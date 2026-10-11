@@ -22,6 +22,8 @@ import { sharedSiteQuery, useSiteSearch } from "../sites/_components/useSitePara
 import { useSiteSortedList, type SiteSortColumns } from "../sites/_components/useSiteSort";
 import { SiteMark } from "../sites/_components/SiteMark";
 import { formatPosition, formatRate } from "./_components/searchConsoleFormat";
+import { SearchConsoleSees } from "./_components/SearchConsoleSees";
+import { websitesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 type SiteRow = FunctionReturnType<typeof api.searchConsoleReads.listSearchConsoleSites>[number];
 
@@ -71,6 +73,10 @@ export default function SearchConsolePage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<SearchCheck className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
+        <SearchConsoleSees
+          screen="websites"
+          seen={sites ? websitesSees(sites.map((site) => ({ siteId: site.siteId, host: site.host, connected: site.status === "CONNECTED", clicks: site.figures?.clicks ?? null }))) : null}
+        />
 
         <DataTable
           rows={paged.pageRows}

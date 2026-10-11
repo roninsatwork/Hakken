@@ -67,7 +67,10 @@ const UPDATES = {
     url: "https://status.search.google.com/", state: "done",
     before: { clicks: 300, impressions: 12000, ctr: 0.025, position: 6.1 },
     after: { clicks: 340, impressions: 13000, ctr: 0.026, position: 5.8 },
+    volatility: { before: 1.5, during: 2.1 },
   }],
+  // What Hakken sees (search-console-volatility-plan.md §4.2).
+  seen: { says: [{ code: "raisedClicks", text: "August 2026 core update", a: 13 }, { code: "positionFromTo", a: 6.1, b: 5.8 }], steps: [] },
 };
 
 /** The website's clicks day by day, for Google updates' chart. */
@@ -143,7 +146,8 @@ describe("Search Console's approved looks: changes and opportunities", () => {
     });
     const { container } = render(<SearchConsoleUpdatesPage />);
     await screen.findByText("August 2026 core update");
-    await expectApprovedLook(container, PLAN, "Updates", "Search Console → Google updates");
+    // Approved again with What Hakken sees and Volatility in place of Moved (search-console-volatility-plan.md §2.2).
+    await expectApprovedLook(container, "search-console-volatility", "Updates", "Search Console → Google updates");
   });
 
   it("9 · Almost there", async () => {

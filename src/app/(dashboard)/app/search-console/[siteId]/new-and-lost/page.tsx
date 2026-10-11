@@ -29,6 +29,8 @@ import { CountryNotReady, ResultKindSwitch, SearchConsoleGate } from "../../_com
 import { filePosition, formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { newLostSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const FIRSTS = { key: "asc", status: "asc", when: "desc", clicks: "desc", impressions: "desc", position: "asc" } as const;
 
@@ -102,6 +104,7 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description", { days: status?.limits.lostAfterDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="newLost" seen={counts ? newLostSees(counts, days) : null} />
           <ResultKindSwitch />
           {list.result?.notKept ? <p className="text-[13px] text-secondary">{t("newLost.notKept")}</p> : country && list.result?.notReady ? <CountryNotReady country={country} /> : (
             <>

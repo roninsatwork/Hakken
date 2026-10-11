@@ -14220,7 +14220,8 @@
       "appearance": "Rich results",
       "estimates": "Real against estimated",
       "trackedKeywords": "Tracked keywords",
-      "trackedPages": "Tracked pages"
+      "trackedPages": "Tracked pages",
+      "volatility": "Volatility"
     },
     "kinds": {
       "label": "Kind of result",
@@ -14506,7 +14507,11 @@
       "missedSearched": "Searched a lot, barely shown",
       "missedUntracked": "Shown, not tracked yet",
       "device": "Device",
-      "anyDevice": "Any device"
+      "anyDevice": "Any device",
+      "way": "Up or down",
+      "anyWay": "Up and down",
+      "wayUp": "Up",
+      "wayDown": "Down"
     },
     "common": {
       "inLast": "In the last {days} days"
@@ -14593,7 +14598,7 @@
     },
     "updates": {
       "title": "Google updates",
-      "description": "What each of Google's updates did to your website: clicks and average position read the {days} days before it began → the {days} days after it finished. The updates are the ones kept in Admin → Content → Google updates, the same list the Visibility charts mark.",
+      "description": "What each of Google's updates did to your website: clicks and average position read the {days} days before it began → the {days} days after it finished, and volatility the 14 days before it began → while it rolled out. The updates are the ones kept in Admin → Content → Google updates, the same list the Visibility charts mark.",
       "chartTitle": "Clicks, with Google's updates",
       "chartHint": "Hover a G for the update: when it started and finished, and what Google said about it.",
       "searchPlaceholder": "Search updates…",
@@ -14604,7 +14609,8 @@
       "started": "Started",
       "notFinished": "Not finished",
       "waiting": "{days} days not yet passed",
-      "empty": "No Google update began in the days held."
+      "empty": "No Google update began in the days held.",
+      "volatilityBefore": "Volatility before"
     },
     "types": {
       "title": "By page classification",
@@ -14704,6 +14710,221 @@
         "shown": "Times Google showed them",
         "ctr": "Clicks for each time shown",
         "position": "Google's own average"
+      }
+    },
+    "volatility": {
+      "title": "Volatility",
+      "description": "How much your positions on Google moved each day, out of 10: 0 when nothing moved, 10 when every keyword moved ten places or more. Read from Search Console, for the keywords with 10 or more impressions that day and the day before, and weighed against your own usual.",
+      "latestDay": "Latest day, {day}",
+      "latestDayNone": "Latest day",
+      "noLevel": "Not enough keywords to judge",
+      "levels": {
+        "NORMAL": "Normal",
+        "HIGH": "High",
+        "VERY_HIGH": "Very high"
+      },
+      "during": "During Google's update",
+      "beforeIt": "{score} in the 14 days before",
+      "noBefore": "Nothing to compare yet",
+      "lastWeek": "Last 7 days",
+      "weekBefore": "{score} the week before",
+      "moved5": "Moved 5 places or more",
+      "downUp": "{down} down, {up} up, on {day}",
+      "clicks7": "Clicks, last 7 days",
+      "onWeekBefore": "on the week before",
+      "empty": "No keyword had 10 or more impressions on both of the last two complete days.",
+      "positionBefore": "Position the day before",
+      "chartTitle": "Volatility, day by day",
+      "chartHint": "Out of 10. Hover a G for Google's update.",
+      "chartHintUsual": "Out of 10. Your usual is {usual}: High is 30% above it, Very high 60%. Hover a G for Google's update.",
+      "chartNothing": "No day has enough keywords to score yet.",
+      "series": "Volatility"
+    },
+    "seen": {
+      "volatility": {
+        "noDays": "Volatility starts once Search Console has two complete days of figures for this website.",
+        "tooFew": "Fewer than 10 of your keywords had 10 impressions on {day1}, too few to judge.",
+        "updateMoved": "Google's {text} ran from {day1} to {day2}, and your positions moved {a}% more than usual while it did.",
+        "updateMovedALot": "Google's {text} ran from {day1} to {day2}, and your positions moved more than usual while it did.",
+        "updateRolling": "Google's {text} has been rolling out since {day1}, and your positions are moving {a}% more than usual.",
+        "updateRollingALot": "Google's {text} has been rolling out since {day1}, and your positions are moving more than usual.",
+        "clicksFellWithIt": "Your clicks fell {a}% in the last week, in step with it.",
+        "pointsToGoogle": "That points to Google reshuffling its results, not to a change on your site.",
+        "movedNoUpdate": "Your positions moved {a}% more than usual on {day1}, and Google has announced no update.",
+        "ownPagesFirst": "When only your keywords move, start with your own pages.",
+        "demand": "Fewer people searched this week: your impressions fell {a}% while your positions held.",
+        "isDemand": "That is demand, not Google and not your site.",
+        "calm": "Google is calm for your keywords: {a} out of 10 on {day1}, close to your usual {b}.",
+        "calmNoUsual": "Google is calm for your keywords: {a} out of 10 on {day1}.",
+        "clicksRoseCalm": "Your clicks rose {a}% this week; that is your pages or demand, not Google.",
+        "clicksFellCalm": "Your clicks fell {a}% this week; that is your pages or demand, not Google.",
+        "holdUntil": "Hold big changes to your pages until {day1}, while Google settles.",
+        "holdWhileRolling": "Hold big changes to your pages until the update finishes.",
+        "checkDropped": "Check the {count, plural, one {keyword} other {# keywords}} that dropped 5 places or more.",
+        "pagesIfNotBack": "If they haven't come back by {day1}, look at the pages they land on.",
+        "lookAtPages": "Look at the pages those keywords land on.",
+        "seeSearches": "See which keywords lost the searches.",
+        "seeWins": "See which keywords gained and lost clicks."
+      },
+      "updates": {
+        "noneInDates": "Google announced no update in these dates.",
+        "rolling": "Google's {text} has been rolling out since {day1}.",
+        "movingMore": "Your positions are moving {a}% more than usual.",
+        "holdWhileRolling": "Hold big changes to your pages until it finishes.",
+        "finished": "Google's {text} finished on {day1}.",
+        "movedMore": "Your positions moved {a}% more than usual while it ran: {b} out of 10, against {c} before it.",
+        "movedAsUsual": "Your positions moved as usual while it ran: {b} out of 10, against {c} before it.",
+        "clicksShowOn": "What it did to your clicks shows on {day1}, once 14 days have passed.",
+        "holdUntil": "Hold big changes to your pages until {day1}.",
+        "notKnown": "Google's {text} finished, but there are no days before it to compare.",
+        "raisedClicks": "Google's {text} raised your clicks by {a}%.",
+        "cutClicks": "Google's {text} cut your clicks by {a}%.",
+        "positionFromTo": "Your average position went from {a} to {b}.",
+        "seeLosses": "See the keywords that lost clicks."
+      },
+      "links": {
+        "seeUpdate": "See the update",
+        "seeKeywords": "See the keywords",
+        "seePages": "See your pages",
+        "seeWins": "See Wins and losses",
+        "seeVolatility": "See Volatility",
+        "seeAlmost": "See Almost there",
+        "seeLowCtr": "See Shown but not clicked",
+        "seeLosing": "See the keywords losing",
+        "keywordResearch": "Open Keyword research",
+        "seeDemand": "See Missed demand",
+        "connect": "Connect it"
+      },
+      "keywords": {
+        "noKeywords": "Google showed your website for no keywords in the last {c} days.",
+        "shown": "Google showed your website for {count, plural, one {one keyword} other {# keywords}} in the last {c} days, bringing {b} clicks.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did.",
+        "topThree": "{count, plural, =0 {None of them is} one {One of them is} other {# of them are}} in Google's top three.",
+        "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
+      },
+      "pages": {
+        "noPages": "Google showed none of your pages in the last {c} days.",
+        "shown": "{count, plural, one {One of your pages was} other {# of your pages were}} shown in Google in the last {c} days, bringing {b} clicks.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did.",
+        "seeLowCtr": "Look at the pages Google shows but people rarely click."
+      },
+      "bands": {
+        "bands": "In Google's top three: {a} keywords. Positions 4 to 10: {b}. Page two: {c}.",
+        "topMore": "That is {count, plural, one {one more} other {# more}} in the top three than the days before.",
+        "topFewer": "That is {count, plural, one {one fewer} other {# fewer}} in the top three than the days before.",
+        "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
+      },
+      "moves": {
+        "noMoves": "No keyword's clicks changed in the last {c} days.",
+        "gainingLosing": "{count, plural, one {One keyword} other {# keywords}} gained clicks and {countB, plural, one {one} other {#}} lost them in the last {c} days.",
+        "netUp": "Between them, clicks rose by {a}.",
+        "netDown": "Between them, clicks fell by {a}.",
+        "seeLosing": "Start with the keywords losing the most clicks.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "almost": {
+        "noneNear": "None of your keywords sits at positions 4 to 20 in these dates.",
+        "near": "{count, plural, one {One keyword sits} other {# keywords sit}} at positions 4 to 20, a short way from Google's first places.",
+        "nearVolume": "Between them they are searched {a} times a month.",
+        "improvePages": "Improve the page each one lands on, starting with the most searched."
+      },
+      "lowCtr": {
+        "noneLow": "Every page Google shows is clicked about as often as its position would bring.",
+        "lowCtr": "{count, plural, one {One page is} other {# pages are}} clicked less than your own click rate at their position would bring: {b} clicks where {c} were due.",
+        "rewriteTitles": "Rewrite their titles and descriptions in Google, the most shown first."
+      },
+      "demand": {
+        "noneMissed": "No keyword that many people search for is missing your website.",
+        "missed": "{count, plural, one {One keyword that many people search for barely shows} other {# keywords that many people search for barely show}} your website.",
+        "missedVolume": "Between them they are searched {a} times a month.",
+        "writeForDemand": "Write or improve a page for the most searched one."
+      },
+      "competing": {
+        "noneCompeting": "No keyword has two of your pages competing for it.",
+        "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
+        "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
+        "pickOne": "Choose one page for each keyword and link the others to it."
+      },
+      "estimates": {
+        "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
+        "estimatesOff": "{count, plural, one {One page’s} other {# pages’}} estimated visits are far from Google’s clicks: {b} too high and {c} too low."
+      },
+      "brand": {
+        "noBrandClicks": "There are no clicks to split into brand and non-brand in these dates.",
+        "brandShare": "{a}% of your clicks come from searches using your brand's name.",
+        "othersUp": "Clicks from people who did not search for you by name rose {a}%.",
+        "othersDown": "Clicks from people who did not search for you by name fell {a}%.",
+        "growOthers": "Grow the searches that don't name you: they are new customers."
+      },
+      "trackedKeywords": {
+        "noneKeywords": "You track no keywords on this website yet.",
+        "trackKeywords": "Tick the keywords that matter on Keywords, and they are watched every day.",
+        "trackedKeywords": "You track {count, plural, one {one keyword} other {# keywords}}; together they brought {b} clicks in the last {c} days.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "trackedPages": {
+        "nonePages": "You track no pages on this website yet.",
+        "trackPages": "Tick the pages that matter on Pages, and they are watched every day.",
+        "trackedPages": "You track {count, plural, one {one page} other {# pages}}; together they brought {b} clicks in the last {c} days.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "performance": {
+        "nothingShown": "Google did not show your website in the last {c} days.",
+        "performance": "Google showed your website {a} times in the last {c} days, and people clicked {b} times.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did.",
+        "position": "Your average position was {a}.",
+        "seeWins": "See which keywords gained and lost clicks."
+      },
+      "newLost": {
+        "keywordsNewLost": "{count, plural, one {One keyword is} other {# keywords are}} new in the last {c} days, and {countB, plural, one {one was} other {# were}} lost.",
+        "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "types": {
+        "noTypes": "There are no clicks to split by kind of page in these dates.",
+        "topType": "{text} bring the most clicks: {a}% of them."
+      },
+      "places": {
+        "noPlaces": "There are no clicks to split by country in these dates.",
+        "topCountry": "Most of your clicks come from {text}: {a}%.",
+        "mobileShare": "{a}% of them are on mobile."
+      },
+      "appearance": {
+        "noRichResults": "Google shows none of your pages with rich results in these dates.",
+        "richResults": "{count, plural, one {One kind of rich result shows} other {# kinds of rich result show}} your pages; {text} brings the most clicks."
+      },
+      "ctrCurve": {
+        "noFirst": "None of your pages showed at position 1 in these dates.",
+        "seeAlmost": "See the keywords closest to the first places.",
+        "firstAndThird": "At position 1 your pages are clicked {a}% of the times they are shown; at position 3, {b}%.",
+        "firstOnly": "At position 1 your pages are clicked {a}% of the times they are shown.",
+        "seeLowCtr": "Look at the pages Google shows but people rarely click."
+      },
+      "record": {
+        "notShown": "Google did not show “{text}” in the last {c} days.",
+        "recordFigures": "“{text}” brought {b} clicks in the last {c} days, at an average position of {a}.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "rose": "Its average position rose from {a} to {b}.",
+        "fell": "Its average position fell from {a} to {b}."
+      },
+      "websites": {
+        "noWebsites": "Your company has no websites of its own here yet.",
+        "connected": "{countB, plural, one {{count, plural, =0 {Search Console is not connected for your website yet.} other {Search Console is connected for your website.}}} other {Search Console is connected for {a} of your # websites.}}",
+        "topWebsite": "{text} brings the most clicks: {a}.",
+        "notConnected": "{text} has no Search Console yet, so its clicks cannot be seen here.",
+        "connect": "Connect Search Console for {text}.",
+        "oneWebsite": "{text} brought {a} clicks in the last 30 days."
       }
     }
   },

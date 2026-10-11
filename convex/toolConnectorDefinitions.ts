@@ -584,6 +584,39 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    // What Hakken sees on a website's screens, for the Assistant
+    // (docs/plans/active/search-console-volatility-plan.md §8, HS7). Its own
+    // connector, as the charts are, so it reaches an Assistant already installed.
+    key: "assistant-advice",
+    name: "Assistant advice",
+    description:
+      "Lets the Assistant read the advice the platform's screens give on a website, so it says what the screens say, never advice of its own.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Read the screens' advice",
+        description:
+          "The advice the platform's own screens give on one of the company's websites, each screen's newest: what it means and what to do first, with the screen's address. Read it before you say how a website is doing, why its numbers moved, or what to do about it, and give that advice as written, with the way to its screen: add detail when asked, never different advice. Is it Google or the website? Volatility's advice says.",
+        handlerMapping: "assistant.advice.read",
+        modelName: "read_advice",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
+          },
+        }),
+      },
+    ],
+  },
+  {
     // The Assistant's chart under an answer (docs/plans/active/
     // hakken-tasks-plan.md, item 2.1). Its own connector rather than one more
     // figure tool: a connector's tools are written when it is installed, so a

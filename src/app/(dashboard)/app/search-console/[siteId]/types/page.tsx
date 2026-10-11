@@ -15,6 +15,8 @@ import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchCon
 import { formatRate } from "../../_components/searchConsoleFormat";
 import { useSearchConsoleSummary, type ListSummary } from "../../_components/SearchConsoleTables";
 import { useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { typesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /**
  * Types (search-console-plan.md §13.3, drawn as "13 · Types" — its own page,
@@ -56,6 +58,8 @@ export default function SearchConsoleTypesPage() {
     (summary?.kinds ?? []).map((kind) => [word(kind.kind), kind.rows, kind.clicks]),
   );
   const pageWord = (kind: string) => pageKinds.label(kind);
+  // The kind of page bringing the most clicks, for What Hakken sees.
+  const topKind = [...(pages?.kinds ?? [])].sort((left, right) => right.clicks - left.clicks)[0] ?? null;
   const intentWord = (kind: string) => tc(`intents.${kind}`);
 
   return (
@@ -63,6 +67,7 @@ export default function SearchConsoleTypesPage() {
       <PageHeader icon={<Shapes className="h-5 w-5 text-brand" />} title={t("types.title")} description={t("types.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="types" seen={pages ? typesSees(topKind ? { name: pageWord(topKind.kind), clicks: topKind.clicks } : null, pages.clicks) : null} />
           <ResultKindSwitch />
           <FigureRow>
             {classified ? (

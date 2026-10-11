@@ -16,6 +16,8 @@ import {
   useSearchConsoleTracking,
   type ChipId,
 } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { almostSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["tracked", "almostBand", "intent"];
 
@@ -36,6 +38,7 @@ export default function SearchConsoleAlmostPage() {
   const keywords = tracking.counts?.keywords ?? null;
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="almost" seen={list.summary ? almostSees(list.summary) : null} />}
       icon={<Target className="h-5 w-5 text-brand" />}
       title={t("almost.title")}
       description={t("almost.description")}

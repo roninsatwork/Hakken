@@ -22,6 +22,8 @@ import { LiveProblem, ResultKindSwitch, SearchConsoleGate, liveProblemKey } from
 import { filePosition, formatPosition } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { BeforeAfter } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { newestUpdateFacts, updatesSees } from "@/convex/utils/sees/searchConsole";
 import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
 type Update = {
@@ -36,16 +38,26 @@ type Update = {
   beforePosition: number | null;
   afterPosition: number | null;
   moved: number | null;
+  /** Volatility the 14 days before it began → while it rolled out (search-console-volatility-plan.md §2.2). */
+  volatilityBefore: number | null;
+  volatilityDuring: number | null;
 };
 
-const SORTS: SiteSortColumns<Update, "title" | "dates" | "clicks" | "change" | "position" | "moved"> = {
+const SORTS: SiteSortColumns<Update, "title" | "dates" | "clicks" | "change" | "position" | "volatility"> = {
   title: { value: (row) => row.title, first: "asc" },
   dates: { value: (row) => row.startedOn, first: "desc" },
   clicks: { value: (row) => row.afterClicks, first: "desc" },
   change: { value: (row) => row.change, first: "desc" },
   position: { value: (row) => row.afterPosition, first: "asc" },
-  moved: { value: (row) => row.moved, first: "desc" },
+  volatility: { value: (row) => row.volatilityDuring, first: "desc" },
 };
+
+/** A score as the page writes it: one decimal. */
+const formatScore = (value: number) => value.toFixed(1);
+
+/** An update's volatility where the days it is read from are kept; one asked of Google has none. */
+const volatilityOf = (update: object): { before: number | null; during: number | null } | undefined =>
+  "volatility" in update ? (update as { volatility?: { before: number | null; during: number | null } }).volatility : undefined;
 const titleOf = (row: Update) => row.title;
 
 /** The chart as drawn: clicks alone, with its one tick box. */
@@ -93,7 +105,11 @@ export default function SearchConsoleUpdatesPage() {
     beforePosition: update.before?.position ?? null,
     afterPosition: update.after?.position ?? null,
     moved: update.before && update.after ? update.before.position - update.after.position : null,
+    volatilityBefore: volatilityOf(update)?.before ?? null,
+    volatilityDuring: volatilityOf(update)?.during ?? null,
   }));
+  // What Hakken sees: the server's for the days it keeps; for a country asked of Google, the same rules on its answer.
+  const seen = kept?.live ? (answer && status?.connection?.newestDay ? updatesSees(newestUpdateFacts(answer.updates), status.connection.newestDay) : null) : kept && "seen" in kept ? kept.seen : undefined;
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => (!matches || matches(row.title)) && (!finished || (finished === "done" ? row.state !== "rolling" : row.state === "rolling")));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "dates", name: titleOf });
@@ -106,6 +122,7 @@ export default function SearchConsoleUpdatesPage() {
       <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={t("updates.title")} description={t("updates.description", { days: status?.limits.updateWindowDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="updates" seen={seen} />
           <ResultKindSwitch />
           {chartProblem ? (
             <LiveProblem problem={chartProblem} retry={problem ? live.retry : days.retry} />
@@ -157,6 +174,8 @@ export default function SearchConsoleUpdatesPage() {
                       { header: t("moves.positionBefore"), value: (row) => filePosition(row.beforePosition) },
                       { header: t("table.position"), value: (row) => filePosition(row.afterPosition) },
                       { header: t("table.moved"), value: (row) => (row.state === "done" ? filePosition(row.moved) : null) },
+                      { header: t("updates.volatilityBefore"), value: (row) => row.volatilityBefore },
+                      { header: t("volatility.title"), value: (row) => row.volatilityDuring },
                     ]}
                   />
                 }
@@ -180,7 +199,8 @@ export default function SearchConsoleUpdatesPage() {
               { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.beforeClicks} now={row.afterClicks} format={formatNumber} /> },
               { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => (row.state !== "done" ? notYet(row) : <Change by={row.change} isNew={row.change !== null && row.beforeClicks === null && (row.afterClicks ?? 0) > 0} format={formatNumber} />) },
               { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.beforePosition} now={row.afterPosition} format={formatPosition} /> },
-              { key: "moved", header: t("table.moved"), align: "right", sortable: true, cell: (row) => (row.state !== "done" ? notYet(row) : <Change by={row.moved} kind="places" same format={formatPosition} />) },
+              // Volatility in place of Moved (§2.2): Position already reads before → after.
+              { key: "volatility", header: t("volatility.title"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.volatilityBefore} now={row.volatilityDuring} format={formatScore} /> },
             ]}
           />
         </SearchConsoleGate>

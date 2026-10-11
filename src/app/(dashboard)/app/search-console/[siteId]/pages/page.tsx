@@ -8,6 +8,8 @@ import { SearchConsoleSiteFigures } from "../../_components/SearchConsoleFigures
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { TrackedCount, figureColumns, trackColumn, useSearchConsoleList, useSearchConsoleTracking, type ChipId } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { pagesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /**
  * The drawing's Section chip ("Top level", "/hub/") was one website's own
@@ -33,6 +35,7 @@ export default function SearchConsolePagesPage() {
 
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="pages" seen={list.summary ? pagesSees(list.summary, list.range.days) : null} />}
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("pages.title")}
       description={t("pages.description")}

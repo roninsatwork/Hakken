@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { auditContentChange, checkedDay, checkedText, checkedUrl, dayStart } from "./utils/contentAdmin";
@@ -260,3 +261,38 @@ async function removeNewsItem(ctx: MutationCtx, updateId: Id<"googleUpdates">): 
     .take(10);
   for (const item of items) await ctx.db.delete(item._id);
 }
+
+/**
+ * One of Google's ranking updates from its Search Status page, filed as an
+ * update entered by hand would be (search-console-volatility-plan.md, V14;
+ * `googleUpdatesFeed.ts`): found by its link, added when new, brought up to
+ * date when Google says more (it finished), left alone when nothing changed.
+ * Its News item kept in step, its words sent to the Translator.
+ */
+export const fileFeedUpdate = internalMutation({
+  args: updateInput,
+  returns: v.union(v.literal("ADDED"), v.literal("CHANGED"), v.literal("SAME")),
+  handler: async (ctx, args) => {
+    const checked = checkedUpdate(args);
+    const rows = await ctx.db.query("googleUpdates").withIndex("by_started", (q) => q.eq("startedOn", checked.startedOn)).take(MAX_GOOGLE_UPDATES);
+    const held = rows.find((row) => row.url === checked.url) ?? null;
+    const now = Date.now();
+    if (!held) {
+      const updateId = await ctx.db.insert("googleUpdates", { ...checked, createdAt: now, updatedAt: now });
+      const update = await ctx.db.get(updateId);
+      if (update) await syncNewsItem(ctx, update);
+      await requestTranslation(ctx, "googleUpdates", updateId);
+      return "ADDED";
+    }
+    // What a person wrote stays theirs: only Google's own facts are brought up to date — its finish, its title, its words.
+    const facts = { titleEn: checked.titleEn, descriptionEn: checked.descriptionEn, finishedOn: checked.finishedOn, expectedDays: checked.expectedDays };
+    const same = held.titleEn === facts.titleEn && held.descriptionEn === facts.descriptionEn && (held.finishedOn ?? undefined) === facts.finishedOn && (held.expectedDays ?? DEFAULT_EXPECTED_DAYS) === facts.expectedDays;
+    if (same) return "SAME";
+    const { _id: _held, _creationTime: _made, ...kept } = held;
+    await ctx.db.replace(held._id, { ...kept, ...facts, updatedAt: now });
+    const update = await ctx.db.get(held._id);
+    if (update) await syncNewsItem(ctx, update);
+    if (held.titleEn !== facts.titleEn || held.descriptionEn !== facts.descriptionEn) await requestTranslation(ctx, "googleUpdates", held._id);
+    return "CHANGED";
+  },
+});

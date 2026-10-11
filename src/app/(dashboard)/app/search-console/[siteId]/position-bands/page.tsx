@@ -14,6 +14,8 @@ import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { CountChange, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 import { useChartPeriods } from "../../_components/useChartPeriods";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { bandsSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["band", "intent", "device"];
 
@@ -53,6 +55,7 @@ export default function SearchConsoleBandsPage() {
   const ticks = useSeriesTicks(series);
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="bands" seen={list.summary ? bandsSees(list.summary) : null} />}
       icon={<BarChart3 className="h-5 w-5 text-brand" />}
       title={t("bands.title")}
       description={t("bands.description")}

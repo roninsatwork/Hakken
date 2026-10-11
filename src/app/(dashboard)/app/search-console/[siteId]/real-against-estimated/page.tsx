@@ -9,6 +9,8 @@ import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTabl
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { KindText, figureColumns, useSearchConsoleList, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { estimatesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["verdict", "pageType"];
 
@@ -31,6 +33,7 @@ export default function SearchConsoleEstimatesPage() {
   const days = list.range.days;
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="estimates" seen={list.summary ? estimatesSees(list.summary) : null} />}
       icon={<Scale className="h-5 w-5 text-brand" />}
       title={t("estimates.title")}
       description={t("estimates.description", { days })}

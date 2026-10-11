@@ -26,9 +26,10 @@ export const bandOf = (position: number): Band =>
  * - `competing` — keywords two or more of the website's pages were shown for (Pages competing);
  * - `moves` — keywords whose clicks changed on the period before (Wins and losses);
  * - `missed` — keywords many search for that Google barely shows the website for, or not yet tracked (Missed demand);
- * - `estimates` — pages with Sites' estimated visits beside Google's clicks (Real against estimated).
+ * - `estimates` — pages with Sites' estimated visits beside Google's clicks (Real against estimated);
+ * - `volatility` — keywords counted on Volatility's day and the day before, 10 or more impressions each (Volatility; its own ready-made day, `VOLATILITY_PERIOD`).
  */
-export const VIEWS = ["all", "tracked", "almost", "lowCtr", "competing", "moves", "missed", "estimates"] as const;
+export const VIEWS = ["all", "tracked", "almost", "lowCtr", "competing", "moves", "missed", "estimates", "volatility"] as const;
 export type View = (typeof VIEWS)[number];
 
 /** The list a view reads, whatever the page asked. */
@@ -39,6 +40,7 @@ export const VIEW_LIST: Partial<Record<View, "query" | "page">> = {
   moves: "query",
   missed: "query",
   estimates: "page",
+  volatility: "query",
 };
 
 /**
@@ -364,6 +366,8 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
       });
     case "moves":
       return rows.filter((row) => row.change !== null && row.change !== 0);
+    case "volatility":
+      return rows.filter((row) => row.positionChange !== null);
     case "missed": {
       if (context.missedList === "untracked") return rows.filter((row) => !row.tracked);
       const shown = new Map(rows.map((row) => [context.textOf ? context.textOf(row.key) : row.key, row]));
@@ -407,6 +411,8 @@ export type Filters = {
   kind?: string;
   brand?: "yes" | "no";
   move?: "win" | "loss";
+  /** Volatility: keywords whose position rose, or fell. */
+  way?: "up" | "down";
   verdict?: Verdict;
 };
 
@@ -421,6 +427,7 @@ export function filterRows(rows: readonly ListRow[], filters: Filters, textOf?: 
     && (!filters.kind || (row.kind ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (row.brand === true))
     && (!filters.move || (filters.move === "win" ? (row.change ?? 0) > 0 : (row.change ?? 0) < 0))
+    && (!filters.way || (filters.way === "up" ? (row.positionChange ?? 0) > 0 : (row.positionChange ?? 0) < 0))
     && (!filters.verdict || row.verdict === filters.verdict));
 }
 

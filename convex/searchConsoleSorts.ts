@@ -15,7 +15,7 @@ import { compareTermsQuickly } from "./utils/searchConsoleTerms";
 
 /** The headings a list orders by, each the best first on its first press. */
 export const SORT_KEYS = [
-  "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "share", "count", "top",
+  "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "movedBy", "share", "count", "top",
   "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band",
 ] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
@@ -28,6 +28,8 @@ const SORTS: ListSorts<ListRow, SortKey> = {
   // A row Google did not show has no position: a blank, last, never "position 0" first.
   position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
   positionChange: { value: (row) => row.positionChange, first: "desc" },
+  // Volatility's Moved: the most moved, either way, first.
+  movedBy: { value: (row) => (row.positionChange === null ? null : Math.abs(row.positionChange)), first: "desc" },
   share: { value: (row) => row.share, first: "desc" },
   count: { value: (row) => row.count, first: "desc" },
   top: { value: (row) => row.top, first: "asc" },

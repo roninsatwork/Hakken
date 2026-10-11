@@ -19,6 +19,8 @@ export const seenPhraseValidator = v.object({
   more: v.optional(v.string()),
   /** An AI engine's id ("chatgpt"), named on screen in the reader's language. */
   engine: v.optional(v.string()),
+  /** Days it names (`YYYY-MM-DD`), written on screen as the reader's dates: `{day1}`, `{day2}`. */
+  days: v.optional(v.array(v.string())),
 });
 
 /**
@@ -43,6 +45,7 @@ export const seenStepValidator = v.object({
   text: v.optional(v.string()),
   more: v.optional(v.string()),
   engine: v.optional(v.string()),
+  days: v.optional(v.array(v.string())),
   link: v.string(),
   to: seenTargetValidator,
 });
@@ -74,6 +77,18 @@ export function seen(says: ReadonlyArray<Maybe<SeenPhrase>>, steps: ReadonlyArra
     says: says.filter((phrase): phrase is SeenPhrase => Boolean(phrase)).slice(0, MOST_SAYS),
     steps: steps.filter((step): step is SeenStep => Boolean(step)).slice(0, MOST_STEPS),
   };
+}
+
+/**
+ * What a box advises, as one line: its sentences' and steps' codes and the
+ * names they quote (a keyword, an update, a rival), never their numbers — the
+ * same advice on today's figures is the same advice, a new update or keyword
+ * is new advice. A folded box opens again when this changes
+ * (search-console-volatility-plan.md §8, HS3).
+ */
+export function seenAdvice(box: Seen): string {
+  const said = (part: { code: string; text?: string; engine?: string }) => [part.code, part.text, part.engine].filter(Boolean).join(":");
+  return [...box.says.map(said), "|", ...box.steps.map(said)].join(" ");
 }
 
 /** A step to one of the site's records. */

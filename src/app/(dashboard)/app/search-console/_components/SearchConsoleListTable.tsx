@@ -55,6 +55,8 @@ export function SearchConsoleListScreen({
   title,
   description,
   icon,
+  sees,
+  kindSwitch = true,
   heroes,
   children,
   table,
@@ -62,6 +64,10 @@ export function SearchConsoleListScreen({
   title: string;
   description: ReactNode;
   icon: ReactNode;
+  /** What Hakken sees, under the title, above everything else (search-console-volatility-plan.md §8). */
+  sees?: ReactNode;
+  /** False for a page reading web search alone (Volatility): no choice of kind of result to make. */
+  kindSwitch?: boolean;
   /** The hero boxes above the table. */
   heroes?: ReactNode;
   /** Between the hero boxes and the table: a chart. */
@@ -78,7 +84,8 @@ export function SearchConsoleListScreen({
       <PageHeader icon={icon} title={title} description={description} />
       {list.status ? (
         <SearchConsoleGate status={list.status} siteId={list.siteId}>
-          <ResultKindSwitch />
+          {sees}
+          {kindSwitch ? <ResultKindSwitch /> : null}
           {heroes}
           {children}
           {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}

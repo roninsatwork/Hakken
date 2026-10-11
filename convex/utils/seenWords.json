@@ -1,0 +1,2436 @@
+{
+  "en": {
+    "sites.seen": {
+      "links": {
+        "visit": "Visit it",
+        "seeQuestion": "See the question",
+        "yourPages": "Your pages",
+        "seeWebsite": "See the website",
+        "seePage": "See the page",
+        "yourReviews": "Your reviews",
+        "seeBusiness": "See the business",
+        "whereToGetListed": "Where to get listed",
+        "seeSearch": "See the search",
+        "seeAnswers": "See the answers",
+        "seeMentions": "See the mentions",
+        "readNotCited": "Read but not cited",
+        "sourcesCited": "Sources cited",
+        "untrackedQueries": "Searches not tracked",
+        "yourListings": "Your listings",
+        "profileManager": "Open your Google profile",
+        "mapRankings": "Map rankings",
+        "seeOffice": "See the office",
+        "seeMapSearch": "See the search on the map",
+        "localMarket": "Local market",
+        "waitingReviews": "Reviews waiting",
+        "againstRivals": "Against rivals",
+        "seeReviews": "See the reviews",
+        "visitPage": "Open the page",
+        "newAndLost": "New and lost links",
+        "brokenBacklinks": "Broken backlinks",
+        "seeLinks": "See the links",
+        "lostLinks": "Lost links",
+        "seeDomain": "See the website",
+        "seeAnchor": "See the words",
+        "seeNetwork": "See the network",
+        "referringDomains": "Referring domains",
+        "fanOutQueries": "Fan-out queries",
+        "seeFeature": "See the feature",
+        "movedSearches": "Searches that moved",
+        "folderPages": "See the folder's pages",
+        "seeProblem": "See the problem",
+        "paidKeywords": "Paid keywords",
+        "suggestedCompetitors": "Suggested competitors",
+        "seeRival": "See the competitor",
+        "contentGap": "Content gap",
+        "newAndLostKeywords": "New and lost keywords",
+        "topPages": "Top pages",
+        "seeAsset": "See the asset",
+        "seePages": "See the pages",
+        "openWebsite": "Open the website"
+      },
+      "website": {
+        "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
+        "onlyRivals": "Google's AI quotes {text} {a} times in answers about your kind of work, every time beside your rivals and never beside you.",
+        "mostlyRivals": "Google's AI quotes {text} {a} times in answers about your kind of work: {b} beside your rivals, {c} beside you.",
+        "besideYou": "Google's AI quotes {text} {a} times in answers about your kind of work, {c} of them beside you.",
+        "linksToRivals": "It links to {count, plural, one {one of your rivals} other {# of your rivals}} ({more}) and not to you.",
+        "namesYou": "{count, plural, one {One of its pages names you.} other {# of its pages name you.}}",
+        "notOnIt": "Nothing on it names you yet.",
+        "getListed": "Get listed on {text}.",
+        "getMentioned": "Get {text} to write about you: it is quoted beside your rivals.",
+        "makeVideo": "Put a short video on {text} that answers the questions it is quoted for.",
+        "joinForum": "Answer the questions people ask on {text}, as your business.",
+        "answerQuestion": "Answer “{text}” on your own site."
+      },
+      "question": {
+        "notFound": "Brand radar no longer reads this question for you or your rivals.",
+        "namesYou": "Google's AI answers this about {a} times a month and names you {b, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "namesOther": "Google's AI answers this about {a} times a month and names {text} first; it does not name you.",
+        "namesNone": "Google's AI answers this about {a} times a month without naming you or the rivals you watch.",
+        "yourPage": "It quotes your page {text}.",
+        "noPage": "None of your pages is quoted.",
+        "rivalPages": "{count, plural, one {It quotes one of your rivals' pages, {text}.} other {It quotes # of your rivals' pages, among them {text}.}}",
+        "answerOnPage": "Answer it in the first lines of a page on your site.",
+        "getListedOn": "Get listed on {text}, which it quotes."
+      },
+      "aiPage": {
+        "notRead": "ChatGPT has not opened this page while answering your questions.",
+        "readNeverCited": "ChatGPT opened this page {count, plural, one {once} other {# times}} while answering your questions and never cited it.",
+        "readCitedSome": "ChatGPT opened this page {count, plural, one {once} other {# times}} while answering your questions and cited it {b} of those times.",
+        "alwaysCited": "ChatGPT opened this page {count, plural, one {once} other {# times}} while answering your questions and cited it every time.",
+        "citedInstead": "When it left it out, it cited {text} instead, {count, plural, one {once} other {# times}}.",
+        "googleQuotes": "Google's AI quotes it for {count, plural, one {one question} other {# questions}} Brand radar reads.",
+        "firstLines": "Answer the question in this page's first lines: who you help, what it costs and what clients say.",
+        "answerBetter": "Answer the same questions better on a page of your own.",
+        "getListedOn": "Get listed on {text}, cited in its place."
+      },
+      "business": {
+        "aheadInAi": "Google's AI names {text} in {a} answers a month to your {b}.",
+        "behindInAi": "Google's AI names {text} in {a} answers a month; you are named in {b}.",
+        "biggestLead": "Its biggest lead is “{text}”, asked {a} times a month, where you are not named.",
+        "chatgptAhead": "ChatGPT shows it in {a} of your {countC, plural, one {# question} other {# questions}}' answers, and you in {b}.",
+        "answersFaster": "It answers reviews in {count, plural, one {# day} other {# days}} on average; you take {b}.",
+        "nothingKnown": "Nothing is held about {text} yet: it is not a rival you watch, and not on Google Maps near your office.",
+        "notWatched": "{text} is not one of the rivals you watch, so only what Google Maps and ChatGPT show of it is known.",
+        "answerQuestion": "Answer “{text}” on your own site.",
+        "getListedOn": "Get listed on {text}, which Google's AI quotes beside it.",
+        "answerReviews": "Answer each new review within a day, and ask every client for one.",
+        "moreReviews": "On Google it has {a} reviews to your {b}.",
+        "mapOnly": "{text} is a rival you watch on Google Maps; its website is not one of the competitors you track, so Google's AI answers and the web are not read for it.",
+        "askForReviews": "Ask every client for a Google review: it is {count, plural, one {# review} other {# reviews}} ahead."
+      },
+      "radarOverview": {
+        "noReading": "Nothing read yet: Brand radar reads Google's AI answers once a month, from the next check.",
+        "behindLeader": "Google's AI names you in {a} answers this month: {b}% of the share of voice, against {c}% for {text}, the leader.",
+        "youLead": "Google's AI names you in {a} answers this month: {b}% of the share of voice, more than any rival you watch.",
+        "upMonth": "That is {a} more than the month before.",
+        "downMonth": "That is {a} fewer than the month before.",
+        "missingQuestion": "Rivals are named for “{text}”, asked {a} times a month, and you are not.",
+        "answerQuestion": "Answer “{text}” on your own site.",
+        "seeLeader": "See which questions {text} is named for and you are not."
+      },
+      "radarSources": {
+        "noReading": "Nothing read yet: Brand radar reads Google's AI answers once a month, from the next check.",
+        "websitesQuoted": "Google's AI quotes {a} websites in these answers; {b} of them appear in answers that name you.",
+        "placesMissing": "{count, plural, one {# website} other {# websites}} quoted beside your rivals never appear beside you, {text} most often.",
+        "ownPages": "Your own site is quoted {count, plural, one {once} other {# times}}.",
+        "ownPagesNone": "None of these answers quotes a page of your own site.",
+        "getOnto": "Get onto {text}: Google's AI quotes it beside your rivals and never beside you.",
+        "workThrough": "Work through the other places your rivals are listed and you are not."
+      },
+      "overviewGaps": {
+        "noChecks": "No search has been checked for an AI Overview yet.",
+        "overviews": "{a} of {countB, plural, one {# search} other {# searches}} checked show an AI Overview; {c} of those quote you.",
+        "gaps": "You rank on the first page for {count, plural, one {# search} other {# searches}} whose overview leaves you out, asked {countB, plural, one {once} other {# times}} a month.",
+        "noGaps": "Every overview on a search where you rank on the first page quotes you.",
+        "quotedUp": "{count, plural, one {# more overview quotes} other {# more overviews quote}} you than a month before.",
+        "quotedDown": "{count, plural, one {# fewer overview quotes} other {# fewer overviews quote}} you than a month before.",
+        "fixGap": "Make your page for “{text}” answer it in its first lines, so the overview can quote it."
+      },
+      "aiMentions": {
+        "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
+        "notNamed": "No assistant names you for {a} of your {countB, plural, one {# question} other {# questions}}, “{text}” among them.",
+        "allNamed": "{count, plural, one {At least one assistant names you for your question.} other {At least one assistant names you for each of your # questions.}}",
+        "leastEngine": "{engine} names you least: for {a} of the {countB, plural, one {# question} other {# questions}} it answered.",
+        "warned": "{engine} warned people off you in its newest answer to “{text}”.",
+        "seeAnswers": "Read what the assistants say for “{text}”, and who they name instead.",
+        "readWarning": "Read {engine}'s warning, and answer it on your site and your profiles."
+      },
+      "aiShare": {
+        "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
+        "noneNamed": "None of the answers names you or a competitor you track yet.",
+        "youLead": "You have {a}% of the mentions across the AI assistants, more than any competitor you track.",
+        "behindLeader": "You have {a}% of the mentions across the AI assistants; {text} leads with {b}%.",
+        "weakestEngine": "{engine} names you least: {a}% of its mentions.",
+        "seeLeader": "See where {text} is named and you are not.",
+        "seeEngine": "See the questions {engine} answers without you."
+      },
+      "aiAnswers": {
+        "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
+        "namedIn": "Of the newest answer from each assistant to each of your questions, {a} of {b} name you.",
+        "dropped": "{count, plural, one {# answer} other {# answers}} dropped you after naming you before; the newest, {engine} on “{text}”.",
+        "recommended": "{count, plural, one {# recommends} other {# recommend}} you outright.",
+        "readDropped": "Read {engine}'s newest answer to “{text}” and see who it names instead."
+      },
+      "aiAnswer": {
+        "first": "Of the websites you watch, it names you first.",
+        "place": "Of the {countB, plural, one {# website} other {# websites}} you watch that it names, you come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "leftOut": "It names {count, plural, one {# website} other {# websites}} you watch, and not you.",
+        "noneNamed": "It names none of the websites you watch, you included.",
+        "firstShown": "The first business it shows is {text}.",
+        "moreReviews": "{text} has {a} Google reviews to your {b}.",
+        "higherRating": "{text} is rated {a} on Google to your {b}.",
+        "readNotCited": "It read {count, plural, one {# of your pages and did not quote it} other {# of your pages and did not quote them}}.",
+        "seeFirst": "See what {text} has that you do not.",
+        "fixPage": "Make {text} answer the question in its first lines."
+      },
+      "aiSources": {
+        "noneCited": "No AI answer to your questions links to a page of yours yet.",
+        "seeRead": "See your pages the assistants read but did not quote.",
+        "cited": "AI answers link to {count, plural, one {# of your pages} other {# of your pages}}.",
+        "mostCited": "{text} is linked most: {count, plural, one {once} other {# times}}.",
+        "stale": "{count, plural, one {# page has} other {# pages have}} not been linked for a month, {text} among them.",
+        "refresh": "Bring {text} up to date: AI answers linked to it before and no longer do.",
+        "buildOn": "Build on {text}: link to it from your other pages on the same subject."
+      },
+      "aiSearched": {
+        "notBuilt": "No fan-out queries yet: the next check records the searches the assistants run.",
+        "noQueries": "The assistants ran no searches for these questions yet.",
+        "competitor": "The assistants ran {a} searches to answer this website's questions, “{text}” most often.",
+        "untracked": "You do not track {a} of the {countB, plural, one {# search} other {# searches}} the assistants ran, “{text}” the most repeated.",
+        "noneTracked": "You track none of the {count, plural, one {# search} other {# searches}} the assistants ran; “{text}” is the most repeated.",
+        "allTracked": "{count, plural, one {You track the one search the assistants ran.} other {You track all # searches the assistants ran.}}",
+        "noPage": "No page of yours answers {a} of them.",
+        "firstPage": "You are on Google's first page for {a} of the {b}.",
+        "track": "Tick “{text}” to track it on Google every run.",
+        "writePage": "Write a page that answers “{text}”."
+      },
+      "aiBusinesses": {
+        "noAnswers": "No answer read from the ChatGPT app yet: your questions are asked at the next check.",
+        "showing": "The ChatGPT app showed businesses in {a} of your {countB, plural, one {# question} other {# questions}}' answers; {countC, plural, =0 {it showed you in none} other {it showed you in #}}.",
+        "shownMost": "It shows {text} most: in {count, plural, one {# answer} other {# answers}}.",
+        "skipped": "You are in Google's map box for {count, plural, one {# search} other {# searches}} where it leaves you out.",
+        "upCheck": "That is {a} more than the check before.",
+        "downCheck": "That is {a} fewer than the check before.",
+        "seeShownMost": "See what {text} has that you do not.",
+        "askReviews": "Ask every client for a Google review: the business shown most has more than you."
+      },
+      "aiRead": {
+        "nothingRead": "The ChatGPT app has not opened a page for your questions yet.",
+        "noneRead": "The ChatGPT app read other websites for your questions, and none of your pages.",
+        "seeCited": "See the pages of yours AI answers do link to.",
+        "winRate": "Your pages are quoted in {a}% of the answers that read them; rivals' pages in {b}%.",
+        "winRateAlone": "Your pages are quoted in {a}% of the answers that read them.",
+        "readMost": "{text} was read {count, plural, one {once} other {# times}}, and quoted in {b} of those answers.",
+        "beatsYou": "{text} is quoted instead most often: in {count, plural, one {# answer} other {# answers}} that read your page.",
+        "fixFirstLines": "Make {text} answer the question in its first lines.",
+        "seeWinner": "See where {text} is quoted and you are not."
+      },
+      "aiDemand": {
+        "notYet": "No AI figures yet: they are read on the next monthly check.",
+        "aiAgainstGoogle": "Your searches are asked of AI about {a} times a month, against {countB, plural, one {# search} other {# searches}} on Google.",
+        "yearUp": "Asks of AI are up {a}% on the year.",
+        "yearDown": "Asks of AI are down {a}% on the year.",
+        "rising": "{count, plural, one {# search is} other {# searches are}} rising in AI, “{text}” the most asked.",
+        "mostAsked": "“{text}” is asked of AI most: {a} times a month.",
+        "answerOnPage": "Answer “{text}” plainly on one of your pages.",
+        "checkPages": "Check your pages answer the searches people now ask AI."
+      },
+      "localProfile": {
+        "noOffice": "No Google profile is linked as your office yet.",
+        "linkOffice": "Link your Google profile as your office.",
+        "mapBox": "You are in Google's map box for {a} of the {countB, plural, one {# search} other {# searches}} checked.",
+        "mapNotChecked": "Your searches have not been checked on the map from this office yet.",
+        "ratingBehind": "Your rating is {a}, against {b} for your rivals.",
+        "ratingAhead": "Your rating of {a} is ahead of your rivals' {b}.",
+        "toFix": "{count, plural, one {# detail of your profile needs} other {# details of your profile need}} putting right.",
+        "nothingToFix": "Every detail of your profile checks out.",
+        "seeMap": "See the searches where you are not in the map box.",
+        "fix": {
+          "CLAIMED": "Claim your Google profile, so you can answer reviews and keep it right.",
+          "CATEGORY": "Change your main category to the one the top three on the map use.",
+          "OTHER_CATEGORIES": "Add the other categories your business covers.",
+          "DESCRIPTION": "Write a description of what you do and where.",
+          "ADDRESS": "Add your address and phone number.",
+          "WEBSITE": "Point your profile's website at your own site.",
+          "HOURS": "Add your opening hours.",
+          "BOOKING": "Add a booking link, as the businesses people also look at have.",
+          "SERVICES": "List your services with their prices.",
+          "PHOTOS": "Add photos: your rivals have more.",
+          "REPLIES": "Answer more of your reviews."
+        }
+      },
+      "localOffices": {
+        "noOffices": "No Google profile is linked as an office yet.",
+        "linkOffice": "Link your Google profiles as your offices.",
+        "offices": "Across your {a} offices you are in Google's map box for {b} of {countC, plural, one {# search} other {# searches}} checked.",
+        "furthestBehind": "{text} is furthest behind: in the map box for {a} of {b}.",
+        "mostToFix": "{text} has the most to put right: {count, plural, one {# detail} other {# details}}.",
+        "seeOffice": "Open {text}'s profile and see what it lacks.",
+        "fixOffice": "Put right {text}'s profile."
+      },
+      "localMaps": {
+        "noOffice": "No Google profile is linked as your office yet.",
+        "linkOffice": "Link your Google profile as your office.",
+        "notChecked": "Your searches have not been checked on the map yet: the next check does it.",
+        "inBox": "You are in Google's map box for {a} of the {countB, plural, one {# search} other {# searches}} checked.",
+        "belowBox": "You are below the box, or off the map, for {count, plural, one {# search} other {# searches}}, “{text}” the biggest.",
+        "topMost": "{text} tops the map most: first for {count, plural, one {# search} other {# searches}}.",
+        "upCheck": "That is {a} more in the box than the check before.",
+        "downCheck": "That is {a} fewer in the box than the check before.",
+        "seeSearch": "See who is above you for “{text}”, and what they have."
+      },
+      "localMapSearch": {
+        "notOnMap": "You are not among the businesses Google shows on the map for this search.",
+        "inBox": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on the map: in Google's map box.",
+        "belowBox": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on the map, below the box of three.",
+        "firstIs": "{text} is first.",
+        "moreReviews": "It has {a} Google reviews to your {b}.",
+        "morePhotos": "It has {a} photos to your {b}.",
+        "otherCategory": "Its main category is {more}, not yours.",
+        "seeFirst": "See what {text} has that you do not.",
+        "checkCategory": "Check whether {more} fits your business better as your main category."
+      },
+      "localMarket": {
+        "notRead": "Your local market has not been read yet: the next check does it.",
+        "businesses": "There are {a} businesses of your kind within {b} km.",
+        "outReview": "{count, plural, one {# of them has} other {# of them have}} more Google reviews than you.",
+        "mostReviews": "None of them has more Google reviews than you.",
+        "unwatched": "{count, plural, one {# business in your map box is} other {# businesses in your map box are}} not watched, {text} the strongest.",
+        "lookAt": "Look at {text}, and watch it as a rival."
+      },
+      "localActivity": {
+        "noRivals": "You do not watch a rival on Google Maps yet.",
+        "findRivals": "Find the businesses near you, and watch the ones that matter.",
+        "questionsWaiting": "{count, plural, one {# question waits} other {# questions wait}} for an answer on your profile: “{text}”.",
+        "posts": "Your rivals posted {a} times in 30 days; you posted {b}.",
+        "offers": "{count, plural, one {# offer is} other {# offers are}} running, “{text}” among them.",
+        "answerQuestion": "Answer “{text}” on your Google profile.",
+        "postMore": "Post on your Google profile each week: offers, news and work done."
+      },
+      "localListings": {
+        "notOwnSite": "Profiles are linked from your own website; here they are only shown.",
+        "off": "Local is not switched on for your company.",
+        "noOffice": "No Google profile is linked as your office yet: find yours below and mark it as yours.",
+        "linked": "{count, plural, one {# office} other {# offices}} and {countB, plural, one {# rival business} other {# rival businesses}} are linked.",
+        "onlyGoogle": "Only Google profiles are linked: reviews on other websites are not counted until you link them.",
+        "seeReviews": "See your reviews, and those waiting for an answer."
+      },
+      "reviews": {
+        "noProfile": "No Google profile is linked yet, so no reviews are read.",
+        "linkOffice": "Link your Google profile as your office.",
+        "waiting": "{count, plural, one {# review waits} other {# reviews wait}} for an answer, the oldest for {countB, plural, one {# day} other {# days}}.",
+        "allAnswered": "Every review has an answer.",
+        "newReviews": "You gained {a} reviews in the last 30 days, against {b} in the 30 days before.",
+        "noNewReviews": "No new review came in over the last 60 days.",
+        "daysToAnswer": "You answer in {count, plural, one {# day} other {# days}} on average.",
+        "answerWaiting": "Answer the {count, plural, one {review} other {# reviews}} waiting, the oldest first.",
+        "askForReviews": "Ask every client for a review: fewer came in this month than the month before."
+      },
+      "reviewsSay": {
+        "notRead": "Your reviews have not been read for what they say yet.",
+        "complaints": "Customers complain most about {text}: {count, plural, one {# review} other {# reviews}}.",
+        "praised": "Customers praise {text} most: {count, plural, one {# review} other {# reviews}}.",
+        "rivalsPraised": "Rivals are praised for {text} more than you: {count, plural, one {# review} other {# reviews}}.",
+        "draftsReady": "{count, plural, one {# reply is} other {# replies are}} drafted and ready to send.",
+        "readComplaints": "Read the reviews about {text}, and answer each one.",
+        "seeRival": "See how {text} is praised for {more}."
+      },
+      "reviewsRivals": {
+        "noProfile": "No Google profile is linked yet, so no reviews are read.",
+        "linkOffice": "Link your Google profile as your office.",
+        "lead": "You have the most Google reviews of the {a} businesses here.",
+        "place": "You come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {b} by Google reviews.",
+        "gap": "{text} leads by {a} reviews.",
+        "faster": "{text} answers reviews in {count, plural, one {# day} other {# days}}; you take {b}.",
+        "seeLeader": "See what {text} does that you do not.",
+        "answerFaster": "Answer each new review within a day."
+      },
+      "mentions": {
+        "none": "No page naming you has been found yet: the web is searched for your name at each check.",
+        "newPages": "{count, plural, one {# new page} other {# new pages}} named you in the last 30 days, of {b} found in all.",
+        "badly": "{count, plural, one {# of them speaks} other {# of them speak}} badly of you, the newest on {text}.",
+        "noLink": "{count, plural, one {# strong page names} other {# strong pages name}} you without a link, {text} the strongest.",
+        "reply": "Read what {text} says, and answer it where you can.",
+        "askForLink": "Ask {text} to link to you where it names you."
+      },
+      "mentionsRivals": {
+        "none": "No page naming you or a rival you watch has been found yet.",
+        "lead": "You have {a}% of the pages naming you and the rivals you watch, more than any of them.",
+        "behind": "You have {a}% of the pages naming you and the rivals you watch; {text} leads with {b}%.",
+        "upMonth": "{count, plural, one {That is # more page} other {That is # more pages}} than the month before.",
+        "downMonth": "{count, plural, one {That is # page fewer} other {That is # pages fewer}} than the month before.",
+        "seeLeader": "See where {text} is named and you are not.",
+        "getListed": "Get onto the websites that name your rivals and not you."
+      },
+      "mentionsListed": {
+        "none": "No place is known yet: they come from Google's AI answers and your rivals' links, from the next check.",
+        "everywhere": "You are already on all {a} places your rivals are on.",
+        "places": "Your rivals are on {a} of these {countB, plural, one {# place} other {# places}} and you are not.",
+        "mostRivals": "{text} has {a} of your rivals and not you.",
+        "strongest": "{text} is the strongest of them.",
+        "getOnto": "Get onto {text}."
+      },
+      "backlinks": {
+        "none": "No backlinks read yet: the next check reads them.",
+        "linkingWebsites": "{a} websites link to you, with {countB, plural, one {# link} other {# links}} in all.",
+        "up": "That is {a} more linking websites than at the start of these dates.",
+        "down": "That is {a} fewer linking websites than at the start of these dates.",
+        "steady": "As many websites link to you as at the start of these dates.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at pages of yours that no longer work.",
+        "seeNew": "See the links gained and lost, and who they came from.",
+        "seeLost": "See which websites stopped linking to you, and when.",
+        "fixBroken": "Put back or redirect the pages those links point at."
+      },
+      "backlinksCompared": {
+        "none": "No backlinks read yet for you and your rivals.",
+        "lead": "{a} websites link to you: more than to any rival you watch.",
+        "behind": "{a} websites link to you; {b} link to {text}, the leader.",
+        "strongerRank": "{text} is the strongest website by its links: {a} against your {b}.",
+        "getListed": "Get onto the websites that link to or quote your rivals and not you.",
+        "seeLeader": "See where {text} is named and you are not."
+      },
+      "backlinksQuality": {
+        "none": "No backlinks read yet: the next check reads them.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at pages of yours that no longer work; {countB, plural, one {# of your pages is} other {# of your pages are}} broken in all.",
+        "noBroken": "No link points at a page of yours that no longer works.",
+        "spam": "Your links' spam score is {a} of 100, where lower is better.",
+        "nofollow": "{a} of the {countB, plural, one {# website} other {# websites}} linking to you mark their links not to be followed.",
+        "fixBroken": "Put back or redirect the pages those links point at."
+      },
+      "backlinksWhere": {
+        "none": "No breakdown of your links is held yet.",
+        "largest": "{text} is the largest group: {a}% of your links, {b} in all.",
+        "second": "{text} comes next, with {a}%.",
+        "seeGroup": "See the links from {text}."
+      },
+      "backlinksAll": {
+        "none": "No backlinks read yet: the next check reads them.",
+        "noneMatch": "No link matches these filters.",
+        "links": "{count, plural, one {# link} other {# links}} listed, from {countB, plural, one {# website} other {# websites}}.",
+        "strongest": "The strongest comes from {text}, ranked {a}.",
+        "followed": "{a}% of them are followed by search engines.",
+        "lost": "{count, plural, one {# of them has} other {# of them have}} been lost.",
+        "visitStrongest": "See the link on {text}'s page.",
+        "seeLost": "See the {count, plural, one {lost link} other {# lost links}}, and ask for them back."
+      },
+      "backlinksDomains": {
+        "none": "No linking websites read yet: the next check reads them.",
+        "domains": "{a} websites link to you now, of {b} ever seen.",
+        "strongest": "The strongest is {text}, ranked {a}.",
+        "lost": "{count, plural, one {# website has} other {# websites have}} stopped linking, {text} the strongest.",
+        "new": "{count, plural, one {# is} other {# are}} new since the check before.",
+        "winBack": "Ask {text} to link to you again.",
+        "seeStrongest": "See every link from {text}."
+      },
+      "backlinksAnchors": {
+        "none": "No link words read yet: the next check reads them.",
+        "top": "The words used most are “{text}”: {count, plural, one {# link} other {# links}}.",
+        "brand": "{a}% of your links use your name or your address.",
+        "otherWords": "{a}% use other words, such as what you do.",
+        "seeAnchor": "See who links to you with “{text}”."
+      },
+      "backlinksIps": {
+        "none": "No servers read yet: the next check reads them.",
+        "spread": "The {a} websites linking to you sit on {countB, plural, one {# network} other {# networks}}.",
+        "crowded": "{text} hosts {a} of them: links from one network count for less.",
+        "oneEach": "No network hosts more than one of them.",
+        "seeNetwork": "See the websites on {text}.",
+        "checkDomains": "Check the websites linking to you for any you do not know."
+      },
+      "backlinksBroken": {
+        "none": "No link points at a page of yours that no longer works.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at {countB, plural, one {# page that no longer works} other {# pages that no longer work}}.",
+        "topPage": "{text} has the most: {count, plural, one {# link} other {# links}}.",
+        "strongest": "The strongest, from {text}, points at {more}.",
+        "putBack": "Put back {text}, or redirect it to the page that replaced it."
+      },
+      "backlinksNewLost": {
+        "none": "No link gained or lost in these dates.",
+        "gainedLost": "{a} websites started linking to you in these dates, and {b} stopped.",
+        "mostLost": {
+          "day": "Most were lost on {text}: {a}.",
+          "week": "Most were lost in the week of {text}: {a}.",
+          "month": "Most were lost in the month from {text}: {a}."
+        },
+        "mostGained": {
+          "day": "Most were gained on {text}: {a}.",
+          "week": "Most were gained in the week of {text}: {a}.",
+          "month": "Most were gained in the month from {text}: {a}."
+        },
+        "seeLostThen": {
+          "day": "See the links lost on {text}.",
+          "week": "See the links lost in the week of {text}.",
+          "month": "See the links lost in the month from {text}."
+        },
+        "seeGainedThen": {
+          "day": "See the links gained on {text}.",
+          "week": "See the links gained in the week of {text}.",
+          "month": "See the links gained in the month from {text}."
+        }
+      },
+      "backlinksDomain": {
+        "notHeld": "{text} is not among the websites linking to you on the newest check.",
+        "lost": "{text} no longer links to you.",
+        "links": "{text} links to you {count, plural, one {once} other {# times}}; {countB, plural, =0 {none of the links held is followed} one {# of the links held is followed} other {# of the links held are followed}}.",
+        "spam": "Its spam score is {a} of 100, where lower is better.",
+        "seeLink": "See its strongest link on its page.",
+        "askBack": "Ask {text} to put its link back.",
+        "linked": "It linked to you {count, plural, one {once} other {# times}}; {countB, plural, =0 {none of those links was followed} one {# of them was followed} other {# of them were followed}}."
+      },
+      "backlinksAnchor": {
+        "notHeld": "“{text}” is not among the words linking to you on the newest check.",
+        "links": "“{text}” links to you {count, plural, one {once} other {# times}}, from {countB, plural, one {# website} other {# websites}}.",
+        "page": "Most of these links point at {text}: {a}.",
+        "seeLink": "See its strongest link on its page."
+      },
+      "googleSearches": {
+        "noSearches": "You do not track a search on Google yet.",
+        "notChecked": "Your searches have not been checked on Google yet: the next check does it.",
+        "noMoves": "None of your searches moved since the check before.",
+        "moves": "Since the check before, {a} of your searches went up and {b} went down.",
+        "biggestFall": "“{text}” fell most: from {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "droppedOut": "“{text}” dropped out of the top 100, from {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "firstPage": "{a} of your {countB, plural, one {# search} other {# searches}} are on Google's first page.",
+        "seeFall": "See who passed you on “{text}”, and which page Google shows."
+      },
+      "googleFanOut": {
+        "none": "No fan-out query is tracked on Google yet.",
+        "pickSome": "Tick the fan-out queries worth tracking on Google every run.",
+        "notChecked": "Your {a} tracked fan-out queries have not been checked on Google yet.",
+        "tracked": "You rank on Google's first page for {b} of the {a} fan-out queries checked.",
+        "pageTwo": "{count, plural, one {# is} other {# are}} on page two, “{text}” the most repeated.",
+        "notRanking": "You do not rank in the top 100 for {a} of them.",
+        "pushUp": "Improve your page for “{text}” to move it onto page one."
+      },
+      "googleMoves": {
+        "noMoves": "No search moved at the newest check.",
+        "winsLosses": "At the newest check you gained or rose on {a} searches, and fell or lost {b}.",
+        "biggestLoss": "The biggest loss: “{text}”, now {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}, searched {countB, plural, one {once} other {# times}} a month.",
+        "biggestLost": "The biggest loss: “{text}”, gone from the top 100, searched {a} times a month.",
+        "biggestWin": "The biggest win: “{text}”, now {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}, searched {countB, plural, one {once} other {# times}} a month.",
+        "seeLoss": "See what moved on “{text}”: the page, and who passed you.",
+        "seeWin": "See what lifted “{text}”."
+      },
+      "googleAbove": {
+        "notChecked": "Your searches' Google pages have not been read yet.",
+        "aboveMost": "{text} is above you most often: on {a} of your {countB, plural, one {# search} other {# searches}}.",
+        "nobodyAbove": "Nobody ranks above you on your searches.",
+        "rivalsAbove": "A rival you watch is above you on {count, plural, one {# search} other {# searches}}.",
+        "youFirst": "You are first on {count, plural, one {# search} other {# searches}}.",
+        "seeWebsite": "See what {text} is quoted and linked for."
+      },
+      "googleFeatures": {
+        "notChecked": "Your searches' Google pages have not been read yet.",
+        "checked": "{a} of your searches were read for {countB, plural, one {# kind} other {# kinds}} of Google feature.",
+        "missed": "{text} shows on {b} of them, and leaves you out of {a}.",
+        "inAll": "Where a feature shows on your searches, you are in it.",
+        "missedToo": "{text} leaves you out of {a} too.",
+        "seeFeature": "See the searches where {text} leaves you out."
+      },
+      "googleFeature": {
+        "none": "None of your searches shows this feature.",
+        "inIt": "You are in it on {a} of the {countB, plural, one {# search} other {# searches}} that show it.",
+        "biggestOut": "The biggest search you are not in it on: “{text}”, searched {a} times a month.",
+        "seeSearch": "See what Google shows for “{text}”."
+      },
+      "googleQuestions": {
+        "none": "No question has been read from your searches' Google pages yet.",
+        "questions": "People ask {a} questions on {b} of your searches' Google pages.",
+        "mostCommon": "“{text}” comes up most: on {count, plural, one {# search} other {# searches}}.",
+        "answer": "Answer “{text}” on your page for “{more}”.",
+        "checkPages": "Check your pages answer the questions people ask."
+      },
+      "keywords": {
+        "none": "No ranked searches read yet: the next check reads them.",
+        "ranking": "You rank for {a} searches on Google, {b} of them on the first page.",
+        "mostVisits": "“{text}” brings the most visits: about {a} a month.",
+        "justOff": "{count, plural, one {# search sits} other {# searches sit}} just off page one, at 11 to 13, “{text}” the most searched.",
+        "pushUp": "Strengthen your page for “{text}” to lift it onto page one.",
+        "keepTop": "Keep “{text}” where it is: see who is close behind."
+      },
+      "keywordsPages": {
+        "none": "No ranking pages read yet: the next check reads them.",
+        "pages": "{count, plural, one {# page ranks} other {# pages rank}} on Google.",
+        "topPage": "{text} brings the most visits: {a}% of them.",
+        "offPageOne": "{count, plural, one {# page ranks} other {# pages rank}} only past page one, {text} for the most searches.",
+        "seeTop": "See the searches {text} ranks for.",
+        "lift": "Strengthen {text}: its searches are close to page one."
+      },
+      "keywordsBands": {
+        "none": "No ranked searches read yet: the next check reads them.",
+        "pageOne": "{a} of your {countB, plural, one {# search} other {# searches}} are on Google's first page.",
+        "movedOnOff": "At the newest check {a} moved onto page one and {b} fell off it.",
+        "closest": "{count, plural, one {# search is} other {# searches are}} at 11 to 13, closest to page one: “{text}” the most searched.",
+        "pushUp": "Strengthen your page for “{text}” to lift it onto page one.",
+        "seeOff": "See the {count, plural, one {search} other {# searches}} that fell off page one."
+      },
+      "keywordsBandsMoved": {
+        "none": "No search changed band at the newest check.",
+        "moved": "{a} searches moved up a band and {b} moved down.",
+        "biggestDrop": "The biggest drop: “{text}”, from {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "seeDrop": "See what changed on “{text}”."
+      },
+      "keywordsStructure": {
+        "none": "No folders read yet: the next check reads them.",
+        "folders": "Your ranking pages sit in {count, plural, one {# folder} other {# folders}}.",
+        "topFolder": "{text} brings the most visits: {a}% of them.",
+        "weakFolder": "{text} ranks for {a} searches but only {b} in the top three.",
+        "seeFolder": "See the pages in {text}."
+      },
+      "keywordRecord": {
+        "notRanking": "You do not rank in Google's top 100 for “{text}”.",
+        "moved": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google, from {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} at the check before.",
+        "position": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google.",
+        "above": "{text} leads the {count, plural, one {website} other {# websites}} above you.",
+        "pageChanged": "Google now shows {text} for it, in place of {more}.",
+        "seePage": "See {text}, the page Google shows.",
+        "seeAbove": "See what {text} is quoted and linked for."
+      },
+      "pageRecord": {
+        "notHeld": "Nothing is held about this page yet: it neither ranks nor was read by the site audit.",
+        "searches": "It ranks for {a} searches, {b} in the top three, “{text}” the biggest.",
+        "notRanking": "It does not rank on Google for any search.",
+        "problems": "The site audit found {count, plural, one {# problem} other {# problems}} on it: {text} first.",
+        "noProblems": "The site audit found no problem on it.",
+        "links": "{count, plural, =0 {No website links to it.} one {# link points to it.} other {# links point to it.}}",
+        "cited": "AI answers cited it {count, plural, one {once} other {# times}}.",
+        "fixProblem": "Fix it: {text}.",
+        "seeTopSearch": "See who ranks beside it for “{text}”."
+      },
+      "paid": {
+        "none": "No paid search read yet: the next check reads it.",
+        "notAdvertising": "It does not advertise on Google at the newest check.",
+        "advertising": "It advertises on {a} searches on Google, bringing about {countB, plural, one {# visit} other {# visits}} a month.",
+        "cost": "Those visits would cost about ${a} a month in adverts.",
+        "seeKeywords": "See which searches it pays for, and what each costs."
+      },
+      "paidKeywords": {
+        "none": "No paid search read: it does not advertise on Google at the newest check.",
+        "keywords": "It pays for {a} searches, worth about ${b} a month in clicks.",
+        "dearest": "“{text}” costs most: about ${a} a month.",
+        "mostVisits": "“{text}” brings the most paid visits: about {a} a month.",
+        "seeSearch": "See who ranks for “{text}” without paying."
+      },
+      "competitors": {
+        "noRivals": "You do not watch a competitor yet.",
+        "findRivals": "See the suggested competitors, and watch the ones that matter.",
+        "notCompared": "Your {a} competitors have not been compared with you on searches yet.",
+        "leadAll": "{count, plural, one {You lead the competitor you watch on the searches you share.} other {You lead all # competitors you watch on the searches you share.}}",
+        "leadOver": "You lead {a} of the {countB, plural, one {# competitor} other {# competitors}} you watch on the searches you share.",
+        "trailMost": "{text} beats you on {a} shared searches; you beat it on {b}.",
+        "seeRival": "See the searches {text} beats you on.",
+        "seeGap": "See the searches your competitors rank for and you do not."
+      },
+      "competitorsRival": {
+        "noneShared": "You share no search with this competitor at the newest check.",
+        "shared": "You both rank for {a} searches; it is ahead on {b}.",
+        "biggest": "The biggest: “{text}”, where it is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} and you are {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "aheadOnAll": "You are ahead on every search you share.",
+        "seeSearch": "See what Google shows for “{text}”.",
+        "seeGap": "See the searches it ranks for and you do not."
+      },
+      "competitorsOrganic": {
+        "none": "No website sharing your searches has been read yet.",
+        "sharing": "{count, plural, one {# website shares} other {# websites share}} your searches; {text} the most, on {b}.",
+        "unwatched": "{count, plural, one {# of them is} other {# of them are}} not watched, {text} sharing the most.",
+        "allWatched": "You watch every one of them.",
+        "lookAt": "Look at {text}, and watch it if it competes for your customers."
+      },
+      "competitorsGap": {
+        "none": "No gap: your competitors rank for no search you do not, or it has not been worked out yet.",
+        "gap": "Your competitors rank for {a} searches you do not.",
+        "biggest": "The biggest: “{text}”, searched {a} times a month.",
+        "everyRival": "All {countB} of your competitors rank for {a} of them.",
+        "seeSearch": "See who ranks for “{text}”, and plan a page for it."
+      },
+      "competitorsMap": {
+        "none": "Your market has not been read yet.",
+        "place": "You come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {b} by visits from Google.",
+        "justAbove": "{text} is just above you, with about {a} visits a month to your {b}.",
+        "top": "No website in your market gets more visits from Google.",
+        "lookAt": "See where {text} is named and you are not."
+      },
+      "competitorsSuggested": {
+        "none": "No competitor to suggest yet.",
+        "reasons": "{a} are named by AI answers beside you; {b} rank for your searches.",
+        "strongestAi": "{text} is named most: {count, plural, one {once} other {# times}}.",
+        "strongestSearch": "{text} shares the most searches with you: {a}.",
+        "lookAt": "See where {text} is quoted and you are not."
+      },
+      "overview": {
+        "none": "No figures in these dates yet: the next check fills them.",
+        "visitsUp": "Visits from Google rose by about {a} a month over these dates, to {b}.",
+        "visitsDown": "Visits from Google fell by about {a} a month over these dates, to {b}.",
+        "visitsSteady": "Visits from Google held at about {a} a month over these dates.",
+        "searchesUp": "You rank for {a} more searches, {b} in all.",
+        "searchesDown": "You rank for {a} fewer searches, {b} in all.",
+        "linksUp": "{a} more websites link to you.",
+        "linksDown": "{a} fewer websites link to you.",
+        "seeLosses": "See the searches you lost or fell on.",
+        "seeTopPages": "See the pages bringing your visits.",
+        "seeLostLinks": "See the websites that stopped linking to you."
+      },
+      "assets": {
+        "none": "Your assets have not been worked out yet: the next check does it.",
+        "stages": "{a} of your assets are working, {b} are seen but losing, and {c} are missing.",
+        "allWorking": "Every asset found is working.",
+        "mostAt": {
+          "NOT_THERE": "Most are lost by not being there at all: {a}.",
+          "NOT_SEEN": "Most are lost by not being seen: {a}.",
+          "SEEN_NOT_CHOSEN": "Most are lost after being seen, when people choose someone else: {a}."
+        },
+        "fix": {
+          "NOT_THERE": "Get onto {text} first.",
+          "NOT_SEEN": "Get {text} seen first.",
+          "SEEN_NOT_CHOSEN": "Make {text} the one people choose."
+        }
+      },
+      "yourPages": {
+        "notOwn": "Your pages is for your own websites: open one of them.",
+        "none": "Your pages have not been listed yet: the next check lists them.",
+        "pages": "{a} pages are known on your website; Google showed {b} of them in its results.",
+        "neverShown": "Google never showed {count, plural, one {# page} other {# pages}}.",
+        "notInSitemap": "{count, plural, one {# page is} other {# pages are}} missing from your sitemap.",
+        "notCrawled": "The site audit could not reach {count, plural, one {# page} other {# pages}}.",
+        "nothingMissing": "Every page is in your sitemap, reached, and shown by Google.",
+        "see": {
+          "neverShown": "See the {count, plural, one {page} other {# pages}} Google never showed, and link to them from your other pages.",
+          "notInSitemap": "Add the {count, plural, one {page} other {# pages}} missing from your sitemap.",
+          "notCrawled": "See the {count, plural, one {page} other {# pages}} the site audit could not reach."
+        }
+      },
+      "audit": {
+        "notCrawled": "Your website has not been crawled yet: the next site audit does it.",
+        "turnedAway": "The site audit read only {a} pages: the website turned it away.",
+        "crawled": "The site audit read {a} pages; their score is {b} of 100.",
+        "crawledNoScore": "The site audit read {a} pages.",
+        "worst": "The worst problem: {text}, on {count, plural, one {# page} other {# pages}}.",
+        "noProblems": "It found no problem.",
+        "errors": "{a} kinds of error were found in all.",
+        "fix": "Fix {text} first."
+      },
+      "auditProblem": {
+        "none": "No page has {text} at the newest site audit.",
+        "pages": "{text} is on {count, plural, one {# page} other {# pages}}.",
+        "brokenLinks": "They hold {count, plural, one {# broken link} other {# broken links}} in all.",
+        "fixFirst": "Start with {text}."
+      },
+      "websites": {
+        "none": "No website is held yet.",
+        "websites": "You hold {count, plural, one {# website} other {# websites}} of your own and watch {countB, plural, one {# competitor} other {# competitors}}.",
+        "mostDown": "{text} moved most at its newest check: down on {a} searches, up on {b}.",
+        "mostUp": "{text} rose on the most searches: {a}.",
+        "notChecked": "None has been checked yet.",
+        "open": "Open {text} and see what moved."
+      }
+    },
+    "keywordResearch.seen": {
+      "links": {
+        "openLookup": "Open the lookup",
+        "keywordIdeas": "Keyword ideas",
+        "googleResults": "Google's results",
+        "seeSearch": "See the search",
+        "visitPage": "Open the page"
+      },
+      "start": {
+        "start": "Look up a search to see how often it is searched, how hard it is, and who ranks for it.",
+        "lookups": "You have looked up {count, plural, one {# search} other {# searches}} and keep {countB, plural, =0 {no lists} one {# list} other {# lists}}.",
+        "bestChance": "Your best chance not yet on page one: “{text}”, searched {a} times a month, difficulty {b} of 100.",
+        "openLookup": "Open “{text}” and see who ranks for it."
+      },
+      "overview": {
+        "waiting": "This search is being read: the page fills in by itself.",
+        "none": "Nothing was found for this search.",
+        "volume": "It is searched {a} times a month; its difficulty is {b} of 100.",
+        "youDont": "{text} is not in Google's top 100 for it.",
+        "youRank": "{text} is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google for it.",
+        "youRankLow": "{text} is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google for it, past page one.",
+        "verdict": {
+          "WINNING": "You are already winning it: keep the page strong.",
+          "IMPROVE": "A page of yours ranks for it: improve that page.",
+          "NEW_PAGE": "It is worth a new page of its own.",
+          "TOO_HARD": "The top ten is too strong to join for now."
+        },
+        "top": "{text} is first, with about {a} visits a month.",
+        "seeIdeas": "See the ideas around it.",
+        "seeResults": "See who ranks on Google's first page."
+      },
+      "ideas": {
+        "none": "No ideas held yet.",
+        "ideas": "{count, plural, one {# idea} other {# ideas}} found.",
+        "ideasRanking": "{count, plural, one {# idea} other {# ideas}} found; your website ranks for {countB, plural, =0 {none of them} other {# of them}}.",
+        "best": "The best chance not yet on page one: “{text}”, searched {a} times a month, difficulty {b} of 100.",
+        "seeSearch": "See where you stand for “{text}”."
+      },
+      "results": {
+        "none": "Google's results have not been read yet.",
+        "top": "{text} is first, with about {a} visits a month.",
+        "youAt": "Your website is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "rivals": "{count, plural, one {# competitor you watch is} other {# competitors you watch are}} on the page.",
+        "seeTop": "See the page that ranks first on {text}."
+      },
+      "ai": {
+        "none": "The AI assistants have not been asked yet.",
+        "answered": "{count, plural, one {# assistant answered} other {# assistants answered}}.",
+        "named": "{count, plural, =0 {None of the {b} assistants that answered names your website.} other {# of the {b} assistants that answered name your website.}}",
+        "rivalMost": "{text} is the competitor named most: by {count, plural, one {# assistant} other {# assistants}}.",
+        "cited": "{count, plural, =0 {None of the {b} pages they cite is yours.} other {They cite # of your pages, of {b} cited in all.}}"
+      },
+      "list": {
+        "empty": "This list has no searches yet.",
+        "tracked": "{a} of its {countB, plural, one {# search} other {# searches}} are tracked on Google.",
+        "notRanked": "Your website does not rank for {count, plural, one {# of them} other {# of them}}, “{text}” the most searched.",
+        "allRanked": "Your website ranks for every one of them.",
+        "seeSearch": "See where you stand for “{text}”."
+      },
+      "competitor": {
+        "preparing": "{text}'s searches are being compared with yours: the page fills in by itself.",
+        "none": "{text} ranks for no search your website does not.",
+        "gap": "{text} ranks for {a} searches your website does not.",
+        "biggest": "The biggest: “{text}”, searched {a} times a month, where it is {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "seeSearch": "See where you stand for “{text}”."
+      }
+    },
+    "googleAnalytics.seen": {
+      "heroes": {
+        "mostInGoogle": "Google shows your pages {a} times a month, but only {bRate} of those showings become clicks, so most of the {cMoney} a month to gain is in Google's results, not on the pages.",
+        "mostOnPages": "Most of the {aMoney} a month to gain is on the pages themselves, once people arrive: {bMoney} of it.",
+        "nothingToGain": "No page has anything to fix this month: every one is clicked, converts and holds its visits as well as the website does.",
+        "heroes": "{count, plural, one {One page makes} other {# pages make}} {bMoney} of your {cMoney}.",
+        "noConsole": "Connect Search Console to see what happens in Google's results before people arrive.",
+        "pushTwo": "Push {text} and {more} onto page one: about {aMoney} a month.",
+        "pushOne": "Push {text} onto page one: about {aMoney} a month.",
+        "rewrite": "Rewrite the title and description of {text}: about {aMoney} a month.",
+        "nextStep": "Give {text} a next step: {a} visits and {countB, plural, =0 {no conversion} one {one conversion} other {# conversions}}.",
+        "answerSearch": "Make {text} answer what was searched: most of its {a} visits leave.",
+        "whyFell": "Find out why {text} fell, from {a} visits to {b}.",
+        "leaveHeroesTwo": "Leave {text} and {more} as they are: they make {aMoney} a month.",
+        "leaveHeroesOne": "Leave {text} as it is: it makes {aMoney} a month."
+      },
+      "landingPage": {
+        "makes": "{text} makes {aMoney} a month, {bRate} of the website's value.",
+        "makesNothing": "{text} brought {a} visits this month and no conversion yet.",
+        "noVisits": "No visit started on {text} this month.",
+        "noneFromGoogle": "Every one of its {a} conversions came from people who arrived without a search: its {b} visits from Google converted none.",
+        "inGoogle": "In Google it sits at position {a}, and was clicked {b} times in {c} showings.",
+        "conversionsFell": "Its conversions fell from {a} to {b}.",
+        "conversionsRose": "Its conversions rose from {a} to {b}.",
+        "fixPush": "Work on the searches it's shown for on page two: about {aMoney} a month.",
+        "fixClick": "Rewrite its title and description: about {aMoney} a month.",
+        "fixConvert": "Give it a next step to the service it supports: about {aMoney} a month.",
+        "fixLeave": "Make the page answer what was searched: about {aMoney} a month.",
+        "fixFall": "Check its place in Google and what changed on it: about {aMoney} a month.",
+        "whatChanged": "Check what changed on the page this month: {count, plural, one {one fewer conversion} other {# fewer conversions}}.",
+        "hero": "It's one of your heroes: change it only with a test."
+      },
+      "websites": {
+        "none": "None of your company's own websites is here yet. Add one in Visibility to see what Google Analytics counts on it.",
+        "noneConnected": "{count, plural, =1 {Your website isn't} other {None of your # websites is}} connected to Google Analytics yet, so nobody can say which pages bring in enquiries or sales.",
+        "notCounting": "{text} had {a} visits in the last 30 days, but nothing counts as a conversion there yet, so its pages can't be weighed by what they bring in.",
+        "made": "{text} made {aMoney} from {countB, plural, =1 {one conversion} other {# conversions}} in the last 30 days.",
+        "fellVisitsUp": "{text} made {aMoney} in the last 30 days, down from {bMoney}, although its visits rose {cRate}.",
+        "value": {
+          "down": "{text} made {aMoney} in the last 30 days, down from {bMoney}.",
+          "up": "{text} made {aMoney} in the last 30 days, up from {bMoney}.",
+          "same": "{text} made {aMoney} in the last 30 days, the same as the 30 days before."
+        },
+        "unknown": "{text}'s tracking needs fixing too: {aRate} of its visits can't be put to a channel or a landing page.",
+        "tracking": "{text}'s tracking needs a look: {count, plural, =1 {one} other {#}} of its {b} checks {count, plural, =1 {fails} other {fail}}.",
+        "notConnected": "{count, plural, =1 {One of your websites isn't} other {# of your websites aren't}} connected yet.",
+        "whereLost": "See where {text} lost its conversions.",
+        "open": "See what brought {text}'s conversions.",
+        "count": "Choose what counts as a conversion on {text}.",
+        "fixTracking": "Fix {text}'s tracking before trusting its page figures.",
+        "connect": "Connect {text} to Google Analytics."
+      },
+      "overview": {
+        "notCounting": "{a} visits came in these dates, but nothing counts as a conversion yet, so nobody can say which pages or channels make money.",
+        "made": "These dates brought {count, plural, =1 {one conversion} other {# conversions}}, worth {bMoney}.",
+        "lead": {
+          "down": {
+            "up": "Visits rose {aRate}, but conversions fell from {b} to {c}.",
+            "down": "Visits fell {aRate}, and conversions with them, from {b} to {c}.",
+            "same": "Visits held steady, but conversions fell from {b} to {c}."
+          },
+          "up": {
+            "up": "Visits rose {aRate}, and conversions with them, from {b} to {c}.",
+            "down": "Visits fell {aRate}, yet conversions rose from {b} to {c}.",
+            "same": "Visits held steady, and conversions rose from {b} to {c}."
+          },
+          "same": {
+            "up": "Visits rose {aRate}, but conversions stayed at {c}.",
+            "down": "Visits fell {aRate}, and conversions held at {c}.",
+            "same": "Visits and conversions held steady, at {c} conversions."
+          }
+        },
+        "cause": {
+          "fellBoth": "Most of the fall is in {text} visits ({count, plural, =1 {one fewer conversion} other {# fewer conversions}}) and on {more} ({countB} fewer).",
+          "fellChannel": "Most of the fall is in {text} visits: {count, plural, =1 {one fewer conversion} other {# fewer conversions}}.",
+          "fellPage": "Most of the fall is on {text}: {count, plural, =1 {one fewer conversion} other {# fewer conversions}}.",
+          "roseBoth": "Most of the rise is in {text} visits ({count, plural, =1 {one more conversion} other {# more conversions}}) and on {more} ({countB} more).",
+          "roseChannel": "Most of the rise is in {text} visits: {count, plural, =1 {one more conversion} other {# more conversions}}.",
+          "rosePage": "Most of the rise is on {text}: {count, plural, =1 {one more conversion} other {# more conversions}}."
+        },
+        "googleRarely": "Google showed your pages {a} times in the last 30 days, yet only {bRate} of those were clicked.",
+        "google": "Google showed your pages {a} times in the last 30 days, and {bRate} of those were clicked.",
+        "chooseWhatCounts": "Choose what counts as a conversion, and what each is worth.",
+        "channel": {
+          "fell": "Find out why {text} visits stopped converting: {count, plural, =1 {one conversion} other {# conversions}}, down from {b}.",
+          "rose": "See what made {text} visits convert more: {count, plural, =1 {one conversion} other {# conversions}}, up from {b}."
+        },
+        "page": {
+          "fell": "Check {text}: {count, plural, =1 {one conversion} other {# conversions}}, down from {b}.",
+          "rose": "See what's working on {text}: {count, plural, =1 {one conversion} other {# conversions}}, up from {b}."
+        },
+        "push": "Move your pages up Google's results, where they're shown but rarely clicked."
+      },
+      "channels": {
+        "none": "No visits in these dates.",
+        "lead": "{text} sends {a} of your {b} visits, and {cMoney} of their value.",
+        "leadVisits": "{text} sends the most visits: {a} of your {b}.",
+        "fell": "{text} visits converted less than before: {count, plural, =1 {once} other {# times}}, down from {b}.",
+        "rose": "{text} visits converted more than before: {count, plural, =1 {once} other {# times}}, up from {b}.",
+        "assistants": "AI assistants sent {a} visits, yet only {bRate} of those visitors stayed and none converted.",
+        "assistantsConverted": "AI assistants sent {a} visits: {bRate} of those visitors stayed, and {countC, plural, =1 {one converted} other {# converted}}.",
+        "whyFell": "Find out why {text} visits convert less: {count, plural, =1 {one conversion} other {# conversions}}, down from {b}.",
+        "assistantsStay": "Give AI assistants' visitors a reason to stay: {a} visits, {bRate} engaged.",
+        "unassigned": "Check the {a} Unassigned visits: Google Analytics can't tell where they came from."
+      },
+      "channel": {
+        "none": "No visits from {text} in these dates.",
+        "top": {
+          "up": "{text} sent the most visits: {a}, up from {b}.",
+          "down": "{text} sent the most visits: {a}, down from {b}.",
+          "same": "{text} sent the most visits: {a}, as many as before."
+        },
+        "topNew": "{text} sent the most visits: {a}, where it sent none before.",
+        "topOnly": "{text} sent the most visits: {a}.",
+        "leaveSooner": "These visitors leave quickly: only {aRate} stayed, against {bRate} of all visits to the website.",
+        "stayLonger": "These visitors stay: {aRate} engaged, against {bRate} of all visits to the website.",
+        "converted": "They converted {count, plural, =1 {once} other {# times}}, worth {bMoney}.",
+        "noneConverted": "None of them converted.",
+        "nextStep": "See which pages {text} sends people to, and give each one a clear next step.",
+        "checkAnswers": "Check what {text} says about your services, so the visitors it sends find what it promised."
+      },
+      "landing": {
+        "none": "No landing pages in these dates.",
+        "leakTop": "{text} brings the most visits, {a}, but no conversions.",
+        "leak": "{text} brings {a} visits but no conversions.",
+        "earners": "{text} and {more} make {aMoney} of your {bMoney}.",
+        "earner": "{text} makes {aMoney} of your {bMoney}.",
+        "notSet": "{a} visits, {bRate} of them, landed on a page Google Analytics couldn't name, so you can't tell where those people started.",
+        "noConversions": "None of these {a} visits converted yet.",
+        "groupLead": "Your {text} pages make {aMoney} of your {bMoney}.",
+        "groupsNoValue": "No page group made money in these dates.",
+        "unsorted": "{count, plural, =1 {One page isn't} other {# pages aren't}} in a page group yet, so {count, plural, =1 {its} other {their}} {b} visits don't add up with the rest.",
+        "device": {
+          "mobile": "Phones brought {a} of the {b} visits, and {countC, plural, =0 {no conversions} =1 {one conversion} other {# conversions}}.",
+          "desktop": "Computers brought {a} of the {b} visits, and {countC, plural, =0 {no conversions} =1 {one conversion} other {# conversions}}.",
+          "tablet": "Tablets brought {a} of the {b} visits, and {countC, plural, =0 {no conversions} =1 {one conversion} other {# conversions}}."
+        },
+        "allFrom": "{count, plural, =1 {It came} =2 {Both came} other {All # came}} from {text} ({bMoney}).",
+        "mostFrom": "The most came from {text}: {count, plural, =1 {one conversion} other {# conversions}}, worth {bMoney}.",
+        "engagesLess": "{text} is the most visited page here, with {a} visits, but only {bRate} of them engaged, against {cRate} on every device.",
+        "nextStep": "Give {text} a next step to the service it supports.",
+        "fixNotSet": "Fix the {a} visits that have no landing page.",
+        "seeUnsorted": "Put the {count, plural, =1 {unsorted page} other {# unsorted pages}} into page groups, so their figures add up with the rest.",
+        "readOn": {
+          "mobile": "Read {text} on a phone: its visitors there leave sooner than the rest.",
+          "desktop": "Read {text} on a computer: its visitors there leave sooner than the rest.",
+          "tablet": "Read {text} on a tablet: its visitors there leave sooner than the rest."
+        }
+      },
+      "allPages": {
+        "none": "No pages viewed in these dates.",
+        "notCounting": "{a} pages were viewed, but nothing counts as a conversion yet, so none can be weighed by what it brings in.",
+        "noConversions": "None of the {a} pages viewed made a conversion in these dates.",
+        "madeOn": "Your {count, plural, =1 {one conversion was} other {# conversions were}} made on {countB, plural, =1 {just one page} other {# pages}}.",
+        "best": "{text} made {count, plural, =1 {one} other {#}} of them, from {b} views.",
+        "idleMostViewed": "{text} is your most viewed page, with {a} views, and made none.",
+        "idle": "{text} has {a} views and made none.",
+        "copy": "Copy the next step that works on {text} onto {more}.",
+        "chooseWhatCounts": "Choose what counts as a conversion."
+      },
+      "conversions": {
+        "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",
+        "fired": "Your property does record {event}: it happened {count, plural, =1 {once} other {# times}} in the same dates.",
+        "tick": "Tick {event} and say what one is worth.",
+        "chooseWhatCounts": "Choose what counts as a conversion, and what each is worth.",
+        "noneHappened": "None of the {count, plural, =1 {kind} other {# kinds}} counted happened in these dates.",
+        "allOne": "{count, plural, =1 {The one conversion was} other {All # conversions were}} {event}.",
+        "topKind": "{event} made {a} of the {b} conversions.",
+        "silent": "{event} {count, plural, =1 {is counted too, but never happened} other {are counted too, but none happened}} in these dates, so either nobody uses {count, plural, =1 {it} other {them}} or Google Analytics isn't recording {count, plural, =1 {it} other {them}}.",
+        "rateDown": "The share of visits that convert fell from {aRate} to {bRate}.",
+        "rateUp": "The share of visits that convert rose from {aRate} to {bRate}.",
+        "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
+        "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
+      },
+      "trackingHealth": {
+        "allPassing": "All {a} checks pass: Google Analytics is counting this website properly.",
+        "failing": "{count, plural, =1 {One} other {#}} of the {b} checks {count, plural, =1 {needs} other {need}} a look.",
+        "check": {
+          "TRACKING_STOPPED": "A day went by with no visits after weeks of steady ones, so the tracking tag may have come off the website.",
+          "NOTHING_COUNTED": "Nothing counts as a conversion, so no page or channel can be weighed by what it brings in.",
+          "TOO_MUCH_UNKNOWN": "{aRate} of visits can't be put to a channel or a landing page, so their conversions can't be credited to anything.",
+          "SUDDEN_FALL": {
+            "visits": "Last week's visits were {aRate} under the four weeks before, which is usually tracking breaking rather than visitors leaving.",
+            "conversions": "Last week's conversions were {aRate} under the four weeks before, which is usually tracking breaking rather than visitors leaving."
+          },
+          "NO_VALUE": "{event} {countC, plural, =1 {has} other {have}} no value, so {countC, plural, =1 {its} other {their}} {b} conversions add nothing to Value.",
+          "PAYMENT_REFERRALS": "Payment pages show up as referrals, taking the credit for sales.",
+          "SELF_REFERRAL": "The website shows up as its own referral, splitting visits in two.",
+          "STRANGERS": "{b} visits were recorded on other addresses; they're left out of these figures."
+        },
+        "fix": {
+          "TRACKING_STOPPED": "Check the tracking tag is still on every page.",
+          "NOTHING_COUNTED": "Choose what counts as a conversion.",
+          "TOO_MUCH_UNKNOWN": "Make the tracking tag load before anything redirects, so every visit keeps its landing page.",
+          "SUDDEN_FALL": "Send your contact form yourself and check Google Analytics counts it.",
+          "NO_VALUE": "Say what each conversion is worth.",
+          "PAYMENT_REFERRALS": "Add the payment pages to Google Analytics' list of unwanted referrals.",
+          "SELF_REFERRAL": "Add the website's own address to Google Analytics' list of unwanted referrals.",
+          "STRANGERS": "Stop the other addresses sending to Google Analytics: take the tag off them, or give them a property of their own."
+        }
+      },
+      "connection": {
+        "collected": "{text} is connected and collected every day.",
+        "stopped": "Nothing new is coming in for {text}; the figures already collected stay.",
+        "nothingCounted": "Nothing counts as a conversion yet, so no page or channel can be weighed by what it brings in.",
+        "oneKindValued": "You count {event}, worth {aMoney} each.",
+        "oneKind": "You count {event} as a conversion.",
+        "kindsValued": "You count {a} kinds of conversion, each worth {bMoney}.",
+        "kinds": "You count {a} kinds of conversion.",
+        "noneHappened": "None of them happened in the last 30 days.",
+        "onlyHappened": "Only {event} happened in the last 30 days.",
+        "chooseWhatCounts": "Choose what counts as a conversion.",
+        "setMissing": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value.",
+        "setWorth": "Set what {event} is really worth: every money figure here rests on its {aMoney}.",
+        "checkSilent": "Check {event} {count, plural, =1 {is} other {are}} recorded: {count, plural, =1 {it never happens} other {they never happen}}."
+      },
+      "connect": {
+        "searchConsole": "Search Console shows Google sent {text} {a} clicks in the last 30 days, from {b} showings.",
+        "cantSay": "It can't say which of those visits became an enquiry or a sale, so nobody can yet say which pages make money and which only bring visits.",
+        "add": "Add Google Analytics: one sign-in, as Search Console is connected already."
+      },
+      "chooseEvents": {
+        "noKeyEvents": "The property has no key events yet, so nothing can count as a conversion. Mark the form sent, the call clicked or the purchase as a key event in Google Analytics first.",
+        "noneFired": "None of the property's {a} key events happened in the last 30 days.",
+        "onlyFired": "Of the property's {b} key events, only {event} happened in the last 30 days: {count, plural, =1 {once} other {# times}}.",
+        "fired": "{a} of the property's {b} key events happened in the last 30 days, {event} the most: {c} times.",
+        "purchaseSilent": "“Purchase” is ticked because on most websites it's a sale, but nothing was bought on {text} in the last 30 days.",
+        "silent": "{event} never happened, so {count, plural, =1 {its} other {their}} tracking may not work.",
+        "silentToo": "{event} never happened either, so {count, plural, =1 {its} other {their}} tracking may not work.",
+        "tick": "Tick {event} and say what one is worth.",
+        "tickUntickPurchase": "Tick {event} and say what one is worth; untick “Purchase”.",
+        "untickPurchase": "Untick “Purchase”: nothing is sold here.",
+        "checkSilent": "Tick {event} if {count, plural, =1 {it is an enquiry} other {they are enquiries}}, and have {count, plural, =1 {its} other {their}} tracking checked."
+      },
+      "links": {
+        "overview": "Overview",
+        "chooseWhatCounts": "Choose what counts",
+        "changeWhatCounts": "Change what counts",
+        "trackingHealth": "Tracking health",
+        "connection": "Connection",
+        "channels": "Channels",
+        "seePage": "See the page",
+        "theHeroes": "The heroes",
+        "itsSearches": "Its searches in Search Console",
+        "openPage": "Open the page",
+        "pagesToPush": "Pages to push",
+        "conversions": "Conversions",
+        "landingPages": "Landing pages",
+        "aiAssistants": "AI assistants",
+        "aiAnswers": "AI answers in Visibility",
+        "unsortedPages": "The unsorted pages",
+        "referrals": "Referral",
+        "addGoogleAnalytics": "Add Google Analytics"
+      }
+    },
+    "searchConsole.seen": {
+      "volatility": {
+        "noDays": "Volatility starts once Search Console has two complete days of figures for this website.",
+        "tooFew": "Fewer than 10 of your keywords had 10 impressions on {day1}, too few to judge.",
+        "updateMoved": "Google's {text} ran from {day1} to {day2}, and your positions moved {a}% more than usual while it did.",
+        "updateMovedALot": "Google's {text} ran from {day1} to {day2}, and your positions moved more than usual while it did.",
+        "updateRolling": "Google's {text} has been rolling out since {day1}, and your positions are moving {a}% more than usual.",
+        "updateRollingALot": "Google's {text} has been rolling out since {day1}, and your positions are moving more than usual.",
+        "clicksFellWithIt": "Your clicks fell {a}% in the last week, in step with it.",
+        "pointsToGoogle": "That points to Google reshuffling its results, not to a change on your site.",
+        "movedNoUpdate": "Your positions moved {a}% more than usual on {day1}, and Google has announced no update.",
+        "ownPagesFirst": "When only your keywords move, start with your own pages.",
+        "demand": "Fewer people searched this week: your impressions fell {a}% while your positions held.",
+        "isDemand": "That is demand, not Google and not your site.",
+        "calm": "Google is calm for your keywords: {a} out of 10 on {day1}, close to your usual {b}.",
+        "calmNoUsual": "Google is calm for your keywords: {a} out of 10 on {day1}.",
+        "clicksRoseCalm": "Your clicks rose {a}% this week; that is your pages or demand, not Google.",
+        "clicksFellCalm": "Your clicks fell {a}% this week; that is your pages or demand, not Google.",
+        "holdUntil": "Hold big changes to your pages until {day1}, while Google settles.",
+        "holdWhileRolling": "Hold big changes to your pages until the update finishes.",
+        "checkDropped": "Check the {count, plural, one {keyword} other {# keywords}} that dropped 5 places or more.",
+        "pagesIfNotBack": "If they haven't come back by {day1}, look at the pages they land on.",
+        "lookAtPages": "Look at the pages those keywords land on.",
+        "seeSearches": "See which keywords lost the searches.",
+        "seeWins": "See which keywords gained and lost clicks."
+      },
+      "updates": {
+        "noneInDates": "Google announced no update in these dates.",
+        "rolling": "Google's {text} has been rolling out since {day1}.",
+        "movingMore": "Your positions are moving {a}% more than usual.",
+        "holdWhileRolling": "Hold big changes to your pages until it finishes.",
+        "finished": "Google's {text} finished on {day1}.",
+        "movedMore": "Your positions moved {a}% more than usual while it ran: {b} out of 10, against {c} before it.",
+        "movedAsUsual": "Your positions moved as usual while it ran: {b} out of 10, against {c} before it.",
+        "clicksShowOn": "What it did to your clicks shows on {day1}, once 14 days have passed.",
+        "holdUntil": "Hold big changes to your pages until {day1}.",
+        "notKnown": "Google's {text} finished, but there are no days before it to compare.",
+        "raisedClicks": "Google's {text} raised your clicks by {a}%.",
+        "cutClicks": "Google's {text} cut your clicks by {a}%.",
+        "positionFromTo": "Your average position went from {a} to {b}.",
+        "seeLosses": "See the keywords that lost clicks."
+      },
+      "links": {
+        "seeUpdate": "See the update",
+        "seeKeywords": "See the keywords",
+        "seePages": "See your pages",
+        "seeWins": "See Wins and losses",
+        "seeVolatility": "See Volatility",
+        "seeAlmost": "See Almost there",
+        "seeLowCtr": "See Shown but not clicked",
+        "seeLosing": "See the keywords losing",
+        "keywordResearch": "Open Keyword research",
+        "seeDemand": "See Missed demand",
+        "connect": "Connect it"
+      },
+      "keywords": {
+        "noKeywords": "Google showed your website for no keywords in the last {c} days.",
+        "shown": "Google showed your website for {count, plural, one {one keyword} other {# keywords}} in the last {c} days, bringing {b} clicks.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did.",
+        "topThree": "{count, plural, =0 {None of them is} one {One of them is} other {# of them are}} in Google's top three.",
+        "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
+      },
+      "pages": {
+        "noPages": "Google showed none of your pages in the last {c} days.",
+        "shown": "{count, plural, one {One of your pages was} other {# of your pages were}} shown in Google in the last {c} days, bringing {b} clicks.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did.",
+        "seeLowCtr": "Look at the pages Google shows but people rarely click."
+      },
+      "bands": {
+        "bands": "In Google's top three: {a} keywords. Positions 4 to 10: {b}. Page two: {c}.",
+        "topMore": "That is {count, plural, one {one more} other {# more}} in the top three than the days before.",
+        "topFewer": "That is {count, plural, one {one fewer} other {# fewer}} in the top three than the days before.",
+        "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
+      },
+      "moves": {
+        "noMoves": "No keyword's clicks changed in the last {c} days.",
+        "gainingLosing": "{count, plural, one {One keyword} other {# keywords}} gained clicks and {countB, plural, one {one} other {#}} lost them in the last {c} days.",
+        "netUp": "Between them, clicks rose by {a}.",
+        "netDown": "Between them, clicks fell by {a}.",
+        "seeLosing": "Start with the keywords losing the most clicks.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "almost": {
+        "noneNear": "None of your keywords sits at positions 4 to 20 in these dates.",
+        "near": "{count, plural, one {One keyword sits} other {# keywords sit}} at positions 4 to 20, a short way from Google's first places.",
+        "nearVolume": "Between them they are searched {a} times a month.",
+        "improvePages": "Improve the page each one lands on, starting with the most searched."
+      },
+      "lowCtr": {
+        "noneLow": "Every page Google shows is clicked about as often as its position would bring.",
+        "lowCtr": "{count, plural, one {One page is} other {# pages are}} clicked less than your own click rate at their position would bring: {b} clicks where {c} were due.",
+        "rewriteTitles": "Rewrite their titles and descriptions in Google, the most shown first."
+      },
+      "demand": {
+        "noneMissed": "No keyword that many people search for is missing your website.",
+        "missed": "{count, plural, one {One keyword that many people search for barely shows} other {# keywords that many people search for barely show}} your website.",
+        "missedVolume": "Between them they are searched {a} times a month.",
+        "writeForDemand": "Write or improve a page for the most searched one."
+      },
+      "competing": {
+        "noneCompeting": "No keyword has two of your pages competing for it.",
+        "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
+        "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
+        "pickOne": "Choose one page for each keyword and link the others to it."
+      },
+      "estimates": {
+        "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
+        "estimatesOff": "{count, plural, one {One page’s} other {# pages’}} estimated visits are far from Google’s clicks: {b} too high and {c} too low."
+      },
+      "brand": {
+        "noBrandClicks": "There are no clicks to split into brand and non-brand in these dates.",
+        "brandShare": "{a}% of your clicks come from searches using your brand's name.",
+        "othersUp": "Clicks from people who did not search for you by name rose {a}%.",
+        "othersDown": "Clicks from people who did not search for you by name fell {a}%.",
+        "growOthers": "Grow the searches that don't name you: they are new customers."
+      },
+      "trackedKeywords": {
+        "noneKeywords": "You track no keywords on this website yet.",
+        "trackKeywords": "Tick the keywords that matter on Keywords, and they are watched every day.",
+        "trackedKeywords": "You track {count, plural, one {one keyword} other {# keywords}}; together they brought {b} clicks in the last {c} days.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "trackedPages": {
+        "nonePages": "You track no pages on this website yet.",
+        "trackPages": "Tick the pages that matter on Pages, and they are watched every day.",
+        "trackedPages": "You track {count, plural, one {one page} other {# pages}}; together they brought {b} clicks in the last {c} days.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "performance": {
+        "nothingShown": "Google did not show your website in the last {c} days.",
+        "performance": "Google showed your website {a} times in the last {c} days, and people clicked {b} times.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "checkGoogle": "See whether Google moved, or your pages did.",
+        "position": "Your average position was {a}.",
+        "seeWins": "See which keywords gained and lost clicks."
+      },
+      "newLost": {
+        "keywordsNewLost": "{count, plural, one {One keyword is} other {# keywords are}} new in the last {c} days, and {countB, plural, one {one was} other {# were}} lost.",
+        "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
+        "checkGoogle": "See whether Google moved, or your pages did."
+      },
+      "types": {
+        "noTypes": "There are no clicks to split by kind of page in these dates.",
+        "topType": "{text} bring the most clicks: {a}% of them."
+      },
+      "places": {
+        "noPlaces": "There are no clicks to split by country in these dates.",
+        "topCountry": "Most of your clicks come from {text}: {a}%.",
+        "mobileShare": "{a}% of them are on mobile."
+      },
+      "appearance": {
+        "noRichResults": "Google shows none of your pages with rich results in these dates.",
+        "richResults": "{count, plural, one {One kind of rich result shows} other {# kinds of rich result show}} your pages; {text} brings the most clicks."
+      },
+      "ctrCurve": {
+        "noFirst": "None of your pages showed at position 1 in these dates.",
+        "seeAlmost": "See the keywords closest to the first places.",
+        "firstAndThird": "At position 1 your pages are clicked {a}% of the times they are shown; at position 3, {b}%.",
+        "firstOnly": "At position 1 your pages are clicked {a}% of the times they are shown.",
+        "seeLowCtr": "Look at the pages Google shows but people rarely click."
+      },
+      "record": {
+        "notShown": "Google did not show “{text}” in the last {c} days.",
+        "recordFigures": "“{text}” brought {b} clicks in the last {c} days, at an average position of {a}.",
+        "clicksUp": "That is {a}% more clicks than the {c} days before.",
+        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "rose": "Its average position rose from {a} to {b}.",
+        "fell": "Its average position fell from {a} to {b}."
+      },
+      "websites": {
+        "noWebsites": "Your company has no websites of its own here yet.",
+        "connected": "{countB, plural, one {{count, plural, =0 {Search Console is not connected for your website yet.} other {Search Console is connected for your website.}}} other {Search Console is connected for {a} of your # websites.}}",
+        "topWebsite": "{text} brings the most clicks: {a}.",
+        "notConnected": "{text} has no Search Console yet, so its clicks cannot be seen here.",
+        "connect": "Connect Search Console for {text}.",
+        "oneWebsite": "{text} brought {a} clicks in the last 30 days."
+      }
+    }
+  },
+  "it": {
+    "sites.seen": {
+      "links": {
+        "visit": "Visitalo",
+        "seeQuestion": "Vedi la domanda",
+        "yourPages": "Le tue pagine",
+        "seeWebsite": "Vedi il sito",
+        "seePage": "Vedi la pagina",
+        "yourReviews": "Le tue recensioni",
+        "seeBusiness": "Vedi l'attività",
+        "whereToGetListed": "Dove farsi elencare",
+        "seeSearch": "Vedi la ricerca",
+        "seeAnswers": "Vedi le risposte",
+        "seeMentions": "Vedi le menzioni",
+        "readNotCited": "Lette ma non citate",
+        "sourcesCited": "Fonti citate",
+        "untrackedQueries": "Ricerche non seguite",
+        "yourListings": "Le tue schede",
+        "profileManager": "Apri il tuo profilo Google",
+        "mapRankings": "Posizioni sulla mappa",
+        "seeOffice": "Vedi la sede",
+        "seeMapSearch": "Vedi la ricerca sulla mappa",
+        "localMarket": "Mercato locale",
+        "waitingReviews": "Recensioni in attesa",
+        "againstRivals": "Contro i concorrenti",
+        "seeReviews": "Vedi le recensioni",
+        "visitPage": "Apri la pagina",
+        "newAndLost": "Link nuovi e persi",
+        "brokenBacklinks": "Backlink rotti",
+        "seeLinks": "Vedi i link",
+        "lostLinks": "Link persi",
+        "seeDomain": "Vedi il sito",
+        "seeAnchor": "Vedi le parole",
+        "seeNetwork": "Vedi la rete",
+        "referringDomains": "Domini di riferimento",
+        "fanOutQueries": "Query di fan-out",
+        "seeFeature": "Vedi la funzione",
+        "movedSearches": "Ricerche che si sono mosse",
+        "folderPages": "Vedi le pagine della cartella",
+        "seeProblem": "Vedi il problema",
+        "paidKeywords": "Parole chiave a pagamento",
+        "suggestedCompetitors": "Concorrenti suggeriti",
+        "seeRival": "Vedi il concorrente",
+        "contentGap": "Divario di contenuti",
+        "newAndLostKeywords": "Parole chiave nuove e perse",
+        "topPages": "Pagine principali",
+        "seeAsset": "Vedi la risorsa",
+        "seePages": "Vedi le pagine",
+        "openWebsite": "Apri il sito"
+      },
+      "website": {
+        "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
+        "onlyRivals": "L'IA di Google cita {text} {a} volte nelle risposte sul tuo tipo di lavoro, sempre accanto ai concorrenti e mai accanto a te.",
+        "mostlyRivals": "L'IA di Google cita {text} {a} volte nelle risposte sul tuo tipo di lavoro: {b} accanto ai concorrenti, {c} accanto a te.",
+        "besideYou": "L'IA di Google cita {text} {a} volte nelle risposte sul tuo tipo di lavoro, {c} accanto a te.",
+        "linksToRivals": "Rimanda a {count, plural, one {uno dei tuoi concorrenti} other {# dei tuoi concorrenti}} ({more}) e non a te.",
+        "namesYou": "{count, plural, one {Una delle sue pagine ti nomina.} other {# delle sue pagine ti nominano.}}",
+        "notOnIt": "Nulla su questo sito ti nomina ancora.",
+        "getListed": "Fatti elencare su {text}.",
+        "getMentioned": "Fai scrivere di te su {text}: è citato accanto ai concorrenti.",
+        "makeVideo": "Pubblica su {text} un breve video che risponda alle domande per cui è citato.",
+        "joinForum": "Rispondi alle domande che le persone fanno su {text}, come attività.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo sito."
+      },
+      "question": {
+        "notFound": "Brand radar non legge più questa domanda per te o per i concorrenti.",
+        "namesYou": "L'IA di Google risponde a questa domanda circa {a} volte al mese e ti nomina {b}°.",
+        "namesOther": "L'IA di Google risponde a questa domanda circa {a} volte al mese e nomina per prima {text}; non nomina te.",
+        "namesNone": "L'IA di Google risponde a questa domanda circa {a} volte al mese senza nominare te o i concorrenti che segui.",
+        "yourPage": "Cita la tua pagina {text}.",
+        "noPage": "Nessuna delle tue pagine è citata.",
+        "rivalPages": "{count, plural, one {Cita una pagina dei tuoi concorrenti, {text}.} other {Cita # pagine dei tuoi concorrenti, tra cui {text}.}}",
+        "answerOnPage": "Rispondi nelle prime righe di una pagina del tuo sito.",
+        "getListedOn": "Fatti elencare su {text}, che viene citato."
+      },
+      "aiPage": {
+        "notRead": "ChatGPT non ha aperto questa pagina rispondendo alle tue domande.",
+        "readNeverCited": "ChatGPT ha aperto questa pagina {count, plural, one {una volta} other {# volte}} rispondendo alle tue domande e non l'ha mai citata.",
+        "readCitedSome": "ChatGPT ha aperto questa pagina {count, plural, one {una volta} other {# volte}} rispondendo alle tue domande e l'ha citata {b} di quelle volte.",
+        "alwaysCited": "ChatGPT ha aperto questa pagina {count, plural, one {una volta} other {# volte}} rispondendo alle tue domande e l'ha citata ogni volta.",
+        "citedInstead": "Quando l'ha esclusa, ha citato al suo posto {text}, {count, plural, one {una volta} other {# volte}}.",
+        "googleQuotes": "L'IA di Google la cita per {count, plural, one {una domanda} other {# domande}} lette da Brand radar.",
+        "firstLines": "Rispondi alla domanda nelle prime righe di questa pagina: chi aiuti, quanto costa e cosa dicono i clienti.",
+        "answerBetter": "Rispondi meglio alle stesse domande su una tua pagina.",
+        "getListedOn": "Fatti elencare su {text}, citato al suo posto."
+      },
+      "business": {
+        "aheadInAi": "L'IA di Google nomina {text} in {a} risposte al mese, contro le tue {b}.",
+        "behindInAi": "L'IA di Google nomina {text} in {a} risposte al mese; tu sei nominato in {b}.",
+        "biggestLead": "Il suo vantaggio maggiore è “{text}”, posta {a} volte al mese, dove tu non sei nominato.",
+        "chatgptAhead": "ChatGPT la mostra in {a} delle risposte alle tue {countC, plural, one {# domanda} other {# domande}}, e te in {b}.",
+        "answersFaster": "Risponde alle recensioni in {count, plural, one {# giorno} other {# giorni}} in media; tu ne impieghi {b}.",
+        "nothingKnown": "Non si sa ancora nulla di {text}: non è un concorrente che segui e non è su Google Maps vicino al tuo ufficio.",
+        "notWatched": "{text} non è tra i concorrenti che segui, quindi si conosce solo ciò che ne mostrano Google Maps e ChatGPT.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo sito.",
+        "getListedOn": "Fatti elencare su {text}, che l'IA di Google cita accanto a lei.",
+        "answerReviews": "Rispondi a ogni nuova recensione entro un giorno e chiedine una a ogni cliente.",
+        "moreReviews": "Su Google ha {a} recensioni contro le tue {b}.",
+        "mapOnly": "{text} è un concorrente che segui su Google Maps; il suo sito non è tra i concorrenti che monitori, quindi le risposte IA di Google e il web non vengono letti per lei.",
+        "askForReviews": "Chiedi a ogni cliente una recensione su Google: è avanti di {count, plural, one {# recensione} other {# recensioni}}."
+      },
+      "radarOverview": {
+        "noReading": "Ancora nessuna lettura: Brand radar legge le risposte dell'IA di Google una volta al mese, dal prossimo controllo.",
+        "behindLeader": "L'IA di Google ti nomina in {a} risposte questo mese: il {b}% della quota di voce, contro il {c}% di {text}, in testa.",
+        "youLead": "L'IA di Google ti nomina in {a} risposte questo mese: il {b}% della quota di voce, più di qualsiasi concorrente che segui.",
+        "upMonth": "Sono {a} in più del mese prima.",
+        "downMonth": "Sono {a} in meno del mese prima.",
+        "missingQuestion": "Per “{text}”, chiesta {a} volte al mese, vengono nominati i concorrenti e non tu.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo sito.",
+        "seeLeader": "Guarda per quali domande viene nominato {text} e tu no."
+      },
+      "radarSources": {
+        "noReading": "Ancora nessuna lettura: Brand radar legge le risposte dell'IA di Google una volta al mese, dal prossimo controllo.",
+        "websitesQuoted": "L'IA di Google cita {a} siti in queste risposte; {b} compaiono in risposte che ti nominano.",
+        "placesMissing": "{count, plural, one {# sito citato accanto ai tuoi concorrenti non compare} other {# siti citati accanto ai tuoi concorrenti non compaiono}} mai accanto a te, {text} più spesso.",
+        "ownPages": "Il tuo sito è citato {count, plural, one {una volta} other {# volte}}.",
+        "ownPagesNone": "Nessuna di queste risposte cita una pagina del tuo sito.",
+        "getOnto": "Fatti elencare su {text}: l'IA di Google lo cita accanto ai tuoi concorrenti e mai accanto a te.",
+        "workThrough": "Passa in rassegna gli altri posti dove sono elencati i tuoi concorrenti e tu no."
+      },
+      "overviewGaps": {
+        "noChecks": "Nessuna ricerca è ancora stata controllata per una AI Overview.",
+        "overviews": "{a} delle {countB, plural, one {# ricerca} other {# ricerche}} controllate mostrano una AI Overview; {c} di queste ti citano.",
+        "gaps": "Sei in prima pagina per {count, plural, one {# ricerca} other {# ricerche}} la cui overview ti lascia fuori, chieste {countB, plural, one {una volta} other {# volte}} al mese.",
+        "noGaps": "Ogni overview su una ricerca in cui sei in prima pagina ti cita.",
+        "quotedUp": "{count, plural, one {# overview in più ti cita} other {# overview in più ti citano}} rispetto a un mese prima.",
+        "quotedDown": "{count, plural, one {# overview in meno ti cita} other {# overview in meno ti citano}} rispetto a un mese prima.",
+        "fixGap": "Fai rispondere la tua pagina per “{text}” nelle prime righe, così l'overview può citarla."
+      },
+      "aiMentions": {
+        "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
+        "notNamed": "Nessun assistente ti nomina per {a} delle tue {countB, plural, one {# domanda} other {# domande}}, tra cui “{text}”.",
+        "allNamed": "{count, plural, one {Almeno un assistente ti nomina per la tua domanda.} other {Almeno un assistente ti nomina per ognuna delle tue # domande.}}",
+        "leastEngine": "{engine} ti nomina meno di tutti: per {a} delle {countB, plural, one {# domanda} other {# domande}} a cui ha risposto.",
+        "warned": "{engine} ha sconsigliato la tua attività nella sua risposta più recente a “{text}”.",
+        "seeAnswers": "Leggi cosa dicono gli assistenti per “{text}” e chi nominano al tuo posto.",
+        "readWarning": "Leggi l'avvertimento di {engine} e rispondi sul tuo sito e sui tuoi profili."
+      },
+      "aiShare": {
+        "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
+        "noneNamed": "Nessuna risposta nomina ancora te o un concorrente che segui.",
+        "youLead": "Hai il {a}% delle menzioni tra gli assistenti IA, più di qualsiasi concorrente che segui.",
+        "behindLeader": "Hai il {a}% delle menzioni tra gli assistenti IA; {text} è in testa con il {b}%.",
+        "weakestEngine": "{engine} ti nomina meno di tutti: il {a}% delle sue menzioni.",
+        "seeLeader": "Guarda dove viene nominato {text} e tu no.",
+        "seeEngine": "Guarda le domande a cui {engine} risponde senza di te."
+      },
+      "aiAnswers": {
+        "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
+        "namedIn": "Della risposta più recente di ogni assistente a ognuna delle tue domande, {a} su {b} ti nominano.",
+        "dropped": "{count, plural, one {# risposta ti ha tolto} other {# risposte ti hanno tolto}} dopo averti nominato in passato; la più recente, {engine} su “{text}”.",
+        "recommended": "{count, plural, one {# ti consiglia} other {# ti consigliano}} apertamente.",
+        "readDropped": "Leggi la risposta più recente di {engine} a “{text}” e guarda chi nomina al tuo posto."
+      },
+      "aiAnswer": {
+        "first": "Tra i siti che segui, ti nomina per primo.",
+        "place": "Tra i {countB, plural, one {# sito} other {# siti}} che segui e che nomina, sei al {count}º posto.",
+        "leftOut": "Nomina {count, plural, one {# sito} other {# siti}} che segui, e non te.",
+        "noneNamed": "Non nomina nessuno dei siti che segui, compreso il tuo.",
+        "firstShown": "La prima attività che mostra è {text}.",
+        "moreReviews": "{text} ha {a} recensioni Google contro le tue {b}.",
+        "higherRating": "{text} ha una valutazione Google di {a} contro la tua di {b}.",
+        "readNotCited": "Ha letto {count, plural, one {# delle tue pagine senza citarla} other {# delle tue pagine senza citarle}}.",
+        "seeFirst": "Guarda cosa ha {text} che a te manca.",
+        "fixPage": "Fai rispondere {text} alla domanda nelle prime righe."
+      },
+      "aiSources": {
+        "noneCited": "Nessuna risposta IA alle tue domande rimanda ancora a una tua pagina.",
+        "seeRead": "Guarda le tue pagine che gli assistenti hanno letto ma non citato.",
+        "cited": "Le risposte IA rimandano a {count, plural, one {# delle tue pagine} other {# delle tue pagine}}.",
+        "mostCited": "{text} è la più citata: {count, plural, one {una volta} other {# volte}}.",
+        "stale": "{count, plural, one {# pagina non è citata} other {# pagine non sono citate}} da un mese, tra cui {text}.",
+        "refresh": "Aggiorna {text}: le risposte IA la citavano e ora non più.",
+        "buildOn": "Punta su {text}: collegala dalle tue altre pagine sullo stesso argomento."
+      },
+      "aiSearched": {
+        "notBuilt": "Ancora nessuna query di fan-out: il prossimo controllo registra le ricerche fatte dagli assistenti.",
+        "noQueries": "Gli assistenti non hanno ancora fatto ricerche per queste domande.",
+        "competitor": "Gli assistenti hanno fatto {a} ricerche per rispondere alle domande di questo sito, “{text}” più spesso.",
+        "untracked": "Non segui {a} delle {countB, plural, one {# ricerca} other {# ricerche}} fatte dagli assistenti, “{text}” la più ripetuta.",
+        "noneTracked": "Non segui nessuna delle {count, plural, one {# ricerca} other {# ricerche}} fatte dagli assistenti; “{text}” è la più ripetuta.",
+        "allTracked": "{count, plural, one {Segui l'unica ricerca fatta dagli assistenti.} other {Segui tutte le # ricerche fatte dagli assistenti.}}",
+        "noPage": "Nessuna tua pagina risponde a {a} di esse.",
+        "firstPage": "Sei nella prima pagina di Google per {a} delle {b}.",
+        "track": "Spunta “{text}” per seguirla su Google a ogni esecuzione.",
+        "writePage": "Scrivi una pagina che risponda a “{text}”."
+      },
+      "aiBusinesses": {
+        "noAnswers": "Ancora nessuna risposta letta dall'app di ChatGPT: le tue domande vengono poste al prossimo controllo.",
+        "showing": "L'app di ChatGPT ha mostrato attività in {a} delle risposte alle tue {countB, plural, one {# domanda} other {# domande}}; {countC, plural, =0 {te in nessuna} other {te in #}}.",
+        "shownMost": "Mostra più spesso {text}: in {count, plural, one {# risposta} other {# risposte}}.",
+        "skipped": "Sei nel riquadro mappa di Google per {count, plural, one {# ricerca} other {# ricerche}} in cui ti lascia fuori.",
+        "upCheck": "Sono {a} in più del controllo prima.",
+        "downCheck": "Sono {a} in meno del controllo prima.",
+        "seeShownMost": "Guarda cosa ha {text} che a te manca.",
+        "askReviews": "Chiedi a ogni cliente una recensione Google: l'attività mostrata di più ne ha più di te."
+      },
+      "aiRead": {
+        "nothingRead": "L'app di ChatGPT non ha ancora aperto una pagina per le tue domande.",
+        "noneRead": "L'app di ChatGPT ha letto altri siti per le tue domande, e nessuna tua pagina.",
+        "seeCited": "Guarda le tue pagine a cui le risposte IA rimandano.",
+        "winRate": "Le tue pagine sono citate nel {a}% delle risposte che le leggono; quelle dei concorrenti nel {b}%.",
+        "winRateAlone": "Le tue pagine sono citate nel {a}% delle risposte che le leggono.",
+        "readMost": "{text} è stata letta {count, plural, one {una volta} other {# volte}} e citata in {b} di quelle risposte.",
+        "beatsYou": "{text} viene citato al tuo posto più spesso: in {count, plural, one {# risposta} other {# risposte}} che hanno letto la tua pagina.",
+        "fixFirstLines": "Fai rispondere {text} alla domanda nelle prime righe.",
+        "seeWinner": "Guarda dove viene citato {text} e tu no."
+      },
+      "aiDemand": {
+        "notYet": "Ancora nessun dato IA: viene letto al prossimo controllo mensile.",
+        "aiAgainstGoogle": "Le tue ricerche vengono chieste all'IA circa {a} volte al mese, contro {countB, plural, one {# ricerca} other {# ricerche}} su Google.",
+        "yearUp": "Le richieste all'IA sono salite del {a}% in un anno.",
+        "yearDown": "Le richieste all'IA sono scese del {a}% in un anno.",
+        "rising": "{count, plural, one {# ricerca è} other {# ricerche sono}} in crescita nell'IA, “{text}” la più chiesta.",
+        "mostAsked": "“{text}” è la più chiesta all'IA: {a} volte al mese.",
+        "answerOnPage": "Rispondi chiaramente a “{text}” in una delle tue pagine.",
+        "checkPages": "Controlla che le tue pagine rispondano alle ricerche che ora si fanno all'IA."
+      },
+      "localProfile": {
+        "noOffice": "Nessun profilo Google è ancora collegato come tua sede.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "mapBox": "Sei nel riquadro mappa di Google per {a} delle {countB, plural, one {# ricerca} other {# ricerche}} controllate.",
+        "mapNotChecked": "Le tue ricerche non sono ancora state controllate sulla mappa da questa sede.",
+        "ratingBehind": "La tua valutazione è {a}, contro {b} dei tuoi concorrenti.",
+        "ratingAhead": "La tua valutazione di {a} è sopra il {b} dei tuoi concorrenti.",
+        "toFix": "{count, plural, one {# dettaglio del tuo profilo va sistemato} other {# dettagli del tuo profilo vanno sistemati}}.",
+        "nothingToFix": "Ogni dettaglio del tuo profilo è in ordine.",
+        "seeMap": "Guarda le ricerche in cui non sei nel riquadro mappa.",
+        "fix": {
+          "CLAIMED": "Rivendica il tuo profilo Google, così puoi rispondere alle recensioni e tenerlo aggiornato.",
+          "CATEGORY": "Cambia la categoria principale in quella usata dai primi tre sulla mappa.",
+          "OTHER_CATEGORIES": "Aggiungi le altre categorie che copre la tua attività.",
+          "DESCRIPTION": "Scrivi una descrizione di cosa fai e dove.",
+          "ADDRESS": "Aggiungi indirizzo e numero di telefono.",
+          "WEBSITE": "Fai puntare il sito del profilo al tuo sito.",
+          "HOURS": "Aggiungi gli orari di apertura.",
+          "BOOKING": "Aggiungi un link per prenotare, come le attività che le persone guardano anche.",
+          "SERVICES": "Elenca i tuoi servizi con i prezzi.",
+          "PHOTOS": "Aggiungi foto: i tuoi concorrenti ne hanno di più.",
+          "REPLIES": "Rispondi a più recensioni."
+        }
+      },
+      "localOffices": {
+        "noOffices": "Nessun profilo Google è ancora collegato come sede.",
+        "linkOffice": "Collega i tuoi profili Google come tue sedi.",
+        "offices": "Nelle tue {a} sedi sei nel riquadro mappa di Google per {b} delle {countC, plural, one {# ricerca} other {# ricerche}} controllate.",
+        "furthestBehind": "{text} è la più indietro: nel riquadro mappa per {a} su {b}.",
+        "mostToFix": "{text} ha più cose da sistemare: {count, plural, one {# dettaglio} other {# dettagli}}.",
+        "seeOffice": "Apri il profilo di {text} e guarda cosa gli manca.",
+        "fixOffice": "Sistema il profilo di {text}."
+      },
+      "localMaps": {
+        "noOffice": "Nessun profilo Google è ancora collegato come tua sede.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "notChecked": "Le tue ricerche non sono ancora state controllate sulla mappa: lo fa il prossimo controllo.",
+        "inBox": "Sei nel riquadro mappa di Google per {a} delle {countB, plural, one {# ricerca} other {# ricerche}} controllate.",
+        "belowBox": "Sei sotto il riquadro, o fuori dalla mappa, per {count, plural, one {# ricerca} other {# ricerche}}, “{text}” la più grande.",
+        "topMost": "{text} è primo sulla mappa più spesso: per {count, plural, one {# ricerca} other {# ricerche}}.",
+        "upCheck": "Sono {a} in più nel riquadro rispetto al controllo prima.",
+        "downCheck": "Sono {a} in meno nel riquadro rispetto al controllo prima.",
+        "seeSearch": "Guarda chi è sopra di te per “{text}” e cosa ha."
+      },
+      "localMapSearch": {
+        "notOnMap": "Non sei tra le attività che Google mostra sulla mappa per questa ricerca.",
+        "inBox": "Sei {count}º sulla mappa: nel riquadro mappa di Google.",
+        "belowBox": "Sei {count}º sulla mappa, sotto il riquadro dei primi tre.",
+        "firstIs": "{text} è primo.",
+        "moreReviews": "Ha {a} recensioni Google contro le tue {b}.",
+        "morePhotos": "Ha {a} foto contro le tue {b}.",
+        "otherCategory": "La sua categoria principale è {more}, non la tua.",
+        "seeFirst": "Guarda cosa ha {text} che a te manca.",
+        "checkCategory": "Valuta se {more} descrive meglio la tua attività come categoria principale."
+      },
+      "localMarket": {
+        "notRead": "Il tuo mercato locale non è ancora stato letto: lo fa il prossimo controllo.",
+        "businesses": "Ci sono {a} attività come la tua entro {b} km.",
+        "outReview": "{count, plural, one {# di esse ha} other {# di esse hanno}} più recensioni Google di te.",
+        "mostReviews": "Nessuna ha più recensioni Google di te.",
+        "unwatched": "{count, plural, one {# attività nel tuo riquadro mappa non è seguita} other {# attività nel tuo riquadro mappa non sono seguite}}, {text} la più forte.",
+        "lookAt": "Guarda {text} e seguila come concorrente."
+      },
+      "localActivity": {
+        "noRivals": "Non segui ancora un concorrente su Google Maps.",
+        "findRivals": "Trova le attività vicino a te e segui quelle che contano.",
+        "questionsWaiting": "{count, plural, one {# domanda attende} other {# domande attendono}} una risposta sul tuo profilo: “{text}”.",
+        "posts": "I tuoi concorrenti hanno pubblicato {a} volte in 30 giorni; tu {b}.",
+        "offers": "{count, plural, one {# offerta è attiva} other {# offerte sono attive}}, tra cui “{text}”.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo profilo Google.",
+        "postMore": "Pubblica sul tuo profilo Google ogni settimana: offerte, novità e lavori fatti."
+      },
+      "localListings": {
+        "notOwnSite": "I profili si collegano dal tuo sito; qui vengono solo mostrati.",
+        "off": "Local non è attivo per la tua azienda.",
+        "noOffice": "Nessun profilo Google è ancora collegato come tua sede: trova il tuo qui sotto e segnalo come tuo.",
+        "linked": "{count, plural, one {# sede} other {# sedi}} e {countB, plural, one {# attività concorrente} other {# attività concorrenti}} collegate.",
+        "onlyGoogle": "Sono collegati solo profili Google: le recensioni su altri siti non contano finché non li colleghi.",
+        "seeReviews": "Guarda le tue recensioni e quelle in attesa di risposta."
+      },
+      "reviews": {
+        "noProfile": "Nessun profilo Google è ancora collegato, quindi non si leggono recensioni.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "waiting": "{count, plural, one {# recensione attende} other {# recensioni attendono}} una risposta, la più vecchia da {countB, plural, one {# giorno} other {# giorni}}.",
+        "allAnswered": "Ogni recensione ha una risposta.",
+        "newReviews": "Hai ricevuto {a} recensioni negli ultimi 30 giorni, contro {b} nei 30 giorni prima.",
+        "noNewReviews": "Nessuna nuova recensione negli ultimi 60 giorni.",
+        "daysToAnswer": "Rispondi in media in {count, plural, one {# giorno} other {# giorni}}.",
+        "answerWaiting": "Rispondi {count, plural, one {alla recensione in attesa} other {alle # recensioni in attesa}}, dalla più vecchia.",
+        "askForReviews": "Chiedi una recensione a ogni cliente: questo mese ne sono arrivate meno del mese prima."
+      },
+      "reviewsSay": {
+        "notRead": "Le tue recensioni non sono ancora state lette per quello che dicono.",
+        "complaints": "I clienti si lamentano soprattutto di {text}: {count, plural, one {# recensione} other {# recensioni}}.",
+        "praised": "I clienti lodano soprattutto {text}: {count, plural, one {# recensione} other {# recensioni}}.",
+        "rivalsPraised": "I concorrenti sono lodati per {text} più di te: {count, plural, one {# recensione} other {# recensioni}}.",
+        "draftsReady": "{count, plural, one {# risposta è pronta} other {# risposte sono pronte}} da inviare.",
+        "readComplaints": "Leggi le recensioni su {text} e rispondi a ciascuna.",
+        "seeRival": "Guarda come {text} viene lodato per {more}."
+      },
+      "reviewsRivals": {
+        "noProfile": "Nessun profilo Google è ancora collegato, quindi non si leggono recensioni.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "lead": "Hai più recensioni Google delle {a} attività qui.",
+        "place": "Sei {count}º su {b} per recensioni Google.",
+        "gap": "{text} è in testa di {a} recensioni.",
+        "faster": "{text} risponde alle recensioni in {count, plural, one {# giorno} other {# giorni}}; tu in {b}.",
+        "seeLeader": "Guarda cosa fa {text} che tu non fai.",
+        "answerFaster": "Rispondi a ogni nuova recensione entro un giorno."
+      },
+      "mentions": {
+        "none": "Non è ancora stata trovata una pagina che ti nomina: il web viene cercato per il tuo nome a ogni controllo.",
+        "newPages": "{count, plural, one {# nuova pagina ti ha nominato} other {# nuove pagine ti hanno nominato}} negli ultimi 30 giorni, su {b} trovate in tutto.",
+        "badly": "{count, plural, one {# di esse parla} other {# di esse parlano}} male di te, la più recente su {text}.",
+        "noLink": "{count, plural, one {# pagina forte ti nomina} other {# pagine forti ti nominano}} senza un link, {text} la più forte.",
+        "reply": "Leggi cosa dice {text} e rispondi dove puoi.",
+        "askForLink": "Chiedi a {text} di mettere un link dove ti nomina."
+      },
+      "mentionsRivals": {
+        "none": "Non è ancora stata trovata una pagina che nomina te o un concorrente che segui.",
+        "lead": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui, più di ognuno di loro.",
+        "behind": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui; {text} è in testa con il {b}%.",
+        "upMonth": "{count, plural, one {È # pagina in più} other {Sono # pagine in più}} del mese prima.",
+        "downMonth": "{count, plural, one {È # pagina in meno} other {Sono # pagine in meno}} del mese prima.",
+        "seeLeader": "Guarda dove viene nominato {text} e tu no.",
+        "getListed": "Fatti elencare sui siti che nominano i tuoi concorrenti e non te."
+      },
+      "mentionsListed": {
+        "none": "Ancora nessun posto noto: arrivano dalle risposte IA di Google e dai link dei concorrenti, dal prossimo controllo.",
+        "everywhere": "Sei già su tutti i {a} posti dove sono i tuoi concorrenti.",
+        "places": "I tuoi concorrenti sono su {a} di questi {countB, plural, one {# posto} other {# posti}} e tu no.",
+        "mostRivals": "{text} ha {a} dei tuoi concorrenti e non te.",
+        "strongest": "{text} è il più forte di questi.",
+        "getOnto": "Fatti elencare su {text}."
+      },
+      "backlinks": {
+        "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
+        "linkingWebsites": "{a} siti rimandano a te, con {countB, plural, one {# link} other {# link}} in tutto.",
+        "up": "Sono {a} siti in più rispetto all'inizio di queste date.",
+        "down": "Sono {a} siti in meno rispetto all'inizio di queste date.",
+        "steady": "Ti linkano tanti siti quanti all'inizio di queste date.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a tue pagine che non funzionano più.",
+        "seeNew": "Guarda i link guadagnati e persi, e da chi arrivano.",
+        "seeLost": "Guarda quali siti hanno smesso di linkarti, e quando.",
+        "fixBroken": "Ripristina o reindirizza le pagine a cui puntano quei link."
+      },
+      "backlinksCompared": {
+        "none": "Ancora nessun backlink letto per te e i tuoi concorrenti.",
+        "lead": "{a} siti rimandano a te: più che a qualsiasi concorrente che segui.",
+        "behind": "{a} siti rimandano a te; {b} a {text}, in testa.",
+        "strongerRank": "{text} è il sito più forte per i suoi link: {a} contro il tuo {b}.",
+        "getListed": "Fatti elencare sui siti che linkano o citano i tuoi concorrenti e non te.",
+        "seeLeader": "Guarda dove viene nominato {text} e tu no."
+      },
+      "backlinksQuality": {
+        "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a tue pagine che non funzionano più; in tutto {countB, plural, one {# tua pagina è rotta} other {# tue pagine sono rotte}}.",
+        "noBroken": "Nessun link punta a una tua pagina che non funziona più.",
+        "spam": "Il punteggio spam dei tuoi link è {a} su 100, dove più basso è meglio.",
+        "nofollow": "{a} dei {countB, plural, one {# sito} other {# siti}} che ti linkano segnano i link da non seguire.",
+        "fixBroken": "Ripristina o reindirizza le pagine a cui puntano quei link."
+      },
+      "backlinksWhere": {
+        "none": "Ancora nessuna suddivisione dei tuoi link.",
+        "largest": "{text} è il gruppo più grande: il {a}% dei tuoi link, {b} in tutto.",
+        "second": "Segue {text}, con il {a}%.",
+        "seeGroup": "Guarda i link da {text}."
+      },
+      "backlinksAll": {
+        "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
+        "noneMatch": "Nessun link corrisponde a questi filtri.",
+        "links": "{count, plural, one {# link elencato} other {# link elencati}}, da {countB, plural, one {# sito} other {# siti}}.",
+        "strongest": "Il più forte arriva da {text}, con rank {a}.",
+        "followed": "Il {a}% è seguito dai motori di ricerca.",
+        "lost": "{count, plural, one {# è stato perso} other {# sono stati persi}}.",
+        "visitStrongest": "Guarda il link sulla pagina di {text}.",
+        "seeLost": "Guarda {count, plural, one {il link perso} other {i # link persi}} e chiedi di rimetterli."
+      },
+      "backlinksDomains": {
+        "none": "Ancora nessun sito che ti linka letto: li legge il prossimo controllo.",
+        "domains": "{a} siti ti linkano ora, su {b} visti in tutto.",
+        "strongest": "Il più forte è {text}, con rank {a}.",
+        "lost": "{count, plural, one {# sito ha} other {# siti hanno}} smesso di linkarti, {text} il più forte.",
+        "new": "{count, plural, one {# è nuovo} other {# sono nuovi}} dal controllo prima.",
+        "winBack": "Chiedi a {text} di linkarti di nuovo.",
+        "seeStrongest": "Guarda tutti i link da {text}."
+      },
+      "backlinksAnchors": {
+        "none": "Ancora nessuna parola dei link letta: la legge il prossimo controllo.",
+        "top": "Le parole più usate sono “{text}”: {count, plural, one {# link} other {# link}}.",
+        "brand": "Il {a}% dei tuoi link usa il tuo nome o il tuo indirizzo.",
+        "otherWords": "Il {a}% usa altre parole, come quello che fai.",
+        "seeAnchor": "Guarda chi ti linka con “{text}”."
+      },
+      "backlinksIps": {
+        "none": "Ancora nessun server letto: li legge il prossimo controllo.",
+        "spread": "I {a} siti che ti linkano stanno su {countB, plural, one {# rete} other {# reti}}.",
+        "crowded": "{text} ne ospita {a}: i link da una stessa rete contano meno.",
+        "oneEach": "Nessuna rete ne ospita più di uno.",
+        "seeNetwork": "Guarda i siti su {text}.",
+        "checkDomains": "Controlla se tra i siti che ti linkano ce n'è qualcuno che non conosci."
+      },
+      "backlinksBroken": {
+        "none": "Nessun link punta a una tua pagina che non funziona più.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a {countB, plural, one {# pagina che non funziona più} other {# pagine che non funzionano più}}.",
+        "topPage": "{text} ne ha di più: {count, plural, one {# link} other {# link}}.",
+        "strongest": "Il più forte, da {text}, punta a {more}.",
+        "putBack": "Ripristina {text}, o reindirizzala alla pagina che l'ha sostituita."
+      },
+      "backlinksNewLost": {
+        "none": "Nessun link guadagnato o perso in queste date.",
+        "gainedLost": "{a} siti hanno iniziato a linkarti in queste date, e {b} hanno smesso.",
+        "mostLost": {
+          "day": "La perdita maggiore il {text}: {a}.",
+          "week": "La perdita maggiore nella settimana del {text}: {a}.",
+          "month": "La perdita maggiore nel mese dal {text}: {a}."
+        },
+        "mostGained": {
+          "day": "Il guadagno maggiore il {text}: {a}.",
+          "week": "Il guadagno maggiore nella settimana del {text}: {a}.",
+          "month": "Il guadagno maggiore nel mese dal {text}: {a}."
+        },
+        "seeLostThen": {
+          "day": "Guarda i link persi il {text}.",
+          "week": "Guarda i link persi nella settimana del {text}.",
+          "month": "Guarda i link persi nel mese dal {text}."
+        },
+        "seeGainedThen": {
+          "day": "Guarda i link guadagnati il {text}.",
+          "week": "Guarda i link guadagnati nella settimana del {text}.",
+          "month": "Guarda i link guadagnati nel mese dal {text}."
+        }
+      },
+      "backlinksDomain": {
+        "notHeld": "{text} non è tra i siti che ti linkano nel controllo più recente.",
+        "lost": "{text} non ti linka più.",
+        "links": "{text} ti linka {count, plural, one {una volta} other {# volte}}; {countB, plural, =0 {nessuno dei link letti è seguito} one {# dei link letti è seguito} other {# dei link letti sono seguiti}}.",
+        "spam": "Il suo punteggio spam è {a} su 100, dove più basso è meglio.",
+        "seeLink": "Guarda il suo link più forte sulla sua pagina.",
+        "askBack": "Chiedi a {text} di rimettere il link.",
+        "linked": "Ti linkava {count, plural, one {una volta} other {# volte}}; {countB, plural, =0 {nessuno di quei link era seguito} one {# era seguito} other {# erano seguiti}}."
+      },
+      "backlinksAnchor": {
+        "notHeld": "“{text}” non è tra le parole che ti linkano nel controllo più recente.",
+        "links": "“{text}” ti linka {count, plural, one {una volta} other {# volte}}, da {countB, plural, one {# sito} other {# siti}}.",
+        "page": "La maggior parte di questi link punta a {text}: {a}.",
+        "seeLink": "Guarda il suo link più forte sulla sua pagina."
+      },
+      "googleSearches": {
+        "noSearches": "Non segui ancora una ricerca su Google.",
+        "notChecked": "Le tue ricerche non sono ancora state controllate su Google: lo fa il prossimo controllo.",
+        "noMoves": "Nessuna delle tue ricerche si è mossa dal controllo prima.",
+        "moves": "Dal controllo prima, {a} delle tue ricerche sono salite e {b} sono scese.",
+        "biggestFall": "“{text}” è scesa di più: da {count}º a {countB}º.",
+        "droppedOut": "“{text}” è uscita dai primi 100, da {count}º.",
+        "firstPage": "{a} delle tue {countB, plural, one {# ricerca} other {# ricerche}} sono nella prima pagina di Google.",
+        "seeFall": "Guarda chi ti ha superato su “{text}” e quale pagina mostra Google."
+      },
+      "googleFanOut": {
+        "none": "Nessuna query di fan-out è ancora seguita su Google.",
+        "pickSome": "Spunta le query di fan-out che vale la pena seguire su Google a ogni esecuzione.",
+        "notChecked": "Le tue {a} query di fan-out seguite non sono ancora state controllate su Google.",
+        "tracked": "Sei nella prima pagina di Google per {b} delle {a} query di fan-out controllate.",
+        "pageTwo": "{count, plural, one {# è} other {# sono}} in seconda pagina, “{text}” la più ripetuta.",
+        "notRanking": "Non sei nei primi 100 per {a} di esse.",
+        "pushUp": "Migliora la tua pagina per “{text}” per portarla in prima pagina."
+      },
+      "googleMoves": {
+        "noMoves": "Nessuna ricerca si è mossa nel controllo più recente.",
+        "winsLosses": "Nel controllo più recente sei salito o entrato su {a} ricerche, e sceso o uscito su {b}.",
+        "biggestLoss": "La perdita più grande: “{text}”, ora {count}º, cercata {countB, plural, one {una volta} other {# volte}} al mese.",
+        "biggestLost": "La perdita più grande: “{text}”, uscita dai primi 100, cercata {a} volte al mese.",
+        "biggestWin": "Il guadagno più grande: “{text}”, ora {count}º, cercata {countB, plural, one {una volta} other {# volte}} al mese.",
+        "seeLoss": "Guarda cosa è cambiato su “{text}”: la pagina, e chi ti ha superato.",
+        "seeWin": "Guarda cosa ha fatto salire “{text}”."
+      },
+      "googleAbove": {
+        "notChecked": "Le pagine Google delle tue ricerche non sono ancora state lette.",
+        "aboveMost": "{text} è sopra di te più spesso: su {a} delle tue {countB, plural, one {# ricerca} other {# ricerche}}.",
+        "nobodyAbove": "Nessuno è sopra di te nelle tue ricerche.",
+        "rivalsAbove": "Un concorrente che segui è sopra di te su {count, plural, one {# ricerca} other {# ricerche}}.",
+        "youFirst": "Sei primo su {count, plural, one {# ricerca} other {# ricerche}}.",
+        "seeWebsite": "Guarda per cosa viene citato e linkato {text}."
+      },
+      "googleFeatures": {
+        "notChecked": "Le pagine Google delle tue ricerche non sono ancora state lette.",
+        "checked": "{a} delle tue ricerche sono state lette per {countB, plural, one {# tipo} other {# tipi}} di funzione Google.",
+        "missed": "{text} compare su {b} di esse, e ti lascia fuori da {a}.",
+        "inAll": "Dove una funzione compare sulle tue ricerche, ci sei.",
+        "missedToo": "Anche {text} ti lascia fuori da {a}.",
+        "seeFeature": "Guarda le ricerche in cui {text} ti lascia fuori."
+      },
+      "googleFeature": {
+        "none": "Nessuna delle tue ricerche mostra questa funzione.",
+        "inIt": "Ci sei su {a} delle {countB, plural, one {# ricerca} other {# ricerche}} che la mostrano.",
+        "biggestOut": "La ricerca più grande in cui non ci sei: “{text}”, cercata {a} volte al mese.",
+        "seeSearch": "Guarda cosa mostra Google per “{text}”."
+      },
+      "googleQuestions": {
+        "none": "Ancora nessuna domanda letta dalle pagine Google delle tue ricerche.",
+        "questions": "Le persone fanno {a} domande sulle pagine Google di {b} delle tue ricerche.",
+        "mostCommon": "“{text}” compare più spesso: su {count, plural, one {# ricerca} other {# ricerche}}.",
+        "answer": "Rispondi a “{text}” nella tua pagina per “{more}”.",
+        "checkPages": "Controlla che le tue pagine rispondano alle domande che le persone fanno."
+      },
+      "keywords": {
+        "none": "Ancora nessuna ricerca posizionata letta: la legge il prossimo controllo.",
+        "ranking": "Sei posizionato per {a} ricerche su Google, {b} nella prima pagina.",
+        "mostVisits": "“{text}” porta più visite: circa {a} al mese.",
+        "justOff": "{count, plural, one {# ricerca è} other {# ricerche sono}} appena fuori dalla prima pagina, tra 11 e 13, “{text}” la più cercata.",
+        "pushUp": "Rafforza la tua pagina per “{text}” per portarla in prima pagina.",
+        "keepTop": "Tieni “{text}” dov'è: guarda chi ti segue da vicino."
+      },
+      "keywordsPages": {
+        "none": "Ancora nessuna pagina posizionata letta: la legge il prossimo controllo.",
+        "pages": "{count, plural, one {# pagina è posizionata} other {# pagine sono posizionate}} su Google.",
+        "topPage": "{text} porta più visite: il {a}%.",
+        "offPageOne": "{count, plural, one {# pagina è posizionata} other {# pagine sono posizionate}} solo oltre la prima pagina, {text} per più ricerche.",
+        "seeTop": "Guarda le ricerche per cui è posizionata {text}.",
+        "lift": "Rafforza {text}: le sue ricerche sono vicine alla prima pagina."
+      },
+      "keywordsBands": {
+        "none": "Ancora nessuna ricerca posizionata letta: la legge il prossimo controllo.",
+        "pageOne": "{a} delle tue {countB, plural, one {# ricerca} other {# ricerche}} sono nella prima pagina di Google.",
+        "movedOnOff": "Nel controllo più recente {a} sono entrate in prima pagina e {b} ne sono uscite.",
+        "closest": "{count, plural, one {# ricerca è} other {# ricerche sono}} tra 11 e 13, le più vicine alla prima pagina: “{text}” la più cercata.",
+        "pushUp": "Rafforza la tua pagina per “{text}” per portarla in prima pagina.",
+        "seeOff": "Guarda {count, plural, one {la ricerca uscita} other {le # ricerche uscite}} dalla prima pagina."
+      },
+      "keywordsBandsMoved": {
+        "none": "Nessuna ricerca ha cambiato fascia nel controllo più recente.",
+        "moved": "{a} ricerche sono salite di fascia e {b} sono scese.",
+        "biggestDrop": "Il calo più grande: “{text}”, da {count}º a {countB}º.",
+        "seeDrop": "Guarda cosa è cambiato su “{text}”."
+      },
+      "keywordsStructure": {
+        "none": "Ancora nessuna cartella letta: la legge il prossimo controllo.",
+        "folders": "Le tue pagine posizionate stanno in {count, plural, one {# cartella} other {# cartelle}}.",
+        "topFolder": "{text} porta più visite: il {a}%.",
+        "weakFolder": "{text} è posizionata per {a} ricerche ma solo {b} tra i primi tre.",
+        "seeFolder": "Guarda le pagine in {text}."
+      },
+      "keywordRecord": {
+        "notRanking": "Non sei nei primi 100 di Google per “{text}”.",
+        "moved": "Sei {count}º su Google, da {countB}º al controllo prima.",
+        "position": "Sei {count}º su Google.",
+        "above": "{text} è in testa {count, plural, one {al sito} other {ai # siti}} sopra di te.",
+        "pageChanged": "Google ora mostra {text}, al posto di {more}.",
+        "seePage": "Guarda {text}, la pagina che mostra Google.",
+        "seeAbove": "Guarda per cosa viene citato e linkato {text}."
+      },
+      "pageRecord": {
+        "notHeld": "Ancora niente su questa pagina: non è posizionata e l'audit del sito non l'ha letta.",
+        "searches": "È posizionata per {a} ricerche, {b} tra i primi tre, “{text}” la più grande.",
+        "notRanking": "Non è posizionata su Google per nessuna ricerca.",
+        "problems": "L'audit del sito ha trovato {count, plural, one {# problema} other {# problemi}}: per primo {text}.",
+        "noProblems": "L'audit del sito non ha trovato problemi.",
+        "links": "{count, plural, =0 {Nessun sito la linka.} one {# link punta a lei.} other {# link puntano a lei.}}",
+        "cited": "Le risposte IA l'hanno citata {count, plural, one {una volta} other {# volte}}.",
+        "fixProblem": "Correggi: {text}.",
+        "seeTopSearch": "Guarda chi è posizionato accanto a lei per “{text}”."
+      },
+      "paid": {
+        "none": "Ancora nessuna ricerca a pagamento letta: la legge il prossimo controllo.",
+        "notAdvertising": "Non fa pubblicità su Google nel controllo più recente.",
+        "advertising": "Fa pubblicità su {a} ricerche su Google, che portano circa {countB, plural, one {# visita} other {# visite}} al mese.",
+        "cost": "Quelle visite costerebbero circa {a} $ al mese in annunci.",
+        "seeKeywords": "Guarda per quali ricerche paga e quanto costa ciascuna."
+      },
+      "paidKeywords": {
+        "none": "Nessuna ricerca a pagamento letta: non fa pubblicità su Google nel controllo più recente.",
+        "keywords": "Paga per {a} ricerche, circa {b} $ al mese in clic.",
+        "dearest": "“{text}” costa di più: circa {a} $ al mese.",
+        "mostVisits": "“{text}” porta più visite a pagamento: circa {a} al mese.",
+        "seeSearch": "Guarda chi è posizionato per “{text}” senza pagare."
+      },
+      "competitors": {
+        "noRivals": "Non segui ancora un concorrente.",
+        "findRivals": "Guarda i concorrenti suggeriti e segui quelli che contano.",
+        "notCompared": "I tuoi {a} concorrenti non sono ancora stati confrontati con te sulle ricerche.",
+        "leadAll": "{count, plural, one {Sei davanti al concorrente che segui sulle ricerche in comune.} other {Sei davanti a tutti i # concorrenti che segui sulle ricerche in comune.}}",
+        "leadOver": "Sei davanti a {a} dei {countB, plural, one {# concorrente} other {# concorrenti}} che segui sulle ricerche in comune.",
+        "trailMost": "{text} ti batte su {a} ricerche in comune; tu lo batti su {b}.",
+        "seeRival": "Guarda le ricerche su cui {text} ti batte.",
+        "seeGap": "Guarda le ricerche per cui sono posizionati i tuoi concorrenti e tu no."
+      },
+      "competitorsRival": {
+        "noneShared": "Non condividi nessuna ricerca con questo concorrente nel controllo più recente.",
+        "shared": "Siete entrambi posizionati per {a} ricerche; è davanti su {b}.",
+        "biggest": "La più grande: “{text}”, dove è {count}º e tu {countB}º.",
+        "aheadOnAll": "Sei davanti su ogni ricerca in comune.",
+        "seeSearch": "Guarda cosa mostra Google per “{text}”.",
+        "seeGap": "Guarda le ricerche per cui è posizionato e tu no."
+      },
+      "competitorsOrganic": {
+        "none": "Ancora nessun sito che condivide le tue ricerche letto.",
+        "sharing": "{count, plural, one {# sito condivide} other {# siti condividono}} le tue ricerche; {text} più di tutti, su {b}.",
+        "unwatched": "{count, plural, one {# non è seguito} other {# non sono seguiti}}, {text} quello che ne condivide di più.",
+        "allWatched": "Li segui tutti.",
+        "lookAt": "Guarda {text} e seguilo se compete per i tuoi clienti."
+      },
+      "competitorsGap": {
+        "none": "Nessun gap: i tuoi concorrenti non sono posizionati per ricerche in cui tu non ci sei, o non è ancora stato calcolato.",
+        "gap": "I tuoi concorrenti sono posizionati per {a} ricerche in cui tu non ci sei.",
+        "biggest": "La più grande: “{text}”, cercata {a} volte al mese.",
+        "everyRival": "Tutti i tuoi {countB} concorrenti sono posizionati per {a} di esse.",
+        "seeSearch": "Guarda chi è posizionato per “{text}” e progetta una pagina."
+      },
+      "competitorsMap": {
+        "none": "Il tuo mercato non è ancora stato letto.",
+        "place": "Sei {count}º su {b} per visite da Google.",
+        "justAbove": "{text} è appena sopra di te, con circa {a} visite al mese contro le tue {b}.",
+        "top": "Nessun sito del tuo mercato riceve più visite da Google.",
+        "lookAt": "Guarda dove viene nominato {text} e tu no."
+      },
+      "competitorsSuggested": {
+        "none": "Ancora nessun concorrente da suggerire.",
+        "reasons": "{a} sono nominati dalle risposte IA accanto a te; {b} sono posizionati per le tue ricerche.",
+        "strongestAi": "{text} è il più nominato: {count, plural, one {una volta} other {# volte}}.",
+        "strongestSearch": "{text} condivide più ricerche con te: {a}.",
+        "lookAt": "Guarda dove viene citato {text} e tu no."
+      },
+      "overview": {
+        "none": "Ancora nessun dato in queste date: lo riempie il prossimo controllo.",
+        "visitsUp": "Le visite da Google sono salite di circa {a} al mese in queste date, a {b}.",
+        "visitsDown": "Le visite da Google sono scese di circa {a} al mese in queste date, a {b}.",
+        "visitsSteady": "Le visite da Google sono rimaste a circa {a} al mese in queste date.",
+        "searchesUp": "Sei posizionato per {a} ricerche in più, {b} in tutto.",
+        "searchesDown": "Sei posizionato per {a} ricerche in meno, {b} in tutto.",
+        "linksUp": "{a} siti in più ti linkano.",
+        "linksDown": "{a} siti in meno ti linkano.",
+        "seeLosses": "Guarda le ricerche perse o in calo.",
+        "seeTopPages": "Guarda le pagine che portano le tue visite.",
+        "seeLostLinks": "Guarda i siti che hanno smesso di linkarti."
+      },
+      "assets": {
+        "none": "Le tue risorse non sono ancora state calcolate: lo fa il prossimo controllo.",
+        "stages": "{a} delle tue risorse funzionano, {b} sono viste ma perdono e {c} mancano.",
+        "allWorking": "Ogni risorsa trovata funziona.",
+        "mostAt": {
+          "NOT_THERE": "La maggior parte si perde perché non c'è proprio: {a}.",
+          "NOT_SEEN": "La maggior parte si perde perché non viene vista: {a}.",
+          "SEEN_NOT_CHOSEN": "La maggior parte si perde dopo essere stata vista, quando le persone scelgono qualcun altro: {a}."
+        },
+        "fix": {
+          "NOT_THERE": "Fatti trovare prima su {text}.",
+          "NOT_SEEN": "Fai vedere prima {text}.",
+          "SEEN_NOT_CHOSEN": "Fai di {text} quella che le persone scelgono."
+        }
+      },
+      "yourPages": {
+        "notOwn": "Le tue pagine riguarda i tuoi siti: aprine uno.",
+        "none": "Le tue pagine non sono ancora state elencate: le elenca il prossimo controllo.",
+        "pages": "Sul tuo sito sono note {a} pagine; Google ne ha mostrate {b} nei risultati.",
+        "neverShown": "Google non ha mai mostrato {count, plural, one {# pagina} other {# pagine}}.",
+        "notInSitemap": "{count, plural, one {# pagina manca} other {# pagine mancano}} dalla tua sitemap.",
+        "notCrawled": "L'audit del sito non ha raggiunto {count, plural, one {# pagina} other {# pagine}}.",
+        "nothingMissing": "Ogni pagina è nella sitemap, raggiunta e mostrata da Google.",
+        "see": {
+          "neverShown": "Guarda {count, plural, one {la pagina} other {le # pagine}} che Google non ha mai mostrato e collegale dalle tue altre pagine.",
+          "notInSitemap": "Aggiungi {count, plural, one {la pagina mancante} other {le # pagine mancanti}} alla tua sitemap.",
+          "notCrawled": "Guarda {count, plural, one {la pagina} other {le # pagine}} che l'audit del sito non ha raggiunto."
+        }
+      },
+      "audit": {
+        "notCrawled": "Il tuo sito non è ancora stato analizzato: lo fa il prossimo audit del sito.",
+        "turnedAway": "L'audit del sito ha letto solo {a} pagine: il sito l'ha respinto.",
+        "crawled": "L'audit del sito ha letto {a} pagine; il loro punteggio è {b} su 100.",
+        "crawledNoScore": "L'audit del sito ha letto {a} pagine.",
+        "worst": "Il problema peggiore: {text}, su {count, plural, one {# pagina} other {# pagine}}.",
+        "noProblems": "Non ha trovato problemi.",
+        "errors": "In tutto sono stati trovati {a} tipi di errore.",
+        "fix": "Correggi prima {text}."
+      },
+      "auditProblem": {
+        "none": "Nessuna pagina ha {text} nell'audit del sito più recente.",
+        "pages": "{text} è su {count, plural, one {# pagina} other {# pagine}}.",
+        "brokenLinks": "Contengono {count, plural, one {# link rotto} other {# link rotti}} in tutto.",
+        "fixFirst": "Inizia da {text}."
+      },
+      "websites": {
+        "none": "Non hai ancora nessun sito.",
+        "websites": "Hai {count, plural, one {# sito tuo} other {# siti tuoi}} e segui {countB, plural, one {# concorrente} other {# concorrenti}}.",
+        "mostDown": "{text} si è mosso di più nel controllo più recente: in calo su {a} ricerche, in salita su {b}.",
+        "mostUp": "{text} è salito sul maggior numero di ricerche: {a}.",
+        "notChecked": "Nessuno è ancora stato controllato.",
+        "open": "Apri {text} e guarda cosa si è mosso."
+      }
+    },
+    "keywordResearch.seen": {
+      "links": {
+        "openLookup": "Apri la ricerca",
+        "keywordIdeas": "Idee di parole chiave",
+        "googleResults": "Risultati di Google",
+        "seeSearch": "Vedi la ricerca",
+        "visitPage": "Apri la pagina"
+      },
+      "start": {
+        "start": "Cerca una parola chiave per vedere quanto viene cercata, quanto è difficile e chi è posizionato.",
+        "lookups": "Hai cercato {count, plural, one {# parola chiave} other {# parole chiave}} e {countB, plural, =0 {non tieni liste} one {tieni # lista} other {tieni # liste}}.",
+        "bestChance": "La tua migliore occasione non ancora in prima pagina: “{text}”, cercata {a} volte al mese, difficoltà {b} su 100.",
+        "openLookup": "Apri “{text}” e guarda chi è posizionato."
+      },
+      "overview": {
+        "waiting": "Questa ricerca è in lettura: la pagina si completa da sola.",
+        "none": "Non è stato trovato nulla per questa ricerca.",
+        "volume": "Viene cercata {a} volte al mese; la difficoltà è {b} su 100.",
+        "youDont": "{text} non è tra i primi 100 di Google.",
+        "youRank": "{text} è {count}º su Google.",
+        "youRankLow": "{text} è {count}º su Google, oltre la prima pagina.",
+        "verdict": {
+          "WINNING": "La stai già vincendo: mantieni forte la pagina.",
+          "IMPROVE": "Una tua pagina è posizionata: migliorala.",
+          "NEW_PAGE": "Vale una pagina nuova tutta sua.",
+          "TOO_HARD": "I primi dieci sono troppo forti per entrarci, per ora."
+        },
+        "top": "{text} è primo, con circa {a} visite al mese.",
+        "seeIdeas": "Guarda le idee collegate.",
+        "seeResults": "Guarda chi è nella prima pagina di Google."
+      },
+      "ideas": {
+        "none": "Ancora nessuna idea.",
+        "ideas": "{count, plural, one {# idea trovata} other {# idee trovate}}.",
+        "ideasRanking": "{count, plural, one {# idea trovata} other {# idee trovate}}; il tuo sito {countB, plural, =0 {non è posizionato per nessuna} other {è posizionato per #}}.",
+        "best": "La migliore occasione non ancora in prima pagina: “{text}”, cercata {a} volte al mese, difficoltà {b} su 100.",
+        "seeSearch": "Guarda dove sei per “{text}”."
+      },
+      "results": {
+        "none": "I risultati di Google non sono ancora stati letti.",
+        "top": "{text} è primo, con circa {a} visite al mese.",
+        "youAt": "Il tuo sito è {count}º.",
+        "rivals": "{count, plural, one {# concorrente che segui è} other {# concorrenti che segui sono}} nella pagina.",
+        "seeTop": "Guarda la pagina prima su {text}."
+      },
+      "ai": {
+        "none": "Gli assistenti IA non sono ancora stati interpellati.",
+        "answered": "{count, plural, one {# assistente ha risposto} other {# assistenti hanno risposto}}.",
+        "named": "{count, plural, =0 {Nessuno dei {b} assistenti che hanno risposto nomina il tuo sito.} other {# dei {b} assistenti che hanno risposto nominano il tuo sito.}}",
+        "rivalMost": "{text} è il concorrente più nominato: da {count, plural, one {# assistente} other {# assistenti}}.",
+        "cited": "{count, plural, =0 {Nessuna delle {b} pagine che citano è tua.} other {Citano # delle tue pagine, su {b} citate in tutto.}}"
+      },
+      "list": {
+        "empty": "Questa lista non ha ancora ricerche.",
+        "tracked": "{a} delle sue {countB, plural, one {# ricerca} other {# ricerche}} sono seguite su Google.",
+        "notRanked": "Il tuo sito non è posizionato per {count, plural, one {# di esse} other {# di esse}}, “{text}” la più cercata.",
+        "allRanked": "Il tuo sito è posizionato per tutte.",
+        "seeSearch": "Guarda dove sei per “{text}”."
+      },
+      "competitor": {
+        "preparing": "Le ricerche di {text} sono in confronto con le tue: la pagina si completa da sola.",
+        "none": "{text} non è posizionato per ricerche in cui il tuo sito non c'è.",
+        "gap": "{text} è posizionato per {a} ricerche in cui il tuo sito non c'è.",
+        "biggest": "La più grande: “{text}”, cercata {a} volte al mese, dove è {countB}º.",
+        "seeSearch": "Guarda dove sei per “{text}”."
+      }
+    },
+    "googleAnalytics.seen": {
+      "heroes": {
+        "mostInGoogle": "Google mostra le tue pagine {a} volte al mese, ma solo il {bRate} di queste visualizzazioni diventa un clic, quindi la maggior parte dei {cMoney} al mese da guadagnare è nei risultati di Google, non sulle pagine.",
+        "mostOnPages": "La maggior parte dei {aMoney} al mese da guadagnare è sulle pagine stesse, una volta che le persone arrivano: {bMoney}.",
+        "nothingToGain": "Nessuna pagina ha qualcosa da sistemare questo mese: ognuna riceve clic, converte e trattiene le visite come il resto del sito.",
+        "heroes": "{count, plural, one {Una pagina porta} other {# pagine portano}} {bMoney} dei tuoi {cMoney}.",
+        "noConsole": "Collega Search Console per vedere cosa succede nei risultati di Google prima che le persone arrivino.",
+        "pushTwo": "Porta {text} e {more} in prima pagina: circa {aMoney} al mese.",
+        "pushOne": "Porta {text} in prima pagina: circa {aMoney} al mese.",
+        "rewrite": "Riscrivi titolo e descrizione di {text}: circa {aMoney} al mese.",
+        "nextStep": "Dai a {text} un passo successivo: {a} visite e {countB, plural, =0 {nessuna conversione} one {una conversione} other {# conversioni}}.",
+        "answerSearch": "Fai in modo che {text} risponda a ciò che è stato cercato: la maggior parte delle sue {a} visite se ne va.",
+        "whyFell": "Scopri perché {text} è calata, da {a} visite a {b}.",
+        "leaveHeroesTwo": "Lascia {text} e {more} come sono: portano {aMoney} al mese.",
+        "leaveHeroesOne": "Lascia {text} com'è: porta {aMoney} al mese."
+      },
+      "landingPage": {
+        "makes": "{text} porta {aMoney} al mese, il {bRate} del valore del sito.",
+        "makesNothing": "{text} ha portato {a} visite questo mese e ancora nessuna conversione.",
+        "noVisits": "Nessuna visita è iniziata su {text} questo mese.",
+        "noneFromGoogle": "Tutte le sue {a} conversioni sono arrivate da persone giunte senza una ricerca: le sue {b} visite da Google non hanno convertito.",
+        "inGoogle": "In Google è in posizione {a}, ed è stata cliccata {b} volte su {c} visualizzazioni.",
+        "conversionsFell": "Le sue conversioni sono calate da {a} a {b}.",
+        "conversionsRose": "Le sue conversioni sono salite da {a} a {b}.",
+        "fixPush": "Lavora sulle ricerche per cui compare in seconda pagina: circa {aMoney} al mese.",
+        "fixClick": "Riscrivi titolo e descrizione: circa {aMoney} al mese.",
+        "fixConvert": "Dalle un passo successivo verso il servizio che sostiene: circa {aMoney} al mese.",
+        "fixLeave": "Fai in modo che la pagina risponda a ciò che è stato cercato: circa {aMoney} al mese.",
+        "fixFall": "Controlla la sua posizione in Google e cosa è cambiato sulla pagina: circa {aMoney} al mese.",
+        "whatChanged": "Controlla cosa è cambiato sulla pagina questo mese: {count, plural, one {una conversione in meno} other {# conversioni in meno}}.",
+        "hero": "È una delle tue pagine eroe: cambiala solo con un test."
+      },
+      "websites": {
+        "none": "Qui non c'è ancora nessuno dei siti della tua azienda. Aggiungine uno in Visibilità per vedere cosa conta Google Analytics.",
+        "noneConnected": "{count, plural, =1 {Il tuo sito non è} other {Nessuno dei tuoi # siti è}} ancora collegato a Google Analytics, quindi nessuno può dire quali pagine portano richieste o vendite.",
+        "notCounting": "{text} ha avuto {a} visite negli ultimi 30 giorni, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
+        "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} negli ultimi 30 giorni.",
+        "fellVisitsUp": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in calo da {bMoney}, anche se le sue visite sono salite del {cRate}.",
+        "value": {
+          "down": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in calo da {bMoney}.",
+          "up": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in crescita da {bMoney}.",
+          "same": "{text} ha fatto {aMoney} negli ultimi 30 giorni, come nei 30 giorni prima."
+        },
+        "unknown": "Anche il tracciamento di {text} va sistemato: il {aRate} delle sue visite non si può attribuire a un canale o a una pagina di destinazione.",
+        "tracking": "Il tracciamento di {text} va controllato: {count, plural, =1 {uno} other {#}} dei suoi {b} controlli {count, plural, =1 {non passa} other {non passano}}.",
+        "notConnected": "{count, plural, =1 {Uno dei tuoi siti non è} other {# dei tuoi siti non sono}} ancora collegati.",
+        "whereLost": "Guarda dove {text} ha perso le sue conversioni.",
+        "open": "Guarda cosa ha portato le conversioni di {text}.",
+        "count": "Scegli cosa conta come conversione su {text}.",
+        "fixTracking": "Sistema il tracciamento di {text} prima di fidarti dei dati delle sue pagine.",
+        "connect": "Collega {text} a Google Analytics."
+      },
+      "overview": {
+        "notCounting": "In queste date sono arrivate {a} visite, ma ancora niente conta come conversione, quindi nessuno può dire quali pagine o canali fanno guadagnare.",
+        "made": "Queste date hanno portato {count, plural, =1 {una conversione} other {# conversioni}}, per un valore di {bMoney}.",
+        "lead": {
+          "down": {
+            "up": "Le visite sono salite del {aRate}, ma le conversioni sono scese da {b} a {c}.",
+            "down": "Le visite sono scese del {aRate}, e con loro le conversioni, da {b} a {c}.",
+            "same": "Le visite sono rimaste stabili, ma le conversioni sono scese da {b} a {c}."
+          },
+          "up": {
+            "up": "Le visite sono salite del {aRate}, e con loro le conversioni, da {b} a {c}.",
+            "down": "Le visite sono scese del {aRate}, eppure le conversioni sono salite da {b} a {c}.",
+            "same": "Le visite sono rimaste stabili, e le conversioni sono salite da {b} a {c}."
+          },
+          "same": {
+            "up": "Le visite sono salite del {aRate}, ma le conversioni sono rimaste {c}.",
+            "down": "Le visite sono scese del {aRate}, e le conversioni sono rimaste {c}.",
+            "same": "Visite e conversioni sono rimaste stabili, a {c} conversioni."
+          }
+        },
+        "cause": {
+          "fellBoth": "Il calo viene soprattutto dalle visite {text} ({count, plural, =1 {una conversione in meno} other {# conversioni in meno}}) e da {more} ({countB} in meno).",
+          "fellChannel": "Il calo viene soprattutto dalle visite {text}: {count, plural, =1 {una conversione in meno} other {# conversioni in meno}}.",
+          "fellPage": "Il calo viene soprattutto da {text}: {count, plural, =1 {una conversione in meno} other {# conversioni in meno}}.",
+          "roseBoth": "La crescita viene soprattutto dalle visite {text} ({count, plural, =1 {una conversione in più} other {# conversioni in più}}) e da {more} ({countB} in più).",
+          "roseChannel": "La crescita viene soprattutto dalle visite {text}: {count, plural, =1 {una conversione in più} other {# conversioni in più}}.",
+          "rosePage": "La crescita viene soprattutto da {text}: {count, plural, =1 {una conversione in più} other {# conversioni in più}}."
+        },
+        "googleRarely": "Google ha mostrato le tue pagine {a} volte negli ultimi 30 giorni, ma solo il {bRate} di queste ha ricevuto un clic.",
+        "google": "Google ha mostrato le tue pagine {a} volte negli ultimi 30 giorni, e il {bRate} di queste ha ricevuto un clic.",
+        "chooseWhatCounts": "Scegli cosa conta come conversione, e quanto vale ciascuna.",
+        "channel": {
+          "fell": "Scopri perché le visite {text} hanno smesso di convertire: {count, plural, =1 {una conversione} other {# conversioni}}, in calo da {b}.",
+          "rose": "Guarda cosa ha fatto convertire di più le visite {text}: {count, plural, =1 {una conversione} other {# conversioni}}, in crescita da {b}."
+        },
+        "page": {
+          "fell": "Controlla {text}: {count, plural, =1 {una conversione} other {# conversioni}}, in calo da {b}.",
+          "rose": "Guarda cosa funziona su {text}: {count, plural, =1 {una conversione} other {# conversioni}}, in crescita da {b}."
+        },
+        "push": "Fai salire le tue pagine nei risultati di Google, dove vengono mostrate ma ricevono pochi clic."
+      },
+      "channels": {
+        "none": "Nessuna visita in queste date.",
+        "lead": "{text} porta {a} delle tue {b} visite, e {cMoney} del loro valore.",
+        "leadVisits": "{text} porta più visite di tutti: {a} delle tue {b}.",
+        "fell": "Le visite {text} hanno convertito meno di prima: {count, plural, =1 {una volta} other {# volte}}, in calo da {b}.",
+        "rose": "Le visite {text} hanno convertito più di prima: {count, plural, =1 {una volta} other {# volte}}, in crescita da {b}.",
+        "assistants": "Gli assistenti AI hanno portato {a} visite, ma solo il {bRate} di quei visitatori è rimasto e nessuno ha convertito.",
+        "assistantsConverted": "Gli assistenti AI hanno portato {a} visite: il {bRate} di quei visitatori è rimasto, e {countC, plural, =1 {uno ha convertito} other {# hanno convertito}}.",
+        "whyFell": "Scopri perché le visite {text} convertono meno: {count, plural, =1 {una conversione} other {# conversioni}}, in calo da {b}.",
+        "assistantsStay": "Dai ai visitatori degli assistenti AI un motivo per restare: {a} visite, il {bRate} coinvolte.",
+        "unassigned": "Controlla le {a} visite Unassigned: Google Analytics non sa da dove arrivano."
+      },
+      "channel": {
+        "none": "Nessuna visita da {text} in queste date.",
+        "top": {
+          "up": "{text} ha portato più visite di tutti: {a}, in crescita da {b}.",
+          "down": "{text} ha portato più visite di tutti: {a}, in calo da {b}.",
+          "same": "{text} ha portato più visite di tutti: {a}, come prima."
+        },
+        "topNew": "{text} ha portato più visite di tutti: {a}, mentre prima non ne portava nessuna.",
+        "topOnly": "{text} ha portato più visite di tutti: {a}.",
+        "leaveSooner": "Questi visitatori se ne vanno presto: solo il {aRate} è rimasto, contro il {bRate} di tutte le visite al sito.",
+        "stayLonger": "Questi visitatori restano: il {aRate} è coinvolto, contro il {bRate} di tutte le visite al sito.",
+        "converted": "Hanno convertito {count, plural, =1 {una volta} other {# volte}}, per un valore di {bMoney}.",
+        "noneConverted": "Nessuno di loro ha convertito.",
+        "nextStep": "Guarda verso quali pagine {text} manda le persone, e dai a ciascuna un passo successivo chiaro.",
+        "checkAnswers": "Controlla cosa dice {text} dei tuoi servizi, così i visitatori che manda trovano ciò che ha promesso."
+      },
+      "landing": {
+        "none": "Nessuna pagina di destinazione in queste date.",
+        "leakTop": "{text} porta più visite di tutte, {a}, ma nessuna conversione.",
+        "leak": "{text} porta {a} visite ma nessuna conversione.",
+        "earners": "{text} e {more} fanno {aMoney} dei tuoi {bMoney}.",
+        "earner": "{text} fa {aMoney} dei tuoi {bMoney}.",
+        "notSet": "{a} visite, il {bRate}, sono arrivate su una pagina che Google Analytics non ha saputo nominare, quindi non si sa da dove sono partite quelle persone.",
+        "noConversions": "Nessuna di queste {a} visite ha ancora convertito.",
+        "groupLead": "Le tue pagine {text} fanno {aMoney} dei tuoi {bMoney}.",
+        "groupsNoValue": "Nessun gruppo di pagine ha fatto guadagnare in queste date.",
+        "unsorted": "{count, plural, =1 {Una pagina non è} other {# pagine non sono}} ancora in un gruppo di pagine, quindi le {count, plural, =1 {sue} other {loro}} {b} visite non si sommano al resto.",
+        "device": {
+          "mobile": "I telefoni hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}.",
+          "desktop": "I computer hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}.",
+          "tablet": "I tablet hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}."
+        },
+        "allFrom": "{count, plural, =1 {È arrivata} =2 {Sono arrivate entrambe} other {Sono arrivate tutte e #}} da {text} ({bMoney}).",
+        "mostFrom": "La maggior parte è arrivata da {text}: {count, plural, =1 {una conversione} other {# conversioni}}, per un valore di {bMoney}.",
+        "engagesLess": "{text} è la pagina più visitata qui, con {a} visite, ma solo il {bRate} è stato coinvolto, contro il {cRate} su ogni dispositivo.",
+        "nextStep": "Dai a {text} un passo successivo verso il servizio che sostiene.",
+        "fixNotSet": "Sistema le {a} visite senza pagina di destinazione.",
+        "seeUnsorted": "Metti {count, plural, =1 {la pagina non ordinata} other {le # pagine non ordinate}} in gruppi di pagine, così i loro dati si sommano al resto.",
+        "readOn": {
+          "mobile": "Leggi {text} su un telefono: lì i suoi visitatori se ne vanno prima degli altri.",
+          "desktop": "Leggi {text} su un computer: lì i suoi visitatori se ne vanno prima degli altri.",
+          "tablet": "Leggi {text} su un tablet: lì i suoi visitatori se ne vanno prima degli altri."
+        }
+      },
+      "allPages": {
+        "none": "Nessuna pagina vista in queste date.",
+        "notCounting": "Sono state viste {a} pagine, ma ancora niente conta come conversione, quindi nessuna si può pesare per ciò che porta.",
+        "noConversions": "Nessuna delle {a} pagine viste ha fatto una conversione in queste date.",
+        "madeOn": "{count, plural, =1 {La tua unica conversione è stata fatta} other {Le tue # conversioni sono state fatte}} su {countB, plural, =1 {una sola pagina} other {# pagine}}.",
+        "best": "{text} ne ha fatte {count, plural, =1 {una} other {#}}, da {b} visualizzazioni.",
+        "idleMostViewed": "{text} è la tua pagina più vista, con {a} visualizzazioni, e non ne ha fatta nessuna.",
+        "idle": "{text} ha {a} visualizzazioni e non ne ha fatta nessuna.",
+        "copy": "Copia il passo successivo che funziona su {text} anche su {more}.",
+        "chooseWhatCounts": "Scegli cosa conta come conversione."
+      },
+      "conversions": {
+        "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",
+        "fired": "La tua proprietà registra {event}: è successo {count, plural, =1 {una volta} other {# volte}} nelle stesse date.",
+        "tick": "Spunta {event} e indica quanto vale.",
+        "chooseWhatCounts": "Scegli cosa conta come conversione, e quanto vale ciascuna.",
+        "noneHappened": "Nessuno {count, plural, =1 {del tipo contato} other {dei # tipi contati}} è successo in queste date.",
+        "allOne": "{count, plural, =1 {L'unica conversione è stata} other {Tutte le # conversioni sono state}} {event}.",
+        "topKind": "{event} ha fatto {a} delle {b} conversioni.",
+        "silent": "{event} {count, plural, =1 {è contato anche, ma non è mai successo} other {sono contati anche, ma non è successo nessuno}} in queste date, quindi o nessuno {count, plural, =1 {lo usa} other {li usa}} o Google Analytics non {count, plural, =1 {lo registra} other {li registra}}.",
+        "rateDown": "La quota di visite che convertono è scesa dal {aRate} al {bRate}.",
+        "rateUp": "La quota di visite che convertono è salita dal {aRate} al {bRate}.",
+        "trySilent": "Prova tu stesso {event}, e controlla che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
+        "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore."
+      },
+      "trackingHealth": {
+        "allPassing": "Tutti i {a} controlli passano: Google Analytics conta questo sito come si deve.",
+        "failing": "{count, plural, =1 {Uno} other {#}} dei {b} controlli {count, plural, =1 {va guardato} other {vanno guardati}}.",
+        "check": {
+          "TRACKING_STOPPED": "È passato un giorno senza visite dopo settimane regolari, quindi il tag di tracciamento potrebbe essere sparito dal sito.",
+          "NOTHING_COUNTED": "Niente conta come conversione, quindi nessuna pagina o canale si può pesare per ciò che porta.",
+          "TOO_MUCH_UNKNOWN": "Il {aRate} delle visite non si può attribuire a un canale o a una pagina di destinazione, quindi le loro conversioni non si possono accreditare a niente.",
+          "SUDDEN_FALL": {
+            "visits": "Le visite della scorsa settimana erano il {aRate} sotto le quattro settimane prima, il che di solito è il tracciamento che si rompe, non i visitatori che se ne vanno.",
+            "conversions": "Le conversioni della scorsa settimana erano il {aRate} sotto le quattro settimane prima, il che di solito è il tracciamento che si rompe, non i visitatori che se ne vanno."
+          },
+          "NO_VALUE": "{event} non {countC, plural, =1 {ha} other {hanno}} un valore, quindi le {countC, plural, =1 {sue} other {loro}} {b} conversioni non aggiungono niente al Valore.",
+          "PAYMENT_REFERRALS": "Le pagine di pagamento compaiono come referral, prendendosi il merito delle vendite.",
+          "SELF_REFERRAL": "Il sito compare come referral di se stesso, dividendo le visite in due.",
+          "STRANGERS": "{b} visite sono state registrate su altri indirizzi; sono escluse da questi dati."
+        },
+        "fix": {
+          "TRACKING_STOPPED": "Controlla che il tag di tracciamento sia ancora su ogni pagina.",
+          "NOTHING_COUNTED": "Scegli cosa conta come conversione.",
+          "TOO_MUCH_UNKNOWN": "Fai caricare il tag di tracciamento prima di ogni reindirizzamento, così ogni visita mantiene la sua pagina di destinazione.",
+          "SUDDEN_FALL": "Invia tu stesso il modulo di contatto e controlla che Google Analytics lo conti.",
+          "NO_VALUE": "Indica quanto vale ciascuna conversione.",
+          "PAYMENT_REFERRALS": "Aggiungi le pagine di pagamento all'elenco dei referral indesiderati di Google Analytics.",
+          "SELF_REFERRAL": "Aggiungi l'indirizzo del sito stesso all'elenco dei referral indesiderati di Google Analytics.",
+          "STRANGERS": "Fai smettere gli altri indirizzi di inviare dati a Google Analytics: togli loro il tag, o dai loro una proprietà a sé."
+        }
+      },
+      "connection": {
+        "collected": "{text} è collegato e raccolto ogni giorno.",
+        "stopped": "Per {text} non arriva niente di nuovo; i dati già raccolti restano.",
+        "nothingCounted": "Ancora niente conta come conversione, quindi nessuna pagina o canale si può pesare per ciò che porta.",
+        "oneKindValued": "Conti {event}, che vale {aMoney} ciascuno.",
+        "oneKind": "Conti {event} come conversione.",
+        "kindsValued": "Conti {a} tipi di conversione, ognuno da {bMoney}.",
+        "kinds": "Conti {a} tipi di conversione.",
+        "noneHappened": "Nessuno di loro è successo negli ultimi 30 giorni.",
+        "onlyHappened": "Negli ultimi 30 giorni è successo solo {event}.",
+        "chooseWhatCounts": "Scegli cosa conta come conversione.",
+        "setMissing": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore.",
+        "setWorth": "Imposta quanto vale davvero {event}: ogni cifra in denaro qui poggia sui suoi {aMoney}.",
+        "checkSilent": "Controlla che {event} {count, plural, =1 {venga registrato} other {vengano registrati}}: {count, plural, =1 {non succede mai} other {non succedono mai}}."
+      },
+      "connect": {
+        "searchConsole": "Search Console mostra che Google ha mandato a {text} {a} clic negli ultimi 30 giorni, su {b} visualizzazioni nei risultati.",
+        "cantSay": "Non può dire quali di quelle visite sono diventate una richiesta o una vendita, quindi nessuno può ancora dire quali pagine fanno guadagnare e quali portano solo visite.",
+        "add": "Aggiungi Google Analytics: un solo accesso, visto che Search Console è già collegato."
+      },
+      "chooseEvents": {
+        "noKeyEvents": "La proprietà non ha ancora eventi chiave, quindi niente può contare come conversione. Prima segna in Google Analytics come evento chiave il modulo inviato, la chiamata cliccata o l'acquisto.",
+        "noneFired": "Nessuno dei {a} eventi chiave della proprietà è successo negli ultimi 30 giorni.",
+        "onlyFired": "Dei {b} eventi chiave della proprietà, negli ultimi 30 giorni è successo solo {event}: {count, plural, =1 {una volta} other {# volte}}.",
+        "fired": "{a} dei {b} eventi chiave della proprietà sono successi negli ultimi 30 giorni, {event} più di tutti: {c} volte.",
+        "purchaseSilent": "“Acquisto” è spuntato perché sulla maggior parte dei siti è una vendita, ma su {text} non è stato comprato niente negli ultimi 30 giorni.",
+        "silent": "{event} non {count, plural, =1 {è mai successo, quindi il suo} other {sono mai successi, quindi il loro}} tracciamento potrebbe non funzionare.",
+        "silentToo": "Anche {event} non {count, plural, =1 {è mai successo, quindi il suo} other {sono mai successi, quindi il loro}} tracciamento potrebbe non funzionare.",
+        "tick": "Spunta {event} e indica quanto vale.",
+        "tickUntickPurchase": "Spunta {event} e indica quanto vale; togli la spunta ad “Acquisto”.",
+        "untickPurchase": "Togli la spunta ad “Acquisto”: qui non si vende niente.",
+        "checkSilent": "Spunta {event} se {count, plural, =1 {è una richiesta} other {sono richieste}}, e fai controllare il {count, plural, =1 {suo} other {loro}} tracciamento."
+      },
+      "links": {
+        "overview": "Panoramica",
+        "chooseWhatCounts": "Scegli cosa conta",
+        "changeWhatCounts": "Cambia cosa conta",
+        "trackingHealth": "Salute del tracciamento",
+        "connection": "Connessione",
+        "channels": "Canali",
+        "seePage": "Vedi la pagina",
+        "theHeroes": "Le pagine eroe",
+        "itsSearches": "Le sue ricerche in Search Console",
+        "openPage": "Apri la pagina",
+        "pagesToPush": "Pagine da portare in prima pagina",
+        "conversions": "Conversioni",
+        "landingPages": "Pagine di destinazione",
+        "aiAssistants": "Assistenti AI",
+        "aiAnswers": "Risposte AI in Visibilità",
+        "unsortedPages": "Le pagine non ordinate",
+        "referrals": "Referral",
+        "addGoogleAnalytics": "Aggiungi Google Analytics"
+      }
+    },
+    "searchConsole.seen": {
+      "volatility": {
+        "noDays": "La volatilità inizia quando Search Console ha due giorni completi di dati per questo sito.",
+        "tooFew": "Meno di 10 delle tue parole chiave hanno avuto 10 impressioni il {day1}: troppo poche per giudicare.",
+        "updateMoved": "L'aggiornamento di Google {text} è durato dal {day1} al {day2}, e le tue posizioni si sono mosse il {a}% più del solito.",
+        "updateMovedALot": "L'aggiornamento di Google {text} è durato dal {day1} al {day2}, e le tue posizioni si sono mosse più del solito.",
+        "updateRolling": "L'aggiornamento di Google {text} è in corso dal {day1}, e le tue posizioni si muovono il {a}% più del solito.",
+        "updateRollingALot": "L'aggiornamento di Google {text} è in corso dal {day1}, e le tue posizioni si muovono più del solito.",
+        "clicksFellWithIt": "I tuoi clic sono calati del {a}% nell'ultima settimana, di pari passo.",
+        "pointsToGoogle": "Indica un rimescolamento dei risultati da parte di Google, non un cambiamento sul tuo sito.",
+        "movedNoUpdate": "Le tue posizioni si sono mosse il {a}% più del solito il {day1}, e Google non ha annunciato aggiornamenti.",
+        "ownPagesFirst": "Quando si muovono solo le tue parole chiave, inizia dalle tue pagine.",
+        "demand": "Meno persone hanno cercato questa settimana: le tue impressioni sono calate del {a}% mentre le posizioni sono rimaste.",
+        "isDemand": "È la domanda, non Google e non il tuo sito.",
+        "calm": "Google è calmo per le tue parole chiave: {a} su 10 il {day1}, vicino al tuo solito {b}.",
+        "calmNoUsual": "Google è calmo per le tue parole chiave: {a} su 10 il {day1}.",
+        "clicksRoseCalm": "I tuoi clic sono saliti del {a}% questa settimana: dipende dalle tue pagine o dalla domanda, non da Google.",
+        "clicksFellCalm": "I tuoi clic sono calati del {a}% questa settimana: dipende dalle tue pagine o dalla domanda, non da Google.",
+        "holdUntil": "Rimanda le modifiche importanti alle tue pagine fino al {day1}, mentre Google si assesta.",
+        "holdWhileRolling": "Rimanda le modifiche importanti alle tue pagine finché l'aggiornamento non finisce.",
+        "checkDropped": "Controlla {count, plural, one {la parola chiave scesa} other {le # parole chiave scese}} di 5 posizioni o più.",
+        "pagesIfNotBack": "Se non sono risalite entro il {day1}, guarda le pagine su cui arrivano.",
+        "lookAtPages": "Guarda le pagine su cui arrivano quelle parole chiave.",
+        "seeSearches": "Vedi quali parole chiave hanno perso ricerche.",
+        "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
+      },
+      "updates": {
+        "noneInDates": "Google non ha annunciato aggiornamenti in queste date.",
+        "rolling": "L'aggiornamento di Google {text} è in corso dal {day1}.",
+        "movingMore": "Le tue posizioni si muovono il {a}% più del solito.",
+        "holdWhileRolling": "Rimanda le modifiche importanti alle tue pagine finché non finisce.",
+        "finished": "L'aggiornamento di Google {text} è finito il {day1}.",
+        "movedMore": "Le tue posizioni si sono mosse il {a}% più del solito durante l'aggiornamento: {b} su 10, contro {c} prima.",
+        "movedAsUsual": "Le tue posizioni si sono mosse come al solito durante l'aggiornamento: {b} su 10, contro {c} prima.",
+        "clicksShowOn": "L'effetto sui tuoi clic si vedrà il {day1}, passati 14 giorni.",
+        "holdUntil": "Rimanda le modifiche importanti alle tue pagine fino al {day1}.",
+        "notKnown": "L'aggiornamento di Google {text} è finito, ma non ci sono giorni precedenti da confrontare.",
+        "raisedClicks": "L'aggiornamento di Google {text} ha aumentato i tuoi clic del {a}%.",
+        "cutClicks": "L'aggiornamento di Google {text} ha ridotto i tuoi clic del {a}%.",
+        "positionFromTo": "La tua posizione media è passata da {a} a {b}.",
+        "seeLosses": "Vedi le parole chiave che hanno perso clic."
+      },
+      "links": {
+        "seeUpdate": "Vedi l'aggiornamento",
+        "seeKeywords": "Vedi le parole chiave",
+        "seePages": "Vedi le tue pagine",
+        "seeWins": "Vedi Guadagni e perdite",
+        "seeVolatility": "Vedi Volatilità",
+        "seeAlmost": "Vedi Quasi in cima",
+        "seeLowCtr": "Vedi Mostrate ma non cliccate",
+        "seeLosing": "Vedi le parole chiave in calo",
+        "keywordResearch": "Apri Ricerca parole chiave",
+        "seeDemand": "Vedi Domanda persa",
+        "connect": "Collegalo"
+      },
+      "keywords": {
+        "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
+        "shown": "Google ha mostrato il tuo sito per {count, plural, one {una parola chiave} other {# parole chiave}} negli ultimi {c} giorni, portando {b} clic.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
+        "topThree": "{count, plural, =0 {Nessuna è} one {Una è} other {# sono}} tra i primi tre risultati di Google.",
+        "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
+      },
+      "pages": {
+        "noPages": "Google non ha mostrato nessuna delle tue pagine negli ultimi {c} giorni.",
+        "shown": "{count, plural, one {Una delle tue pagine è stata mostrata} other {# delle tue pagine sono state mostrate}} su Google negli ultimi {c} giorni, portando {b} clic.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
+        "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
+      },
+      "bands": {
+        "bands": "Tra i primi tre di Google: {a} parole chiave. Posizioni da 4 a 10: {b}. Seconda pagina: {c}.",
+        "topMore": "{count, plural, one {Una in più} other {# in più}} tra i primi tre rispetto ai giorni prima.",
+        "topFewer": "{count, plural, one {Una in meno} other {# in meno}} tra i primi tre rispetto ai giorni prima.",
+        "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
+      },
+      "moves": {
+        "noMoves": "I clic di nessuna parola chiave sono cambiati negli ultimi {c} giorni.",
+        "gainingLosing": "{count, plural, one {Una parola chiave ha guadagnato} other {# parole chiave hanno guadagnato}} clic e {countB, plural, one {una li ha persi} other {# li hanno persi}} negli ultimi {c} giorni.",
+        "netUp": "Nel complesso, i clic sono aumentati di {a}.",
+        "netDown": "Nel complesso, i clic sono calati di {a}.",
+        "seeLosing": "Inizia dalle parole chiave che perdono più clic.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "almost": {
+        "noneNear": "Nessuna delle tue parole chiave è tra le posizioni 4 e 20 in queste date.",
+        "near": "{count, plural, one {Una parola chiave è} other {# parole chiave sono}} tra le posizioni 4 e 20, a poca distanza dai primi posti di Google.",
+        "nearVolume": "Insieme vengono cercate {a} volte al mese.",
+        "improvePages": "Migliora la pagina su cui arriva ciascuna, a partire dalla più cercata."
+      },
+      "lowCtr": {
+        "noneLow": "Ogni pagina che Google mostra viene cliccata più o meno quanto la sua posizione porterebbe.",
+        "lowCtr": "{count, plural, one {Una pagina viene cliccata} other {# pagine vengono cliccate}} meno di quanto porterebbe il tuo tasso di clic alla loro posizione: {b} clic invece di {c}.",
+        "rewriteTitles": "Riscrivi i loro titoli e descrizioni su Google, a partire dalle più mostrate."
+      },
+      "demand": {
+        "noneMissed": "Nessuna parola chiave cercata da molti manca il tuo sito.",
+        "missed": "{count, plural, one {Una parola chiave cercata da molti mostra} other {# parole chiave cercate da molti mostrano}} appena il tuo sito.",
+        "missedVolume": "Insieme vengono cercate {a} volte al mese.",
+        "writeForDemand": "Scrivi o migliora una pagina per la più cercata."
+      },
+      "competing": {
+        "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
+        "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
+        "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
+        "pickOne": "Scegli una pagina per ogni parola chiave e collega le altre a quella."
+      },
+      "estimates": {
+        "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",
+        "estimatesOff": "Le visite stimate {count, plural, one {di una pagina sono lontane} other {di # pagine sono lontane}} dai clic di Google: {b} troppo alte e {c} troppo basse."
+      },
+      "brand": {
+        "noBrandClicks": "Non ci sono clic da dividere tra brand e non brand in queste date.",
+        "brandShare": "Il {a}% dei tuoi clic arriva da ricerche con il nome del tuo brand.",
+        "othersUp": "I clic di chi non ti ha cercato per nome sono aumentati del {a}%.",
+        "othersDown": "I clic di chi non ti ha cercato per nome sono calati del {a}%.",
+        "growOthers": "Fai crescere le ricerche che non ti nominano: sono nuovi clienti."
+      },
+      "trackedKeywords": {
+        "noneKeywords": "Non segui ancora nessuna parola chiave su questo sito.",
+        "trackKeywords": "Spunta le parole chiave che contano in Parole chiave, e verranno seguite ogni giorno.",
+        "trackedKeywords": "Segui {count, plural, one {una parola chiave} other {# parole chiave}}; insieme hanno portato {b} clic negli ultimi {c} giorni.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "trackedPages": {
+        "nonePages": "Non segui ancora nessuna pagina su questo sito.",
+        "trackPages": "Spunta le pagine che contano in Pagine, e verranno seguite ogni giorno.",
+        "trackedPages": "Segui {count, plural, one {una pagina} other {# pagine}}; insieme hanno portato {b} clic negli ultimi {c} giorni.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "performance": {
+        "nothingShown": "Google non ha mostrato il tuo sito negli ultimi {c} giorni.",
+        "performance": "Google ha mostrato il tuo sito {a} volte negli ultimi {c} giorni, e le persone hanno cliccato {b} volte.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
+        "position": "La tua posizione media è stata {a}.",
+        "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
+      },
+      "newLost": {
+        "keywordsNewLost": "{count, plural, one {Una parola chiave è nuova} other {# parole chiave sono nuove}} negli ultimi {c} giorni, e {countB, plural, one {una è stata persa} other {# sono state perse}}.",
+        "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "types": {
+        "noTypes": "Non ci sono clic da dividere per tipo di pagina in queste date.",
+        "topType": "{text} portano più clic: il {a}%."
+      },
+      "places": {
+        "noPlaces": "Non ci sono clic da dividere per paese in queste date.",
+        "topCountry": "La maggior parte dei tuoi clic arriva da {text}: il {a}%.",
+        "mobileShare": "Il {a}% arriva da mobile."
+      },
+      "appearance": {
+        "noRichResults": "Google non mostra nessuna delle tue pagine con risultati multimediali in queste date.",
+        "richResults": "{count, plural, one {Un tipo di risultato multimediale mostra} other {# tipi di risultati multimediali mostrano}} le tue pagine; {text} porta più clic."
+      },
+      "ctrCurve": {
+        "noFirst": "Nessuna delle tue pagine è comparsa in posizione 1 in queste date.",
+        "seeAlmost": "Vedi le parole chiave più vicine ai primi posti.",
+        "firstAndThird": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono; in posizione 3, il {b}%.",
+        "firstOnly": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono.",
+        "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
+      },
+      "record": {
+        "notShown": "Google non ha mostrato “{text}” negli ultimi {c} giorni.",
+        "recordFigures": "“{text}” ha portato {b} clic negli ultimi {c} giorni, con una posizione media di {a}.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "rose": "La sua posizione media è salita da {a} a {b}.",
+        "fell": "La sua posizione media è scesa da {a} a {b}."
+      },
+      "websites": {
+        "noWebsites": "La tua azienda non ha ancora siti propri qui.",
+        "connected": "{countB, plural, one {{count, plural, =0 {Search Console non è ancora collegato per il tuo sito.} other {Search Console è collegato per il tuo sito.}}} other {Search Console è collegato per {a} dei tuoi # siti.}}",
+        "topWebsite": "{text} porta più clic: {a}.",
+        "notConnected": "{text} non ha ancora Search Console, quindi i suoi clic non si vedono qui.",
+        "connect": "Collega Search Console per {text}.",
+        "oneWebsite": "{text} ha portato {a} clic negli ultimi 30 giorni."
+      }
+    }
+  }
+}

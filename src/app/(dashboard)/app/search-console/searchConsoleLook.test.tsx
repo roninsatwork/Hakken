@@ -17,6 +17,8 @@ import SearchConsoleTrackedPagesPage from "./[siteId]/tracked/pages/page";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "" }));
 
+// What Hakken sees names the platform in its title (search-console-volatility-plan.md §8).
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,

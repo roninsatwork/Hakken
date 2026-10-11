@@ -9,6 +9,8 @@ import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTabl
 import { formatRate } from "../../_components/searchConsoleFormat";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { competingSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["intent", "band"];
 
@@ -28,6 +30,7 @@ export default function SearchConsoleCompetingPage() {
   const page = (value: string | null) => <span className="block truncate text-[12px] text-secondary">{value === null ? "–" : pageLabel(value, host)}</span>;
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="competing" seen={list.summary ? competingSees(list.summary) : null} />}
       icon={<Split className="h-5 w-5 text-brand" />}
       title={t("competing.title")}
       description={t("competing.description")}

@@ -8,7 +8,7 @@ import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite } from "./siteAccess";
 import { listPageArgs, pageOfList, sortDirectionArg } from "./siteListPages";
-import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, type SearchType } from "./searchConsoleSchema";
+import { SEARCH_CONSOLE_PERIODS, VOLATILITY_PERIOD, searchTypeValidator, type SearchConsolePeriod, type SearchType } from "./searchConsoleSchema";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
@@ -164,6 +164,8 @@ const filterArgs = {
   kind: v.optional(v.string()),
   brand: v.optional(v.union(v.literal("yes"), v.literal("no"))),
   move: v.optional(v.union(v.literal("win"), v.literal("loss"))),
+  /** Volatility: keywords whose position rose, or fell. */
+  way: v.optional(v.union(v.literal("up"), v.literal("down"))),
   verdict: v.optional(v.union(v.literal("high"), v.literal("low"), v.literal("close"))),
   /** Missed demand's two lists. */
   missed: v.optional(v.union(v.literal("searched"), v.literal("untracked"))),
@@ -283,9 +285,10 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   // A country not kept ready, or not yet collected: asked of Google with its filter.
   if (scope.read === "LIVE") return live;
   const country = scope.read === "KEPT" ? scope.country : undefined;
-  const period = periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection.newestDay);
-  if (!period) return live;
   const view = args.view ?? "all";
+  // Volatility lists its own ready-made day, whatever the dates (search-console-volatility-plan.md §2.1).
+  const period = view === "volatility" ? VOLATILITY_PERIOD : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection.newestDay);
+  if (!period) return live;
   const within = args.within;
   // One keyword's pages are rows keyed by page, one page's keywords by keyword.
   const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);

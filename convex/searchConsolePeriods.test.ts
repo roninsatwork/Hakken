@@ -112,6 +112,23 @@ describe("the days, weeks and months the charts read", () => {
     expect(of("MONTH", "2026-09-01")?.days).toBe(26);
   });
 
+  test("each day's volatility against the day before, and a week's the average of its days' (search-console-volatility-plan.md §3)", () => {
+    const keywords = (shift: number) => pairs(Array.from({ length: 10 }, (_, at) => [`k${at}`, "/", 1, 20, 4 + (at < 5 ? shift : 0)] as [string, string, number, number, number]));
+    const days: Kept[] = [
+      { grain: "DAY", start: "2026-09-14", packed: keywords(0) },
+      { grain: "DAY", start: "2026-09-15", packed: keywords(2) },
+      { grain: "DAY", start: "2026-09-16", packed: keywords(8) },
+    ];
+    const rows = chartFigures(days, NEWEST, OLDEST, [], 16);
+    const row = (grain: Kept["grain"], start: string) => rows.find((one) => one.grain === grain && one.week === start);
+    // Five of ten keywords fell 2 places: 1.0; then 6 more: 3.0, five "moved 5 places or more" down.
+    expect(row("DAY", "2026-09-14")?.volatility).toBeUndefined();
+    expect(row("DAY", "2026-09-15")).toMatchObject({ volatility: 1, volatilityKeywords: 10, movedDown5: 0 });
+    expect(row("DAY", "2026-09-16")).toMatchObject({ volatility: 3, volatilityKeywords: 10, movedDown5: 5, movedUp5: 0 });
+    expect(row("WEEK", "2026-09-14")).toMatchObject({ volatility: 2, volatilityKeywords: 20, movedDown5: 5 });
+    expect(row("DAY", "2026-09-17")?.volatility).toBeUndefined();
+  });
+
   test("the charts' weeks limit how far back they reach", () => {
     const eight = chartFigures(kept, NEWEST, OLDEST, ["Ronins"], 8);
     expect(eight.filter((row) => row.grain === "WEEK")[0].week).toBe("2026-08-03");

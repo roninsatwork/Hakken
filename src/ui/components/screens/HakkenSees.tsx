@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { SettingsCard } from "./SettingsCard";
+import { rememberFolded, useFoldedAdvice } from "./hakkenSeesFold";
 
 /** One "Do first" step: its sentence, its link's words and where the link leads. */
 export type HakkenSeesStep = { words: string; link: string; href: string; external?: boolean };
@@ -19,12 +21,24 @@ export type HakkenSeesStep = { words: string; link: string; href: string; extern
  * A `SettingsCard` with fixed contents, so it cannot drift page by page: the
  * sentences at prose width, then "Do first" and up to three numbered steps.
  * With nothing to do it shows the sentences alone.
+ *
+ * It folds away (search-console-volatility-plan.md §8, HS1–HS3): folded, one
+ * row with its first sentence; remembered per screen in this browser, and
+ * opened again by itself when its `advice` changes — the box's sentences and
+ * steps as codes (`seenAdvice`), so the same advice with today's numbers
+ * stays folded. Without `advice`, the sentences themselves are the advice.
  */
-export function HakkenSees({ says, steps }: { says: string[]; steps: HakkenSeesStep[] }) {
+export function HakkenSees({ says, steps, advice }: { says: string[]; steps: HakkenSeesStep[]; advice?: string }) {
   const t = useTranslations("ui.hakkenSees");
   const { platformName } = useSystemSettings();
+  const screen = usePathname() ?? "";
+  const held = advice ?? says.join(" ");
+  const open = useFoldedAdvice(screen) !== held;
   return (
-    <SettingsCard title={t("title", { platformName })}>
+    <SettingsCard
+      title={t("title", { platformName })}
+      fold={{ open, summary: says[0], onToggle: () => rememberFolded(screen, open ? held : null) }}
+    >
       <p className="max-w-[75ch] text-[13px] leading-[1.6] text-secondary">{says.join(" ")}</p>
       {steps.length > 0 ? (
         <div className="mt-1 flex flex-col gap-2">

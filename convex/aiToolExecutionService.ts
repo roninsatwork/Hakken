@@ -66,6 +66,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.searchConsole",
   "assistant.ai.mentions",
   "assistant.tasks.open",
+  // What Hakken sees on a website's screens, as the member can already read them there (search-console-volatility-plan.md §8, HS7).
+  "assistant.advice.read",
   // A chart under an answer, drawn from the Search Console figures a member can already open (hakken-tasks-plan.md, 2.1).
   "assistant.chart",
   // A person's own Hakken tasks (hakken-tasks-plan.md, item 1.2): anyone in the

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Seen } from "@/convex/utils/hakkenSees";
+import { seenAdvice, type Seen } from "@/convex/utils/hakkenSees";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { useSeenWords } from "../../sites/_components/SiteSees";
 
@@ -20,5 +20,5 @@ export function ResearchSees({ screen, seen }: { screen: string; seen: Seen | nu
     href: step.to.url ?? "",
     ...(step.to.url && !step.to.url.startsWith("/") ? { external: true } : {}),
   }));
-  return <HakkenSees says={seen.says.map(words)} steps={steps} />;
+  return <HakkenSees says={seen.says.map(words)} steps={steps} advice={seenAdvice(seen)} />;
 }

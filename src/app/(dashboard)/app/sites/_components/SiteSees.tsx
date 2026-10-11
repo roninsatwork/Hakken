@@ -3,10 +3,11 @@
 import { useTranslations } from "next-intl";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import type { Seen, SeenPhrase, SeenTarget } from "@/convex/utils/hakkenSees";
+import { seenAdvice, type Seen, type SeenPhrase, type SeenTarget } from "@/convex/utils/hakkenSees";
 import { formatNumber } from "./siteFormat";
 import { siteRecordOf, useSiteListHref, useSiteRecordHref } from "./siteRecordLinks";
 import { useSiteId } from "./useSite";
+import { useNoteAdvice } from "../../_components/useNoteAdvice";
 
 /**
  * Where a box's step leads, as an address with the way back: a record or a
@@ -66,7 +67,8 @@ export function useSeenWords(namespace: "sites.seen" | "keywordResearch.seen", s
 export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null | undefined }) {
   const { words, linkWords } = useSeenWords("sites.seen", screen);
   const hrefOf = useSeenHref();
+  useNoteAdvice(useSiteId(), `sites.seen.${screen}`, seen);
   if (!seen || seen.says.length === 0) return null;
   const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: linkWords(step.link), ...hrefOf(step.to) }));
-  return <HakkenSees says={seen.says.map(words)} steps={steps} />;
+  return <HakkenSees says={seen.says.map(words)} steps={steps} advice={seenAdvice(seen)} />;
 }

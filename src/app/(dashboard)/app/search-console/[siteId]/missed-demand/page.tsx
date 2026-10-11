@@ -16,6 +16,8 @@ import {
   useSearchConsoleTracking,
   type ChipId,
 } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { demandSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["missed", "tracked", "intent"];
 
@@ -38,6 +40,7 @@ export default function SearchConsoleDemandPage() {
   const keywords = tracking.counts?.keywords ?? null;
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="demand" seen={list.summary ? demandSees(list.summary) : null} />}
       icon={<SearchX className="h-5 w-5 text-brand" />}
       title={t("demand.title")}
       description={t("demand.description")}

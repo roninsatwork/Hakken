@@ -129,7 +129,15 @@ export const SEARCH_CONSOLE_PERIODS = ["7", "30", "90", "365"] as const;
  * web keyword list for all countries only, with no period before.
  */
 export const FAN_OUT_PERIODS = ["14", "28"] as const;
-export type SearchConsolePeriod = (typeof SEARCH_CONSOLE_PERIODS)[number] | (typeof FAN_OUT_PERIODS)[number];
+/**
+ * Volatility's day (search-console-volatility-plan.md §2.1, V7): the web
+ * keywords counted on the newest day (`NOW`) and on the day before
+ * (`BEFORE`) — 10 or more impressions each day (§3) — kept ready for all
+ * countries and each country kept, so its table reads a ready-made list as
+ * every Search Console table does. Not a period any date range asks for.
+ */
+export const VOLATILITY_PERIOD = "1" as const;
+export type SearchConsolePeriod = (typeof SEARCH_CONSOLE_PERIODS)[number] | (typeof FAN_OUT_PERIODS)[number] | typeof VOLATILITY_PERIOD;
 /**
  * The Search Console screens' limits as stored (search-console-plan.md §17.5),
  * one field each, on the platform's row and on a company's or a website's —
@@ -158,7 +166,7 @@ export const consoleScreenLimitFields = {
 /** The kind of result as the first- and last-seen register files it: web results carry none, as every row held before they all did. */
 export const seenType = (type: SearchType): SearchType | undefined => (type === "web" ? undefined : type);
 
-export const periodValidator = v.union(v.literal("7"), v.literal("14"), v.literal("28"), v.literal("30"), v.literal("90"), v.literal("365"));
+export const periodValidator = v.union(v.literal("1"), v.literal("7"), v.literal("14"), v.literal("28"), v.literal("30"), v.literal("90"), v.literal("365"));
 
 /**
  * One list's rows, packed: one record for a whole day (or week, or month)
@@ -448,6 +456,16 @@ export const searchConsoleTables = {
     rest: v.number(),
     brandClicks: v.number(),
     otherClicks: v.number(),
+    /**
+     * Volatility (search-console-volatility-plan.md §3): the day's score out of
+     * 10 where enough keywords counted, a week's or a month's the average of
+     * its days'; the keywords counted; those that moved 5 places or more up,
+     * and down. Missing on rows built before 2026-10-10.
+     */
+    volatility: v.optional(v.number()),
+    volatilityKeywords: v.optional(v.number()),
+    movedUp5: v.optional(v.number()),
+    movedDown5: v.optional(v.number()),
     builtAt: v.number(),
   }).index("by_hold_country_type_week", ["companyWebsiteId", "country", "searchType", "week"]),
 

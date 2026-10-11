@@ -8,6 +8,8 @@ import { SearchConsoleSiteFigures } from "../../_components/SearchConsoleFigures
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { TrackedCount, figureColumns, trackColumn, useSearchConsoleList, useSearchConsoleTracking, type ChipId } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { keywordsSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /** Intent beside the drawn chips: Types opens Keywords narrowed to one. */
 const CHIPS: readonly ChipId[] = ["tracked", "band", "intent", "device"];
@@ -29,6 +31,7 @@ export default function SearchConsoleKeywordsPage() {
 
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="keywords" seen={list.summary ? keywordsSees(list.summary, list.range.days) : null} />}
       icon={<Search className="h-5 w-5 text-brand" />}
       title={t("keywords.title")}
       description={t("keywords.description")}

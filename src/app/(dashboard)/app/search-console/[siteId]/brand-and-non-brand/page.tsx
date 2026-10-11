@@ -17,6 +17,8 @@ import { formatPosition, formatRate } from "../../_components/searchConsoleForma
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId, type ListSummary } from "../../_components/SearchConsoleTables";
 import { useChartPeriods } from "../../_components/useChartPeriods";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { brandSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["brand", "band", "device"];
 
@@ -64,6 +66,7 @@ export default function SearchConsoleBrandPage() {
   );
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="brand" seen={list.summary ? brandSees(list.summary) : null} />}
       icon={<BadgeCheck className="h-5 w-5 text-brand" />}
       title={t("brand.title")}
       description={description}

@@ -398,6 +398,8 @@ describe("ai tool execution service", () => {
       "apify.actor.describe",
       // Runs an Apify job the admin has configured.
       "apify.actor.run",
+      // What Hakken sees on a website's screens (search-console-volatility-plan.md §8, HS7).
+      "assistant.advice.read",
       // The Assistant's company figures (assistant-foundation-plan.md, item 7):
       // each read through its screen's own function, for the run's company.
       "assistant.ai.mentions",

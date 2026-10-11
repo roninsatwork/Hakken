@@ -99,6 +99,15 @@ describe("each page's rule", () => {
     expect(filterRows(applyView("moves", rows, { rules }), { move: "loss" }).map((entry) => entry.key)).toEqual(["down"]);
   });
 
+  test("Volatility: keywords counted on its day and the day before, up or down (search-console-volatility-plan.md §2.1)", () => {
+    // The day's lists hold only keywords with 10 or more impressions: "new" was not counted the day before.
+    const rows = shaped([row("fell", 0, 20, 11), row("rose", 1, 20, 3), row("new", 0, 20, 5)], [row("fell", 0, 20, 4), row("rose", 0, 20, 9)]);
+    const listed = applyView("volatility", rows, { rules });
+    expect(listed.map((entry) => [entry.key, entry.positionChange])).toEqual([["fell", -7], ["rose", 6]]);
+    expect(filterRows(listed, { way: "down" }).map((entry) => entry.key)).toEqual(["fell"]);
+    expect(filterRows(listed, { way: "up" }).map((entry) => entry.key)).toEqual(["rose"]);
+  });
+
   test("Missed demand: Sites' most-searched keywords Google barely shows, or every shown keyword not tracked", () => {
     const rows = shaped([row("shown a lot", 4, 900, 8), row("barely", 0, 14, 61.2)], null, ["shown a lot"]);
     const sitesKeywords = [

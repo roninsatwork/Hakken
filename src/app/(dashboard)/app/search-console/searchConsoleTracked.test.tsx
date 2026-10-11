@@ -19,6 +19,8 @@ import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
 
+// What Hakken sees names the platform in its title (search-console-volatility-plan.md §8).
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 // The shared mock, with the values a wording is given written after its key.
 vi.mock("next-intl", async () => {

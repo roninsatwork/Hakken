@@ -56,7 +56,7 @@ type View = NonNullable<FunctionArgs<typeof api.searchConsoleLists.searchConsole
 
 /** Each heading's first press: the best first — a top position, a name A to Z, any other figure the most. */
 const FIRSTS = {
-  key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", share: "desc",
+  key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", movedBy: "desc", share: "desc",
   count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
   topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc",
 } as const;
@@ -71,6 +71,8 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
   // A row Google did not show has no position: a blank, last, as the server orders it.
   position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
   positionChange: { value: (row) => row.positionChange, first: "desc" },
+  // Volatility's Moved: the most moved, either way, first, as the server orders it.
+  movedBy: { value: (row) => (row.positionChange === null ? null : Math.abs(row.positionChange)), first: "desc" },
   share: { value: (row) => row.share, first: "desc" },
   count: { value: (row) => row.count, first: "desc" },
   top: { value: (row) => row.top, first: "asc" },
@@ -97,7 +99,7 @@ function liveSortsFor(choices: PageKindsView["choices"]): SiteSortColumns<ListRo
 }
 
 /** The filter chips a table can show, each kept in the address under its own key. The country is the page's, not a chip (§16). */
-export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "verdict" | "missed" | "device";
+export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "way" | "verdict" | "missed" | "device";
 
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 /** Every intent and page type a Kind chip can hold: anything else in the address is ignored. */
@@ -127,6 +129,7 @@ function useChosen(chips: readonly ChipId[]) {
   const [kind] = useSiteParam<string>("kind", "", allowed);
   const [brand] = useSiteParam<"" | "yes" | "no">("brand", "", ["", "yes", "no"]);
   const [move] = useSiteParam<"" | "win" | "loss">("move", "", ["", "win", "loss"]);
+  const [way] = useSiteParam<"" | "up" | "down">("way", "", ["", "up", "down"]);
   const [verdict] = useSiteParam<"" | "high" | "low" | "close">("verdict", "", ["", "high", "low", "close"]);
   const [missed] = useSiteParam<"searched" | "untracked">("list", "searched", ["searched", "untracked"]);
   const [device] = useSiteParam<string>("device", "", ["", ...DEVICES]);
@@ -136,6 +139,7 @@ function useChosen(chips: readonly ChipId[]) {
     ...((has("intent") || has("pageType")) && kind ? { kind } : {}),
     ...(has("brand") && brand ? { brand } : {}),
     ...(has("move") && move ? { move } : {}),
+    ...(has("way") && way ? { way } : {}),
     ...(has("verdict") && verdict ? { verdict } : {}),
     ...(has("missed") ? { missed } : {}),
   };
@@ -167,7 +171,8 @@ export function useSearchConsoleList(options: {
   const within = options.within ?? undefined;
   const base = {
     siteId,
-    searchType: kind,
+    // Volatility reads web search alone, whatever kind of result another page chose.
+    searchType: options.view === "volatility" ? ("web" as const) : kind,
     dimension: options.dimension,
     ...(options.view ? { view: options.view } : {}),
     ...(within ? { within } : {}),
@@ -178,7 +183,10 @@ export function useSearchConsoleList(options: {
   // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready,
   // Pages competing included. One keyword's pages and one page's keywords are asked of Google for every period, their
   // counts from the lists kept (keep-less-history-plan.md, 5.1).
-  const asksGoogle = Boolean(device) || within !== undefined || !isReadyMade(range, status?.connection?.newestDay);
+  // Volatility lists its own ready-made day whatever the dates (search-console-volatility-plan.md §2.1): never asked of
+  // Google, and in a country not kept ready, empty — the page says Volatility is worked out for the home countries.
+  const ownDay = options.view === "volatility";
+  const asksGoogle = !ownDay && (Boolean(device) || within !== undefined || !isReadyMade(range, status?.connection?.newestDay));
   const ready = held && (within === undefined || Boolean(within.key));
   // A country the website does not keep ready — or keeps, before its first collection — the server answers `live`.
   // That answer is held for these dates and this country, so a search, a filter or an order, worked out here from
@@ -190,8 +198,8 @@ export function useSearchConsoleList(options: {
     api.searchConsoleLists.searchConsoleListPage,
     ready && !asksGoogle && !toldLive ? { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction } : "skip",
   );
-  if (server.result?.live && !toldLive) setLiveFor(baseKey);
-  const isLive = asksGoogle || toldLive || server.result?.live === true;
+  if (server.result?.live && !toldLive && !ownDay) setLiveFor(baseKey);
+  const isLive = !ownDay && (asksGoogle || toldLive || server.result?.live === true);
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
     isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(device ? { device } : {}) } : null,
@@ -358,6 +366,7 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const [kind, setKind] = useSiteParam<string>("kind", "", allowed);
   const [brand, setBrand] = useSiteParam<string>("brand", "", ["", "yes", "no"]);
   const [move, setMove] = useSiteParam<string>("move", "", ["", "win", "loss"]);
+  const [way, setWay] = useSiteParam<string>("way", "", ["", "up", "down"]);
   const [verdict, setVerdict] = useSiteParam<string>("verdict", "", ["", "high", "low", "close"]);
   const [missed, setMissed] = useSiteParam<string>("list", "searched", ["searched", "untracked"]);
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...DEVICES]);
@@ -418,6 +427,14 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
                 <option value="">{t("anyMove")}</option>
                 <option value="win">{t("wins")}</option>
                 <option value="loss">{t("losses")}</option>
+              </Select>
+            );
+          case "way":
+            return (
+              <Select key={chip} chip={{ label: t("way"), choice: way ? t(way === "up" ? "wayUp" : "wayDown") : null }} value={way} onChange={setWay}>
+                <option value="">{t("anyWay")}</option>
+                <option value="up">{t("wayUp")}</option>
+                <option value="down">{t("wayDown")}</option>
               </Select>
             );
           case "verdict":

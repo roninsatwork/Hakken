@@ -183,6 +183,8 @@ describe("the Assistant's company figures", () => {
       return await Promise.all(rows.map(async (row) => (await ctx.db.get(row.toolId))?.handlerMapping));
     });
     expect(bound.sort()).toEqual([
+      // What Hakken sees on a website's screens, from its own connector (search-console-volatility-plan.md §8, HS7).
+      "assistant.advice.read",
       "assistant.ai.mentions",
       // Its chart (hakken-tasks-plan.md, item 2.1).
       "assistant.chart",

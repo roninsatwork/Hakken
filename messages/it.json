@@ -14220,7 +14220,8 @@
       "appearance": "Risultati avanzati",
       "estimates": "Reali contro stimati",
       "trackedKeywords": "Parole chiave monitorate",
-      "trackedPages": "Pagine monitorate"
+      "trackedPages": "Pagine monitorate",
+      "volatility": "Volatilità"
     },
     "kinds": {
       "label": "Tipo di risultato",
@@ -14506,7 +14507,11 @@
       "missedSearched": "Molto cercate, poco mostrate",
       "missedUntracked": "Mostrate, non ancora seguite",
       "device": "Dispositivo",
-      "anyDevice": "Qualsiasi dispositivo"
+      "anyDevice": "Qualsiasi dispositivo",
+      "way": "Su o giù",
+      "anyWay": "Su e giù",
+      "wayUp": "Su",
+      "wayDown": "Giù"
     },
     "common": {
       "inLast": "Negli ultimi {days} giorni"
@@ -14593,7 +14598,7 @@
     },
     "updates": {
       "title": "Aggiornamenti di Google",
-      "description": "Cosa ha fatto al tuo sito ciascun aggiornamento di Google: clic e posizione media si leggono dai {days} giorni prima dell'inizio → ai {days} giorni dopo la fine. Gli aggiornamenti sono quelli in Admin → Contenuti → Aggiornamenti di Google, lo stesso elenco segnato sui grafici di Visibilità.",
+      "description": "Cosa ha fatto al tuo sito ciascun aggiornamento di Google: clic e posizione media si leggono dai {days} giorni prima dell'inizio → ai {days} giorni dopo la fine, e la volatilità dai 14 giorni prima dell'inizio → a mentre era in corso. Gli aggiornamenti sono quelli in Admin → Contenuti → Aggiornamenti di Google, lo stesso elenco segnato sui grafici di Visibilità.",
       "chartTitle": "Clic, con gli aggiornamenti di Google",
       "chartHint": "Passa il mouse su una G per vedere l'aggiornamento: quando è iniziato e finito, e cosa ne ha detto Google.",
       "searchPlaceholder": "Cerca aggiornamenti…",
@@ -14604,7 +14609,8 @@
       "started": "Iniziato",
       "notFinished": "Non concluso",
       "waiting": "Non sono ancora passati {days} giorni",
-      "empty": "Nessun aggiornamento di Google è iniziato nei giorni disponibili."
+      "empty": "Nessun aggiornamento di Google è iniziato nei giorni disponibili.",
+      "volatilityBefore": "Volatilità prima"
     },
     "types": {
       "title": "Per classificazione delle pagine",
@@ -14704,6 +14710,221 @@
         "shown": "Volte in cui Google le ha mostrate",
         "ctr": "Clic per ogni volta mostrate",
         "position": "La media di Google"
+      }
+    },
+    "volatility": {
+      "title": "Volatilità",
+      "description": "Quanto si sono mosse ogni giorno le tue posizioni su Google, su 10: 0 quando nulla si è mosso, 10 quando ogni parola chiave si è spostata di dieci posizioni o più. Letto da Search Console, per le parole chiave con 10 o più impressioni quel giorno e il giorno prima, e confrontato con il tuo solito.",
+      "latestDay": "Ultimo giorno, {day}",
+      "latestDayNone": "Ultimo giorno",
+      "noLevel": "Parole chiave insufficienti per giudicare",
+      "levels": {
+        "NORMAL": "Normale",
+        "HIGH": "Alta",
+        "VERY_HIGH": "Molto alta"
+      },
+      "during": "Durante l'aggiornamento di Google",
+      "beforeIt": "{score} nei 14 giorni prima",
+      "noBefore": "Ancora nulla da confrontare",
+      "lastWeek": "Ultimi 7 giorni",
+      "weekBefore": "{score} la settimana prima",
+      "moved5": "Spostate di 5 posizioni o più",
+      "downUp": "{down} giù, {up} su, il {day}",
+      "clicks7": "Clic, ultimi 7 giorni",
+      "onWeekBefore": "rispetto alla settimana prima",
+      "empty": "Nessuna parola chiave ha avuto 10 o più impressioni in entrambi gli ultimi due giorni completi.",
+      "positionBefore": "Posizione il giorno prima",
+      "chartTitle": "Volatilità, giorno per giorno",
+      "chartHint": "Su 10. Passa sopra una G per l'aggiornamento di Google.",
+      "chartHintUsual": "Su 10. Il tuo solito è {usual}: Alta è il 30% sopra, Molto alta il 60%. Passa sopra una G per l'aggiornamento di Google.",
+      "chartNothing": "Nessun giorno ha ancora abbastanza parole chiave per un punteggio.",
+      "series": "Volatilità"
+    },
+    "seen": {
+      "volatility": {
+        "noDays": "La volatilità inizia quando Search Console ha due giorni completi di dati per questo sito.",
+        "tooFew": "Meno di 10 delle tue parole chiave hanno avuto 10 impressioni il {day1}: troppo poche per giudicare.",
+        "updateMoved": "L'aggiornamento di Google {text} è durato dal {day1} al {day2}, e le tue posizioni si sono mosse il {a}% più del solito.",
+        "updateMovedALot": "L'aggiornamento di Google {text} è durato dal {day1} al {day2}, e le tue posizioni si sono mosse più del solito.",
+        "updateRolling": "L'aggiornamento di Google {text} è in corso dal {day1}, e le tue posizioni si muovono il {a}% più del solito.",
+        "updateRollingALot": "L'aggiornamento di Google {text} è in corso dal {day1}, e le tue posizioni si muovono più del solito.",
+        "clicksFellWithIt": "I tuoi clic sono calati del {a}% nell'ultima settimana, di pari passo.",
+        "pointsToGoogle": "Indica un rimescolamento dei risultati da parte di Google, non un cambiamento sul tuo sito.",
+        "movedNoUpdate": "Le tue posizioni si sono mosse il {a}% più del solito il {day1}, e Google non ha annunciato aggiornamenti.",
+        "ownPagesFirst": "Quando si muovono solo le tue parole chiave, inizia dalle tue pagine.",
+        "demand": "Meno persone hanno cercato questa settimana: le tue impressioni sono calate del {a}% mentre le posizioni sono rimaste.",
+        "isDemand": "È la domanda, non Google e non il tuo sito.",
+        "calm": "Google è calmo per le tue parole chiave: {a} su 10 il {day1}, vicino al tuo solito {b}.",
+        "calmNoUsual": "Google è calmo per le tue parole chiave: {a} su 10 il {day1}.",
+        "clicksRoseCalm": "I tuoi clic sono saliti del {a}% questa settimana: dipende dalle tue pagine o dalla domanda, non da Google.",
+        "clicksFellCalm": "I tuoi clic sono calati del {a}% questa settimana: dipende dalle tue pagine o dalla domanda, non da Google.",
+        "holdUntil": "Rimanda le modifiche importanti alle tue pagine fino al {day1}, mentre Google si assesta.",
+        "holdWhileRolling": "Rimanda le modifiche importanti alle tue pagine finché l'aggiornamento non finisce.",
+        "checkDropped": "Controlla {count, plural, one {la parola chiave scesa} other {le # parole chiave scese}} di 5 posizioni o più.",
+        "pagesIfNotBack": "Se non sono risalite entro il {day1}, guarda le pagine su cui arrivano.",
+        "lookAtPages": "Guarda le pagine su cui arrivano quelle parole chiave.",
+        "seeSearches": "Vedi quali parole chiave hanno perso ricerche.",
+        "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
+      },
+      "updates": {
+        "noneInDates": "Google non ha annunciato aggiornamenti in queste date.",
+        "rolling": "L'aggiornamento di Google {text} è in corso dal {day1}.",
+        "movingMore": "Le tue posizioni si muovono il {a}% più del solito.",
+        "holdWhileRolling": "Rimanda le modifiche importanti alle tue pagine finché non finisce.",
+        "finished": "L'aggiornamento di Google {text} è finito il {day1}.",
+        "movedMore": "Le tue posizioni si sono mosse il {a}% più del solito durante l'aggiornamento: {b} su 10, contro {c} prima.",
+        "movedAsUsual": "Le tue posizioni si sono mosse come al solito durante l'aggiornamento: {b} su 10, contro {c} prima.",
+        "clicksShowOn": "L'effetto sui tuoi clic si vedrà il {day1}, passati 14 giorni.",
+        "holdUntil": "Rimanda le modifiche importanti alle tue pagine fino al {day1}.",
+        "notKnown": "L'aggiornamento di Google {text} è finito, ma non ci sono giorni precedenti da confrontare.",
+        "raisedClicks": "L'aggiornamento di Google {text} ha aumentato i tuoi clic del {a}%.",
+        "cutClicks": "L'aggiornamento di Google {text} ha ridotto i tuoi clic del {a}%.",
+        "positionFromTo": "La tua posizione media è passata da {a} a {b}.",
+        "seeLosses": "Vedi le parole chiave che hanno perso clic."
+      },
+      "links": {
+        "seeUpdate": "Vedi l'aggiornamento",
+        "seeKeywords": "Vedi le parole chiave",
+        "seePages": "Vedi le tue pagine",
+        "seeWins": "Vedi Guadagni e perdite",
+        "seeVolatility": "Vedi Volatilità",
+        "seeAlmost": "Vedi Quasi in cima",
+        "seeLowCtr": "Vedi Mostrate ma non cliccate",
+        "seeLosing": "Vedi le parole chiave in calo",
+        "keywordResearch": "Apri Ricerca parole chiave",
+        "seeDemand": "Vedi Domanda persa",
+        "connect": "Collegalo"
+      },
+      "keywords": {
+        "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
+        "shown": "Google ha mostrato il tuo sito per {count, plural, one {una parola chiave} other {# parole chiave}} negli ultimi {c} giorni, portando {b} clic.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
+        "topThree": "{count, plural, =0 {Nessuna è} one {Una è} other {# sono}} tra i primi tre risultati di Google.",
+        "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
+      },
+      "pages": {
+        "noPages": "Google non ha mostrato nessuna delle tue pagine negli ultimi {c} giorni.",
+        "shown": "{count, plural, one {Una delle tue pagine è stata mostrata} other {# delle tue pagine sono state mostrate}} su Google negli ultimi {c} giorni, portando {b} clic.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
+        "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
+      },
+      "bands": {
+        "bands": "Tra i primi tre di Google: {a} parole chiave. Posizioni da 4 a 10: {b}. Seconda pagina: {c}.",
+        "topMore": "{count, plural, one {Una in più} other {# in più}} tra i primi tre rispetto ai giorni prima.",
+        "topFewer": "{count, plural, one {Una in meno} other {# in meno}} tra i primi tre rispetto ai giorni prima.",
+        "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
+      },
+      "moves": {
+        "noMoves": "I clic di nessuna parola chiave sono cambiati negli ultimi {c} giorni.",
+        "gainingLosing": "{count, plural, one {Una parola chiave ha guadagnato} other {# parole chiave hanno guadagnato}} clic e {countB, plural, one {una li ha persi} other {# li hanno persi}} negli ultimi {c} giorni.",
+        "netUp": "Nel complesso, i clic sono aumentati di {a}.",
+        "netDown": "Nel complesso, i clic sono calati di {a}.",
+        "seeLosing": "Inizia dalle parole chiave che perdono più clic.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "almost": {
+        "noneNear": "Nessuna delle tue parole chiave è tra le posizioni 4 e 20 in queste date.",
+        "near": "{count, plural, one {Una parola chiave è} other {# parole chiave sono}} tra le posizioni 4 e 20, a poca distanza dai primi posti di Google.",
+        "nearVolume": "Insieme vengono cercate {a} volte al mese.",
+        "improvePages": "Migliora la pagina su cui arriva ciascuna, a partire dalla più cercata."
+      },
+      "lowCtr": {
+        "noneLow": "Ogni pagina che Google mostra viene cliccata più o meno quanto la sua posizione porterebbe.",
+        "lowCtr": "{count, plural, one {Una pagina viene cliccata} other {# pagine vengono cliccate}} meno di quanto porterebbe il tuo tasso di clic alla loro posizione: {b} clic invece di {c}.",
+        "rewriteTitles": "Riscrivi i loro titoli e descrizioni su Google, a partire dalle più mostrate."
+      },
+      "demand": {
+        "noneMissed": "Nessuna parola chiave cercata da molti manca il tuo sito.",
+        "missed": "{count, plural, one {Una parola chiave cercata da molti mostra} other {# parole chiave cercate da molti mostrano}} appena il tuo sito.",
+        "missedVolume": "Insieme vengono cercate {a} volte al mese.",
+        "writeForDemand": "Scrivi o migliora una pagina per la più cercata."
+      },
+      "competing": {
+        "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
+        "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
+        "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
+        "pickOne": "Scegli una pagina per ogni parola chiave e collega le altre a quella."
+      },
+      "estimates": {
+        "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",
+        "estimatesOff": "Le visite stimate {count, plural, one {di una pagina sono lontane} other {di # pagine sono lontane}} dai clic di Google: {b} troppo alte e {c} troppo basse."
+      },
+      "brand": {
+        "noBrandClicks": "Non ci sono clic da dividere tra brand e non brand in queste date.",
+        "brandShare": "Il {a}% dei tuoi clic arriva da ricerche con il nome del tuo brand.",
+        "othersUp": "I clic di chi non ti ha cercato per nome sono aumentati del {a}%.",
+        "othersDown": "I clic di chi non ti ha cercato per nome sono calati del {a}%.",
+        "growOthers": "Fai crescere le ricerche che non ti nominano: sono nuovi clienti."
+      },
+      "trackedKeywords": {
+        "noneKeywords": "Non segui ancora nessuna parola chiave su questo sito.",
+        "trackKeywords": "Spunta le parole chiave che contano in Parole chiave, e verranno seguite ogni giorno.",
+        "trackedKeywords": "Segui {count, plural, one {una parola chiave} other {# parole chiave}}; insieme hanno portato {b} clic negli ultimi {c} giorni.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "trackedPages": {
+        "nonePages": "Non segui ancora nessuna pagina su questo sito.",
+        "trackPages": "Spunta le pagine che contano in Pagine, e verranno seguite ogni giorno.",
+        "trackedPages": "Segui {count, plural, one {una pagina} other {# pagine}}; insieme hanno portato {b} clic negli ultimi {c} giorni.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "performance": {
+        "nothingShown": "Google non ha mostrato il tuo sito negli ultimi {c} giorni.",
+        "performance": "Google ha mostrato il tuo sito {a} volte negli ultimi {c} giorni, e le persone hanno cliccato {b} volte.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
+        "position": "La tua posizione media è stata {a}.",
+        "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
+      },
+      "newLost": {
+        "keywordsNewLost": "{count, plural, one {Una parola chiave è nuova} other {# parole chiave sono nuove}} negli ultimi {c} giorni, e {countB, plural, one {una è stata persa} other {# sono state perse}}.",
+        "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
+        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
+      },
+      "types": {
+        "noTypes": "Non ci sono clic da dividere per tipo di pagina in queste date.",
+        "topType": "{text} portano più clic: il {a}%."
+      },
+      "places": {
+        "noPlaces": "Non ci sono clic da dividere per paese in queste date.",
+        "topCountry": "La maggior parte dei tuoi clic arriva da {text}: il {a}%.",
+        "mobileShare": "Il {a}% arriva da mobile."
+      },
+      "appearance": {
+        "noRichResults": "Google non mostra nessuna delle tue pagine con risultati multimediali in queste date.",
+        "richResults": "{count, plural, one {Un tipo di risultato multimediale mostra} other {# tipi di risultati multimediali mostrano}} le tue pagine; {text} porta più clic."
+      },
+      "ctrCurve": {
+        "noFirst": "Nessuna delle tue pagine è comparsa in posizione 1 in queste date.",
+        "seeAlmost": "Vedi le parole chiave più vicine ai primi posti.",
+        "firstAndThird": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono; in posizione 3, il {b}%.",
+        "firstOnly": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono.",
+        "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
+      },
+      "record": {
+        "notShown": "Google non ha mostrato “{text}” negli ultimi {c} giorni.",
+        "recordFigures": "“{text}” ha portato {b} clic negli ultimi {c} giorni, con una posizione media di {a}.",
+        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
+        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "rose": "La sua posizione media è salita da {a} a {b}.",
+        "fell": "La sua posizione media è scesa da {a} a {b}."
+      },
+      "websites": {
+        "noWebsites": "La tua azienda non ha ancora siti propri qui.",
+        "connected": "{countB, plural, one {{count, plural, =0 {Search Console non è ancora collegato per il tuo sito.} other {Search Console è collegato per il tuo sito.}}} other {Search Console è collegato per {a} dei tuoi # siti.}}",
+        "topWebsite": "{text} porta più clic: {a}.",
+        "notConnected": "{text} non ha ancora Search Console, quindi i suoi clic non si vedono qui.",
+        "connect": "Collega Search Console per {text}.",
+        "oneWebsite": "{text} ha portato {a} clic negli ultimi 30 giorni."
       }
     }
   },

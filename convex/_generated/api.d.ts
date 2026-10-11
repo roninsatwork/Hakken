@@ -10,6 +10,7 @@
 
 import type * as actionAuth from "../actionAuth.js";
 import type * as adminQueryService from "../adminQueryService.js";
+import type * as adviceSchema from "../adviceSchema.js";
 import type * as agentAccountabilityService from "../agentAccountabilityService.js";
 import type * as agentEvalFixtures from "../agentEvalFixtures.js";
 import type * as agentEvalGradingActions from "../agentEvalGradingActions.js";
@@ -222,6 +223,7 @@ import type * as googleConnection from "../googleConnection.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
 import type * as googleSchema from "../googleSchema.js";
 import type * as googleUpdates from "../googleUpdates.js";
+import type * as googleUpdatesFeed from "../googleUpdatesFeed.js";
 import type * as governanceActivity from "../governanceActivity.js";
 import type * as governanceActivityService from "../governanceActivityService.js";
 import type * as governanceDashboard from "../governanceDashboard.js";
@@ -231,6 +233,7 @@ import type * as governanceRegister from "../governanceRegister.js";
 import type * as governanceRegisterService from "../governanceRegisterService.js";
 import type * as governanceRollupService from "../governanceRollupService.js";
 import type * as governanceRollups from "../governanceRollups.js";
+import type * as hakkenAdvice from "../hakkenAdvice.js";
 import type * as hakkenAssistant from "../hakkenAssistant.js";
 import type * as hakkenCaretaker from "../hakkenCaretaker.js";
 import type * as hakkenResearch from "../hakkenResearch.js";
@@ -419,6 +422,8 @@ import type * as searchConsoleSorts from "../searchConsoleSorts.js";
 import type * as searchConsoleSync from "../searchConsoleSync.js";
 import type * as searchConsoleTidy from "../searchConsoleTidy.js";
 import type * as searchConsoleTracking from "../searchConsoleTracking.js";
+import type * as searchConsoleVolatility from "../searchConsoleVolatility.js";
+import type * as searchConsoleVolatilityDays from "../searchConsoleVolatilityDays.js";
 import type * as searchVolumes from "../searchVolumes.js";
 import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
@@ -600,6 +605,7 @@ import type * as utils_evalFixtureShapes from "../utils/evalFixtureShapes.js";
 import type * as utils_fanOutAngle from "../utils/fanOutAngle.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_followChannels from "../utils/followChannels.js";
+import type * as utils_googleUpdatesFeed from "../utils/googleUpdatesFeed.js";
 import type * as utils_governanceShapes from "../utils/governanceShapes.js";
 import type * as utils_hakkenAssistant from "../utils/hakkenAssistant.js";
 import type * as utils_hakkenCaretaker from "../utils/hakkenCaretaker.js";
@@ -655,6 +661,7 @@ import type * as utils_searchConsoleExport from "../utils/searchConsoleExport.js
 import type * as utils_searchConsolePacks from "../utils/searchConsolePacks.js";
 import type * as utils_searchConsoleTerms from "../utils/searchConsoleTerms.js";
 import type * as utils_searchConsoleViews from "../utils/searchConsoleViews.js";
+import type * as utils_searchConsoleVolatility from "../utils/searchConsoleVolatility.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_sees_aiAnswers from "../utils/sees/aiAnswers.js";
 import type * as utils_sees_analytics from "../utils/sees/analytics.js";
@@ -668,6 +675,8 @@ import type * as utils_sees_organic from "../utils/sees/organic.js";
 import type * as utils_sees_paid from "../utils/sees/paid.js";
 import type * as utils_sees_radar from "../utils/sees/radar.js";
 import type * as utils_sees_research from "../utils/sees/research.js";
+import type * as utils_sees_searchConsole from "../utils/sees/searchConsole.js";
+import type * as utils_sees_searchConsoleScreens from "../utils/sees/searchConsoleScreens.js";
 import type * as utils_sees_site from "../utils/sees/site.js";
 import type * as utils_seoLocations from "../utils/seoLocations.js";
 import type * as utils_seoSentPlace from "../utils/seoSentPlace.js";
@@ -783,6 +792,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   actionAuth: typeof actionAuth;
   adminQueryService: typeof adminQueryService;
+  adviceSchema: typeof adviceSchema;
   agentAccountabilityService: typeof agentAccountabilityService;
   agentEvalFixtures: typeof agentEvalFixtures;
   agentEvalGradingActions: typeof agentEvalGradingActions;
@@ -995,6 +1005,7 @@ declare const fullApi: ApiFromModules<{
   googleProviderAdapter: typeof googleProviderAdapter;
   googleSchema: typeof googleSchema;
   googleUpdates: typeof googleUpdates;
+  googleUpdatesFeed: typeof googleUpdatesFeed;
   governanceActivity: typeof governanceActivity;
   governanceActivityService: typeof governanceActivityService;
   governanceDashboard: typeof governanceDashboard;
@@ -1004,6 +1015,7 @@ declare const fullApi: ApiFromModules<{
   governanceRegisterService: typeof governanceRegisterService;
   governanceRollupService: typeof governanceRollupService;
   governanceRollups: typeof governanceRollups;
+  hakkenAdvice: typeof hakkenAdvice;
   hakkenAssistant: typeof hakkenAssistant;
   hakkenCaretaker: typeof hakkenCaretaker;
   hakkenResearch: typeof hakkenResearch;
@@ -1192,6 +1204,8 @@ declare const fullApi: ApiFromModules<{
   searchConsoleSync: typeof searchConsoleSync;
   searchConsoleTidy: typeof searchConsoleTidy;
   searchConsoleTracking: typeof searchConsoleTracking;
+  searchConsoleVolatility: typeof searchConsoleVolatility;
+  searchConsoleVolatilityDays: typeof searchConsoleVolatilityDays;
   searchVolumes: typeof searchVolumes;
   seedUsers: typeof seedUsers;
   seedWorkflows: typeof seedWorkflows;
@@ -1373,6 +1387,7 @@ declare const fullApi: ApiFromModules<{
   "utils/fanOutAngle": typeof utils_fanOutAngle;
   "utils/fileParser": typeof utils_fileParser;
   "utils/followChannels": typeof utils_followChannels;
+  "utils/googleUpdatesFeed": typeof utils_googleUpdatesFeed;
   "utils/governanceShapes": typeof utils_governanceShapes;
   "utils/hakkenAssistant": typeof utils_hakkenAssistant;
   "utils/hakkenCaretaker": typeof utils_hakkenCaretaker;
@@ -1428,6 +1443,7 @@ declare const fullApi: ApiFromModules<{
   "utils/searchConsolePacks": typeof utils_searchConsolePacks;
   "utils/searchConsoleTerms": typeof utils_searchConsoleTerms;
   "utils/searchConsoleViews": typeof utils_searchConsoleViews;
+  "utils/searchConsoleVolatility": typeof utils_searchConsoleVolatility;
   "utils/security": typeof utils_security;
   "utils/sees/aiAnswers": typeof utils_sees_aiAnswers;
   "utils/sees/analytics": typeof utils_sees_analytics;
@@ -1441,6 +1457,8 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/paid": typeof utils_sees_paid;
   "utils/sees/radar": typeof utils_sees_radar;
   "utils/sees/research": typeof utils_sees_research;
+  "utils/sees/searchConsole": typeof utils_sees_searchConsole;
+  "utils/sees/searchConsoleScreens": typeof utils_sees_searchConsoleScreens;
   "utils/sees/site": typeof utils_sees_site;
   "utils/seoLocations": typeof utils_seoLocations;
   "utils/seoSentPlace": typeof utils_seoSentPlace;

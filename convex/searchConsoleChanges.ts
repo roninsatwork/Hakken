@@ -24,6 +24,10 @@ import { updateInLanguage } from "./googleUpdates";
 import { BANDS, bandOf, ctrCurve, type Band } from "./utils/searchConsoleViews";
 import { stepEnd, stepStart } from "./utils/searchConsolePacks";
 import { wordStartMatcher } from "./utils/wordStarts";
+import { seenValidator } from "./utils/hakkenSees";
+import { newestUpdateFacts, updatesSees } from "./utils/sees/searchConsole";
+import { completeDays } from "./utils/searchConsoleVolatility";
+import { DAYS_READ, dayRowsOf, updateVolatility } from "./searchConsoleVolatilityDays";
 
 /**
  * Search Console's Changes pages that read more than one list
@@ -325,9 +329,16 @@ const updateValidator = v.object({
   state: v.union(v.literal("done"), v.literal("rolling"), v.literal("waiting")),
   before: figuresValidator,
   after: figuresValidator,
+  /**
+   * Volatility (search-console-volatility-plan.md §2.2): the website's score
+   * the 14 days before it began → while it rolled out. Missing where those
+   * days' scores are not held — older than the 60 days kept as days, or a
+   * country asked of Google.
+   */
+  volatility: v.optional(v.object({ before: v.union(v.number(), v.null()), during: v.union(v.number(), v.null()) })),
 });
 
-type UpdateWords = { id: Id<"googleUpdates">; title: string; description: string; startedOn: string; finishedOn: string | null; url: string };
+export type UpdateWords = { id: Id<"googleUpdates">; title: string; description: string; startedOn: string; finishedOn: string | null; url: string };
 
 /** Each update kept in Admin → Content → Google updates that began in the days given, in the reader's language: up to `most` (`consoleUpdatesListed`). */
 /** The dates chosen, cut to the days held: null when they miss them altogether. */
@@ -337,7 +348,7 @@ function within(dates: { from: string; to: string }, oldest: string, newest: str
   return from <= to ? { from, to } : null;
 }
 
-async function updatesIn(ctx: { db: QueryCtx["db"] }, oldest: string, newest: string, language: string, most: number): Promise<UpdateWords[]> {
+export async function updatesIn(ctx: { db: QueryCtx["db"] }, oldest: string, newest: string, language: string, most: number): Promise<UpdateWords[]> {
   const rows = await ctx.db
     .query("googleUpdates")
     .withIndex("by_started", (q) => q.gte("startedOn", oldest).lte("startedOn", newest))
@@ -396,6 +407,8 @@ export const searchConsoleUpdates = tenantQuery({
     updates: v.array(updateValidator),
     /** A country not kept ready: asked of Google instead. */
     live: v.boolean(),
+    /** What Hakken sees (search-console-volatility-plan.md §4.2): the newest update in the dates, and what it did. */
+    seen: v.optional(seenValidator),
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -411,14 +424,18 @@ export const searchConsoleUpdates = tenantQuery({
     checkedRange(args.from, args.to);
     const shown = within(args, oldest, newest);
     if (!shown) return { from: null, to: null, updates: [], live: false };
-    const updates = await withFigures(
+    const figured = await withFigures(
       await updatesIn(ctx, shown.from, shown.to, args.language, limits.updatesListed),
       oldest,
       newest,
       limits.updateWindowDays,
       async (from, to) => addUp(await daysOf(ctx, holdId, args.searchType, from, to, country)),
     );
-    return { ...shown, updates, live: false };
+    // Each update's volatility, from the web day scores (search-console-volatility-plan.md §2.2).
+    const days = figured.length > 0 ? await dayRowsOf(ctx, holdId, country, shiftDay(newest, 1 - DAYS_READ)) : [];
+    const complete = completeDays(days);
+    const updates = figured.map((update) => ({ ...update, volatility: updateVolatility(days, update, newest, complete) }));
+    return { ...shown, updates, live: false, seen: updatesSees(newestUpdateFacts(updates), newest) };
   },
 });
 
@@ -470,6 +487,7 @@ type LiveUpdatesTarget = {
 };
 
 type UpdateFigures = UpdateWords & { state: "done" | "rolling" | "waiting"; before: Figures | null; after: Figures | null };
+
 
 type LiveUpdatesAnswer =
   | { ok: true; from: string | null; to: string | null; updates: UpdateFigures[] }

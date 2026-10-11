@@ -87,6 +87,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "hakken-task-care": (ctx) => ctx.runAction(internal.hakkenCaretaker.careForTasks, {}),
   // Every hour: the Outbox Queue Processing Agent kept there, and stuck emails told (outbox-and-preferences-plan.md, A4).
   "outbox-watch": (ctx) => ctx.runAction(internal.outboxQueueAgent.watchOutbox, {}),
+  // Once a day, Google's ranking updates read from its Search Status page into Google updates (search-console-volatility-plan.md, V14).
+  "google-updates-feed": (ctx) => ctx.runAction(internal.googleUpdatesFeed.collectGoogleUpdates, {}),
 };
 
 /** How often each job is meant to run, in minutes — the screen uses this to
@@ -127,6 +129,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "hakken-task-reports": 15,
   "hakken-task-care": 1440,
   "outbox-watch": 60,
+  "google-updates-feed": 1440,
 };
 
 export const recordJobOutcomeInternal = internalMutation({

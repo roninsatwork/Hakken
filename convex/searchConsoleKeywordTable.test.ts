@@ -109,10 +109,13 @@ describe("a list of keywords read as columns", () => {
       for (const { slot, parts } of lists) {
         for (const [part, made] of parts.entries()) {
           const stored = inBook(slot.list, made, places, ["acme"]);
-          await ctx.db.insert("searchConsolePeriods", {
-            companyWebsiteId: holdId, searchType: "web", list: slot.list, period: "90", which: slot.which, part, from: slot.from, to: slot.to,
-            ...stored, ...packedColumns(stored), ...bookedColumns({ ...stored, list: slot.list }), builtAt: BUILT,
-          });
+          // The keyword lists again as Volatility's own day (`VOLATILITY_PERIOD`), which its rule reads whatever the dates.
+          for (const period of slot.list === "query" ? (["90", "1"] as const) : (["90"] as const)) {
+            await ctx.db.insert("searchConsolePeriods", {
+              companyWebsiteId: holdId, searchType: "web", list: slot.list, period, which: slot.which, part, from: slot.from, to: slot.to,
+              ...stored, ...packedColumns(stored), ...bookedColumns({ ...stored, list: slot.list }), builtAt: BUILT,
+            });
+          }
         }
       }
       return holdId;
@@ -140,13 +143,13 @@ describe("a list of keywords read as columns", () => {
 
   const VIEWS: Array<{ view: View; missed?: "searched" | "untracked" }> = [
     { view: "all" }, { view: "tracked" }, { view: "almost" }, { view: "competing" }, { view: "moves" },
-    { view: "missed", missed: "searched" }, { view: "missed", missed: "untracked" },
+    { view: "missed", missed: "searched" }, { view: "missed", missed: "untracked" }, { view: "volatility" },
   ];
 
   test("every page's rule, searched and filtered every way: the same rows, figures and hero boxes", async () => {
     const filters: Filters[] = [
       {}, { q: "door" }, { q: "acme lev" }, { tracked: "yes" }, { tracked: "no" }, { band: "4-10" }, { kind: "BUYING" }, { kind: "UNJUDGED" },
-      { brand: "yes" }, { brand: "no" }, { move: "win" }, { move: "loss" }, { verdict: "high" },
+      { brand: "yes" }, { brand: "no" }, { move: "win" }, { move: "loss" }, { way: "up" }, { way: "down" }, { verdict: "high" },
     ];
     const results = await bothWays(VIEWS.flatMap((view) => filters.map((filter) => ({ ...view, ...filter }))));
     for (const result of results) {
@@ -158,7 +161,7 @@ describe("a list of keywords read as columns", () => {
   });
 
   test("every heading, either way round, on the rules that add their own figures", async () => {
-    const rules: Array<{ view: View }> = [{ view: "competing" }, { view: "moves" }, { view: "tracked" }];
+    const rules: Array<{ view: View }> = [{ view: "competing" }, { view: "moves" }, { view: "tracked" }, { view: "volatility" }];
     const results = await bothWays(rules.flatMap((rule) => SORT_KEYS.flatMap((sort) => (["asc", "desc"] as const).map((direction) => ({ ...rule, sort, direction })))));
     for (const result of results) expect(result.columns, JSON.stringify(result.ask)).toEqual(result.rows);
   });

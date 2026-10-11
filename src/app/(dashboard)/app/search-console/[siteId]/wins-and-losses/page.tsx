@@ -9,6 +9,8 @@ import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTabl
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { BeforeAfter, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { movesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["move", "band", "device"];
 
@@ -26,6 +28,7 @@ export default function SearchConsoleWinsPage() {
   const days = list.range.days;
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="moves" seen={list.summary ? movesSees(list.summary, list.range.days) : null} />}
       icon={<ArrowUpDown className="h-5 w-5 text-brand" />}
       title={t("moves.title")}
       description={t("moves.description", { days })}

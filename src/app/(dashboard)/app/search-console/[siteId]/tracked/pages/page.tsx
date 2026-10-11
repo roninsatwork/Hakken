@@ -8,6 +8,8 @@ import { TrackedFigures } from "../../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../../_components/searchConsoleRecords";
 import { TrackedCount, figureColumns, trackColumn, useSearchConsoleList, useSearchConsoleTracking, type ChipId } from "../../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../../_components/SearchConsoleSees";
+import { trackedSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /** A search box only, as drawn: no filter chips. */
 const CHIPS: readonly ChipId[] = [];
@@ -29,6 +31,7 @@ export default function SearchConsoleTrackedPagesPage() {
 
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="trackedPages" seen={list.summary ? trackedSees(list.summary, list.range.days, "pages") : null} />}
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("tracked.pages.title")}
       description={t("tracked.pages.description")}

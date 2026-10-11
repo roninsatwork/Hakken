@@ -9,6 +9,8 @@ import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTabl
 import { formatRate } from "../../_components/searchConsoleFormat";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { lowCtrSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["pageType", "band", "device"];
 
@@ -27,6 +29,7 @@ export default function SearchConsoleLowCtrPage() {
   const days = list.range.days;
   return (
     <SearchConsoleListScreen
+      sees={<SearchConsoleSees screen="lowCtr" seen={list.summary ? lowCtrSees(list.summary) : null} />}
       icon={<MousePointerClick className="h-5 w-5 text-brand" />}
       title={t("lowCtr.title")}
       description={t("lowCtr.description")}

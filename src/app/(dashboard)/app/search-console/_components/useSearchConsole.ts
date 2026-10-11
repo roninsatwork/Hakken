@@ -51,6 +51,7 @@ export const SEARCH_CONSOLE_PAGES = [
   { id: "bands", segment: "position-bands", group: "changes" },
   { id: "newLost", segment: "new-and-lost", group: "changes" },
   { id: "moves", segment: "wins-and-losses", group: "changes" },
+  { id: "volatility", segment: "volatility", group: "changes" },
   { id: "updates", segment: "google-updates", group: "changes" },
   { id: "almost", segment: "almost-there", group: "opportunities" },
   { id: "lowCtr", segment: "shown-but-not-clicked", group: "opportunities" },

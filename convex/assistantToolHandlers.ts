@@ -74,6 +74,13 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(question ? { question } : {}),
     });
   },
+  "assistant.advice.read": async (input) => {
+    if (!input.companyId) return NO_COMPANY_FIGURES;
+    return await input.ctx.runQuery(internal.assistantReads.adviceInternal, {
+      companyId: input.companyId,
+      website: stringArg(input.args, "website"),
+    });
+  },
   "assistant.tasks.open": async (input) => {
     if (!input.companyId) return NO_COMPANY_FIGURES;
     return await input.ctx.runQuery(internal.assistantReads.openTasksInternal, { companyId: input.companyId });

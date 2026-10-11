@@ -11,20 +11,39 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  * think its a good idea — so its not just these screens"): every page in a
  * website's menu, every record and detail screen, the Websites list and
  * Keyword research. Only forms carry none.
+ *
+ * And every Search Console and Google Analytics screen where it makes sense
+ * (search-console-volatility-plan.md §8, HS8; Anthony, 2026-10-10: "if a
+ * screen in Visibility, Search Console or Analytics is missing a What Hakken
+ * sees we need to add it where it makes sense"), so a new screen without one
+ * fails here. Where it does not: below, each with its reason.
  */
-const ROOTS = ["src/app/(dashboard)/app/sites", "src/app/(dashboard)/app/keyword-research"];
+const ROOTS = [
+  "src/app/(dashboard)/app/sites",
+  "src/app/(dashboard)/app/keyword-research",
+  "src/app/(dashboard)/app/search-console",
+  "src/app/(dashboard)/app/analytics",
+];
 
-/** Forms: a box has nothing to say about a field. */
+/** Screens with no box, and why: a form has nothing to say about a field; the rest say it another way. */
 const FORMS = new Set([
   "src/app/(dashboard)/app/keyword-research/lists/[listId]/rename/page.tsx",
   "src/app/(dashboard)/app/keyword-research/lists/new/page.tsx",
+  // Search Console's connection: a setting, with nothing in its figures to advise on.
+  "src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx",
+  // A keyword's and a page's countries: the record's own tab, under the record's box.
+  "src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx",
+  "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",
+  // One page of Heroes and attention: its What to do is that page's advice, problem by problem.
+  "src/app/(dashboard)/app/analytics/[siteId]/heroes/page/page.tsx",
 ]);
 
 const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set([".tsx"])))
   .map(relativePath)
   .filter((file) => file.endsWith("/page.tsx") && !FORMS.has(file));
 
-const carriesBox = (file: string) => /<(SiteSees|HakkenSees|ResearchSees)\b/.test(readRepoFile(file));
+// A record's screen draws its box itself (`SearchConsoleRecordScreen`).
+const carriesBox = (file: string) => /<(SiteSees|HakkenSees|ResearchSees|SearchConsoleSees|AnalyticsSees|SearchConsoleRecordScreen)\b/.test(readRepoFile(file));
 
 describe("What Hakken sees on every Visibility screen", () => {
   test("every screen opens with the box", () => {
@@ -33,9 +52,12 @@ describe("What Hakken sees on every Visibility screen", () => {
   });
 
   test("every box names a screen whose words exist in English and Italian", () => {
-    const unworded = screens().flatMap((file) => [...readRepoFile(file).matchAll(/<(SiteSees|ResearchSees) screen="([^"]+)"/g)].flatMap(([, box, screen]) =>
+    const unworded = screens().flatMap((file) => [...readRepoFile(file).matchAll(/<(SiteSees|ResearchSees|SearchConsoleSees|AnalyticsSees)\s+screen="([^"]+)"/g)].flatMap(([, box, screen]) =>
       [en, it].flatMap((messages) => {
-        const words = (box === "SiteSees" ? messages.sites.seen : messages.keywordResearch.seen) as Record<string, unknown>;
+        const words = (box === "SiteSees" ? messages.sites.seen
+          : box === "SearchConsoleSees" ? messages.searchConsole.seen
+            : box === "AnalyticsSees" ? messages.googleAnalytics.seen
+              : messages.keywordResearch.seen) as Record<string, unknown>;
         return words[screen] ? [] : [`${file}: ${box} "${screen}"`];
       })));
     expect(unworded, "A box's screen has no words: add them under sites.seen (or keywordResearch.seen) in both languages.").toEqual([]);

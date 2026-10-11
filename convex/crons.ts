@@ -27,6 +27,15 @@ crons.interval(
   { job: "hakken-task-watch" }
 );
 
+// Google's ranking updates read from its Search Status page once a day, into Admin → Content → Google updates
+// (search-console-volatility-plan.md, V14): the charts' markers and Volatility's "is it Google?" never wait on a person.
+crons.daily(
+  "google-updates-feed",
+  { hourUTC: 6, minuteUTC: 15 },
+  internal.jobLedger.runJob,
+  { job: "google-updates-feed" }
+);
+
 // The Caretaker Agent's daily sweep: any task that can no longer work paused, its owner told (hakken-tasks-plan.md, Phase 5).
 crons.daily(
   "hakken-task-care",

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { latestAdvice } from "./hakkenAdvice";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
 import { companyHolds, type SiteReader } from "./siteAccess";
@@ -54,6 +55,28 @@ export async function holdFor(ctx: Pick<QueryCtx, "db">, companyId: Id<"companie
 }
 
 const reader = (ctx: Pick<QueryCtx, "db">, companyId: Id<"companies">): SiteReader => ({ db: ctx.db, companyId });
+
+/**
+ * What Hakken sees on a website's screens (search-console-volatility-plan.md
+ * §8, HS7): each screen's newest saved advice, in the screen's own words, and
+ * the way to the screen. What the Assistant says of how a website is doing
+ * starts here, so it says what the screens say (HS4).
+ */
+export const adviceInternal = internalQuery({
+  args: { ...companyArg, website: v.string(), language: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const found = await holdFor(ctx, args.companyId, args.website);
+    if ("problem" in found) return { ok: false, problem: found.problem };
+    const advice = await latestAdvice(ctx, found.held.hold._id, args.language ?? "en");
+    return {
+      ok: true,
+      website: found.held.summary.host,
+      rule: "This is the advice the screens give. Give it as written, with the way to its screen; add detail when asked, never different advice.",
+      advice: advice.map((entry) => ({ screen: entry.screen, page: entry.path, worked_out: entry.day, says: entry.says, do_first: entry.steps.map((step) => step.words) })),
+      ...(advice.length === 0 ? { none: "No screen of this website has been opened in the last fortnight, so there is no advice saved yet." } : {}),
+    };
+  },
+});
 
 /** The company's websites — its own, and the competitors each is measured against. */
 export const websitesInternal = internalQuery({

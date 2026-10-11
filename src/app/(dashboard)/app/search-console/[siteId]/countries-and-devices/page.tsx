@@ -27,6 +27,8 @@ import {
   useSearchConsoleStatus,
   type ResultKind,
 } from "../../_components/useSearchConsole";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { placesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 type Split = { key: string; name: string; clicks: number; impressions: number; ctr: number; position: number; share: number };
 
@@ -96,6 +98,11 @@ export default function SearchConsolePlacesPage() {
   const deviceOrder = useSiteSortedList(matching(devices, deviceTerm), SORTS, { opening: "clicks", name: nameOf, table: "devices" });
   const countryPages = useSitePager(countryOrder.rows, { isLoading: countries === undefined });
   const devicePages = useSitePager(deviceOrder.rows, { isLoading: devices === undefined, table: "devices" });
+  // What Hakken sees: the country bringing the most clicks, and mobile's share of them.
+  const countryClicks = (countries ?? []).reduce((sum, row) => sum + row.clicks, 0);
+  const topCountry = [...(countries ?? [])].sort((left, right) => right.clicks - left.clicks)[0] ?? null;
+  const mobile = devices?.find((row) => row.key === "MOBILE") ?? null;
+  const placesSeen = countries && devices ? placesSees(topCountry, countryClicks, mobile ? mobile.clicks : null) : null;
   const nothing = countryList && !countryList.preparing && countryList.rows.length === 0 && deviceList && !deviceList.preparing && deviceList.rows.length === 0;
 
   const columns = (first: string) => [
@@ -129,6 +136,7 @@ export default function SearchConsolePlacesPage() {
       <PageHeader icon={<MapPin className="h-5 w-5 text-brand" />} title={t("places.title")} description={t("places.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="places" seen={placesSeen} />
           <ResultKindSwitch />
           {countryCopy.building ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : countryCopy.behind ? <p className="text-[12px] text-muted">{t("table.behind")}</p> : null}
           {nothing ? (

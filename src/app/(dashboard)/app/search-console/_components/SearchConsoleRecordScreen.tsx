@@ -41,6 +41,8 @@ import {
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
 } from "./useSearchConsole";
+import { SearchConsoleSees } from "./SearchConsoleSees";
+import { recordSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["tracked", "band", "device"];
 
@@ -136,6 +138,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
       />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="record" seen={days ? recordSees(title, days.totals, days.previous, range.days) : null} />
           <ResultKindSwitch />
           {days === undefined ? (
             <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />

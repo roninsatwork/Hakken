@@ -324,6 +324,9 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   searchConsoleSeenDays: LATEST,
   searchConsoleRuns: forever("each collection, the run log"),
 
+  // ── What Hakken advised (search-console-volatility-plan.md §8, HS5) ───────
+  hakkenAdvice: cleared("90 days", "hakkenAdvice/noteAdvice"),
+
   // ── Keyword research ──────────────────────────────────────────────────────
   keywordLookups: RECORD,
   researchLists: RECORD,

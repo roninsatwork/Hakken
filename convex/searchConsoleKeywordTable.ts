@@ -366,6 +366,7 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
       const change = changeOf(row);
       return change !== null && change !== 0;
     }
+    : ask.view === "volatility" ? (row) => positionChangeOf(row) !== null
     : () => true;
   let count = 0;
   for (let row = 0; row < source.length; row += 1) if (keep(row)) count += 1;
@@ -464,8 +465,9 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     && (!filters.kind || (kindOf(row) ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (brandOf(row) === true))
     && (!filters.move || (filters.move === "win" ? (changeOf(row) ?? 0) > 0 : (changeOf(row) ?? 0) < 0))
+    && (!filters.way || (filters.way === "up" ? (positionChangeOf(row) ?? 0) > 0 : (positionChangeOf(row) ?? 0) < 0))
     && !filters.verdict;
-  const kept = filters.q || filters.tracked || filters.band || filters.kind || filters.brand || filters.move || filters.verdict
+  const kept = filters.q || filters.tracked || filters.band || filters.kind || filters.brand || filters.move || filters.way || filters.verdict
     ? listed.filter(passes)
     : listed;
   const order = ordered(kept, ask, {
@@ -524,6 +526,10 @@ function sortValue(key: SortKey, read: Readers): ((row: number) => number) | nul
     case "ctr": return (row) => (read.impressionsOf(row) > 0 ? read.clicksOf(row) / read.impressionsOf(row) : 0);
     case "position": return (row) => (read.impressionsOf(row) > 0 ? read.positionOf(row) : Number.NaN);
     case "positionChange": return (row) => numberOr(read.positionChangeOf(row));
+    case "movedBy": return (row) => {
+      const moved = read.positionChangeOf(row);
+      return moved === null ? Number.NaN : Math.abs(moved);
+    };
     case "share": return (row) => (read.total > 0 ? read.clicksOf(row) / read.total : 0);
     case "count": return (row) => {
       const competing = read.competing;
@@ -559,7 +565,7 @@ function sortValue(key: SortKey, read: Readers): ((row: number) => number) | nul
 
 /** The first direction each heading's first press orders by (`SORTS`). */
 const FIRST: Record<SortKey, "asc" | "desc"> = {
-  key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", share: "desc",
+  key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", movedBy: "desc", share: "desc",
   count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
   topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc",
 };

@@ -68,7 +68,11 @@ describe("approved looks", () => {
     const canvas = JSON.parse(readFileSync(path.join(ASSETS, "search-console-redesign/canvas.json"), "utf8")) as { boards: Record<string, unknown> };
     const boards = Object.keys(canvas.boards).map((file) => file.replace(/\.dc\.html$/, ""));
     const saved = new Set(lookFiles.filter((look) => look.plan === "search-console-redesign").map((look) => look.board));
-    expect(boards.filter((board) => !saved.has(board))).toEqual([]);
+    // A board approved again in a later plan keeps its look there: Google updates with What Hakken sees and
+    // Volatility (search-console-volatility-plan.md §2.2).
+    const redrawn: Record<string, string> = { Updates: "search-console-volatility" };
+    const savedLater = (board: string) => lookFiles.some((look) => look.plan === redrawn[board] && look.board === board);
+    expect(boards.filter((board) => !saved.has(board) && !savedLater(board))).toEqual([]);
   });
 
   test("the outline reads parts in order, nested, with titles and headings but no data", () => {

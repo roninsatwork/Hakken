@@ -11,13 +11,15 @@ import type { Seen, SeenPhrase } from "@/convex/utils/hakkenSees";
  * a code without words would show its key on screen, and a slot the screen
  * does not fill would fail there.
  */
-export function expectWords(screen: string, box: Seen, namespace: "sites.seen" | "keywordResearch.seen" = "sites.seen") {
+export function expectWords(screen: string, box: Seen, namespace: "sites.seen" | "keywordResearch.seen" | "searchConsole.seen" = "sites.seen") {
   for (const [locale, messages] of [["en", en], ["it", it]] as const) {
-    const seen = (namespace === "sites.seen" ? messages.sites.seen : messages.keywordResearch.seen) as unknown as Record<string, Record<string, string> | undefined>;
+    const seen = (namespace === "sites.seen" ? messages.sites.seen : namespace === "searchConsole.seen" ? messages.searchConsole.seen : messages.keywordResearch.seen) as unknown as Record<string, Record<string, string> | undefined>;
     const t = createTranslator({ locale, messages, onError: (error) => { throw error; } }) as unknown as (key: string, values?: Record<string, string | number>) => string;
     const values = (phrase: SeenPhrase) => ({
       a: String(phrase.a ?? 0), b: String(phrase.b ?? 0), c: String(phrase.c ?? 0), count: phrase.a ?? 0, countB: phrase.b ?? 0, countC: phrase.c ?? 0,
       text: phrase.text ?? "", more: phrase.more ?? "", engine: phrase.engine ?? "",
+      // Search Console's boxes name days (`SearchConsoleSees`).
+      day1: phrase.days?.[0] ?? "", day2: phrase.days?.[1] ?? "",
     });
     // A code may name a group's own sentence: "fix.HOURS" is `fix` → `HOURS`.
     const wordsOf = (code: string) => code.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], seen[screen]);

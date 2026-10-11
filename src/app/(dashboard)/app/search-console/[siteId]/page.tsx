@@ -8,6 +8,8 @@ import { SearchConsoleChart } from "../_components/SearchConsoleChart";
 import { SearchConsoleFigures, useSiteFiguresFor } from "../_components/SearchConsoleFigures";
 import { LiveProblem, NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../_components/SearchConsoleNotices";
 import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
+import { SearchConsoleSees } from "../_components/SearchConsoleSees";
+import { performanceSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /**
  * A website's Performance (docs/plans/active/search-console-plan.md §5.1):
@@ -33,6 +35,7 @@ export default function SearchConsolePerformancePage() {
       <PageHeader icon={<LineChart className="h-5 w-5 text-brand" />} title={t("performance.title")} description={t("performance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="performance" seen={performance && !problem ? performanceSees(totals, performance.previous, range.days) : null} />
           <ResultKindSwitch />
           {problem ? (
             <LiveProblem problem={problem} retry={retry} />

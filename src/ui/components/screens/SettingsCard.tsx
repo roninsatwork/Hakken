@@ -1,7 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import { Button } from "./Button";
 
 /**
  * The card an admin settings screen is built from.
@@ -15,11 +17,43 @@ import { cn } from "@/src/ui/lib/utils";
  * a heading sits and what a field label looks like. Shared here so they cannot
  * drift apart again by one of them being edited.
  */
-export function SettingsCard({ title, className, children }: {
+/**
+ * A card that folds away, for a card read once and then wanted out of the way
+ * — What Hakken sees (search-console-volatility-plan.md §8, HS1; Anthony,
+ * 2026-10-10: "so once you read it you can minimise it and get more screen
+ * real estate back"). Its title becomes the button, with the chevron Search
+ * Console's side menu draws for its groups; folded, the card is one row — the
+ * title, `summary` cut to the line, the chevron — and its contents are not drawn.
+ */
+export type CardFold = { open: boolean; onToggle: () => void; summary?: string };
+
+export function SettingsCard({ title, className, children, fold }: {
   title: string;
   className?: string;
   children: ReactNode;
+  fold?: CardFold;
 }) {
+  const panelId = useId();
+  if (fold) {
+    return (
+      <section data-part="settings-card" className={cn("flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40", fold.open ? "p-6" : "px-6 py-4", className)}>
+        <h2 data-part-title className={cn("text-muted", fold.open && "mb-1")}>
+          <Button
+            variant="ghost"
+            aria-expanded={fold.open}
+            aria-controls={panelId}
+            onClick={fold.onToggle}
+            className="flex w-full items-center gap-4 rounded-none p-0 text-left text-muted hover:bg-transparent hover:text-foreground"
+          >
+            <span className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.12em]">{title}</span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-normal text-secondary">{fold.open ? null : fold.summary}</span>
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", fold.open && "rotate-180")} aria-hidden="true" />
+          </Button>
+        </h2>
+        {fold.open ? <div id={panelId} className="flex flex-col gap-3">{children}</div> : null}
+      </section>
+    );
+  }
   return (
     <section data-part="settings-card" className={cn("flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-6", className)}>
       <h2 data-part-title className="mb-1 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">

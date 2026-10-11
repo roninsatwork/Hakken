@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { LISTS_OF } from "./searchConsoleApi";
 import {
   FAN_OUT_PERIODS,
+  VOLATILITY_PERIOD,
   SEARCH_CONSOLE_PERIODS,
   periodListValidator,
   periodValidator,
@@ -42,6 +43,7 @@ import {
   type StoredPacked,
 } from "./utils/searchConsolePacks";
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
+import { VOLATILITY_IMPRESSIONS, completeDays, dayVolatility, periodVolatility, type Volatility } from "./utils/searchConsoleVolatility";
 import { tenantQuery } from "./tenantFunctions";
 import { addressesOf, decodeWith } from "./holdPageRefs";
 import { forgetListBuild, noteListBuild, writeBook } from "./searchConsolePeriodBooks";
@@ -213,7 +215,7 @@ type ChartPeriod = {
   rest: number;
   brandClicks: number;
   otherClicks: number;
-};
+} & Partial<Volatility>;
 
 /** A day's, week's or month's last day. */
 const lastDayOf = (grain: Grain, start: string): string => stepEnd(start, STEP_OF[grain]);
@@ -250,6 +252,7 @@ function chartPeriods(newest: string, oldest: string, chartWeeks: number, dayLin
  * fall in (§14.3, item 4).
  */
 export function chartFigures(kept: readonly Kept[], newest: string, oldest: string, brandWords: readonly string[], chartWeeks: number, searchType = "web"): ChartPeriod[] {
+  const volatilityOn = dailyVolatility(kept);
   return chartPeriods(newest, oldest, chartWeeks, firstDayKeptFor(searchType, newest)).map(({ grain, start }) => {
     const end = lastDayOf(grain, start);
     const held = { from: start > oldest ? start : oldest, to: end < newest ? end : newest };
@@ -265,8 +268,42 @@ export function chartFigures(kept: readonly Kept[], newest: string, oldest: stri
       if (isBrand(keyword.key, brandWords)) figures.brandClicks += keyword.clicks;
       else figures.otherClicks += keyword.clicks;
     }
-    return figures;
+    const scored = grain === "DAY" ? [volatilityOn(start)] : daysFrom(held.from, held.to).map(volatilityOn);
+    const days = scored.filter((day): day is Volatility => day !== null);
+    return days.length === 0 ? figures : { ...figures, ...(grain === "DAY" ? days[0] : periodVolatility(days)) };
   });
+}
+
+/** Every day from one to the other, oldest first. */
+function daysFrom(from: string, to: string): string[] {
+  const days: string[] = [];
+  for (let day = from; day <= to; day = shiftDay(day, 1)) days.push(day);
+  return days;
+}
+
+/**
+ * Each day's volatility against the day before (search-console-volatility-
+ * plan.md §3), from the days kept as days — null where either day is not one,
+ * as a day past the 60 kept, rolled into its week, cannot be told apart.
+ */
+function dailyVolatility(kept: readonly Kept[]): (day: string) => Volatility | null {
+  const partsOf = new Map<string, Packed[]>();
+  for (const record of kept) {
+    if (record.grain !== "DAY") continue;
+    partsOf.set(record.start, [...(partsOf.get(record.start) ?? []), record.packed]);
+  }
+  const keywords = new Map<string, ReturnType<typeof bySide>>();
+  const keywordsOn = (day: string) => {
+    const parts = partsOf.get(day);
+    if (!parts) return null;
+    if (!keywords.has(day)) keywords.set(day, bySide(addUp(parts), "query"));
+    return keywords.get(day)!;
+  };
+  return (day) => {
+    const today = keywordsOn(day);
+    const before = keywordsOn(shiftDay(day, -1));
+    return today && before ? dayVolatility(today, before) : null;
+  };
 }
 
 const grainValidator = v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("MONTH"));
@@ -283,6 +320,10 @@ const chartPeriodValidator = v.object({
   rest: v.number(),
   brandClicks: v.number(),
   otherClicks: v.number(),
+  volatility: v.optional(v.number()),
+  volatilityKeywords: v.optional(v.number()),
+  movedUp5: v.optional(v.number()),
+  movedDown5: v.optional(v.number()),
 });
 
 /**
@@ -353,6 +394,8 @@ const shownPeriodValidator = v.object({
   rest: v.number(),
   brandClicks: v.number(),
   otherClicks: v.number(),
+  /** Volatility's score (search-console-volatility-plan.md §3): missing where too few keywords counted, or on a row built before it. */
+  volatility: v.optional(v.number()),
 });
 
 /**
@@ -421,6 +464,8 @@ export const searchConsoleChartFigures = tenantQuery({
     const rows = await weeksOf(ctx, site.hold._id, scope.read === "KEPT" ? scope.country : undefined, args.searchType);
     // Rows built before 2026-10-04 carry no grain: they are weeks.
     const ofGrain = rows.filter((row) => (row.grain ?? "WEEK") === grain);
+    // Volatility's chart leaves out a day Google has only half filled in (search-console-volatility-plan.md §3).
+    const complete = grain === "DAY" ? completeDays(ofGrain) : null;
     const periods = ofGrain
       .filter((row) => row.week <= args.to && lastDayOf(grain, row.week) >= args.from)
       .map((row) => {
@@ -438,6 +483,7 @@ export const searchConsoleChartFigures = tenantQuery({
           rest: row.rest,
           brandClicks: row.brandClicks,
           otherClicks: row.otherClicks,
+          ...(row.volatility === undefined || (complete && !complete.has(row.week)) ? {} : { volatility: row.volatility }),
         };
       });
     if (!LISTS_OF[args.searchType].includes("pair")) return { ...nothing, notReady: false, preparing: false, noSearches: true };
@@ -699,11 +745,12 @@ export async function buildSitePeriods(
     const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, country, searchType, "pair", newest) : null;
     const pairsAsked = pairsKept ? await askedOf(searchType, "pair") : null;
     const queryFacts = pairsKept ? await factsOf("query", [...keysIn(pairsKept, "keys"), ...keysAsked(pairsAsked, "key")]) : undefined;
+    const weeks = pairsKept ? chartFigures(pairsKept, newest, oldest, target?.brandWords ?? [], chartWeeks, searchType) : [];
     if (!onlyLong) await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
       companyWebsiteId,
       ...scope,
       searchType,
-      weeks: pairsKept ? chartFigures(pairsKept, newest, oldest, target?.brandWords ?? [], chartWeeks, searchType) : [],
+      weeks,
       dayLine: firstDayKeptFor(searchType, newest),
       reach: chartReach(newest, chartWeeks),
       builtAt,
@@ -765,6 +812,25 @@ export async function buildSitePeriods(
           ? [...bySide(addUp(keptIn(pairsKept, span, newest, searchType)), "query").values()].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
           : null;
         await write(searchType, "query", { period, which: "NOW", span, now: span }, rows);
+      }
+    }
+    // Volatility's day (search-console-volatility-plan.md §2.1, V7): the web keywords counted on the newest day and the
+    // day before — 10 or more impressions each day (§3) — for all countries and each country kept.
+    if (searchType === "web" && !onlyLong) {
+      // The newest day Google has filled in, as the page judges it (§3): a half-filled newest day is passed over.
+      const days = weeks.filter((week) => week.grain === "DAY");
+      const complete = completeDays(days);
+      const judged = [...days].reverse().find((week) => complete.has(week.week))?.week ?? newest;
+      const now = { from: judged, to: judged };
+      for (const which of ["NOW", "BEFORE"] as const) {
+        const day = which === "NOW" ? judged : shiftDay(judged, -1);
+        const span = { from: day, to: day };
+        const rows = pairsKept && day >= oldest
+          ? [...bySide(addUp(keptIn(pairsKept, span, newest, searchType)), "query").values()]
+            .filter((summed) => summed.impressions >= VOLATILITY_IMPRESSIONS)
+            .map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
+          : null;
+        await write(searchType, "query", { period: VOLATILITY_PERIOD, which, span, now }, rows);
       }
     }
     // Pages, countries, devices and kinds of search appearance: Google's own totals, one list at a time.

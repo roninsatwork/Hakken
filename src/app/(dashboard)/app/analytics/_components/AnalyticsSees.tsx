@@ -2,10 +2,11 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
-import type { Seen, SeenPhrase, SeenTarget } from "@/convex/utils/hakkenSees";
+import { seenAdvice, type Seen, type SeenPhrase, type SeenTarget } from "@/convex/utils/hakkenSees";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatMoney } from "./analyticsFormat";
 import { useAnalyticsHref, useAnalyticsSiteId } from "./useAnalytics";
+import { useNoteAdvice } from "../../_components/useNoteAdvice";
 import { useEventName } from "./useEventName";
 
 /**
@@ -32,6 +33,7 @@ export function AnalyticsSees({ screen, seen, currency }: { screen: string; seen
   const hrefOf = useAnalyticsHref(siteId);
   const nameOf = useEventName();
   const locale = useLocale();
+  useNoteAdvice(siteId, `googleAnalytics.seen.${screen}`, seen, currency);
   if (!seen || seen.says.length === 0) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const events = (text: string) => eventList(text, nameOf, locale);
@@ -41,7 +43,7 @@ export function AnalyticsSees({ screen, seen, currency }: { screen: string; seen
     return { href: hrefOf(to.segment ?? "", to.filters) };
   };
   const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
-  return <HakkenSees says={seen.says.map(words)} steps={steps} />;
+  return <HakkenSees says={seen.says.map(words)} steps={steps} advice={seenAdvice(seen)} />;
 }
 
 /** Conversions' events, sent joined by commas, by their own names in the reader's language, as it lists them. */

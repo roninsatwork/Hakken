@@ -29,6 +29,8 @@ import {
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
 } from "../../_components/useSearchConsole";
+import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { curveSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["device"];
 
@@ -87,6 +89,7 @@ export default function SearchConsoleCtrCurvePage() {
       <PageHeader icon={<Percent className="h-5 w-5 text-brand" />} title={t("ctrCurve.title")} description={t("ctrCurve.description", { days: range.days })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          <SearchConsoleSees screen="ctrCurve" seen={points ? curveSees(points) : null} />
           <ResultKindSwitch />
           {server?.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
           <SearchConsoleChartCard
