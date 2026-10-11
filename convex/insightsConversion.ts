@@ -9,6 +9,8 @@ import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
 import { EVERY_DEVICE, slotKey } from "./googleAnalyticsLists";
 import { conversionValidator, pageReviewValidator, sourceRowValidator, funnelStepValidator } from "./utils/insightConversion";
 import { pageFactsValidator } from "./utils/moneyPageChecks";
+import { addUpClarity, clarityRowValidator, type ClarityRow } from "./utils/clarityRows";
+import { shiftDay } from "./utils/insightFacts";
 
 /**
  * The Conversion specialist's reads and writes (docs/plans/active/
@@ -56,12 +58,21 @@ export const reviewInputs = internalQuery({
     page: v.string(), title: v.union(v.string(), v.null()), kind: v.union(v.string(), v.null()),
     visits: v.number(), enquiries: v.number(), visitsBefore: v.union(v.number(), v.null()), enquiriesBefore: v.union(v.number(), v.null()),
     facts: v.union(pageFactsValidator, v.null()), structured: v.union(v.array(v.string()), v.null()),
+    /** Clarity's behaviour over its last 30 days, where it is connected (I24). */
+    behaviour: v.union(v.null(), clarityRowValidator),
   })),
   handler: async (ctx, args) => {
     const checks = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId)).take(48);
     if (checks.length === 0) return [];
     const now = await landingByPath(ctx, args.holdId, "365", "NOW");
     const year = await landingByPath(ctx, args.holdId, "365", "YEAR");
+    // Clarity's last 30 days by page, where the website has it connected (I24).
+    const clarity = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    const behaviour = new Map<string, ClarityRow>();
+    if (clarity?.newestDay) {
+      const days = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", args.holdId).eq("by", "PAGE").gte("day", shiftDay(clarity.newestDay!, -29))).take(31);
+      for (const row of addUpClarity(days.map((day) => day.rows))) behaviour.set(row.key, row);
+    }
     const titles = new Map<string, string | null>();
     for (const check of checks) {
       const held = await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId).eq("page", check.page)).first();
@@ -74,7 +85,7 @@ export const reviewInputs = internalQuery({
           page: check.page, title: titles.get(check.page) ?? null, kind: check.kind,
           visits: mine?.visits ?? 0, enquiries: mine?.enquiries ?? 0,
           visitsBefore: year ? before?.visits ?? 0 : null, enquiriesBefore: year ? before?.enquiries ?? 0 : null,
-          facts: check.facts ?? null, structured: check.structured,
+          facts: check.facts ?? null, structured: check.structured, behaviour: behaviour.get(check.page) ?? null,
         };
       })
       .filter((page) => page.visits > 0)

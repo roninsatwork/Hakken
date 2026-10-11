@@ -3,31 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Building2,
-  FileText,
-  Gauge,
-  Globe,
-  GraduationCap,
-  SearchCheck,
-  ChartColumn,
-  Bot,
-  Workflow,
-  ShieldCheck,
-  Settings,
-  CreditCard,
-  Wrench,
-
-
-
-  ListChecks,
-  ListTodo,
-  MonitorSpeaker,
-  Phone,
-  Gamepad2,
-  Lightbulb,
-} from "lucide-react";
+import { LayoutDashboard, Building2, FileText, Gauge, Globe, GraduationCap, SearchCheck, ChartColumn, Bot, Workflow, ShieldCheck, Settings, CreditCard, Wrench, ListChecks, ListTodo, MonitorSpeaker, Phone, Gamepad2, Lightbulb, MousePointerClick } from 'lucide-react';
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { CORE_MODULES } from "@/convex/utils/coreModules";
@@ -428,6 +404,15 @@ export function UserNavTree({
     href="/app/analytics"
     isActive={activeItem === 'GoogleAnalytics' || pathname.startsWith('/app/analytics')}
     onClick={() => setActiveItem('GoogleAnalytics')}
+  />
+
+  {/* Each own website's Microsoft Clarity, after Google Analytics like the other sources (insights-analyst-plan.md I27). */}
+  <NavItem
+    icon={MousePointerClick}
+    label={t('clarity')}
+    href="/app/clarity"
+    isActive={activeItem === 'Clarity' || pathname.startsWith('/app/clarity')}
+    onClick={() => setActiveItem('Clarity')}
   />
 
   {/*

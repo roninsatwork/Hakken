@@ -56,6 +56,7 @@ export default function InsightsSourcesPage() {
   const fixHref = (source: string, siteId: Id<"companyWebsites">) => {
     if (source === "searchConsole") return "/app/search-console";
     if (source === "analytics") return "/app/analytics";
+    if (source === "clarity") return `/app/clarity/${siteId}/connection`;
     if (source === "enquiryValue") return `/app/analytics/${siteId}/tracking-health`;
     if (source === "businessProfiles") return `/app/sites/${siteId}/local`;
     return `/app/sites/${siteId}`;

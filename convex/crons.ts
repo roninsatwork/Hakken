@@ -36,6 +36,14 @@ crons.daily(
   { job: "google-updates-feed" }
 );
 
+// Microsoft Clarity keeps three days: each connected project's last day is read every morning and kept (insights-analyst-plan.md §7b).
+crons.daily(
+  "clarity-morning",
+  { hourUTC: 4, minuteUTC: 50 },
+  internal.jobLedger.runJob,
+  { job: "clarity-morning" }
+);
+
 // The Caretaker Agent's daily sweep: any task that can no longer work paused, its owner told (hakken-tasks-plan.md, Phase 5).
 crons.daily(
   "hakken-task-care",

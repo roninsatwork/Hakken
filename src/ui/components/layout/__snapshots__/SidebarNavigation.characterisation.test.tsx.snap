@@ -10,6 +10,7 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
     "authDiagnostics -> /app/settings/auth-diagnostics",
     "billing -> /app/settings/billing",
     "calls -> /app/calls",
+    "clarity -> /app/clarity",
     "dashboard -> /app",
     "dashboard -> /app/settings",
     "googleAnalytics -> /app/analytics",
@@ -44,6 +45,7 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
   "links": [
     "Hakken -> /",
     "askPlatform -> /app/assistant",
+    "clarity -> /app/clarity",
     "dashboard -> /app",
     "googleAnalytics -> /app/analytics",
     "hakkenTasks -> /app/hakken-tasks",
@@ -71,6 +73,7 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
     "Hakken -> /",
     "askPlatform -> /app/assistant",
     "calls -> /app/calls",
+    "clarity -> /app/clarity",
     "dashboard -> /app",
     "googleAnalytics -> /app/analytics",
     "hakkenTasks -> /app/hakken-tasks",

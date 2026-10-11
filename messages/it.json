@@ -631,7 +631,8 @@
     "insightsAdmin": "Insights",
     "insightsRuns": "Esecuzioni settimanali",
     "insightsPatterns": "Schemi",
-    "insights": "Insights"
+    "insights": "Insights",
+    "clarity": "Microsoft Clarity"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -18677,7 +18678,8 @@
         "analytics": "Google Analytics",
         "businessProfiles": "Profilo dell'attività su Google",
         "pages": "Le tue pagine, lette da {platformName}",
-        "enquiryValue": "Un valore per una richiesta"
+        "enquiryValue": "Un valore per una richiesta",
+        "clarity": "Microsoft Clarity"
       },
       "gives": {
         "market": "Posizioni, concorrenti, risposte AI, link e profili dell'attività",
@@ -18685,7 +18687,8 @@
         "analytics": "Visite, fonti, pagine e richieste",
         "businessProfiles": "Voti, recensioni, post, categorie e posizioni sulla mappa",
         "pages": "Le parole di ogni pagina che porta clienti, e cosa è cambiato",
-        "enquiryValue": "Scoperte e report in denaro, non solo in richieste"
+        "enquiryValue": "Scoperte e report in denaro, non solo in richieste",
+        "clarity": "Scorrimento, clic a vuoto e uscite rapide su ogni pagina"
       },
       "statuses": {
         "CONNECTED": "Collegato",
@@ -18710,7 +18713,8 @@
         "analytics": "contare visite e richieste",
         "businessProfiles": "leggere recensioni e posizioni sulla mappa",
         "pages": "leggere le parole delle tue pagine",
-        "enquiryValue": "dare un valore in denaro a scoperte e report"
+        "enquiryValue": "dare un valore in denaro a scoperte e report",
+        "clarity": "vedere dove i visitatori si fermano, cliccano a vuoto e se ne vanno"
       },
       "fix": {
         "market": "Controlla la posizione del sito in Siti.",
@@ -18718,7 +18722,8 @@
         "analytics": "Collega Google Analytics.",
         "businessProfiles": "Aggiungi il profilo dell'attività su Google.",
         "pages": "Niente da fare: {platformName} leggerà le pagine da solo.",
-        "enquiryValue": "Dai un valore a una richiesta in Salute del tracciamento."
+        "enquiryValue": "Dai un valore a una richiesta in Salute del tracciamento.",
+        "clarity": "Collega Microsoft Clarity."
       },
       "fixLink": {
         "market": "Siti",
@@ -18726,7 +18731,8 @@
         "analytics": "Google Analytics",
         "businessProfiles": "Locale",
         "pages": "Siti",
-        "enquiryValue": "Salute del tracciamento"
+        "enquiryValue": "Salute del tracciamento",
+        "clarity": "Microsoft Clarity"
       }
     },
     "opportunities": {
@@ -18998,6 +19004,148 @@
       "PAGE_DOWN": "{page} non si è caricata ({status}).",
       "CLICKS_FELL": "I clic da Google del {day} sono stati {clicks}, contro i soliti {usual}; {platformName} controlla se dura.",
       "noAnswer": "nessuna risposta"
+    }
+  },
+  "clarity": {
+    "status": {
+      "CONNECTED": "Collegato",
+      "NEEDS_RECONNECT": "Ricollega",
+      "DISCONNECTED": "Scollegato",
+      "NOT_CONNECTED": "Non collegato"
+    },
+    "list": {
+      "title": "Microsoft Clarity",
+      "description": "Come si comportano i visitatori sui tuoi siti — quanto scorrono, quanto restano, dove si bloccano — da Microsoft Clarity, letto ogni mattina.",
+      "search": "Trova un sito",
+      "download": "Scarica CSV",
+      "noMatch": "Nessun sito corrisponde",
+      "empty": "La tua azienda non ha ancora siti propri.",
+      "columns": {
+        "website": "Sito",
+        "status": "Clarity",
+        "sessions": "Visite, 30 giorni",
+        "scroll": "Scorrimento medio",
+        "updated": "Letto"
+      }
+    },
+    "site": {
+      "back": "Microsoft Clarity",
+      "notFoundTitle": "Sito non trovato",
+      "notFoundDescription": "Clarity si collega solo ai siti della tua azienda.",
+      "withProject": "Il tuo sito · progetto Clarity {name}",
+      "yourWebsite": "Il tuo sito",
+      "updated": "Letto {when}",
+      "switch": "Sito",
+      "days": "Giorni",
+      "lastDays": "Ultimi {days} giorni",
+      "figuresTo": "Dati di Clarity al {day}, letti ogni mattina."
+    },
+    "menu": {
+      "label": "Microsoft Clarity",
+      "figures": "Clarity",
+      "overview": "Panoramica",
+      "pages": "Pagine",
+      "devices": "Dispositivi",
+      "settings": "Impostazioni",
+      "connection": "Collegamento"
+    },
+    "overview": {
+      "title": "Panoramica",
+      "description": "Come si comportano i visitatori sulle tue pagine: quanto scorrono, quanto restano e dove si bloccano. Da Microsoft Clarity.",
+      "notConnectedTitle": "Clarity non è ancora collegato",
+      "notConnectedDescription": "Collega il progetto Microsoft Clarity di questo sito, e i suoi dati vengono letti ogni mattina e conservati.",
+      "connect": "Collega Clarity",
+      "sees": {
+        "scroll": "I visitatori di {page} scorrono in media il {scroll}% della pagina: la maggior parte non arriva alla seconda metà.",
+        "dead": "Su {page}, il {dead}% delle visite clicca qualcosa che non fa nulla.",
+        "noPages": "Nessuna pagina ha ancora abbastanza visite per dire come viene letta."
+      },
+      "do": "Sistema le pagine che i visitatori lasciano prima del pulsante di richiesta.",
+      "seeReviews": "Vedi le revisioni delle pagine",
+      "seeInsights": "Vedi le scoperte di Insights sul comportamento",
+      "figures": {
+        "visits": "Visite",
+        "lastDays": "ultimi {days} giorni",
+        "scroll": "Scorrimento medio",
+        "scrollDetail": "di ogni pagina",
+        "dead": "Visite con un clic a vuoto",
+        "deadDetail": "hanno cliccato qualcosa che non fa nulla",
+        "quickBack": "Uscite rapide",
+        "quickBackDetail": "andati via in pochi secondi"
+      },
+      "chart": {
+        "title": "Visite con una frustrazione, giorno per giorno",
+        "hint": "Clic a vuoto e clic ripetuti, come quota delle visite.",
+        "dead": "Clic a vuoto",
+        "rage": "Clic ripetuti"
+      }
+    },
+    "pages": {
+      "title": "Pagine",
+      "description": "Il comportamento di ogni pagina: scorrimento, tempo, frustrazioni e uscite rapide. Apri Clarity per la mappa di calore di una pagina.",
+      "search": "Trova una pagina",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna pagina corrisponde",
+      "empty": "Nessuna pagina ancora letta: i dati di Clarity arrivano ogni mattina una volta collegato.",
+      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Ultimi {days} giorni",
+      "openInClarity": "Apri in Clarity",
+      "sees": {
+        "low": "{count, plural, one {Una pagina perde} other {# pagine perdono}} la maggior parte dei visitatori prima di metà, come {pages}.",
+        "fine": "I visitatori leggono la maggior parte delle tue pagine oltre la metà.",
+        "none": "Nessuna pagina ancora letta."
+      },
+      "do": "Vedi la revisione di ogni pagina.",
+      "seeReviews": "Vedi le revisioni delle pagine",
+      "columns": {
+        "page": "Pagina",
+        "visits": "Visite",
+        "scroll": "Scorrimento",
+        "time": "Tempo attivo",
+        "dead": "Clic a vuoto",
+        "quickBack": "Uscite rapide",
+        "heatmap": "Mappa di calore"
+      }
+    },
+    "devices": {
+      "title": "Dispositivi",
+      "description": "Lo stesso comportamento per dispositivo, così una pagina che funziona su computer e non su telefono si vede.",
+      "search": "Trova un dispositivo",
+      "download": "Scarica CSV",
+      "noMatch": "Nessun dispositivo corrisponde",
+      "empty": "Nessun dispositivo ancora letto: i dati di Clarity arrivano ogni mattina una volta collegato.",
+      "tableTitle": "{count, plural, one {# dispositivo} other {# dispositivi}} · Ultimi {days} giorni",
+      "sees": {
+        "low": "{count, plural, one {Un dispositivo scorre} other {# dispositivi scorrono}} in media meno di metà: {pages}.",
+        "fine": "I visitatori su ogni dispositivo leggono in media oltre la metà.",
+        "none": "Nessun dispositivo ancora letto."
+      },
+      "do": "Vedi la revisione di ogni pagina.",
+      "seeReviews": "Vedi le revisioni delle pagine",
+      "columns": {
+        "page": "Dispositivo",
+        "visits": "Visite",
+        "scroll": "Scorrimento",
+        "time": "Tempo attivo",
+        "dead": "Clic a vuoto",
+        "quickBack": "Uscite rapide"
+      }
+    },
+    "connection": {
+      "title": "Collegamento",
+      "description": "Collega il progetto Microsoft Clarity di questo sito. I suoi dati vengono letti ogni mattina e conservati, perché Clarity ne tiene solo tre giorni.",
+      "connectTitle": "Collega Clarity",
+      "stepOne": "1. Aggiungi il codice di tracciamento di Clarity al tuo sito, e attiva la Modalità consenso in Clarity così il banner dei cookie passa la scelta di ogni visitatore. Dal 31 ottobre 2025 Clarity lo richiede per i visitatori da Regno Unito, SEE e Svizzera.",
+      "stepTwo": "2. In Clarity, un amministratore del progetto apre Impostazioni → Esportazione dati → Genera un nuovo token API.",
+      "stepThree": "3. Incolla qui il token",
+      "tokenHint": "Conservato con gli altri collegamenti, mai più mostrato. Viene controllato subito.",
+      "connect": "Collega",
+      "failed": "Non è stato possibile collegare Clarity. Riprova.",
+      "refused": "Clarity ha rifiutato il token: generane uno nuovo e incollalo qui.",
+      "connectedTitle": "Collegato",
+      "connectedRead": "Clarity è stato letto l'ultima volta {when}.",
+      "connectedFirst": "Collegato: i primi dati di Clarity arrivano domattina.",
+      "disconnect": "Scollega",
+      "limits": "Clarity consente 10 richieste al giorno per progetto e dà solo gli ultimi tre giorni. Gli si chiede due volte ogni mattina e lo storico è conservato qui."
     }
   }
 }

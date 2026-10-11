@@ -631,7 +631,8 @@
     "insightsAdmin": "Insights",
     "insightsRuns": "Weekly runs",
     "insightsPatterns": "Patterns",
-    "insights": "Insights"
+    "insights": "Insights",
+    "clarity": "Microsoft Clarity"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -18677,7 +18678,8 @@
         "analytics": "Google Analytics",
         "businessProfiles": "Google Business Profile",
         "pages": "Your pages, read by {platformName}",
-        "enquiryValue": "A value for an enquiry"
+        "enquiryValue": "A value for an enquiry",
+        "clarity": "Microsoft Clarity"
       },
       "gives": {
         "market": "Places, rivals, AI answers, links and Business Profiles",
@@ -18685,7 +18687,8 @@
         "analytics": "Visits, sources, pages and enquiries",
         "businessProfiles": "Ratings, reviews, posts, categories and map places",
         "pages": "The words on each money page, and what changed",
-        "enquiryValue": "Findings and reports in money, not just enquiries"
+        "enquiryValue": "Findings and reports in money, not just enquiries",
+        "clarity": "Scroll depth, dead clicks and quick backs on each page"
       },
       "statuses": {
         "CONNECTED": "Connected",
@@ -18710,7 +18713,8 @@
         "analytics": "count your visits and enquiries",
         "businessProfiles": "read your reviews and map places",
         "pages": "read the words on your pages",
-        "enquiryValue": "put a money value on findings and reports"
+        "enquiryValue": "put a money value on findings and reports",
+        "clarity": "see where visitors stop, click in vain and leave"
       },
       "fix": {
         "market": "Check your website's place in Sites.",
@@ -18718,7 +18722,8 @@
         "analytics": "Connect Google Analytics.",
         "businessProfiles": "Add your Google Business Profile.",
         "pages": "Nothing to do: {platformName} will read your pages itself.",
-        "enquiryValue": "Give an enquiry a value in Tracking health."
+        "enquiryValue": "Give an enquiry a value in Tracking health.",
+        "clarity": "Connect Microsoft Clarity."
       },
       "fixLink": {
         "market": "Sites",
@@ -18726,7 +18731,8 @@
         "analytics": "Google Analytics",
         "businessProfiles": "Local",
         "pages": "Sites",
-        "enquiryValue": "Tracking health"
+        "enquiryValue": "Tracking health",
+        "clarity": "Microsoft Clarity"
       }
     },
     "opportunities": {
@@ -18998,6 +19004,148 @@
       "PAGE_DOWN": "{page} didn't load ({status}).",
       "CLICKS_FELL": "Google's clicks on {day} were {clicks}, against a usual {usual}; {platformName} is watching whether it lasts.",
       "noAnswer": "no answer"
+    }
+  },
+  "clarity": {
+    "status": {
+      "CONNECTED": "Connected",
+      "NEEDS_RECONNECT": "Connect again",
+      "DISCONNECTED": "Disconnected",
+      "NOT_CONNECTED": "Not connected"
+    },
+    "list": {
+      "title": "Microsoft Clarity",
+      "description": "How visitors behave on your websites — how far they scroll, how long they stay, where they get stuck — from Microsoft Clarity, read each morning.",
+      "search": "Find a website",
+      "download": "Download CSV",
+      "noMatch": "No website matches",
+      "empty": "Your company has no websites of its own yet.",
+      "columns": {
+        "website": "Website",
+        "status": "Clarity",
+        "sessions": "Visits, 30 days",
+        "scroll": "Average scroll depth",
+        "updated": "Read"
+      }
+    },
+    "site": {
+      "back": "Microsoft Clarity",
+      "notFoundTitle": "Website not found",
+      "notFoundDescription": "Clarity connects to your company's own websites only.",
+      "withProject": "Your website · Clarity project {name}",
+      "yourWebsite": "Your website",
+      "updated": "Read {when}",
+      "switch": "Website",
+      "days": "Days",
+      "lastDays": "Last {days} days",
+      "figuresTo": "Clarity's figures to {day}, read each morning."
+    },
+    "menu": {
+      "label": "Microsoft Clarity",
+      "figures": "Clarity",
+      "overview": "Overview",
+      "pages": "Pages",
+      "devices": "Devices",
+      "settings": "Settings",
+      "connection": "Connection"
+    },
+    "overview": {
+      "title": "Overview",
+      "description": "How visitors behave on your pages: how far they scroll, how long they stay, and where they get stuck. From Microsoft Clarity.",
+      "notConnectedTitle": "Clarity isn't connected yet",
+      "notConnectedDescription": "Connect this website's Microsoft Clarity project, and its figures are read each morning and kept.",
+      "connect": "Connect Clarity",
+      "sees": {
+        "scroll": "Visitors on {page} scroll {scroll}% of the way down on average: most never reach its lower half.",
+        "dead": "On {page}, {dead}% of visits click something that does nothing.",
+        "noPages": "No page has enough visits yet to say how it is read."
+      },
+      "do": "Fix the pages visitors leave before their enquiry button.",
+      "seeReviews": "See the page reviews",
+      "seeInsights": "See the Insights findings about behaviour",
+      "figures": {
+        "visits": "Visits",
+        "lastDays": "last {days} days",
+        "scroll": "Average scroll depth",
+        "scrollDetail": "of each page",
+        "dead": "Visits with a dead click",
+        "deadDetail": "clicked something that does nothing",
+        "quickBack": "Quick backs",
+        "quickBackDetail": "left within seconds"
+      },
+      "chart": {
+        "title": "Visits with a frustration, day by day",
+        "hint": "Dead clicks and rage clicks, as a share of visits.",
+        "dead": "Dead clicks",
+        "rage": "Rage clicks"
+      }
+    },
+    "pages": {
+      "title": "Pages",
+      "description": "Each page's behaviour: scroll depth, time, frustrations and quick backs. Open Clarity for a page's heatmap.",
+      "search": "Find a page",
+      "download": "Download CSV",
+      "noMatch": "No page matches",
+      "empty": "No pages read yet: Clarity's figures arrive each morning once it is connected.",
+      "tableTitle": "{count, plural, one {# page} other {# pages}} · Last {days} days",
+      "openInClarity": "Open in Clarity",
+      "sees": {
+        "low": "{count, plural, one {One page loses} other {# pages lose}} most visitors before halfway down, such as {pages}.",
+        "fine": "Visitors read most of your pages past halfway.",
+        "none": "No pages read yet."
+      },
+      "do": "See each page's review.",
+      "seeReviews": "See the page reviews",
+      "columns": {
+        "page": "Page",
+        "visits": "Visits",
+        "scroll": "Scroll depth",
+        "time": "Active time",
+        "dead": "Dead clicks",
+        "quickBack": "Quick backs",
+        "heatmap": "Heatmap"
+      }
+    },
+    "devices": {
+      "title": "Devices",
+      "description": "The same behaviour by device, so a page that works on a computer and not on a phone shows.",
+      "search": "Find a device",
+      "download": "Download CSV",
+      "noMatch": "No device matches",
+      "empty": "No devices read yet: Clarity's figures arrive each morning once it is connected.",
+      "tableTitle": "{count, plural, one {# device} other {# devices}} · Last {days} days",
+      "sees": {
+        "low": "{count, plural, one {One device scrolls} other {# devices scroll}} less than halfway on average: {pages}.",
+        "fine": "Visitors on every device read past halfway on average.",
+        "none": "No devices read yet."
+      },
+      "do": "See each page's review.",
+      "seeReviews": "See the page reviews",
+      "columns": {
+        "page": "Device",
+        "visits": "Visits",
+        "scroll": "Scroll depth",
+        "time": "Active time",
+        "dead": "Dead clicks",
+        "quickBack": "Quick backs"
+      }
+    },
+    "connection": {
+      "title": "Connection",
+      "description": "Connect this website's Microsoft Clarity project. Its figures are read each morning and kept, since Clarity keeps only three days.",
+      "connectTitle": "Connect Clarity",
+      "stepOne": "1. Add Clarity's tracking code to your website, and turn on Consent Mode in Clarity so your cookie banner passes each visitor's choice. Since 31 October 2025 Clarity needs this for visitors from the UK, the EEA and Switzerland.",
+      "stepTwo": "2. In Clarity, a project admin opens Settings → Data Export → Generate new API token.",
+      "stepThree": "3. Paste the token here",
+      "tokenHint": "Kept with your other connections, never shown again. It's checked straight away.",
+      "connect": "Connect",
+      "failed": "Clarity couldn't be connected. Try again.",
+      "refused": "Clarity refused the token: generate a new one and paste it here.",
+      "connectedTitle": "Connected",
+      "connectedRead": "Clarity was last read {when}.",
+      "connectedFirst": "Connected: Clarity's first figures arrive tomorrow morning.",
+      "disconnect": "Disconnect",
+      "limits": "Clarity allows 10 requests a project a day and gives out the last three days only. It's asked twice each morning and the history is kept here."
     }
   }
 }

@@ -340,6 +340,10 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   insightQuestionPanels: LATEST,
   insightConversions: LATEST,
   insightQuickChecks: LATEST,
+
+  // ── Microsoft Clarity (insights-analyst-plan.md §7b): its connections, and its days kept two years, cleared as each day comes ──
+  clarityConnections: RECORD,
+  clarityDays: cleared("2 years", "clarity/saveDay"),
   insightExperiments: RECORD,
   insightTally: RECORD,
   insightLearnings: RECORD,

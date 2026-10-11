@@ -612,7 +612,7 @@ export const insightsPlan = tenantQuery({
   },
 });
 
-export const SOURCE_IDS = ["market", "searchConsole", "analytics", "businessProfiles", "pages", "enquiryValue"] as const;
+export const SOURCE_IDS = ["market", "searchConsole", "analytics", "clarity", "businessProfiles", "pages", "enquiryValue"] as const;
 export type SourceId = (typeof SOURCE_IDS)[number];
 
 const sourceRow = v.object({
@@ -644,6 +644,7 @@ export const insightsSources = tenantQuery({
       const first = await ctx.db.query("siteDaySummaries").withIndex("by_site_day", (q) => q.eq("websiteId", hold.websiteId).eq("locationCode", hold.locationCode ?? DEFAULT_LOCATION_CODE)).first();
       const console = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
       const analytics = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+      const clarity = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
       const listings = (await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(LISTINGS_READ)).filter((entry) => entry.role === "OWN");
       const consoleOn = console?.status === "CONNECTED" && Boolean(console.newestDay);
       const analyticsOn = analytics?.status === "CONNECTED";
@@ -656,6 +657,7 @@ export const insightsSources = tenantQuery({
           { source: "market", status: first ? "CONNECTED" : "NOT_CONNECTED", since: first?.day ?? null, count: null },
           { source: "searchConsole", status: consoleOn ? "CONNECTED" : "NOT_CONNECTED", since: consoleOn ? console?.oldestDay ?? null : null, count: null },
           { source: "analytics", status: analyticsOn ? "CONNECTED" : "NOT_CONNECTED", since: analyticsOn ? analytics?.oldestDay ?? null : null, count: null },
+          { source: "clarity", status: clarity?.status === "CONNECTED" ? "CONNECTED" : "NOT_CONNECTED", since: clarity?.status === "CONNECTED" ? clarity.oldestDay ?? null : null, count: null },
           { source: "businessProfiles", status: listings.length > 0 ? "CONNECTED" : "NOT_CONNECTED", since: null, count: listings.length },
           { source: "pages", status: "SOON", since: null, count: null },
           { source: "enquiryValue", status: !analyticsOn ? "NOT_SET" : valued ? "SET" : "NOT_SET", since: null, count: counted.length },

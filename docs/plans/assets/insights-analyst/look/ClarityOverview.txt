@@ -1,0 +1,11 @@
+# Microsoft Clarity → Overview — the approved look (board "ClarityOverview" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Overview
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Average scroll depth
+  figure: Visits with a dead click
+  figure: Quick backs
+chart-card: Visits with a frustration, day by day

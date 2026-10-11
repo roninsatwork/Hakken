@@ -432,6 +432,8 @@ async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: r
         visits: page.visits, enquiries: page.enquiries, visitsYearBefore: page.visitsBefore, enquiriesYearBefore: page.enquiriesBefore,
         headline: page.facts?.headline ?? null, words: page.facts?.words ?? null, showsPrice: page.facts?.price ?? null, showsProof: page.facts?.proof ?? null,
         hasForm: page.facts?.form ?? null, firstAskAt: page.facts?.firstAsk ?? null, opening: page.facts?.opening ?? null, structuredData: page.structured,
+        // How visitors behave on it, from Microsoft Clarity's last 30 days where connected (I24): shares are per cent of visits.
+        behaviour: page.behaviour ? { visits: page.behaviour.sessions, scrollDepth: page.behaviour.scroll, deadClicks: page.behaviour.dead, rageClicks: page.behaviour.rage, quickBacks: page.behaviour.quickBack, activeSeconds: page.behaviour.activeSeconds } : null,
       })),
     });
     const answer = await ask(ctx, args, member, "the Conversion specialist's page reviews", system, prompt).catch(() => null) as { pages?: unknown } | null;
