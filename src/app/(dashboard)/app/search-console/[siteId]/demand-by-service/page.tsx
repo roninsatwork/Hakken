@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
@@ -34,6 +35,17 @@ const SHARE_FROM = 10;
  * Hakken's kinds of page until it has any. Ready-made dates only; Insights
  * reads the same figures for its findings about demand.
  */
+type ServiceRow = { id: string; name: string | null; kind: string; shown: number; shownBefore: number | null; clicks: number; clicksBefore: number | null };
+const moved = (now: number, before: number | null) => (before ? (now - before) / before : null);
+/** Its sortable columns (sites-table-sorting-plan.md): the service A to Z, each figure and change the most first. */
+const SORTS: SiteSortColumns<ServiceRow, "service" | "shown" | "shownChange" | "clicks" | "clicksChange"> = {
+  service: { value: (row) => row.name ?? row.id, first: "asc" },
+  shown: { value: (row) => row.shown, first: "desc" },
+  shownChange: { value: (row) => moved(row.shown, row.shownBefore), first: "desc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  clicksChange: { value: (row) => moved(row.clicks, row.clicksBefore), first: "desc" },
+};
+
 export default function SearchConsoleDemandPage() {
   const t = useTranslations("searchConsole.services");
   const siteId = useSearchConsoleSiteId();
@@ -52,7 +64,8 @@ export default function SearchConsoleDemandPage() {
     return (row.kind === "SERVICE" ? row.name?.split("|")[0].trim() : row.name) || row.id;
   };
   const matches = wordStartMatcher(term.toLowerCase());
-  const rows = data?.services.filter((row) => !matches || matches(nameOf(row)));
+  const matching = data?.services.filter((row) => !matches || matches(nameOf(row)));
+  const { rows, tableSort } = useSiteSortedList(matching, SORTS, { opening: "shown", name: nameOf });
   const pages = useSitePager(data ? rows : undefined, { isLoading: data === undefined && readyMade });
   const host = status?.host ?? "";
   const change = (now: number, before: number | null) => {
@@ -88,12 +101,13 @@ export default function SearchConsoleDemandPage() {
             cardHeader={<TableBar footer={pages.footer} noun="results" title={t("tableTitle", { count: rows?.length ?? 0, days: range.days })} actions={<ListDownload label={t("download")} fileName={`${host}-demand-by-service`} rows={rows} columns={[{ header: t("columns.service"), value: nameOf }, { header: t("columns.shown"), value: (row) => row.shown }, { header: t("chart.before"), value: (row) => row.shownBefore ?? "" }, { header: t("columns.clicks"), value: (row) => row.clicks }, { header: t("columns.clicksBefore"), value: (row) => row.clicksBefore ?? "" }]} />} />}
             empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
             footer={pages.footer}
+            sort={tableSort}
             columns={[
-              { key: "service", header: t("columns.service"), cell: (row) => <span className="truncate text-[13px] text-foreground">{nameOf(row)}</span> },
-              { key: "shown", header: t("columns.shown"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.shown)}</span> },
-              { key: "shownChange", header: t("columns.change"), align: "right", cell: (row) => change(row.shown, row.shownBefore) },
-              { key: "clicks", header: t("columns.clicks"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
-              { key: "clicksChange", header: t("columns.change"), align: "right", cell: (row) => change(row.clicks, row.clicksBefore) },
+              { key: "service", header: t("columns.service"), sortable: true, cell: (row) => <span className="truncate text-[13px] text-foreground">{nameOf(row)}</span> },
+              { key: "shown", header: t("columns.shown"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.shown)}</span> },
+              { key: "shownChange", header: t("columns.change"), align: "right", sortable: true, cell: (row) => change(row.shown, row.shownBefore) },
+              { key: "clicks", header: t("columns.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
+              { key: "clicksChange", header: t("columns.change"), align: "right", sortable: true, cell: (row) => change(row.clicks, row.clicksBefore) },
             ]}
           />
           <Link href="/app/insights/findings" className="w-fit text-[13px] text-secondary hover:text-foreground">{t("seeInsights")}</Link>

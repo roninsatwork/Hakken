@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Change } from "@/src/ui/components/screens/Change";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -47,6 +48,16 @@ const VERDICT_TONES: Record<string, StatusTone> = {
  * its newest check, and how each compares on the searches and questions the
  * site is measured on. The chart draws their estimated traffic together.
  */
+/** Rival moves' sortable columns (sites-table-sorting-plan.md): the rival A to Z, each figure the most first. */
+type MoveRow = { host: string; newSearches: number; climbed: number; fell: number; visits: number | null };
+const MOVE_SORTS: SiteSortColumns<MoveRow, "rival" | "new" | "climbed" | "fell" | "visits"> = {
+  rival: { value: (row) => row.host, first: "asc" },
+  new: { value: (row) => row.newSearches, first: "desc" },
+  climbed: { value: (row) => row.climbed, first: "desc" },
+  fell: { value: (row) => row.fell, first: "desc" },
+  visits: { value: (row) => row.visits, first: "desc" },
+};
+
 export default function SiteSideBySidePage() {
   const t = useTranslations("sites.sideBySide");
   const tc = useTranslations("sites.common");
@@ -84,6 +95,12 @@ export default function SiteSideBySidePage() {
     return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
   };
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
+  const tm = useTranslations("sites.rivalMoves");
+  const moves = useQuery(api.siteRivalMoves.rivalMoves, { siteId });
+  const [moveSearch, setMoveSearch, moveTerm] = useSiteSearch("mq", "moves");
+  const moveMatches = moves?.filter((row) => !moveTerm || row.host.toLowerCase().includes(moveTerm.toLowerCase()));
+  const { rows: moveRows, tableSort: moveSort } = useSiteSortedList(moveMatches, MOVE_SORTS, { opening: "new", name: (row) => row.host, table: "moves" });
+  const movePages = useSitePager(moves ? moveRows : undefined, { isLoading: moves === undefined, table: "moves" });
 
   const lines = series ?? [];
   // A group of more than five draws the five with the most traffic, and says so (4.11).
@@ -167,6 +184,26 @@ export default function SiteSideBySidePage() {
               return entry ? <StatusLabel tone={VERDICT_TONES[entry.verdict] ?? "neutral"}>{t(`verdicts.${entry.verdict}`)}</StatusLabel> : <NoFigure />;
             },
           },
+        ]}
+      />
+
+      {/* What the rivals did lately (insights-analyst-plan.md phase 4): their new searches, climbs and falls, and visits a month. */}
+      <DataTable
+        rows={movePages.pageRows}
+        rowKey={(row) => row.siteId}
+        onRowClick={(row) => router.push(`/app/sites/${siteId}/competitors/rival?rival=${row.siteId}`)}
+        search={{ value: moveSearch, onChange: setMoveSearch, placeholder: tc("findWebsite") }}
+        cardHeader={<TableBar footer={movePages.footer} noun="websites" title={tm("title")} actions={<ListDownload fileName={`${site?.host ?? "site"}-rival-moves`} rows={moveRows} columns={[{ header: tm("columns.rival"), value: (row) => row.host }, { header: tm("columns.new"), value: (row) => row.newSearches }, { header: tm("columns.climbed"), value: (row) => row.climbed }, { header: tm("columns.fell"), value: (row) => row.fell }, { header: tm("columns.biggest"), value: (row) => row.biggestNew?.keyword ?? "" }, { header: tm("columns.visits"), value: (row) => row.visits ?? "" }]} />} />}
+        empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: moveTerm ? tc("noWebsiteMatch") : tm("empty") }}
+        footer={movePages.footer}
+        sort={moveSort}
+        columns={[
+          { key: "rival", header: tm("columns.rival"), sortable: true, cell: (row) => <span className="text-[13px] text-foreground">{row.host}</span> },
+          { key: "new", header: tm("columns.new"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.newSearches)}</span> },
+          { key: "climbed", header: tm("columns.climbed"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.climbed)}</span> },
+          { key: "fell", header: tm("columns.fell"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.fell)}</span> },
+          { key: "biggest", header: tm("columns.biggest"), cell: (row) => <span className="text-[12px] text-secondary">{row.biggestNew ? tm("biggest", { keyword: row.biggestNew.keyword, position: row.biggestNew.position ?? "–", volume: formatNumber(row.biggestNew.volume) }) : "–"}</span> },
+          { key: "visits", header: tm("columns.visits"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.visits)}{row.visits !== null && row.visitsBefore ? <span className="ml-2"><Change by={row.visits - row.visitsBefore} /></span> : null}</span> },
         ]}
       />
     </div>

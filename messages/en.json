@@ -11313,7 +11313,9 @@
       },
       "empty": "No shared searches here yet.",
       "sharedOf": "This website and {rival} share {total} searches across everything both rank for. Those below are the ones in both keyword lists held, their most valuable first.",
-      "sharedHeldOf": "{held} of the {total} searches you share are in both keyword lists held, and are compared here, their most valuable first."
+      "sharedHeldOf": "{held} of the {total} searches you share are in both keyword lists held, and are compared here, their most valuable first.",
+      "trafficTitle": "Google visitors a month: {rival} against you",
+      "trafficHint": "Estimated visitors from Google each month, from the figures Visibility keeps."
     },
     "domainRecord": {
       "description": "A website linking to this one: how strong it is, and each of its links here in full.",
@@ -14416,6 +14418,19 @@
         "volume": "Searches a month",
         "name": "Your name in it",
         "status": "Status"
+      }
+    },
+    "rivalMoves": {
+      "title": "What your rivals did lately",
+      "empty": "No rival moves to show yet: they appear once Google's results have been checked twice.",
+      "biggest": "{keyword}: {position} ({volume} a month)",
+      "columns": {
+        "rival": "Rival",
+        "new": "New searches, 30 days",
+        "climbed": "Climbed",
+        "fell": "Fell",
+        "biggest": "Biggest new search",
+        "visits": "Visits a month"
       }
     }
   },

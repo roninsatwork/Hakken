@@ -11313,7 +11313,9 @@
       },
       "empty": "Ancora nessuna ricerca in comune qui.",
       "sharedOf": "Questo sito e {rival} condividono {total} ricerche tra tutte quelle per cui si posizionano. Qui sotto quelle presenti in entrambi gli elenchi conservati, prima le più preziose per loro.",
-      "sharedHeldOf": "{held} delle {total} ricerche che condividete sono in entrambi gli elenchi conservati e vengono confrontate qui, prima le più preziose per loro."
+      "sharedHeldOf": "{held} delle {total} ricerche che condividete sono in entrambi gli elenchi conservati e vengono confrontate qui, prima le più preziose per loro.",
+      "trafficTitle": "Visitatori da Google al mese: {rival} contro di te",
+      "trafficHint": "Visitatori stimati da Google ogni mese, dai dati che Visibilità conserva."
     },
     "domainRecord": {
       "description": "Un sito che rimanda a questo: quanto è forte, e ciascuno dei suoi link qui per intero.",
@@ -14416,6 +14418,19 @@
         "volume": "Ricerche al mese",
         "name": "Con il tuo nome",
         "status": "Stato"
+      }
+    },
+    "rivalMoves": {
+      "title": "Cosa hanno fatto di recente i tuoi concorrenti",
+      "empty": "Ancora nessuna mossa dei concorrenti: compaiono dopo due controlli dei risultati di Google.",
+      "biggest": "{keyword}: {position} ({volume} al mese)",
+      "columns": {
+        "rival": "Concorrente",
+        "new": "Nuove ricerche, 30 giorni",
+        "climbed": "Salite",
+        "fell": "Scese",
+        "biggest": "Nuova ricerca più grande",
+        "visits": "Visite al mese"
       }
     }
   },

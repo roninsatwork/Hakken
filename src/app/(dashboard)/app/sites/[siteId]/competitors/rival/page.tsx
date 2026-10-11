@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { SiteChartCard } from "../../../_components/SiteChartCard";
+import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
+import { datedRow } from "../../../_components/datedRows";
+import { toCsv } from "../../../_components/siteFormat";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -60,6 +64,7 @@ const VERDICT_TONES: Record<string, StatusTone> = {
 export default function SiteRivalPage() {
   const t = useTranslations("sites.rivalRecord");
   const ts = useTranslations("sites.sideBySide");
+  const tc = useTranslations("sites.common");
   const router = useRouter();
   const params = useSearchParams();
   const siteId = useSiteId();
@@ -83,6 +88,13 @@ export default function SiteRivalPage() {
     rivalId ? { siteId, rivalId, ...(lead === "ALL" ? {} : { lead }), sort: order.key, direction: order.direction } : "skip",
     rivalId ? [{ siteId, list: "keywords" }, { siteId, list: "keywords", rivalId }] : [],
   );
+
+  // Twenty-two months of each one's estimated visits, a point a month.
+  const today = new Date().toISOString().slice(0, 10);
+  const trend = useQuery(api.siteCharts.siteSeries, rivalId ? { siteId, from: `${Number(today.slice(0, 4)) - 2}-01-01`, to: today, step: "month", withRivals: true } : "skip");
+  const ownLine = trend?.find((line) => line.isYou), rivalLine = trend?.find((line) => !line.isYou && line.host === hold?.host);
+  const months = [...new Set([...(ownLine?.points ?? []), ...(rivalLine?.points ?? [])].map((point) => point.day))].sort();
+  const monthly = (you: boolean, day: string) => ((you ? ownLine : rivalLine)?.points.find((point) => point.day === day)?.estimatedTraffic ?? null);
 
   if (!asked) {
     return <DetailHeader back={back} icon={<Swords className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -119,6 +131,24 @@ export default function SiteRivalPage() {
         <Figure label={t("figures.linking")} value={formatNumber(theirs?.referringDomains)} detail={yoursLine(yours?.referringDomains)} />
         <Figure label={t("figures.rank")} value={formatNumber(theirs?.domainRank)} detail={yoursLine(yours?.domainRank)} />
       </div>
+
+      {/* Their Google visitors a month against yours (insights-analyst-plan.md phase 4, the VisRival board). */}
+      <SiteChartCard
+        title={t("trafficTitle", { rival: hold?.host ?? "" })}
+        hint={t("trafficHint")}
+        exportName={`${site?.host ?? "site"}-against-${hold?.host ?? "rival"}`}
+        csv={() => toCsv(["month", site?.host ?? "", hold?.host ?? ""], months.map((month) => [month, monthly(true, month), monthly(false, month)]))}
+        enoughData={months.length > 1}
+      >
+        <SiteLineChart
+          sharedScale
+          data={months.map((month) => datedRow({ day: month }, { you: monthly(true, month), them: monthly(false, month) }))}
+          series={[
+            { key: "you", name: tc("you", { host: site?.host ?? "" }), colour: SITE_SERIES_COLOURS[0] },
+            { key: "them", name: hold?.host ?? "", colour: SITE_SERIES_COLOURS[1], dashed: true },
+          ]}
+        />
+      </SiteChartCard>
 
       <DataTable
         rows={table.pageRows}
