@@ -1305,7 +1305,7 @@
         "growBest": "Put next quarter's effort into {text}."
       },
       "indexing": {
-        "noIndexing": "Hakken hasn't asked Google about your money pages yet: the first weekly check is on its way.",
+        "noIndexing": "Your money pages haven't been checked with Google yet: the first weekly check is on its way.",
         "indexedOf": "Google has indexed {a} of your {b} money pages.",
         "notIndexed": "{text} isn't indexed, so it can't show in Google's results.",
         "oldestRead": "The page Google read longest ago is {text}, on {day1}: a change made since isn't in its results yet.",
@@ -2620,7 +2620,7 @@
         "growBest": "Metti l'impegno del prossimo trimestre su {text}."
       },
       "indexing": {
-        "noIndexing": "Hakken non ha ancora chiesto a Google delle tue pagine che portano clienti: il primo controllo settimanale è in arrivo.",
+        "noIndexing": "Le tue pagine che portano clienti non sono ancora state controllate con Google: il primo controllo settimanale è in arrivo.",
         "indexedOf": "Google ha indicizzato {a} delle tue {b} pagine che portano clienti.",
         "notIndexed": "{text} non è indicizzata, quindi non può comparire nei risultati di Google.",
         "oldestRead": "La pagina che Google ha letto da più tempo è {text}, il {day1}: una modifica fatta dopo non è ancora nei risultati.",
