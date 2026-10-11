@@ -171,6 +171,8 @@ export const siteMoneyPages = tenantQuery({
     checkedAt: v.union(v.number(), v.null()),
     pages: v.array(v.object({
       page: v.string(),
+      /** Its title, as Analytics last saw it (I41). */
+      title: v.union(v.string(), v.null()),
       kind: v.union(v.string(), v.null()),
       clicks: v.number(),
       indexed: v.union(indexedValidator, v.null()),
@@ -186,9 +188,11 @@ export const siteMoneyPages = tenantQuery({
     const rows = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", site.hold._id)).take(MOST_MONEY_PAGES * 4);
     const crawl = await ctx.db.query("siteCrawls").withIndex("by_site_day", (q) => q.eq("websiteId", site.hold.websiteId)).order("desc").first();
     const orphans = crawl ? await orphanPagesOf(ctx, crawl.pullId) : null;
+    const titles = new Map<string, string | null>();
+    for (const row of rows) titles.set(row.page, (await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", site.hold._id).eq("page", row.page)).first())?.title ?? null);
     return {
       checkedAt: rows.length > 0 ? Math.max(...rows.map((row) => row.checkedAt)) : null,
-      pages: rows.sort((a, b) => b.clicks - a.clicks).map(({ page, kind, clicks, indexed, speed, structured }) => ({ page, kind, clicks, indexed, speed, structured })),
+      pages: rows.sort((a, b) => b.clicks - a.clicks).map(({ page, kind, clicks, indexed, speed, structured }) => ({ page, title: titles.get(page) ?? null, kind, clicks, indexed, speed, structured })),
       orphans: orphans ? orphans.length : null,
       orphanPages: (orphans ?? []).slice(0, 20).map((page) => page.page),
     };

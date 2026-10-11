@@ -79,7 +79,8 @@ export default function SearchConsoleIndexingPage() {
             footer={pages.footer}
             sort={tableSort}
             columns={[
-              { key: "page", header: t("columns.page"), sortable: true, cell: (row) => <span className="truncate text-[13px] text-foreground">{row.page}</span> },
+              // A page by its title over its address (I41).
+              { key: "page", header: t("columns.page"), sortable: true, cell: (row) => <span className="flex min-w-0 flex-col">{row.title ? <span className="truncate text-[13px] text-foreground">{row.title.split("|")[0].trim()}</span> : null}<span className="truncate text-[12px] text-secondary">{row.page}</span></span> },
               { key: "indexed", header: t("columns.indexed"), sortable: true, cell: (row) => (row.indexed ? <StatusLabel tone={row.indexed.verdict === "PASS" ? "success" : "warning"}>{t(row.indexed.verdict === "PASS" ? "indexed" : "notIndexed")}</StatusLabel> : <StatusLabel tone="neutral">{t("notAsked")}</StatusLabel>) },
               { key: "lastRead", header: t("columns.lastRead"), sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.indexed?.lastRead ? formatDay(row.indexed.lastRead) : "–"}</span> },
               { key: "why", header: t("columns.why"), cell: (row) => <span className="text-[12px] text-secondary">{whyNot(row)}</span> },

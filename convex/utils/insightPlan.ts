@@ -22,6 +22,8 @@ export const opportunityValidator = v.object({
   /** Times Google showed the website for it in 90 days. */
   shown: v.union(v.number(), v.null()),
   page: v.union(v.string(), v.null()),
+  /** The page's title, as Analytics last saw it (I41). */
+  title: v.optional(v.union(v.string(), v.null())),
   /** The service page it belongs to, where the page is one. */
   service: v.union(v.string(), v.null()),
   /** The page's share of visits that enquire over 12 months, a percent to one place. */
@@ -120,7 +122,7 @@ export function opportunitiesFrom(ranked: readonly RankedSearch[], consoleSearch
     const rate = pageRate(figures);
     const monthly = volume ?? (shown !== null ? shown / 3 : null);
     const worth = rate !== null && monthly !== null ? oneDecimal(monthly * Math.max(0, TOP_THREE - clickShare(place)) * (rate / 100)) : null;
-    out.push({ search, place, volume, shown, page, service: figures && (figures.kind === "SERVICE" || figures.kind === "HOME") ? page : null, rate, worth });
+    out.push({ search, place, volume, shown, page, title: figures?.title ?? null, service: figures && (figures.kind === "SERVICE" || figures.kind === "HOME") ? page : null, rate, worth });
   };
   for (const row of ranked) {
     const console = fromConsole.get(row.keyword.toLowerCase());

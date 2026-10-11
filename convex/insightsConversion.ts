@@ -24,7 +24,7 @@ export const EXPERIMENT_DAYS = 56;
 
 type Reader = { db: QueryCtx["db"] };
 
-/** A page's visits and enquiries in one of Analytics' landing lists, by path. */
+/** A page's visitors (people, over 12 months; visits over 30 days, for experiments) and enquiries in one of Analytics' landing lists, by path. */
 async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "365", which: "NOW" | "YEAR") {
   const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first();
   if (!connection?.property) return null;
@@ -36,7 +36,8 @@ async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period:
   landing.rows.forEach((row, index) => {
     const path = pathOf(addresses[index]);
     const held = out.get(path) ?? { visits: 0, enquiries: 0 };
-    held.visits += row.visits;
+    // People, not visits (I34): "visitors for one enquiry" counts people, Analytics' own figure.
+    held.visits += period === "365" ? row.people : row.visits;
     held.enquiries += conversionsOf(row, counted).conversions;
     out.set(path, held);
   });

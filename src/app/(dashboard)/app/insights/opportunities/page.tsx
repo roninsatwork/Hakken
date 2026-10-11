@@ -102,7 +102,8 @@ export default function InsightsOpportunitiesPage() {
           { key: "place", header: t("columns.place"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{place(row.place)}</span> },
           { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.volume === null ? "–" : formatNumber(row.volume)}</span> },
           { key: "shown", header: t("columns.shown"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.shown === null ? "–" : formatNumber(row.shown)}</span> },
-          { key: "page", header: t("columns.page"), cell: (row) => <span className="truncate text-[12px] text-secondary">{row.page ?? "–"}</span> },
+          // A page by its title over its address (I41).
+          { key: "page", header: t("columns.page"), cell: (row) => <span className="flex min-w-0 flex-col">{row.title ? <span className="truncate text-[12px] text-foreground">{row.title.split("|")[0].trim()}</span> : null}<span className="truncate text-[12px] text-secondary">{row.page ?? "–"}</span></span> },
           { key: "converts", header: t("columns.converts"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.rate === null ? "–" : `${formatPosition(row.rate)}%`}</span> },
         ]}
       />

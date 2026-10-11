@@ -74,7 +74,8 @@ export function useMoneyPagesAudit(siteId: Id<"companyWebsites">, host: string) 
     download: <ListDownload label={t("download")} fileName={`${host}-money-pages`} rows={rows} columns={[{ header: t("columns.page"), value: (row) => row.page }, { header: t("columns.mainContent"), value: (row) => row.speed?.lcpMs ?? "" }, { header: t("columns.tap"), value: (row) => row.speed?.inpMs ?? "" }, { header: t("columns.shifts"), value: (row) => row.speed?.cls ?? "" }, { header: t("columns.markup"), value: markup }]} />,
     empty: { icon: <Gauge className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("notYet") },
     columns: [
-      { key: "page", header: t("columns.page"), cell: (row: MoneyRow) => <span className="truncate text-[13px] text-foreground">{row.page}</span> },
+      // A page by its title over its address (I41).
+      { key: "page", header: t("columns.page"), cell: (row: MoneyRow) => <span className="flex min-w-0 flex-col">{row.title ? <span className="truncate text-[13px] text-foreground">{row.title.split("|")[0].trim()}</span> : null}<span className="truncate text-[12px] text-secondary">{row.page}</span></span> },
       { key: "mainContent", header: t("columns.mainContent"), align: "right" as const, cell: (row: MoneyRow) => <span className="font-mono text-[12px] text-foreground">{seconds(row.speed?.lcpMs)}</span> },
       { key: "tap", header: t("columns.tap"), align: "right" as const, cell: (row: MoneyRow) => <span className="font-mono text-[12px] text-secondary">{row.speed?.inpMs === null || row.speed?.inpMs === undefined ? "–" : t("ms", { value: formatNumber(row.speed.inpMs) })}</span> },
       { key: "shifts", header: t("columns.shifts"), align: "right" as const, cell: (row: MoneyRow) => <span className="font-mono text-[12px] text-secondary">{row.speed?.cls === null || row.speed?.cls === undefined ? "–" : row.speed.cls.toFixed(2)}</span> },
@@ -84,4 +85,4 @@ export function useMoneyPagesAudit(siteId: Id<"companyWebsites">, host: string) 
   };
 }
 
-type MoneyRow = { page: string; kind: string | null; speed: Speed | null; structured: string[] | null };
+type MoneyRow = { page: string; title?: string | null; kind: string | null; speed: Speed | null; structured: string[] | null };
