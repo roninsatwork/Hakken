@@ -1,0 +1,13 @@
+# Insights → Opportunities — the approved look (board "Opportunities" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Opportunities
+settings-card: What Hakken sees
+chart-card: Your opportunities by place and how often they're shown
+search: Find a search
+filter: Service
+filter: Place
+table: Search | Your place | Searches a month | Shown, # days | Page | Page converts
+  table-bar: # searches · Worth most first
+    download: Download CSV
+  table-footer

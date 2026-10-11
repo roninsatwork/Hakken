@@ -19,6 +19,8 @@ import InsightsServicePage from "./strategy/service/page";
 import InsightsTrackRecordPage from "./track-record/page";
 import InsightsMeasurementPage from "./measurement/page";
 import InsightsSourcesPage from "./sources/page";
+import InsightsOpportunitiesPage from "./opportunities/page";
+import InsightsPagePlanPage from "./page-plan/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -269,5 +271,37 @@ describe("Insights' looks", () => {
     const { container } = render(<InsightsSourcesPage />);
     await screen.findByText("Google Search Console");
     await expectApprovedLook(container, PLAN, "Sources", "Insights → Sources");
+  });
+
+  const PLAN_DATA = {
+    siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05",
+    plan: {
+      siteRate: 3.7,
+      opportunities: [
+        { search: "ai consultancy", place: 25.7, volume: 2400, shown: 4027, page: "/ai-consultancy/", service: "/ai-consultancy/", rate: 7.1, worth: 29.3 },
+        { search: "ai automation agency", place: 9.3, volume: 720, shown: 3264, page: "/ai-agency/", service: "/ai-agency/", rate: 4.4, worth: 5 },
+        { search: "wordpress agency", place: 12, volume: null, shown: 5584, page: null, service: null, rate: null, worth: null },
+      ],
+      pages: [
+        { page: "/chatbot-agency/", title: "ChatBot Agency", shouldWin: ["chatbot services"], action: "REBUILD", why: "fell", a: 12, b: 3, enquiries: 3, enquiriesBefore: 12, stake: 9 },
+        { page: "/ai-consultancy/", title: "AI Consultancy", shouldWin: ["ai consultancy"], action: "STRENGTHEN", why: "bestRate", a: 7.1, b: 26, enquiries: 6, enquiriesBefore: 0, stake: 351 },
+      ],
+    },
+  };
+
+  it("31 · Opportunities", async () => {
+    nav.pathname = "/app/insights/opportunities";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA });
+    const { container } = render(<InsightsOpportunitiesPage />);
+    await screen.findByText("wordpress agency");
+    await expectApprovedLook(container, PLAN, "Opportunities", "Insights → Opportunities");
+  });
+
+  it("32 · Page plan", async () => {
+    nav.pathname = "/app/insights/page-plan";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA });
+    const { container } = render(<InsightsPagePlanPage />);
+    await screen.findByText("/chatbot-agency/");
+    await expectApprovedLook(container, PLAN, "PagePlan", "Insights → Page plan");
   });
 });

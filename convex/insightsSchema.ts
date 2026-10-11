@@ -4,6 +4,7 @@ import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { measurementValidator } from "./utils/insightMeasurement";
+import { planValidator } from "./utils/insightPlan";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -149,6 +150,19 @@ export const insightsTables = {
     companyWebsiteId: v.id("companyWebsites"),
     week: v.string(),
     ...measurementValidator.fields,
+    createdAt: v.number(),
+  }).index("by_hold", ["companyWebsiteId"]),
+
+  /**
+   * Opportunities and the page plan (§4.1, phase 9): the searches a website
+   * nearly wins and each page's one thing to do, as the newest run worked
+   * them out — one row a website, replaced each run.
+   */
+  insightPlans: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    week: v.string(),
+    ...planValidator.fields,
     createdAt: v.number(),
   }).index("by_hold", ["companyWebsiteId"]),
 

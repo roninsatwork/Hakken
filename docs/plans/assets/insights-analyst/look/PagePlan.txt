@@ -1,0 +1,12 @@
+# Insights → Page plan — the approved look (board "PagePlan" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Page plan
+settings-card: What Hakken sees
+chart-card: Enquiries a year, the pages in the plan
+search: Search pages
+filter: What to do
+table: Page | Should win | What to do | Why
+  table-bar: # pages · Most at stake first
+    download: Download CSV
+  table-footer

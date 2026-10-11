@@ -13,6 +13,7 @@ import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { measurementValidator } from "./utils/insightMeasurement";
+import { planValidator } from "./utils/insightPlan";
 import { insightSpecialistValidator, insightSureValidator } from "./insightsSchema";
 
 /**
@@ -286,6 +287,7 @@ export const saveWeek = internalMutation({
     costUsd: v.number(),
     summary: v.optional(weekSummaryValidator),
     measurement: v.optional(measurementValidator),
+    plan: v.optional(planValidator),
   },
   /** The published findings' ids, in their order, for the week's brief. */
   returns: v.array(v.id("insightFindings")),
@@ -321,6 +323,13 @@ export const saveWeek = internalMutation({
       const row = { companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, ...args.measurement, createdAt: now };
       if (held) await ctx.db.replace(held._id, row);
       else await ctx.db.insert("insightMeasurements", row);
+    }
+    // Opportunities and the page plan, the newest only.
+    if (args.plan) {
+      const held = await ctx.db.query("insightPlans").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+      const row = { companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, ...args.plan, createdAt: now };
+      if (held) await ctx.db.replace(held._id, row);
+      else await ctx.db.insert("insightPlans", row);
     }
     // Two years kept (I7): the website's weeks and findings older than that go as each new week is saved.
     const cutoff = new Date(now - KEPT_MS).toISOString().slice(0, 10);

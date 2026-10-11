@@ -18397,7 +18397,8 @@
         "day": "Giorno",
         "clicks": "Clic di Google",
         "visits": "Visite da Google in Analytics"
-      }
+      },
+      "andMore": "{names} e {count, plural, one {# altro} other {altri #}}"
     },
     "sources": {
       "title": "Fonti",
@@ -18471,6 +18472,107 @@
         "businessProfiles": "Locale",
         "pages": "Siti",
         "enquiryValue": "Salute del tracciamento"
+      }
+    },
+    "opportunities": {
+      "title": "Opportunità",
+      "description": "Ricerche che quasi vinci, ordinate per quanto vale vincerle: quanto spesso si fanno, dove sei e quanto converte la pagina.",
+      "emptyTitle": "Ancora nessuna opportunità",
+      "emptyDescription": "Hakken calcola le ricerche che quasi vinci con le scoperte di ogni settimana. Compaiono dopo la prima.",
+      "search": "Trova una ricerca",
+      "service": "Servizio",
+      "everyService": "Ogni servizio",
+      "place": "Posizione",
+      "places": {
+        "4-30": "Dalla 4ª alla 30ª",
+        "4-10": "Dalla 4ª alla 10ª",
+        "11-20": "Dall'11ª alla 20ª",
+        "21-30": "Dalla 21ª alla 30ª"
+      },
+      "tableTitle": "{count, plural, one {# ricerca} other {# ricerche}} · Prima quelle che valgono di più",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna ricerca corrisponde",
+      "columns": {
+        "search": "Ricerca",
+        "place": "La tua posizione",
+        "volume": "Ricerche al mese",
+        "shown": "Mostrato, 90 giorni",
+        "page": "Pagina",
+        "converts": "La pagina converte"
+      },
+      "sees": {
+        "best": "La tua migliore opportunità è '{search}': cercata {volume} volte al mese{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
+        "bestShown": "La tua migliore opportunità è '{search}': Google ti ha mostrato {shown} volte in 90 giorni{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
+        "next": "Poi '{search}': sei in posizione {place}."
+      },
+      "do": "Rafforza {page} per '{search}'.",
+      "seePlan": "Vedi il piano delle pagine",
+      "chart": {
+        "title": "Le tue opportunità per posizione e per quante volte sei mostrato",
+        "hint": "Ogni ricerca che quasi vinci: più a sinistra è più vicina alla cima. Quelle arancioni arrivano su una pagina che converte almeno quanto il {rate}% del sito.",
+        "x": "La tua posizione su Google",
+        "y": "Volte mostrato, 90 giorni",
+        "better": "La pagina converte bene",
+        "rest": "Altre ricerche"
+      }
+    },
+    "pagePlan": {
+      "title": "Piano delle pagine",
+      "description": "Quale pagina dovrebbe vincere quale ricerca, e cosa fare con ognuna: ricostruire, ripristinare, rafforzare, aggiornare, tenere o ritirare.",
+      "emptyTitle": "Ancora nessun piano",
+      "emptyDescription": "Hakken scrive il piano delle pagine con le scoperte di ogni settimana. Compare dopo la prima.",
+      "search": "Cerca pagine",
+      "action": "Cosa fare",
+      "everyAction": "Ogni azione",
+      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Prima quelle con più in gioco",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna pagina corrisponde",
+      "addTask": "Aggiungi ai compiti di Hakken",
+      "columns": {
+        "page": "Pagina",
+        "shouldWin": "Dovrebbe vincere",
+        "action": "Cosa fare",
+        "why": "Perché"
+      },
+      "actions": {
+        "REBUILD": "Ricostruire",
+        "RESTORE": "Ripristinare",
+        "STRENGTHEN": "Rafforzare",
+        "CREATE": "Creare",
+        "REFRESH": "Aggiornare",
+        "REFRESH_OR_RETIRE": "Aggiornare o ritirare",
+        "KEEP_ROUTE": "Tenere, aggiungere un percorso",
+        "KEEP": "Tenere"
+      },
+      "why": {
+        "fell": "Richieste {a} l'anno, ora {b}",
+        "heirLost": "La vecchia pagina ne portava {a} l'anno; questa ne porta {b}",
+        "bestRate": "Converte il {a}%; {place} su Google",
+        "rateFell": "Converte il {b}%, dal {a}%",
+        "guideFell": "{a} richieste l'anno, ora {b}",
+        "readNotEnquire": "{a}% delle visite, {count, plural, =0 {nessuna richiesta} one {1 richiesta} other {# richieste}}",
+        "mergeKept": "Le pagine unite hanno tenuto le richieste: {a} l'anno, ora {b}"
+      },
+      "do": {
+        "REBUILD": "Ricostruisci {page} attorno alle ricerche che dovrebbe vincere.",
+        "RESTORE": "Ripristina ciò che {page} ha perso quando ha preso il lavoro di un'altra pagina.",
+        "STRENGTHEN": "Rafforza {page} per '{search}'.",
+        "CREATE": "Crea {page}.",
+        "REFRESH": "Aggiorna {page}: trasforma in richieste meno visitatori di prima.",
+        "REFRESH_OR_RETIRE": "Aggiorna {page}, o ritirala.",
+        "KEEP_ROUTE": "Dai a chi legge {page} un modo per contattarti.",
+        "KEEP": "Tieni {page} così com'è."
+      },
+      "sees": {
+        "lost": "{count, plural, one {Una pagina che portava lavoro va ricostruita o ripristinata} other {# pagine che portavano lavoro vanno ricostruite o ripristinate}}. La più importante è {page}: {a} richieste l'anno, ora {b}.",
+        "noneLost": "Nessuna pagina che portava lavoro lo ha perso.",
+        "reach": "{count, plural, one {Una pagina converte} other {# pagine convertono}} bene dove quasi vinci su Google: {pages}."
+      },
+      "chart": {
+        "title": "Richieste l'anno, le pagine del piano",
+        "hint": "I 12 mesi precedenti contro gli ultimi 12.",
+        "before": "I 12 mesi precedenti",
+        "now": "Gli ultimi 12 mesi"
       }
     }
   }

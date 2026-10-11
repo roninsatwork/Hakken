@@ -33,6 +33,7 @@ import { scorecardFrom } from "./utils/insightSummary";
 import { outcomeOf } from "./utils/insightTrack";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
 import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
+import { planBrief } from "./utils/insightPlan";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
@@ -191,7 +192,10 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   // The Measurement check (phase 13): whether the figures can be trusted, for the page and the Measurement specialist.
   const measured = await ctx.runQuery(internal.insightsReading.measurementInternal, { holdId: args.holdId }).catch(() => ({ health: null, byDay: [] }));
   const measurement = { checks: measurementFrom(reading.facts, check, measured.health), byDay: measured.byDay };
-  const caveatFor = (specialist: string) => (specialist === "measurement" ? [caveat, measurementBrief(measurement.checks)].filter(Boolean).join("\n\n") || null : caveat);
+  // Opportunities and the page plan (phase 9), for their pages and the Search and content specialist.
+  const plan = await ctx.runQuery(internal.insightsReading.planInternal, { holdId: args.holdId }).catch(() => null);
+  const briefs: Record<string, string | null> = { measurement: measurementBrief(measurement.checks), search: plan ? planBrief(plan) : null };
+  const caveatFor = (specialist: string) => [caveat, briefs[specialist] ?? null].filter(Boolean).join("\n\n") || null;
   // 3. Each specialist thinks and tests, side by side (§2.3).
   const drafts: Draft[] = [];
   const answers = await Promise.all(SIDE_BY_SIDE.map(async (specialist) => {
@@ -274,6 +278,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     costUsd,
     summary,
     measurement,
+    ...(plan ? { plan } : {}),
   });
   // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
   const reports: string[] = [];

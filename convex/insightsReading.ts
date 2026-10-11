@@ -23,6 +23,7 @@ import { factKey, factValidator, percentOf, shiftDay, spansOf, type Fact, type F
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
 import { pageChanges, type PageYear } from "./utils/insightTrack";
+import { NEAR, opportunitiesFrom, pagePlanFrom, planValidator, siteRateOf, type ConsoleSearch, type PageFigures, type RankedSearch } from "./utils/insightPlan";
 
 /**
  * Insights' reading layer (docs/plans/active/insights-analyst-plan.md §2,
@@ -416,6 +417,88 @@ export const measurementInternal = internalQuery({
     const visits = new Map(parts.map((part) => [part.day, unpackPart(part as PackedPart).filter((row) => splitChannelKey(row.key).channel === "Organic Search").reduce((sum, row) => sum + row.visits, 0)]));
     const days = [...new Set([...clicks.keys(), ...visits.keys()])].filter((day) => clicks.has(day) && visits.has(day)).sort();
     return { health, byDay: days.map((day) => ({ day, clicks: clicks.get(day) ?? 0, visits: visits.get(day) ?? 0 })) };
+  },
+});
+
+/** Rankings read in each band within reach, at most. */
+const RANKS_READ = 300;
+/** A plan page's own rankings read, to name what it should win. */
+const PAGE_RANKS_READ = 40;
+
+/**
+ * Opportunities and the page plan (phase 9): the searches the website nearly
+ * wins, from Visibility's rankings and Search Console's searches, each priced
+ * with its page's rate from Analytics; and each page's one thing to do, from
+ * its 12 months against the 12 before and the change log (I25).
+ */
+export const planInternal = internalQuery({
+  args: holdArgs,
+  returns: planValidator,
+  handler: async (ctx, args) => {
+    const none = { opportunities: [], pages: [], siteRate: null };
+    const hold = await ctx.db.get(args.holdId);
+    const site = hold ? await loadSite(ctx, hold._id) : null;
+    if (!hold || !site) return none;
+    // Each page's kind and title, and its 12 months against the 12 before.
+    const held = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(3000);
+    const kindOf = new Map(held.map((page) => [page.page, page]));
+    const figures = new Map<string, PageFigures>();
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (connection?.property) {
+      const counted = countedOf(connection);
+      for (const which of ["NOW", "YEAR"] as const) {
+        const landing = await readSlot(ctx, hold._id, slotKey("landing", "365", which, EVERY_DEVICE));
+        if (!landing) continue;
+        const addresses = await decodePages(ctx, hold._id, landing.rows.map((row) => row.key));
+        landing.rows.forEach((row, index) => {
+          const path = pathOf(addresses[index]);
+          const page = kindOf.get(path);
+          const entry = figures.get(path) ?? { page: path, kind: page?.pageType ?? (path === "/" ? "HOME" : null), title: page?.title ?? null, visits: 0, enquiries: 0, visitsBefore: null, enquiriesBefore: null };
+          const done = conversionsOf(row, counted).conversions;
+          if (which === "NOW") {
+            entry.visits += row.visits;
+            entry.enquiries += done;
+          } else {
+            entry.visitsBefore = (entry.visitsBefore ?? 0) + row.visits;
+            entry.enquiriesBefore = (entry.enquiriesBefore ?? 0) + done;
+          }
+          figures.set(path, entry);
+        });
+      }
+    }
+    const pages = [...figures.values()];
+    // The searches within reach in Google's results, and Search Console's own.
+    const ranked: RankedSearch[] = [];
+    for (const band of ["p04_10", "p11_20", "p21_50"] as const) {
+      const rows = await ctx.db.query("siteKeywordRanks")
+        .withIndex("by_site_band_position", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("band", band).lte("position", NEAR.to))
+        .take(RANKS_READ);
+      for (const row of rows) {
+        if (row.status !== "LOST" && row.position !== undefined) ranked.push({ keyword: row.keyword, position: row.position, page: row.page, volume: row.volumeKnown ? row.volume : null });
+      }
+    }
+    const list = await readPeriod(ctx, hold._id, "web", "query", "90", "NOW");
+    const near = (list?.rows ?? []).filter((row) => row.impressions > 0 && row.positionSum / row.impressions >= NEAR.from - 0.5 && row.positionSum / row.impressions <= NEAR.to + 0.5);
+    const names = list?.book ? await new BookNames(ctx, list.book).textsOf(near.map((row) => row.key)) : null;
+    const consoleSearches: ConsoleSearch[] = near.map((row) => ({ search: names?.get(row.key) ?? row.key, impressions: row.impressions, position: row.positionSum / row.impressions, brand: Boolean(row.brand) }));
+    const opportunities = opportunitiesFrom(ranked, consoleSearches, pages);
+    const changes = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id)).take(100);
+    const siteRate = siteRateOf(pages);
+    const planned = pagePlanFrom(pages, changes, opportunities, siteRate);
+    // What each page should win: its biggest searches within reach.
+    const withSearches = [];
+    for (const page of planned) {
+      const rows = await ctx.db.query("siteKeywordRanks")
+        .withIndex("by_site_page_band_position", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("page", page.page))
+        .take(PAGE_RANKS_READ);
+      const shouldWin = rows
+        .filter((row) => row.status !== "LOST" && row.position !== undefined && row.position <= NEAR.to)
+        .sort((a, b) => b.volume - a.volume)
+        .slice(0, 2)
+        .map((row) => row.keyword);
+      withSearches.push({ ...page, shouldWin });
+    }
+    return { opportunities, pages: withSearches, siteRate };
   },
 });
 

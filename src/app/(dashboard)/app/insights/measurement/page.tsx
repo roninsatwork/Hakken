@@ -46,8 +46,10 @@ export default function InsightsMeasurementPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<string>("status", "");
   const checks = data?.measurement?.checks;
+  // A long list of addresses names the first few and counts the rest.
+  const listOf = (names: readonly string[]) => (names.length > 3 ? t("andMore", { names: names.slice(0, 3).join(", "), count: names.length - 3 }) : names.join(", "));
   const words = (row: MeasurementCheck) => t(`found.${row.check}.${row.found}`, {
-    names: row.names.join(", "),
+    names: listOf(row.names),
     count: row.names.length,
     a: row.a === null ? "" : formatNumber(row.a),
     b: row.b === null ? "" : formatNumber(row.b),

@@ -111,6 +111,12 @@ describe("Insights' screens at their largest", () => {
         await ctx.db.insert("insightReports", { companyId, companyWebsiteId: holdId, kind: "BOARD", from: dayOf(quarter * 91), to: dayOf(quarter * 91), period: `q${quarter}`, title: "Board report", status: "READ", body: body(6), createdAt: now - quarter * 91 * 86_400_000 });
       }
       await ctx.db.insert("insightMeasurements", { companyId, companyWebsiteId: holdId, week: dayOf(0), ...measurement, createdAt: now });
+      // The plan at its largest: a hundred opportunities and thirty pages.
+      await ctx.db.insert("insightPlans", {
+        companyId, companyWebsiteId: holdId, week: dayOf(0), siteRate: 3.7, createdAt: now,
+        opportunities: Array.from({ length: 100 }, (_, at) => ({ search: `a search people make, number ${at}`, place: 12.5, volume: 2400, shown: 4000, page: "/a-service-page-with-a-long-address/", service: "/a-service-page-with-a-long-address/", rate: 7.1, worth: 29.3 })),
+        pages: Array.from({ length: 30 }, (_, at) => ({ page: `/a-page-in-the-plan-${at}/`, title: "A page's title, as Google Analytics last saw it", shouldWin: ["a search it should win", "another search"], action: "REBUILD" as const, why: "fell", a: 12, b: 3, enquiries: 3, enquiriesBefore: 12, stake: 9 })),
+      });
       return { userId, holdId, findingId: findingId!, reportId: reportId! };
     });
   });
@@ -133,6 +139,7 @@ describe("Insights' screens at their largest", () => {
     ["your month", () => [api.insightsReads.insightsLatestReport, { kind: "MONTHLY" }]],
     ["measurement", () => [api.insightsReads.insightsMeasurement, {}]],
     ["sources", () => [api.insightsReads.insightsSources, {}]],
+    ["plan", () => [api.insightsReads.insightsPlan, {}]],
   ];
   const modules = import.meta.glob("./*.ts");
 

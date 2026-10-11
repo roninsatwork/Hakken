@@ -8,6 +8,7 @@ import { factValidator } from "./utils/insightFacts";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { serviceValidator } from "./utils/insightStrategy";
 import { measurementValidator } from "./utils/insightMeasurement";
+import { planValidator } from "./utils/insightPlan";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 
@@ -554,6 +555,27 @@ export const insightsMeasurement = tenantQuery({
     if (!site) return null;
     const held = await ctx.db.query("insightMeasurements").withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id)).first();
     return { siteId: site.hold._id, host: site.host, week: held?.week ?? null, measurement: held ? { checks: held.checks, byDay: held.byDay } : null };
+  },
+});
+
+/**
+ * Opportunities and the page plan (§4.1, phase 9, drawn as the Opportunities
+ * and Page plan boards): as the newest run worked them out, one read for both
+ * pages, with each page's name from Hakken's page list.
+ */
+export const insightsPlan = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.union(v.null(), v.object({
+    siteId: v.id("companyWebsites"),
+    host: v.string(),
+    week: v.union(v.string(), v.null()),
+    plan: v.union(planValidator, v.null()),
+  })),
+  handler: async (ctx, args) => {
+    const [site] = await sitesFor(ctx, args.siteId);
+    if (!site) return null;
+    const held = await ctx.db.query("insightPlans").withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id)).first();
+    return { siteId: site.hold._id, host: site.host, week: held?.week ?? null, plan: held ? { opportunities: held.opportunities, pages: held.pages, siteRate: held.siteRate } : null };
   },
 });
 
