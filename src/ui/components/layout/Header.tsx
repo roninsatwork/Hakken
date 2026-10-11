@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Building2, Gamepad2, Gauge, GraduationCap, LayoutDashboard, ListChecks, ListTodo, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck, ChartColumn } from "lucide-react";
+import { Bot, Building2, Gamepad2, Gauge, GraduationCap, LayoutDashboard, ListChecks, ListTodo, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck, ChartColumn, Lightbulb } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
@@ -67,6 +67,7 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/calls")) return [t("calls")];
   // Keyword research sits under Visibility beside Websites (keyword-research-plan.md).
   if (pathname.startsWith("/app/sites") || pathname.startsWith("/app/keyword-research")) return [t("sites")];
+  if (pathname.startsWith("/app/insights")) return [t("insights")];
   if (pathname.startsWith("/app/search-console")) return [t("searchConsole")];
   if (pathname.startsWith("/app/analytics")) return [t("googleAnalytics")];
   if (isLearnPath(pathname)) return [t("learn")];
@@ -122,6 +123,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
       ? Phone
       : pathname.startsWith("/app/sites") || pathname.startsWith("/app/keyword-research")
       ? Globe
+      : pathname.startsWith("/app/insights")
+      ? Lightbulb
       : pathname.startsWith("/app/search-console")
       ? SearchCheck
       : pathname.startsWith("/app/analytics")

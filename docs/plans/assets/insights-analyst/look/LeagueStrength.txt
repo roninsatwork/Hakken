@@ -1,0 +1,16 @@
+# Insights → Domain authority league — the approved look (board "LeagueStrength" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Domain authority
+settings-card: What Hakken sees
+figures
+  figure: Your place
+  figure: Your figure
+  figure: Gap to the place above
+  figure: Leader
+chart-card: The league
+search: Search websites...
+table: Place | Website | Domain authority | Move | Gap to the place above
+  table-bar
+    download: Download CSV
+  table-footer

@@ -265,10 +265,17 @@ export function SiteBarChart({
   formatScale,
   seriesLabel,
   line,
+  highlight,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
   xKey?: string;
+  /**
+   * Rows drawn in another colour: the website itself among its rivals on
+   * Insights' leaderboards ("You in orange", insights-analyst-plan.md §5,
+   * drawn and approved 2026-10-11). Extended here rather than drawn again.
+   */
+  highlight?: { colour: string; rows: (row: Record<string, unknown>) => boolean };
   /** Upright bars only: bars along size themselves to their rows. */
   height?: number;
   stacked?: boolean;
@@ -343,7 +350,9 @@ export function SiteBarChart({
                 activeBar={CHART_ACTIVE_BAR}
                 isAnimationActive={false}
               >
-                {data.some(isPart) ? data.map((row, index) => <Cell key={index} fillOpacity={isPart(row) ? PART_OPACITY : 1} />) : null}
+                {data.some(isPart) || highlight
+                  ? data.map((row, index) => <Cell key={index} fillOpacity={isPart(row) ? PART_OPACITY : 1} {...(highlight?.rows(row) ? { fill: highlight.colour } : {})} />)
+                  : null}
               </Bar>
             ))}
             <GoogleUpdateMarkers google={google} />

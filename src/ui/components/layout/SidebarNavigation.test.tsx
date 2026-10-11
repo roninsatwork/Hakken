@@ -400,11 +400,11 @@ describe("Visibility's menu", () => {
     expect(websites.className).not.toContain(NAV_ACTIVE_TEXT);
   });
 
-  it("keeps the approved order: Visibility after Ask Hakken, Hakken tasks after Reading room (menu-names-plan.md)", () => {
+  it("keeps the approved order: Insights straight under Ask Hakken, Visibility after it, Hakken tasks after Reading room (menu-names-plan.md)", () => {
     vi.mocked(usePathname).mockReturnValue("/app");
     render(<SidebarNavigation />);
 
-    const order: (string | RegExp)[] = ["Dashboard", /^Ask /, "sites", "searchConsole", "googleAnalytics", "learn", "hakkenTasks", "usage"];
+    const order: (string | RegExp)[] = ["Dashboard", /^Ask /, "insights", "sites", "searchConsole", "googleAnalytics", "learn", "hakkenTasks", "usage"];
     const items = order.map((label) => screen.getAllByText(label)[0]);
     items.slice(1).forEach((item, index) => {
       expect(items[index].compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING, `${order[index]} before ${order[index + 1]}`).toBeTruthy();

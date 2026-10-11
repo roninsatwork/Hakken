@@ -244,6 +244,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (isSystemSettingsRoute(pathname)) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
+  if (pathname.startsWith('/app/insights')) return 'Insights';
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
   if (pathname.startsWith('/app/calls')) return 'Calls';
   if (pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research')) return 'Sites';

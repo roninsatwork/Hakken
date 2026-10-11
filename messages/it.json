@@ -630,7 +630,8 @@
     "contentAnalytics": "Analytics",
     "insightsAdmin": "Insights",
     "insightsRuns": "Esecuzioni settimanali",
-    "insightsPatterns": "Schemi"
+    "insightsPatterns": "Schemi",
+    "insights": "Insights"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -17572,6 +17573,193 @@
     },
     "AGENT_EMAILS": {
       "name": "Email degli agenti"
+    }
+  },
+  "insights": {
+    "section": {
+      "title": "Insights",
+      "description": "{company}, letta come farebbe un'agenzia: Google, le risposte dell'IA, il profilo dell'attività, Search Console e Google Analytics, a confronto con i concorrenti.",
+      "lastLooked": "Ultima lettura di Hakken {when}",
+      "website": "Sito",
+      "everyWebsite": "Tutti i siti",
+      "noCompanyTitle": "Insights legge i siti di un'azienda",
+      "noCompanyDescription": "Apri lo spazio di lavoro di un'azienda per vedere cosa ha trovato Hakken."
+    },
+    "menu": {
+      "label": "Insights",
+      "soon": "In arrivo",
+      "groups": {
+        "overview": "Panoramica",
+        "findings": "Risultati",
+        "leaderboards": "Classifiche",
+        "growth": "Crescita",
+        "setup": "Configurazione"
+      },
+      "pages": {
+        "summary": "Sintesi per la direzione",
+        "week": "Questa settimana",
+        "month": "Il tuo mese",
+        "strategy": "Strategia",
+        "reports": "Report",
+        "findings": "Tutti i risultati",
+        "track": "Storico",
+        "leagues": "Tutte le classifiche",
+        "strength": "Autorità del dominio",
+        "traffic": "Traffico organico",
+        "mindshare": "Presenza nell'IA",
+        "shareOfVoice": "Quota di visibilità",
+        "links": "Link",
+        "aiOverviews": "AI Overview",
+        "recommended": "Consigliato dall'IA",
+        "cited": "Pagine citate dall'IA",
+        "reviews": "Recensioni Google",
+        "opportunities": "Opportunità",
+        "pagePlan": "Piano delle pagine",
+        "funnel": "Imbuto",
+        "pageReviews": "Analisi delle pagine",
+        "experiments": "Esperimenti",
+        "measurement": "Verifica delle misurazioni",
+        "sources": "Fonti"
+      }
+    },
+    "place": {
+      "ordinal": "{place}º",
+      "ofTotal": "{place}º su {total}"
+    },
+    "leagues": {
+      "strength": {
+        "title": "Autorità del dominio",
+        "short": "autorità del dominio",
+        "hint": "Quanto è forte ogni sito agli occhi di Google, dai suoi link e dalla sua reputazione, su 1.000.",
+        "figure": "Forza, su 1.000"
+      },
+      "traffic": {
+        "title": "Traffico organico",
+        "short": "traffico organico",
+        "hint": "I visitatori stimati che ogni sito riceve al mese dalla ricerca Google.",
+        "figure": "Visitatori da Google al mese"
+      },
+      "mindshare": {
+        "title": "Presenza nell'IA",
+        "short": "presenza nell'IA",
+        "hint": "Quante volte al mese le risposte dell'IA citano ogni sito, nelle domande che le persone fanno.",
+        "figure": "Citazioni nelle risposte dell'IA"
+      },
+      "shareOfVoice": {
+        "title": "Quota di visibilità",
+        "short": "quota di visibilità",
+        "hint": "Per quante ricerche ogni sito è primo, secondo o terzo su Google: la sua quota dei posti che ricevono clic.",
+        "figure": "Ricerche nei primi tre di Google"
+      },
+      "links": {
+        "title": "Link",
+        "short": "link",
+        "hint": "I siti che rimandano a ogni sito.",
+        "figure": "Siti che rimandano"
+      },
+      "aiOverviews": {
+        "title": "Presente nelle AI Overview di Google",
+        "short": "AI Overview",
+        "hint": "Quante ricerche mostrano ogni sito come fonte nelle AI Overview di Google.",
+        "figure": "Ricerche che lo citano"
+      },
+      "recommended": {
+        "title": "Consigliato per le domande dei tuoi clienti",
+        "short": "consigli dell'IA",
+        "hint": "Le risposte che nominano ogni sito, tra gli assistenti di IA a cui Hakken pone le domande dei tuoi clienti.",
+        "figure": "Risposte che lo nominano"
+      },
+      "cited": {
+        "title": "Pagine citate dagli assistenti di IA",
+        "short": "pagine citate dall'IA",
+        "hint": "Quante pagine di ogni sito gli assistenti di IA hanno indicato come fonte.",
+        "figure": "Pagine citate"
+      },
+      "reviews": {
+        "title": "Recensioni Google",
+        "short": "recensioni Google",
+        "hint": "Le recensioni sul profilo dell'attività su Google di ogni azienda.",
+        "figure": "Recensioni"
+      },
+      "you": "Tu",
+      "place": "Posizione",
+      "website": "Sito",
+      "league": "Classifica",
+      "of": "Su",
+      "seeLeague": "Vedi la classifica",
+      "everyLeague": {
+        "title": "La tua posizione in ogni classifica",
+        "hint": "Ogni classifica: più lunga è la barra, più in alto sei; il primo posto la riempie tutta.",
+        "figure": "La tua posizione"
+      },
+      "cardTitle": "Classifica: {league}"
+    },
+    "leaderboards": {
+      "title": "Classifiche",
+      "description": "La tua posizione rispetto a {rivals, plural, one {un concorrente} other {# concorrenti}}: prima le quattro classifiche principali, poi ogni altra misura che Hakken legge. Apri una classifica per i dettagli.",
+      "descriptionLoading": "La tua posizione rispetto ai concorrenti.",
+      "emptyTitle": "Ancora nessuna classifica",
+      "emptyDescription": "Le classifiche si riempiono quando Hakken ha letto questo sito e i suoi concorrenti.",
+      "and": ", ",
+      "asOf": "Dati fino al {day}.",
+      "sees": {
+        "main": "Nelle quattro classifiche principali sei {places}.",
+        "placeIn": "{place} per {league}",
+        "lead": "Sei in testa in {count, plural, one {una classifica} other {# classifiche}}: {leagues}.",
+        "leadNone": "Non sei ancora in testa in nessuna classifica.",
+        "climb": "Sali prima in {league}: {gap} dietro {above}, il posto sopra di te."
+      },
+      "figures": {
+        "lead": "Classifiche in cui sei primo",
+        "leadValue": "{count} su {total}",
+        "leadNone": "Ancora nessuna",
+        "best": "La tua posizione migliore",
+        "climbing": "In salita",
+        "climbed": "Su di {count, plural, one {un posto} other {# posti}} in un anno",
+        "noneClimbing": "Nessuna classifica è salita in un anno",
+        "weakest": "La tua più debole"
+      }
+    },
+    "league": {
+      "notFound": "Questa classifica non esiste",
+      "notFoundDescription": "Apri le classifiche per vederle tutte.",
+      "emptyTitle": "Ancora nessuna classifica",
+      "emptyDescription": "Questa classifica si riempie quando Hakken ha letto questo sito e i suoi concorrenti.",
+      "seeAll": "Vedi le classifiche",
+      "sees": {
+        "lead": "Sei in testa con {figure}; segue {second} con {secondFigure}.",
+        "place": "Sei {place} su {total} con {figure}; è in testa {leader} con {leaderFigure}.",
+        "noMove": "I movimenti compaiono quando Hakken ha un anno di questa classifica.",
+        "held": "Hai mantenuto la posizione nell'anno.",
+        "rose": "Sei salito di {count, plural, one {un posto} other {# posti}} in un anno.",
+        "fell": "Sei sceso di {count, plural, one {un posto} other {# posti}} in un anno.",
+        "notIn": "Questo sito non è ancora in questa classifica.",
+        "allLeagues": "Guarda la tua posizione in tutte le altre classifiche."
+      },
+      "figures": {
+        "place": "La tua posizione",
+        "noMove": "I movimenti dopo un anno di storico",
+        "held": "Invariata",
+        "moved": "{count, plural, one {Un posto} other {# posti}} in un anno",
+        "figure": "Il tuo valore",
+        "gap": "Distanza dal posto sopra",
+        "behind": "dietro {name}",
+        "top": "Sei primo",
+        "leader": "In testa"
+      },
+      "search": "Cerca siti...",
+      "download": "Scarica CSV",
+      "columns": {
+        "place": "Posizione",
+        "website": "Sito",
+        "move": "Movimento",
+        "gap": "Distanza dal posto sopra"
+      },
+      "noMatch": "Nessun sito corrisponde alla ricerca.",
+      "empty": "Nessun sito in questa classifica.",
+      "you": "Tu",
+      "rival": "Concorrente",
+      "chart": "La classifica"
     }
   }
 }

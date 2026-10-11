@@ -356,9 +356,16 @@ export function UserNavTree({
   />
 
   {/*
-    Insights, the AI analyst's findings, goes here, straight under Ask Hakken,
-    once its first page is built (docs/plans/active/menu-names-plan.md, phase 7).
+    Insights, the AI analyst's findings, straight under Ask Hakken
+    (docs/plans/active/menu-names-plan.md, phase 7; insights-analyst-plan.md I1).
   */}
+  <NavItem
+    icon={Lightbulb}
+    label={t('insights')}
+    href="/app/insights"
+    isActive={activeItem === 'Insights' || pathname.startsWith('/app/insights')}
+    onClick={() => setActiveItem('Insights')}
+  />
 
   {hasCapability(CORE_MODULES.tasks) && (
   <NavItem

@@ -630,7 +630,8 @@
     "contentAnalytics": "Analytics",
     "insightsAdmin": "Insights",
     "insightsRuns": "Weekly runs",
-    "insightsPatterns": "Patterns"
+    "insightsPatterns": "Patterns",
+    "insights": "Insights"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -17572,6 +17573,193 @@
     },
     "AGENT_EMAILS": {
       "name": "Agent emails"
+    }
+  },
+  "insights": {
+    "section": {
+      "title": "Insights",
+      "description": "{company}, read the way an agency would: Google, AI answers, your Business Profile, Search Console and Google Analytics, against your rivals.",
+      "lastLooked": "Hakken last looked {when}",
+      "website": "Website",
+      "everyWebsite": "Every website",
+      "noCompanyTitle": "Insights reads a company's own websites",
+      "noCompanyDescription": "Open a company's workspace to see what Hakken found."
+    },
+    "menu": {
+      "label": "Insights",
+      "soon": "Coming soon",
+      "groups": {
+        "overview": "Overview",
+        "findings": "Findings",
+        "leaderboards": "Leaderboards",
+        "growth": "Growth",
+        "setup": "Setup"
+      },
+      "pages": {
+        "summary": "Executive summary",
+        "week": "This week",
+        "month": "Your month",
+        "strategy": "Strategy",
+        "reports": "Reports",
+        "findings": "All findings",
+        "track": "Track record",
+        "leagues": "All leagues",
+        "strength": "Domain authority",
+        "traffic": "Organic traffic",
+        "mindshare": "AI mindshare",
+        "shareOfVoice": "Share of voice",
+        "links": "Links",
+        "aiOverviews": "AI Overviews",
+        "recommended": "Recommended by AI",
+        "cited": "Pages AI cites",
+        "reviews": "Google reviews",
+        "opportunities": "Opportunities",
+        "pagePlan": "Page plan",
+        "funnel": "Funnel",
+        "pageReviews": "Page reviews",
+        "experiments": "Experiments",
+        "measurement": "Measurement check",
+        "sources": "Sources"
+      }
+    },
+    "place": {
+      "ordinal": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "ofTotal": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {total}"
+    },
+    "leagues": {
+      "strength": {
+        "title": "Domain authority",
+        "short": "domain authority",
+        "hint": "How strong each website is in Google's eyes, from its links and standing, out of 1,000.",
+        "figure": "Strength, out of 1,000"
+      },
+      "traffic": {
+        "title": "Organic traffic",
+        "short": "organic traffic",
+        "hint": "Each website's estimated visitors from Google search a month.",
+        "figure": "Visitors from Google a month"
+      },
+      "mindshare": {
+        "title": "AI mindshare",
+        "short": "AI mindshare",
+        "hint": "How often AI answers mention each website in a month, across the questions people ask.",
+        "figure": "Mentions in AI answers"
+      },
+      "shareOfVoice": {
+        "title": "Share of voice",
+        "short": "share of voice",
+        "hint": "How many searches each website ranks first, second or third for on Google: its share of the places that get clicked.",
+        "figure": "Searches in Google's top three"
+      },
+      "links": {
+        "title": "Links",
+        "short": "links",
+        "hint": "The websites linking to each website.",
+        "figure": "Linking websites"
+      },
+      "aiOverviews": {
+        "title": "Shown in Google's AI Overviews",
+        "short": "AI Overviews",
+        "hint": "How many searches show each website as a source in Google's AI Overviews.",
+        "figure": "Searches citing it"
+      },
+      "recommended": {
+        "title": "Recommended for your buyers' questions",
+        "short": "AI recommendations",
+        "hint": "Answers naming each website, across the AI assistants Hakken asks your buyers' questions.",
+        "figure": "Answers naming it"
+      },
+      "cited": {
+        "title": "Pages AI assistants cite",
+        "short": "pages AI cites",
+        "hint": "How many of each website's pages AI assistants linked to as a source.",
+        "figure": "Pages cited"
+      },
+      "reviews": {
+        "title": "Google reviews",
+        "short": "Google reviews",
+        "hint": "Reviews on each business's Google Business Profile.",
+        "figure": "Reviews"
+      },
+      "you": "You",
+      "place": "Place",
+      "website": "Website",
+      "league": "League",
+      "of": "Of",
+      "seeLeague": "See the league",
+      "everyLeague": {
+        "title": "Where you rank in every league",
+        "hint": "Each league, the longer the bar the higher you are: first is the whole way.",
+        "figure": "Your place"
+      },
+      "cardTitle": "{league} league"
+    },
+    "leaderboards": {
+      "title": "Leaderboards",
+      "description": "Where you rank against your {rivals, plural, one {rival} other {# rivals}}: the four main leagues first, then every other measure Hakken reads. Open a league for the detail.",
+      "descriptionLoading": "Where you rank against your rivals.",
+      "emptyTitle": "No leagues yet",
+      "emptyDescription": "The leagues fill in once Hakken has read this website and its rivals.",
+      "and": ", ",
+      "asOf": "Figures to {day}.",
+      "sees": {
+        "main": "In the four main leagues you're {places}.",
+        "placeIn": "{place} for {league}",
+        "lead": "You lead {count, plural, one {one league} other {# leagues}}: {leagues}.",
+        "leadNone": "You don't lead a league yet.",
+        "climb": "Climb {league} first: {gap} behind {above}, the place above you."
+      },
+      "figures": {
+        "lead": "Leagues you lead",
+        "leadValue": "{count} of {total}",
+        "leadNone": "None yet",
+        "best": "Your best place",
+        "climbing": "Climbing",
+        "climbed": "Up {count, plural, one {one place} other {# places}} in a year",
+        "noneClimbing": "No league moved up in a year",
+        "weakest": "Your weakest"
+      }
+    },
+    "league": {
+      "notFound": "That league doesn't exist",
+      "notFoundDescription": "Open the leaderboards to see every league.",
+      "emptyTitle": "No league yet",
+      "emptyDescription": "This league fills in once Hakken has read this website and its rivals.",
+      "seeAll": "See the leaderboards",
+      "sees": {
+        "lead": "You lead this league with {figure}; {second} is next with {secondFigure}.",
+        "place": "You're {place} of {total} with {figure}; {leader} leads with {leaderFigure}.",
+        "noMove": "Movement shows once Hakken holds a year of this league.",
+        "held": "You held your place over the year.",
+        "rose": "You rose {count, plural, one {one place} other {# places}} in a year.",
+        "fell": "You fell {count, plural, one {one place} other {# places}} in a year.",
+        "notIn": "This website isn't in this league yet.",
+        "allLeagues": "See where you rank in every other league."
+      },
+      "figures": {
+        "place": "Your place",
+        "noMove": "Movement from a year's history",
+        "held": "Held",
+        "moved": "{count, plural, one {One place} other {# places}} in a year",
+        "figure": "Your figure",
+        "gap": "Gap to the place above",
+        "behind": "behind {name}",
+        "top": "You're first",
+        "leader": "Leader"
+      },
+      "search": "Search websites...",
+      "download": "Download CSV",
+      "columns": {
+        "place": "Place",
+        "website": "Website",
+        "move": "Move",
+        "gap": "Gap to the place above"
+      },
+      "noMatch": "No website matches that search.",
+      "empty": "No websites in this league.",
+      "you": "You",
+      "rival": "Rival",
+      "chart": "The league"
     }
   }
 }

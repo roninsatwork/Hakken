@@ -244,7 +244,7 @@ function pathOf(address: string): string {
 // ---------------------------------------------------------------------------
 // The market: the website and its rivals (DataForSEO), AI mentions and answers, reviews, the site audit
 
-async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promise<Fact[]> {
+export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promise<Fact[]> {
   const facts = new Facts();
   const site = await loadSite(ctx, hold._id);
   if (!site) return [];
@@ -276,6 +276,10 @@ async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promise<F
       const pastBase = { source: "market" as const, from: then.lastDay, to: then.lastDay };
       if (typeof then.estimatedTraffic === "number") facts.add({ ...pastBase, key: factKey("seo", host, "traffic", "year"), value: Math.round(then.estimatedTraffic), unit: "count", label: `${host}'s estimated visitors from Google a month` });
       if (typeof then.domainRank === "number") facts.add({ ...pastBase, key: factKey("seo", host, "strength", "year"), value: Math.round(then.domainRank), unit: "score", label: `${host}'s strength in Google's eyes, out of 1,000` });
+      if (typeof then.referringDomains === "number") facts.add({ ...pastBase, key: factKey("seo", host, "linkingSites", "year"), value: then.referringDomains, unit: "count", label: `websites linking to ${host}` });
+      const pastBands = then.allBands ?? then.bands;
+      if (pastBands?.p01_03 !== undefined) facts.add({ ...pastBase, key: factKey("seo", host, "top3", "year"), value: pastBands.p01_03, unit: "count", label: `searches where ${host} is in Google's top three` });
+      if (typeof then.aiOverviewRefs === "number") facts.add({ ...pastBase, key: factKey("seo", host, "aiOverviews", "year"), value: then.aiOverviewRefs, unit: "count", label: `searches where Google's AI Overview cites ${host}` });
     }
   }
   // AI mentions a month (Brand Radar), the newest month and the same month a year before.
@@ -297,6 +301,11 @@ async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promise<F
   const listed = listHold(site);
   const summary = await holdAiSummary(ctx, listed ?? null, site.place);
   const hosts = new Map(websites.map((website) => [website._id, website.displayHost ?? website.host]));
+  // The pages each website has cited as a source by AI assistants (Pages AI cites, §5).
+  for (const cited of summary?.cited ?? []) {
+    const host = hosts.get(cited.websiteId);
+    if (host) facts.add({ key: factKey("ai", "cited", host), value: cited.pages, unit: "count", source: "ai", label: `${host}'s pages AI assistants cited as a source` });
+  }
   for (const engine of summary?.engines ?? []) {
     facts.add({ key: factKey("ai", "answers", engine.engine, "asked"), value: engine.asked, unit: "count", source: "ai", label: `questions asked of ${engine.engine}`, to: engine.lastDay });
     for (const host of hosts.values()) {
