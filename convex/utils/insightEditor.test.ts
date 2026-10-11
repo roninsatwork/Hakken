@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { couldBeChance, editFinding, typedNumbers, unlike, type DraftFinding } from "./insightEditor";
+import { claimAgainstEvidence, couldBeChance, editFinding, typedNumbers, unlike, type DraftFinding } from "./insightEditor";
 import { candidatesFor } from "./insightChecks";
 import { enquiryCheck } from "./insightEnquiryCheck";
 import { factsByKey, type Fact } from "./insightFacts";
@@ -67,7 +67,7 @@ describe("the Editor", () => {
   test("a move small enough to be chance is not called a change, unless the finding says it is too early to tell", () => {
     expect(couldBeChance(12, 9)).toBe(true);
     expect(couldBeChance(101, 171)).toBe(false);
-    const small = draft({ comparisons: [["ga.conversions.30.now", "ga.conversions.30.before"]] });
+    const small = draft({ headline: "Enquiries in the last 30 days: [[ga.conversions.30.now]], against [[ga.conversions.30.before]].", comparisons: [["ga.conversions.30.now", "ga.conversions.30.before"]] });
     expect(editFinding(small, facts)).toMatchObject({ ok: false });
     expect(editFinding({ ...small, story: `${small.story} It is too early to tell whether [[ga.conversions.30.now]] is a rise.` }, facts).ok).toBe(true);
   });
@@ -144,5 +144,27 @@ describe("keeping score and the change log (§2.7, I25)", () => {
       { kind: "REPLACED", from: "/blockchain-developers/", to: "/blockchain-development-company/", before: 13, after: 3, result: "LOST" },
       { kind: "REMOVED", from: "/old-offer/", to: null, before: 4, after: 0, result: "LOST" },
     ]);
+  });
+});
+
+describe("claims against their evidence (I21)", () => {
+  const year = (key: string, value: number, to: string): Fact => ({ key, value, unit: "count", source: "analytics", label: key, from: `${Number(to.slice(0, 4)) - 1}${to.slice(4)}`, to });
+  const now = year("ga.conversions.365.now", 101, "2026-10-10"), before = year("ga.conversions.365.before", 171, "2025-10-10");
+
+  test("a headline saying its figures rose when they fell is sent back, and the other way", () => {
+    expect(claimAgainstEvidence("Enquiries from search grew to [[ga.conversions.365.now]]", [[now, before]])).toContain("rose");
+    expect(claimAgainstEvidence("Enquiries fell to [[ga.conversions.365.now]] from [[ga.conversions.365.before]]", [[now, before]])).toBeNull();
+    expect(claimAgainstEvidence("Enquiries fell", [[{ ...now, value: 200 }, before]])).toContain("fell");
+  });
+
+  test("a headline saying both ways, neither, or resting on a small move is left to its story", () => {
+    expect(claimAgainstEvidence("Visits rose but enquiries fell", [[now, before]])).toBeNull();
+    expect(claimAgainstEvidence("Search brings the same visitors", [[now, before]])).toBeNull();
+    expect(claimAgainstEvidence("Enquiries grew", [[{ ...now, value: 168 }, before]])).toBeNull();
+  });
+
+  test("the Editor sends such a finding back", () => {
+    const verdict = editFinding(draft({ headline: "Search sent more enquiries: [[ga.channel.Organic Search.conversions.365.now]] against [[ga.channel.Organic Search.conversions.365.before]]." }), facts);
+    expect(verdict).toMatchObject({ ok: false });
   });
 });

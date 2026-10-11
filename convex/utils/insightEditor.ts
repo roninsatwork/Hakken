@@ -80,6 +80,32 @@ export function couldBeChance(a: number, b: number): boolean {
 
 const SAYS_TOO_EARLY = /too early|too few|too small to (say|tell)|chance/i;
 
+/** Words a headline uses to say a figure went up, or down. */
+const SAYS_UP = /\b(rose|risen|rising|grew|grown|growing|up|increased?|increasing|more|doubled|tripled|climbed|gained|higher|jumped|soared)\b/i;
+const SAYS_DOWN = /\b(fell|fallen|falling|dropped|dropping|down|declined?|declining|decreased?|fewer|less|lost|halved|lower|slipped|shrank|shrunk|collapsed)\b/i;
+
+/**
+ * A claim checked against its evidence (I21): a headline that says its
+ * figures rose when every comparison it rests on fell — or fell when they
+ * rose — is sent back. Only a headline that says one way plainly is judged;
+ * one that says both, or neither, is the story's to explain.
+ */
+export function claimAgainstEvidence(headline: string, pairs: ReadonlyArray<[Fact, Fact]>): string | null {
+  const up = SAYS_UP.test(headline), down = SAYS_DOWN.test(headline);
+  if (up === down || pairs.length === 0) return null;
+  // Each comparison's way: the later span against the earlier, by ten per cent or more.
+  const ways = pairs.map(([a, b]) => {
+    const [newer, older] = (a.to ?? "") >= (b.to ?? "") ? [a, b] : [b, a];
+    const moved = newer.value - older.value;
+    return Math.abs(moved) < Math.max(Math.abs(newer.value), Math.abs(older.value)) * 0.1 ? 0 : Math.sign(moved);
+  });
+  if (ways.some((way) => way === 0) || new Set(ways).size > 1) return null;
+  const way = ways[0];
+  if (up && way < 0) return "The headline says its figures rose, but every comparison it rests on fell.";
+  if (down && way > 0) return "The headline says its figures fell, but every comparison it rests on rose.";
+  return null;
+}
+
 export function editFinding(draft: DraftFinding, facts: ReadonlyMap<string, Fact>): EditorVerdict {
   const words = [draft.headline, draft.story, draft.action, draft.howWeKnow];
   const all = words.join(" ");
@@ -99,6 +125,11 @@ export function editFinding(draft: DraftFinding, facts: ReadonlyMap<string, Fact
       return { ok: false, note: `${a.label} against ${b.label} (${a.value} and ${b.value}) could be chance, and the finding doesn't say it is too early to tell.` };
     }
   }
+  const contradiction = claimAgainstEvidence(draft.headline, draft.comparisons.flatMap((pair) => {
+    const [a, b] = [facts.get(pair[0]), facts.get(pair[1])];
+    return a && b ? [[a, b] as [Fact, Fact]] : [];
+  }));
+  if (contradiction) return { ok: false, note: contradiction };
   const filled = words.map((text) => fillFacts(text, facts));
   const missing = [...new Set(filled.flatMap((answer) => answer.missing))];
   if (missing.length > 0) return { ok: false, note: `Names figures Hakken doesn't hold: ${missing.slice(0, 3).join(", ")}.` };

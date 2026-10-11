@@ -37,6 +37,7 @@ import { planBrief } from "./utils/insightPlan";
 import { DRAFT_RULES, draftsFrom, type Drafted } from "./utils/insightDrafts";
 import { PANEL_RULES, panelFrom } from "./utils/insightPanel";
 import { REVIEW_RULES, VERDICTS, funnelFrom, sourcesFrom, verdictByRule, type Verdict } from "./utils/insightConversion";
+import { missingStructuredData } from "./utils/moneyPageChecks";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
@@ -427,10 +428,14 @@ async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: r
     });
     const answer = await ask(ctx, args, member, "the Conversion specialist's page reviews", system, prompt).catch(() => null) as { pages?: unknown } | null;
     const list = Array.isArray(answer?.pages) ? answer.pages : [];
+    const markupOf = new Map(inputs.map((page) => [page.page, page]));
     answered = new Map(list.flatMap((raw) => {
       const entry = raw as Record<string, unknown>;
       const verdict = VERDICTS.find((known) => known === entry.verdict);
       if (typeof entry.page !== "string" || !verdict) return [];
+      // Company facts a page already carries are never asked for: the markup decides, not the model.
+      const held = markupOf.get(entry.page);
+      if (verdict === "ADD_COMPANY_FACTS" && held && !missingStructuredData(held.kind === "HOME" || entry.page === "/" ? "HOME" : held.kind, held.structured ?? []).includes("ORGANISATION")) return [];
       const steps = Array.isArray(entry.steps) ? entry.steps.filter((step): step is string => typeof step === "string").map((step) => step.trim().slice(0, 300)).slice(0, 2) : [];
       return [[entry.page, { verdict, reason: typeof entry.reason === "string" ? entry.reason.trim().slice(0, 300) : "", steps }]];
     }));
