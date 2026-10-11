@@ -1,9 +1,9 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { getFunctionName, type FunctionReference } from "convex/server";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { bytesReadBy, metered } from "@/src/test/readMeter";
+import { metered, readBy } from "@/src/test/readMeter";
 import { loadSite } from "./websiteSiteRows";
 import { workOutAssets } from "./assetSummaries";
 import budgets from "../code-ratchets.json";
@@ -23,6 +23,11 @@ import { AI_ENGINES } from "./seoAiEngines";
  * its budget in `code-ratchets.json` (`aiAppsReadKiB`, which may shrink,
  * never grow), and under half of what one read may hold.
  * AI_APPS_READ_REPORT=1 prints what each reads.
+ *
+ * One website seeded for every screen, and a test a screen: as one test
+ * reading all eight, and two of them again for what they say, it took 8.5s
+ * on its own, past the five-second line (AGENTS.md, "Test time limits";
+ * 2026-10-11). What a screen says is checked from the call that measured it.
  */
 
 const QUESTIONS = 50;
@@ -35,9 +40,13 @@ const dayOf = (offset: number) => new Date(Date.UTC(2026, 9, 9) - offset * 86_40
 const words = (count: number, seed: number) => Array.from({ length: count }, (_, at) => `word${(at + seed) % 97}`).join(" ");
 
 describe("AI app screens at five times a large client", () => {
-  test("every AI app screen reads within its budget and half of Convex's limit", async () => {
-    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
-    const seeded = await t.run(async (ctx) => {
+  const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+  let seeded: { userId: Id<"users">; holdId: Id<"companyWebsites">; firstText: Id<"aiAnswerTexts"> };
+  const readBudgets: Record<string, number> = budgets.aiAppsReadKiB;
+  const read: Record<string, number> = {};
+
+  beforeAll(async () => {
+    seeded = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Co", createdAt: Date.now() });
       const userId = await ctx.db.insert("users", { name: "Member", email: "big@test.com", role: "ADMIN" as const, companyId, createdAt: Date.now() });
       const websiteId = await ctx.db.insert("websites", { host: "big.co.uk", displayHost: "big.co.uk", firstSeenAt: Date.now() });
@@ -92,49 +101,51 @@ describe("AI app screens at five times a large client", () => {
       }
       return { userId, holdId, firstText: firstText! };
     });
+  });
 
-    const siteId = seeded.holdId;
-    const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
-      ["one answer, five ways", api.siteAnswerShown.answerShown, { siteId, answerId: seeded.firstText }],
-      ["businesses recommended", api.siteAiApps.businessesRecommended, { siteId }],
-      ["read but not cited", api.siteAiApps.readNotCited, { siteId }],
-      // The page it opens (discovery-detail-and-hakken-sees-plan.md §3): every answer read, and the Brand radar readings.
-      ["one page", api.siteAiPageDetail.aiPageDetail, { siteId, url: "https://read12.co.uk/a-long-page-address/0/" }],
-      // One business, shown on every answer's cards.
-      ["one business", api.siteBusinessDetail.businessDetail, { siteId, business: "business1.co.uk" }],
-      ["ai demand", api.siteAiDemand.aiDemand, { siteId }],
-      ["ai overview gaps", api.siteAiOverviewGaps.overviewGaps, { siteId }],
-    ];
-    const modules = import.meta.glob("./*.ts");
-    const readBudgets: Record<string, number> = budgets.aiAppsReadKiB;
-    const read: Record<string, number> = {};
-    const over: string[] = [];
-    for (const [name, query, args] of screens) {
-      const [file, exported] = getFunctionName(query).split(":");
-      const loaded = (await modules[`./${file}.ts`]()) as Record<string, { _handler?: unknown }>;
-      const bytes = await bytesReadBy(t, seeded.userId, loaded[exported], args);
-      read[name] = Math.ceil(bytes / 1024);
-      if (bytes > HALF_A_READ) over.push(`${name}: ${read[name]} KiB, past half of what one read may hold`);
-      if (!(read[name] <= (readBudgets[name] ?? -1))) over.push(`${name}: ${read[name]} KiB read, its budget ${readBudgets[name] ?? "not set"}`);
-    }
-    // And Your assets, worked out after each collection from what these screens read (`assetSummaries.ts`).
+  afterAll(() => {
+    if (process.env.AI_APPS_READ_REPORT) process.stdout.write(`${JSON.stringify(read, null, 2)}\n`);
+  });
+
+  /** A screen's read against its budget and half of what one read may hold. */
+  const withinBudget = (name: string, bytes: number) => {
+    read[name] = Math.ceil(bytes / 1024);
+    expect(bytes, `${name}: ${read[name]} KiB, past half of what one read may hold`).toBeLessThanOrEqual(HALF_A_READ);
+    expect(read[name], `${name}: ${read[name]} KiB read, its budget ${readBudgets[name] ?? "not set"}`).toBeLessThanOrEqual(readBudgets[name] ?? -1);
+  };
+
+  const screens: Array<[string, () => [FunctionReference<"query">, Record<string, unknown>], ((answer: unknown) => void)?]> = [
+    ["one answer, five ways", () => [api.siteAnswerShown.answerShown, { siteId: seeded.holdId, answerId: seeded.firstText }]],
+    // What the screen says at this size: every question's answers counted.
+    ["businesses recommended", () => [api.siteAiApps.businessesRecommended, { siteId: seeded.holdId }], (answer) => expect((answer as { answers: number }).answers).toBe(QUESTIONS)],
+    ["read but not cited", () => [api.siteAiApps.readNotCited, { siteId: seeded.holdId }]],
+    // The page it opens (discovery-detail-and-hakken-sees-plan.md §3): every answer read, and the Brand radar readings.
+    ["one page", () => [api.siteAiPageDetail.aiPageDetail, { siteId: seeded.holdId, url: "https://read12.co.uk/a-long-page-address/0/" }]],
+    // One business, shown on every answer's cards.
+    ["one business", () => [api.siteBusinessDetail.businessDetail, { siteId: seeded.holdId, business: "business1.co.uk" }]],
+    // Every tracked search and every searched keyword with AI demand.
+    ["ai demand", () => [api.siteAiDemand.aiDemand, { siteId: seeded.holdId }], (answer) => expect((answer as { rows: unknown[] }).rows).toHaveLength(SEARCHES + KEYWORDS)],
+    ["ai overview gaps", () => [api.siteAiOverviewGaps.overviewGaps, { siteId: seeded.holdId }]],
+  ];
+  const modules = import.meta.glob("./*.ts");
+
+  test.each(screens)("%s reads within its budget and half of Convex's limit", async (name, ask, says) => {
+    const [query, args] = ask();
+    const [file, exported] = getFunctionName(query).split(":");
+    const loaded = (await modules[`./${file}.ts`]()) as Record<string, { _handler?: unknown }>;
+    const { bytes, answer } = await readBy(t, seeded.userId, loaded[exported], args);
+    withinBudget(name, bytes);
+    says?.(answer);
+  });
+
+  // And Your assets, worked out after each collection from what these screens read (`assetSummaries.ts`).
+  test("your assets reads within its budget and half of Convex's limit", async () => {
     const assetBytes = await t.run(async (ctx) => {
       const meter = metered(ctx.db);
-      const site = await loadSite({ db: meter.db } as never, siteId);
+      const site = await loadSite({ db: meter.db } as never, seeded.holdId);
       if (site) await workOutAssets({ db: meter.db } as never, site);
       return meter.bytes();
     });
-    read["your assets"] = Math.ceil(assetBytes / 1024);
-    if (assetBytes > HALF_A_READ) over.push(`your assets: ${read["your assets"]} KiB, past half of what one read may hold`);
-    if (!(read["your assets"] <= (readBudgets["your assets"] ?? -1))) over.push(`your assets: ${read["your assets"]} KiB read, its budget ${readBudgets["your assets"] ?? "not set"}`);
-    if (process.env.AI_APPS_READ_REPORT) process.stdout.write(`${JSON.stringify(read, null, 2)}\n`);
-    expect(over).toEqual([]);
-
-    // What the screens say at this size.
-    const asMember = t.withIdentity({ subject: seeded.userId });
-    const businesses = await asMember.query(api.siteAiApps.businessesRecommended, { siteId });
-    expect(businesses.answers).toBe(QUESTIONS);
-    const demand = await asMember.query(api.siteAiDemand.aiDemand, { siteId });
-    expect(demand.rows).toHaveLength(SEARCHES + KEYWORDS);
+    withinBudget("your assets", assetBytes);
   });
 });
