@@ -24,6 +24,7 @@ import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useSchedule
 import { CollectNow } from "./CollectNow";
 import { CollectionCost } from "./CollectionCost";
 import { CollectionParts } from "./CollectionParts";
+import { InsightsSchedule } from "./InsightsSchedule";
 
 /**
  * When this company's SEO data gets collected: the company's Schedules page,
@@ -157,6 +158,8 @@ export default function CompanyDataCollectionPage() {
           />
         </div>
       </SettingsCard>
+
+      <InsightsSchedule companyId={companyId} />
 
       <CollectionParts companyId={companyId} />
 

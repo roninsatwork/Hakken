@@ -141,7 +141,8 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
   // ---------------------------------------------------------------- Conversion
   const siteRate = read.get("ga.conversionRate.365.now");
   const siteVisits = read.get("ga.visits.365.now") ?? 0;
-  for (const path of landingPaths(read, "landing", "365")) {
+  // Visits Analytics couldn't tie to a landing page are a measurement question, never a page's.
+  for (const path of landingPaths(read, "landing", "365").filter((path) => !/not set/i.test(path))) {
     const base = `ga.landing.${path}`;
     const visits = read.get(`${base}.visits.365.now`) ?? 0;
     const done = read.get(`${base}.conversions.365.now`) ?? 0;

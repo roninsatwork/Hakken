@@ -68,12 +68,15 @@ export const runInsightsTeamNow = internalAction({
         await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", turn.message);
         return null;
       }
-      const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
+      const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, { runId: args.runId });
       const mode = setup.members.find((member) => member.role === INSIGHTS_LEAD_ROLE)?.mode ?? "TEST";
       if (setup.websites.length === 0) {
-        await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", mode === "TEST"
-          ? "In Test, the team reads only the companies a super admin is working in, and none of their websites has Search Console or Google Analytics connected."
-          : "No website has Search Console or Google Analytics connected, so there was nothing to read.");
+        const waiting = setup.notDue.length > 0 ? ` Not due today by their company's Insights schedule: ${setup.notDue.join(", ")}.` : "";
+        await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", setup.notDue.length > 0
+          ? `No client is due today.${waiting}`
+          : mode === "TEST"
+            ? "In Test, the team reads only the companies a super admin is working in, and none of their websites has Search Console or Google Analytics connected."
+            : "No website has Search Console or Google Analytics connected, so there was nothing to read.");
         return null;
       }
       const hosts = setup.websites.map((site) => site.host).join(", ");

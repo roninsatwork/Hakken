@@ -262,6 +262,7 @@ import type * as holdProfileSchema from "../holdProfileSchema.js";
 import type * as holdProfiles from "../holdProfiles.js";
 import type * as http from "../http.js";
 import type * as httpConnectorPolicy from "../httpConnectorPolicy.js";
+import type * as insightsAdmin from "../insightsAdmin.js";
 import type * as insightsCounts from "../insightsCounts.js";
 import type * as insightsCountsSchema from "../insightsCountsSchema.js";
 import type * as insightsMigrations from "../insightsMigrations.js";
@@ -1070,6 +1071,7 @@ declare const fullApi: ApiFromModules<{
   holdProfiles: typeof holdProfiles;
   http: typeof http;
   httpConnectorPolicy: typeof httpConnectorPolicy;
+  insightsAdmin: typeof insightsAdmin;
   insightsCounts: typeof insightsCounts;
   insightsCountsSchema: typeof insightsCountsSchema;
   insightsMigrations: typeof insightsMigrations;

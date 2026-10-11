@@ -65,6 +65,14 @@ export default defineSchema({
   
   companies: defineTable({
     name: v.string(),
+    /**
+     * When the Insights team reads this company's websites
+     * (docs/plans/active/insights-analyst-plan.md §6; Anthony, 2026-10-11: "I
+     * may decide monthly for some clients"): the platform's schedule format,
+     * daily to monthly, and whether it runs at all. Absent: every Monday at
+     * 07:00 (`DEFAULT_CLIENT_SCHEDULE`).
+     */
+    insightsSchedule: v.optional(v.object({ intervalStr: v.string(), isActive: v.boolean() })),
     logo: v.optional(v.string()),
     description: v.optional(v.string()),
     overview: v.optional(v.string()),

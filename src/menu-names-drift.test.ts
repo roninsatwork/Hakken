@@ -22,7 +22,7 @@ const OLD_NAMES: Record<"en" | "it", RegExp> = {
 };
 const KEPT = new Set(["dashboard.hero.eyebrow"]);
 /** The analyst's section, the one place "Insights" belongs (menu-names-plan.md phase 7). */
-const INSIGHTS_KEYS = /^(insights\.|sidebar\.insights$|admin\.insights\.|admin\.agents\.details\.settings\.sections\.role\.(groups\.insights|roles\.INSIGHTS_))/;
+const INSIGHTS_KEYS = /^(insights\.|sidebar\.insights|admin\.insights\.|admin\.companyDataCollection\.insights\.|admin\.agents\.details\.settings\.sections\.role\.(groups\.insights|roles\.INSIGHTS_))/;
 const DISCOVERY: Record<"en" | "it", RegExp> = { en: /\bDiscovery\b/, it: /\b(Discovery|Scoperta)\b/ };
 
 function strings(messages: unknown, prefix = ""): [string, string][] {

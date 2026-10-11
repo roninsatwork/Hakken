@@ -128,11 +128,25 @@ export const TEAM_AGENTS: Record<InsightsRole, { name: string; description: stri
   INSIGHTS_REPORT_WRITER: { name: "Insights: Report Writer", description: "Writes the weekly brief, the monthly report and the quarterly board report from the week's findings." },
 };
 
-/** The Head of Strategy's schedule: Monday mornings, once the collectors have run. Shown and changed on the Schedules screen. */
+/**
+ * The Head of Strategy's schedule: every morning, once the collectors have
+ * run, it reads each client whose own Insights schedule has come due
+ * (`DEFAULT_CLIENT_SCHEDULE` unless set on the company's Schedules page).
+ * Shown and changed on the Schedules screen.
+ */
 export const TEAM_SCHEDULE = {
-  name: "Insights: the team's weekly run",
-  intervalStr: JSON.stringify({ version: 2, kind: "recurring", cadence: "weekly", dayOfWeek: 1, timeLocal: "07:00", timezone: "Europe/London" }),
+  name: "Insights: the team's run",
+  intervalStr: JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", timeLocal: "07:00", timezone: "Europe/London" }),
 } as const;
+
+/** The schedule as first made, weekly: moved to daily where nobody has changed it. */
+export const FIRST_TEAM_SCHEDULE = JSON.stringify({ version: 2, kind: "recurring", cadence: "weekly", dayOfWeek: 1, timeLocal: "07:00", timezone: "Europe/London" });
+
+/** A client's Insights schedule until one is set: every Monday at 07:00 (I5's weekly rhythm). */
+export const DEFAULT_CLIENT_SCHEDULE = FIRST_TEAM_SCHEDULE;
+
+/** Due a little early still counts: the team's own run lands a few minutes either side of the hour. */
+export const DUE_SLACK_MS = 2 * 60 * 60 * 1000;
 
 /** The Head of Strategy's spend limit for one website's run, as first made: changed in Admin → Agents (I18). */
 export const LEAD_LIMIT_USD = 2;

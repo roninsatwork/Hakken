@@ -4,9 +4,12 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { isTrackedHold } from "./utils/websitePairing";
 import { INSIGHTS_LEAD_ROLE, INSIGHTS_ROLES, type InsightsRole } from "./utils/agentRoles";
-import { LEAD_LIMIT_USD, TEAM_AGENTS, TEAM_SCHEDULE } from "./utils/insightTeam";
+import { DEFAULT_CLIENT_SCHEDULE, DUE_SLACK_MS, FIRST_TEAM_SCHEDULE, LEAD_LIMIT_USD, TEAM_AGENTS, TEAM_SCHEDULE } from "./utils/insightTeam";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { startRoleRun } from "./roleRuns";
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import { assertSeoInterval } from "./seoScheduleService";
+import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
 import { insightSpecialistValidator, insightSureValidator } from "./insightsSchema";
 
@@ -41,9 +44,15 @@ const CONNECTIONS_PER_READ = 500;
  * working in, so the findings are seen before any customer's (I19).
  */
 export const teamSetup = internalQuery({
-  args: {},
-  returns: v.object({ members: v.array(memberValidator), websites: v.array(websiteValidator) }),
-  handler: async (ctx) => {
+  args: {
+    /** The run asking: a scheduled one reads only the clients due by their own Insights schedule; Run, every client. */
+    runId: v.optional(v.id("agentRuns")),
+  },
+  returns: v.object({ members: v.array(memberValidator), websites: v.array(websiteValidator), notDue: v.array(v.string()) }),
+  handler: async (ctx, args) => {
+    const run = args.runId ? await ctx.db.get(args.runId) : null;
+    const scheduled = run?.triggerType === "SCHEDULE";
+    const now = Date.now();
     const members: Array<typeof memberValidator.type> = [];
     for (const role of INSIGHTS_ROLES) {
       const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
@@ -83,14 +92,30 @@ export const teamSetup = internalQuery({
       }
     }
     const websites: Array<typeof websiteValidator.type> = [];
+    const notDue: string[] = [];
     for (const holdId of holdIds) {
       const hold = await ctx.db.get(holdId);
       if (!hold || isTrackedHold(hold)) continue;
       if (testing && !testing.has(hold.companyId)) continue;
       const website = await ctx.db.get(hold.websiteId);
-      websites.push({ holdId, companyId: hold.companyId, host: website?.displayHost ?? website?.host ?? "" });
+      const host = website?.displayHost ?? website?.host ?? "";
+      // Each client on its own Insights schedule: off, or not yet due since its last week, and a scheduled run passes it by.
+      const schedule = (await ctx.db.get(hold.companyId))?.insightsSchedule;
+      if (schedule && !schedule.isActive) {
+        notDue.push(`${host} (Insights switched off for its company)`);
+        continue;
+      }
+      if (scheduled) {
+        const last = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", holdId)).order("desc").first();
+        const next = last ? getNextWorkflowScheduleRunAt({ intervalStr: schedule?.intervalStr ?? DEFAULT_CLIENT_SCHEDULE, now: new Date(last.createdAt) }) : now;
+        if (next !== undefined && next > now + DUE_SLACK_MS) {
+          notDue.push(`${host} (next due ${new Date(next).toISOString().slice(0, 10)})`);
+          continue;
+        }
+      }
+      websites.push({ holdId, companyId: hold.companyId, host });
     }
-    return { members, websites };
+    return { members, websites, notDue };
   },
 });
 
@@ -107,7 +132,17 @@ export const ensureTeamInternal = internalMutation({
     const made: string[] = [];
     for (const role of INSIGHTS_ROLES) {
       const existing = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
-      if (existing) continue;
+      if (existing) {
+        // The lead's first schedule was weekly; each client now has its own, so the team looks every morning — unless an administrator changed it.
+        if (role === INSIGHTS_LEAD_ROLE) {
+          const first = await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", existing._id)).first();
+          if (first && first.intervalStr === FIRST_TEAM_SCHEDULE) {
+            await ctx.db.patch(first._id, { name: TEAM_SCHEDULE.name, intervalStr: TEAM_SCHEDULE.intervalStr, nextRunAt: getNextWorkflowScheduleRunAt({ intervalStr: TEAM_SCHEDULE.intervalStr, now: new Date(now) }) });
+            made.push("Insights: the team's run, now every morning");
+          }
+        }
+        continue;
+      }
       const agentId = await ctx.db.insert("agents", {
         name: TEAM_AGENTS[role].name,
         description: TEAM_AGENTS[role].description,
@@ -294,3 +329,27 @@ export type TeamMember = typeof memberValidator.type;
 export type InsightsMemberRole = InsightsRole;
 export type SavedFinding = typeof savedFindingValidator.type;
 export type InsightWeek = Doc<"insightWeeks">;
+
+// ---------------------------------------------------------------------------
+// Each client's Insights schedule (Anthony, 2026-10-11: "I want to be able to set the schedule as I may decide monthly for some clients")
+
+export const getCompanyInsightsSchedule = superAdminQuery({
+  args: { companyId: v.id("companies") },
+  returns: v.object({ intervalStr: v.string(), isActive: v.boolean(), isDefault: v.boolean() }),
+  handler: async (ctx, args) => {
+    const schedule = (await ctx.db.get(args.companyId))?.insightsSchedule;
+    return schedule ? { ...schedule, isDefault: false } : { intervalStr: DEFAULT_CLIENT_SCHEDULE, isActive: true, isDefault: true };
+  },
+});
+
+/** A client's Insights schedule: daily to monthly, in the platform's format, and whether the team reads it at all. */
+export const saveCompanyInsightsSchedule = superAdminMutation({
+  args: { companyId: v.id("companies"), intervalStr: v.string(), isActive: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    if (!(await ctx.db.get(args.companyId))) throw appError("NOT_FOUND", "Company not found.");
+    assertSeoInterval(args.intervalStr);
+    await ctx.db.patch(args.companyId, { insightsSchedule: { intervalStr: args.intervalStr, isActive: args.isActive } });
+    return null;
+  },
+});

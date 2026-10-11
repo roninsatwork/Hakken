@@ -627,7 +627,10 @@
     "usageStatement": "Estratto conto",
     "creditPrices": "Prezzi dei crediti",
     "topics": "Argomenti",
-    "contentAnalytics": "Analytics"
+    "contentAnalytics": "Analytics",
+    "insightsAdmin": "Insights",
+    "insightsRuns": "Esecuzioni settimanali",
+    "insightsPatterns": "Schemi"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -2009,6 +2012,16 @@
         "saved": "Salvato",
         "saveFailed": "Non è stato possibile salvare gli interruttori.",
         "saveParts": "Salva gli interruttori"
+      },
+      "insights": {
+        "title": "Insights",
+        "label": "Il team Insights legge questa azienda",
+        "description": "Ogni esecuzione legge i siti dell'azienda con i loro concorrenti e scrive i risultati. Ogni lunedì mattina finché non lo imposti.",
+        "summary": "{schedule}",
+        "off": "Il team non legge questa azienda.",
+        "save": "Salva la pianificazione di Insights",
+        "saved": "Salvato",
+        "saveFailed": "Non è stato possibile salvare la pianificazione di Insights."
       }
     },
     "collectionRuns": {
@@ -7531,6 +7544,87 @@
         "ofPeople": "{count, plural, =1 {Su # persona in {name}} other {Su # persone in {name}}}",
         "notOpened": "{count, plural, =1 {Un'altra persona in {name} non ha aperto niente in questi {days} giorni} other {Altre # persone in {name} non hanno aperto niente in questi {days} giorni}}",
         "noReaders": "Nessuno qui ha letto niente in questi {days} giorni."
+      }
+    },
+    "insights": {
+      "runs": {
+        "title": "Insights: esecuzioni settimanali",
+        "description": "La settimana di ogni sito come l'ha lasciata il team Insights: il verdetto, i risultati che il redattore ha approvato e rimandato, cosa è stato letto e quanto è costato. Prima i più recenti.",
+        "searchPlaceholder": "Cerca aziende e siti...",
+        "website": "Sito",
+        "week": "Settimana",
+        "verdict": "Verdetto",
+        "found": "Risultati",
+        "facts": "Dati letti",
+        "cost": "Costo",
+        "published": "{count} pubblicati",
+        "sentBack": "{count} rimandati",
+        "empty": "Il team non ha ancora lavorato.",
+        "noMatch": "Nessuna azienda o sito corrisponde alla ricerca."
+      },
+      "week": {
+        "back": "Torna alle esecuzioni settimanali",
+        "notFound": "Settimana non trovata",
+        "title": "{host}, settimana del {week}",
+        "published": "Pubblicati",
+        "publishedDetail": "approvati dal redattore",
+        "sentBack": "Rimandati",
+        "sentBackDetail": "ognuno con il motivo del redattore",
+        "facts": "Dati letti",
+        "cost": "Costo",
+        "costDetail": "ogni chiamata al modello di questa esecuzione",
+        "problems": "Alcune fonti non sono state lette: {problems}",
+        "empty": "Nessun risultato questa settimana.",
+        "rank": "#",
+        "finding": "Risultato",
+        "who": "Trovato da",
+        "status": "Stato",
+        "action": "Prima cosa da fare: {action}",
+        "editorNote": "Il redattore: {note}",
+        "statusPublished": "Pubblicato",
+        "statusSentBack": "Rimandato",
+        "sure": {
+          "HIGH": "Sicuro",
+          "MEDIUM": "Abbastanza sicuro",
+          "LOW": "Non ancora sicuro"
+        },
+        "specialist": {
+          "market": "Mercato",
+          "technical": "SEO tecnico",
+          "search": "Ricerca e contenuti",
+          "local": "Locale e reputazione",
+          "links": "Link e PR",
+          "aiVisibility": "Visibilità nell'IA",
+          "conversion": "Conversioni",
+          "measurement": "Misurazioni",
+          "strategy": "Responsabile della strategia"
+        },
+        "source": {
+          "searchConsole": "da Search Console",
+          "analytics": "da Google Analytics",
+          "market": "sui concorrenti",
+          "ai": "dalle risposte dell'IA",
+          "local": "sulle recensioni",
+          "crawl": "dall'audit del sito"
+        },
+        "searchPlaceholder": "Cerca risultati...",
+        "noMatch": "Nessun risultato corrisponde alla ricerca."
+      },
+      "patterns": {
+        "title": "Insights: schemi",
+        "description": "Ogni schema che gli specialisti cercano: quante volte è emerso, su quanti siti, quanti il redattore ha approvato o rimandato e come sono andati quelli verificati.",
+        "proposed": "Gli schemi proposti dal team aspettano qui un sì prima che un cliente li veda. Nessuno è in attesa.",
+        "searchPlaceholder": "Cerca schemi...",
+        "pattern": "Schema",
+        "specialist": "Specialista",
+        "fired": "Emerso",
+        "websites": "Siti",
+        "published": "Pubblicati",
+        "sentBack": "Rimandati",
+        "held": "Confermati",
+        "last": "Ultima settimana",
+        "empty": "Nessuno schema è ancora emerso.",
+        "noMatch": "Nessuno schema corrisponde alla ricerca."
       }
     }
   },

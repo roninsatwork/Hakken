@@ -26,6 +26,7 @@ import {
   MonitorSpeaker,
   Phone,
   Gamepad2,
+  Lightbulb,
 } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -115,6 +116,26 @@ export function AdminNavTree({
       <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites') && !pathname.startsWith('/admin/websites/collection') && !pathname.startsWith('/admin/websites/costs')} onClick={() => setActiveItem('Websites')} />
       <SubNavItem label={t('seoCollection')} href="/admin/websites/collection" isActive={pathname.startsWith('/admin/websites/collection')} onClick={() => setActiveItem('Websites')} />
       <SubNavItem label={t('seoCosts')} href="/admin/websites/costs" isActive={pathname.startsWith('/admin/websites/costs')} onClick={() => setActiveItem('Websites')} />
+    </NavItem>
+  )}
+
+  {/*
+    The Insights team's work (docs/plans/active/insights-analyst-plan.md §4.3):
+    each website's weekly run — what it read, found, sent back and cost — and
+    the patterns, where each fired and how it held up.
+  */}
+  {canSeeAdminSections && (
+    <NavItem
+      icon={Lightbulb}
+      label={t('insightsAdmin')}
+      isActive={activeItem === 'Insights Admin' || pathname.startsWith('/admin/insights')}
+      onClick={() => setActiveItem('Insights Admin')}
+      hasChildren
+      isOpen={openSections.insightsAdmin}
+      onToggle={() => toggleSection('insightsAdmin')}
+    >
+      <SubNavItem label={t('insightsRuns')} href="/admin/insights" isActive={pathname === '/admin/insights' || (pathname.startsWith('/admin/insights/') && !pathname.startsWith('/admin/insights/patterns'))} onClick={() => setActiveItem('Insights Admin')} />
+      <SubNavItem label={t('insightsPatterns')} href="/admin/insights/patterns" isActive={pathname.startsWith('/admin/insights/patterns')} onClick={() => setActiveItem('Insights Admin')} />
     </NavItem>
   )}
 

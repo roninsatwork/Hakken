@@ -275,6 +275,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     sites: pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research'),
     usage: pathname.startsWith('/app/usage'),
     content: pathname.startsWith('/admin/content'),
+    insightsAdmin: pathname.startsWith('/admin/insights'),
     businessHub: false,
     clients: false,
     companies: pathname.startsWith('/admin/companies'),

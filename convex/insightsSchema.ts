@@ -87,5 +87,6 @@ export const insightsTables = {
     createdAt: v.number(),
   })
     .index("by_hold_week", ["companyWebsiteId", "week"])
-    .index("by_company_week", ["companyId", "week"]),
+    .index("by_company_week", ["companyId", "week"])
+    .index("by_created", ["createdAt"]),
 };

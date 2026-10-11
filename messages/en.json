@@ -627,7 +627,10 @@
     "usageStatement": "Statement",
     "creditPrices": "Credit prices",
     "topics": "Topics",
-    "contentAnalytics": "Analytics"
+    "contentAnalytics": "Analytics",
+    "insightsAdmin": "Insights",
+    "insightsRuns": "Weekly runs",
+    "insightsPatterns": "Patterns"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -2009,6 +2012,16 @@
         "saved": "Saved",
         "saveFailed": "The switches could not be saved.",
         "saveParts": "Save switches"
+      },
+      "insights": {
+        "title": "Insights",
+        "label": "The Insights team reads this company",
+        "description": "Each run reads the company's websites with their rivals and writes its findings. Weekly on Monday mornings until you set it.",
+        "summary": "{schedule}",
+        "off": "The team doesn't read this company.",
+        "save": "Save Insights schedule",
+        "saved": "Saved",
+        "saveFailed": "The Insights schedule couldn't be saved."
       }
     },
     "collectionRuns": {
@@ -7531,6 +7544,87 @@
         "ofPeople": "{count, plural, =1 {Of # person at {name}} other {Of # people at {name}}}",
         "notOpened": "{count, plural, =1 {# more at {name} has not opened anything in these {days} days} other {# more at {name} have not opened anything in these {days} days}}",
         "noReaders": "Nobody here read anything in these {days} days."
+      }
+    },
+    "insights": {
+      "runs": {
+        "title": "Insights: weekly runs",
+        "description": "Each website's week as the Insights team left it: its verdict, the findings the Editor passed and sent back, what was read and what it cost. Newest first.",
+        "searchPlaceholder": "Search companies and websites...",
+        "website": "Website",
+        "week": "Week",
+        "verdict": "Verdict",
+        "found": "Findings",
+        "facts": "Facts read",
+        "cost": "Cost",
+        "published": "{count} published",
+        "sentBack": "{count} sent back",
+        "empty": "The team hasn't run yet.",
+        "noMatch": "No company or website matches that search."
+      },
+      "week": {
+        "back": "Back to weekly runs",
+        "notFound": "That week can't be found",
+        "title": "{host}, week of {week}",
+        "published": "Published",
+        "publishedDetail": "passed by the Editor",
+        "sentBack": "Sent back",
+        "sentBackDetail": "each with the Editor's reason",
+        "facts": "Facts read",
+        "cost": "Cost",
+        "costDetail": "every model call this run made",
+        "problems": "Some sources couldn't be read: {problems}",
+        "empty": "No findings this week.",
+        "rank": "#",
+        "finding": "Finding",
+        "who": "Found by",
+        "status": "Status",
+        "action": "Do first: {action}",
+        "editorNote": "The Editor: {note}",
+        "statusPublished": "Published",
+        "statusSentBack": "Sent back",
+        "sure": {
+          "HIGH": "Sure",
+          "MEDIUM": "Fairly sure",
+          "LOW": "Not yet sure"
+        },
+        "specialist": {
+          "market": "Market",
+          "technical": "Technical SEO",
+          "search": "Search and content",
+          "local": "Local and reputation",
+          "links": "Links and PR",
+          "aiVisibility": "AI visibility",
+          "conversion": "Conversion",
+          "measurement": "Measurement",
+          "strategy": "Head of Strategy"
+        },
+        "source": {
+          "searchConsole": "from Search Console",
+          "analytics": "from Google Analytics",
+          "market": "about rivals",
+          "ai": "from AI answers",
+          "local": "about reviews",
+          "crawl": "from the site audit"
+        },
+        "searchPlaceholder": "Search findings...",
+        "noMatch": "No finding matches that search."
+      },
+      "patterns": {
+        "title": "Insights: patterns",
+        "description": "Each pattern the specialists look for: how often it fired, on how many websites, how many the Editor passed or sent back, and how the ones checked turned out.",
+        "proposed": "Patterns the team proposes wait here for a yes before any customer sees one. None is waiting.",
+        "searchPlaceholder": "Search patterns...",
+        "pattern": "Pattern",
+        "specialist": "Specialist",
+        "fired": "Fired",
+        "websites": "Websites",
+        "published": "Published",
+        "sentBack": "Sent back",
+        "held": "Held up",
+        "last": "Last week",
+        "empty": "No pattern has fired yet.",
+        "noMatch": "No pattern matches that search."
       }
     }
   },
