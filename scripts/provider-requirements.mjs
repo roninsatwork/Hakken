@@ -46,6 +46,8 @@ export const OPTIONAL_KEYS = [
   "OUTBOX_FROM_EMAIL", "RESEND_WEBHOOK_SECRET",
   // What X charges per post read, so each run's X cost shows on the run.
   "X_READ_COST_USD",
+  // Google's real-visitor speed for the money pages (insights-analyst-plan.md phase 8): without it, PageSpeed refuses and speed waits.
+  "PAGESPEED_API_KEY",
 ];
 export const IGNORED_KEYS = new Set([
   "NODE_ENV", "VITEST", "IS_TEST", "NEXT_PUBLIC_APP_URL",

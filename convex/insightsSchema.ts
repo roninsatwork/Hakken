@@ -73,7 +73,6 @@ export const insightsTables = {
     editorNote: v.optional(v.string()),
     createdAt: v.number(),
   })
-    .index("by_company_week", ["companyId", "week"])
     .index("by_hold_week", ["companyWebsiteId", "week"])
     .index("by_check", ["status", "checkOn"]),
 
