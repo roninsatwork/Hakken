@@ -10,7 +10,7 @@ import { v, type Infer } from "convex/values";
  * and source. Nothing here is stored; a finding keeps the few facts it used.
  */
 
-export const FACT_UNITS = ["count", "money", "percent", "position", "seconds", "score"] as const;
+export const FACT_UNITS = ["count", "money", "percent", "position", "seconds", "score", "ratio"] as const;
 export type FactUnit = (typeof FACT_UNITS)[number];
 
 export const FACT_SOURCES = ["searchConsole", "analytics", "market", "ai", "local", "crawl"] as const;
@@ -85,6 +85,8 @@ export function formatFact(fact: Pick<Fact, "value" | "unit" | "currency">): str
   }
   if (fact.unit === "percent") return `${ONE.format(fact.value)}%`;
   if (fact.unit === "position" || fact.unit === "score") return ONE.format(fact.value);
+  // A ratio (people for one conversion) reads as a whole number of people.
+  if (fact.unit === "ratio") return COUNT.format(fact.value);
   if (fact.unit === "seconds") {
     const seconds = Math.round(fact.value);
     return seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${seconds}s`;

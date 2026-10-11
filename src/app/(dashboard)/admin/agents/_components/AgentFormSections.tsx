@@ -265,13 +265,17 @@ export function AgentFormSections({
             mode too (knowledge-news-and-digest plan): in Test its issue goes
             only to super admins. Keyword research has none: it always buys
             real figures (Anthony, 2026-10-04). */}
-        {(values.role === "DATAFORSEO_PLANNER" || values.role === "WEEKLY_DIGEST") && !builtInRoleName ? (
+        {/* The Insights team's Head of Strategy too (insights-analyst-plan.md I19): in Test its weekly run
+            reads only the company a super admin is working in; live, every company's websites. */}
+        {(values.role === "DATAFORSEO_PLANNER" || values.role === "WEEKLY_DIGEST" || values.role === "INSIGHTS_HEAD_OF_STRATEGY") && !builtInRoleName ? (
           <div className="border-t border-border-dim/40">
             <SettingRow
               label={t("sections.role.mode.label")}
               description={values.role === "WEEKLY_DIGEST"
                 ? (values.plannerMode === "LIVE" ? t("sections.role.mode.digestLiveHint") : t("sections.role.mode.digestTestHint"))
-                : (values.plannerMode === "LIVE" ? t("sections.role.mode.liveHint") : t("sections.role.mode.testHint"))}
+                : values.role === "INSIGHTS_HEAD_OF_STRATEGY"
+                  ? (values.plannerMode === "LIVE" ? t("sections.role.mode.insightsLiveHint") : t("sections.role.mode.insightsTestHint"))
+                  : (values.plannerMode === "LIVE" ? t("sections.role.mode.liveHint") : t("sections.role.mode.testHint"))}
             >
               <SegmentedChoice
                 label={t("sections.role.mode.label")}

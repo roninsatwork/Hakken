@@ -23,6 +23,7 @@ import { aiAppTables } from "./aiAppSchema";
 import { radarTables } from "./radarSchema";
 import { mentionTables } from "./mentionSchema";
 import { adviceTables } from "./adviceSchema";
+import { insightsTables } from "./insightsSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -55,6 +56,7 @@ export default defineSchema({
   ...creditTables,
   ...hakkenTaskTables,
   ...adviceTables,
+  ...insightsTables,
   ...telegramTables,
   ...localTables,
   ...aiAppTables,

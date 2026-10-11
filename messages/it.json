@@ -3399,7 +3399,8 @@
                 "builtIn": "Ruoli integrati",
                 "news": "Notizie ed email",
                 "searchConsole": "Search Console",
-                "googleAnalytics": "Google Analytics"
+                "googleAnalytics": "Google Analytics",
+                "insights": "Insights"
               },
               "takenBy": "{role} — assegnato a {name}",
               "roles": {
@@ -3410,7 +3411,18 @@
                 "EMAIL_SENDER": "Invio email",
                 "SEARCH_CONSOLE_COLLECTOR": "Raccoglitore Search Console",
                 "GOOGLE_ANALYTICS_COLLECTOR": "Raccoglitore Google Analytics",
-                "KEYWORD_RESEARCH": "Ricerca parole chiave"
+                "KEYWORD_RESEARCH": "Ricerca parole chiave",
+                "INSIGHTS_HEAD_OF_STRATEGY": "Insights: responsabile della strategia",
+                "INSIGHTS_MARKET": "Insights: specialista del mercato",
+                "INSIGHTS_TECHNICAL": "Insights: specialista SEO tecnico",
+                "INSIGHTS_SEARCH": "Insights: specialista di ricerca e contenuti",
+                "INSIGHTS_LOCAL": "Insights: specialista locale e reputazione",
+                "INSIGHTS_LINKS": "Insights: specialista di link e PR",
+                "INSIGHTS_AI_VISIBILITY": "Insights: specialista della visibilità nell'IA",
+                "INSIGHTS_CONVERSION": "Insights: specialista delle conversioni",
+                "INSIGHTS_MEASUREMENT": "Insights: specialista delle misurazioni",
+                "INSIGHTS_EDITOR": "Insights: redattore",
+                "INSIGHTS_REPORT_WRITER": "Insights: autore dei report"
               },
               "mode": {
                 "label": "Modalità",
@@ -3419,7 +3431,9 @@
                 "testHint": "Prova: ogni esecuzione aggiunge alla coda tutto, per ogni azienda, qualunque sia la sua cadenza.",
                 "liveHint": "Operativa: ogni esecuzione aggiunge solo ciò che è dovuto secondo la cadenza di ogni azienda.",
                 "digestTestHint": "Test: ogni esecuzione scrive un numero e lo invia solo ai super admin, così lo vedi prima di qualsiasi cliente.",
-                "digestLiveHint": "Live: una volta a settimana, il numero va a ogni utente che ha attivo il Digest settimanale delle notizie."
+                "digestLiveHint": "Live: una volta a settimana, il numero va a ogni utente che ha attivo il Digest settimanale delle notizie.",
+                "insightsTestHint": "Test: ogni settimana il team legge solo l'azienda in cui sta lavorando un super amministratore, così vedi i suoi risultati prima di qualsiasi cliente.",
+                "insightsLiveHint": "Live: ogni settimana il team legge i siti di ogni azienda che hanno collegato Search Console o Google Analytics."
               },
               "daily": {
                 "label": "Spesa al giorno ($)",

@@ -93,7 +93,7 @@ async function searchConsoleFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
     const top = [...now.rows].sort((a, b) => b.clicks - a.clicks).slice(0, TOP_ROWS);
     const names = list === "query" && now.book ? await new BookNames(ctx, now.book).textsOf(top.map((row) => row.key)) : null;
     const beforeNames = list === "query" && before?.book ? await new BookNames(ctx, before.book).textsOf(before.rows.map((row) => row.key)) : null;
-    const beforeBy = new Map((before?.rows ?? []).map((row) => [beforeNames?.get(row.key) ?? row.key, row]));
+    const beforeBy = new Map((before?.rows ?? []).map((row) => [list === "page" ? pathOf(row.key) : beforeNames?.get(row.key) ?? row.key, row]));
     const noun = list === "page" ? "page" : "search";
     // Brand searches (the website's own name), counted whole from the list's flags.
     if (list === "query") {
@@ -105,7 +105,8 @@ async function searchConsoleFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
       }
     }
     for (const row of top) {
-      const name = names?.get(row.key) ?? row.key;
+      // A page by its path, as Analytics names it, so the two join (§2); a search by its words.
+      const name = list === "page" ? pathOf(row.key) : names?.get(row.key) ?? row.key;
       if (!name) continue;
       const base = { source: "searchConsole" as const, country };
       facts.add({ ...base, key: factKey("sc", noun, name, "clicks", 90, "now"), value: row.clicks, unit: "count", label: `Google clicks to ${name}`, from: now.from, to: now.to });
@@ -152,7 +153,7 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
     facts.add({ ...base, key: factKey("ga", ...prefix, "conversions", period, which), value: money.conversions, unit: "count", label: `conversions${label}` });
     if (money.value > 0) facts.add({ ...base, key: factKey("ga", ...prefix, "value", period, which), value: Math.round(money.value / 100), unit: "money", currency, label: `value of conversions${label}` });
     if (withPeople && money.conversions > 0 && row.people > 0) {
-      facts.add({ ...base, key: factKey("ga", ...prefix, "peoplePerConversion", period, which), value: Math.round(row.people / money.conversions), unit: "count", label: `people for one conversion${label}` });
+      facts.add({ ...base, key: factKey("ga", ...prefix, "peoplePerConversion", period, which), value: Math.round(row.people / money.conversions), unit: "ratio", label: `people for one conversion${label}` });
     }
     if (row.visits > 0) {
       const rate = percentOf(money.conversions, row.visits);
@@ -212,6 +213,14 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
     for (const row of events?.rows ?? []) {
       facts.add({ key: factKey("ga", "event", row.key, "times", 365, GA_WHICH[which]), value: row.times ?? 0, unit: "count", source: "analytics", label: `times "${row.key}" happened`, from: events!.from, to: events!.to, country });
       facts.add({ key: factKey("ga", "event", row.key, "people", 365, GA_WHICH[which]), value: row.people, unit: "count", source: "analytics", label: `people who did "${row.key}"`, from: events!.from, to: events!.to, country });
+    }
+  }
+  // The ways to enquire counted as conversions, each with how often it happened in 12 months (§4.4, Measurement).
+  const events365 = await slot("event", "365", "NOW");
+  if (events365) {
+    for (const event of counted) {
+      const times = events365.rows.find((row) => row.key === event.eventName)?.times ?? 0;
+      facts.add({ key: factKey("ga", "counted", event.eventName, "times", 365, "now"), value: times, unit: "count", source: "analytics", label: `times "${event.eventName}", counted as a conversion, happened`, from: events365.from, to: events365.to, country });
     }
   }
   const visitors = await slot("visitorType", "365", "NOW");

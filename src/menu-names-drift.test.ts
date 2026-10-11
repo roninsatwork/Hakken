@@ -8,7 +8,10 @@ import it from "@/messages/it.json";
  * supplier cannot be named, and "Discovery" is kept for something else — and
  * the reading section is Reading room, never Insights, which is kept for the
  * AI analyst's findings (phase 7). A new sentence naming the old sections fails
- * here, so the names cannot drift back one sentence at a time.
+ * here, so the names cannot drift back one sentence at a time. Since phase 7
+ * (insights-analyst-plan.md I1), "Insights" is the analyst's section: its menu
+ * item, its own pages' words, its Admin pages and its team's roles may say it,
+ * and nothing else.
  *
  * The Dashboard's "発見 · Discovery" (Italian "発見 · Scoperta") stays: it
  * translates the product's name, not the section's.
@@ -18,6 +21,9 @@ const OLD_NAMES: Record<"en" | "it", RegExp> = {
   it: /\b(Discovery|Scoperta|Insights)\b/,
 };
 const KEPT = new Set(["dashboard.hero.eyebrow"]);
+/** The analyst's section, the one place "Insights" belongs (menu-names-plan.md phase 7). */
+const INSIGHTS_KEYS = /^(insights\.|sidebar\.insights$|admin\.insights\.|admin\.agents\.details\.settings\.sections\.role\.(groups\.insights|roles\.INSIGHTS_))/;
+const DISCOVERY: Record<"en" | "it", RegExp> = { en: /\bDiscovery\b/, it: /\b(Discovery|Scoperta)\b/ };
 
 function strings(messages: unknown, prefix = ""): [string, string][] {
   if (typeof messages === "string") return [[prefix, messages]];
@@ -28,7 +34,7 @@ function strings(messages: unknown, prefix = ""): [string, string][] {
 describe("the menu's names", () => {
   test.each([["en", en], ["it", it]] as const)("no sentence in %s names Discovery or Insights", (language, messages) => {
     const stale = strings(messages)
-      .filter(([key, words]) => !KEPT.has(key) && OLD_NAMES[language].test(words))
+      .filter(([key, words]) => !KEPT.has(key) && (INSIGHTS_KEYS.test(key) ? DISCOVERY[language].test(words) : OLD_NAMES[language].test(words)))
       .map(([key, words]) => `${key}: ${words}`);
     expect(stale, "Say Visibility (Visibilità) for the DataForSEO section and Reading room (Sala di lettura) for the reading one (menu-names-plan.md).").toEqual([]);
   });

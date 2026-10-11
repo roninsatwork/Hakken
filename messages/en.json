@@ -3399,7 +3399,8 @@
                 "builtIn": "Built-in roles",
                 "news": "News and email",
                 "searchConsole": "Search Console",
-                "googleAnalytics": "Google Analytics"
+                "googleAnalytics": "Google Analytics",
+                "insights": "Insights"
               },
               "takenBy": "{role} — taken by {name}",
               "roles": {
@@ -3410,7 +3411,18 @@
                 "EMAIL_SENDER": "Email Sender",
                 "SEARCH_CONSOLE_COLLECTOR": "Search Console Collector",
                 "GOOGLE_ANALYTICS_COLLECTOR": "Google Analytics Collector",
-                "KEYWORD_RESEARCH": "Keyword research"
+                "KEYWORD_RESEARCH": "Keyword research",
+                "INSIGHTS_HEAD_OF_STRATEGY": "Insights: Head of Strategy",
+                "INSIGHTS_MARKET": "Insights: Market specialist",
+                "INSIGHTS_TECHNICAL": "Insights: Technical SEO specialist",
+                "INSIGHTS_SEARCH": "Insights: Search and content specialist",
+                "INSIGHTS_LOCAL": "Insights: Local and reputation specialist",
+                "INSIGHTS_LINKS": "Insights: Links and PR specialist",
+                "INSIGHTS_AI_VISIBILITY": "Insights: AI visibility specialist",
+                "INSIGHTS_CONVERSION": "Insights: Conversion specialist",
+                "INSIGHTS_MEASUREMENT": "Insights: Measurement specialist",
+                "INSIGHTS_EDITOR": "Insights: Editor",
+                "INSIGHTS_REPORT_WRITER": "Insights: Report Writer"
               },
               "mode": {
                 "label": "Mode",
@@ -3419,7 +3431,9 @@
                 "testHint": "Test: every run adds everything for every company to the queue, whatever its cadence says.",
                 "liveHint": "Live: every run adds only what is due by each company's cadence.",
                 "digestTestHint": "Test: each run writes an issue and sends it to super admins only, so you see it before any customer does.",
-                "digestLiveHint": "Live: once a week, the issue goes to every user who has the Weekly News Digest on."
+                "digestLiveHint": "Live: once a week, the issue goes to every user who has the Weekly News Digest on.",
+                "insightsTestHint": "Test: each week the team reads only the company a super admin is working in, so you see its findings before any customer does.",
+                "insightsLiveHint": "Live: each week the team reads every company's websites that have Search Console or Google Analytics connected."
               },
               "daily": {
                 "label": "Spend a day ($)",

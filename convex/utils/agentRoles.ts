@@ -48,21 +48,47 @@ export const GOOGLE_ANALYTICS_ROLES = ["GOOGLE_ANALYTICS_COLLECTOR"] as const;
  */
 export const RESEARCH_ROLES = ["KEYWORD_RESEARCH"] as const;
 
-export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES, ...GOOGLE_ANALYTICS_ROLES] as const;
+/**
+ * The Insights team (docs/plans/active/insights-analyst-plan.md §6, I20): the
+ * Head of Strategy, whose weekly run is the team's — it reads each owned
+ * website's sources, has each specialist look at its own discipline, connects
+ * what they found, and has the Editor check every figure before anything is
+ * saved — and the specialists, the Editor and the Report Writer, whose agents
+ * give each step its own model, instructions and spend limit. Only the Head of
+ * Strategy's run starts the work; the others run inside it.
+ */
+export const INSIGHTS_LEAD_ROLE = "INSIGHTS_HEAD_OF_STRATEGY";
+export const INSIGHTS_ROLES = [
+  INSIGHTS_LEAD_ROLE,
+  "INSIGHTS_MARKET",
+  "INSIGHTS_TECHNICAL",
+  "INSIGHTS_SEARCH",
+  "INSIGHTS_LOCAL",
+  "INSIGHTS_LINKS",
+  "INSIGHTS_AI_VISIBILITY",
+  "INSIGHTS_CONVERSION",
+  "INSIGHTS_MEASUREMENT",
+  "INSIGHTS_EDITOR",
+  "INSIGHTS_REPORT_WRITER",
+] as const;
+
+export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES, ...GOOGLE_ANALYTICS_ROLES, ...INSIGHTS_ROLES] as const;
 
 export type DataForSeoRole = (typeof DATAFORSEO_ROLES)[number];
 export type NewsRole = (typeof NEWS_ROLES)[number];
 export type SearchConsoleRole = (typeof SEARCH_CONSOLE_ROLES)[number];
 export type GoogleAnalyticsRole = (typeof GOOGLE_ANALYTICS_ROLES)[number];
 export type ResearchRole = (typeof RESEARCH_ROLES)[number];
+export type InsightsRole = (typeof INSIGHTS_ROLES)[number];
 export type AssignableAgentRole = (typeof ASSIGNABLE_AGENT_ROLES)[number];
 
 /** The roles in the groups the Role dropdown shows them under. */
-export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole" | "googleAnalytics"; roles: readonly AssignableAgentRole[] }> = [
+export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole" | "googleAnalytics" | "insights"; roles: readonly AssignableAgentRole[] }> = [
   { group: "dataforseo", roles: [...DATAFORSEO_ROLES, ...RESEARCH_ROLES] },
   { group: "news", roles: NEWS_ROLES },
   { group: "searchConsole", roles: SEARCH_CONSOLE_ROLES },
   { group: "googleAnalytics", roles: GOOGLE_ANALYTICS_ROLES },
+  { group: "insights", roles: INSIGHTS_ROLES },
 ];
 
 export const newsRoleValidator = v.union(
@@ -80,6 +106,7 @@ export const agentRoleChoiceValidator = v.union(
   v.literal("SEARCH_CONSOLE_COLLECTOR"),
   v.literal("GOOGLE_ANALYTICS_COLLECTOR"),
   v.literal("KEYWORD_RESEARCH"),
+  ...INSIGHTS_ROLES.map((role) => v.literal(role)),
 );
 
 export type AgentRoleChoice = "NONE" | AssignableAgentRole;
@@ -106,4 +133,8 @@ export function isSearchConsoleRole(key: string | undefined): key is SearchConso
 
 export function isGoogleAnalyticsRole(key: string | undefined): key is GoogleAnalyticsRole {
   return key !== undefined && (GOOGLE_ANALYTICS_ROLES as readonly string[]).includes(key);
+}
+
+export function isInsightsRole(key: string | undefined): key is InsightsRole {
+  return key !== undefined && (INSIGHTS_ROLES as readonly string[]).includes(key);
 }
