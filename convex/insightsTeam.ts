@@ -51,7 +51,8 @@ export const teamSetup = internalQuery({
     /** The run asking: a scheduled one reads only the clients due by their own Insights schedule; Run, every client. */
     runId: v.optional(v.id("agentRuns")),
   },
-  returns: v.object({ members: v.array(memberValidator), websites: v.array(websiteValidator), notDue: v.array(v.string()) }),
+  /** The websites due their week; those covered but not due, for the daily quick check; and why each isn't due. */
+  returns: v.object({ members: v.array(memberValidator), websites: v.array(websiteValidator), waiting: v.array(websiteValidator), notDue: v.array(v.string()) }),
   handler: async (ctx, args) => {
     const run = args.runId ? await ctx.db.get(args.runId) : null;
     const scheduled = run?.triggerType === "SCHEDULE";
@@ -95,6 +96,7 @@ export const teamSetup = internalQuery({
       }
     }
     const websites: Array<typeof websiteValidator.type> = [];
+    const waiting: Array<typeof websiteValidator.type> = [];
     const notDue: string[] = [];
     for (const holdId of holdIds) {
       const hold = await ctx.db.get(holdId);
@@ -113,12 +115,13 @@ export const teamSetup = internalQuery({
         const next = last ? getNextWorkflowScheduleRunAt({ intervalStr: schedule?.intervalStr ?? DEFAULT_CLIENT_SCHEDULE, now: new Date(last.createdAt) }) : now;
         if (next !== undefined && next > now + DUE_SLACK_MS) {
           notDue.push(`${host} (next due ${new Date(next).toISOString().slice(0, 10)})`);
+          waiting.push({ holdId, companyId: hold.companyId, host });
           continue;
         }
       }
       websites.push({ holdId, companyId: hold.companyId, host });
     }
-    return { members, websites, notDue };
+    return { members, websites, waiting, notDue };
   },
 });
 

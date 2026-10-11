@@ -18977,6 +18977,12 @@
         "status": "Status",
         "act": "Live?"
       }
+    },
+    "quick": {
+      "intro": "Today's quick check, {day}: {found}",
+      "PAGE_DOWN": "{page} didn't load ({status}).",
+      "CLICKS_FELL": "Google's clicks on {day} were {clicks}, against a usual {usual}; Hakken is watching whether it lasts.",
+      "noAnswer": "no answer"
     }
   }
 }

@@ -18977,6 +18977,12 @@
         "status": "Stato",
         "act": "Online?"
       }
+    },
+    "quick": {
+      "intro": "Il controllo rapido di oggi, {day}: {found}",
+      "PAGE_DOWN": "{page} non si è caricata ({status}).",
+      "CLICKS_FELL": "I clic da Google del {day} sono stati {clicks}, contro i soliti {usual}; Hakken controlla se dura.",
+      "noAnswer": "nessuna risposta"
     }
   }
 }

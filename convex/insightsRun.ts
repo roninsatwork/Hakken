@@ -87,6 +87,10 @@ export const runInsightsTeamNow = internalAction({
       }
       const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, { runId: args.runId });
       const mode = setup.members.find((member) => member.role === INSIGHTS_LEAD_ROLE)?.mode ?? "TEST";
+      // The daily quick check (§2, phase 2): every website the team covers, due its week or not — rules only, no AI.
+      for (const [index, site] of [...setup.websites, ...setup.waiting].entries()) {
+        await ctx.scheduler.runAfter(index * QUICK_STAGGER_MS, internal.insightsQuick.quickCheck, { holdId: site.holdId });
+      }
       if (setup.websites.length === 0) {
         const waiting = setup.notDue.length > 0 ? ` Not due today by their company's Insights schedule: ${setup.notDue.join(", ")}.` : "";
         await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", setup.notDue.length > 0
@@ -118,6 +122,9 @@ export const runInsightsTeamNow = internalAction({
     return null;
   },
 });
+
+/** The daily quick checks are started this far apart, so a portfolio's pages aren't all asked at once. */
+const QUICK_STAGGER_MS = 5_000;
 
 /** One website's week. */
 export const runWebsite = internalAction({

@@ -241,6 +241,18 @@ export const insightsTables = {
     .index("by_hold_key", ["companyWebsiteId", "key"])
     .index("by_hold_status", ["companyWebsiteId", "status"]),
 
+  /**
+   * The daily quick check (§2, phase 2): fixed rules, no AI, so what breaks is
+   * seen the same day — a money page that stopped answering, Google's clicks
+   * collapsing. One row a website, replaced each day.
+   */
+  insightQuickChecks: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    day: v.string(),
+    alerts: v.array(v.object({ code: v.string(), page: v.optional(v.string()), a: v.optional(v.number()), b: v.optional(v.number()), on: v.optional(v.string()) })),
+    checkedAt: v.number(),
+  }).index("by_hold", ["companyWebsiteId"]),
+
   insightLearnings: defineTable({
     kind: v.string(),
     companies: v.array(v.id("companies")),

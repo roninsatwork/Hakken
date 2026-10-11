@@ -269,6 +269,7 @@ import type * as insightsCountsSchema from "../insightsCountsSchema.js";
 import type * as insightsDrafts from "../insightsDrafts.js";
 import type * as insightsMigrations from "../insightsMigrations.js";
 import type * as insightsPanel from "../insightsPanel.js";
+import type * as insightsQuick from "../insightsQuick.js";
 import type * as insightsReading from "../insightsReading.js";
 import type * as insightsReads from "../insightsReads.js";
 import type * as insightsRun from "../insightsRun.js";
@@ -1095,6 +1096,7 @@ declare const fullApi: ApiFromModules<{
   insightsDrafts: typeof insightsDrafts;
   insightsMigrations: typeof insightsMigrations;
   insightsPanel: typeof insightsPanel;
+  insightsQuick: typeof insightsQuick;
   insightsReading: typeof insightsReading;
   insightsReads: typeof insightsReads;
   insightsRun: typeof insightsRun;

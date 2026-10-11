@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { QuickCheckNotice } from "../_components/QuickCheckNotice";
 import { useTranslations } from "next-intl";
 import { LayoutDashboard } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -78,6 +79,7 @@ export default function InsightsSummaryPage() {
         action={<ReportDownloadAction report={board} label={t("downloadBoard")} />}
       />
       <HakkenSees says={says} steps={steps} />
+      <QuickCheckNotice />
       <EnquiryCheckNotice check={newest?.summary?.enquiryCheck} />
       {leagues && leagues.leagues.length > 0 ? <RankStrip leagues={leagues.leagues} host={leagues.host} title={t("rank.title", { rivals: leagues.rivals })} hint={t("rank.hint")} /> : null}
       <FigureRow>
