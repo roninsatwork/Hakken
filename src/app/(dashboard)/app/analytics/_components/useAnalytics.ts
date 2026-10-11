@@ -34,6 +34,8 @@ export const ANALYTICS_PAGES = [
   // Every event the website recorded (GA30).
   { id: "events", segment: "events", group: "figures" },
   { id: "conversions", segment: "conversions", group: "figures" },
+  // Who visited (GA24).
+  { id: "visitors", segment: "visitors", group: "figures" },
   { id: "trackingHealth", segment: "tracking-health", group: "settings" },
   { id: "connection", segment: "connection", group: "settings" },
 ] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup }[];

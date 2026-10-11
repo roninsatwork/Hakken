@@ -25,9 +25,16 @@ import { AnalyticsGate } from "./AnalyticsNotices";
 import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
+/** The lists asked of Google for one device when a screen opens (`googleAnalyticsRows.LiveList`). */
+type LiveList = "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"
+  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries";
 export type ShownRow = ListPageAnswer["rows"][number];
-export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword";
+export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
+/** Visitors' lists (§18.2 board 15). */
+export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
 type Column = "name" | "source" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "conversions" | "value" | "change";
+
+const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change"];
 
 /**
  * Each list's columns, as drawn (§11, §15; the second round, §18.2 boards 18
@@ -45,6 +52,13 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
   // Campaigns (§18.2 board 17): each campaign with where its link was, and the words tagged links carry.
   campaign: ["name", "source", "visits", "engaged", "conversions", "value", "change"],
   adKeyword: ["name", "visits", "engaged", "conversions", "value", "change"],
+  // Visitors (§18.2 board 15): each group's people beside its visits.
+  visitorType: VISITOR_COLUMNS,
+  browser: VISITOR_COLUMNS,
+  system: VISITOR_COLUMNS,
+  age: VISITOR_COLUMNS,
+  gender: VISITOR_COLUMNS,
+  interest: VISITOR_COLUMNS,
 };
 
 /** Each list's download: its columns, with the value — and on the page lists engagement too — as columns of their own. */
@@ -93,7 +107,7 @@ export function AnalyticsListScreen({ header, ...table }: Parameters<typeof Anal
   );
 }
 
-function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head }: {
+function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head, nameOf }: {
   /**
    * What the page shows between its title and its table, from the same
    * answer: its What Hakken sees, and a channel's own figures (§14, §15).
@@ -108,6 +122,8 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
   filters?: ReactNode;
   opening?: keyof typeof FIRSTS;
   emptyLabel: string;
+  /** A row's name in the reader's words, where Google's is a code: Visitors' "new", "female", "unknown". */
+  nameOf?: (row: ShownRow) => string;
 }) {
   const t = useTranslations("googleAnalytics.table");
   const tf = useTranslations("googleAnalytics.filters");
@@ -138,7 +154,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
   const campaigns = list === "campaign" || list === "adKeyword";
   const shown = live ? everyDevice : paged;
   const currency = status?.connection?.currency ?? null;
-  const columns = COLUMNS[list].map((column) => columnOf(column, list, currency, rowHref, t));
+  const columns = COLUMNS[list].map((column) => columnOf(column, list, currency, rowHref, t, nameOf));
   // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
   const untagged = shown.result?.untagged ?? null;
   const bar = [
@@ -187,12 +203,13 @@ function columnOf(
   currency: string | null,
   rowHref: ((row: ShownRow) => string | null) | undefined,
   t: (key: string, values?: Record<string, string | number>) => string,
+  nameOf?: (row: ShownRow) => string,
 ): DataTableColumn<ShownRow> {
   switch (column) {
     case "name":
       return {
         key: "name",
-        header: t(`columns.${list === "channel" ? "channel" : list === "source" ? "source" : list === "groups" ? "group" : list === "campaign" ? "campaign" : list === "adKeyword" ? "adKeyword" : "page"}`),
+        header: t(`columns.${list === "groups" ? "group" : list === "landing" ? "page" : list}`),
         sortable: true,
         // A page's title and address cut to a line each in their share of the table, as Sites' words are (CUT_COLUMN).
         ...(list === "landing" || list === "page" ? { className: CUT_COLUMN.first } : {}),
@@ -205,7 +222,7 @@ function columnOf(
                 <span className="text-[11.5px] text-muted">{t("pagesCount", { count: row.members ?? 0 })}</span>
               </span>
             )
-            : <span className="text-[13px] text-foreground">{row.label === "" ? t("noSource") : row.label}</span>,
+            : <span className="text-[13px] text-foreground">{nameOf ? nameOf(row) : row.label === "" ? t("noSource") : row.label}</span>,
       };
     case "source":
       return { key: "source", header: t("columns.source"), cell: (row) => <span className="text-[12px] text-secondary">{row.source ?? ""}</span> };
@@ -245,7 +262,7 @@ function columnOf(
  * first needs it, never again for the same ask. "FAILED" when Google could not
  * answer; the screen keeps what it has.
  */
-export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
+export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: LiveList; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
   const t = useTranslations("googleAnalytics.table");
   const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
   const { run } = useAdminAction({ scope: "google-analytics-live" });

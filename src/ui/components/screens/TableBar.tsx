@@ -41,6 +41,8 @@ export type TableNoun =
   | "events" | "files" | "videos" | "depths"
   // Campaigns (§18.2 board 17).
   | "campaigns"
+  // Visitors (§18.2 board 15): browsers, operating systems, age groups and interests.
+  | "browsers" | "systems" | "ageGroups" | "interests"
   // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.
   | "stories" | "storiesSoFar"
   // Admin → Content → Analytics (content-people-knowledge-plan.md, boards 8, 9, 11, 12).

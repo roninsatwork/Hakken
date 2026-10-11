@@ -30,6 +30,13 @@ export type Visit = {
   title?: string;
   /** The page viewed just before (`pageReferrer`): none unless a test says otherwise. */
   referrer?: string;
+  /** Who the visitors were (§18.6.6): new, on Chrome and Windows, their age, gender and interests unknown, unless a test says otherwise. */
+  visitor?: "new" | "returning";
+  browser?: string;
+  system?: string;
+  age?: string;
+  gender?: string;
+  interest?: string;
   /** A tagged link's campaign, medium and words (`utm_campaign`, `utm_medium`, `utm_term`): none unless a test says otherwise. */
   campaign?: string;
   medium?: string;
@@ -60,6 +67,12 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   countryId: (visit) => visit.country ?? "GB",
   pageTitle: (visit) => visit.title ?? `Title of ${visit.page}`,
   pageReferrer: (visit) => visit.referrer ?? "",
+  newVsReturning: (visit) => visit.visitor ?? "new",
+  browser: (visit) => visit.browser ?? "Chrome",
+  operatingSystem: (visit) => visit.system ?? "Windows",
+  userAgeBracket: (visit) => visit.age ?? "unknown",
+  userGender: (visit) => visit.gender ?? "unknown",
+  brandingInterest: (visit) => visit.interest ?? "unknown",
   sessionCampaignName: (visit) => visit.campaign ?? (visit.channel === "Direct" ? "(direct)" : "(organic)"),
   sessionMedium: (visit) => visit.medium ?? "(none)",
   sessionManualTerm: (visit) => visit.term ?? "(not set)",

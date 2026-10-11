@@ -20,6 +20,7 @@ import {
   KEPT_BY_DEVICE,
   LIST_DIMENSIONS,
   MAIN_METRICS,
+  VISITOR_LISTS,
   fingerprint,
   groupKeys,
   isEventList,
@@ -125,12 +126,12 @@ export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: A
 /**
  * All pages before landing pages: a landing page finds its address, slash and
  * all, already numbered (`numberPages`). Every event beside them (§18.6.5),
- * and the campaigns and the words their links carry (§18.6.6).
+ * the campaigns and the words their links carry, and Visitors' lists (§18.6.6).
  */
-const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing", "event", "campaign", "adKeyword"];
+const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS];
 
-/** The lists kept as each period a day for its chart, every device: each event, and each campaign. */
-const DAY_LISTS: readonly AnalyticsList[] = ["eventSeries", "campaignSeries"];
+/** The lists kept as each period a day for its chart, every device: each event, each campaign, new and returning people. */
+const DAY_LISTS: readonly AnalyticsList[] = ["eventSeries", "campaignSeries", "visitorSeries"];
 
 /**
  * The ready-made lists a run asks for: the 7 and 30 days every run, and the
@@ -190,9 +191,9 @@ export type CollectTarget = {
    */
   untitled: boolean;
   /**
-   * No list of every event or campaign kept yet (§18.6.5, §18.6.6) — the
-   * campaigns came after the events, so their list says for both: the weekly
-   * lists are asked at once too, so the longer periods never wait a week.
+   * No list of every event, campaign or visitor kept yet (§18.6.5, §18.6.6)
+   * — the interests came last, so their list says for all: the weekly lists
+   * are asked at once too, so the longer periods never wait a week.
    */
   eventless: boolean;
 };
@@ -228,7 +229,7 @@ export const collectTarget = internalQuery({
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
       eventless: (await ctx.db
         .query("googleAnalyticsPeriodSlots")
-        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("campaign", "365", "NOW", "")))
+        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("interest", "365", "NOW", "")))
         .first()) === null,
     };
   },

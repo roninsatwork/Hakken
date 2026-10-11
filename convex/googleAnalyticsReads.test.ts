@@ -360,6 +360,32 @@ describe("Campaigns (GA28)", () => {
   });
 });
 
+describe("Visitors (GA24)", () => {
+  test("people, new and returning, a day at a time, each list by people and visits, and Google signals off", async () => {
+    const t = harness();
+    // The last 30 days' returning visitors on Safari: a visit a day, each one a lead.
+    const returning = Array.from({ length: 30 }, (_, at): Visit => ({
+      date: shiftDay(NEWEST, -at), device: "mobile", channel: "Direct", source: "(direct)", landing: "/", page: "/",
+      visitor: "returning", browser: "Safari", system: "iOS", sessions: 1, engaged: 1, seconds: 30, views: 2, events: { generate_lead: [1, 0] },
+    }));
+    const { siteId, user } = await collected(t, [...growing(), ...returning]);
+    const args = { siteId, period: "30" as const, device: "" };
+    const visitors = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitors, args))!;
+    expect(visitors).toMatchObject({ preparing: false, missing: [], signals: "off" });
+    expect(visitors.figures).toMatchObject({ visits: 30 * 34, visitsBefore: 30 * 16 });
+    expect(visitors.points).toHaveLength(30);
+    expect(visitors.points.every((point) => point.returning > 0 && point.new > 0)).toBe(true);
+    // Returning visitors converted every time; new ones two leads in 33 visits a day — at least twice as often.
+    expect(visitors.seen.says.map((phrase) => phrase.code)).toEqual(["people", "returnersConvert", "signalsOff"]);
+    expect(visitors.seen.steps.map((step) => step.code)).toEqual(["reasonToReturn"]);
+    const browsers = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, ...listArgs, list: "browser" });
+    expect(browsers.rows.map((row) => [row.label, row.visits])).toEqual([["Chrome", 30 * 33], ["Safari", 30]]);
+    expect(browsers.seen).toEqual({ says: [], steps: [] });
+    const types = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, ...listArgs, list: "visitorType" });
+    expect(types.rows.map((row) => row.label)).toEqual(["new", "returning"]);
+  });
+});
+
 describe("What Hakken sees, from what each screen already reads (§14)", () => {
   /** Search Console connected for the website, with its last 30 days held: 100 clicks from 20,000 showings. */
   async function withSearchConsole(t: Harness, siteId: Id<"companyWebsites">) {

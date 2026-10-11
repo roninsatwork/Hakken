@@ -33,8 +33,8 @@ export function BeforeLine({ now, before }: { now: number; before: number | null
   );
 }
 
-/** A figure a visit — pages, seconds — on the span before, as its own move (up 0.1 on the 30 days before); a rate in points. */
-function PerVisitLine({ now, before, format, points = false, lowerIsBetter = false }: {
+/** A figure a visit — pages, seconds — on the span before, as its own move (up 0.1 on the 30 days before); a rate in points. Visitors' visits a person too. */
+export function PerVisitLine({ now, before, format, points = false, lowerIsBetter = false }: {
   now: number | null;
   before: number | null;
   format: (value: number) => string;

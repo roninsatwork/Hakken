@@ -995,6 +995,16 @@
         "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
         "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
       },
+      "visitors": {
+        "none": "No visits in these dates.",
+        "people": "{a} people made the {b} visits; {cRate} were new to the website.",
+        "returnersConvert": "The {a} visits from people who came back converted at {bRate}, against {cRate} for new visitors.",
+        "browserLags": "{aRate} of visits were on {text}, and they engaged less: {bRate} against {cRate} for the website.",
+        "signalsOff": "Age, gender and interests are empty: Google signals is off in this website's Google Analytics.",
+        "hidden": "Google held back some small groups to protect people's privacy.",
+        "reasonToReturn": "Give people who come back a reason to get in touch: they convert at least twice as often.",
+        "checkBrowser": "Send your contact form on {text} and check it arrives."
+      },
       "trackingHealth": {
         "allPassing": "All {a} checks pass: Google Analytics is counting this website properly.",
         "failing": "{count, plural, =1 {One} other {#}} of the {b} checks {count, plural, =1 {needs} other {need}} a look.",
@@ -1076,7 +1086,8 @@
         "addGoogleAnalytics": "Add Google Analytics",
         "linksClicked": "Links clicked",
         "wordsSearched": "Words searched",
-        "allPages": "All pages"
+        "allPages": "All pages",
+        "events": "Events"
       }
     },
     "searchConsole.seen": {
@@ -2263,6 +2274,16 @@
         "trySilent": "Prova tu stesso {event}, e controlla che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
         "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore."
       },
+      "visitors": {
+        "none": "Nessuna visita in queste date.",
+        "people": "{a} persone hanno fatto le {b} visite; il {cRate} era nuovo sul sito.",
+        "returnersConvert": "Le {a} visite di chi è tornato hanno convertito al {bRate}, contro il {cRate} dei nuovi visitatori.",
+        "browserLags": "Il {aRate} delle visite era su {text}, con meno coinvolgimento: {bRate} contro il {cRate} del sito.",
+        "signalsOff": "Età, genere e interessi sono vuoti: Google Signals è spento nel Google Analytics di questo sito.",
+        "hidden": "Google ha nascosto alcuni gruppi piccoli per proteggere la privacy delle persone.",
+        "reasonToReturn": "Dai a chi torna un motivo per contattarti: converte almeno il doppio delle volte.",
+        "checkBrowser": "Invia il tuo modulo di contatto da {text} e controlla che arrivi."
+      },
       "trackingHealth": {
         "allPassing": "Tutti i {a} controlli passano: Google Analytics conta questo sito come si deve.",
         "failing": "{count, plural, =1 {Uno} other {#}} dei {b} controlli {count, plural, =1 {va guardato} other {vanno guardati}}.",
@@ -2344,7 +2365,8 @@
         "addGoogleAnalytics": "Aggiungi Google Analytics",
         "linksClicked": "Link cliccati",
         "wordsSearched": "Parole cercate",
-        "allPages": "Tutte le pagine"
+        "allPages": "Tutte le pagine",
+        "events": "Eventi"
       }
     },
     "searchConsole.seen": {

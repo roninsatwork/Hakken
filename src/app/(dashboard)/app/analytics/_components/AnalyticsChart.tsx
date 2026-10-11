@@ -11,7 +11,7 @@ import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/site
 import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
 import { currencySign, pathOf } from "./analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, type Step } from "./useAnalytics";
-import { useLiveAsk } from "./AnalyticsListScreen";
+import { useLiveAsk, type VisitorList } from "./AnalyticsListScreen";
 
 /** One day of the chart: the website's figures, and each counted event's own count. */
 export type ChartDay = { day: string; visits: number; engaged: number; views?: number; conversions: number; value: number; events?: number[] };
@@ -283,10 +283,12 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
  * (GA35): Overview's channels, Landing pages' visits, All pages' views,
  * Conversions' landing pages.
  */
-export function ListTopBars({ list, sort, bars }: {
-  list: "channel" | "landing" | "page" | "campaign";
+export function ListTopBars({ list, sort, bars, nameOf }: {
+  list: "channel" | "landing" | "page" | "campaign" | VisitorList;
   sort: "visits" | "views" | "conversions";
-  bars: "channels" | "channelsList" | "landing" | "allPages" | "conversions" | "campaigns";
+  bars: "channels" | "channelsList" | "landing" | "allPages" | "conversions" | "campaigns" | `visitors.${VisitorList}`;
+  /** A bar's name in the reader's words, where Google's is a code (Visitors'). */
+  nameOf?: (label: string) => string;
 }) {
   const t = useTranslations("googleAnalytics.chart");
   const tf = useTranslations("googleAnalytics.filters");
@@ -299,7 +301,7 @@ export function ListTopBars({ list, sort, bars }: {
       title={t(`bars.${bars}.title`)}
       hint={t(`bars.${bars}.hint`, { period: tf(`periods.${args.period}`) })}
       measure={t(`bars.${bars}.measure`)}
-      rows={top?.rows.map((row) => ({ label: row.label, value: sort === "views" ? row.views : sort === "conversions" ? row.conversions : row.visits }))}
+      rows={top?.rows.map((row) => ({ label: nameOf ? nameOf(row.label) : row.label, value: sort === "views" ? row.views : sort === "conversions" ? row.conversions : row.visits }))}
       exportName={`google-analytics-${bars}`}
       host={status?.host ?? ""}
       from={top?.from ?? null}

@@ -140,8 +140,10 @@ export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: 
   };
 }
 
-/** The lists kept only for every device, asked of Google for one device when a screen opens: the pages and the events. */
-export type LiveList = "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries";
+/** The lists kept only for every device, asked of Google for one device when a screen opens: the pages, events, campaigns and visitors. */
+export type LiveList =
+  | "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"
+  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries";
 
 function isLiveList(list: AnalyticsList): list is LiveList {
   return !KEPT_BY_DEVICE[list];

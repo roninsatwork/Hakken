@@ -530,11 +530,11 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 11
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 12
 built on dev, each committed and none pushed, and "people who converted
-after it" (half a day more) — sixteen of twenty-seven days, about 59%;
-eleven left. Both rounds: about forty-one and a half of fifty-two and a half
-days, about 79%.**
+after it" (half a day more) — eighteen and a half of twenty-seven days, about
+69%; eight and a half left. Both rounds: about forty-four of fifty-two and a
+half days, about 84%.**
 
 ## 9. Risks
 
@@ -1421,6 +1421,21 @@ The books hold a month of Search Console's daily lines and go with them, so a
 second keyword table is made. Ronins: 34 of 4,517 visits in 12 months came
 from tagged links, 32 of them ReviveOldPost's LinkedIn shares, none
 converting.
+
+*Built 2026-10-11 (Phase 12, GA24).* Visitors, as board 15 draws it: What
+Hakken sees, people, new and returning visitors and visits a person against
+the span before, new and returning people a day, the list chosen as bars, a
+note when Google signals is off, and one table switching between new or
+returning, browsers, operating systems, age, gender and interests. Seven
+ready-made lists in the same packed tables, every device (`visitorType`,
+`browser`, `system`, `age`, `gender`, `interest`, and `visitorSeries` a day);
+one device asked of Google when the screen opens. The figures, chart and box
+come from their own read (`googleAnalyticsVisitorReads.ts`); the table from
+the standard list read. Google signals is read as off only when every age and
+every gender Google gives is unknown: on Ronins, age shows only "Unknown" —
+Google hides small age groups — but gender shows men and women, so signals is
+on and the box says Google held small groups back instead. Ronins, 30 days:
+167 people made 230 visits, 93% new; Chrome, Safari, Edge, Firefox, Opera.
 
 **7. Live.** The Realtime API (`runRealtimeReport`), asked by the Live page
 itself through one action that returns the answer and stores nothing. The

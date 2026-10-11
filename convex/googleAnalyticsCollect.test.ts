@@ -123,10 +123,10 @@ describe("which days and lists a run asks for", () => {
     expect(periodRange("30", "BEFORE", NEWEST)).toEqual({ from: "2026-08-10", to: "2026-09-08" });
     // A year before is 52 weeks before, so each day falls on the same weekday.
     expect(periodRange("90", "YEAR", NEWEST)).toEqual({ from: "2025-07-12", to: "2025-10-09" });
-    // Seven lists each — every event, the campaigns and their words among them — and each event and each campaign a
-    // day for every period's chart (§18.6.5, §18.6.6).
-    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength(2 * (2 * 7 + 2) + 2 * (3 * 7 + 3));
-    expect(dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW)).toHaveLength(2 * (2 * 7 + 2));
+    // Thirteen lists each — every event, the campaigns and their words, and Visitors' six among them — and each event,
+    // each campaign and new and returning people a day for every period's chart (§18.6.5, §18.6.6).
+    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength(2 * (2 * 13 + 3) + 2 * (3 * 13 + 4));
+    expect(dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW)).toHaveLength(2 * (2 * 13 + 3));
   });
 });
 

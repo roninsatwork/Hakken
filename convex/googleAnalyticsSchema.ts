@@ -80,8 +80,14 @@ export const countedEventValidator = v.object({
  * `campaign` is the visits from tagged links by campaign and source, `adKeyword`
  * by the words a tagged link carries (`utm_term`), and `campaignSeries` each
  * campaign's visits a day, for Campaigns (GA28, §18.6.6): every device.
+ * Visitors' lists — new or returning, browsers, operating systems, age,
+ * gender and interests — and new and returning people a day (`visitorSeries`)
+ * for Visitors (GA24, §18.6.6): every device.
  */
-export const ANALYTICS_LISTS = ["total", "channel", "landing", "page", "series", "event", "eventSeries", "campaign", "adKeyword", "campaignSeries"] as const;
+export const ANALYTICS_LISTS = [
+  "total", "channel", "landing", "page", "series", "event", "eventSeries", "campaign", "adKeyword", "campaignSeries",
+  "visitorType", "browser", "system", "age", "gender", "interest", "visitorSeries",
+] as const;
 export type AnalyticsList = (typeof ANALYTICS_LISTS)[number];
 export const analyticsListValidator = v.union(
   v.literal("total"),
@@ -94,6 +100,13 @@ export const analyticsListValidator = v.union(
   v.literal("campaign"),
   v.literal("adKeyword"),
   v.literal("campaignSeries"),
+  v.literal("visitorType"),
+  v.literal("browser"),
+  v.literal("system"),
+  v.literal("age"),
+  v.literal("gender"),
+  v.literal("interest"),
+  v.literal("visitorSeries"),
 );
 
 /** The ready-made periods (§4.3): days, ending on the newest day held. */

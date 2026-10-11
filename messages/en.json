@@ -9849,6 +9849,10 @@
       "videos": "{count, plural, =1 {# video} other {# videos}}",
       "depths": "{count, plural, =1 {# depth} other {# depths}}",
       "campaigns": "{count, plural, =1 {# campaign} other {# campaigns}}",
+      "browsers": "{count, plural, =1 {# browser} other {# browsers}}",
+      "systems": "{count, plural, =1 {# operating system} other {# operating systems}}",
+      "ageGroups": "{count, plural, =1 {# age group} other {# age groups}}",
+      "interests": "{count, plural, =1 {# interest} other {# interests}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
@@ -14950,6 +14954,7 @@
       "allPages": "All pages",
       "events": "Events",
       "conversions": "Conversions",
+      "visitors": "Visitors",
       "trackingHealth": "Tracking health",
       "connection": "Connection"
     },
@@ -15257,7 +15262,13 @@
         "revenue": "Revenue",
         "averageOrder": "Average order",
         "campaign": "Campaign",
-        "adKeyword": "Ad keyword"
+        "adKeyword": "Ad keyword",
+        "visitorType": "Visitor",
+        "browser": "Browser",
+        "system": "Operating system",
+        "age": "Age",
+        "gender": "Gender",
+        "interest": "Interest"
       },
       "notSorted": "Not sorted",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -15340,6 +15351,38 @@
           "title": "Visits by campaign",
           "hint": "{period}.",
           "measure": "Visits"
+        },
+        "visitors": {
+          "visitorType": {
+            "title": "Visits by new or returning",
+            "hint": "{period}. Follows the choice above the table.",
+            "measure": "Visits"
+          },
+          "browser": {
+            "title": "Visits by browser",
+            "hint": "{period}. Follows the choice above the table.",
+            "measure": "Visits"
+          },
+          "system": {
+            "title": "Visits by operating system",
+            "hint": "{period}. Follows the choice above the table.",
+            "measure": "Visits"
+          },
+          "age": {
+            "title": "Visits by age",
+            "hint": "{period}. Follows the choice above the table.",
+            "measure": "Visits"
+          },
+          "gender": {
+            "title": "Visits by gender",
+            "hint": "{period}. Follows the choice above the table.",
+            "measure": "Visits"
+          },
+          "interest": {
+            "title": "Visits by interest",
+            "hint": "{period}. Follows the choice above the table.",
+            "measure": "Visits"
+          }
         }
       },
       "conversionsTitle": "Conversions over time",
@@ -15798,6 +15841,50 @@
       "channelsTitle": "Channels that brought them",
       "channelsDescription": "Where each of those visits came from."
     },
+    "visitors": {
+      "title": "Visitors",
+      "description": "Who visited: how many people, whether they'd been before, what they used, and their age, gender and interests where Google can tell.",
+      "showing": "Showing",
+      "views": {
+        "visitorType": "New or returning",
+        "browser": "Browsers",
+        "system": "Operating systems",
+        "age": "Age",
+        "gender": "Gender",
+        "interest": "Interests"
+      },
+      "find": {
+        "visitorType": "Find a group…",
+        "browser": "Find a browser…",
+        "system": "Find a system…",
+        "age": "Find an age…",
+        "gender": "Find a group…",
+        "interest": "Find an interest…"
+      },
+      "empty": "No visits in these dates.",
+      "preparing": "Visitors come in with the next collection, within a day.",
+      "people": "People",
+      "newVisitors": "New visitors",
+      "returning": "Returning visitors",
+      "ofPeople": "{rate} of people",
+      "visitsAPerson": "Visits a person",
+      "new": "New",
+      "returningLine": "Returning",
+      "chartTitle": {
+        "day": "New and returning visitors a day",
+        "week": "New and returning visitors a week",
+        "month": "New and returning visitors a month"
+      },
+      "chartHint": "{period}.",
+      "signalsOff": "Age, gender and interests show only when Google signals is switched on in this website's Google Analytics. It's off for {host}, so those three lists are empty.",
+      "names": {
+        "new": "New",
+        "returning": "Returning",
+        "male": "Male",
+        "female": "Female",
+        "unknown": "Unknown"
+      }
+    },
     "landingPage": {
       "back": "Landing pages",
       "description": "A landing page on {host}. Every figure here is for visits that started on this page.",
@@ -16149,6 +16236,16 @@
         "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
         "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
       },
+      "visitors": {
+        "none": "No visits in these dates.",
+        "people": "{a} people made the {b} visits; {cRate} were new to the website.",
+        "returnersConvert": "The {a} visits from people who came back converted at {bRate}, against {cRate} for new visitors.",
+        "browserLags": "{aRate} of visits were on {text}, and they engaged less: {bRate} against {cRate} for the website.",
+        "signalsOff": "Age, gender and interests are empty: Google signals is off in this website's Google Analytics.",
+        "hidden": "Google held back some small groups to protect people's privacy.",
+        "reasonToReturn": "Give people who come back a reason to get in touch: they convert at least twice as often.",
+        "checkBrowser": "Send your contact form on {text} and check it arrives."
+      },
       "trackingHealth": {
         "allPassing": "All {a} checks pass: Google Analytics is counting this website properly.",
         "failing": "{count, plural, =1 {One} other {#}} of the {b} checks {count, plural, =1 {needs} other {need}} a look.",
@@ -16230,7 +16327,8 @@
         "addGoogleAnalytics": "Add Google Analytics",
         "linksClicked": "Links clicked",
         "wordsSearched": "Words searched",
-        "allPages": "All pages"
+        "allPages": "All pages",
+        "events": "Events"
       }
     }
   },

@@ -56,6 +56,13 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   campaign: ["sessionCampaignName", "sessionSource", "sessionMedium"],
   adKeyword: ["sessionManualTerm"],
   campaignSeries: ["date", "sessionCampaignName"],
+  visitorType: ["newVsReturning"],
+  browser: ["browser"],
+  system: ["operatingSystem"],
+  age: ["userAgeBracket"],
+  gender: ["userGender"],
+  interest: ["brandingInterest"],
+  visitorSeries: ["date", "newVsReturning"],
 };
 
 /** Whether a list is kept by device (GA20): the small ones and the long charts; the page lists only for every device. */
@@ -71,7 +78,18 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   campaign: false,
   adKeyword: false,
   campaignSeries: false,
+  visitorType: false,
+  browser: false,
+  system: false,
+  age: false,
+  gender: false,
+  interest: false,
+  visitorSeries: false,
 };
+
+/** Visitors' lists (§18.6.6), in the order the screen's switch offers them. */
+export const VISITOR_LISTS = ["visitorType", "browser", "system", "age", "gender", "interest"] as const;
+export type VisitorList = (typeof VISITOR_LISTS)[number];
 
 /**
  * Visits from no tagged link (§18.6.6): Google names their campaign
@@ -146,6 +164,7 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   // A campaign with where its link was: "linkedin.com / social"; every untagged visit as one row.
   if (list === "campaign") return isUntagged(keys[0] ?? "") ? UNTAGGED : channelKey(keys[0] ?? "", `${keys[1] ?? ""} / ${keys[2] ?? ""}`);
   if (list === "adKeyword") return isUntagged(keys[0] ?? "") ? UNTAGGED : keys[0] ?? "";
+  if (list === "visitorSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${keys[1] ?? ""}`;
   return keys[0] ?? "";
 }
 
@@ -248,7 +267,7 @@ export type PackedPart = {
  * or not.
  */
 export function packList(list: AnalyticsList, rows: readonly ListRow[], events: readonly string[]): PackedPart[] {
-  const sorted = list === "series" || list === "eventSeries" || list === "campaignSeries"
+  const sorted = list === "series" || list === "eventSeries" || list === "campaignSeries" || list === "visitorSeries"
     ? [...rows].sort((left, right) => left.key.localeCompare(right.key))
     : [...rows].sort((left, right) => (list === "page" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits) || left.key.localeCompare(right.key));
   const timed = rows.some((row) => row.times !== undefined);

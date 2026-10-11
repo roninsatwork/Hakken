@@ -12,7 +12,7 @@ import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts }
 import { wordStartMatcher } from "./utils/wordStarts";
 import { assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
-import { UNTAGGED, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { UNTAGGED, VISITOR_LISTS, splitChannelKey, type ListRow, type VisitorList } from "./googleAnalyticsLists";
 import { campaignsSees } from "./utils/sees/analyticsCampaigns";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -106,7 +106,7 @@ const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pag
 };
 /** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
 export function openingSort(list: ListKind): keyof typeof SORTS {
-  return list === "page" ? "views" : list === "landing" || list === "groups" || list === "campaign" || list === "adKeyword" ? "visits" : "value";
+  return list === "page" ? "views" : list === "landing" || list === "groups" || list === "campaign" || list === "adKeyword" || isVisitorList(list) ? "visits" : "value";
 }
 
 export const sortValidator = v.union(...(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((key) => v.literal(key)));
@@ -127,8 +127,14 @@ export const listKindValidator = v.union(
   /** Visits from tagged links, by campaign and where the link was; and by the words a link carries (§18.6.6). */
   v.literal("campaign"),
   v.literal("adKeyword"),
+  /** Visitors (§18.6.6): new or returning, browsers, operating systems, age, gender, interests. */
+  ...VISITOR_LISTS.map((list) => v.literal(list)),
 );
 export type ListKind = Infer<typeof listKindValidator>;
+
+function isVisitorList(list: ListKind): list is VisitorList {
+  return (VISITOR_LISTS as readonly string[]).includes(list);
+}
 
 const listArgs = {
   siteId: v.id("companyWebsites"),
@@ -220,7 +226,8 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const counted = countedOf(connection).filter((event) => !args.eventName || event.eventName === args.eventName);
   const counting = countedOf(connection).length > 0;
   const tagged = args.list === "campaign" || args.list === "adKeyword";
-  const base: AnalyticsList = tagged ? args.list as "campaign" | "adKeyword"
+  const own = tagged || isVisitorList(args.list);
+  const base: AnalyticsList = own ? args.list as AnalyticsList
     : args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : "landing";
   const kept: { every: Held | null } = { every: null };
   const now = await readFor(ctx, holdId, base, args.period, "NOW", args.device, kept, args.country);
@@ -370,7 +377,8 @@ export async function listSeen(
   args: Pick<ListArgs, "list" | "channel" | "device">,
   list: ListAnswer,
 ): Promise<Seen> {
-  if (list.live || list.preparing) return seen([]);
+  // Visitors' box is the whole screen's, from its own read (`googleAnalyticsVisitorReads.ts`), whichever list is shown.
+  if (list.live || list.preparing || isVisitorList(args.list)) return seen([]);
   const box = args.list === "channel" ? channelsSees(list.every)
     : args.list === "source" ? channelSees(args.channel ?? "", list.every, channelFigures(list), site.siteId)
       : args.list === "page" ? allPagesSees(list.every, list.counting)
