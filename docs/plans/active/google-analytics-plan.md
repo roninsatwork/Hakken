@@ -10,8 +10,9 @@ answered (§10) and the screens agreed and locked (§11), all on 2026-10-09.
 A second round (§18) drawn and agreed 2026-10-11 (Anthony: "ok tis is
 good"), not built: people, visit length, bounce rate, pages a visit, page
 views first, page titles, campaigns, the page before, every event, home
-countries only, products, visitors, live, and charts on every screen — ten
-phases, about twenty-two and a half days.**
+countries only, products, visitors, live, and charts on every screen, with
+Ask Hakken reading all of it — eleven phases, about twenty-six and a half
+days, being built in one go from 2026-10-11 (§18.5).**
 Change a decision here, with a date, before building anything that
 disagrees with it. Progress: §8.
 
@@ -501,13 +502,13 @@ No one else can: it is his Google account.
 | | What Hakken sees on sixteen screens, from the shared part (§14) | Two and a half days |
 | | The locked screens changed as the canvas draws them (§15), each only once agreed | One and a half days |
 | | The three things found while drawing (§16) | Half a day |
-| — | The second round's drawings (§18.2), agreed 2026-10-11 | Half a day — done |
-| 6–15 | Added 2026-10-11, the second round, phase by phase in §18.5 | Twenty-two and a half days |
+| — | The second round's drawings (§18.2) and how it is built (§18.6, §18.7), 2026-10-11 | One day — done |
+| 6–16 | Added 2026-10-11, the second round, phase by phase in §18.5 | Twenty-six and a half days |
 
 About fourteen and a half days of building after Phase 0 and the drawings;
 about fifteen and a half with them (two and a half more since GA18, §4.6,
 and a day and a half since GA22). With Phase 5, about twenty-four. With the
-second round (§18), about forty-seven and a half.
+second round (§18), about fifty-two.
 
 Every phase ends with its tests, Google faked as for Search Console (the
 sign-in, a missing scope, renewal, revocation, paging, quotas, "(other)" and
@@ -528,9 +529,10 @@ Anthony's word. Everything but Q12 is built: about 24½ of 24½ days; with
 Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
-**Progress, 2026-10-11: the second round (§18) drawn, agreed and planned;
-none of its ten phases built — 0 of twenty-two and a half days. Both rounds:
-about twenty-five of forty-seven and a half days, about 53%.**
+**Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
+with how it is built (§18.6) and its What Hakken sees (§18.7); none of its
+eleven phases built — 0 of twenty-six and a half days. Both rounds: about
+twenty-five and a half of fifty-two days, about 49%.**
 
 ## 9. Risks
 
@@ -1151,10 +1153,10 @@ are made up to show the layout.
 
 | What | Kept | Google asks |
 |---|---|---|
-| Home countries | A filter on every ask. The main home country's figures kept as now; another home country asked when chosen and held until the next collection, as a device is (GA20; Q17). The figures held so far are cleared and collected again, as Search Console's were on 2026-10-06 | None more |
-| People, visit length | Two more figures on every list; people asked ready-made for the small lists' periods | About eight more a day |
+| Home countries | A filter on every ask. Each home country kept (Q17): the main one as now, days and periods; each other one as ready-made periods only, its charts among them. The figures held so far are cleared and collected again, as Search Console's were on 2026-10-06 | The main country's as now; each other home country about as many again |
+| People, visit length | Two more figures on every list. The small lists' periods asked of Google ready-made, as the page lists' are, rather than added up from days — people cannot be added up | About eight more a day |
 | Bounce rate, pages a visit | Worked out | None |
-| Page titles | Once a page, with the hold's page numbers | One a week |
+| Page titles | Once a page, on the website's one page list (`holdPages`), read by every screen that lists the website's pages | One a week |
 | Campaigns, ad keywords | Ready-made periods, every device | About four a day, and the weekly periods |
 | Every event | Ready-made periods; by day for its chart; every device | About five a day |
 | Visitors' lists | Ready-made periods, every device; age, gender and interests asked apart; new and returning by day | About eight a day, and the weekly periods |
@@ -1172,11 +1174,15 @@ storage.
 
 ### 18.4 Questions
 
-- **Q17 — The other home countries. Answered 2026-10-11 (Anthony: "yes").**
-  The main home country kept, any other asked of Google when chosen and held
-  until the next collection, so storage does not grow with each country, and
-  Reports can join Search Console and Analytics country by country. The
-  other way kept every home country ready, up to three times the storage.
+- **Q17 — The other home countries. Answered 2026-10-11, then changed the
+  same day.** First: the main home country kept, any other asked when chosen
+  (Anthony: "yes"). Reading the code showed only the page lists are asked
+  live for a device; the totals, channels and charts are kept, so a country
+  asked live would need every list on every screen asked and read live.
+  Changed (Anthony: "store each coutnry thats selected as a hoem country"):
+  every home country is kept, as Search Console keeps them — compared home
+  country to home country, like with like. Storage grows only for a website
+  with more than one; Ronins has one. How: §18.6.
 - **Q18 — Google signals on ronins.co.uk. Answered 2026-10-11 (Anthony: "i
   dotn know lets build it and see").** Phase 12 builds age, gender and
   interests as drawn and asks Ronins' property for them; what comes back is
@@ -1192,29 +1198,156 @@ storage.
 
 ### 18.5 Phases and days
 
+Re-estimated 2026-10-11 with Anthony's answers (§18.4, §18.6): every home
+country kept, page titles on every screen that lists the website's pages,
+and Ask Hakken reading all of it. Built in one go (Anthony: "can you build
+this in one go"), phase by phase, each committed on dev and not pushed.
+
 | Phase | What | Days |
 |---|---|---|
-| 6 | Home countries: every ask filtered, the codes mapped onto Search Console's, the Country choice on every page, another home country asked and held, the figures held so far collected again | One and a half |
-| 7 | The new figures and changed lists: people, new and returning, visit length, bounce rate, pages a visit; page titles; Overview reordered, page views first; Landing pages and All pages as drawn; the CSV downloads | Three |
+| 6 | Home countries: every ask filtered; each home country kept (§18.6.1); the Country choice on every page; the figures held so far cleared and collected again | Two and a half |
+| 7 | The new figures and changed lists: people, new and returning, visit length, bounce rate, pages a visit; the small lists' periods asked ready-made; page titles on `holdPages`, shown on every screen listing the website's pages (Google Analytics, Search Console, Heroes); Overview reordered, page views first; Landing pages and All pages as drawn; the CSV downloads | Four |
 | 8 | Charts on the screens that exist: the bar chart shared; Overview's, Channels', Conversions' and a landing page's charts; the top-ten bars | Two |
 | 9 | A page's own screen and the page before | Two and a half |
-| 10 | Events and an event's own screen, with every Google event named in English and Italian | Three |
+| 10 | Events and an event's own screen, every detail (Anthony: "all"), every Google event named in English and Italian | Three |
 | 11 | Campaigns and ad keywords | One and a half |
 | 12 | Visitors: new or returning, browsers, systems, age, gender, interests | Two and a half |
-| 13 | Products, for websites with a shop | Three |
+| 13 | Products, found by themselves (§18.6.6) | Three |
 | 14 | Live | Two |
-| 15 | Measured and checked: storage on Ronins, a reading-budget test for every new screen at five times morehandles.co.uk, look tests against the pictures, Ronins checked in Chrome, the full gate | One and a half |
+| 15 | Ask Hakken reads every Google Analytics screen and figure, both rounds (§18.6.8) | Two |
+| 16 | Measured and checked: storage on Ronins, a reading-budget test for every new screen at five times morehandles.co.uk, look tests against the pictures, Ronins checked in Chrome, the full gate | One and a half |
 
-**About twenty-two and a half days of building**; the drawings, half a day,
-are done. Every phase brings its What Hakken sees, its words in English and
-Italian, and tests with Google faked, and ends with the gate. Phase 6 goes
-first, since it changes every figure and collects again, then 7 and 8 on the
-screens that exist; the new pages may come in any order.
+**About twenty-six and a half days of building**, and half a day writing
+this section and §18.7. Every phase brings its What Hakken sees (§18.7),
+its words in English and Italian, and tests with Google faked, and ends with
+the gate. Up from twenty-two and a half: every home country kept (one day
+more than first thought), titles on every screen listing pages (one), and
+Ask Hakken (two).
 
-More than the twelve to fourteen days first estimated in chat: that
-estimate had no charts (two days), no page's or event's own screen (about
-two), no What Hakken sees for six new screens (about two), and no measuring
-and look tests (one and a half).
+### 18.6 How it is built
+
+Everything follows Hakken's standard (Anthony, on storage: "you recommend
+based on the hakken standard"): stored once and named by number (the core
+data normalisation plan), packed and kept as Search Console's are (§4.3,
+§4.6), only what changed written, live answers held until the next
+collection (GA23), cleared with the website, and every screen held to a
+reading budget at five times morehandles.co.uk.
+
+**1. Home countries.** A website's home countries are its Market list, the
+same as Search Console's (`searchConsoleCountries`, `mainConsoleCountry`,
+`countriesKeptReady`), each turned into Google's two-letter `countryId` by
+the one list of codes (`utils/countryCodes.ts`). Every ask carries a
+`countryId` filter. The connection notes the main country its figures are
+for (`mainCountry`); when it differs — every website on the day this ships,
+and later when the Market list changes — everything held is cleared and
+the next collection fetches it again, as Search Console's
+`prepareMainCountryOf` does. The main country is kept as now, without a
+country in its records' names; each other home country is kept as
+ready-made periods only, named with its code (`gbr` style, as Search
+Console names them) — every list a screen reads, its charts' series for
+every period among them, so no screen of another country reads days. A
+country taken off the list is cleared at the next run. The Country choice is
+Search Console's own dropdown (`Select`), beside device and dates, opening
+on the main country and kept in the address. Visits from outside the home
+countries are not counted anywhere; a visit Google cannot place
+(`(not set)`) is not in a home country either.
+
+**2. People and how visits went.** Every list asks two more figures,
+`totalUsers` and `newUsers`, and `averageSessionDuration`, kept as the
+seconds of all visits (the average × visits) so it adds up across rows.
+Bounce rate and pages a visit are worked out when read. People cannot be
+added up across days or devices, so the small lists' periods — the totals
+and the channels, by device — are asked of Google ready-made, as the page
+lists' are, instead of added up from days; their days are kept only for the
+charts. New and returning is its own small list (`newVsReturning`), kept by
+day for its chart and as ready-made periods. Each collection asks for the
+last 90 days and 12 months as now, so the backlog fills at once.
+
+**3. Page titles.** `pageTitle` by `pagePath`, asked weekly; each page's
+most-viewed title is kept once on the website's one page list
+(`holdPages.title`), joined by the page's number as Analytics' visits are
+(§17). Every screen that lists the website's pages reads it from there and
+shows it over the address (one line each, cut with "…", whole on hover):
+Google Analytics' Landing pages, All pages, a page's and a landing page's
+own screens, Heroes and attention, and Search Console's pages lists and a
+page's own screen. Search Console sends no titles; until Analytics is
+connected, those screens show the address alone.
+
+**4. The page before.** When a page's own screen opens, Google is asked for
+`pageReferrer` by `pagePath` for that page, and for its views a day; both
+held until the next collection. A referrer on the website becomes the
+page's number (its title and address shown); another website becomes its
+host, named where Hakken knows it (Google, Bing, ChatGPT, Perplexity, as
+§4.4's list); none becomes "No page before".
+
+**5. Every event.** A new list, `event`: `eventName` with `eventCount` and
+`totalUsers`, as ready-made periods and by day for the charts, every device.
+Every one of Google's own events gets a name in English and Italian beside
+the list of likely conversions (`utils/analyticsEvents.ts`); an event Hakken
+does not know shows Google's name. An event's own screen asks Google, when
+it opens, for what that event was about, by its kind: `click` → `linkUrl`
+(and `outbound`), `file_download` → `fileName`, `view_search_results` →
+`searchTerm`, `scroll` → `percentScrolled`, `video_start`,
+`video_progress`, `video_complete` → `videoTitle`; any event → the pages it
+happened on (`pagePath`). Held until the next collection.
+
+**6. Campaigns, Visitors, Products.** New ready-made lists, every device:
+`campaign` (campaign, source, medium), `adKeyword` (`sessionManualTerm`,
+numbered in the hold's keyword store as Search Console's keywords are,
+GA18), `browser`, `system`, and — asked on their own — `age`, `gender`,
+`interest`. Google signals is taken as off when every row of age and gender
+comes back "unknown"; the Visitors page then says so instead of drawing
+empty bars, and Google's hiding of small groups (`subjectToThresholding`) is
+said as on every list. Products: `product` (`itemName`, `itemCategory`,
+with `itemsViewed`, `itemsAddedToCart`, `itemsPurchased`, `itemRevenue`),
+asked on its own, since Google never mixes product and visit figures. The
+shop's four steps are read from the `event` list (`view_item`,
+`add_to_cart`, `begin_checkout`, `purchase`), so they cost no ask. A
+website is a shop when any of those four happened in the last 90 days: the
+collector notes it (`shop`) each day, the Products page appears by itself,
+and nothing is set in admin (Anthony: "you recommend").
+
+**7. Live.** The Realtime API (`runRealtimeReport`), asked by the Live page
+itself through one action that returns the answer and stores nothing. The
+page asks once a minute while it is in front (`document.visibilityState`),
+stops when hidden or closed, and pauses after 30 minutes untouched with a
+line to carry on. One ask a minute brings the figures, the minute chart and
+the chosen list together where Google allows, else three or four small
+asks. Filtered to the home country chosen.
+
+**8. Ask Hakken.** Ask Hakken reads every Google Analytics screen and figure
+the website holds — both rounds — through the same reads the screens use,
+for the company's own websites only (Anthony: "ask hakken will be able to
+pull from every screen and every peice of data we hold"). Today it reads
+none of Analytics' figures, only What Hakken sees' saved advice
+(`hakkenAdvice`). Built as its other reads are (`assistantReads`,
+`assistantToolHandlers`, `toolConnectorDefinitions`).
+
+**9. Storage.** New lists use the packed rows (`analyticsPackedRows`) with
+new columns where a list needs them — people, new people, visit seconds,
+times (an event's count), basket, checkouts — each empty and costing
+nothing on lists that have none. Every new list joins the keep rules: days
+60, ready-made periods replaced, live answers cleared at the next
+collection, all of it cleared when the website disconnects, changes
+property or changes main country.
+
+### 18.7 What Hakken sees on the new screens
+
+Written by fixed rules over the figures each screen already reads, in the
+shared box and its saved advice (§14; the Volatility plan's `hakkenAdvice`),
+words in `messages/<language>.json`; no AI model, no extra read. The canvas
+shows each on its figures. The changed screens keep their rules, with the
+new figures where they matter (bounce beside engagement).
+
+| Screen | What it says (when) | Do first |
+|---|---|---|
+| Live | How many are on the website now, and the page most of them are on; a conversion in the last 30 minutes, and how long ago; "Nobody is on the website right now" when none | See today's conversions (when one happened) |
+| Visitors | People and visits, and the share new. Returning visitors converting at least twice the new ones' rate (30 returning visits or more); a browser with a fifth of visits or more engaging 5 points or more below the website; age, gender and interests empty because Google signals is off; groups hidden by Google | Give returning visitors a reason to get in touch; check the website on that browser |
+| Campaigns | The share of visits from tagged links, said when under 10%; the campaign that converted most; a campaign with 30 visits or more and no conversion; "No visits came from a tagged link" when none | Tag the links in emails, ads and posts; see where that campaign's visitors landed |
+| Events | Events counted as conversions that never happened; the share of page views reaching the bottom of the page; clicks taking people off the website when 5% of visits or more; site searches when any | Try the conversions that never fire, and check Google records them; see which links take people away; see what people searched for |
+| An event's own screen | By its kind: the links clicked most and their share; the words searched most; the share of views reaching 90%; the file downloaded most; otherwise how many times, by how many people, and the change | Open links to other websites in a new tab (clicks); make sure a page answers the top search (site search) |
+| A page's own screen | The two biggest sources of its views and their shares; views with no page before, when a fifth or more; an AI assistant among its sources | Keep the link on the page that sends most; check what that assistant says about the page |
+| Products | Looks, baskets and the share in between; the share of checkouts finished; the best seller; a product looked at 100 times or more and bought 1% of the time or less | Look at that product's page; find out why checkouts aren't finished (under half) |
 
 ## Change log
 
@@ -1316,3 +1449,13 @@ and look tests (one and a half).
   not kept) and Q19 agreed (Products built with Google faked until a shop
   connects). Q18 answered: build age, gender and interests and see what
   Ronins' property returns (Anthony: "lets build it and see").
+- 2026-10-11 — Q17 changed: every home country kept, as Search Console's
+  (Anthony: "store each coutnry thats selected as a hoem country"). How it
+  is built written in (§18.6) with Anthony's answers: the backlog asked at
+  once, titles once a page on `holdPages` and shown wherever the website's
+  pages are listed ("normalise this and other screens"), every event detail
+  ("all"), shops found by themselves, Live paused when hidden or untouched,
+  storage to Hakken's standard, and Ask Hakken reading every Google
+  Analytics screen and figure. What Hakken sees on the seven new screens
+  (§18.7, Anthony: "yes add the rulles to teh plan"). Eleven phases, about
+  twenty-six and a half days; building in one go.

@@ -73,8 +73,9 @@ completed work.
   the page-number change (Q12) built and held for Anthony's word (§17).
   Second round (§18) drawn and agreed 2026-10-11: people, page views first,
   page titles, campaigns, the page before, every event, home countries only,
-  products, visitors, live, and charts on every screen — ten phases, about
-  twenty-two and a half days, not built.**
+  products, visitors, live, and charts on every screen, with Ask Hakken
+  reading all of it — eleven phases, about twenty-six and a half days; being
+  built in one go.**
 - [Core data — each keyword and page once](./active/core-data-normalisation-plan.md)
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a
