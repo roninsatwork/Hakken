@@ -1,9 +1,9 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { titlesOf } from "./pageTitles";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPeriodUnnamed } from "./searchConsolePeriodReads";
 import { BookNames } from "./searchConsolePeriodBooks";
@@ -416,16 +416,18 @@ function tabCounts(pages: readonly HeroPage[]) {
   ];
 }
 
-/** Heroes and attention's page: the four stages, the tabs, and one page of Pages to fix. */
-export const analyticsHeroes = tenantQuery({
-  args: {
+const analyticsHeroesArgs = {
     siteId: v.id("companyWebsites"),
     tab: heroTabValidator,
     q: v.optional(v.string()),
     sort: v.optional(heroSortValidator),
     direction: sortDirectionArg,
     ...listPageArgs,
-  },
+  };
+
+/** Heroes and attention's page: the four stages, the tabs, and one page of Pages to fix. */
+export const analyticsHeroes = tenantQuery({
+  args: analyticsHeroesArgs,
   returns: v.object({
     state: v.union(v.literal("NOT_CONNECTED"), v.literal("PREPARING"), v.literal("READY")),
     currency: v.union(v.string(), v.null()),
@@ -446,93 +448,96 @@ export const analyticsHeroes = tenantQuery({
     preparing: v.boolean(),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const journey = await journeyOf(ctx, site.hold._id, site.website.host);
-    const watched = await watchedPages(ctx, site.hold.companyId, site.hold._id);
-    const listed: HeroRow[] = journey.pages.flatMap((page) => {
-      const main = mainOf(page, args.tab);
-      const facts = journey.facts.get(page.page);
-      return main ? [{
-        page: page.page, main, hero: page.hero, worth: worthOn(page, args.tab), task: watched.has(pageKeyOf(page.page)),
-        ref: facts?.landingKey ?? null, console: facts?.consoleAddress ?? null,
-      }] : [];
-    });
-    const matches = wordStartMatcher(args.q);
-    const found = matches ? listed.filter((row) => matches(row.page)) : listed;
-    found.sort(listOrder(SORTS, args.sort ?? "worth", args.direction, (row) => row.page));
-    const shown = pageOfList(found, args.page, args.rows);
-    const titles = await titlesOf(ctx, site.hold._id, shown.rows.map((row) => journey.facts.get(row.page)?.address ?? ""));
-    const titled = shown.rows.map((row) => {
-      const title = titles.get(journey.facts.get(row.page)?.address ?? "");
-      return title ? { ...row, title } : row;
-    });
-    const stages = stagesOf(journey);
-    const totalGain = Math.round(journey.pages.reduce((sum, page) => sum + (worthOn(page, "all") ?? 0), 0));
-    const tabs = tabCounts(journey.pages);
-    return {
-      state: journey.state,
-      currency: journey.currency,
-      consoleConnected: journey.consoleConnected,
-      consoleTo: journey.consoleTo,
-      analyticsTo: journey.analyticsTo,
-      stages,
-      totalGain,
-      tabs,
-      rows: titled,
-      total: shown.total,
-      page: shown.page,
-      pages: shown.pages,
-      size: shown.size,
-      cut: null,
-      preparing: journey.state === "PREPARING",
-      seen: journey.state === "READY" ? heroesSees({ stages, totalGain, pages: journey.pages, consoleConnected: journey.consoleConnected, linkOf: (path) => linkOf(journey, path) }) : { says: [], steps: [] },
-    };
-  },
+  handler: async (ctx, args) => await readHeroes(ctx, args),
 });
+
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export async function readHeroes(ctx: SiteReader, args: ObjectType<typeof analyticsHeroesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const journey = await journeyOf(ctx, site.hold._id, site.website.host);
+  const watched = await watchedPages(ctx, site.hold.companyId, site.hold._id);
+  const listed: HeroRow[] = journey.pages.flatMap((page) => {
+    const main = mainOf(page, args.tab);
+    const facts = journey.facts.get(page.page);
+    return main ? [{
+      page: page.page, main, hero: page.hero, worth: worthOn(page, args.tab), task: watched.has(pageKeyOf(page.page)),
+      ref: facts?.landingKey ?? null, console: facts?.consoleAddress ?? null,
+    }] : [];
+  });
+  const matches = wordStartMatcher(args.q);
+  const found = matches ? listed.filter((row) => matches(row.page)) : listed;
+  found.sort(listOrder(SORTS, args.sort ?? "worth", args.direction, (row) => row.page));
+  const shown = pageOfList(found, args.page, args.rows);
+  const titles = await titlesOf(ctx, site.hold._id, shown.rows.map((row) => journey.facts.get(row.page)?.address ?? ""));
+  const titled = shown.rows.map((row) => {
+    const title = titles.get(journey.facts.get(row.page)?.address ?? "");
+    return title ? { ...row, title } : row;
+  });
+  const stages = stagesOf(journey);
+  const totalGain = Math.round(journey.pages.reduce((sum, page) => sum + (worthOn(page, "all") ?? 0), 0));
+  const tabs = tabCounts(journey.pages);
+  return {
+    state: journey.state,
+    currency: journey.currency,
+    consoleConnected: journey.consoleConnected,
+    consoleTo: journey.consoleTo,
+    analyticsTo: journey.analyticsTo,
+    stages,
+    totalGain,
+    tabs,
+    rows: titled,
+    total: shown.total,
+    page: shown.page,
+    pages: shown.pages,
+    size: shown.size,
+    cut: null,
+    preparing: journey.state === "PREPARING",
+    seen: journey.state === "READY" ? heroesSees({ stages, totalGain, pages: journey.pages, consoleConnected: journey.consoleConnected, linkOf: (path) => linkOf(journey, path) }) : { says: [], steps: [] },
+  };
+}
 
 /** Every row of Pages to fix on a tab, in the order on screen: its download. */
 export const analyticsHeroesAll = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), tab: heroTabValidator, q: v.optional(v.string()), sort: v.optional(heroSortValidator), direction: sortDirectionArg },
-  returns: v.array(v.object({
-    page: v.string(),
-    main: kindValidator,
-    hero: v.boolean(),
-    worth: v.union(v.number(), v.null()),
-    shown: v.union(v.number(), v.null()),
-    position: v.union(v.number(), v.null()),
-    clicks: v.union(v.number(), v.null()),
-    visits: v.union(v.number(), v.null()),
-    conversions: v.union(v.number(), v.null()),
-    value: v.union(v.number(), v.null()),
-  })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const journey = await journeyOf(ctx, site.hold._id, site.website.host);
-    const rows = journey.pages.flatMap((page) => {
-      const main = mainOf(page, args.tab);
-      return main ? [{ page, main, worth: worthOn(page, args.tab) }] : [];
-    });
-    const matches = wordStartMatcher(args.q);
-    const found = matches ? rows.filter((row) => matches(row.page.page)) : rows;
-    const order = listOrder(SORTS, args.sort ?? "worth", args.direction, (row: HeroRow) => row.page);
-    found.sort((one, two) => order(
-      { page: one.page.page, main: one.main, hero: one.page.hero, worth: one.worth, task: false, ref: null, console: null },
-      { page: two.page.page, main: two.main, hero: two.page.hero, worth: two.worth, task: false, ref: null, console: null },
-    ));
-    return found.map(({ page, main, worth }) => ({
-      page: page.page,
-      main,
-      hero: page.hero,
-      worth,
-      shown: page.google?.shown ?? null,
-      position: page.google?.position ?? null,
-      clicks: page.google?.clicks ?? null,
-      visits: page.visits?.visits ?? null,
-      conversions: page.visits?.conversions ?? null,
-      value: page.visits?.value ?? null,
-    }));
-  },
+args: { siteId: v.id("companyWebsites"), tab: heroTabValidator, q: v.optional(v.string()), sort: v.optional(heroSortValidator), direction: sortDirectionArg },
+returns: v.array(v.object({
+  page: v.string(),
+  main: kindValidator,
+  hero: v.boolean(),
+  worth: v.union(v.number(), v.null()),
+  shown: v.union(v.number(), v.null()),
+  position: v.union(v.number(), v.null()),
+  clicks: v.union(v.number(), v.null()),
+  visits: v.union(v.number(), v.null()),
+  conversions: v.union(v.number(), v.null()),
+  value: v.union(v.number(), v.null()),
+})),
+handler: async (ctx, args) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const journey = await journeyOf(ctx, site.hold._id, site.website.host);
+  const rows = journey.pages.flatMap((page) => {
+    const main = mainOf(page, args.tab);
+    return main ? [{ page, main, worth: worthOn(page, args.tab) }] : [];
+  });
+  const matches = wordStartMatcher(args.q);
+  const found = matches ? rows.filter((row) => matches(row.page.page)) : rows;
+  const order = listOrder(SORTS, args.sort ?? "worth", args.direction, (row: HeroRow) => row.page);
+  found.sort((one, two) => order(
+    { page: one.page.page, main: one.main, hero: one.page.hero, worth: one.worth, task: false, ref: null, console: null },
+    { page: two.page.page, main: two.main, hero: two.page.hero, worth: two.worth, task: false, ref: null, console: null },
+  ));
+  return found.map(({ page, main, worth }) => ({
+    page: page.page,
+    main,
+    hero: page.hero,
+    worth,
+    shown: page.google?.shown ?? null,
+    position: page.google?.position ?? null,
+    clicks: page.google?.clicks ?? null,
+    visits: page.visits?.visits ?? null,
+    conversions: page.visits?.conversions ?? null,
+    value: page.visits?.value ?? null,
+  }));
+},
 });
 
 // ---------------------------------------------------------------------------

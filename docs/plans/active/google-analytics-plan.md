@@ -530,11 +530,11 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 14
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 15
 built on dev, each committed and none pushed, and "people who converted
-after it" (half a day more) — twenty-three and a half of twenty-seven days,
-about 87%; three and a half left. Both rounds: about forty-nine of fifty-two
-and a half days, about 93%.**
+after it" (half a day more) — twenty-five and a half of twenty-seven days,
+about 94%; one and a half left. Both rounds: about fifty-one of fifty-two
+and a half days, about 97%.**
 
 ## 9. Risks
 
@@ -1486,6 +1486,25 @@ pull from every screen and every peice of data we hold"). Today it reads
 none of Analytics' figures, only What Hakken sees' saved advice
 (`hakkenAdvice`). Built as its other reads are (`assistantReads`,
 `assistantToolHandlers`, `toolConnectorDefinitions`).
+
+*Built 2026-10-11 (Phase 15).* Ask Hakken has two new tools, in a connector
+of their own (`assistant-analytics`) so they reach an Assistant already
+installed: `read_google_analytics` — every screen of both rounds: Overview,
+Channels and a channel, Campaigns and ad keywords, Landing pages and a
+landing page, All pages and a page (with the page before), Events and an
+event (with what it was about and the people who converted after it),
+Conversions, Visitors and each of its lists, Products, and Heroes and
+attention — for 7, 30 or 90 days or 12 months, a device and a home country;
+and `read_google_analytics_live`, asked of Google as the Live page asks it
+and kept no more than it is. Each screen's read was split into a function
+its page and Ask Hakken both call (`readOverview`, `readListPage`,
+`readEvents`, …; `assistantAnalyticsReads.ts`), so a figure in an answer is
+the figure on the screen, given with the screen's link, money in the
+currency rather than hundredths. Only the conversation's company's own
+websites; a competitor has none, as with Search Console. A member may read
+them, as they may open the screens. Tested figure for figure against the
+screens' own reads, Google faked. Ask Hakken itself was not asked a question
+in Chrome: that is a chat with the AI model, on credits.
 
 **9. Storage.** New lists use the packed rows (`analyticsPackedRows`) with
 new columns where a list needs them — people, new people, visit seconds,

@@ -1,8 +1,8 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { companyHolds, requireMySite } from "./siteAccess";
+import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { websiteIconUrl } from "./websiteIcons";
 import { analyticsStatusValidator } from "./googleAnalyticsSchema";
 import { decodePages, isPageRef } from "./holdPageRefs";
@@ -411,13 +411,15 @@ const answerValidator = {
   groups: v.union(v.null(), v.array(v.object({ id: v.string(), name: v.string() }))),
 };
 
+const analyticsListPageArgs = { ...listArgs, ...listPageArgs };
+
 /**
  * One page of a list, counted exactly: Channels, a channel's sources, Landing
  * pages, page groups, All pages — with the screen's What Hakken sees, and a
  * channel's own figures above its sources (§15, screen 5).
  */
 export const analyticsListPage = tenantQuery({
-  args: { ...listArgs, ...listPageArgs },
+  args: analyticsListPageArgs,
   returns: v.object({
     rows: v.array(shownRowValidator),
     total: v.number(),
@@ -432,41 +434,44 @@ export const analyticsListPage = tenantQuery({
     /** Campaigns: the visits from no tagged link (§18.6.6). */
     untagged: v.union(v.number(), v.null()),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
-    const page = pageOfList(list.rows, args.page, args.rows);
-    return {
-      rows: await nameRows(ctx, site.hold._id, page.rows),
-      total: page.total,
-      page: page.page,
-      pages: page.pages,
-      size: page.size,
-      cut: null,
-      live: list.live,
-      preparing: list.preparing,
-      from: list.from,
-      to: list.to,
-      folded: list.folded,
-      thresholded: list.thresholded,
-      longer: list.cut,
-      groups: list.groups,
-      seen: await listSeen(ctx, { holdId: site.hold._id, siteId: args.siteId }, args, list),
-      figures: args.list === "source" && !list.live && !list.preparing ? channelFigures(list) : null,
-      untagged: list.untagged,
-    };
-  },
+  handler: async (ctx, args) => await readListPage(ctx, args),
 });
+
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export async function readListPage(ctx: SiteReader, args: ObjectType<typeof analyticsListPageArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
+  const page = pageOfList(list.rows, args.page, args.rows);
+  return {
+    rows: await nameRows(ctx, site.hold._id, page.rows),
+    total: page.total,
+    page: page.page,
+    pages: page.pages,
+    size: page.size,
+    cut: null,
+    live: list.live,
+    preparing: list.preparing,
+    from: list.from,
+    to: list.to,
+    folded: list.folded,
+    thresholded: list.thresholded,
+    longer: list.cut,
+    groups: list.groups,
+    seen: await listSeen(ctx, { holdId: site.hold._id, siteId: args.siteId }, args, list),
+    figures: args.list === "source" && !list.live && !list.preparing ? channelFigures(list) : null,
+    untagged: list.untagged,
+  };
+}
 
 /** Every row of a list, named, in the order on screen: its download. */
 export const analyticsListAll = tenantQuery({
-  args: listArgs,
-  returns: v.object({ rows: v.array(shownRowValidator), live: v.boolean() }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
-    return { rows: await nameRows(ctx, site.hold._id, list.rows), live: list.live };
-  },
+args: listArgs,
+returns: v.object({ rows: v.array(shownRowValidator), live: v.boolean() }),
+handler: async (ctx, args) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
+  return { rows: await nameRows(ctx, site.hold._id, list.rows), live: list.live };
+},
 });
 
 /** Rows a top list may ask for: a chart's ten bars at most. */
@@ -565,60 +570,63 @@ export const analyticsOverview = tenantQuery({
     searchConsole: searchConsoleMonthValidator,
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    const nothing = {
-      preparing: connection?.status === "CONNECTED",
-      from: null,
-      to: null,
-      now: null,
-      before: null,
-      changedMost: [] as Moved[],
-      landingLive: false,
-      channelVisits: [] as Array<{ label: string; visits: number }>,
-      counting: false,
-      searchConsole: null,
-    };
-    if (!connection?.newestDay) return nothing;
-    const counted = countedOf(connection);
-    const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
-    if (!now) return nothing;
-    const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
-    const moved: Moved[] = [];
-    const landing = await readAnalyticsList(ctx, holdId, { list: "landing", period: args.period, device: args.device, country });
-    const channels = await readAnalyticsList(ctx, holdId, { list: "channel", period: args.period, device: args.device, country });
-    for (const [kind, list] of [["landing", landing], ["channel", channels]] as const) {
-      for (const row of list.rows) {
-        if (row.conversionsBefore === null || row.valueBefore === null) continue;
-        const conversions = row.conversions - row.conversionsBefore;
-        const value = row.value - row.valueBefore;
-        if (conversions !== 0 || value !== 0) moved.push({ kind, key: row.key, label: row.label, conversions, value, conversionsNow: row.conversions });
-      }
-    }
-    moved.sort((left, right) => Math.abs(right.value) - Math.abs(left.value) || Math.abs(right.conversions) - Math.abs(left.conversions) || left.label.localeCompare(right.label));
-    const top = moved.slice(0, TOP_ROWS);
-    const named = await decodePages(ctx, holdId, top.map((row) => row.label));
-    const titles = await titlesOf(ctx, holdId, top.map((row, index) => (row.kind === "landing" ? named[index] : "")));
-    return {
-      preparing: false,
-      from: now.from,
-      to: now.to,
-      now: figuresOf(now.rows, counted),
-      before: before ? figuresOf(before.rows, counted) : null,
-      changedMost: top.map((row, index) => {
-        const title = row.kind === "landing" ? titles.get(named[index]) : undefined;
-        return { ...row, label: row.kind === "landing" ? named[index] : row.label, ...(title ? { title } : {}) };
-      }),
-      landingLive: landing.live,
-      channelVisits: [...channels.rows].sort((left, right) => right.visits - left.visits).map((row) => ({ label: row.label, visits: row.visits })),
-      counting: counted.length > 0,
-      searchConsole: await searchConsoleMonth(ctx, holdId),
-    };
-  }, overviewSees),
+  handler: async (ctx, args) => await readOverview(ctx, args),
 });
+
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export const readOverview = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  const nothing = {
+    preparing: connection?.status === "CONNECTED",
+    from: null,
+    to: null,
+    now: null,
+    before: null,
+    changedMost: [] as Moved[],
+    landingLive: false,
+    channelVisits: [] as Array<{ label: string; visits: number }>,
+    counting: false,
+    searchConsole: null,
+  };
+  if (!connection?.newestDay) return nothing;
+  const counted = countedOf(connection);
+  const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
+  if (!now) return nothing;
+  const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
+  const moved: Moved[] = [];
+  const landing = await readAnalyticsList(ctx, holdId, { list: "landing", period: args.period, device: args.device, country });
+  const channels = await readAnalyticsList(ctx, holdId, { list: "channel", period: args.period, device: args.device, country });
+  for (const [kind, list] of [["landing", landing], ["channel", channels]] as const) {
+    for (const row of list.rows) {
+      if (row.conversionsBefore === null || row.valueBefore === null) continue;
+      const conversions = row.conversions - row.conversionsBefore;
+      const value = row.value - row.valueBefore;
+      if (conversions !== 0 || value !== 0) moved.push({ kind, key: row.key, label: row.label, conversions, value, conversionsNow: row.conversions });
+    }
+  }
+  moved.sort((left, right) => Math.abs(right.value) - Math.abs(left.value) || Math.abs(right.conversions) - Math.abs(left.conversions) || left.label.localeCompare(right.label));
+  const top = moved.slice(0, TOP_ROWS);
+  const named = await decodePages(ctx, holdId, top.map((row) => row.label));
+  const titles = await titlesOf(ctx, holdId, top.map((row, index) => (row.kind === "landing" ? named[index] : "")));
+  return {
+    preparing: false,
+    from: now.from,
+    to: now.to,
+    now: figuresOf(now.rows, counted),
+    before: before ? figuresOf(before.rows, counted) : null,
+    changedMost: top.map((row, index) => {
+      const title = row.kind === "landing" ? titles.get(named[index]) : undefined;
+      return { ...row, label: row.kind === "landing" ? named[index] : row.label, ...(title ? { title } : {}) };
+    }),
+    landingLive: landing.live,
+    channelVisits: [...channels.rows].sort((left, right) => right.visits - left.visits).map((row) => ({ label: row.label, visits: row.visits })),
+    counting: counted.length > 0,
+    searchConsole: await searchConsoleMonth(ctx, holdId),
+  };
+}, overviewSees);
 
 // ---------------------------------------------------------------------------
 // Conversions
@@ -652,69 +660,72 @@ export const analyticsConversions = tenantQuery({
     fired: v.array(v.object({ eventName: v.string(), count: v.number() })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    const nothing = {
-      preparing: connection?.status === "CONNECTED",
-      from: null,
-      to: null,
-      visits: 0,
-      visitsBefore: null,
-      kinds: [] as Array<{ eventName: string; count: number; countBefore: number | null; each: number | null; setIn: "ANALYTICS" | "HAKKEN" | "REVENUE" | null; value: number | null; valueBefore: number | null }>,
-      shop: null,
-      fired: [] as Array<{ eventName: string; count: number }>,
-    };
-    if (!connection?.newestDay) return nothing;
-    const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
-    if (!now) return nothing;
-    const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
-    const total = blank("");
-    for (const row of now.rows) addInto(total, row);
-    const was = before ? blank("") : null;
-    if (was && before) for (const row of before.rows) addInto(was, row);
-    const valueIn = (row: ListRow, event: Counted) => conversionsOf(row, [event]).value;
-    const kinds = countedOf(connection).map((event) => {
-      const count = total.counts.get(event.eventName) ?? 0;
-      const held = connection.events?.find((one) => one.eventName === event.eventName);
-      const purchase = event.eventName === PURCHASE_EVENT;
-      const setIn = purchase ? "REVENUE" as const : event.fromAnalytics ? "ANALYTICS" as const : event.hakken !== null ? "HAKKEN" as const : null;
-      const value = purchase ? total.revenue
-        : event.fromAnalytics ? total.values.get(event.eventName) ?? 0
-        : event.hakken !== null ? Math.round(count * event.hakken * 100) : null;
-      return {
-        eventName: event.eventName,
-        count,
-        countBefore: was ? was.counts.get(event.eventName) ?? 0 : null,
-        each: purchase ? (count > 0 ? Math.round(total.revenue / count) : null)
-          : event.fromAnalytics ? Math.round((held?.analyticsValue ?? 0) * 100)
-          : event.hakken !== null ? Math.round(event.hakken * 100) : null,
-        setIn,
-        value,
-        valueBefore: was && setIn !== null ? valueIn(was, event) : null,
-      };
-    });
-    const isShop = total.purchases > 0 || (connection.events ?? []).some((event) => event.eventName === PURCHASE_EVENT && event.counted);
-    // Every key event is kept as a column (§12): those not counted are counted here too, for the box.
-    const fired = (connection.events ?? [])
-      .filter((event) => !event.counted)
-      .map((event) => ({ eventName: event.eventName, count: total.counts.get(event.eventName) ?? 0 }))
-      .filter((event) => event.count > 0)
-      .sort((left, right) => right.count - left.count || left.eventName.localeCompare(right.eventName));
-    return {
-      preparing: false,
-      from: now.from,
-      to: now.to,
-      visits: total.visits,
-      visitsBefore: was ? was.visits : null,
-      kinds,
-      shop: isShop ? { purchases: total.purchases, revenue: total.revenue, purchasesBefore: was ? was.purchases : null, revenueBefore: was ? was.revenue : null } : null,
-      fired,
-    };
-  }, conversionsSees),
+  handler: async (ctx, args) => await readConversions(ctx, args),
 });
+
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  const nothing = {
+    preparing: connection?.status === "CONNECTED",
+    from: null,
+    to: null,
+    visits: 0,
+    visitsBefore: null,
+    kinds: [] as Array<{ eventName: string; count: number; countBefore: number | null; each: number | null; setIn: "ANALYTICS" | "HAKKEN" | "REVENUE" | null; value: number | null; valueBefore: number | null }>,
+    shop: null,
+    fired: [] as Array<{ eventName: string; count: number }>,
+  };
+  if (!connection?.newestDay) return nothing;
+  const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
+  if (!now) return nothing;
+  const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
+  const total = blank("");
+  for (const row of now.rows) addInto(total, row);
+  const was = before ? blank("") : null;
+  if (was && before) for (const row of before.rows) addInto(was, row);
+  const valueIn = (row: ListRow, event: Counted) => conversionsOf(row, [event]).value;
+  const kinds = countedOf(connection).map((event) => {
+    const count = total.counts.get(event.eventName) ?? 0;
+    const held = connection.events?.find((one) => one.eventName === event.eventName);
+    const purchase = event.eventName === PURCHASE_EVENT;
+    const setIn = purchase ? "REVENUE" as const : event.fromAnalytics ? "ANALYTICS" as const : event.hakken !== null ? "HAKKEN" as const : null;
+    const value = purchase ? total.revenue
+      : event.fromAnalytics ? total.values.get(event.eventName) ?? 0
+      : event.hakken !== null ? Math.round(count * event.hakken * 100) : null;
+    return {
+      eventName: event.eventName,
+      count,
+      countBefore: was ? was.counts.get(event.eventName) ?? 0 : null,
+      each: purchase ? (count > 0 ? Math.round(total.revenue / count) : null)
+        : event.fromAnalytics ? Math.round((held?.analyticsValue ?? 0) * 100)
+        : event.hakken !== null ? Math.round(event.hakken * 100) : null,
+      setIn,
+      value,
+      valueBefore: was && setIn !== null ? valueIn(was, event) : null,
+    };
+  });
+  const isShop = total.purchases > 0 || (connection.events ?? []).some((event) => event.eventName === PURCHASE_EVENT && event.counted);
+  // Every key event is kept as a column (§12): those not counted are counted here too, for the box.
+  const fired = (connection.events ?? [])
+    .filter((event) => !event.counted)
+    .map((event) => ({ eventName: event.eventName, count: total.counts.get(event.eventName) ?? 0 }))
+    .filter((event) => event.count > 0)
+    .sort((left, right) => right.count - left.count || left.eventName.localeCompare(right.eventName));
+  return {
+    preparing: false,
+    from: now.from,
+    to: now.to,
+    visits: total.visits,
+    visitsBefore: was ? was.visits : null,
+    kinds,
+    shop: isShop ? { purchases: total.purchases, revenue: total.revenue, purchasesBefore: was ? was.purchases : null, revenueBefore: was ? was.revenue : null } : null,
+    fired,
+  };
+}, conversionsSees);
 
 // ---------------------------------------------------------------------------
 // The section's websites

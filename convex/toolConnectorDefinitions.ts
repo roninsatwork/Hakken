@@ -584,6 +584,65 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    // Every Google Analytics screen and figure, for the Assistant
+    // (docs/plans/active/google-analytics-plan.md §18.6.8). Its own connector,
+    // as the charts and the advice are, so it reaches an Assistant already installed.
+    key: "assistant-analytics",
+    name: "Assistant Google Analytics",
+    description:
+      "Lets the Assistant read every Google Analytics screen of the company's own websites, and who is on one right now, through the same reads the screens use.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Read Google Analytics",
+        description:
+          "One Google Analytics screen of one of the company's own websites, over its last 7, 30 or 90 days or 12 months (365), with the figures the screen shows and its link. Screens: overview (visits, page views, people, conversions and value against the span before, visits by channel, what changed most); channels; channel (key: the channel's name, its sources); campaigns and adKeywords (visits from tagged links); landingPages; landingPage (key: the page's address or path, with where its visits came from); allPages; page (key: address or path, with the page or website visitors were on just before); events; event (key: Google's event name — click, scroll, form_submit — with what it was about, the pages it happened on and the people who converted after it); conversions; visitors (list: visitorType, browser, system, age, gender or interest); products (a shop's four steps and each product); heroes (each landing page from Google's results to its money). Leave device out for every device; country is one of the website's other home countries, left out for the main one. Give the figures with the link returned; money is in the currency returned.",
+        handlerMapping: "assistant.googleAnalytics",
+        modelName: "read_google_analytics",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "screen", "days"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
+            screen: { type: "string", enum: ["overview", "channels", "channel", "campaigns", "adKeywords", "landingPages", "landingPage", "allPages", "page", "events", "event", "conversions", "visitors", "products", "heroes"] },
+            days: { type: "number", description: "7, 30, 90 or 365." },
+            device: { type: "string", enum: ["desktop", "mobile", "tablet"], description: "One device. Leave out for every device." },
+            country: { type: "string", description: "Another home country of the website, as a three-letter code (fra). Leave out for the main one." },
+            key: { type: "string", description: "For channel, landingPage, page and event: the channel, the page's address or path, or the event's Google name." },
+            search: { type: "string", description: "Words to find in a list's names. Optional." },
+            list: { type: "string", enum: ["visitorType", "browser", "system", "age", "gender", "interest"], description: "For visitors: which list. Browsers if left out." },
+          },
+        }),
+      },
+      {
+        name: "Read Google Analytics live",
+        description:
+          "Who is on one of the company's own websites right now and in the last 30 minutes, from Google's live figures, asked just now and never kept: on the website now, people, page views and conversions in the last 30 minutes, the towns they are in, and pages (by title), places, devices or events. Say the figures are live, with the link returned.",
+        handlerMapping: "assistant.googleAnalytics.live",
+        modelName: "read_google_analytics_live",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
+            device: { type: "string", enum: ["desktop", "mobile", "tablet"], description: "One device. Leave out for every device." },
+            list: { type: "string", enum: ["pages", "places", "devices", "events"], description: "Which list to give. Pages if left out." },
+          },
+        }),
+      },
+    ],
+  },
+  {
     // What Hakken sees on a website's screens, for the Assistant
     // (docs/plans/active/search-console-volatility-plan.md §8, HS7). Its own
     // connector, as the charts are, so it reaches an Assistant already installed.

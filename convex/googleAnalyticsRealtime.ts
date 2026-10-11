@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import type { ActionCtx } from "./_generated/server";
 import { tenantAction } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
@@ -65,64 +66,76 @@ export const askGoogleAnalyticsRealtime = tenantAction({
   handler: async (ctx, args): Promise<LiveAnswer> => {
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId: companyId as Id<"companies">, siteId: args.siteId, period: "30", country: args.country });
-    if (!found) return { ok: false as const, problem: "NOT_CONNECTED" as const };
-    const opened = await openSession(ctx, found.connectionId);
-    if (!opened.ok) return { ok: false as const, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" as const : "NOT_CONNECTED" as const };
-    const base = { countries: [found.target.country], ...(args.device ? { device: args.device } : {}) };
-    const chosen: RealtimeAsk | null = args.list === "devices" ? { ...base, dimensions: ["deviceCategory"], metrics: ["activeUsers"] }
-      : args.list === "events" ? { ...base, dimensions: ["eventName"], metrics: ["activeUsers", "eventCount"] } : null;
-    const asks: Record<string, RealtimeAsk> = {
-      now: { ...base, dimensions: [], metrics: ["activeUsers"], minutes: { from: 4, to: 0 } },
-      last: { ...base, dimensions: [], metrics: ["activeUsers", "screenPageViews"] },
-      minutes: { ...base, dimensions: ["minutesAgo"], metrics: ["activeUsers"] },
-      places: { ...base, dimensions: ["city"], metrics: ["activeUsers"] },
-      pages: { ...base, dimensions: ["unifiedScreenName"], metrics: ["activeUsers", "screenPageViews"] },
-      ...(chosen ? { chosen } : {}),
-      ...(found.counted.length > 0 ? { conversions: { ...base, dimensions: ["eventName", "minutesAgo"], metrics: ["eventCount"], eventNames: found.counted } } : {}),
-    };
-    // Asked side by side: one minute's figures together.
-    const answered = await Promise.all(Object.entries(asks).map(async ([key, live]) => [key, await askRealtime(opened.session, found.target.property!, live)] as const));
-    const rowsOf: Record<string, Array<{ keys: string[]; values: number[] }>> = {};
-    for (const [key, answer] of answered) {
-      if (!answer.ok) return { ok: false as const, problem: answer.reason === "BUSY" || answer.reason === "UNREACHABLE" ? "GOOGLE_BUSY" as const : "GOOGLE_REFUSED" as const };
-      rowsOf[key] = answer.rows;
-    }
-    const total = (key: string, at = 0) => rowsOf[key]?.[0]?.values[at] ?? 0;
-    const listed = (key: string, people: number, views: number | null, times: number | null): LiveRow[] => (rowsOf[key] ?? [])
-      .map((row) => ({ name: row.keys[0] ?? "", people: row.values[people] ?? 0, views: views === null ? 0 : row.values[views] ?? 0, times: times === null ? 0 : row.values[times] ?? 0 }))
-      .sort((left, right) => right.people - left.people || right.views - left.views || right.times - left.times);
-    const minutes = Array.from({ length: MINUTES }, () => 0);
-    for (const row of rowsOf.minutes ?? []) {
-      const ago = Number(row.keys[0]);
-      if (Number.isInteger(ago) && ago >= 0 && ago < MINUTES) minutes[MINUTES - 1 - ago] += row.values[0] ?? 0;
-    }
-    // The newest conversion: the fewest minutes ago.
-    let count = 0;
-    let newest: { eventName: string; minutesAgo: number } | null = null;
-    for (const row of rowsOf.conversions ?? []) {
-      const happened = row.values[0] ?? 0;
-      if (happened <= 0) continue;
-      count += happened;
-      const ago = Number(row.keys[1]);
-      if (!newest || ago < newest.minutesAgo) newest = { eventName: row.keys[0] ?? "", minutesAgo: ago };
-    }
-    const pages = listed("pages", 0, 1, null);
-    const places = listed("places", 0, null, null);
-    const rows = args.list === "pages" ? pages : args.list === "places" ? places : listed("chosen", 0, null, args.list === "events" ? 1 : null);
-    const now = total("now");
-    const people = total("last");
-    return {
-      ok: true as const,
-      askedAt: Date.now(),
-      now,
-      people,
-      views: total("last", 1),
-      conversions: { count, eventName: newest?.eventName ?? null, minutesAgo: newest?.minutesAgo ?? null },
-      minutes,
-      places,
-      rows,
-      seen: liveSees({ now, people, topPage: pages[0] ? { title: pages[0].name, people: pages[0].people } : null, conversion: newest }),
-    };
+    return await askLiveFigures(ctx, companyId as Id<"companies">, args);
   },
 });
+
+/**
+ * One minute's live figures for a company's own website: the Live page's ask,
+ * and Ask Hakken's (google-analytics-plan.md §18.6.8). Nothing is kept.
+ */
+export async function askLiveFigures(
+  ctx: ActionCtx,
+  companyId: Id<"companies">,
+  args: { siteId: Id<"companyWebsites">; device: string; country?: string; list: (typeof LIVE_LISTS)[number] },
+): Promise<LiveAnswer> {
+  const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId, siteId: args.siteId, period: "30", country: args.country });
+  if (!found) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+  const opened = await openSession(ctx, found.connectionId);
+  if (!opened.ok) return { ok: false as const, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" as const : "NOT_CONNECTED" as const };
+  const base = { countries: [found.target.country], ...(args.device ? { device: args.device } : {}) };
+  const chosen: RealtimeAsk | null = args.list === "devices" ? { ...base, dimensions: ["deviceCategory"], metrics: ["activeUsers"] }
+    : args.list === "events" ? { ...base, dimensions: ["eventName"], metrics: ["activeUsers", "eventCount"] } : null;
+  const asks: Record<string, RealtimeAsk> = {
+    now: { ...base, dimensions: [], metrics: ["activeUsers"], minutes: { from: 4, to: 0 } },
+    last: { ...base, dimensions: [], metrics: ["activeUsers", "screenPageViews"] },
+    minutes: { ...base, dimensions: ["minutesAgo"], metrics: ["activeUsers"] },
+    places: { ...base, dimensions: ["city"], metrics: ["activeUsers"] },
+    pages: { ...base, dimensions: ["unifiedScreenName"], metrics: ["activeUsers", "screenPageViews"] },
+    ...(chosen ? { chosen } : {}),
+    ...(found.counted.length > 0 ? { conversions: { ...base, dimensions: ["eventName", "minutesAgo"], metrics: ["eventCount"], eventNames: found.counted } } : {}),
+  };
+  // Asked side by side: one minute's figures together.
+  const answered = await Promise.all(Object.entries(asks).map(async ([key, live]) => [key, await askRealtime(opened.session, found.target.property!, live)] as const));
+  const rowsOf: Record<string, Array<{ keys: string[]; values: number[] }>> = {};
+  for (const [key, answer] of answered) {
+    if (!answer.ok) return { ok: false as const, problem: answer.reason === "BUSY" || answer.reason === "UNREACHABLE" ? "GOOGLE_BUSY" as const : "GOOGLE_REFUSED" as const };
+    rowsOf[key] = answer.rows;
+  }
+  const total = (key: string, at = 0) => rowsOf[key]?.[0]?.values[at] ?? 0;
+  const listed = (key: string, people: number, views: number | null, times: number | null): LiveRow[] => (rowsOf[key] ?? [])
+    .map((row) => ({ name: row.keys[0] ?? "", people: row.values[people] ?? 0, views: views === null ? 0 : row.values[views] ?? 0, times: times === null ? 0 : row.values[times] ?? 0 }))
+    .sort((left, right) => right.people - left.people || right.views - left.views || right.times - left.times);
+  const minutes = Array.from({ length: MINUTES }, () => 0);
+  for (const row of rowsOf.minutes ?? []) {
+    const ago = Number(row.keys[0]);
+    if (Number.isInteger(ago) && ago >= 0 && ago < MINUTES) minutes[MINUTES - 1 - ago] += row.values[0] ?? 0;
+  }
+  // The newest conversion: the fewest minutes ago.
+  let count = 0;
+  let newest: { eventName: string; minutesAgo: number } | null = null;
+  for (const row of rowsOf.conversions ?? []) {
+    const happened = row.values[0] ?? 0;
+    if (happened <= 0) continue;
+    count += happened;
+    const ago = Number(row.keys[1]);
+    if (!newest || ago < newest.minutesAgo) newest = { eventName: row.keys[0] ?? "", minutesAgo: ago };
+  }
+  const pages = listed("pages", 0, 1, null);
+  const places = listed("places", 0, null, null);
+  const rows = args.list === "pages" ? pages : args.list === "places" ? places : listed("chosen", 0, null, args.list === "events" ? 1 : null);
+  const now = total("now");
+  const people = total("last");
+  return {
+    ok: true as const,
+    askedAt: Date.now(),
+    now,
+    people,
+    views: total("last", 1),
+    conversions: { count, eventName: newest?.eventName ?? null, minutesAgo: newest?.minutesAgo ?? null },
+    minutes,
+    places,
+    rows,
+    seen: liveSees({ now, people, topPage: pages[0] ? { title: pages[0].name, people: pages[0].people } : null, conversion: newest }),
+  };
+}

@@ -188,6 +188,9 @@ describe("the Assistant's company figures", () => {
       "assistant.ai.mentions",
       // Its chart (hakken-tasks-plan.md, item 2.1).
       "assistant.chart",
+      // Every Google Analytics screen, and Live, from their own connector (google-analytics-plan.md §18.6.8).
+      "assistant.googleAnalytics",
+      "assistant.googleAnalytics.live",
       "assistant.searchConsole",
       "assistant.site.overview",
       // Its Hakken task tools, from their own connector (hakken-tasks-plan.md, item 1.2).

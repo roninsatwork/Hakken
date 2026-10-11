@@ -1,5 +1,6 @@
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
+import { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
 
 /**
  * The Assistant's company-figure reads, as tool handlers
@@ -18,6 +19,12 @@ const NO_COMPANY_FIGURES = {
 function nearestPeriod(days: number | undefined): 7 | 30 | 90 {
   if (days === undefined || days <= 7) return 7;
   return days <= 30 ? 30 : 90;
+}
+
+/** Google Analytics is read over its ready-made periods: 7, 30 or 90 days, or 12 months, the nearest asked for. */
+function analyticsPeriod(days: number | undefined): 7 | 30 | 90 | 365 {
+  if (days === undefined || days <= 7) return 7;
+  return days <= 30 ? 30 : days <= 90 ? 90 : 365;
 }
 
 function stringArg(args: Record<string, unknown>, key: string) {
@@ -79,6 +86,45 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     return await input.ctx.runQuery(internal.assistantReads.adviceInternal, {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
+    });
+  },
+  /**
+   * Every Google Analytics screen of the company's own websites, and Live
+   * (docs/plans/active/google-analytics-plan.md §18.6.8): read through the
+   * screens' own reads (`assistantAnalyticsReads.ts`).
+   */
+  "assistant.googleAnalytics": async (input) => {
+    if (!input.companyId) return NO_COMPANY_FIGURES;
+    const screen = stringArg(input.args, "screen");
+    if (!(ANALYTICS_SCREENS as readonly string[]).includes(screen)) {
+      return { ok: false, problem: `screen must be one of: ${ANALYTICS_SCREENS.join(", ")}.` };
+    }
+    const device = optionalStringArg(input.args, "device");
+    const list = optionalStringArg(input.args, "list");
+    const country = optionalStringArg(input.args, "country");
+    const key = optionalStringArg(input.args, "key");
+    const search = optionalStringArg(input.args, "search");
+    return await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, {
+      companyId: input.companyId,
+      website: stringArg(input.args, "website"),
+      screen: screen as (typeof ANALYTICS_SCREENS)[number],
+      days: analyticsPeriod(numberArg(input.args, "days")),
+      ...(device === "desktop" || device === "mobile" || device === "tablet" ? { device } : {}),
+      ...(country ? { country: country.toLowerCase() } : {}),
+      ...(key ? { key } : {}),
+      ...(search ? { search } : {}),
+      ...(list === "visitorType" || list === "browser" || list === "system" || list === "age" || list === "gender" || list === "interest" ? { list } : {}),
+    });
+  },
+  "assistant.googleAnalytics.live": async (input) => {
+    if (!input.companyId) return NO_COMPANY_FIGURES;
+    const device = optionalStringArg(input.args, "device");
+    const list = optionalStringArg(input.args, "list");
+    return await input.ctx.runAction(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, {
+      companyId: input.companyId,
+      website: stringArg(input.args, "website"),
+      ...(device === "desktop" || device === "mobile" || device === "tablet" ? { device } : {}),
+      ...(list === "pages" || list === "places" || list === "devices" || list === "events" ? { list } : {}),
     });
   },
   "assistant.tasks.open": async (input) => {

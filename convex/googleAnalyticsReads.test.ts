@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import type { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -417,6 +418,74 @@ describe("Live (GA34)", () => {
     expect(phones).toMatchObject({ ok: true, now: 1, people: 2, rows: [{ name: "generate_lead", people: 1, times: 1 }] });
     // Nothing is kept: no held list, no row of any kind.
     expect(await kept()).toBe(before);
+  });
+});
+
+describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
+  /** An answer's own fields, whatever screen it is: the test reads what it asked for. */
+  const fields = (answer: unknown) => answer as Record<string, unknown> & { rows?: Array<Record<string, unknown>> };
+
+  test("each screen's figures as the screen shows them, with its link; a website not the company's has none", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    const read = async (screen: (typeof ANALYTICS_SCREENS)[number], extra: Record<string, string> = {}) =>
+      fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "https://www.acme-shop.test/", screen, days: 30, ...extra }));
+
+    const overview = await read("overview");
+    const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" });
+    expect(overview).toMatchObject({
+      ok: true, website: "acme-shop.test", screen: "overview", currency: "GBP",
+      now: { visits: shown.now!.visits, pageViews: shown.now!.views, conversions: shown.now!.conversions, value: shown.now!.value / 100 },
+      theSpanBefore: { visits: shown.before!.visits },
+      link: `/app/analytics/${siteId}?period=30`,
+    });
+
+    const landing = await read("landingPages");
+    const landingShown = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
+    expect(landing.rows!.map((row) => [row.name, row.visits, row.conversions])).toEqual(landingShown.rows.map((row) => [row.label.replace("https://www.acme-shop.test", ""), row.visits, row.conversions]));
+
+    const channel = await read("channel", { key: "Organic Search" });
+    expect(channel.rows!.map((row) => row.name)).toEqual(["google"]);
+    expect(channel.link).toBe(`/app/analytics/${siteId}/channels/channel?period=30&key=Organic+Search`);
+
+    const page = await read("page", { key: "https://www.acme-shop.test/ai-agency/" });
+    expect(page).toMatchObject({ ok: true, page: "https://www.acme-shop.test/ai-agency/", figures: { pageViews: 30 * 18 + 30 * 2 } });
+
+    const events = await read("events");
+    expect((events.events as Array<{ event: string; times: number }>).find((row) => row.event === "generate_lead")?.times).toBe(60);
+    const event = await read("event", { key: "generate_lead" });
+    expect(event).toMatchObject({ ok: true, event: "generate_lead", countsAsConversion: true, figures: { times: 60, timesBefore: 30 } });
+
+    const conversions = await read("conversions");
+    const conversionsShown = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "30", device: "" });
+    expect(conversions.kinds).toEqual(conversionsShown.kinds.map((kind) => ({ event: kind.eventName, count: kind.count, countBefore: kind.countBefore, value: kind.value === null ? null : kind.value / 100 })));
+
+    expect(await read("visitors")).toMatchObject({ ok: true, figures: { visits: 30 * 33 }, googleSignals: "off" });
+    expect(await read("products")).toMatchObject({ ok: false });
+    expect(await read("heroes")).toMatchObject({ ok: true, screen: "heroes" });
+
+    // Another company's website, or none at all: never read.
+    const stranger = fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "rival.test", screen: "overview", days: 30 }));
+    expect(stranger).toMatchObject({ ok: false });
+  });
+
+  test("Live, asked of Google as the Live page asks it, and kept no more than it is", async () => {
+    const t = harness();
+    const { siteId } = await collected(t, growing());
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    const google = fakeGoogle(growing());
+    google.live = [
+      { minutesAgo: 1, city: "London", page: "AI Agency", device: "desktop", views: 3 },
+      { minutesAgo: 12, city: "Leeds", page: "Home", device: "mobile", views: 1, events: { generate_lead: 1 } },
+    ];
+    const answer = fields(await t.action(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, { companyId, website: "acme-shop.test" }));
+    expect(answer).toMatchObject({
+      ok: true, website: "acme-shop.test", onTheWebsiteNow: 1, peopleInTheLast30Minutes: 2, pageViewsInTheLast30Minutes: 4,
+      conversionsInTheLast30Minutes: { count: 1, eventName: "generate_lead", minutesAgo: 12 },
+      link: `/app/analytics/${siteId}/live`,
+    });
+    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).length)).toBe(0);
   });
 });
 

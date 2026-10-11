@@ -1,6 +1,6 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -20,6 +20,8 @@ const DAYS_CHARTED = 30;
 /** Its records: a part a day, with room to spare. */
 const CHART_RECORDS_READ = 100;
 
+const analyticsChartArgs = { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
+
 /**
  * The website's figures a day at a time over the span chosen, for one device
  * or every device: from the days kept (§4.3) for up to 30 days, from the long
@@ -27,7 +29,7 @@ const CHART_RECORDS_READ = 100;
  * event's own line comes with it, for Conversions' chart.
  */
 export const analyticsChart = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
+  args: analyticsChartArgs,
   returns: v.object({
     points: v.array(v.object({
       day: v.string(),
@@ -42,38 +44,41 @@ export const analyticsChart = tenantQuery({
     /** The counted events, in the order of each point's `events`. */
     events: v.array(v.string()),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    const counted = connection ? countedOf(connection) : [];
-    const events = counted.map((event) => event.eventName);
-    if (!connection?.newestDay) return { points: [], events };
-    const point = (day: string, row: ListRow) => {
-      const { conversions, value } = conversionsOf(row, counted);
-      return { day, visits: row.visits, engaged: row.engaged, views: row.views, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
-    };
-    // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
-    if (Number(args.period) <= DAYS_CHARTED && country === "") {
-      const first = shiftDay(connection.newestDay, -(Number(args.period) - 1));
-      const parts = await ctx.db
-        .query("googleAnalyticsDays")
-        .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "total").eq("device", args.device).gte("day", first))
-        .take(CHART_RECORDS_READ);
-      return { points: parts.map((part) => point(part.day, unpackPart(part as PackedPart)[0] ?? blank(""))), events };
-    }
-    const series = await readSlot(ctx, holdId, slotKey("series", args.period, "NOW", args.device, country));
-    return { points: (series?.rows ?? []).map((row) => point(row.key, row)), events };
-  },
+  handler: async (ctx, args) => await readChart(ctx, args),
 });
+
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyticsChartArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  const counted = connection ? countedOf(connection) : [];
+  const events = counted.map((event) => event.eventName);
+  if (!connection?.newestDay) return { points: [], events };
+  const point = (day: string, row: ListRow) => {
+    const { conversions, value } = conversionsOf(row, counted);
+    return { day, visits: row.visits, engaged: row.engaged, views: row.views, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
+  };
+  // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
+  if (Number(args.period) <= DAYS_CHARTED && country === "") {
+    const first = shiftDay(connection.newestDay, -(Number(args.period) - 1));
+    const parts = await ctx.db
+      .query("googleAnalyticsDays")
+      .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "total").eq("device", args.device).gte("day", first))
+      .take(CHART_RECORDS_READ);
+    return { points: parts.map((part) => point(part.day, unpackPart(part as PackedPart)[0] ?? blank(""))), events };
+  }
+  const series = await readSlot(ctx, holdId, slotKey("series", args.period, "NOW", args.device, country));
+  return { points: (series?.rows ?? []).map((row) => point(row.key, row)), events };
+}
 
 /** Channels drawn as lines of their own on Channels' chart; the rest are one line, "everything else" (§18.2 board 16). */
 const CHANNEL_LINES = 4;
 
 /** The name a channel chart asked of Google live is held under: another home country's ends with its code. */
 export function channelSeriesAsk(period: string, from: string, to: string, device: string, country = ""): string {
-  return `channelSeries|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
+return `channelSeries|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
 /** A day and a channel's key, as one key of a live channel chart's rows (`googleAnalyticsLists.ts`). */

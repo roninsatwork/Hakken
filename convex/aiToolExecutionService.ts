@@ -70,6 +70,9 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.advice.read",
   // A chart under an answer, drawn from the Search Console figures a member can already open (hakken-tasks-plan.md, 2.1).
   "assistant.chart",
+  // Every Google Analytics screen and Live, as a member can already open them (google-analytics-plan.md §18.6.8).
+  "assistant.googleAnalytics",
+  "assistant.googleAnalytics.live",
   // A person's own Hakken tasks (hakken-tasks-plan.md, item 1.2): anyone in the
   // company may set one (Anthony, 2026-10-07). Each only proposes — the change
   // waits on the reply for their tap — and only ever for the run's own person.

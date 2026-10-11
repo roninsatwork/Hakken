@@ -1,6 +1,6 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages } from "./holdPageRefs";
 import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
@@ -69,6 +69,8 @@ function timesADay(series: Held, events: readonly string[]): Array<{ day: string
 /** The change in times on the span before; null when there is none to compare. */
 const changeOf = (now: number, before: number | null | undefined) => (before ? (now - before) / before : null);
 
+const analyticsEventsArgs = { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
+
 /**
  * Events (§18.2 board 22): every event, by its own name and Google's, its
  * times, people and visits, whether it counts as a conversion — those that
@@ -76,7 +78,7 @@ const changeOf = (now: number, before: number | null | undefined) => (before ? (
  * clicks a day. A device chosen is asked of Google when the screen opens.
  */
 export const analyticsEvents = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
+  args: analyticsEventsArgs,
   returns: v.union(v.null(), v.object({
     /** No event list held yet: it comes in with the next collection. */
     preparing: v.boolean(),
@@ -87,58 +89,61 @@ export const analyticsEvents = tenantQuery({
     flags: flagsValidator,
     seen: seenValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    if (!connection?.newestDay) return null;
-    const counted = new Set(countedOf(connection).map((event) => event.eventName));
-    const nowList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
-    const beforeList = await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country);
-    const seriesList = await readFor(ctx, holdId, "eventSeries", args.period, "NOW", args.device, undefined, country);
-    const now = heldOf(nowList);
-    const before = heldOf(beforeList);
-    const series = heldOf(seriesList);
-    const live = nowList === "LIVE" || seriesList === "LIVE";
-    const byName = new Map((now?.rows ?? []).map((row) => [row.key, row]));
-    const was = new Map((before?.rows ?? []).map((row) => [row.key, row.times ?? 0]));
-    // What counts is listed even when it never happened: that is what the screen most wants said.
-    const names = now ? [...new Set([...byName.keys(), ...counted])] : [];
-    const rows = names.map((eventName) => {
-      const row = byName.get(eventName);
-      return {
-        eventName,
-        kind: eventKind(eventName, counted.has(eventName)),
-        counted: counted.has(eventName),
-        times: row?.times ?? 0,
-        people: row?.people ?? 0,
-        visits: row?.visits ?? 0,
-        timesBefore: before ? was.get(eventName) ?? 0 : null,
-      };
-    }).sort((left, right) => right.times - left.times || left.eventName.localeCompare(right.eventName));
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
-    const visits = total?.rows[0]?.visits ?? 0;
-    return {
-      preparing: nowList === null,
-      live,
-      rows,
-      points: series ? timesADay(series, ["scroll", "click"]).map(({ day, times: [scroll, click] }) => ({ day, scroll, click })) : [],
-      flags: { folded: now?.folded ?? false, thresholded: now?.thresholded ?? false, cut: now?.cut ?? false },
-      seen: now && !live ? eventsSees(rows, visits) : { says: [], steps: [] },
-    };
-  },
+  handler: async (ctx, args) => await readEvents(ctx, args),
 });
 
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export async function readEvents(ctx: SiteReader, args: ObjectType<typeof analyticsEventsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  if (!connection?.newestDay) return null;
+  const counted = new Set(countedOf(connection).map((event) => event.eventName));
+  const nowList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
+  const beforeList = await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country);
+  const seriesList = await readFor(ctx, holdId, "eventSeries", args.period, "NOW", args.device, undefined, country);
+  const now = heldOf(nowList);
+  const before = heldOf(beforeList);
+  const series = heldOf(seriesList);
+  const live = nowList === "LIVE" || seriesList === "LIVE";
+  const byName = new Map((now?.rows ?? []).map((row) => [row.key, row]));
+  const was = new Map((before?.rows ?? []).map((row) => [row.key, row.times ?? 0]));
+  // What counts is listed even when it never happened: that is what the screen most wants said.
+  const names = now ? [...new Set([...byName.keys(), ...counted])] : [];
+  const rows = names.map((eventName) => {
+    const row = byName.get(eventName);
+    return {
+      eventName,
+      kind: eventKind(eventName, counted.has(eventName)),
+      counted: counted.has(eventName),
+      times: row?.times ?? 0,
+      people: row?.people ?? 0,
+      visits: row?.visits ?? 0,
+      timesBefore: before ? was.get(eventName) ?? 0 : null,
+    };
+  }).sort((left, right) => right.times - left.times || left.eventName.localeCompare(right.eventName));
+  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
+  const visits = total?.rows[0]?.visits ?? 0;
+  return {
+    preparing: nowList === null,
+    live,
+    rows,
+    points: series ? timesADay(series, ["scroll", "click"]).map(({ day, times: [scroll, click] }) => ({ day, scroll, click })) : [],
+    flags: { folded: now?.folded ?? false, thresholded: now?.thresholded ?? false, cut: now?.cut ?? false },
+    seen: now && !live ? eventsSees(rows, visits) : { says: [], steps: [] },
+  };
+}
+
 const aboutRowValidator = v.object({
-  /** The link, file, words, depth or video; a page's number on the pages it happened on. */
-  key: v.string(),
-  /** As shown: the page's address on the pages it happened on. */
-  label: v.string(),
-  title: v.optional(v.string()),
-  times: v.number(),
-  people: v.number(),
-  change: v.union(v.number(), v.null()),
+/** The link, file, words, depth or video; a page's number on the pages it happened on. */
+key: v.string(),
+/** As shown: the page's address on the pages it happened on. */
+label: v.string(),
+title: v.optional(v.string()),
+times: v.number(),
+people: v.number(),
+change: v.union(v.number(), v.null()),
 });
 
 /** A detail or page list held, against its span before, as the screen shows it. */
@@ -150,6 +155,8 @@ function aboutRows(now: Held | null, before: Held | null): Array<{ key: string; 
     .sort((left, right) => right.times - left.times);
 }
 
+const analyticsEventArgs = { siteId: v.id("companyWebsites"), event: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
+
 /**
  * An event's own screen (§18.2 board 23): its times, people and visits
  * against the span before and the website's, its times a day, and — asked of
@@ -157,7 +164,7 @@ function aboutRows(now: Held | null, before: Held | null): Array<{ key: string; 
  * was about by its kind and the pages it happened on; `live` until they are.
  */
 export const analyticsEvent = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), event: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
+  args: analyticsEventArgs,
   returns: v.union(v.null(), v.object({
     eventName: v.string(),
     kind: kindValidator,
@@ -184,68 +191,71 @@ export const analyticsEvent = tenantQuery({
     after: v.union(v.null(), v.object({ did: v.number(), converted: v.number() })),
     seen: seenValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    if (!connection?.newestDay) return null;
-    const counts = countedOf(connection).map((event) => event.eventName);
-    const counted = counts.includes(args.event);
-    const counting = counts.some((name) => name !== args.event);
-    const now = heldOf(await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country));
-    const before = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
-    const series = heldOf(await readFor(ctx, holdId, "eventSeries", args.period, "NOW", args.device, undefined, country));
-    const row = now?.rows.find((one) => one.key === args.event) ?? null;
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
-    const whole = total?.rows[0] ?? null;
-    // Named as the live ask names them: by the dates of every device's ready-made period.
-    const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-    const named = (kind: "detail" | "pages" | "funnel", which: "NOW" | "BEFORE") =>
-      eventAsk(kind, which, args.event, args.period, every?.from ?? "", every?.to ?? "", args.device, country);
-    const detail = EVENT_DETAIL[args.event] ?? null;
-    const detailNow = detail ? await readLive(ctx, holdId, named("detail", "NOW")) : null;
-    const detailBefore = detail ? await readLive(ctx, holdId, named("detail", "BEFORE")) : null;
-    const pagesNow = await readLive(ctx, holdId, named("pages", "NOW"));
-    const pagesBefore = await readLive(ctx, holdId, named("pages", "BEFORE"));
-    const funnel = counting ? await readLive(ctx, holdId, named("funnel", "NOW")) : null;
-    const live = !pagesNow || !pagesBefore || (detail !== null && (!detailNow || !detailBefore)) || (counting && !funnel);
-    // A link as people read it — `linkedin.com/company/ronins` — its whole address kept as its key, for the link itself.
-    const reached = (key: string) => funnel?.rows.find((one) => one.key === key)?.people ?? 0;
-    // Google refusing its funnel report is held as `refused`: the figure unsaid, the rest of the screen shown.
-    const after = funnel && !funnel.rows.some((one) => one.key === "refused") ? { did: reached("did"), converted: reached("then") } : null;
-    const about = aboutRows(detailNow, detailBefore).map((one) => (detail === "linkUrl" ? { ...one, label: one.key.replace(/^https?:\/\//i, "").replace(/^www\./i, "") } : one));
-    const listed = aboutRows(pagesNow, pagesBefore);
-    const addresses = listed.length > 0 ? await decodePages(ctx, holdId, listed.map((one) => one.key)) : [];
-    const titles = await titlesOf(ctx, holdId, addresses);
-    const pages = listed.map((one, at) => {
-      const title = titles.get(addresses[at]);
-      return { ...one, label: addresses[at] ?? one.key, ...(title ? { title } : {}) };
-    });
-    const times = row?.times ?? 0;
-    const timesBefore = before ? before.rows.find((one) => one.key === args.event)?.times ?? 0 : null;
-    return {
-      eventName: args.event,
-      kind: eventKind(args.event, counted),
-      counted,
-      detail,
-      figures: {
-        times,
-        timesBefore,
-        people: row?.people ?? 0,
-        peopleShare: whole && whole.people > 0 ? (row?.people ?? 0) / whole.people : null,
-        visits: row?.visits ?? 0,
-        visitsShare: whole && whole.visits > 0 ? (row?.visits ?? 0) / whole.visits : null,
-      },
-      points: series ? timesADay(series, [args.event]).map(({ day, times: [count] }) => ({ day, times: count })) : [],
-      live,
-      about,
-      pages,
-      counting,
-      after,
-      seen: live ? { says: [], steps: [] } : eventSees({
-        eventName: args.event, detail, times, timesBefore, people: row?.people ?? 0, about, pageViews: whole?.views ?? 0, after,
-      }),
-    };
-  },
+  handler: async (ctx, args) => await readEvent(ctx, args),
 });
+
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export async function readEvent(ctx: SiteReader, args: ObjectType<typeof analyticsEventArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  if (!connection?.newestDay) return null;
+  const counts = countedOf(connection).map((event) => event.eventName);
+  const counted = counts.includes(args.event);
+  const counting = counts.some((name) => name !== args.event);
+  const now = heldOf(await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country));
+  const before = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
+  const series = heldOf(await readFor(ctx, holdId, "eventSeries", args.period, "NOW", args.device, undefined, country));
+  const row = now?.rows.find((one) => one.key === args.event) ?? null;
+  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
+  const whole = total?.rows[0] ?? null;
+  // Named as the live ask names them: by the dates of every device's ready-made period.
+  const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+  const named = (kind: "detail" | "pages" | "funnel", which: "NOW" | "BEFORE") =>
+    eventAsk(kind, which, args.event, args.period, every?.from ?? "", every?.to ?? "", args.device, country);
+  const detail = EVENT_DETAIL[args.event] ?? null;
+  const detailNow = detail ? await readLive(ctx, holdId, named("detail", "NOW")) : null;
+  const detailBefore = detail ? await readLive(ctx, holdId, named("detail", "BEFORE")) : null;
+  const pagesNow = await readLive(ctx, holdId, named("pages", "NOW"));
+  const pagesBefore = await readLive(ctx, holdId, named("pages", "BEFORE"));
+  const funnel = counting ? await readLive(ctx, holdId, named("funnel", "NOW")) : null;
+  const live = !pagesNow || !pagesBefore || (detail !== null && (!detailNow || !detailBefore)) || (counting && !funnel);
+  // A link as people read it — `linkedin.com/company/ronins` — its whole address kept as its key, for the link itself.
+  const reached = (key: string) => funnel?.rows.find((one) => one.key === key)?.people ?? 0;
+  // Google refusing its funnel report is held as `refused`: the figure unsaid, the rest of the screen shown.
+  const after = funnel && !funnel.rows.some((one) => one.key === "refused") ? { did: reached("did"), converted: reached("then") } : null;
+  const about = aboutRows(detailNow, detailBefore).map((one) => (detail === "linkUrl" ? { ...one, label: one.key.replace(/^https?:\/\//i, "").replace(/^www\./i, "") } : one));
+  const listed = aboutRows(pagesNow, pagesBefore);
+  const addresses = listed.length > 0 ? await decodePages(ctx, holdId, listed.map((one) => one.key)) : [];
+  const titles = await titlesOf(ctx, holdId, addresses);
+  const pages = listed.map((one, at) => {
+    const title = titles.get(addresses[at]);
+    return { ...one, label: addresses[at] ?? one.key, ...(title ? { title } : {}) };
+  });
+  const times = row?.times ?? 0;
+  const timesBefore = before ? before.rows.find((one) => one.key === args.event)?.times ?? 0 : null;
+  return {
+    eventName: args.event,
+    kind: eventKind(args.event, counted),
+    counted,
+    detail,
+    figures: {
+      times,
+      timesBefore,
+      people: row?.people ?? 0,
+      peopleShare: whole && whole.people > 0 ? (row?.people ?? 0) / whole.people : null,
+      visits: row?.visits ?? 0,
+      visitsShare: whole && whole.visits > 0 ? (row?.visits ?? 0) / whole.visits : null,
+    },
+    points: series ? timesADay(series, [args.event]).map(({ day, times: [count] }) => ({ day, times: count })) : [],
+    live,
+    about,
+    pages,
+    counting,
+    after,
+    seen: live ? { says: [], steps: [] } : eventSees({
+      eventName: args.event, detail, times, timesBefore, people: row?.people ?? 0, about, pageViews: whole?.views ?? 0, after,
+    }),
+  };
+}

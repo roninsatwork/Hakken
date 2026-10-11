@@ -35,8 +35,11 @@ export const CHARTS_CONNECTOR_KEY = "assistant-charts";
 /** The connector holding What Hakken sees on a website's screens (search-console-volatility-plan.md §8, HS7). */
 export const ADVICE_CONNECTOR_KEY = "assistant-advice";
 
+/** The connector holding every Google Analytics screen and Live (google-analytics-plan.md §18.6.8). */
+export const ANALYTICS_CONNECTOR_KEY = "assistant-analytics";
+
 /** Every connector the Assistant carries, installed once and bound to it. */
-export const ASSISTANT_CONNECTOR_KEYS = [COMPANY_FIGURES_CONNECTOR_KEY, TASKS_CONNECTOR_KEY, CHARTS_CONNECTOR_KEY, ADVICE_CONNECTOR_KEY] as const;
+export const ASSISTANT_CONNECTOR_KEYS = [COMPANY_FIGURES_CONNECTOR_KEY, TASKS_CONNECTOR_KEY, CHARTS_CONNECTOR_KEY, ADVICE_CONNECTOR_KEY, ANALYTICS_CONNECTOR_KEY] as const;
 
 export type AgentReasoningEffortLevel = "LOW" | "MEDIUM" | "HIGH";
 

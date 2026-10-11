@@ -405,6 +405,9 @@ describe("ai tool execution service", () => {
       "assistant.ai.mentions",
       // A chart under an answer, from Search Console's own days (hakken-tasks-plan.md, item 2.1).
       "assistant.chart",
+      // Every Google Analytics screen, and Live, through the screens' own reads (google-analytics-plan.md §18.6.8).
+      "assistant.googleAnalytics",
+      "assistant.googleAnalytics.live",
       "assistant.searchConsole",
       "assistant.site.overview",
       // The Assistant's Hakken task tools (hakken-tasks-plan.md, item 1.2): each

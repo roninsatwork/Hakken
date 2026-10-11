@@ -1,8 +1,8 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -82,13 +82,15 @@ const filterArgs = {
   country: v.optional(v.string()),
 };
 
+const analyticsProductsArgs = filterArgs;
+
 /**
  * Products above its table (§18.2 board 25): the shop's four steps and its
  * revenue against the span before, the products bought a day, the categories
  * for the filter, and What Hakken sees over all of it.
  */
 export const analyticsProducts = tenantQuery({
-  args: filterArgs,
+  args: analyticsProductsArgs,
   returns: v.union(v.null(), v.object({
     shop: v.boolean(),
     preparing: v.boolean(),
@@ -100,52 +102,55 @@ export const analyticsProducts = tenantQuery({
     categories: v.array(v.string()),
     seen: seenValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    if (!connection?.newestDay) return null;
-    const none = { shop: false, preparing: false, missing: [], steps: null, before: null, points: [], categories: [], seen: { says: [], steps: [] } };
-    if (!isShop(connection)) return none;
-    const eventsList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
-    const eventsBefore = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
-    const seriesList = await readFor(ctx, holdId, "productSeries", args.period, "NOW", args.device, undefined, country);
-    const products = await productsOf(ctx, holdId, args, country);
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
-    const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
-    const missing = [
-      ...(eventsList === "LIVE" ? ["event" as const] : []),
-      ...(products.live ? ["product" as const] : []),
-      ...(seriesList === "LIVE" ? ["productSeries" as const] : []),
-    ];
-    const steps = stepsOf(heldOf(eventsList), total);
-    const series = heldOf(seriesList);
-    const byDay = new Map((series?.rows ?? []).map((row) => [row.key, row.purchases]));
-    const points: Array<{ day: string; bought: number }> = [];
-    if (series) for (let day = series.from; day && day <= series.to; day = shiftDay(day, 1)) points.push({ day, bought: byDay.get(day) ?? 0 });
-    return {
-      shop: true,
-      preparing: products.preparing,
-      missing,
-      steps,
-      before: stepsOf(eventsBefore, totalBefore),
-      points,
-      categories: [...new Set(products.rows.map((row) => row.category).filter((category) => category && !/^\(.*\)$/.test(category)))].sort(),
-      seen: steps && missing.length === 0 && !products.preparing
-        ? productsSees(steps, products.rows.map((row) => ({ name: row.name, looks: row.looks, bought: row.bought, revenue: row.revenue })))
-        : { says: [], steps: [] },
-    };
-  },
+  handler: async (ctx, args) => await readProducts(ctx, args),
 });
 
+/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+export async function readProducts(ctx: SiteReader, args: ObjectType<typeof analyticsProductsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  if (!connection?.newestDay) return null;
+  const none = { shop: false, preparing: false, missing: [], steps: null, before: null, points: [], categories: [], seen: { says: [], steps: [] } };
+  if (!isShop(connection)) return none;
+  const eventsList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
+  const eventsBefore = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
+  const seriesList = await readFor(ctx, holdId, "productSeries", args.period, "NOW", args.device, undefined, country);
+  const products = await productsOf(ctx, holdId, args, country);
+  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
+  const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
+  const missing = [
+    ...(eventsList === "LIVE" ? ["event" as const] : []),
+    ...(products.live ? ["product" as const] : []),
+    ...(seriesList === "LIVE" ? ["productSeries" as const] : []),
+  ];
+  const steps = stepsOf(heldOf(eventsList), total);
+  const series = heldOf(seriesList);
+  const byDay = new Map((series?.rows ?? []).map((row) => [row.key, row.purchases]));
+  const points: Array<{ day: string; bought: number }> = [];
+  if (series) for (let day = series.from; day && day <= series.to; day = shiftDay(day, 1)) points.push({ day, bought: byDay.get(day) ?? 0 });
+  return {
+    shop: true,
+    preparing: products.preparing,
+    missing,
+    steps,
+    before: stepsOf(eventsBefore, totalBefore),
+    points,
+    categories: [...new Set(products.rows.map((row) => row.category).filter((category) => category && !/^\(.*\)$/.test(category)))].sort(),
+    seen: steps && missing.length === 0 && !products.preparing
+      ? productsSees(steps, products.rows.map((row) => ({ name: row.name, looks: row.looks, bought: row.bought, revenue: row.revenue })))
+      : { says: [], steps: [] },
+  };
+}
+
 const SORTS: ListSorts<ProductRow, "name" | "looks" | "basket" | "bought" | "revenue" | "change"> = {
-  name: { value: (row) => row.name, first: "asc" },
-  looks: { value: (row) => row.looks, first: "desc" },
-  basket: { value: (row) => row.basket, first: "desc" },
-  bought: { value: (row) => row.bought, first: "desc" },
-  revenue: { value: (row) => row.revenue, first: "desc" },
-  change: { value: (row) => row.change, first: "desc" },
+name: { value: (row) => row.name, first: "asc" },
+looks: { value: (row) => row.looks, first: "desc" },
+basket: { value: (row) => row.basket, first: "desc" },
+bought: { value: (row) => row.bought, first: "desc" },
+revenue: { value: (row) => row.revenue, first: "desc" },
+change: { value: (row) => row.change, first: "desc" },
 };
 
 const listArgs = {
@@ -163,7 +168,7 @@ type ListArgs = {
 };
 
 /** Every product the filters leave, searched and in the order asked: the best seller first unless told otherwise. */
-async function productList(ctx: Reader, hold: Doc<"companyWebsites">, args: ListArgs) {
+export async function productList(ctx: Reader, hold: Doc<"companyWebsites">, args: ListArgs) {
   const country = await keptCountry(ctx, hold, args.country);
   const connection = await connectionOf(ctx, hold._id);
   if (!connection?.newestDay || !isShop(connection)) return { rows: [] as ProductRow[], live: false, preparing: false };
