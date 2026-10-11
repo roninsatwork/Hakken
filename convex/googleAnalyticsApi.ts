@@ -275,6 +275,47 @@ export async function runReport(accessToken: string, property: string, ask: Repo
   return { ok: true, rows, folded, thresholded, cut: rows.length < total, requests };
 }
 
+/** Google's funnel report: still in its `v1alpha` (§18.6.5). */
+const FUNNEL = "https://analyticsdata.googleapis.com/v1alpha";
+
+/** Who did one event and, any time after, one of a set of others: an event's screen's "people who converted after it". */
+export type FunnelAsk = Pick<ReportAsk, "startDate" | "endDate" | "hostNames" | "device" | "countries"> & { first: string; then: string[] };
+
+const eventStep = (eventName: string) => ({ funnelEventFilter: { eventName } });
+
+/**
+ * The people who did one event, and of them the people who did one of the
+ * others after it, at any time in the dates (Anthony, 2026-10-11: "Yes agree
+ * use the people"): Google's funnel report, two steps, the second not
+ * directly after the first. Google cannot join an event to conversions in the
+ * same visit, so this counts people, not visits.
+ */
+export async function runFunnelReport(accessToken: string, property: string, ask: FunnelAsk): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
+  const filter = filterOf({ ...ask, dimensions: [], metrics: [] });
+  const answer = await callGoogle(`${FUNNEL}/${property}:runFunnelReport`, accessToken, {
+    dateRanges: [{ startDate: ask.startDate, endDate: ask.endDate }],
+    funnel: {
+      steps: [
+        { name: "did", filterExpression: eventStep(ask.first) },
+        {
+          name: "then",
+          isDirectlyFollowedBy: false,
+          filterExpression: ask.then.length === 1 ? eventStep(ask.then[0]) : { orGroup: { expressions: ask.then.map(eventStep) } },
+        },
+      ],
+    },
+    ...(filter ? { dimensionFilter: filter } : {}),
+  });
+  if (!answer.ok) return answer;
+  const table = (answer.json as { funnelTable?: { rows?: { dimensionValues?: { value?: string }[]; metricValues?: { value?: string }[] }[] } }).funnelTable;
+  // Each step's row is named by its number and name ("1. did"); its first figure is the people who reached it.
+  const people = (step: string) => {
+    const row = (table?.rows ?? []).find((one) => (one.dimensionValues?.[0]?.value ?? "").endsWith(step));
+    return Number(row?.metricValues?.[0]?.value ?? 0) || 0;
+  };
+  return { ok: true, did: people("did"), then: people("then") };
+}
+
 export type SiteAddresses = {
   /** The addresses read: the website's own, `www.` or not. */
   addresses: string[];

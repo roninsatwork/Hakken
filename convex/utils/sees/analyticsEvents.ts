@@ -56,6 +56,8 @@ export type EventScreenFacts = {
   about: ReadonlyArray<{ label: string; times: number }>;
   /** The website's page views in the same dates: how far people scrolled is weighed against them. */
   pageViews: number;
+  /** The people who did it, and of them who converted after it; null when not known. */
+  after?: { did: number; converted: number } | null;
 };
 
 /** The sentence naming what an event was about most, by its kind. */
@@ -65,11 +67,12 @@ const TOP_CODE: Partial<Record<EventDetail, string>> = { linkUrl: "topLink", sea
  * An event's own screen (§18.7): how many times, by how many people, and the
  * change; then by its kind — the link clicked most and its share, the words
  * searched most, the share of views reaching the bottom, the file or video
- * most — and, for clicks, open links to other websites in a new tab; for site
- * searches, make sure a page answers the top search.
+ * most — and how many of the people who did it converted after it (Anthony,
+ * 2026-10-11); then, for clicks, open links to other websites in a new tab;
+ * for site searches, make sure a page answers the top search.
  */
 export function eventSees(facts: EventScreenFacts): Seen {
-  const { eventName, detail, times, timesBefore, people, about, pageViews } = facts;
+  const { eventName, detail, times, timesBefore, people, about, pageViews, after } = facts;
   if (times === 0) return seen([{ code: "neverHappened", text: eventName }]);
   const way = timesBefore === null || timesBefore === 0 ? "new" : times > timesBefore ? "up" : times < timesBefore ? "down" : "same";
   const top = about[0] ?? null;
@@ -78,6 +81,7 @@ export function eventSees(facts: EventScreenFacts): Seen {
     way === "new" ? { code: "timesNew", text: eventName, a: times, b: people } : { code: `times.${way}`, text: eventName, a: times, b: people, c: timesBefore ?? 0 },
     detail === "percentScrolled" && pageViews > 0 && { code: "reached", a: Math.min(1, times / pageViews), b: pageViews },
     top && topCode !== undefined && { code: topCode, text: top.label, a: top.times, b: top.times / times },
+    after && after.did > 0 && (after.converted > 0 ? { code: "convertedAfter", a: after.converted, b: after.did } : { code: "noneAfter", a: after.did }),
   ], [
     eventName === "click" && { code: "newTab", link: "allPages", to: toPage("all-pages") },
     detail === "searchTerm" && top && { code: "answerSearch", text: top.label, link: "allPages", to: toPage("all-pages") },

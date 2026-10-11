@@ -15743,7 +15743,11 @@
       "asking": "Asking Google…",
       "askFailed": "Google couldn't answer for this event just now. Open it again in a moment.",
       "empty": "Nothing in these dates.",
-      "noMatch": "Nothing matches that search."
+      "noMatch": "Nothing matches that search.",
+      "after": "People who converted after it",
+      "afterOf": "of the {did} people who did it",
+      "afterNothingCounts": "Nothing else counts as a conversion yet",
+      "afterUnknown": "Google couldn't say this time"
     },
     "conversions": {
       "title": "Conversions",
@@ -16127,7 +16131,9 @@
         "topFile": "{text} was downloaded most: {count, plural, =1 {once} other {# times}}.",
         "topVideo": "“{text}” was played most: {count, plural, =1 {once} other {# times}}.",
         "newTab": "Open links to other websites in a new tab, so people keep your page.",
-        "answerSearch": "Make sure a page answers “{text}”, and is easy to find from the menu."
+        "answerSearch": "Make sure a page answers “{text}”, and is easy to find from the menu.",
+        "convertedAfter": "{count, plural, =1 {One} other {#}} of the {b} people who did it converted after it.",
+        "noneAfter": "None of the {a} people who did it converted after it."
       },
       "conversions": {
         "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",

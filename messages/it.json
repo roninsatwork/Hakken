@@ -15743,7 +15743,11 @@
       "asking": "Chiediamo a Google…",
       "askFailed": "Google non ha risposto ora per questo evento. Riaprilo tra poco.",
       "empty": "Niente in queste date.",
-      "noMatch": "Nessun risultato per questa ricerca."
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "after": "Persone che hanno convertito dopo",
+      "afterOf": "delle {did} persone che lo hanno fatto",
+      "afterNothingCounts": "Nient'altro conta ancora come conversione",
+      "afterUnknown": "Google non ha potuto dirlo questa volta"
     },
     "conversions": {
       "title": "Conversioni",
@@ -16127,7 +16131,9 @@
         "topFile": "{text} è il file scaricato di più: {count, plural, =1 {una volta} other {# volte}}.",
         "topVideo": "“{text}” è il video avviato di più: {count, plural, =1 {una volta} other {# volte}}.",
         "newTab": "Apri i link ad altri siti in una nuova scheda, così le persone restano sulla tua pagina.",
-        "answerSearch": "Assicurati che una pagina risponda a “{text}” e sia facile da trovare dal menu."
+        "answerSearch": "Assicurati che una pagina risponda a “{text}” e sia facile da trovare dal menu.",
+        "convertedAfter": "Tra le {b} persone che lo hanno fatto, {count, plural, =1 {una ha} other {# hanno}} poi convertito.",
+        "noneAfter": "Nessuna delle {a} persone che lo hanno fatto ha poi convertito."
       },
       "conversions": {
         "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",

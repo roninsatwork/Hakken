@@ -46,13 +46,18 @@ describe("22 · Events", () => {
 });
 
 describe("23 · An event's own screen", () => {
-  test("a click: its times and the link clicked most; open links in a new tab", () => {
+  test("a click: its times, the link clicked most, and none of its people converting after; open links in a new tab", () => {
     const box = eventSees({
       eventName: "click", detail: "linkUrl", times: 64, timesBefore: 73, people: 41, pageViews: 2_431,
       about: [{ label: "linkedin.com/company/ronins", times: 18 }, { label: "clutch.co/profile/ronins", times: 10 }],
+      after: { did: 41, converted: 0 },
     });
     expect(box).toEqual({
-      says: [{ code: "times.down", text: "click", a: 64, b: 41, c: 73 }, { code: "topLink", text: "linkedin.com/company/ronins", a: 18, b: 18 / 64 }],
+      says: [
+        { code: "times.down", text: "click", a: 64, b: 41, c: 73 },
+        { code: "topLink", text: "linkedin.com/company/ronins", a: 18, b: 18 / 64 },
+        { code: "noneAfter", a: 41 },
+      ],
       steps: [{ code: "newTab", link: "allPages", to: { segment: "all-pages" } }],
     });
     expectAnalyticsWords("event", box);
@@ -68,8 +73,8 @@ describe("23 · An event's own screen", () => {
     expect(file.says).toEqual([{ code: "timesNew", text: "file_download", a: 6, b: 5 }, { code: "topFile", text: "brochure.pdf", a: 4, b: 4 / 6 }]);
     const video = eventSees({ eventName: "video_start", detail: "videoTitle", times: 4, timesBefore: 0, people: 4, pageViews: 0, about: [{ label: "Our studio", times: 4 }] });
     expect(video.says[1]).toEqual({ code: "topVideo", text: "Our studio", a: 4, b: 1 });
-    const own = eventSees({ eventName: "brochure_request", detail: null, times: 9, timesBefore: 12, people: 8, pageViews: 0, about: [] });
-    expect(own).toEqual({ says: [{ code: "times.down", text: "brochure_request", a: 9, b: 8, c: 12 }], steps: [] });
+    const own = eventSees({ eventName: "brochure_request", detail: null, times: 9, timesBefore: 12, people: 8, pageViews: 0, about: [], after: { did: 8, converted: 3 } });
+    expect(own).toEqual({ says: [{ code: "times.down", text: "brochure_request", a: 9, b: 8, c: 12 }, { code: "convertedAfter", a: 3, b: 8 }], steps: [] });
     const never = eventSees({ eventName: "live_chat_event", detail: null, times: 0, timesBefore: 0, people: 0, pageViews: 0, about: [] });
     expect(never).toEqual({ says: [{ code: "neverHappened", text: "live_chat_event" }], steps: [] });
     for (const shown of [search, scroll, file, video, own, never]) expectAnalyticsWords("event", shown);

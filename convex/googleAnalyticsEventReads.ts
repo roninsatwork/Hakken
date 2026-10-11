@@ -178,6 +178,10 @@ export const analyticsEvent = tenantQuery({
     live: v.boolean(),
     about: v.array(aboutRowValidator),
     pages: v.array(aboutRowValidator),
+    /** Whether anything else counts as a conversion: without, no one can convert after it. */
+    counting: v.boolean(),
+    /** The people who did it, and of them who converted after it (Anthony, 2026-10-11); null until asked, or when Google could not say. */
+    after: v.union(v.null(), v.object({ did: v.number(), converted: v.number() })),
     seen: seenValidator,
   })),
   handler: async (ctx, args) => {
@@ -186,7 +190,9 @@ export const analyticsEvent = tenantQuery({
     const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
     if (!connection?.newestDay) return null;
-    const counted = countedOf(connection).some((event) => event.eventName === args.event);
+    const counts = countedOf(connection).map((event) => event.eventName);
+    const counted = counts.includes(args.event);
+    const counting = counts.some((name) => name !== args.event);
     const now = heldOf(await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country));
     const before = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
     const series = heldOf(await readFor(ctx, holdId, "eventSeries", args.period, "NOW", args.device, undefined, country));
@@ -195,15 +201,19 @@ export const analyticsEvent = tenantQuery({
     const whole = total?.rows[0] ?? null;
     // Named as the live ask names them: by the dates of every device's ready-made period.
     const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-    const named = (kind: "detail" | "pages", which: "NOW" | "BEFORE") =>
+    const named = (kind: "detail" | "pages" | "funnel", which: "NOW" | "BEFORE") =>
       eventAsk(kind, which, args.event, args.period, every?.from ?? "", every?.to ?? "", args.device, country);
     const detail = EVENT_DETAIL[args.event] ?? null;
     const detailNow = detail ? await readLive(ctx, holdId, named("detail", "NOW")) : null;
     const detailBefore = detail ? await readLive(ctx, holdId, named("detail", "BEFORE")) : null;
     const pagesNow = await readLive(ctx, holdId, named("pages", "NOW"));
     const pagesBefore = await readLive(ctx, holdId, named("pages", "BEFORE"));
-    const live = !pagesNow || !pagesBefore || (detail !== null && (!detailNow || !detailBefore));
+    const funnel = counting ? await readLive(ctx, holdId, named("funnel", "NOW")) : null;
+    const live = !pagesNow || !pagesBefore || (detail !== null && (!detailNow || !detailBefore)) || (counting && !funnel);
     // A link as people read it — `linkedin.com/company/ronins` — its whole address kept as its key, for the link itself.
+    const reached = (key: string) => funnel?.rows.find((one) => one.key === key)?.people ?? 0;
+    // Google refusing its funnel report is held as `refused`: the figure unsaid, the rest of the screen shown.
+    const after = funnel && !funnel.rows.some((one) => one.key === "refused") ? { did: reached("did"), converted: reached("then") } : null;
     const about = aboutRows(detailNow, detailBefore).map((one) => (detail === "linkUrl" ? { ...one, label: one.key.replace(/^https?:\/\//i, "").replace(/^www\./i, "") } : one));
     const listed = aboutRows(pagesNow, pagesBefore);
     const addresses = listed.length > 0 ? await decodePages(ctx, holdId, listed.map((one) => one.key)) : [];
@@ -231,8 +241,10 @@ export const analyticsEvent = tenantQuery({
       live,
       about,
       pages,
+      counting,
+      after,
       seen: live ? { says: [], steps: [] } : eventSees({
-        eventName: args.event, detail, times, timesBefore, people: row?.people ?? 0, about, pageViews: whole?.views ?? 0,
+        eventName: args.event, detail, times, timesBefore, people: row?.people ?? 0, about, pageViews: whole?.views ?? 0, after,
       }),
     };
   },

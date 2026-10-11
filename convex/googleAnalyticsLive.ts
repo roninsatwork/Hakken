@@ -7,7 +7,7 @@ import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { appError } from "./utils/appError";
-import { ask, askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { ask, askFunnel, askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
 import { beforeKey, emptyRow, packList, pageAddress, type ListRow } from "./googleAnalyticsLists";
 import { encodePagesFromAction } from "./holdPageRefs";
 import { shiftDay } from "./searchConsoleDays";
@@ -65,7 +65,9 @@ export const liveTarget = internalQuery({
       untitled: false,
       eventless: false,
     };
-    return { connectionId: connection._id, target, from: slot.from, to: slot.to, country };
+    // What counts as a conversion: an event's screen asks who converted after it (§18.6.5).
+    const counted = (connection.events ?? []).filter((event) => event.counted).map((event) => event.eventName);
+    return { connectionId: connection._id, target, from: slot.from, to: slot.to, country, counted };
   },
 });
 
@@ -115,9 +117,10 @@ export function pageAsk(kind: "series" | "channel" | "viewed" | "before", page: 
 /**
  * The name an event's own lists are held under (§18.6.5): what it was about
  * (`detail`) and the pages it happened on (`pages`), for the dates chosen and
- * the span before them — both named by the dates chosen.
+ * the span before them — both named by the dates chosen — and the people who
+ * did it and converted after it (`funnel`).
  */
-export function eventAsk(kind: "detail" | "pages", which: "NOW" | "BEFORE", event: string, period: string, from: string, to: string, device: string, country = ""): string {
+export function eventAsk(kind: "detail" | "pages" | "funnel", which: "NOW" | "BEFORE", event: string, period: string, from: string, to: string, device: string, country = ""): string {
   return `${kind}${which === "BEFORE" ? "Before" : ""}:${event}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
@@ -252,6 +255,19 @@ export const askGoogleAnalyticsLive = tenantAction({
             folded: answer.folded, thresholded: answer.thresholded, cut: answer.cut,
           });
         }
+      }
+      // The people who did it and converted after it, when anything else counts (Anthony, 2026-10-11). Google's funnel
+      // report is still in its alpha: a refusal leaves the figure unsaid, never the rest of the screen.
+      const conversions = found.counted.filter((name) => name !== event);
+      if (conversions.length > 0) {
+        const funnel = await askFunnel(opened.session, found.target.property!, {
+          startDate: range.from, endDate: range.to, first: event, then: conversions,
+          hostNames: found.target.addresses, countries: [found.target.country], ...(device ? { device } : {}),
+        });
+        // Held either way, so the screen says Google could not answer rather than asking again and again.
+        await write(eventAsk("funnel", "NOW", event, args.period, range.from, range.to, args.device, found.country), "event",
+          funnel.ok ? [{ ...emptyRow("did"), people: funnel.did }, { ...emptyRow("then"), people: funnel.then }] : [emptyRow("refused")],
+          { folded: false, thresholded: false, cut: false });
       }
       return { ok: true, problem: null };
     }

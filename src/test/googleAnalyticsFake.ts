@@ -146,6 +146,27 @@ export function fakeGoogle(visits: Visit[]): Google {
       }));
       return Response.json({ rows, rowCount: rows.length, metadata: {} });
     }
+    // Google's funnel report (§18.6.5): the people of each line with the first event, and of those lines the ones with a later one too.
+    if (url === `https://analyticsdata.googleapis.com/v1alpha/${PROPERTY}:runFunnelReport`) {
+      type Step = { filterExpression: { funnelEventFilter?: { eventName: string }; orGroup?: { expressions: { funnelEventFilter: { eventName: string } }[] } } };
+      const ask = JSON.parse(body) as { dateRanges: { startDate: string; endDate: string }[]; funnel: { steps: Step[] }; dimensionFilter?: Filter };
+      const { startDate, endDate } = ask.dateRanges[0];
+      const namesOf = (step: Step) => step.filterExpression.funnelEventFilter
+        ? [step.filterExpression.funnelEventFilter.eventName]
+        : (step.filterExpression.orGroup?.expressions ?? []).map((one) => one.funnelEventFilter.eventName);
+      const [first, then] = ask.funnel.steps.map(namesOf);
+      let did = 0;
+      let after = 0;
+      for (const visit of google.visits) {
+        if (visit.date < startDate || visit.date > endDate || !passes(visit, ask.dimensionFilter)) continue;
+        const count = first.reduce((sum, name) => sum + (visit.events?.[name]?.[0] ?? 0), 0);
+        if (count === 0) continue;
+        did += Math.ceil(count / 2);
+        if (then.some((name) => (visit.events?.[name]?.[0] ?? 0) > 0)) after += Math.ceil(count / 2);
+      }
+      const row = (step: string, people: number) => ({ dimensionValues: [{ value: step }], metricValues: [{ value: String(people) }] });
+      return Response.json({ funnelTable: { rows: [row("1. did", did), row("2. then", after)] } });
+    }
     throw new Error(`Unexpected fetch in test: ${url}`);
   }));
   return google;

@@ -312,8 +312,14 @@ describe("Events and an event's own screen (GA30)", () => {
     expect(opened.live).toBe(false);
     expect(opened.about).toEqual([{ key: "https://www.linkedin.com/company/acme", label: "linkedin.com/company/acme", times: 60, people: 30, change: null }]);
     expect(opened.pages).toMatchObject([{ label: "https://www.acme-shop.test/", times: 60 }]);
+    // The people who clicked, and of them none who converted after it: Google's funnel report (Anthony, 2026-10-11).
+    expect(opened).toMatchObject({ counting: true, after: { did: 30, converted: 0 } });
     expect(opened.seen).toEqual({
-      says: [{ code: "timesNew", text: "click", a: 60, b: 30 }, { code: "topLink", text: "linkedin.com/company/acme", a: 60, b: 1 }],
+      says: [
+        { code: "timesNew", text: "click", a: 60, b: 30 },
+        { code: "topLink", text: "linkedin.com/company/acme", a: 60, b: 1 },
+        { code: "noneAfter", a: 30 },
+      ],
       steps: [{ code: "newTab", link: "allPages", to: { segment: "all-pages" } }],
     });
   });

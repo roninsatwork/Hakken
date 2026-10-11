@@ -977,7 +977,9 @@
         "topFile": "{text} was downloaded most: {count, plural, =1 {once} other {# times}}.",
         "topVideo": "“{text}” was played most: {count, plural, =1 {once} other {# times}}.",
         "newTab": "Open links to other websites in a new tab, so people keep your page.",
-        "answerSearch": "Make sure a page answers “{text}”, and is easy to find from the menu."
+        "answerSearch": "Make sure a page answers “{text}”, and is easy to find from the menu.",
+        "convertedAfter": "{count, plural, =1 {One} other {#}} of the {b} people who did it converted after it.",
+        "noneAfter": "None of the {a} people who did it converted after it."
       },
       "conversions": {
         "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",
@@ -2243,7 +2245,9 @@
         "topFile": "{text} è il file scaricato di più: {count, plural, =1 {una volta} other {# volte}}.",
         "topVideo": "“{text}” è il video avviato di più: {count, plural, =1 {una volta} other {# volte}}.",
         "newTab": "Apri i link ad altri siti in una nuova scheda, così le persone restano sulla tua pagina.",
-        "answerSearch": "Assicurati che una pagina risponda a “{text}” e sia facile da trovare dal menu."
+        "answerSearch": "Assicurati che una pagina risponda a “{text}” e sia facile da trovare dal menu.",
+        "convertedAfter": "Tra le {b} persone che lo hanno fatto, {count, plural, =1 {una ha} other {# hanno}} poi convertito.",
+        "noneAfter": "Nessuna delle {a} persone che lo hanno fatto ha poi convertito."
       },
       "conversions": {
         "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",

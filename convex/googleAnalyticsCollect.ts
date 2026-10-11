@@ -11,7 +11,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
-import { runReport, type ReportAsk, type Report } from "./googleAnalyticsApi";
+import { runFunnelReport, runReport, type FunnelAsk, type ReportAsk, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
   EVENT_LIST_METRICS,
@@ -255,10 +255,26 @@ export async function openSession(
 
 /** One report, renewing the token once if it has just expired and waiting a little when Google is busy. */
 export async function ask(session: Session, property: string, report: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
+  return await retried(session, async (token) => {
+    const answer = await runReport(token, property, report);
+    return { answer, requests: answer.ok ? answer.requests : 1 };
+  });
+}
+
+/** Who did an event and then one of others (§18.6.5), asked as every report is: its sign-in renewed, Google waited for when busy. */
+export async function askFunnel(session: Session, property: string, funnel: FunnelAsk): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
+  return await retried(session, async (token) => ({ answer: await runFunnelReport(token, property, funnel), requests: 1 }));
+}
+
+/** One ask of Google, its sign-in renewed once when it ran out and asked again a little later when Google was busy. */
+async function retried<Answer extends { ok: true } | GoogleFailure>(
+  session: Session,
+  call: (accessToken: string) => Promise<{ answer: Answer; requests: number }>,
+): Promise<Answer> {
   let renewed = false;
   for (let wait = 0; ;) {
-    const answer = await runReport(session.accessToken, property, report);
-    session.requests += answer.ok ? answer.requests : 1;
+    const { answer, requests } = await call(session.accessToken);
+    session.requests += requests;
     if (answer.ok) return answer;
     if (answer.reason === "EXPIRED" && !renewed) {
       renewed = true;

@@ -531,9 +531,10 @@ where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
 with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 11
-built on dev, each committed and none pushed — fifteen and a half of
-twenty-six and a half days, about 58%; eleven left. Both rounds: about
-forty-one of fifty-two days, about 79%.**
+built on dev, each committed and none pushed, and "people who converted
+after it" (half a day more) — sixteen of twenty-seven days, about 59%;
+eleven left. Both rounds: about forty-one and a half of fifty-two and a half
+days, about 79%.**
 
 ## 9. Risks
 
@@ -1377,7 +1378,13 @@ whole address kept for the link. **The fourth figure on an event's
 screen, "Conversions after it", changed** — Google cannot join an event to
 conversions in the same visit, so it counts the people who did the event and
 converted after it, from Google's funnel report (Anthony, 2026-10-11: "Yes
-agree use the people"); built after Phase 11.
+agree use the people"). Built after Phase 11 (`runFunnelReport`, still
+Google's `v1alpha`; a refusal is held and the figure left unsaid, never the
+rest of the screen), with its sentence in What Hakken sees. Checked against
+Google four ways on Ronins: 255 of the 271 people who clicked a link to
+another website in 12 months sent a form after it, and only 133 viewed a page
+after it — Ronins' form likely counts as a click away, or bots fill it in; a
+tracking question, not the figure's.
 Measured on Ronins: twelve events in 30 days; the 12 months' each-event-a-day
 list is two stored parts.
 

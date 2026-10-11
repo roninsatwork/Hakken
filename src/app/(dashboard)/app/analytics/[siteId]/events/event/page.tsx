@@ -114,10 +114,20 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
       <AnalyticsSees screen="event" seen={answer?.seen} currency={currency} />
 
       {figures ? (
-        <FigureRow columns={3}>
+        <FigureRow columns={4}>
           <Figure label={t("times")} value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />
           <Figure label={t("people")} value={formatNumber(figures.people)} detail={<span className="text-secondary">{figures.peopleShare === null ? "–" : t("peopleShare", { rate: formatPercent(figures.peopleShare) })}</span>} />
           <Figure label={t("visits")} value={formatNumber(figures.visits)} detail={<span className="text-secondary">{figures.visitsShare === null ? "–" : t("visitsShare", { rate: formatPercent(figures.visitsShare) })}</span>} />
+          {/* People, not visits: Google cannot join an event to conversions in the same visit (Anthony, 2026-10-11). */}
+          <Figure
+            label={t("after")}
+            value={answer?.after ? formatNumber(answer.after.converted) : "–"}
+            detail={(
+              <span className="text-secondary">
+                {!answer?.counting ? t("afterNothingCounts") : answer.after ? t("afterOf", { did: answer.after.did }) : answer.live ? t("asking") : t("afterUnknown")}
+              </span>
+            )}
+          />
         </FigureRow>
       ) : null}
 
