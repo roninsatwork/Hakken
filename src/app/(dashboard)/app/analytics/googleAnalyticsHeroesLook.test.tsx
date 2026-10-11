@@ -123,7 +123,7 @@ describe("Heroes and attention's approved looks", () => {
     at("/app/analytics/site_1/landing-pages/page", "key=~0");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsLandingPage": LANDING_PAGE,
+      "googleAnalyticsPageReads:analyticsLandingPage": LANDING_PAGE,
       "googleAnalyticsHeroes:analyticsHeroPage": HERO_PAGE,
     });
     const { container } = render(<AnalyticsLandingPage />);

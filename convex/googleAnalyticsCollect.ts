@@ -4,6 +4,8 @@ import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { isTrackedHold } from "./utils/websitePairing";
+import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
+import { countriesKeptReady, mainConsoleCountry } from "./searchConsoleCountries";
 import { DAYS_KEPT } from "./utils/searchConsolePacks";
 import { shiftDay } from "./searchConsoleDays";
 import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
@@ -115,7 +117,8 @@ export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top:
 /** A ready-made list's name, as every reader of the lists names it (`googleAnalyticsLists.ts`). */
 export { slotKey };
 
-export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: AnalyticsWhich };
+/** A ready-made list to ask: for the main home country, or — `country`, its code — for another home country (§18.6.1). */
+export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: AnalyticsWhich; country?: string };
 
 /** All pages before landing pages: a landing page finds its address, slash and all, already numbered (`numberPages`). */
 const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing"];
@@ -126,15 +129,21 @@ const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landi
  * same span a year before is asked for the long periods (§10, Q2); for the
  * short ones it waits for the "Compare with" choice to be drawn (§4.1).
  */
-export function dueJobs(connection: Pick<Doc<"googleAnalyticsConnections">, "weeklyPeriodsAt">, now: number): PeriodJob[] {
+export function dueJobs(connection: Pick<Doc<"googleAnalyticsConnections">, "weeklyPeriodsAt">, now: number, others: readonly string[] = []): PeriodJob[] {
   const jobs: PeriodJob[] = [];
-  for (const period of ["7", "30"] as const) {
-    for (const which of ["NOW", "BEFORE"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which });
-  }
-  if (connection.weeklyPeriodsAt === undefined || now - connection.weeklyPeriodsAt >= WEEK_MS) {
-    for (const period of ["90", "365"] as const) {
-      for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which });
-      jobs.push({ list: "series", period, which: "NOW" });
+  const weekly = connection.weeklyPeriodsAt === undefined || now - connection.weeklyPeriodsAt >= WEEK_MS;
+  for (const country of [undefined, ...others]) {
+    const of = country ? { country } : {};
+    for (const period of ["7", "30"] as const) {
+      for (const which of ["NOW", "BEFORE"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
+      // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
+      if (country) jobs.push({ list: "series", period, which: "NOW", ...of });
+    }
+    if (weekly) {
+      for (const period of ["90", "365"] as const) {
+        for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
+        jobs.push({ list: "series", period, which: "NOW", ...of });
+      }
     }
   }
   return jobs;
@@ -158,7 +167,16 @@ export type CollectTarget = {
   newestDay: string | undefined;
   oldestDay: string | undefined;
   weeklyPeriodsAt: number | undefined;
+  /** The home country every ask is filtered to, by Google's two-letter `countryId`: the main one unless a job names another. */
+  country: string;
+  /** The website's other home countries, kept as ready-made lists (§18.6.1), by Search Console's code (`fra`). */
+  others: string[];
 };
+
+/** Google Analytics' two-letter `countryId` for Search Console's code: `gbr` → `GB`. */
+export function countryIdOf(code: string): string {
+  return ALPHA3_TO_ALPHA2[code.toUpperCase()] ?? "GB";
+}
 
 export const collectTarget = internalQuery({
   args: { connectionId: v.id("googleAnalyticsConnections") },
@@ -181,6 +199,8 @@ export const collectTarget = internalQuery({
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
+      country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
+      others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
     };
   },
 });
@@ -249,6 +269,7 @@ export async function askList(
     startDate: range.from,
     endDate: range.to,
     hostNames: target.addresses,
+    countries: [target.country],
     ...(only.device ? { device: only.device } : {}),
     ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } } : {}),
   };
@@ -573,12 +594,14 @@ export async function collectPeriod(
 ): Promise<StepResult> {
   const range = periodRange(job.period, job.which, top);
   const lead = KEPT_BY_DEVICE[job.list] ? (["deviceCategory"] as const) : ([] as const);
-  const asked = await askList(session, target, job.list, lead, range);
+  const country = job.country ?? "";
+  const asking = country ? { ...target, country: countryIdOf(country) } : target;
+  const asked = await askList(session, asking, job.list, lead, range);
   if (!asked.ok) return failed(session, asked);
   const devices = new Map<string, ListRow[]>();
   for (const [group, rows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, rows);
   if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
-  const keys = [...devices.keys()].map((device) => slotKey(job.list, job.period, job.which, device));
+  const keys = [...devices.keys()].map((device) => slotKey(job.list, job.period, job.which, device, country));
   const slots: Record<string, { slot: number; hash: string; from: string; to: string }> =
     await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
   let rows = 0;
@@ -586,7 +609,7 @@ export async function collectPeriod(
     const listRows = job.list === "landing" || job.list === "page" ? await numberPages(ctx, target, deviceRows, job.list) : deviceRows;
     rows += listRows.length;
     const parts = packList(job.list, listRows, target.events);
-    const key = slotKey(job.list, job.period, job.which, device);
+    const key = slotKey(job.list, job.period, job.which, device, country);
     const hash = await fingerprint(parts);
     const held = slots[key];
     if (held && held.hash === hash && held.from === range.from && held.to === range.to) continue;
@@ -639,6 +662,8 @@ export const finishCollection = internalMutation({
     // Each page's visits sit beside Search Console's clicks in the website's page list (§4.6): it is rebuilt, as
     // Search Console's settle asks, and writes only the pages whose figures moved.
     await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
+    // A home country taken off the website's list goes (§18.6.1).
+    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountriesNotKept, { companyWebsiteId: connection.companyWebsiteId });
     return null;
   },
 });

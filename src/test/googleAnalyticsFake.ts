@@ -4,7 +4,7 @@ import { vi } from "vitest";
  * A Google Analytics property faked at the network, for the tests of its
  * collection and its screens' reads (docs/plans/active/google-analytics-plan.md
  * §4, §5): a log of visits answered as the Data API answers — split by the
- * dimensions asked, filtered by address, event and dates, added up. Nothing
+ * dimensions asked, filtered by address, event, country and dates, added up. Nothing
  * reaches Google.
  */
 
@@ -24,6 +24,8 @@ export type Visit = {
   landing: string;
   page: string;
   host?: string;
+  /** Google's two-letter `countryId`: the United Kingdom unless a test says otherwise. */
+  country?: string;
   sessions: number;
   engaged: number;
   seconds: number;
@@ -41,6 +43,7 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   landingPage: (visit) => visit.landing,
   pagePath: (visit) => visit.page,
   hostName: (visit) => visit.host ?? "www.acme-shop.test",
+  countryId: (visit) => visit.country ?? "GB",
 };
 
 export type Google = { visits: Visit[]; reportStatus?: number; calls: { url: string; body: string }[] };

@@ -1252,6 +1252,19 @@ on the main country and kept in the address. Visits from outside the home
 countries are not counted anywhere; a visit Google cannot place
 (`(not set)`) is not in a home country either.
 
+*Built 2026-10-11 (Phase 6).* `googleAnalyticsCountries.ts` holds the rules
+(`keptCountry`, `prepareAnalyticsCountry`, `dropCountriesNotKept`); every
+ask carries `countryId`, each list's name ends with the country's code when
+it is not the main one (`slotKey`), and every read and live ask takes an
+optional `country`, as Search Console's do. One difference from the words
+above: **Heroes and attention stays on the main home country** and offers no
+Country choice. Its Search Console side reads through Search Console's
+main-country path (`readPeriodUnnamed`), so a second country there would
+mean reworking Search Console's own reads; for the main country both sides
+are like with like. Ronins has one home country, so nothing it shows
+changes. Ronins switched on dev the same day: its figures cleared and its 60
+days collected again for the United Kingdom only.
+
 **2. People and how visits went.** Every list asks two more figures,
 `totalUsers` and `newUsers`, and `averageSessionDuration`, kept as the
 seconds of all visits (the average × visits) so it adds up across rows.

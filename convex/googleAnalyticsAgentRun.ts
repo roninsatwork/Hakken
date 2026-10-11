@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { failureSummary, lastMoved, ROLE_RUN_LIVE_MS } from "./roleRuns";
 import { shiftDay } from "./searchConsoleDays";
 import { siteAddresses } from "./googleAnalyticsApi";
+import { prepareAnalyticsCountry } from "./googleAnalyticsCountries";
 import { count, days, finishRun } from "./searchConsoleAgentRun";
 import {
   DAYS_PER_STEP,
@@ -128,7 +129,9 @@ export const runGoogleAnalyticsCollectorNow = internalAction({
           runId: args.runId,
           companyId: site.companyId,
           heading: site.host,
-          detail: started ? `Its own run started: ${days(started.from, started.top)}.` : "Not started: it was disconnected meanwhile.",
+          detail: started === "CLEARING"
+            ? "Not started yet: its figures are being cleared for its main home country, and it is collected again once they are gone."
+            : started ? `Its own run started: ${days(started.from, started.top)}.` : "Not started: it was disconnected meanwhile.",
           failed: false,
         });
       }
@@ -152,9 +155,11 @@ async function beginSiteRun(
   agentId: Id<"agents">,
   site: Site,
   delayMs: number,
-): Promise<{ runId: Id<"agentRuns">; from: string; top: string } | null> {
+): Promise<{ runId: Id<"agentRuns">; from: string; top: string } | "CLEARING" | null> {
   const connection = await ctx.db.get(site.connectionId);
   if (!connection || connection.status !== "CONNECTED" || connection.property !== site.property) return null;
+  // Its figures must be its main home country's: when not, they are cleared and this run waits for the clearing's (§18.6.1).
+  if (connection.clearing || (await prepareAnalyticsCountry(ctx, connection)) === "SWITCHING") return "CLEARING";
   const now = Date.now();
   const window = analyticsWindow(connection.newestDay, connection.oldestDay, newestWholeDayIn(now, connection.timeZone ?? "Europe/London"));
   const runId = await ctx.db.insert("agentRuns", {
@@ -200,7 +205,7 @@ export const startSiteRun = internalMutation({
     property: v.string(),
     delayMs: v.number(),
   },
-  returns: v.union(v.null(), v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
+  returns: v.union(v.null(), v.literal("CLEARING"), v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
   handler: async (ctx, args) => {
     const parent = await ctx.db.get(args.parentRunId);
     if (!parent) return null;
@@ -229,6 +234,7 @@ export async function startFirstCollection(
     host: website?.displayHost ?? website?.host ?? connection.property ?? "",
     property: connection.property ?? "",
   }, 0);
+  // Clearing for its main home country starts it again once done (`clearFigures`).
   return started ? "STARTED" : "NO_AGENT";
 }
 
@@ -297,7 +303,7 @@ export const collectSiteStep = internalAction({
       let weekly = args.weekly;
       let jobAt = args.jobAt;
       let rows = args.rows;
-      let jobs: PeriodJob[] = to === null ? jobsFor(weekly) : [];
+      let jobs: PeriodJob[] = to === null ? jobsFor(weekly, target.others) : [];
       const stop = async (result: Extract<StepResult, { ok: false }>) => {
         if (result.access) {
           await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "NO_ACCESS" });
@@ -329,7 +335,7 @@ export const collectSiteStep = internalAction({
           to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
           if (to === null) {
             weekly = dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
-            jobs = jobsFor(weekly);
+            jobs = jobsFor(weekly, target.others);
           }
           continue;
         }
@@ -378,7 +384,7 @@ export const collectSiteStep = internalAction({
   },
 });
 
-/** The ready-made lists a run asks, in order: the same every step of the run. */
-function jobsFor(weekly: boolean): PeriodJob[] {
-  return dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now() }, Date.now());
+/** The ready-made lists a run asks, in order — the main home country's, then each other's: the same every step of the run. */
+function jobsFor(weekly: boolean, others: readonly string[]): PeriodJob[] {
+  return dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now() }, Date.now(), others);
 }

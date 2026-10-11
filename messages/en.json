@@ -15059,6 +15059,7 @@
       "figuresTo": "Analytics' figures to {day}; the last two days can still change."
     },
     "filters": {
+      "country": "Country",
       "device": "Device",
       "period": "Dates",
       "step": "Chart step",

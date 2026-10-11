@@ -6,6 +6,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
+import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
 
 /**
  * The Google Analytics section's own address and reads
@@ -51,15 +52,24 @@ export const DEVICES = ["all", "desktop", "mobile", "tablet"] as const;
 export type Device = (typeof DEVICES)[number];
 export const DEVICE_KEY = "device";
 
+/**
+ * The home country (google-analytics-plan.md §18.6.1): the main one unless
+ * another of the website's home countries is chosen. The same key and codes as
+ * Search Console's, so a link keeps its country between the two sections.
+ */
+export const COUNTRY_KEY = "country";
+const MAIN_COUNTRY = "main";
+const COUNTRY_CHOICES = [MAIN_COUNTRY, ...GOOGLE_COUNTRIES.filter((code) => code !== "zzz")] as const;
+
 /** How a chart steps: the Sites charts' own key, so a choice reads the same in every section. */
 export const STEPS = ["day", "week", "month"] as const;
 export type Step = (typeof STEPS)[number];
 export const STEP_KEY = "step";
 
-/** What travels between the section's pages: the dates, the device and the step. */
+/** What travels between the section's pages: the dates, the device, the step and the home country. */
 export function analyticsQuery(params: URLSearchParams): string {
   const shared = new URLSearchParams();
-  for (const key of [PERIOD_KEY, DEVICE_KEY, STEP_KEY]) {
+  for (const key of [PERIOD_KEY, DEVICE_KEY, STEP_KEY, COUNTRY_KEY]) {
     const value = params.get(key);
     if (value) shared.set(key, value);
   }
@@ -101,17 +111,31 @@ export function useStep(): [Step, (next: Step) => void] {
   return useSiteParam<Step>(STEP_KEY, "day", STEPS);
 }
 
+/**
+ * The home country chosen, as Google writes it (`fra`), or null for the main
+ * one — and for a country the website does not keep, which reads as the main
+ * one, as Search Console's do.
+ */
+export function useAnalyticsCountry(): [string | null, (next: string | null) => void] {
+  const siteId = useAnalyticsSiteId();
+  const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId });
+  const [value, set] = useSiteParam<string>(COUNTRY_KEY, MAIN_COUNTRY, COUNTRY_CHOICES);
+  const kept = value !== MAIN_COUNTRY && (choices === undefined || choices.ready.includes(value));
+  return [kept ? value : null, (next) => set(next ?? MAIN_COUNTRY)];
+}
+
 /** The device as a read takes it: empty for every device. */
 export function deviceArg(device: Device): string {
   return device === "all" ? "" : device;
 }
 
-/** The dates, device and website every read of a page takes. */
+/** The dates, device, home country and website every read of a page takes: the main country left out, as reads take it. */
 export function useAnalyticsArgs() {
   const siteId = useAnalyticsSiteId();
   const [period] = usePeriod();
   const [device] = useDevice();
-  return { siteId, period, device: deviceArg(device) };
+  const [country] = useAnalyticsCountry();
+  return { siteId, period, device: deviceArg(device), ...(country ? { country } : {}) };
 }
 
 /** Whether the website has figures to show: collected once, whatever it is now. */

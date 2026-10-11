@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { mainConsoleCountry } from "./searchConsoleCountries";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -19,7 +20,7 @@ import {
   newSignInState,
 } from "./googleConnection";
 import { lastThirtyDays, listKeyEvents, propertyDetails, runReport, siteAddresses, yesterdayUtc } from "./googleAnalyticsApi";
-import { newestWholeDayIn } from "./googleAnalyticsCollect";
+import { countryIdOf, newestWholeDayIn } from "./googleAnalyticsCollect";
 import {
   analyticsAttemptValidator,
   analyticsProblemValidator,
@@ -280,11 +281,14 @@ export const countingTarget = internalQuery({
     if (!connection?.property) return null;
     const website = await ctx.db.get(connection.websiteId);
     if (!website) return null;
+    const hold = await ctx.db.get(connection.companyWebsiteId);
     return {
       property: connection.property,
       host: website.host,
       addresses: connection.addresses ?? null,
       googleConnectionId: connection.googleConnectionId ?? null,
+      // Counted in the main home country, as every figure is (google-analytics-plan.md §18.6.1).
+      country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
     };
   },
 });
@@ -328,6 +332,7 @@ export const readWhatCounts = internalAction({
         metrics: ["eventCount", "eventValue"],
         hostNames: addresses.found.addresses,
         eventNames: names,
+        countries: [target.country],
       });
       if (report.ok) {
         for (const row of report.rows) counts.set(row.keys[0], { count: row.values[0], value: row.values[1] });

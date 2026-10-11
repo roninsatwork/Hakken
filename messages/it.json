@@ -15059,6 +15059,7 @@
       "figuresTo": "Dati di Analytics fino al {day}; gli ultimi due giorni possono ancora cambiare."
     },
     "filters": {
+      "country": "Paese",
       "device": "Dispositivo",
       "period": "Date",
       "step": "Passo del grafico",

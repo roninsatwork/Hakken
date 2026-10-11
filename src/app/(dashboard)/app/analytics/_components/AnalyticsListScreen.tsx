@@ -121,7 +121,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
   const live = paged.result?.live === true;
   // A page list for one device is asked of Google once; its every device list is shown meanwhile.
   const everyDevice = useSiteListPage(api.googleAnalyticsReads.analyticsListPage, live ? { ...base, device: "" } : "skip");
-  const asking = useLiveAsk(live && (list === "landing" || list === "page" || list === "groups") ? { siteId: args.siteId, period: args.period, device: args.device, pages: list === "page" ? "page" : "landing" } : null);
+  const asking = useLiveAsk(live && (list === "landing" || list === "page" || list === "groups") ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, pages: list === "page" ? "page" : "landing" } : null);
   const shown = live ? everyDevice : paged;
   const currency = status?.connection?.currency ?? null;
   const columns = COLUMNS[list].map((column) => columnOf(column, list, currency, rowHref, t));
@@ -217,7 +217,7 @@ function columnOf(
  * first needs it, never again for the same ask. "FAILED" when Google could not
  * answer; the screen keeps what it has.
  */
-export function useLiveAsk(ask: { siteId: string; period: string; device: string; pages?: "landing" | "page"; page?: { ref: string; path: string } } | null): "ASKING" | "FAILED" | "IDLE" {
+export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: "landing" | "page"; page?: { ref: string; path: string } } | null): "ASKING" | "FAILED" | "IDLE" {
   const t = useTranslations("googleAnalytics.table");
   const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
   const { run } = useAdminAction({ scope: "google-analytics-live" });

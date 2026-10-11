@@ -185,6 +185,12 @@ export const googleAnalyticsTables = {
     eventsReadAt: v.optional(v.number()),
     /** The property the figures held came from: choosing another clears them. */
     dataProperty: v.optional(v.string()),
+    /**
+     * The main home country the figures held are for, as Search Console names
+     * it (`gbr`): when the website's main country changes they are cleared and
+     * collected again (google-analytics-plan.md §18.6.1).
+     */
+    mainCountry: v.optional(v.string()),
     clearing: v.optional(v.boolean()),
     connectedBy: v.optional(v.id("users")),
     connectedAt: v.optional(v.number()),

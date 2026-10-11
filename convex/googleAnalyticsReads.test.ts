@@ -217,11 +217,11 @@ describe("a landing page's own screen", () => {
     const { siteId, user } = await collected(t, growing());
     const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
     const page = landing.rows.find((row) => row.label.endsWith("/ai-agency/"))!.key;
-    const first = (await user.query(api.googleAnalyticsReads.analyticsLandingPage, { siteId, page, period: "30", device: "" }))!;
+    const first = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page, period: "30", device: "" }))!;
     expect(first).toMatchObject({ address: "https://www.acme-shop.test/ai-agency/", path: "/ai-agency/", live: true });
     expect(first.row).toMatchObject({ visits: 30 * 8 + 30 });
     await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "", page: { ref: page, path: first.path } });
-    const opened = (await user.query(api.googleAnalyticsReads.analyticsLandingPage, { siteId, page, period: "30", device: "" }))!;
+    const opened = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page, period: "30", device: "" }))!;
     expect(opened.live).toBe(false);
     expect(opened.points).toHaveLength(30);
     expect(opened.channels.map((row) => row.label)).toEqual(["AI assistants"]);

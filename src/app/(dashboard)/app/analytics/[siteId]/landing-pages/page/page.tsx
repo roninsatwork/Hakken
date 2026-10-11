@@ -44,9 +44,9 @@ function LandingPageBody({ status }: { status: AnalyticsStatus }) {
   const [period] = usePeriod();
   const hrefFor = useAnalyticsHref(args.siteId);
   const page = useSearchParams().get("key") ?? "";
-  const answer = useQuery(api.googleAnalyticsReads.analyticsLandingPage, page ? { ...args, page } : "skip");
+  const answer = useQuery(api.googleAnalyticsPageReads.analyticsLandingPage, page ? { ...args, page } : "skip");
   const journey = useQuery(api.googleAnalyticsHeroes.analyticsHeroPage, page ? { siteId: args.siteId, page } : "skip");
-  const asking = useLiveAsk(answer?.live ? { siteId: args.siteId, period: args.period, device: args.device, page: { ref: page, path: answer.path } } : null);
+  const asking = useLiveAsk(answer?.live ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, page: { ref: page, path: answer.path } } : null);
   const currency = status.connection?.currency ?? null;
   const found = journey?.found ?? null;
   const address = answer?.address ?? "";

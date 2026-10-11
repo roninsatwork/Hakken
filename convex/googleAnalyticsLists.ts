@@ -236,8 +236,15 @@ export function pageAddress(origin: string, path: string): string {
  * A ready-made list's name: the list, the period, which span, and the device
  * (empty for every device). Here rather than beside the collection, so a
  * reader such as the hold's page list (`holdPages.ts`) names it without
- * importing the collection.
+ * importing the collection. The main home country's lists carry no country,
+ * as Search Console's don't; each other home country's end with its code
+ * (`gbr`), google-analytics-plan.md §18.6.1.
  */
-export function slotKey(list: AnalyticsList, period: AnalyticsPeriod, which: AnalyticsWhich, device: string): string {
-  return `${list}|${period}|${which}|${device}`;
+export function slotKey(list: AnalyticsList, period: AnalyticsPeriod, which: AnalyticsWhich, device: string, country = ""): string {
+  return `${list}|${period}|${which}|${device}${country ? `|${country}` : ""}`;
+}
+
+/** The home country a kept list's name ends with: empty for the main one. */
+export function countryOfKey(key: string): string {
+  return key.split("|")[4] ?? "";
 }

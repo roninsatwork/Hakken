@@ -192,6 +192,11 @@ export type ReportAsk = {
   device?: string;
   /** Only rows whose dimension is one of these values (a landing page's own screen, slashed or not). */
   only?: { dimension: string; values: string[] };
+  /**
+   * Only visits from these countries, by Google's two-letter `countryId`: the
+   * website's home country being collected (google-analytics-plan.md §18.6.1).
+   */
+  countries?: string[];
 };
 
 export type ReportRow = { keys: string[]; values: number[] };
@@ -220,6 +225,9 @@ function filterOf(ask: ReportAsk) {
   }
   if (ask.only) {
     filters.push({ filter: { fieldName: ask.only.dimension, inListFilter: { values: ask.only.values, caseSensitive: true } } });
+  }
+  if (ask.countries?.length) {
+    filters.push({ filter: { fieldName: "countryId", inListFilter: { values: ask.countries, caseSensitive: false } } });
   }
   if (filters.length === 0) return undefined;
   return filters.length === 1 ? filters[0] : { andGroup: { expressions: filters } };

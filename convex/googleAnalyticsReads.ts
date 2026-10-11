@@ -14,6 +14,7 @@ import { assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { slotKey } from "./googleAnalyticsCollect";
+import { keptCountry } from "./googleAnalyticsCountries";
 import { LIVE_PARTS } from "./googleAnalyticsLive";
 import { shiftDay } from "./searchConsoleDays";
 import { analyticsPeriodValidator, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
@@ -97,11 +98,11 @@ function addInto(target: ListRow, row: ListRow) {
   for (const [event, value] of row.values) target.values.set(event, (target.values.get(event) ?? 0) + value);
 }
 
-function blank(key: string): ListRow {
+export function blank(key: string): ListRow {
   return { key, visits: 0, engaged: 0, seconds: 0, views: 0, purchases: 0, revenue: 0, counts: new Map(), values: new Map() };
 }
 
-function grouped(rows: readonly ListRow[], keyOf: (row: ListRow) => string | null): ListRow[] {
+export function grouped(rows: readonly ListRow[], keyOf: (row: ListRow) => string | null): ListRow[] {
   const groups = new Map<string, ListRow>();
   for (const row of rows) {
     const key = keyOf(row);
@@ -124,7 +125,7 @@ export async function connectionOf(ctx: Reader, holdId: Id<"companyWebsites">) {
     .first();
 }
 
-type Held = { rows: ListRow[]; from: string; to: string; folded: boolean; thresholded: boolean; cut: boolean };
+export type Held = { rows: ListRow[]; from: string; to: string; folded: boolean; thresholded: boolean; cut: boolean };
 
 /** A ready-made list, every part of the build screens read, at one moment. */
 export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: string): Promise<Held | null> {
@@ -148,7 +149,7 @@ export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: 
 }
 
 /** A list a screen asked of Google live and is held until the next collection (GA20, GA23). */
-async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: string): Promise<Held | null> {
+export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: string): Promise<Held | null> {
   const parts = await ctx.db
     .query("googleAnalyticsLive")
     .withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", holdId).eq("ask", ask))
@@ -165,16 +166,16 @@ async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: string)
   };
 }
 
-/** The name a live ask of a page list for one device is held under. */
-export function liveAsk(list: "landing" | "page", period: AnalyticsPeriod, from: string, to: string, device: string): string {
-  return `${list}|${period}|${from}|${to}|${device}`;
+/** The name a live ask of a page list for one device is held under: another home country's ends with its code (§18.6.1). */
+export function liveAsk(list: "landing" | "page", period: AnalyticsPeriod, from: string, to: string, device: string, country = ""): string {
+  return `${list}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
 /**
  * A list for the dates and device chosen: ready-made, or — a page list for
  * one device (GA20) — asked live, `live` until it has been.
  */
-async function readFor(
+export async function readFor(
   ctx: Reader,
   holdId: Id<"companyWebsites">,
   list: AnalyticsList,
@@ -183,14 +184,16 @@ async function readFor(
   device: string,
   /** Given, keeps the every device list read on the way, for What Hakken sees to weigh a device against. */
   keep?: { every: Held | null },
+  /** The home country, as its lists are named: empty for the main one (§18.6.1). */
+  country = "",
 ): Promise<Held | "LIVE" | null> {
   if ((list === "landing" || list === "page") && device !== "") {
-    const every = await readSlot(ctx, holdId, slotKey(list, period, which, ""));
+    const every = await readSlot(ctx, holdId, slotKey(list, period, which, "", country));
     if (keep) keep.every = every;
     if (!every) return null;
-    return (await readLive(ctx, holdId, liveAsk(list, period, every.from, every.to, device))) ?? "LIVE";
+    return (await readLive(ctx, holdId, liveAsk(list, period, every.from, every.to, device, country))) ?? "LIVE";
   }
-  return await readSlot(ctx, holdId, slotKey(list, period, which, device));
+  return await readSlot(ctx, holdId, slotKey(list, period, which, device, country));
 }
 
 // ---------------------------------------------------------------------------
@@ -226,7 +229,7 @@ export const shownRowValidator = v.object({
 });
 export type ShownRow = Infer<typeof shownRowValidator>;
 
-function shown(row: ListRow, before: ListRow | null | undefined, counted: readonly Counted[], hadBefore: boolean): ShownRow {
+export function shown(row: ListRow, before: ListRow | null | undefined, counted: readonly Counted[], hadBefore: boolean): ShownRow {
   const { conversions, value } = conversionsOf(row, counted);
   const was = before ? conversionsOf(before, counted) : null;
   return {
@@ -282,6 +285,8 @@ const listArgs = {
   list: listKindValidator,
   period: analyticsPeriodValidator,
   device: v.string(),
+  /** A home country other than the main one, as Search Console names it (`fra`); left out for the main one (§18.6.1). */
+  country: v.optional(v.string()),
   /** The channel whose sources are listed. */
   channel: v.optional(v.string()),
   /** Only the pages of one page group (its classification's id, or Not sorted). */
@@ -297,6 +302,8 @@ type ListArgs = {
   list: ListKind;
   period: AnalyticsPeriod;
   device: string;
+  /** The home country as its lists are named, already checked (`keptCountry`): empty for the main one. */
+  country?: string;
   channel?: string;
   group?: string;
   eventName?: string;
@@ -338,7 +345,7 @@ const EMPTY: Omit<ListAnswer, "live" | "preparing"> = {
 };
 
 /** The display channel of a kept channel row. */
-function displayChannel(key: string): string {
+export function displayChannel(key: string): string {
   const { channel, source } = splitChannelKey(key);
   return channelOf(channel, source);
 }
@@ -362,10 +369,10 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const counting = countedOf(connection).length > 0;
   const base: AnalyticsList = args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : "landing";
   const kept: { every: Held | null } = { every: null };
-  const now = await readFor(ctx, holdId, base, args.period, "NOW", args.device, kept);
+  const now = await readFor(ctx, holdId, base, args.period, "NOW", args.device, kept, args.country);
   if (now === "LIVE") return { ...EMPTY, live: true, preparing: false, counting };
   if (!now) return { ...EMPTY, live: false, preparing: true, counting };
-  const before = await readFor(ctx, holdId, base, args.period, "BEFORE", args.device);
+  const before = await readFor(ctx, holdId, base, args.period, "BEFORE", args.device, undefined, args.country);
   const beforeRows = before && before !== "LIVE" ? before.rows : null;
   const site = figuresOf(now.rows, counted);
 
@@ -549,7 +556,7 @@ export const analyticsListPage = tenantQuery({
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const list = await readAnalyticsList(ctx, site.hold._id, args);
+    const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
     const page = pageOfList(list.rows, args.page, args.rows);
     return {
       rows: await nameRows(ctx, site.hold._id, page.rows),
@@ -578,7 +585,7 @@ export const analyticsListAll = tenantQuery({
   returns: v.object({ rows: v.array(shownRowValidator), live: v.boolean() }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const list = await readAnalyticsList(ctx, site.hold._id, args);
+    const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
     return { rows: await nameRows(ctx, site.hold._id, list.rows), live: list.live };
   },
 });
@@ -589,7 +596,7 @@ export const analyticsTopList = tenantQuery({
   returns: v.object({ rows: v.array(shownRowValidator), total: v.number(), ...answerValidator }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const list = await readAnalyticsList(ctx, site.hold._id, args);
+    const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
     return {
       rows: await nameRows(ctx, site.hold._id, list.rows.slice(0, TOP_ROWS)),
       total: list.rows.length,
@@ -620,7 +627,7 @@ const figureValidator = v.object({
   unvalued: v.number(),
 });
 
-function figuresOf(rows: readonly ListRow[], counted: readonly Counted[]) {
+export function figuresOf(rows: readonly ListRow[], counted: readonly Counted[]) {
   const total = blank("");
   for (const row of rows) addInto(total, row);
   const { conversions, value, unvalued } = conversionsOf(total, counted);
@@ -636,7 +643,7 @@ type Moved = { kind: "landing" | "channel"; key: string; label: string; conversi
  * (§14), which weighs them against Search Console's last 30 days.
  */
 export const analyticsOverview = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string() },
+  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.object({
     preparing: v.boolean(),
     from: v.union(v.string(), v.null()),
@@ -660,9 +667,10 @@ export const analyticsOverview = tenantQuery({
     searchConsole: searchConsoleMonthValidator,
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string }) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
     const nothing = {
       preparing: connection?.status === "CONNECTED",
@@ -677,12 +685,12 @@ export const analyticsOverview = tenantQuery({
     };
     if (!connection?.newestDay) return nothing;
     const counted = countedOf(connection);
-    const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device));
+    const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
     if (!now) return nothing;
-    const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device));
+    const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
     const moved: Moved[] = [];
-    const landing = await readAnalyticsList(ctx, holdId, { list: "landing", period: args.period, device: args.device });
-    const channels = await readAnalyticsList(ctx, holdId, { list: "channel", period: args.period, device: args.device });
+    const landing = await readAnalyticsList(ctx, holdId, { list: "landing", period: args.period, device: args.device, country });
+    const channels = await readAnalyticsList(ctx, holdId, { list: "channel", period: args.period, device: args.device, country });
     for (const [kind, list] of [["landing", landing], ["channel", channels]] as const) {
       for (const row of list.rows) {
         if (row.conversionsBefore === null || row.valueBefore === null) continue;
@@ -724,7 +732,7 @@ const CHART_RECORDS_READ = 100;
  * event's own line comes with it, for Conversions' chart.
  */
 export const analyticsChart = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string() },
+  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.object({
     points: v.array(v.object({
       day: v.string(),
@@ -740,6 +748,7 @@ export const analyticsChart = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
     const counted = connection ? countedOf(connection) : [];
     const events = counted.map((event) => event.eventName);
@@ -748,7 +757,8 @@ export const analyticsChart = tenantQuery({
       const { conversions, value } = conversionsOf(row, counted);
       return { day, visits: row.visits, engaged: row.engaged, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
     };
-    if (Number(args.period) <= DAYS_CHARTED) {
+    // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
+    if (Number(args.period) <= DAYS_CHARTED && country === "") {
       const first = shiftDay(connection.newestDay, -(Number(args.period) - 1));
       const parts = await ctx.db
         .query("googleAnalyticsDays")
@@ -756,7 +766,7 @@ export const analyticsChart = tenantQuery({
         .take(CHART_RECORDS_READ);
       return { points: parts.map((part) => point(part.day, unpackPart(part as PackedPart)[0] ?? blank(""))), events };
     }
-    const series = await readSlot(ctx, holdId, slotKey("series", args.period, "NOW", args.device));
+    const series = await readSlot(ctx, holdId, slotKey("series", args.period, "NOW", args.device, country));
     return { points: (series?.rows ?? []).map((row) => point(row.key, row)), events };
   },
 });
@@ -771,7 +781,7 @@ export const analyticsChart = tenantQuery({
  * the span before; for a shop, purchases, revenue and the average order (GA7).
  */
 export const analyticsConversions = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string() },
+  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.object({
     preparing: v.boolean(),
     from: v.union(v.string(), v.null()),
@@ -793,9 +803,10 @@ export const analyticsConversions = tenantQuery({
     fired: v.array(v.object({ eventName: v.string(), count: v.number() })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string }) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
     const nothing = {
       preparing: connection?.status === "CONNECTED",
@@ -808,9 +819,9 @@ export const analyticsConversions = tenantQuery({
       fired: [] as Array<{ eventName: string; count: number }>,
     };
     if (!connection?.newestDay) return nothing;
-    const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device));
+    const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
     if (!now) return nothing;
-    const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device));
+    const before = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
     const total = blank("");
     for (const row of now.rows) addInto(total, row);
     const was = before ? blank("") : null;
@@ -919,76 +930,5 @@ export const analyticsSites = tenantQuery({
         lastCollectedAt: connection?.lastCollectedAt ?? null,
       };
     }));
-  },
-});
-
-// ---------------------------------------------------------------------------
-// A landing page's own screen (GA22)
-// ---------------------------------------------------------------------------
-
-/**
- * One landing page's figures against the span before, the whole website's
- * engagement for comparison, what its visits converted into, and its chart
- * and channels — those two asked of Google when the screen opens and held
- * (`googleAnalyticsLive.askGoogleAnalyticsLive`); `live` until they are.
- */
-export const analyticsLandingPage = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string() },
-  returns: v.union(v.null(), v.object({
-    address: v.string(),
-    /** The path Analytics names it by, for asking Google. */
-    path: v.string(),
-    group: v.union(v.string(), v.null()),
-    row: v.union(shownRowValidator, v.null()),
-    siteEngagementRate: v.union(v.number(), v.null()),
-    conversions: v.array(v.object({ eventName: v.string(), count: v.number(), each: v.union(v.number(), v.null()), value: v.union(v.number(), v.null()) })),
-    live: v.boolean(),
-    points: v.array(v.object({ day: v.string(), visits: v.number(), engaged: v.number(), conversions: v.number(), value: v.number() })),
-    channels: v.array(shownRowValidator),
-  })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const connection = await connectionOf(ctx, holdId);
-    if (!connection?.newestDay) return null;
-    const counted = countedOf(connection);
-    const [address] = await decodePages(ctx, holdId, [args.page]);
-    const path = address.replace(/^https?:\/\/[^/]+/, "") || "/";
-    const now = await readFor(ctx, holdId, "landing", args.period, "NOW", args.device);
-    const before = await readFor(ctx, holdId, "landing", args.period, "BEFORE", args.device);
-    const own = now && now !== "LIVE" ? now.rows.find((row) => row.key === args.page) ?? null : null;
-    const was = before && before !== "LIVE" ? before.rows.find((row) => row.key === args.page) ?? null : null;
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device));
-    const whole = total ? figuresOf(total.rows, counted) : null;
-    const kinds = await readPageKinds(ctx, holdId, { pages: [address] });
-    const kind = kinds?.kindOf(address) ?? null;
-    const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("landing", args.period, "NOW", ""));
-    const from = every?.from ?? "";
-    const to = every?.to ?? "";
-    const series = await readLive(ctx, holdId, `series:${args.page}|${args.period}|${from}|${to}|${args.device}`);
-    const channels = await readLive(ctx, holdId, `channel:${args.page}|${args.period}|${from}|${to}|${args.device}`);
-    return {
-      address,
-      path,
-      group: kind && kind !== NOT_SORTED_KIND ? kinds?.nameOf(kind) ?? null : null,
-      row: own ? shown(own, was, counted, before !== null && before !== "LIVE") : null,
-      siteEngagementRate: whole && whole.visits > 0 ? whole.engaged / whole.visits : null,
-      conversions: counted.map((event) => {
-        const count = own?.counts.get(event.eventName) ?? 0;
-        const each = event.fromAnalytics
-          ? Math.round((connection.events?.find((one) => one.eventName === event.eventName)?.analyticsValue ?? 0) * 100)
-          : event.hakken !== null ? Math.round(event.hakken * 100) : null;
-        const value = own ? conversionsOf({ ...blank(""), counts: new Map([[event.eventName, count]]), values: new Map([[event.eventName, own.values.get(event.eventName) ?? 0]]), revenue: event.eventName === PURCHASE_EVENT ? own.revenue : 0 }, [event]).value : 0;
-        return { eventName: event.eventName, count, each, value: count > 0 ? value : null };
-      }),
-      live: !series || !channels,
-      points: (series?.rows ?? []).map((row) => {
-        const { conversions, value } = conversionsOf(row, counted);
-        return { day: row.key, visits: row.visits, engaged: row.engaged, conversions, value };
-      }),
-      channels: grouped(channels?.rows ?? [], (row) => displayChannel(row.key))
-        .map((row) => shown(row, null, counted, false))
-        .sort((left, right) => right.value - left.value || right.visits - left.visits),
-    };
   },
 });
