@@ -22,7 +22,7 @@ import { useSiteParam, useSiteSearch } from "../../sites/_components/useSitePara
 import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
 
 const RESULT_TONE = { RIGHT: "success", WRONG: "warning", TOO_EARLY: "neutral", DUE: "info" } as const;
-const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning" } as const;
+const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning", WAITING: "info" } as const;
 
 /**
  * The Track record (docs/plans/active/insights-analyst-plan.md §2.7, §4.1,
@@ -45,7 +45,14 @@ export default function InsightsTrackRecordPage() {
   const resultOf = (row: { outcome: string | null; checkOn: string | null }) => row.outcome ?? (row.checkOn && row.checkOn <= today ? "TOO_EARLY" : "DUE");
   const changeWords = (row: { kind: string; from: string | null; to: string | null }) => t(`changes.kinds.${row.kind}`, { from: row.from ?? "", to: row.to ?? "" });
   const changeMatch = wordStartMatcher(changeTerm.toLowerCase());
-  const changes = data?.changes.filter((row) => !changeMatch || changeMatch(changeWords(row)));
+  // The approved fixes join the change log (I39): what changed, on the day it was approved, and what its tagged link brought.
+  const fixRows = (data?.fixes ?? []).map((fix) => ({
+    changeId: fix.draftId as string, host: fix.host, kind: "FIX", from: fix.title, to: fix.target, seenIn: "campaigns", before: fix.visits, after: fix.enquiries,
+    result: fix.enquiries > 0 ? "GREW" : fix.visits > 0 ? "HELD" : "WAITING", week: fix.approved,
+  }));
+  const changes = data ? [...fixRows, ...data.changes].filter((row) => !changeMatch || changeMatch(changeWords(row))) : undefined;
+  const seenIn = (row: { kind: string }) => t(row.kind === "FIX" ? "changes.campaigns" : "changes.analytics");
+  const followed = (row: { kind: string; before: number; after: number }) => (row.kind === "FIX" ? t("changes.fixFollowed", { visits: row.before, enquiries: row.after }) : t("changes.followedWords", { before: row.before, after: row.after }));
   const match = wordStartMatcher(term.toLowerCase());
   const findings = data?.findings.filter((row) => (!result || resultOf(row) === result) && (!match || match(row.headline)));
   const changePages = useSitePager(changes, { isLoading: data === undefined, table: "changes" });
@@ -81,13 +88,13 @@ export default function InsightsTrackRecordPage() {
         rows={changePages.pageRows}
         rowKey={(row) => row.changeId}
         search={{ value: changeSearch, onChange: setChangeSearch, placeholder: t("changes.search") }}
-        cardHeader={<TableBar footer={changePages.footer} noun="results" title={t("changes.title")} actions={<ListDownload label={t("download")} fileName="insights-changes" rows={changes} columns={[{ header: t("changes.change"), value: changeWords }, { header: t("changes.seenIn"), value: () => t("changes.analytics") }, { header: t("changes.followed"), value: (row) => t("changes.followedWords", { before: row.before, after: row.after }) }, { header: t("changes.result"), value: (row) => t(`changes.results.${row.result}`) }]} />} />}
+        cardHeader={<TableBar footer={changePages.footer} noun="results" title={t("changes.title")} actions={<ListDownload label={t("download")} fileName="insights-changes" rows={changes} columns={[{ header: t("changes.change"), value: changeWords }, { header: t("changes.seenIn"), value: seenIn }, { header: t("changes.followed"), value: followed }, { header: t("changes.result"), value: (row) => t(`changes.results.${row.result}`) }]} />} />}
         empty={{ icon: <History className="h-8 w-8 text-muted/30" />, label: changeTerm ? t("noMatch") : t("changes.empty") }}
         footer={changePages.footer}
         columns={[
           { key: "change", header: t("changes.change"), cell: (row) => <span className="flex flex-col"><span className="text-[13px] text-foreground">{changeWords(row)}</span><span className="text-[12px] text-secondary">{row.host}</span></span> },
-          { key: "seenIn", header: t("changes.seenIn"), cell: () => <TagLabel>{t("changes.analytics")}</TagLabel> },
-          { key: "followed", header: t("changes.followed"), cell: (row) => <span className="text-[12px] text-secondary">{t("changes.followedWords", { before: row.before, after: row.after })}</span> },
+          { key: "seenIn", header: t("changes.seenIn"), cell: (row) => <TagLabel>{seenIn(row)}</TagLabel> },
+          { key: "followed", header: t("changes.followed"), cell: (row) => <span className="text-[12px] text-secondary">{followed(row)}</span> },
           { key: "result", header: t("changes.result"), cell: (row) => <StatusLabel tone={CHANGE_TONE[row.result as keyof typeof CHANGE_TONE] ?? "neutral"}>{t(`changes.results.${row.result}`)}</StatusLabel> },
         ]}
       />

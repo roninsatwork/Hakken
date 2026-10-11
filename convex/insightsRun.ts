@@ -34,6 +34,7 @@ import { outcomeOf } from "./utils/insightTrack";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
 import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
 import { planBrief } from "./utils/insightPlan";
+import { DRAFT_RULES, draftsFrom, type Drafted } from "./utils/insightDrafts";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
@@ -305,8 +306,68 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   } catch (error) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Report Writer", detail: failureSummary(error), failed: true });
   }
+  // 7. Drafted fixes for what lives off the website (I23, I39): profile changes and posts, review replies, outreach.
+  let drafted = 0;
+  try {
+    drafted = await writeDrafts(ctx, args, weekOf(now), member(SPECIALIST_ROLE.local) ?? lead, member(SPECIALIST_ROLE.links) ?? lead);
+  } catch (error) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Drafts", detail: failureSummary(error), failed: true });
+  }
   const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
-  return `${args.host}: ${reading.facts.length} facts read,${reports.length > 0 ? ` ${reports.join(", ")} written,` : ""} ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
+  return `${args.host}: ${reading.facts.length} facts read,${reports.length > 0 ? ` ${reports.join(", ")} written,` : ""}${drafted > 0 ? ` ${drafted} fixes drafted,` : ""} ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
+}
+
+/**
+ * The week's drafted fixes (I23, phases 10 and 11): the Local and reputation
+ * specialist drafts Business Profile changes, posts, a review request and
+ * replies; the Links and PR specialist an email to each site linking to
+ * rivals but not to the business. Each area is asked only when it has
+ * something to fix; Hakken adds each draft's tagged link (I39).
+ */
+async function writeDrafts(ctx: ActionCtx, args: RunArgs, week: string, local: TeamMember | undefined, links: TeamMember | undefined): Promise<number> {
+  const inputs = await ctx.runQuery(internal.insightsDrafts.draftInputs, { holdId: args.holdId });
+  if (!inputs) return 0;
+  const pages = inputs.pages.map((page) => page.page);
+  const recent = inputs.recent.map((row) => `${row.kind}: ${row.target}`);
+  const drafted: Drafted[] = [];
+  if (inputs.own.length > 0) {
+    const system = [DRAFT_RULES, `You are the Local and reputation specialist: ${DISCIPLINE.local}.`, local?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({
+      website: inputs.host,
+      today: new Date().toISOString().slice(0, 10),
+      want: [
+        "CATEGORY: only where the profiles' categories miss what the business sells (its pages) or what the rivals on the map use; one draft for the change, naming the category exactly as Google lists it.",
+        "NAME: only where the business's profiles use different names; the one name to use on all of them.",
+        "DESCRIPTION: only where a profile has no description or a thin one; a new one from its pages, under 750 characters.",
+        "POST: one or two posts when a profile has posted nothing in the last 30 days, each about one of the pages given, pointing to it.",
+        "REVIEW_REQUEST: one short message the business can send its recent clients asking for a Google review, with [link to your Google review form] as a gap.",
+        "REVIEW_REPLIES: replies to the reviews waiting, newest first, one each, named by the reviewer, in one draft; only if some are given.",
+      ],
+      notAgain: recent,
+      profiles: inputs.own,
+      rivalsMainCategories: inputs.rivalCategories,
+      rivalsLastPost: inputs.rivalLastPost,
+      reviewsWaiting: inputs.waitingCount,
+      newestWaiting: inputs.waiting,
+      pages: inputs.pages,
+    });
+    const answer = await ask(ctx, args, local, "the Local and reputation specialist's drafts", system, prompt);
+    drafted.push(...draftsFrom(answer, "LOCAL", pages), ...draftsFrom(answer, "REVIEWS", pages));
+  }
+  if (inputs.outreach.length > 0) {
+    const system = [DRAFT_RULES, `You are the Links and PR specialist: ${DISCIPLINE.links}.`, links?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({
+      website: inputs.host,
+      want: ["OUTREACH: for each site given, one short email from the business to the site's editor or owner, offering what fits the site (a case study, an article, a listing, a comment for a story) and pointing to the one page of the website it is about; the target is the site's address."],
+      notAgain: recent,
+      sites: inputs.outreach.map((site) => ({ site: site.host, linksToRivals: site.rivals, strength: site.strength })),
+      pages: inputs.pages,
+    });
+    const answer = await ask(ctx, args, links, "the Links and PR specialist's drafts", system, prompt);
+    drafted.push(...draftsFrom(answer, "LINKS", pages));
+  }
+  if (drafted.length === 0) return 0;
+  return await ctx.runMutation(internal.insightsDrafts.saveDrafts, { holdId: args.holdId, companyId: args.companyId, week, origin: inputs.origin, drafts: drafted });
 }
 
 type WrittenFinding = SavedFinding & { findingId: Id<"insightFindings"> | null };

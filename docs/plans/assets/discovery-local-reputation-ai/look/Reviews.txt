@@ -3,6 +3,12 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Your reviews
   select: Office
+search: Find a draft
+filter: Status
+table: Draft | For | Why | Status
+  table-bar: # drafts · Drafted by Hakken
+    download: Download CSV
+  table-footer
 figures
   figure: Rating
   figure: New in # days

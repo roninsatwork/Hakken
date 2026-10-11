@@ -14316,6 +14316,72 @@
         "notChecked": "None has been checked yet.",
         "open": "Open {text} and see what moved."
       }
+    },
+    "drafts": {
+      "search": "Find a draft",
+      "status": "Status",
+      "everyStatus": "Every status",
+      "statuses": {
+        "DRAFTED": "Drafted: waiting for you",
+        "APPROVED": "Approved and copied",
+        "DISMISSED": "Dismissed"
+      },
+      "titles": {
+        "LOCAL": "{count, plural, one {# fix} other {# fixes}} · Drafted by Hakken for your profiles",
+        "REVIEWS": "{count, plural, one {# draft} other {# drafts}} · Drafted by Hakken",
+        "LINKS": "{count, plural, one {# site} other {# sites}} · Sites that link to your rivals and not to you, each with an email drafted"
+      },
+      "download": "Download CSV",
+      "noMatch": "No draft matches",
+      "empty": {
+        "LOCAL": "Nothing to fix on your profiles this week. Hakken looks again with each week's findings.",
+        "REVIEWS": "No review drafts this week. Hakken looks again with each week's findings.",
+        "LINKS": "No sites to write to this week. Hakken looks again with each week's findings."
+      },
+      "seeInsights": {
+        "LOCAL": "See the Insights findings about your profiles",
+        "REVIEWS": "See the Insights findings about reviews",
+        "LINKS": "See the Insights findings about links"
+      },
+      "columns": {
+        "draft": {
+          "LOCAL": "Fix",
+          "REVIEWS": "Draft",
+          "LINKS": "Drafted"
+        },
+        "for": {
+          "LOCAL": "Profile",
+          "REVIEWS": "For",
+          "LINKS": "Site"
+        },
+        "why": "Why",
+        "status": "Status"
+      },
+      "googleAccess": "Until Google approves Hakken's Business Profile access, an approved fix is copied for you to paste. Once approved, Hakken makes it itself, and calls, direction requests and website clicks join this page.",
+      "gone": "This draft is gone",
+      "goneDescription": "Drafts are kept two years, and only for your company's own websites.",
+      "failed": "The draft couldn't be updated. Try again.",
+      "back": {
+        "LOCAL": "Business profile",
+        "REVIEWS": "Your reviews",
+        "LINKS": "Where links come from"
+      },
+      "drafted": "Drafted {day} · for {target}",
+      "approve": "Approve and copy",
+      "copyAgain": "Copy again",
+      "dismiss": "Not this one",
+      "undo": "Put it back as a draft",
+      "copied": "Copied. Paste it where it belongs; the link in it tells Hakken what it brought.",
+      "tagged": "The link carries the campaign {campaign}, so Google Analytics counts the visits and enquiries it brings, and the Track record shows them beside this change.",
+      "howTo": {
+        "CATEGORY": "Change it in your Google Business Profile: Edit profile, then Business category.",
+        "NAME": "Change it in your Google Business Profile: Edit profile, then Business name. Use the same name on every profile.",
+        "DESCRIPTION": "Paste it in your Google Business Profile: Edit profile, then Description.",
+        "POST": "Paste it as a post in your Google Business Profile: Add update. Add a photo if you have one.",
+        "REVIEW_REQUEST": "Send it to your recent clients by email or message, with your Google review link in the gap.",
+        "REVIEW_REPLIES": "Paste each reply under its review in your Google Business Profile: Read reviews, then Reply.",
+        "OUTREACH": "Send it from your own email to the site's editor or owner. Fill in any gaps first."
+      }
     }
   },
   "searchConsole": {
@@ -18373,21 +18439,26 @@
         "results": {
           "GREW": "Grew",
           "HELD": "Held",
-          "LOST": "Lost"
+          "LOST": "Lost",
+          "WAITING": "No visits yet"
         },
         "kinds": {
           "REPLACED": "Replaced {from} with {to}",
           "REMOVED": "Removed {from}",
           "ADDED": "Added {to}",
-          "MERGED": "Merged {from} into {to}"
+          "MERGED": "Merged {from} into {to}",
+          "FIX": "Approved: {from} ({to})"
         },
         "kindNames": {
           "REPLACED": "replacing a page",
           "REMOVED": "removing a page",
           "ADDED": "adding a page",
-          "MERGED": "merging pages"
+          "MERGED": "merging pages",
+          "FIX": "approving a drafted fix"
         },
-        "empty": "No changes seen yet: Hakken logs each change it sees in your figures, with what followed."
+        "empty": "No changes seen yet: Hakken logs each change it sees in your figures, with what followed.",
+        "campaigns": "Analytics' campaigns",
+        "fixFollowed": "{visits, plural, one {# visit} other {# visits}} and {enquiries, plural, one {# enquiry} other {# enquiries}} from its link"
       },
       "learnings": {
         "intro": "What your changes teach: {learnings}",

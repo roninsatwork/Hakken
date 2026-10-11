@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSiteDrafts } from "../../../_components/useSiteDrafts";
 import { useCallback, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -56,6 +57,7 @@ export default function SiteLinkSourcesPage() {
   const router = useRouter();
   const listHref = useSiteListHref(siteId);
   const site = useSite();
+  const drafts = useSiteDrafts(siteId, "LINKS", site?.host ?? "site");
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
   const [breakdown, setBreakdown] = useSiteParam<Breakdown>("by", "countries", BREAKDOWNS);
   const [search, setSearch, term] = useSiteSearch();
@@ -97,6 +99,23 @@ export default function SiteLinkSourcesPage() {
           : null}
       />
       <SiteSees screen="backlinksWhere" seen={profile === undefined ? undefined : whereLinksSees({ breakdown, groups, total }, nameOf)} />
+      {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
+      {drafts.shown ? (
+        <>
+          <DataTable
+            rows={drafts.pager.pageRows}
+            rowKey={(row) => row.draftId}
+            onRowClick={(row) => router.push(drafts.href(row.draftId))}
+            search={drafts.search}
+            filters={drafts.filters}
+            cardHeader={<TableBar footer={drafts.pager.footer} noun="results" title={drafts.title} actions={drafts.download} />}
+            empty={drafts.empty}
+            footer={drafts.pager.footer}
+            columns={drafts.columns}
+          />
+          {drafts.link}
+        </>
+      ) : null}
 
       {profile === null ? (
         <HakkenEmptyState icon={Globe2} title={t("title")} description={t("empty")} />

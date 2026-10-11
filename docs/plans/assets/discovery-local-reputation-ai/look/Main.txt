@@ -3,6 +3,13 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Business profile
   select: Office
+search: Find a draft
+filter: Status
+table: Fix | Profile | Why | Status
+  table-bar: # fixes · Drafted by Hakken for your profiles
+    download: Download CSV
+  table-footer
+notice (info)
 figures
   figure: Rating
   figure: Reviews →

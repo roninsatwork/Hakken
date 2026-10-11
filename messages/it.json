@@ -14316,6 +14316,72 @@
         "notChecked": "Nessuno è ancora stato controllato.",
         "open": "Apri {text} e guarda cosa si è mosso."
       }
+    },
+    "drafts": {
+      "search": "Trova una bozza",
+      "status": "Stato",
+      "everyStatus": "Ogni stato",
+      "statuses": {
+        "DRAFTED": "Bozza: aspetta te",
+        "APPROVED": "Approvata e copiata",
+        "DISMISSED": "Scartata"
+      },
+      "titles": {
+        "LOCAL": "{count, plural, one {# correzione} other {# correzioni}} · Scritte da Hakken per i tuoi profili",
+        "REVIEWS": "{count, plural, one {# bozza} other {# bozze}} · Scritte da Hakken",
+        "LINKS": "{count, plural, one {# sito} other {# siti}} · Siti che rimandano ai tuoi concorrenti e non a te, ognuno con un'email pronta"
+      },
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna bozza corrisponde",
+      "empty": {
+        "LOCAL": "Niente da correggere sui tuoi profili questa settimana. Hakken guarda di nuovo con le scoperte di ogni settimana.",
+        "REVIEWS": "Nessuna bozza per le recensioni questa settimana. Hakken guarda di nuovo con le scoperte di ogni settimana.",
+        "LINKS": "Nessun sito a cui scrivere questa settimana. Hakken guarda di nuovo con le scoperte di ogni settimana."
+      },
+      "seeInsights": {
+        "LOCAL": "Vedi le scoperte di Insights sui tuoi profili",
+        "REVIEWS": "Vedi le scoperte di Insights sulle recensioni",
+        "LINKS": "Vedi le scoperte di Insights sui link"
+      },
+      "columns": {
+        "draft": {
+          "LOCAL": "Correzione",
+          "REVIEWS": "Bozza",
+          "LINKS": "Bozza"
+        },
+        "for": {
+          "LOCAL": "Profilo",
+          "REVIEWS": "Per",
+          "LINKS": "Sito"
+        },
+        "why": "Perché",
+        "status": "Stato"
+      },
+      "googleAccess": "Finché Google non approva l'accesso di Hakken al Profilo dell'attività, una correzione approvata viene copiata perché tu la incolli. Dopo l'approvazione, Hakken la fa da sé, e chiamate, richieste di indicazioni e clic al sito si aggiungono a questa pagina.",
+      "gone": "Questa bozza non c'è più",
+      "goneDescription": "Le bozze si tengono due anni, e solo per i siti della tua azienda.",
+      "failed": "Non è stato possibile aggiornare la bozza. Riprova.",
+      "back": {
+        "LOCAL": "Profilo dell'attività",
+        "REVIEWS": "Le tue recensioni",
+        "LINKS": "Da dove arrivano i link"
+      },
+      "drafted": "Scritta il {day} · per {target}",
+      "approve": "Approva e copia",
+      "copyAgain": "Copia di nuovo",
+      "dismiss": "Non questa",
+      "undo": "Rimettila come bozza",
+      "copied": "Copiata. Incollala dove serve; il link al suo interno dice a Hakken cosa ha portato.",
+      "tagged": "Il link porta la campagna {campaign}, così Google Analytics conta le visite e le richieste che porta, e lo Storico le mostra accanto a questa modifica.",
+      "howTo": {
+        "CATEGORY": "Cambiala nel tuo Profilo dell'attività su Google: Modifica profilo, poi Categoria dell'attività.",
+        "NAME": "Cambialo nel tuo Profilo dell'attività su Google: Modifica profilo, poi Nome dell'attività. Usa lo stesso nome su ogni profilo.",
+        "DESCRIPTION": "Incollala nel tuo Profilo dell'attività su Google: Modifica profilo, poi Descrizione.",
+        "POST": "Incollalo come post nel tuo Profilo dell'attività su Google: Aggiungi aggiornamento. Aggiungi una foto se ne hai una.",
+        "REVIEW_REQUEST": "Mandalo ai tuoi clienti recenti per email o messaggio, con il tuo link per le recensioni Google nello spazio.",
+        "REVIEW_REPLIES": "Incolla ogni risposta sotto la sua recensione nel tuo Profilo dell'attività su Google: Leggi recensioni, poi Rispondi.",
+        "OUTREACH": "Mandala dalla tua email al redattore o al titolare del sito. Completa prima gli spazi vuoti."
+      }
     }
   },
   "searchConsole": {
@@ -18373,21 +18439,26 @@
         "results": {
           "GREW": "Cresciuto",
           "HELD": "Mantenuto",
-          "LOST": "Perso"
+          "LOST": "Perso",
+          "WAITING": "Ancora nessuna visita"
         },
         "kinds": {
           "REPLACED": "Sostituita {from} con {to}",
           "REMOVED": "Rimossa {from}",
           "ADDED": "Aggiunta {to}",
-          "MERGED": "Unita {from} a {to}"
+          "MERGED": "Unita {from} a {to}",
+          "FIX": "Approvata: {from} ({to})"
         },
         "kindNames": {
           "REPLACED": "sostituire una pagina",
           "REMOVED": "rimuovere una pagina",
           "ADDED": "aggiungere una pagina",
-          "MERGED": "unire pagine"
+          "MERGED": "unire pagine",
+          "FIX": "approvare una correzione scritta"
         },
-        "empty": "Ancora nessuna modifica vista: Hakken registra ogni modifica che vede nei tuoi dati, con cosa è seguito."
+        "empty": "Ancora nessuna modifica vista: Hakken registra ogni modifica che vede nei tuoi dati, con cosa è seguito.",
+        "campaigns": "Campagne di Analytics",
+        "fixFollowed": "{visits, plural, one {# visita} other {# visite}} e {enquiries, plural, one {# richiesta} other {# richieste}} dal suo link"
       },
       "learnings": {
         "intro": "Cosa insegnano le tue modifiche: {learnings}",

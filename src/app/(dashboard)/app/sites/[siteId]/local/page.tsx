@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSiteDrafts } from "../../_components/useSiteDrafts";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -78,6 +80,8 @@ export default function LocalProfilePage() {
   const recordHref = useSiteRecordHref(siteId);
   const listHref = useSiteListHref(siteId);
   const site = useSite();
+  const drafts = useSiteDrafts(siteId, "LOCAL", site?.host ?? "site");
+  const tDrafts = useTranslations("sites.drafts");
   const officeId = useOfficeId();
   const data = useQuery(api.siteLocalProfile.businessProfile, { siteId, ...(officeId ? { officeId } : {}) });
   const link = useMutation(api.siteLocalListings.linkListing);
@@ -113,6 +117,25 @@ export default function LocalProfilePage() {
         ) : undefined}
       />
       <SiteSees screen="localProfile" seen={data?.seen} />
+      {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
+      {drafts.shown ? (
+        <>
+          <DataTable
+            rows={drafts.pager.pageRows}
+            rowKey={(row) => row.draftId}
+            onRowClick={(row) => router.push(drafts.href(row.draftId))}
+            search={drafts.search}
+            filters={drafts.filters}
+            cardHeader={<TableBar footer={drafts.pager.footer} noun="results" title={drafts.title} actions={drafts.download} />}
+            empty={drafts.empty}
+            footer={drafts.pager.footer}
+            columns={drafts.columns}
+          />
+          {/* Until Google approves Hakken's Business Profile access, an approved fix is copied to paste (I31). */}
+          <Notice>{tDrafts("googleAccess")}</Notice>
+          {drafts.link}
+        </>
+      ) : null}
       {data && !office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {office ? (

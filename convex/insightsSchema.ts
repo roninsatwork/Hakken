@@ -5,6 +5,7 @@ import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
+import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./utils/insightDrafts";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -165,6 +166,35 @@ export const insightsTables = {
     ...planValidator.fields,
     createdAt: v.number(),
   }).index("by_hold", ["companyWebsiteId"]),
+
+  /**
+   * Drafted fixes for what lives off the website (I23, phases 10 and 11):
+   * Business Profile changes and posts, a review request and replies, and an
+   * email to each site linking to rivals but not to the business — each with
+   * its tagged link (I39). Kept two years, as findings are; the person
+   * approves (and copies) or dismisses each.
+   */
+  insightDrafts: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    week: v.string(),
+    area: draftAreaValidator,
+    kind: draftKindValidator,
+    target: v.string(),
+    why: v.string(),
+    title: v.string(),
+    body: v.string(),
+    /** The tagged link it carries, when it points to the website. */
+    link: v.union(v.string(), v.null()),
+    campaign: v.string(),
+    status: draftStatusValidator,
+    decidedAt: v.optional(v.number()),
+    decidedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_hold_area_created", ["companyWebsiteId", "area", "createdAt"])
+    .index("by_hold_kind_target", ["companyWebsiteId", "kind", "target"])
+    .index("by_created", ["createdAt"]),
 
   insightLearnings: defineTable({
     kind: v.string(),

@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useSiteDrafts } from "../../_components/useSiteDrafts";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { MessageSquareText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -48,6 +50,8 @@ export default function YourReviewsPage() {
   const tr = useTranslations("sites.reviews");
   const siteId = useSiteId();
   const site = useSite();
+  const router = useRouter();
+  const drafts = useSiteDrafts(siteId, "REVIEWS", site?.host ?? "site");
   const officeId = useOfficeId();
   const data = useQuery(api.siteReviews.yourReviews, { siteId, ...(officeId ? { officeId } : {}) });
   const [search, setSearch, term] = useSiteSearch();
@@ -81,6 +85,23 @@ export default function YourReviewsPage() {
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? null} allOffices /> : undefined}
       />
       <SiteSees screen="reviews" seen={data?.seen} />
+      {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
+      {drafts.shown ? (
+        <>
+          <DataTable
+            rows={drafts.pager.pageRows}
+            rowKey={(row) => row.draftId}
+            onRowClick={(row) => router.push(drafts.href(row.draftId))}
+            search={drafts.search}
+            filters={drafts.filters}
+            cardHeader={<TableBar footer={drafts.pager.footer} noun="results" title={drafts.title} actions={drafts.download} />}
+            empty={drafts.empty}
+            footer={drafts.pager.footer}
+            columns={drafts.columns}
+          />
+          {drafts.link}
+        </>
+      ) : null}
       {data && data.listings.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {figures ? (

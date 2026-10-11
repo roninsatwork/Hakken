@@ -10,6 +10,9 @@ import { serviceValidator } from "./utils/insightStrategy";
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { DRAFT_AREAS } from "./utils/insightDrafts";
+import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
+import { EVERY_DEVICE, slotKey, splitChannelKey } from "./googleAnalyticsLists";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 
 /**
@@ -489,6 +492,8 @@ export const insightsTrackRecord = tenantQuery({
     tally: v.object({ right: v.number(), wrong: v.number(), unclear: v.number() }),
     changes: v.array(v.object({ changeId: v.id("insightChanges"), host: v.string(), kind: v.string(), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), seenIn: v.string(), before: v.number(), after: v.number(), result: v.string(), week: v.string() })),
     learnings: v.array(v.object({ kind: v.string(), own: v.object({ lost: v.number(), held: v.number(), grew: v.number() }), across: v.union(v.null(), v.object({ companies: v.number(), lost: v.number(), held: v.number(), grew: v.number() })) })),
+    /** Each drafted fix the person approved, with what its tagged link brought (I39). */
+    fixes: v.array(v.object({ draftId: v.id("insightDrafts"), host: v.string(), title: v.string(), target: v.string(), approved: v.string(), visits: v.number(), enquiries: v.number() })),
   }),
   handler: async (ctx, args) => {
     const sites = await sitesFor(ctx, args.siteId);
@@ -513,7 +518,35 @@ export const insightsTrackRecord = tenantQuery({
         across: across && across.companies.length >= LIKE_YOURS ? { companies: across.companies.length, lost: across.lost, held: across.held, grew: across.grew } : null,
       });
     }
+    // The approved fixes, and what each tagged link brought: Analytics' campaigns over 12 months, by campaign and source (I39).
+    const fixes = [];
+    const since = Date.now() - 365 * 86_400_000;
+    for (const site of sites) {
+      const approved = [];
+      for (const area of DRAFT_AREAS) {
+        const rows = await ctx.db.query("insightDrafts").withIndex("by_hold_area_created", (q) => q.eq("companyWebsiteId", site.hold._id).eq("area", area).gte("createdAt", since)).take(200);
+        approved.push(...rows.filter((row) => row.status === "APPROVED"));
+      }
+      if (approved.length === 0) continue;
+      const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id)).first();
+      const counted = connection ? countedOf(connection) : [];
+      const campaigns = connection ? await readSlot(ctx, site.hold._id, slotKey("campaign", "365", "NOW", EVERY_DEVICE)) : null;
+      for (const draft of approved) {
+        const source = draft.link ? new URL(draft.link).searchParams.get("utm_source") : null;
+        const rows = (campaigns?.rows ?? []).filter((row) => {
+          const { channel, source: sourceMedium } = splitChannelKey(row.key);
+          return channel === draft.campaign && (!source || sourceMedium.startsWith(`${source} /`));
+        });
+        fixes.push({
+          draftId: draft._id, host: site.host, title: draft.title, target: draft.target,
+          approved: new Date(draft.decidedAt ?? draft.createdAt).toISOString().slice(0, 10),
+          visits: rows.reduce((sum, row) => sum + row.visits, 0),
+          enquiries: rows.reduce((sum, row) => sum + conversionsOf(row, counted).conversions, 0),
+        });
+      }
+    }
     return {
+      fixes: fixes.sort((a, b) => b.approved.localeCompare(a.approved)),
       findings: findings.sort((a, b) => (a.checkOn ?? "9").localeCompare(b.checkOn ?? "9")),
       tally: tallies.reduce((sum, row) => ({ right: sum.right + row.right, wrong: sum.wrong + row.wrong, unclear: sum.unclear + row.unclear }), { right: 0, wrong: 0, unclear: 0 }),
       changes: changes.map((change) => ({ changeId: change._id, host: hosts.get(change.companyWebsiteId) ?? "", kind: change.kind, from: change.from, to: change.to, seenIn: change.seenIn, before: change.before, after: change.after, result: change.result, week: change.week })),
