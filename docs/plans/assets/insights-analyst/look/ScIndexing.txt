@@ -1,0 +1,15 @@
+# Search Console → Indexing — the approved look (board "ScIndexing" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Indexing
+settings-card: What Hakken sees
+figures
+  figure: Money pages indexed
+  figure: Read by Google this month
+  figure: Not indexed
+  figure: Checked
+search: Find a page
+table: Page | Indexed | Last read by Google | Why not
+  table-bar: # pages · Your money pages
+    download: Download CSV
+  table-footer

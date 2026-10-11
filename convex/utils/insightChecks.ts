@@ -65,6 +65,9 @@ function landingPaths(read: Read, prefix: "landing" | "landingSearch", period: s
   return paths;
 }
 
+/** A money page Google hasn't read in this many days carries none of the changes made since. */
+const STALE_DAYS = 60;
+
 export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] {
   const read = readerOf(facts);
   const out: Candidate[] = [];
@@ -333,6 +336,52 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
         specialist: "technical", pattern: "auditProblems", stake: found[0].count / 10,
         seen: `The site audit read [[crawl.pages]] pages; ${found.slice(0, 3).map((issue) => `[[crawl.issue.${issue.check}]] have "${issue.check}"`).join(", ")}.`,
         facts: ["crawl.pages", ...found.slice(0, 3).map((issue) => `crawl.issue.${issue.check}`)],
+      });
+    }
+  }
+
+  // The money pages' weekly checks (phase 8): not indexed, unread for months, slow for real visitors,
+  // missing the structured data their kind should carry; and pages no other page links to.
+  {
+    const notIndexed = facts.filter((fact) => /^tech\.page\..+\.notIndexed$/.test(fact.key)).map((fact) => fact.key);
+    if (notIndexed.length > 0 && read.has("tech.indexed") && read.has("tech.inspected")) {
+      add({
+        specialist: "technical", pattern: "moneyPageNotIndexed", stake: 6 * notIndexed.length,
+        seen: `Google has indexed [[tech.indexed]] of the [[tech.inspected]] money pages Hakken asked about; ${notIndexed.slice(0, 3).map((key) => `[[${key}]]`).join(", ")} is not.`,
+        facts: ["tech.indexed", "tech.inspected", ...notIndexed.slice(0, 3)],
+      });
+    }
+    const unread = facts.filter((fact) => /^tech\.page\..+\.unreadDays$/.test(fact.key) && fact.value >= STALE_DAYS).sort((a, b) => b.value - a.value);
+    if (unread.length > 0) {
+      add({
+        specialist: "technical", pattern: "moneyPageUnread", stake: unread.length,
+        seen: `Google last read ${unread.slice(0, 3).map((fact) => `${fact.label.replace(/^days since Google last read /, "")} [[${fact.key}]] days ago`).join("; ")}: a change made since isn't in its results yet.`,
+        facts: unread.slice(0, 3).map((fact) => fact.key),
+      });
+    }
+    const fast = read.get("tech.fast"), timed = read.get("tech.timed");
+    if (fast !== undefined && timed !== undefined && fast < timed) {
+      const slowest = facts.filter((fact) => /^tech\.page\..+\.mainContent$/.test(fact.key)).sort((a, b) => b.value - a.value)[0];
+      add({
+        specialist: "technical", pattern: "slowMoneyPages", stake: 2 * (timed - fast),
+        seen: `[[tech.fast]] of [[tech.timed]] money pages are fast enough for real visitors${slowest ? `; ${slowest.label.replace(/^seconds before /, "").replace(/ shows its main content.*$/, "")} takes [[${slowest.key}]] seconds to show its main content on phones` : ""}.`,
+        facts: ["tech.fast", "tech.timed", ...(slowest ? [slowest.key] : [])],
+      });
+    }
+    const missing = read.get("tech.missingMarkup");
+    if (missing !== undefined && missing > 0 && read.has("tech.marked")) {
+      add({
+        specialist: "technical", pattern: "missingMarkup", stake: missing / 2,
+        seen: "[[tech.missingMarkup]] of [[tech.marked]] money pages lack the structured data their kind should carry: company facts on the home page, the service on a service page.",
+        facts: ["tech.missingMarkup", "tech.marked"],
+      });
+    }
+    const orphans = read.get("crawl.orphans");
+    if (orphans !== undefined && orphans > 0 && read.has("crawl.pages")) {
+      add({
+        specialist: "technical", pattern: "orphanPages", stake: orphans / 5,
+        seen: "[[crawl.orphans]] of the [[crawl.pages]] pages the site audit read have no link from any other page: Google and visitors only find them by search or the sitemap.",
+        facts: ["crawl.orphans", "crawl.pages"],
       });
     }
   }

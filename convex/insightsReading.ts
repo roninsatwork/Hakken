@@ -19,10 +19,11 @@ import { latestBands, latestFigures, seriesFor } from "./siteFigures";
 import { listHold } from "./siteAccess";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 import { unpackColumn } from "./utils/packedColumns";
-import { factKey, factValidator, percentOf, shiftDay, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
+import { factKey, factValidator, percentOf, shiftDay, spanDays, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
 import { pageChanges, type PageYear } from "./utils/insightTrack";
+import { fastEnough, missingStructuredData } from "./utils/moneyPageChecks";
 import { NEAR, opportunitiesFrom, pagePlanFrom, planValidator, siteRateOf, type ConsoleSearch, type PageFigures, type RankedSearch } from "./utils/insightPlan";
 
 /**
@@ -356,9 +357,48 @@ export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
   if (crawl) {
     facts.add({ key: factKey("crawl", "pages"), value: crawl.pagesCrawled, unit: "count", source: "crawl", label: "pages read in the site audit", to: crawl.day });
     for (const issue of crawl.issues) facts.add({ key: factKey("crawl", "issue", issue.check), value: issue.pages, unit: "count", source: "crawl", label: `pages with "${issue.check}"`, to: crawl.day });
+    // Pages no other page links to (phase 8): from the crawl's own pages, read as far as is sensible.
+    const orphans = await orphanPagesOf(ctx, crawl.pullId);
+    facts.add({ key: factKey("crawl", "orphans"), value: orphans.length, unit: "count", source: "crawl", label: "pages no other page links to", to: crawl.day });
+  }
+  // The money pages' weekly checks (phase 8): indexed, read lately, fast for real visitors, marked up.
+  const checks = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", hold._id)).take(MONEY_PAGES_READ);
+  if (checks.length > 0) {
+    const day = new Date(Math.max(...checks.map((check) => check.checkedAt))).toISOString().slice(0, 10);
+    const inspected = checks.filter((check) => check.indexed);
+    if (inspected.length > 0) {
+      facts.add({ key: factKey("tech", "inspected"), value: inspected.length, unit: "count", source: "searchConsole", label: "money pages Hakken asked Google about", to: day });
+      facts.add({ key: factKey("tech", "indexed"), value: inspected.filter((check) => check.indexed?.verdict === "PASS").length, unit: "count", source: "searchConsole", label: "money pages Google has indexed", to: day });
+    }
+    const timed = checks.filter((check) => check.speed?.lcpMs !== null && check.speed?.lcpMs !== undefined);
+    if (timed.length > 0) {
+      facts.add({ key: factKey("tech", "timed"), value: timed.length, unit: "count", source: "crawl", label: "money pages with Google's real-visitor speed figures", to: day });
+      facts.add({ key: factKey("tech", "fast"), value: timed.filter((check) => fastEnough(check.speed) === true).length, unit: "count", source: "crawl", label: "money pages fast enough on Google's three measures", to: day });
+    }
+    const read = checks.filter((check) => check.structured !== null);
+    if (read.length > 0) {
+      facts.add({ key: factKey("tech", "marked"), value: read.length, unit: "count", source: "crawl", label: "money pages whose structured data Hakken read", to: day });
+      facts.add({ key: factKey("tech", "missingMarkup"), value: read.filter((check) => missingStructuredData(check.kind, check.structured ?? []).length > 0).length, unit: "count", source: "crawl", label: "money pages missing the structured data their kind should carry", to: day });
+    }
+    for (const check of checks) {
+      if (check.indexed && check.indexed.verdict !== "PASS") facts.add({ key: factKey("tech", "page", check.page, "notIndexed"), value: 1, unit: "count", source: "searchConsole", label: `${check.page} not indexed by Google`, to: day });
+      if (check.indexed?.lastRead) facts.add({ key: factKey("tech", "page", check.page, "unreadDays"), value: spanDays(check.indexed.lastRead, day) - 1, unit: "count", source: "searchConsole", label: `days since Google last read ${check.page}`, to: day });
+      if (check.speed?.lcpMs) facts.add({ key: factKey("tech", "page", check.page, "mainContent"), value: Math.round(check.speed.lcpMs / 100) / 10, unit: "seconds", source: "crawl", label: `seconds before ${check.page} shows its main content to real visitors on phones`, to: day });
+    }
   }
   return facts.list;
 }
+
+/** A crawl's pages no other page links to, read at most. */
+const ORPHANS_READ = 500;
+
+/** The working pages of a crawl no other page links to, the home page aside: read by their own index (phase 8). */
+export async function orphanPagesOf(ctx: Reader, pullId: Id<"seoDataPulls">) {
+  const rows = await ctx.db.query("siteCrawlPages").withIndex("by_pull_inbound", (q) => q.eq("pullId", pullId).eq("inboundLinks", 0)).take(ORPHANS_READ);
+  return rows.filter((page) => (page.statusCode ?? 200) === 200 && (page.resourceType ?? "html") === "html" && page.page !== "/");
+}
+/** A website's money page checks: a dozen, with room. */
+const MONEY_PAGES_READ = 40;
 
 // ---------------------------------------------------------------------------
 // The queries the run reads, one a source

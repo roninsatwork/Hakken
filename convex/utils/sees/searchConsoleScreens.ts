@@ -310,3 +310,36 @@ export function servicesSees(services: readonly ServiceDemand[]): Seen {
     [best && { code: "growBest", text: best.name, link: "seeStrategy", to: { url: "/app/insights/strategy" } }],
   );
 }
+
+/** A money page's indexing, as the weekly check found it. */
+export type PageIndexing = { page: string; verdict: string | null; lastRead: string | null };
+
+/** A page Google hasn't read in this many days carries none of the changes made since. */
+const UNREAD_DAYS = 60;
+
+/**
+ * Indexing (insights-analyst-plan.md §4.4, phase 8): how many money pages
+ * Google has indexed, which one isn't, and the one it read longest ago — with
+ * asking Google to read it again as the step, in Search Console itself.
+ */
+export function indexingSees(pages: readonly PageIndexing[], checkedDay: string | null): Seen {
+  const inspected = pages.filter((page) => page.verdict !== null);
+  if (inspected.length === 0) return seen([{ code: "noIndexing" }]);
+  const indexed = inspected.filter((page) => page.verdict === "PASS");
+  const missing = inspected.filter((page) => page.verdict !== "PASS");
+  const oldest = [...indexed].filter((page) => page.lastRead).sort((a, b) => (a.lastRead ?? "").localeCompare(b.lastRead ?? ""))[0];
+  const daysAgo = (day: string) => (checkedDay ? Math.round((Date.parse(checkedDay) - Date.parse(day)) / 86_400_000) : 0);
+  const stale = oldest?.lastRead && daysAgo(oldest.lastRead) >= UNREAD_DAYS ? oldest : null;
+  const console = { url: "https://search.google.com/search-console" };
+  return seen(
+    [
+      { code: "indexedOf", a: indexed.length, b: inspected.length },
+      missing.length > 0 && { code: "notIndexed", text: missing[0].page, a: missing.length },
+      oldest?.lastRead ? { code: "oldestRead", text: oldest.page, days: [oldest.lastRead] } : null,
+    ],
+    [
+      missing.length > 0 && { code: "fixIndexing", text: missing[0].page, link: "openSearchConsole", to: console },
+      stale && { code: "askRead", text: stale.page, link: "openSearchConsole", to: console },
+    ],
+  );
+}

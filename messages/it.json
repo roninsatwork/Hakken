@@ -12143,7 +12143,56 @@
         "NO_INDEX": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: le pagine del sito chiedono ai crawler di non leggerle, quindi questo audit non è completo.",
         "REDIRECTS": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: la home page del sito reindirizza troppe volte per essere seguita, quindi questo audit non è completo."
       },
-      "notComplete": "È stata scansionata troppo poca parte del sito per giudicarlo."
+      "notComplete": "È stata scansionata troppo poca parte del sito per giudicarlo.",
+      "money": {
+        "notYet": "Hakken controlla le tue pagine che portano clienti una volta a settimana: velocità per i visitatori reali, dati strutturati e se Google le ha indicizzate. Il primo controllo è in arrivo.",
+        "noSpeed": "I dati di velocità di Google per i visitatori reali non sono ancora collegati, quindi la velocità aspetta; dati strutturati e indicizzazione sono controllati.",
+        "of": "{a} su {b}",
+        "seconds": "{value}s",
+        "ms": "{value}ms",
+        "search": "Trova una pagina",
+        "tableTitle": "{count, plural, one {# pagina che porta clienti} other {# pagine che portano clienti}} · Controllate il {day}",
+        "download": "Scarica CSV",
+        "noMatch": "Nessuna pagina corrisponde",
+        "seeInsights": "Vedi le scoperte di Insights sulla salute tecnica",
+        "figures": {
+          "fast": "Pagine che portano clienti abbastanza veloci",
+          "fastDetail": "le tre misure di Google, su telefono",
+          "slowest": "La più lenta a mostrare il contenuto principale",
+          "slowestDetail": "{page}, su telefono",
+          "waiting": "in attesa dei dati di Google",
+          "markup": "Pagine che portano clienti con i loro dati strutturati",
+          "markupDetail": "ciò che cercano Google e gli strumenti di AI",
+          "orphans": "Pagine a cui nessun'altra pagina rimanda",
+          "orphansDetail": "come {page}",
+          "orphansNone": "ogni pagina ha un link da un'altra"
+        },
+        "columns": {
+          "page": "Pagina",
+          "mainContent": "Mostra il contenuto principale",
+          "tap": "Risponde a un tocco",
+          "shifts": "Spostamenti del layout",
+          "markup": "Dati strutturati",
+          "speed": "Velocità"
+        },
+        "speed": {
+          "fast": "Veloce",
+          "none": "Ancora nessun dato",
+          "MAIN_CONTENT": "Lenta a mostrare",
+          "TAPS": "Lenta a rispondere",
+          "SHIFTS": "Il layout si sposta"
+        },
+        "markup": {
+          "unread": "Pagina non leggibile",
+          "none": "Nessuno",
+          "has": "{count, plural, one {# tipo} other {# tipi}}",
+          "missing": "Mancano: {kinds}",
+          "kinds": {
+            "ORGANISATION": "i dati dell'azienda",
+            "SERVICE": "il servizio"
+          }
+        }
+      }
     },
     "paid": {
       "title": "Ricerca a pagamento",
@@ -14342,7 +14391,8 @@
       "trackedKeywords": "Parole chiave monitorate",
       "trackedPages": "Pagine monitorate",
       "volatility": "Volatilità",
-      "services": "Domanda per servizio"
+      "services": "Domanda per servizio",
+      "indexing": "Indicizzazione"
     },
     "kinds": {
       "label": "Tipo di risultato",
@@ -14916,7 +14966,8 @@
         "keywordResearch": "Apri Ricerca parole chiave",
         "seeDemand": "Vedi Domanda persa",
         "connect": "Collegalo",
-        "seeStrategy": "Vedi la strategia"
+        "seeStrategy": "Vedi la strategia",
+        "openSearchConsole": "Apri Search Console"
       },
       "keywords": {
         "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
@@ -15055,6 +15106,14 @@
         "shownFewer": "Google ti ha mostrato il {a}% in meno dei giorni precedenti, e i clic sono passati da {c} a {b}.",
         "bestWorst": "Tra i tuoi servizi, l'interesse ha tenuto meglio per {text}, {countC, plural, =1 {in crescita del} other {in calo del}} {a}%, ed è sceso di più per {more}, in calo del {b}%.",
         "growBest": "Metti l'impegno del prossimo trimestre su {text}."
+      },
+      "indexing": {
+        "noIndexing": "Hakken non ha ancora chiesto a Google delle tue pagine che portano clienti: il primo controllo settimanale è in arrivo.",
+        "indexedOf": "Google ha indicizzato {a} delle tue {b} pagine che portano clienti.",
+        "notIndexed": "{text} non è indicizzata, quindi non può comparire nei risultati di Google.",
+        "oldestRead": "La pagina che Google ha letto da più tempo è {text}, il {day1}: una modifica fatta dopo non è ancora nei risultati.",
+        "fixIndexing": "Controlla {text} in Search Console e chiedi a Google di indicizzarla.",
+        "askRead": "Chiedi a Google di rileggere {text} in Search Console."
       }
     },
     "pageGap": {
@@ -15096,6 +15155,39 @@
         "now": "Gli ultimi giorni"
       },
       "home": "Pagina principale"
+    },
+    "indexing": {
+      "title": "Indicizzazione",
+      "description": "Se Google ha indicizzato ogni pagina che porta richieste, e quando l'ha letta l'ultima volta. Dal controllo URL di Search Console, una volta a settimana.",
+      "of": "{a} su {b}",
+      "search": "Trova una pagina",
+      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Le tue pagine che portano clienti",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna pagina corrisponde",
+      "empty": "Hakken chiede a Google delle tue pagine che portano clienti una volta a settimana. Il primo controllo è in arrivo.",
+      "indexed": "Indicizzata",
+      "notIndexed": "Non indicizzata",
+      "notAsked": "Non ancora chiesto",
+      "unknown": "Google non l'ha detto",
+      "otherCanonical": "Google mostra un'altra pagina al suo posto",
+      "seeInsights": "Vedi le scoperte di Insights sull'indicizzazione",
+      "figures": {
+        "indexed": "Pagine che portano clienti indicizzate",
+        "indexedDetail": "secondo Google oggi",
+        "readThisMonth": "Lette da Google questo mese",
+        "readThisMonthDetail": "nei 30 giorni prima del controllo",
+        "notIndexed": "Non indicizzate",
+        "noneMissing": "nessuna",
+        "checked": "Controllate",
+        "checkedOn": "una volta a settimana; l'ultima il {day}",
+        "notYet": "il primo controllo è in arrivo"
+      },
+      "columns": {
+        "page": "Pagina",
+        "indexed": "Indicizzata",
+        "lastRead": "Ultima lettura di Google",
+        "why": "Perché no"
+      }
     }
   },
   "googleAnalytics": {
@@ -17825,7 +17917,12 @@
         "conversionsNeverFire": "Modi di contattarti che non vengono mai contati",
         "analyticsSeesPart": "Analytics vede solo una parte",
         "joinedStory": "Una storia tra le fonti",
-        "enquiryCountUncertain": "Le richieste potrebbero essere contate male"
+        "enquiryCountUncertain": "Le richieste potrebbero essere contate male",
+        "moneyPageNotIndexed": "Una pagina che porta clienti non indicizzata da Google",
+        "moneyPageUnread": "Pagine che portano clienti non lette di recente da Google",
+        "slowMoneyPages": "Pagine che portano clienti lente per i visitatori reali",
+        "missingMarkup": "Pagine che portano clienti senza i loro dati strutturati",
+        "orphanPages": "Pagine a cui nessun'altra pagina rimanda"
       },
       "sources": {
         "searchConsole": "Search Console",

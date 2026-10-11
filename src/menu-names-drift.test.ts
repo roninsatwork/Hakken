@@ -20,8 +20,9 @@ const OLD_NAMES: Record<"en" | "it", RegExp> = {
   en: /\b(Discovery|Insights)\b/,
   it: /\b(Discovery|Scoperta|Insights)\b/,
 };
-// A source's link to the analyst's own findings names the section it opens (insights-analyst-plan.md §4.4).
-const KEPT = new Set(["dashboard.hero.eyebrow", "searchConsole.services.seeInsights"]);
+const KEPT = new Set(["dashboard.hero.eyebrow"]);
+/** A source's link to the analyst's own findings names the section it opens (insights-analyst-plan.md §4.4). */
+const LINKS_TO_INSIGHTS = /\.seeInsights$/;
 /** The analyst's section, the one place "Insights" belongs (menu-names-plan.md phase 7). */
 const INSIGHTS_KEYS = /^(insights\.|sidebar\.insights|admin\.insights\.|admin\.companyDataCollection\.insights\.|admin\.agents\.details\.settings\.sections\.role\.(groups\.insights|roles\.INSIGHTS_))/;
 const DISCOVERY: Record<"en" | "it", RegExp> = { en: /\bDiscovery\b/, it: /\b(Discovery|Scoperta)\b/ };
@@ -35,7 +36,7 @@ function strings(messages: unknown, prefix = ""): [string, string][] {
 describe("the menu's names", () => {
   test.each([["en", en], ["it", it]] as const)("no sentence in %s names Discovery or Insights", (language, messages) => {
     const stale = strings(messages)
-      .filter(([key, words]) => !KEPT.has(key) && (INSIGHTS_KEYS.test(key) ? DISCOVERY[language].test(words) : OLD_NAMES[language].test(words)))
+      .filter(([key, words]) => !KEPT.has(key) && !LINKS_TO_INSIGHTS.test(key) && (INSIGHTS_KEYS.test(key) ? DISCOVERY[language].test(words) : OLD_NAMES[language].test(words)))
       .map(([key, words]) => `${key}: ${words}`);
     expect(stale, "Say Visibility (Visibilità) for the DataForSEO section and Reading room (Sala di lettura) for the reading one (menu-names-plan.md).").toEqual([]);
   });

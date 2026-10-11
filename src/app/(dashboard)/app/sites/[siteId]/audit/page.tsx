@@ -31,6 +31,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSi
 import { ListDownload } from "../../_components/SiteDownloads";
 import { CompetitorNotCollected, useIsCompetitor } from "../../_components/CompetitorNotCollected";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { useMoneyPagesAudit } from "./MoneyPagesAudit";
 
 type Severity = "ERROR" | "WARNING" | "NOTICE";
 const SEVERITIES: Severity[] = ["ERROR", "WARNING", "NOTICE"];
@@ -56,6 +57,7 @@ export default function SiteAuditPage() {
   const competitor = useIsCompetitor();
   const range = useSiteRange();
   const audit = useQuery(api.siteCrawl.siteAudit, { siteId });
+  const money = useMoneyPagesAudit(siteId, site?.host ?? "site");
   const router = useRouter();
   const params = useSearchParams();
   const recordHref = useSiteRecordHref(siteId);
@@ -121,6 +123,23 @@ export default function SiteAuditPage() {
       {/* A crawl turned away at the door says so, rather than reading as an empty or a perfect audit (finish-off plan, item 7). */}
       {audit?.turnedAway ? (
         <Notice tone="warning">{t(`turnedAway.${audit.turnedAway}`, { count: audit.pagesCrawled })}</Notice>
+      ) : null}
+
+      {/* The money pages: real-visitor speed, structured data and pages nothing links to (insights-analyst-plan.md phase 8). */}
+      {money.shown ? (
+        <>
+          {money.figures}
+          <DataTable
+            rows={money.pager.pageRows}
+            rowKey={(row) => row.page}
+            search={money.search}
+            cardHeader={<TableBar footer={money.pager.footer} noun="results" title={money.title} actions={money.download} />}
+            empty={money.empty}
+            footer={money.pager.footer}
+            columns={money.columns}
+          />
+          {money.link}
+        </>
       ) : null}
 
       {audit === null ? (

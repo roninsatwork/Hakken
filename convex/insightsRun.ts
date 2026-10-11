@@ -146,6 +146,16 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   const member = (role: string) => setup.members.find((entry) => entry.role === role && entry.isActive);
   const lead = member(INSIGHTS_LEAD_ROLE);
 
+  // 0. The money pages' weekly checks (phase 8), when a week has passed: indexing, speed, structured data.
+  try {
+    const checked = await ctx.runAction(internal.moneyPageChecks.checkWebsite, { holdId: args.holdId });
+    if (checked.checked > 0 || checked.problems.length > 0) {
+      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Money pages", detail: `Checked ${checked.checked} money pages.${checked.problems.length > 0 ? ` ${checked.problems.join(" ")}` : ""}`.slice(0, 900), failed: false });
+    }
+  } catch (error) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Money pages", detail: failureSummary(error), failed: true });
+  }
+
   // 1. One reading of every source (§2.1), and what the run asks Google itself (§8, I37, I42).
   const reading = await readWebsiteFacts(ctx, args.holdId);
   reading.facts.push(...await askedInRun(ctx, args.holdId));

@@ -1163,7 +1163,8 @@
         "keywordResearch": "Open Keyword research",
         "seeDemand": "See Missed demand",
         "connect": "Connect it",
-        "seeStrategy": "See the strategy"
+        "seeStrategy": "See the strategy",
+        "openSearchConsole": "Open Search Console"
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords in the last {c} days.",
@@ -1302,6 +1303,14 @@
         "shownFewer": "Google showed you {a}% less than the days before, and clicks went from {c} to {b}.",
         "bestWorst": "Among your services, interest held best for {text}, {countC, plural, =1 {up} other {down}} {a}%, and fell most for {more}, down {b}%.",
         "growBest": "Put next quarter's effort into {text}."
+      },
+      "indexing": {
+        "noIndexing": "Hakken hasn't asked Google about your money pages yet: the first weekly check is on its way.",
+        "indexedOf": "Google has indexed {a} of your {b} money pages.",
+        "notIndexed": "{text} isn't indexed, so it can't show in Google's results.",
+        "oldestRead": "The page Google read longest ago is {text}, on {day1}: a change made since isn't in its results yet.",
+        "fixIndexing": "Inspect {text} in Search Console and ask Google to index it.",
+        "askRead": "Ask Google to read {text} again in Search Console."
       }
     }
   },
@@ -2469,7 +2478,8 @@
         "keywordResearch": "Apri Ricerca parole chiave",
         "seeDemand": "Vedi Domanda persa",
         "connect": "Collegalo",
-        "seeStrategy": "Vedi la strategia"
+        "seeStrategy": "Vedi la strategia",
+        "openSearchConsole": "Apri Search Console"
       },
       "keywords": {
         "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
@@ -2608,6 +2618,14 @@
         "shownFewer": "Google ti ha mostrato il {a}% in meno dei giorni precedenti, e i clic sono passati da {c} a {b}.",
         "bestWorst": "Tra i tuoi servizi, l'interesse ha tenuto meglio per {text}, {countC, plural, =1 {in crescita del} other {in calo del}} {a}%, ed è sceso di più per {more}, in calo del {b}%.",
         "growBest": "Metti l'impegno del prossimo trimestre su {text}."
+      },
+      "indexing": {
+        "noIndexing": "Hakken non ha ancora chiesto a Google delle tue pagine che portano clienti: il primo controllo settimanale è in arrivo.",
+        "indexedOf": "Google ha indicizzato {a} delle tue {b} pagine che portano clienti.",
+        "notIndexed": "{text} non è indicizzata, quindi non può comparire nei risultati di Google.",
+        "oldestRead": "La pagina che Google ha letto da più tempo è {text}, il {day1}: una modifica fatta dopo non è ancora nei risultati.",
+        "fixIndexing": "Controlla {text} in Search Console e chiedi a Google di indicizzarla.",
+        "askRead": "Chiedi a Google di rileggere {text} in Search Console."
       }
     }
   }

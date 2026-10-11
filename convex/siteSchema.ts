@@ -623,7 +623,9 @@ export const siteTables = {
     .index("by_pull", ["pullId"])
     .index("by_site", ["websiteId"])
     // A page's own screen: what the newest crawl found on it.
-    .index("by_site_page", ["websiteId", "page"]),
+    .index("by_site_page", ["websiteId", "page"])
+    // The pages no other page links to (insights-analyst-plan.md phase 8), read without the rest.
+    .index("by_pull_inbound", ["pullId", "inboundLinks"]),
 
   /** The broken links a site crawl found, page by page: where each is and where it points. */
   siteCrawlLinks: defineTable({

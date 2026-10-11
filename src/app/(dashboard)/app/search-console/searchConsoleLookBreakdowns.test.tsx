@@ -13,6 +13,7 @@ import SearchConsoleCtrCurvePage from "./[siteId]/click-rate-by-position/page";
 import SearchConsoleAppearancePage from "./[siteId]/rich-results/page";
 import SearchConsoleEstimatesPage from "./[siteId]/real-against-estimated/page";
 import SearchConsoleServicesPage from "./[siteId]/demand-by-service/page";
+import SearchConsoleIndexingPage from "./[siteId]/indexing/page";
 
 /**
  * Search Console's last opportunities and its breakdowns hold to the looks
@@ -168,6 +169,23 @@ describe("Search Console's approved looks: missed demand, pages competing and th
     const { container } = render(<SearchConsoleServicesPage />);
     await screen.findAllByText("AI Agency");
     await expectApprovedLook(container, "insights-analyst", "ScDemand", "Search Console → Demand by service");
+  });
+
+  it("Insights 36 · Indexing", async () => {
+    at("/app/search-console/site_1/indexing");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "moneyPageChecks:siteMoneyPages": {
+        checkedAt: Date.parse("2026-10-11T07:00:00Z"), orphans: 0, orphanPages: [],
+        pages: [
+          { page: "/", kind: "HOME", clicks: 65, indexed: { verdict: "PASS", coverage: "Submitted and indexed", lastRead: "2026-10-08", fetch: "SUCCESSFUL", otherCanonical: false }, speed: null, structured: null },
+          { page: "/blockchain-developers/", kind: "SERVICE", clicks: 3, indexed: { verdict: "FAIL", coverage: "Not found (404)", lastRead: "2026-06-14", fetch: "NOT_FOUND", otherCanonical: false }, speed: null, structured: null },
+        ],
+      },
+    });
+    const { container } = render(<SearchConsoleIndexingPage />);
+    await screen.findAllByText("/blockchain-developers/");
+    await expectApprovedLook(container, "insights-analyst", "ScIndexing", "Search Console → Indexing");
   });
 
   it("12 · Pages competing", async () => {

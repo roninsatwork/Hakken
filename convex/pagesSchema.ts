@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import { indexedValidator, speedValidator } from "./utils/moneyPageChecks";
 
 /**
  * A website's pages, and what each is in the company's own words
@@ -155,4 +156,23 @@ export const pagesTables = {
     .index("by_hold_page", ["companyWebsiteId", "page"])
     // The pages set to one classification by hand, cleared when it is removed (pageClassifications.ts).
     .index("by_hold_classification", ["companyWebsiteId", "classificationId"]),
+
+  /**
+   * The weekly checks on each money page of a website (insights-analyst-plan.md
+   * §4.4, phase 8): whether Google has indexed it and when it last read it,
+   * how fast it is for real visitors, and its structured data. One row a page,
+   * replaced each week; a page no longer among the money pages is removed.
+   */
+  moneyPageChecks: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    page: v.string(),
+    kind: v.union(v.string(), v.null()),
+    /** Its clicks from Google over 90 days, when it was chosen: the order of the list. */
+    clicks: v.number(),
+    indexed: v.union(indexedValidator, v.null()),
+    speed: v.union(speedValidator, v.null()),
+    /** Its structured data's kinds; null when the page could not be read. */
+    structured: v.union(v.array(v.string()), v.null()),
+    checkedAt: v.number(),
+  }).index("by_hold_page", ["companyWebsiteId", "page"]),
 };

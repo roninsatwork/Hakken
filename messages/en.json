@@ -12143,7 +12143,56 @@
         "NO_INDEX": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's pages ask crawlers not to read them, so this audit is not complete.",
         "REDIRECTS": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's home page redirects too many times to follow, so this audit is not complete."
       },
-      "notComplete": "Too little of the website was crawled to judge it."
+      "notComplete": "Too little of the website was crawled to judge it.",
+      "money": {
+        "notYet": "Hakken checks your money pages once a week: their speed for real visitors, their structured data and whether Google has indexed them. The first check is on its way.",
+        "noSpeed": "Google's speed figures for real visitors aren't connected yet, so speed waits; structured data and indexing are checked.",
+        "of": "{a} of {b}",
+        "seconds": "{value}s",
+        "ms": "{value}ms",
+        "search": "Find a page",
+        "tableTitle": "{count, plural, one {# money page} other {# money pages}} · Checked {day}",
+        "download": "Download CSV",
+        "noMatch": "No page matches",
+        "seeInsights": "See the Insights findings about technical health",
+        "figures": {
+          "fast": "Money pages fast enough",
+          "fastDetail": "Google's three measures, on phones",
+          "slowest": "Slowest to show its main content",
+          "slowestDetail": "{page}, on phones",
+          "waiting": "waiting for Google's figures",
+          "markup": "Money pages with their structured data",
+          "markupDetail": "what Google and AI tools look for",
+          "orphans": "Pages no other page links to",
+          "orphansDetail": "such as {page}",
+          "orphansNone": "every page is linked from another"
+        },
+        "columns": {
+          "page": "Page",
+          "mainContent": "Main content shows",
+          "tap": "Responds to a tap",
+          "shifts": "Layout shifts",
+          "markup": "Structured data",
+          "speed": "Speed"
+        },
+        "speed": {
+          "fast": "Fast",
+          "none": "No figures yet",
+          "MAIN_CONTENT": "Slow to show",
+          "TAPS": "Slow to respond",
+          "SHIFTS": "Layout shifts"
+        },
+        "markup": {
+          "unread": "Couldn't read the page",
+          "none": "None",
+          "has": "{count, plural, one {# kind} other {# kinds}}",
+          "missing": "Missing: {kinds}",
+          "kinds": {
+            "ORGANISATION": "company facts",
+            "SERVICE": "the service"
+          }
+        }
+      }
     },
     "paid": {
       "title": "Paid search",
@@ -14342,7 +14391,8 @@
       "trackedKeywords": "Tracked keywords",
       "trackedPages": "Tracked pages",
       "volatility": "Volatility",
-      "services": "Demand by service"
+      "services": "Demand by service",
+      "indexing": "Indexing"
     },
     "kinds": {
       "label": "Kind of result",
@@ -14916,7 +14966,8 @@
         "keywordResearch": "Open Keyword research",
         "seeDemand": "See Missed demand",
         "connect": "Connect it",
-        "seeStrategy": "See the strategy"
+        "seeStrategy": "See the strategy",
+        "openSearchConsole": "Open Search Console"
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords in the last {c} days.",
@@ -15055,6 +15106,14 @@
         "shownFewer": "Google showed you {a}% less than the days before, and clicks went from {c} to {b}.",
         "bestWorst": "Among your services, interest held best for {text}, {countC, plural, =1 {up} other {down}} {a}%, and fell most for {more}, down {b}%.",
         "growBest": "Put next quarter's effort into {text}."
+      },
+      "indexing": {
+        "noIndexing": "Hakken hasn't asked Google about your money pages yet: the first weekly check is on its way.",
+        "indexedOf": "Google has indexed {a} of your {b} money pages.",
+        "notIndexed": "{text} isn't indexed, so it can't show in Google's results.",
+        "oldestRead": "The page Google read longest ago is {text}, on {day1}: a change made since isn't in its results yet.",
+        "fixIndexing": "Inspect {text} in Search Console and ask Google to index it.",
+        "askRead": "Ask Google to read {text} again in Search Console."
       }
     },
     "pageGap": {
@@ -15096,6 +15155,39 @@
         "now": "The last days"
       },
       "home": "Home page"
+    },
+    "indexing": {
+      "title": "Indexing",
+      "description": "Whether Google has indexed each page that brings enquiries, and when it last read it. From Search Console's URL inspection, once a week.",
+      "of": "{a} of {b}",
+      "search": "Find a page",
+      "tableTitle": "{count, plural, one {# page} other {# pages}} · Your money pages",
+      "download": "Download CSV",
+      "noMatch": "No page matches",
+      "empty": "Hakken asks Google about your money pages once a week. The first check is on its way.",
+      "indexed": "Indexed",
+      "notIndexed": "Not indexed",
+      "notAsked": "Not asked yet",
+      "unknown": "Google didn't say",
+      "otherCanonical": "Google shows another page in its place",
+      "seeInsights": "See the Insights findings about indexing",
+      "figures": {
+        "indexed": "Money pages indexed",
+        "indexedDetail": "as Google says today",
+        "readThisMonth": "Read by Google this month",
+        "readThisMonthDetail": "in the 30 days before the check",
+        "notIndexed": "Not indexed",
+        "noneMissing": "none",
+        "checked": "Checked",
+        "checkedOn": "once a week; last on {day}",
+        "notYet": "the first check is on its way"
+      },
+      "columns": {
+        "page": "Page",
+        "indexed": "Indexed",
+        "lastRead": "Last read by Google",
+        "why": "Why not"
+      }
     }
   },
   "googleAnalytics": {
@@ -17825,7 +17917,12 @@
         "conversionsNeverFire": "Ways to enquire that never count",
         "analyticsSeesPart": "Analytics sees only part",
         "joinedStory": "One story across sources",
-        "enquiryCountUncertain": "Enquiries may be counted wrongly"
+        "enquiryCountUncertain": "Enquiries may be counted wrongly",
+        "moneyPageNotIndexed": "A money page Google hasn't indexed",
+        "moneyPageUnread": "Money pages Google hasn't read lately",
+        "slowMoneyPages": "Money pages slow for real visitors",
+        "missingMarkup": "Money pages without their structured data",
+        "orphanPages": "Pages no other page links to"
       },
       "sources": {
         "searchConsole": "Search Console",

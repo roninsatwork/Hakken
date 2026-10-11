@@ -6,6 +6,7 @@ import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
 import SiteTrackedFanOutPage from "./google/fan-out/page";
 import SiteYourPagesPage from "./your-pages/page";
+import SiteAuditPage from "./audit/page";
 
 /**
  * Visibility → Websites' screens hold to the looks Anthony approved
@@ -111,5 +112,26 @@ describe("Visibility → Websites' approved looks", () => {
     const { container } = render(<SiteYourPagesPage />);
     await screen.findByText("/ai-agency/");
     await expectApprovedLook(container, PLAN, "YourPages", "Visibility → Websites → Your pages");
+  });
+
+  it("Site audit, with the money pages (insights-analyst-plan.md phase 8)", async () => {
+    at("/app/sites/site_1/audit");
+    answer({
+      "sites:getMySite": { ...SITE, siteId: "site_1", relationship: "OWNED" },
+      "siteCrawl:siteAudit": {
+        day: "2026-09-28", pagesCrawled: 175, maxPages: 1_000, pagesFound: 175, onPageScore: 95, linksInternal: 3_000, linksExternal: 120,
+        cms: "wp rocket", server: null, turnedAway: null, issues: [{ check: "https_to_http_links", pages: 8, severity: "ERROR" }],
+      },
+      "moneyPageChecks:siteMoneyPages": {
+        checkedAt: Date.parse("2026-10-11T07:00:00Z"), orphans: 0, orphanPages: [],
+        pages: [
+          { page: "/", kind: "HOME", clicks: 65, indexed: { verdict: "PASS", coverage: "Submitted and indexed", lastRead: "2026-10-11", fetch: "SUCCESSFUL", otherCanonical: false }, speed: { lcpMs: 3400, inpMs: 180, cls: 0.02, category: "AVERAGE", scope: "PAGE" }, structured: ["Organization", "WebSite"] },
+          { page: "/ai-agency/", kind: "SERVICE", clicks: 204, indexed: { verdict: "PASS", coverage: "Submitted and indexed", lastRead: "2026-10-08", fetch: "SUCCESSFUL", otherCanonical: false }, speed: { lcpMs: 2100, inpMs: 140, cls: 0.01, category: "FAST", scope: "PAGE" }, structured: ["ProfessionalService"] },
+        ],
+      },
+    });
+    const { container } = render(<SiteAuditPage />);
+    await screen.findByText("/ai-agency/");
+    await expectApprovedLook(container, "insights-analyst", "VisAudit", "Visibility → Websites → Site audit");
   });
 });

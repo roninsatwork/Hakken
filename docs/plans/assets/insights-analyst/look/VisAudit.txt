@@ -1,0 +1,27 @@
+# Visibility → Websites → Site audit — the approved look (board "VisAudit" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Site audit
+settings-card: What Hakken sees
+figures
+  figure: Money pages fast enough
+  figure: Slowest to show its main content
+  figure: Money pages with their structured data
+  figure: Pages no other page links to
+search: Find a page
+table: Page | Main content shows | Responds to a tap | Layout shifts | Structured data | Speed
+  table-bar: # money pages · Checked # Oct #
+    download: Download CSV
+  table-footer
+figure: Technical score
+figure: Pages crawled
+figure: Errors →
+figure: Warnings →
+figure: Notices →
+chart-card: Pages crawled and technical score
+search: Find a problem…
+filter: How serious
+table: Problem | How serious | Pages | Last checked
+  table-bar
+    download: Download CSV
+  table-footer
