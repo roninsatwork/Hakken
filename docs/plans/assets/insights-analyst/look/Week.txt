@@ -1,0 +1,17 @@
+# Insights → This week — the approved look (board "Week" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: This week
+settings-card: What Hakken sees
+figures
+  figure: New this week
+  figure: Enquiries at stake
+  figure: Figures Hakken checked
+  figure: Explanations ruled out
+chart-card: Visitors and Google clicks for each enquiry
+search: Search findings...
+filter: Pattern
+table: Finding | Pattern | At stake | How sure | Status
+  table-bar
+    download: Download CSV
+  table-footer

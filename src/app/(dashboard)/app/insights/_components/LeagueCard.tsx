@@ -59,7 +59,7 @@ export function LeagueCard({ league, host, href, title }: { league: LeagueData; 
 }
 
 /** Where you rank in every league, first to last: each league a bar as long as the places you're ahead of last. */
-export function RankStrip({ leagues, host }: { leagues: Leagues["leagues"]; host: string }) {
+export function RankStrip({ leagues, host, title, hint }: { leagues: Leagues["leagues"]; host: string; title?: string; hint?: string }) {
   const t = useTranslations("insights.leagues");
   const tPlace = useTranslations("insights.place");
   const tMenu = useTranslations("insights.menu.pages");
@@ -72,7 +72,7 @@ export function RankStrip({ leagues, host }: { leagues: Leagues["leagues"]; host
   }));
   const csv = () => toCsv([t("league"), t("place"), t("of")], ranked.map((league) => [tMenu(league.id), league.place, league.rows.length]));
   return (
-    <ChartCard title={t("everyLeague.title")} hint={t("everyLeague.hint")} exportName={`${host}-every-league`} csv={csv}>
+    <ChartCard title={title ?? t("everyLeague.title")} hint={hint ?? t("everyLeague.hint")} exportName={`${host}-every-league`} csv={csv}>
       <SiteBarChart
         data={data}
         series={[{ key: "value", name: t("everyLeague.figure"), colour: CHART_SERIES_ORANGE }]}

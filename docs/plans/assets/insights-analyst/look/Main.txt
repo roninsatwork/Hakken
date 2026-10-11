@@ -1,0 +1,20 @@
+# Insights → Executive summary — the approved look (board "Main" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Executive summary
+settings-card: What Hakken sees
+chart-card: Where you rank against your # rivals
+figures
+  figure: Enquiries
+  figure: Visitors
+  figure: Visitors for each enquiry
+  figure: Your place in your market
+chart-card: Your share of your market's Google visitors
+chart-card: Visits for each enquiry, month by month
+search: Search measures...
+filter: Status
+table: Measure | Last # days | Last year | Change | Against your rivals | Status
+  table-bar: Scorecard
+    download: Download CSV
+  table-footer
+notice (info)

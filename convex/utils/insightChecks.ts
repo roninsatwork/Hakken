@@ -20,6 +20,8 @@ export type Candidate = {
   facts: string[];
   /** What is at stake, to order the week: enquiries a year, or share points. */
   stake: number;
+  /** Enquiries a year at stake, for the patterns that count them. */
+  enquiries?: number;
 };
 
 type Read = { get(key: string): number | undefined; has(key: string): boolean; keys: string[]; fact(key: string): Fact | undefined };
@@ -79,7 +81,7 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
       const doneMoved = changeOf(cNow, cYear) ?? 0;
       if (Math.abs(visitsMoved) <= 15 && doneMoved <= -25) {
         add({
-          specialist: "search", pattern: "sameVisitorsFewerResults", stake: cYear - cNow,
+          specialist: "search", pattern: "sameVisitorsFewerResults", stake: cYear - cNow, enquiries: cYear - cNow,
           seen: `Visits from search held ([[${visits}.now]] against [[${visits}.before]]) while their conversions fell ([[${done}.now]] against [[${done}.before]]).`,
           facts: [`${visits}.now`, `${visits}.before`, `${done}.now`, `${done}.before`],
         });
@@ -150,7 +152,7 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
     // Traffic that doesn't pay: a page carries a tenth of the visits and brings almost nothing.
     if (siteVisits > 0 && visits / siteVisits >= 0.1 && done <= 1 && visits >= FEW_VISITS) {
       add({
-        specialist: "conversion", pattern: "trafficThatDoesntPay", stake: (siteRate ?? 1) * visits / 100,
+        specialist: "conversion", pattern: "trafficThatDoesntPay", stake: (siteRate ?? 1) * visits / 100, enquiries: Math.max(0, Math.round((siteRate ?? 0) * visits / 100) - done),
         seen: `${path} had [[${base}.visits.365.now]] of the website's [[ga.visits.365.now]] visits and [[${base}.conversions.365.now]] conversions.`,
         facts: [`${base}.visits.365.now`, "ga.visits.365.now", `${base}.conversions.365.now`],
       });
@@ -158,7 +160,7 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
     // A page lost its enquiries against the same months a year before.
     if (doneYear !== undefined && doneYear >= 6 && done <= doneYear * 0.5) {
       add({
-        specialist: "conversion", pattern: "pageLostItsEnquiries", stake: doneYear - done,
+        specialist: "conversion", pattern: "pageLostItsEnquiries", stake: doneYear - done, enquiries: doneYear - done,
         seen: `${path} made [[${base}.conversions.365.now]] conversions in 12 months against [[${base}.conversions.365.year]] the year before, from [[${base}.visits.365.now]] visits against [[${base}.visits.365.year]].`,
         facts: [`${base}.conversions.365.now`, `${base}.conversions.365.year`, `${base}.visits.365.now`, `${base}.visits.365.year`].filter((key) => read.has(key)),
       });

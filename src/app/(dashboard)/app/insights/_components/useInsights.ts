@@ -20,12 +20,12 @@ export type InsightsGroup = (typeof INSIGHTS_GROUPS)[number];
 export type InsightsPage = { id: string; segment: string; group: InsightsGroup; built: boolean };
 
 export const INSIGHTS_PAGES: readonly InsightsPage[] = [
-  { id: "summary", segment: "summary", group: "overview", built: false },
-  { id: "week", segment: "this-week", group: "overview", built: false },
+  { id: "summary", segment: "summary", group: "overview", built: true },
+  { id: "week", segment: "this-week", group: "overview", built: true },
   { id: "month", segment: "your-month", group: "overview", built: false },
   { id: "strategy", segment: "strategy", group: "overview", built: false },
   { id: "reports", segment: "reports", group: "overview", built: false },
-  { id: "findings", segment: "findings", group: "findings", built: false },
+  { id: "findings", segment: "findings", group: "findings", built: true },
   { id: "track", segment: "track-record", group: "findings", built: false },
   { id: "leagues", segment: "leaderboards", group: "leaderboards", built: true },
   ...LEAGUE_IDS.map((league) => ({ id: league, segment: `leaderboards/${league}`, group: "leaderboards" as const, built: true })),

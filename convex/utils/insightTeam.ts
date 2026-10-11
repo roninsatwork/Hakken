@@ -90,7 +90,7 @@ export const FINDINGS_FORMAT = [
   " \"pattern\": the candidate's pattern,",
   " \"headline\": one sentence, at most 18 words, naming its key figure,",
   " \"story\": two to four sentences joining the facts into what is happening and why,",
-  " \"ruledOut\": short sentences, each an explanation you checked and why it doesn't hold,",
+  " \"ruledOut\": each an explanation you checked, written as \"The explanation: why it doesn't hold\" — a few words, a colon, then one sentence naming its facts,",
   " \"sure\": \"HIGH\", \"MEDIUM\" or \"LOW\",",
   " \"action\": one sentence, what to do first,",
   " \"howWeKnow\": one sentence naming the figure to watch in words (not its value) and when to look again,",

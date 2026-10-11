@@ -17760,6 +17760,211 @@
       "you": "Tu",
       "rival": "Concorrente",
       "chart": "La classifica"
+    },
+    "words": {
+      "patterns": {
+        "sameVisitorsFewerResults": "Stessi visitatori, meno risultati",
+        "nameSearchesRose": "Più persone cercano il tuo nome",
+        "nameSearchesFell": "Meno persone cercano il tuo nome",
+        "pageGaining": "Una pagina che guadagna terreno",
+        "pageLosing": "Una pagina che perde terreno",
+        "almostOnPageOne": "Quasi in prima pagina",
+        "trafficThatDoesntPay": "Traffico che non rende",
+        "pageLostItsEnquiries": "Una pagina ha perso le richieste",
+        "bestPageBuried": "La pagina migliore, nascosta",
+        "harderToConvert": "Più difficile ottenere una richiesta",
+        "easierToConvert": "Più facile ottenere una richiesta",
+        "returningConvertMore": "Chi torna chiede di più",
+        "newConvertMore": "I nuovi visitatori chiedono di più",
+        "worthMorePerVisit": "Vale di più per visita",
+        "introducedByAi": "Presentato dall'IA, chiuso col nome",
+        "missingFromAnAssistant": "Forte in un posto, assente in un altro",
+        "aiMindshareGap": "Indietro nelle risposte dell'IA",
+        "itsTheMarket": "È il mercato, non tu",
+        "rivalRising": "Un concorrente in crescita",
+        "linkGap": "Meno link dei concorrenti",
+        "reviewGap": "Meno recensioni dei concorrenti",
+        "auditProblems": "Pagine che Google legge male",
+        "conversionsNeverFire": "Modi di contattarti che non vengono mai contati",
+        "analyticsSeesPart": "Analytics vede solo una parte",
+        "joinedStory": "Una storia tra le fonti"
+      },
+      "sources": {
+        "searchConsole": "Search Console",
+        "analytics": "Google Analytics",
+        "market": "il tuo mercato",
+        "ai": "risposte dell'IA",
+        "local": "profilo dell'attività",
+        "crawl": "l'audit del sito"
+      },
+      "sure": {
+        "HIGH": "Sicuro",
+        "MEDIUM": "Probabile",
+        "LOW": "Troppo presto per esserne sicuri"
+      },
+      "specialists": {
+        "market": "Mercato",
+        "technical": "SEO tecnico",
+        "search": "Ricerca e contenuti",
+        "local": "Locale e reputazione",
+        "links": "Link e PR",
+        "aiVisibility": "Visibilità nell'IA",
+        "conversion": "Conversioni",
+        "measurement": "Misurazioni",
+        "strategy": "Responsabile della strategia"
+      },
+      "status": {
+        "new": "Nuovo",
+        "open": "Aperto",
+        "right": "Confermato",
+        "wrong": "Non confermato"
+      }
+    },
+    "findings": {
+      "title": "Tutti i risultati",
+      "description": "Ogni risultato che Hakken ha scritto per te. Ognuno è una storia tra le tue fonti, con cosa fare e come sapremo se ha funzionato.",
+      "table": {
+        "search": "Cerca risultati...",
+        "pattern": "Schema",
+        "everyPattern": "Tutti gli schemi",
+        "download": "Scarica CSV",
+        "finding": "Risultato",
+        "from": "Da",
+        "fromSources": "Da {sources}",
+        "patternColumn": "Schema",
+        "atStake": "In gioco",
+        "atStakeYear": "{count, plural, one {# richiesta l'anno} other {# richieste l'anno}}",
+        "sure": "Quanto è sicuro",
+        "found": "Trovato",
+        "status": "Stato",
+        "noMatch": "Nessun risultato corrisponde alla ricerca.",
+        "empty": "Ancora nessun risultato: il team li scrive alla prossima esecuzione."
+      }
+    },
+    "week": {
+      "title": "Questa settimana",
+      "description": "Cosa ha trovato Hakken nella sua ultima lettura di tutte le tue fonti insieme. Ogni risultato è qualcosa che nessuna fonte mostra da sola.",
+      "seeFinding": "Vedi il risultato",
+      "sees": {
+        "count": "{count, plural, one {Un risultato} other {# risultati}} nell'ultima lettura di Hakken. Il primo su cui agire: {first}",
+        "checked": "Hakken ha controllato {checked} dati tra le tue fonti e i concorrenti, e ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} prima di scriverli.",
+        "none": "Nell'ultima lettura di Hakken nulla si è mosso abbastanza da segnalarlo. I dati sono stabili."
+      },
+      "figures": {
+        "new": "Nuovi questa settimana",
+        "open": "{count} aperti in tutto",
+        "atStake": "Richieste in gioco",
+        "atStakeDetail": "a trimestre, al ritmo dell'anno scorso",
+        "checked": "Dati controllati da Hakken",
+        "checkedDetail": "in {sources, plural, one {una fonte} other {# fonti}} e tra i concorrenti",
+        "ruledOut": "Spiegazioni escluse",
+        "ruledOutDetail": "prima di scriverli"
+      },
+      "per": {
+        "title": "Visitatori e clic da Google per ogni richiesta",
+        "hint": "Gli ultimi 90 giorni rispetto alle stesse settimane di un anno prima. Meno è meglio.",
+        "measure": "Misura",
+        "year": "Le stesse settimane dell'anno scorso",
+        "now": "Gli ultimi 90 giorni",
+        "visitorsPerEnquiry": "Visitatori per ogni richiesta",
+        "googleClicksPerEnquiry": "Clic da Google per ogni richiesta",
+        "empty": "Si riempie quando Hakken ha un anno dei tuoi dati."
+      }
+    },
+    "finding": {
+      "back": "Tutti i risultati",
+      "notFound": "Risultato non trovato",
+      "notFoundDescription": "Potrebbe avere più di due anni o appartenere a un'altra azienda.",
+      "description": "{host} · Trovato il {day} · Letto da {sources}",
+      "and": " e ",
+      "checked": "Verificato dal redattore",
+      "seeAll": "Vedi i risultati di questa settimana",
+      "against": "rispetto a {figure} ({span})",
+      "chart": {
+        "title": "I dati, rispetto a cosa sono confrontati",
+        "hint": "Ogni dato su cui si basa questo risultato, accanto al suo confronto.",
+        "figure": "Dato",
+        "then": "Confrontato con",
+        "now": "Ora",
+        "empty": "Questo risultato si basa su dati senza un confronto proprio."
+      },
+      "evidence": {
+        "title": "Le prove",
+        "source": "Fonte",
+        "shows": "Cosa mostra",
+        "against": "Confrontato con",
+        "empty": "Nessuna prova disponibile."
+      },
+      "ruledOut": {
+        "title": "Cosa ha escluso Hakken",
+        "explanation": "Spiegazione",
+        "why": "Perché Hakken l'ha esclusa",
+        "empty": "Per questo risultato non è stato escluso nulla."
+      },
+      "download": "Scarica CSV",
+      "howWeKnow": "Come lo sapremo: Hakken ricontrolla il {day}. {how} Il risultato va nel tuo storico in ogni caso."
+    },
+    "summary": {
+      "title": "Sintesi per la direzione",
+      "description": "{company} in breve: gli ultimi 90 giorni rispetto alle stesse settimane dell'anno scorso e ai concorrenti.",
+      "noWeek": "Hakken non ha ancora letto le tue fonti: la sintesi si riempie dopo la prima esecuzione del team.",
+      "seeFinding": "Vedi il risultato",
+      "noYear": "Ancora nessun dato per l'anno scorso",
+      "changeOn": "{percent}% rispetto a {before} l'anno scorso",
+      "changeFromNone": "Da zero l'anno scorso",
+      "changePoints": "{points} punti rispetto al {before}% dell'anno scorso",
+      "place": "La tua posizione nel mercato",
+      "placeMoved": "{count, plural, one {Un posto} other {# posti}} in un anno",
+      "placeDetail": "per i visitatori da Google",
+      "rank": {
+        "title": "La tua posizione rispetto a {rivals, plural, one {un concorrente} other {# concorrenti}}",
+        "hint": "Ogni classifica: più lunga è la barra, più in alto sei."
+      },
+      "share": {
+        "title": "La tua quota dei visitatori da Google del tuo mercato",
+        "hint": "I tuoi visitatori stimati da Google come quota dei tuoi e di quelli dei concorrenti, mese per mese.",
+        "month": "Mese",
+        "figure": "La tua quota",
+        "empty": "Si riempie quando Hakken ha qualche mese del tuo mercato."
+      },
+      "per": {
+        "title": "Visite per ogni richiesta, mese per mese",
+        "hint": "Quante visite servono per ottenere una richiesta. Meno è meglio. Tutti i canali, da Google Analytics.",
+        "figure": "Visite per ogni richiesta",
+        "empty": "Si riempie quando Google Analytics ha contato richieste per qualche mese."
+      },
+      "measures": {
+        "enquiries": "Richieste",
+        "visitors": "Visitatori",
+        "visitorsPerEnquiry": "Visitatori per ogni richiesta",
+        "googleVisits": "Visite da Google",
+        "googleClicksPerEnquiry": "Clic da Google per ogni richiesta",
+        "googleEnquiries": "Richieste da Google",
+        "aiVisits": "Visite dagli assistenti di IA",
+        "marketShare": "Quota dei visitatori da Google del tuo mercato",
+        "aiMentions": "Volte in cui le risposte dell'IA ti nominano",
+        "strength": "Forza agli occhi di Google",
+        "reviews": "Recensioni Google"
+      },
+      "status": {
+        "ON_TRACK": "In linea",
+        "WATCH": "Da tenere d'occhio",
+        "BEHIND": "Indietro"
+      },
+      "table": {
+        "title": "Quadro di valutazione",
+        "search": "Cerca misure...",
+        "status": "Stato",
+        "everyStatus": "Tutti gli stati",
+        "download": "Scarica CSV",
+        "measure": "Misura",
+        "now": "Ultimi 90 giorni",
+        "year": "L'anno scorso",
+        "change": "Variazione",
+        "rivals": "Rispetto ai concorrenti",
+        "noMatch": "Nessuna misura corrisponde alla ricerca."
+      },
+      "did": "Nella sua ultima lettura Hakken ha controllato {checked} dati tra le tue fonti e i concorrenti, ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e ha scritto {findings, plural, one {un risultato} other {# risultati}}."
     }
   }
 }

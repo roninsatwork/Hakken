@@ -11,6 +11,7 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertSeoInterval } from "./seoScheduleService";
 import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
+import { weekSummaryValidator } from "./utils/insightSummary";
 import { insightSpecialistValidator, insightSureValidator } from "./insightsSchema";
 
 /**
@@ -246,6 +247,7 @@ const savedFindingValidator = v.object({
   pattern: v.string(),
   status: v.union(v.literal("PUBLISHED"), v.literal("SENT_BACK")),
   rank: v.number(),
+  atStake: v.optional(v.number()),
   headline: v.string(),
   story: v.string(),
   ruledOut: v.array(v.string()),
@@ -281,6 +283,7 @@ export const saveWeek = internalMutation({
     problems: v.array(v.string()),
     findings: v.array(savedFindingValidator),
     costUsd: v.number(),
+    summary: v.optional(weekSummaryValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -302,6 +305,7 @@ export const saveWeek = internalMutation({
       published: args.findings.filter((finding) => finding.status === "PUBLISHED").length,
       sentBack: args.findings.filter((finding) => finding.status === "SENT_BACK").length,
       costUsd: args.costUsd,
+      ...(args.summary ? { summary: args.summary } : {}),
       createdAt: now,
     };
     if (week) await ctx.db.replace(week._id, record);

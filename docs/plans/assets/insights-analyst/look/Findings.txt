@@ -1,0 +1,10 @@
+# Insights → All findings — the approved look (board "Findings" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: All findings
+search: Search findings...
+filter: Pattern
+table: Finding | Pattern | At stake | Found | Status
+  table-bar
+    download: Download CSV
+  table-footer

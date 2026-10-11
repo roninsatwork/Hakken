@@ -81,7 +81,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   visitorSeries: ["date", "newVsReturning"],
   product: ["itemName", "itemCategory"],
   productSeries: ["date"],
-  firstChannel: ["firstUserDefaultChannelGroup"],
+  // With its first source, so an assistant's referrals count as AI assistants, as the screens show them (utils/aiAssistants.ts).
+  firstChannel: ["firstUserDefaultChannelGroup", "firstUserSource"],
   landingChannel: ["landingPage", "sessionDefaultChannelGroup"],
 };
 
@@ -199,6 +200,8 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "product") return channelKey(keys[0] ?? "", keys[1] ?? "");
   // A landing page with the channel of its visits (Insights, §8): the page numbered as Landing pages' are.
   if (list === "landingChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
+  // The channel that first brought a person, with the source it came by.
+  if (list === "firstChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   return keys[0] ?? "";
 }
 

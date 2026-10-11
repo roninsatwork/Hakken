@@ -24,6 +24,7 @@ import {
   type InsightSpecialist,
 } from "./utils/insightTeam";
 import { typedNumbers } from "./utils/insightEditor";
+import { scorecardFrom } from "./utils/insightSummary";
 
 /**
  * The Insights team's weekly run (docs/plans/active/insights-analyst-plan.md
@@ -44,6 +45,8 @@ const MOST_FACTS = 220;
 type Draft = DraftFinding & {
   specialist: InsightSpecialist;
   pattern: string;
+  /** Enquiries a year at stake, from the candidate's checklist. */
+  atStake?: number;
   sure: "HIGH" | "MEDIUM" | "LOW";
   watch?: { key: string; direction: "UP" | "DOWN" };
   checkInDays?: number;
@@ -198,6 +201,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
       pattern: draft.pattern,
       status: "PUBLISHED",
       rank,
+      ...(draft.atStake ? { atStake: draft.atStake } : {}),
       ...verdictOf.filled,
       sure: draft.sure,
       sources: [...new Set(used.map((fact) => fact.source))],
@@ -211,6 +215,14 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   const verdictText = verdictFrom(verdict, fresh.size > 0 ? fresh : facts) ?? top?.headline ?? (reading.facts.length === 0
     ? "Hakken has nothing to read for this website yet: connect Search Console or Google Analytics."
     : "Nothing this week moved enough to call: the figures are steady.");
+  // The executive summary's scorecard and charts, kept with the week (§8).
+  const monthly = await ctx.runQuery(internal.insightsReading.monthlyInternal, { holdId: args.holdId });
+  const summary = {
+    scorecard: scorecardFrom(reading.facts, args.host),
+    ...monthly,
+    checked: reading.facts.length,
+    ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),
+  };
   const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: args.runId });
   await ctx.runMutation(internal.insightsTeam.saveWeek, {
     holdId: args.holdId,
@@ -222,6 +234,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     problems: reading.problems,
     findings: saved,
     costUsd,
+    summary,
   });
   const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
   return `${args.host}: ${reading.facts.length} facts read, ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
@@ -390,7 +403,8 @@ async function askSpecialist(
     const number = typeof (raw as { candidate?: unknown })?.candidate === "number" ? (raw as { candidate: number }).candidate : 0;
     const candidate = candidates[number] ?? candidates[0];
     const draft = draftFrom(raw, specialist, candidate.pattern, candidate.stake);
-    return draft ? [draft] : [];
+    // The pattern is the checklist's, never renamed by the model; with what it put at stake.
+    return draft ? [{ ...draft, pattern: candidate.pattern, ...(candidate.enquiries ? { atStake: candidate.enquiries } : {}) }] : [];
   });
 }
 
@@ -416,7 +430,10 @@ async function askStrategy(
     const from = listed.filter((number): number is number => typeof number === "number" && Number.isInteger(number) && number >= 0 && number < drafts.length);
     if (from.length < 2) return [];
     const draft = draftFrom(raw, "strategy", "joinedStory", Math.max(...from.map((number) => drafts[number].stake)));
-    return draft ? [{ ...draft, from }] : [];
+    // A joined story is the pattern of the finding most at stake it joins.
+    const lead = [...from].sort((a, b) => drafts[b].stake - drafts[a].stake)[0];
+    const atStake = Math.max(0, ...from.map((number) => drafts[number].atStake ?? 0));
+    return draft ? [{ ...draft, from, pattern: drafts[lead].pattern, ...(atStake > 0 ? { atStake } : {}) }] : [];
   });
   // The order the Head of Strategy gave, each joined story in place of the first finding it joins, and the rest after.
   const replaced = new Set(joined.flatMap((draft) => draft.from ?? []));

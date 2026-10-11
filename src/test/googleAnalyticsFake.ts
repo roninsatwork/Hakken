@@ -65,6 +65,7 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   deviceCategory: (visit) => visit.device,
   sessionDefaultChannelGroup: (visit) => visit.channel,
   firstUserDefaultChannelGroup: (visit) => visit.firstChannel ?? visit.channel,
+  firstUserSource: (visit) => visit.source,
   sessionSource: (visit) => visit.source,
   landingPage: (visit) => visit.landing,
   pagePath: (visit) => visit.page,

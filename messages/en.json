@@ -17760,6 +17760,211 @@
       "you": "You",
       "rival": "Rival",
       "chart": "The league"
+    },
+    "words": {
+      "patterns": {
+        "sameVisitorsFewerResults": "Same visitors, fewer results",
+        "nameSearchesRose": "More people search your name",
+        "nameSearchesFell": "Fewer people search your name",
+        "pageGaining": "A page gaining ground",
+        "pageLosing": "A page losing ground",
+        "almostOnPageOne": "Almost on page one",
+        "trafficThatDoesntPay": "Traffic that doesn't pay",
+        "pageLostItsEnquiries": "A page lost its enquiries",
+        "bestPageBuried": "Best page, buried",
+        "harderToConvert": "Harder to win an enquiry",
+        "easierToConvert": "Easier to win an enquiry",
+        "returningConvertMore": "Returning visitors enquire more",
+        "newConvertMore": "New visitors enquire more",
+        "worthMorePerVisit": "Worth more per visit",
+        "introducedByAi": "Introduced by AI, closed by name",
+        "missingFromAnAssistant": "Strong in one place, missing in another",
+        "aiMindshareGap": "Behind in AI answers",
+        "itsTheMarket": "It's the market, not you",
+        "rivalRising": "A rival rising",
+        "linkGap": "Fewer links than your rivals",
+        "reviewGap": "Fewer reviews than your rivals",
+        "auditProblems": "Pages Google can't read well",
+        "conversionsNeverFire": "Ways to enquire that never count",
+        "analyticsSeesPart": "Analytics sees only part",
+        "joinedStory": "One story across sources"
+      },
+      "sources": {
+        "searchConsole": "Search Console",
+        "analytics": "Google Analytics",
+        "market": "your market",
+        "ai": "AI answers",
+        "local": "Business Profile",
+        "crawl": "the site audit"
+      },
+      "sure": {
+        "HIGH": "Sure",
+        "MEDIUM": "Likely",
+        "LOW": "Too early to be sure"
+      },
+      "specialists": {
+        "market": "Market",
+        "technical": "Technical SEO",
+        "search": "Search and content",
+        "local": "Local and reputation",
+        "links": "Links and PR",
+        "aiVisibility": "AI visibility",
+        "conversion": "Conversion",
+        "measurement": "Measurement",
+        "strategy": "Head of Strategy"
+      },
+      "status": {
+        "new": "New",
+        "open": "Open",
+        "right": "Proved right",
+        "wrong": "Didn't hold"
+      }
+    },
+    "findings": {
+      "title": "All findings",
+      "description": "Every finding Hakken has written for you. Each is a story across your sources, with what to do and how we'll know.",
+      "table": {
+        "search": "Search findings...",
+        "pattern": "Pattern",
+        "everyPattern": "Every pattern",
+        "download": "Download CSV",
+        "finding": "Finding",
+        "from": "From",
+        "fromSources": "From {sources}",
+        "patternColumn": "Pattern",
+        "atStake": "At stake",
+        "atStakeYear": "{count, plural, one {# enquiry a year} other {# enquiries a year}}",
+        "sure": "How sure",
+        "found": "Found",
+        "status": "Status",
+        "noMatch": "No finding matches that search.",
+        "empty": "No findings yet: the team writes them on its next run."
+      }
+    },
+    "week": {
+      "title": "This week",
+      "description": "What Hakken found in its newest read of all your sources together. Each finding is something none of them shows on its own.",
+      "seeFinding": "See the finding",
+      "sees": {
+        "count": "{count, plural, one {One finding} other {# findings}} in Hakken's newest read. The one to act on first: {first}",
+        "checked": "Hakken checked {checked} figures across your sources and rivals, and ruled out {ruledOut, plural, one {one explanation} other {# explanations}} before writing these.",
+        "none": "Nothing in Hakken's newest read moved enough to call. The figures are steady."
+      },
+      "figures": {
+        "new": "New this week",
+        "open": "{count} open in all",
+        "atStake": "Enquiries at stake",
+        "atStakeDetail": "a quarter, at last year's rate",
+        "checked": "Figures Hakken checked",
+        "checkedDetail": "across {sources, plural, one {one source} other {# sources}} and your rivals",
+        "ruledOut": "Explanations ruled out",
+        "ruledOutDetail": "before these were written"
+      },
+      "per": {
+        "title": "Visitors and Google clicks for each enquiry",
+        "hint": "The last 90 days against the same weeks a year before. Lower is better.",
+        "measure": "Measure",
+        "year": "The same weeks last year",
+        "now": "The last 90 days",
+        "visitorsPerEnquiry": "Visitors for each enquiry",
+        "googleClicksPerEnquiry": "Google clicks for each enquiry",
+        "empty": "These fill in once Hakken holds a year of your figures."
+      }
+    },
+    "finding": {
+      "back": "All findings",
+      "notFound": "That finding can't be found",
+      "notFoundDescription": "It may be older than two years, or belong to another company.",
+      "description": "{host} · Found {day} · Read from {sources}",
+      "and": " and ",
+      "checked": "Checked by the Editor",
+      "seeAll": "See this week's findings",
+      "against": "against {figure} ({span})",
+      "chart": {
+        "title": "The figures, against what they're compared with",
+        "hint": "Each figure this finding rests on, beside its comparison.",
+        "figure": "Figure",
+        "then": "Compared with",
+        "now": "Now",
+        "empty": "This finding rests on figures with no comparison of their own."
+      },
+      "evidence": {
+        "title": "The evidence",
+        "source": "Source",
+        "shows": "What it shows",
+        "against": "Compared with",
+        "empty": "No evidence held."
+      },
+      "ruledOut": {
+        "title": "What Hakken ruled out",
+        "explanation": "Explanation",
+        "why": "Why Hakken ruled it out",
+        "empty": "Nothing was ruled out for this finding."
+      },
+      "download": "Download CSV",
+      "howWeKnow": "How we'll know: Hakken checks again on {day}. {how} The result goes on your Track record either way."
+    },
+    "summary": {
+      "title": "Executive summary",
+      "description": "{company} at a glance: the last 90 days against the same weeks last year, and against your rivals.",
+      "noWeek": "Hakken hasn't read your sources yet: the summary fills in after the team's first run.",
+      "seeFinding": "See the finding",
+      "noYear": "No figure for last year yet",
+      "changeOn": "{percent}% on {before} last year",
+      "changeFromNone": "From none last year",
+      "changePoints": "{points} points on {before}% last year",
+      "place": "Your place in your market",
+      "placeMoved": "{count, plural, one {One place} other {# places}} in a year",
+      "placeDetail": "for visitors from Google",
+      "rank": {
+        "title": "Where you rank against your {rivals, plural, one {rival} other {# rivals}}",
+        "hint": "Each league: the longer the bar, the higher you are."
+      },
+      "share": {
+        "title": "Your share of your market's Google visitors",
+        "hint": "Your estimated visitors from Google as a share of yours and your rivals', month by month.",
+        "month": "Month",
+        "figure": "Your share",
+        "empty": "This fills in once Hakken holds a few months of your market."
+      },
+      "per": {
+        "title": "Visits for each enquiry, month by month",
+        "hint": "How many visits it takes to win one enquiry. Lower is better. Every channel, from Google Analytics.",
+        "figure": "Visits for each enquiry",
+        "empty": "This fills in once Google Analytics has counted enquiries for a few months."
+      },
+      "measures": {
+        "enquiries": "Enquiries",
+        "visitors": "Visitors",
+        "visitorsPerEnquiry": "Visitors for each enquiry",
+        "googleVisits": "Visits from Google",
+        "googleClicksPerEnquiry": "Google clicks for each enquiry",
+        "googleEnquiries": "Enquiries from Google",
+        "aiVisits": "Visits from AI assistants",
+        "marketShare": "Share of your market's Google visitors",
+        "aiMentions": "Times AI answers name you",
+        "strength": "Strength in Google's eyes",
+        "reviews": "Google reviews"
+      },
+      "status": {
+        "ON_TRACK": "On track",
+        "WATCH": "Watch",
+        "BEHIND": "Behind"
+      },
+      "table": {
+        "title": "Scorecard",
+        "search": "Search measures...",
+        "status": "Status",
+        "everyStatus": "Every status",
+        "download": "Download CSV",
+        "measure": "Measure",
+        "now": "Last 90 days",
+        "year": "Last year",
+        "change": "Change",
+        "rivals": "Against your rivals",
+        "noMatch": "No measure matches that search."
+      },
+      "did": "In its newest read Hakken checked {checked} figures across your sources and rivals, ruled out {ruledOut, plural, one {one explanation} other {# explanations}}, and wrote {findings, plural, one {one finding} other {# findings}}."
     }
   }
 }

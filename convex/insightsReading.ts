@@ -6,6 +6,7 @@ import { decodePages } from "./holdPageRefs";
 import { holdAiSummary } from "./holdLists";
 import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
 import { EVERY_DEVICE, slotKey, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { channelOf } from "./utils/aiAssistants";
 import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { readPeriod } from "./searchConsolePeriodReads";
@@ -18,6 +19,7 @@ import { listHold } from "./siteAccess";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 import { unpackColumn } from "./utils/packedColumns";
 import { factKey, factValidator, percentOf, shiftDay, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
+import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 
 /**
  * Insights' reading layer (docs/plans/active/insights-analyst-plan.md §2,
@@ -168,26 +170,18 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
         rowFacts([], "", row, total, period, GA_WHICH[which], true);
         facts.add({ key: factKey("ga", "views", period, GA_WHICH[which]), value: row.views, unit: "count", source: "analytics", label: "page views", from: total.from, to: total.to, country });
       }
-      // The channels, each from its sources added up; people are left out, never added across sources.
+      // The channels as the Analytics screens show them — an assistant's referrals among AI assistants
+      // (utils/aiAssistants.ts) — each from its sources added up; people left out, never added across sources.
       const channels = await slot("channel", period, which);
       if (channels) {
-        const byChannel = new Map<string, ListRow>();
-        for (const line of channels.rows) {
-          const name = splitChannelKey(line.key).channel || "Unassigned";
-          const held = byChannel.get(name);
-          if (!held) byChannel.set(name, { ...line, key: name, counts: new Map(line.counts), values: new Map(line.values) });
-          else {
-            for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue"] as const) held[field] += line[field];
-            for (const [event, count] of line.counts) held.counts.set(event, (held.counts.get(event) ?? 0) + count);
-            for (const [event, value] of line.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
-          }
-        }
-        for (const [name, line] of byChannel) rowFacts(["channel", name], ` from ${name}`, line, channels, period, GA_WHICH[which], false);
+        for (const [name, line] of byChannelOf(channels.rows)) rowFacts(["channel", name], ` from ${name}`, line, channels, period, GA_WHICH[which], false);
       }
       if (period === "30") continue;
-      // The channel that first brought each person (I35): people are counted whole, a row each channel.
+      // The channel that first brought each person (I35): each person has one first source, so their people add up.
       const first = await slot("firstChannel", period, which);
-      for (const line of first?.rows ?? []) rowFacts(["firstChannel", line.key || "Unassigned"], ` from people first brought by ${line.key || "an unknown channel"}`, line, first!, period, GA_WHICH[which], true);
+      if (first) {
+        for (const [name, line] of byChannelOf(first.rows, true)) rowFacts(["firstChannel", name], ` from people first brought by ${name}`, line, first, period, GA_WHICH[which], true);
+      }
     }
   }
   // Landing pages and the visits from search to each (§8), the biggest, now and a year before.
@@ -229,6 +223,25 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
     rowFacts(["visitor", row.key], ` from ${row.key} visitors`, row, visitors!, "365", "now", true);
   }
   return facts.list;
+}
+
+/** A list's rows by channel as the screens show them, its sources added up; people too when `people`. */
+function byChannelOf(rows: readonly ListRow[], people = false): Map<string, ListRow> {
+  const byChannel = new Map<string, ListRow>();
+  for (const line of rows) {
+    const { channel, source } = splitChannelKey(line.key);
+    const name = channelOf(channel || "Unassigned", source);
+    const held = byChannel.get(name);
+    if (!held) {
+      byChannel.set(name, { ...line, key: name, counts: new Map(line.counts), values: new Map(line.values) });
+      continue;
+    }
+    for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue"] as const) held[field] += line[field];
+    if (people) held.people += line.people;
+    for (const [event, count] of line.counts) held.counts.set(event, (held.counts.get(event) ?? 0) + count);
+    for (const [event, value] of line.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
+  }
+  return byChannel;
 }
 
 /** A page's path, for words: the address without its scheme and host. */
@@ -385,3 +398,58 @@ export async function readWebsiteFacts(ctx: Pick<ActionCtx, "runQuery">, holdId:
   }
   return { facts, problems };
 }
+
+// ---------------------------------------------------------------------------
+// Month by month, for the executive summary's charts (§4.1)
+
+/**
+ * Visits and conversions a month over the last 12 months (Analytics' 12
+ * months a day, I44), and the website's share of its market's estimated
+ * Google visitors a month, back as far as every website in it is held.
+ */
+export const monthlyInternal = internalQuery({
+  args: holdArgs,
+  returns: v.object({ enquiriesByMonth: v.array(monthValidator), shareByMonth: v.array(shareMonthValidator) }),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    if (!hold) return { enquiriesByMonth: [], shareByMonth: [] };
+    const enquiries = new Map<string, { visits: number; conversions: number }>();
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (connection?.property) {
+      const counted = countedOf(connection);
+      const series = await readSlot(ctx, hold._id, slotKey("series", "365", "NOW", EVERY_DEVICE));
+      for (const row of series?.rows ?? []) {
+        const month = row.key.slice(0, 7);
+        const held = enquiries.get(month) ?? { visits: 0, conversions: 0 };
+        held.visits += row.visits;
+        held.conversions += conversionsOf(row, counted).conversions;
+        enquiries.set(month, held);
+      }
+    }
+    const shares = new Map<string, { you: number; total: number; hosts: number }>();
+    const site = await loadSite(ctx, hold._id);
+    let hosts = 0;
+    if (site) {
+      const rivals = await loadRivalHolds(ctx, site);
+      const ids = [site.website._id, ...rivals.map((rival) => rival.websiteId)];
+      hosts = ids.length;
+      const from = shiftDay(site.today, -700);
+      for (const [index, websiteId] of ids.entries()) {
+        for (const point of await seriesFor(ctx, websiteId, site.place, from, site.today, "month")) {
+          if (typeof point.estimatedTraffic !== "number") continue;
+          const month = point.day.slice(0, 7);
+          const held = shares.get(month) ?? { you: 0, total: 0, hosts: 0 };
+          held.total += point.estimatedTraffic;
+          held.hosts += 1;
+          if (index === 0) held.you += point.estimatedTraffic;
+          shares.set(month, held);
+        }
+      }
+    }
+    return {
+      enquiriesByMonth: [...enquiries.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, held]) => ({ month, ...held })),
+      // A month counts only when every website in the market has a figure for it.
+      shareByMonth: [...shares.entries()].filter(([, held]) => held.hosts === hosts && held.total > 0).sort(([a], [b]) => a.localeCompare(b)).map(([month, held]) => ({ month, you: held.you, total: held.total })),
+    };
+  },
+});

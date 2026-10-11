@@ -644,6 +644,7 @@ import type * as utils_insightChecks from "../utils/insightChecks.js";
 import type * as utils_insightEditor from "../utils/insightEditor.js";
 import type * as utils_insightFacts from "../utils/insightFacts.js";
 import type * as utils_insightLeagues from "../utils/insightLeagues.js";
+import type * as utils_insightSummary from "../utils/insightSummary.js";
 import type * as utils_insightTeam from "../utils/insightTeam.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
 import type * as utils_keywordCopyLayout from "../utils/keywordCopyLayout.js";
@@ -1455,6 +1456,7 @@ declare const fullApi: ApiFromModules<{
   "utils/insightEditor": typeof utils_insightEditor;
   "utils/insightFacts": typeof utils_insightFacts;
   "utils/insightLeagues": typeof utils_insightLeagues;
+  "utils/insightSummary": typeof utils_insightSummary;
   "utils/insightTeam": typeof utils_insightTeam;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;
   "utils/keywordCopyLayout": typeof utils_keywordCopyLayout;

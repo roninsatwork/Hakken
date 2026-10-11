@@ -2,6 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
+import { weekSummaryValidator } from "./utils/insightSummary";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -40,6 +41,8 @@ export const insightsTables = {
     status: insightFindingStatusValidator,
     /** Its place in the week, 1 the most at stake. */
     rank: v.number(),
+    /** Enquiries a year at stake, where the pattern counts them (a page that lost its enquiries). */
+    atStake: v.optional(v.number()),
     headline: v.string(),
     story: v.string(),
     /** What the specialists checked and ruled out. */
@@ -84,6 +87,8 @@ export const insightsTables = {
     published: v.number(),
     sentBack: v.number(),
     costUsd: v.number(),
+    /** The executive summary's scorecard and charts, worked out in the run and kept with the week (§8). */
+    summary: v.optional(weekSummaryValidator),
     createdAt: v.number(),
   })
     .index("by_hold_week", ["companyWebsiteId", "week"])
