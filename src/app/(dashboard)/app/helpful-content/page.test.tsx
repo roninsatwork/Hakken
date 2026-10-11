@@ -46,7 +46,7 @@ const COUNTS = {
 const loadMore = vi.fn();
 
 /**
- * Helpful content in Insights (docs/plans/active/insights-helpful-content-
+ * Helpful content in Reading room (docs/plans/active/insights-helpful-content-
  * plan.md, IH1, IH5–IH7): the best of what others have written, for every
  * signed-in user — Hakken's summary and what it means, never the article's
  * words — set out as News's front page and read from the server a page at a

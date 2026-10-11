@@ -4,7 +4,7 @@ import { AI_MODE_ENGINE } from "./seoAiEngines";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 
 /**
- * Discovery's one-off migrations (docs/plans/active/discovery-local-
+ * Visibility's one-off migrations (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 3), registered in `dataMigrations.ts`. Each is
  * idempotent: a row already done is passed over.
  */

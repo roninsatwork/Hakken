@@ -1,4 +1,4 @@
-# Discovery → Reviews → Against rivals — the approved look (board "ReviewsRivals" of docs/plans/assets/discovery-local-reputation-ai/).
+# Visibility → Reviews → Against rivals — the approved look (board "ReviewsRivals" of docs/plans/assets/discovery-local-reputation-ai/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Reviews against rivals

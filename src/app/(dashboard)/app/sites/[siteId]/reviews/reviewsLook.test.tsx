@@ -9,7 +9,7 @@ import ReviewsAgainstRivalsPage from "./rivals/page";
 import WhatCustomersSayPage from "./say/page";
 
 /**
- * Discovery's Reviews screens hold to the looks Anthony approved on the canvas
+ * Visibility's Reviews screens hold to the looks Anthony approved on the canvas
  * "Discovery — local, reviews, AI apps and mentions" (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, D18; design-drift-plan D4): each
  * screen, rendered with sample rows in English, reads as the outline saved
@@ -116,13 +116,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery → Reviews' approved looks", () => {
+describe("Visibility → Reviews' approved looks", () => {
   it("Your reviews", async () => {
     at("/app/sites/site_1/reviews");
     answer({ "siteReviews:yourReviews": YOURS });
     const { container } = render(<YourReviewsPage />);
     await screen.findByText("J. Patel");
-    await expectApprovedLook(container, PLAN, "Reviews", "Discovery → Reviews → Your reviews");
+    await expectApprovedLook(container, PLAN, "Reviews", "Visibility → Reviews → Your reviews");
   });
 
   it("Against rivals", async () => {
@@ -130,7 +130,7 @@ describe("Discovery → Reviews' approved looks", () => {
     answer({ "siteReviews:reviewsAgainstRivals": RIVALS });
     const { container } = render(<ReviewsAgainstRivalsPage />);
     await screen.findByText("Ronins · you");
-    await expectApprovedLook(container, PLAN, "ReviewsRivals", "Discovery → Reviews → Against rivals");
+    await expectApprovedLook(container, PLAN, "ReviewsRivals", "Visibility → Reviews → Against rivals");
   });
 
   it("What customers say", async () => {
@@ -138,6 +138,6 @@ describe("Discovery → Reviews' approved looks", () => {
     answer({ "siteReviews:whatCustomersSay": SAY });
     const { container } = render(<WhatCustomersSayPage />);
     await screen.findByText("Hi Mark, thank you for telling us, and we're sorry you had to chase.");
-    await expectApprovedLook(container, PLAN, "ReviewsSay", "Discovery → Reviews → What customers say");
+    await expectApprovedLook(container, PLAN, "ReviewsSay", "Visibility → Reviews → What customers say");
   });
 });

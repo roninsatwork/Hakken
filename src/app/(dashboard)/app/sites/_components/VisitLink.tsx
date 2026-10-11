@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 /**
  * A quiet link out to the real thing — a business's Google profile, a
- * website Discovery is describing — in a new tab, beside a screen's title.
+ * website Visibility is describing — in a new tab, beside a screen's title.
  * Business profile's "Open on Google" and the detail screens' "Visit" are it
  * (discovery-detail-and-hakken-sees-plan.md §2); the detail screens' wears the
  * outward arrow, as drawn.

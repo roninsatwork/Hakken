@@ -298,7 +298,7 @@ export const findByUrlInternal = internalQuery({
 
 /**
  * A checked article stored whole: its row, its words, Ask Hakken's sections,
- * its translation asked for and Insights' counts brought up to date. Add from
+ * its translation asked for and Reading room's counts brought up to date. Add from
  * a link saves through it, and so does a News story ticked into Knowledge
  * (content-people-knowledge-plan.md, C4), which passes where it came from.
  */
@@ -318,7 +318,7 @@ export async function storeArticle(
   return articleId;
 }
 
-/** An article taken out whole: its words, its sections, its translations and the row; Insights' counts follow. */
+/** An article taken out whole: its words, its sections, its translations and the row; Reading room's counts follow. */
 export async function removeArticle(ctx: MutationCtx, articleId: Id<"libraryArticles">): Promise<void> {
   // One text and at most LIBRARY_MAX_SECTIONS sections an article, by how they are written.
   const [text, sections] = await Promise.all([
@@ -410,7 +410,7 @@ export const deleteArticle = superAdminMutation({
 });
 
 /**
- * What a reader sees of a Helpful content article in Insights (IH1, IH5–IH7):
+ * What a reader sees of a Helpful content article in Reading room (IH1, IH5–IH7):
  * its details and Hakken's summary in their language — never the article's
  * words, which no reader query reads.
  */
@@ -497,7 +497,7 @@ export const listForReadersSince = tenantQuery({
   },
 });
 
-/** One Helpful content article for its page in Insights (IH7); null for a draft or one without a summary, as for one that never existed. */
+/** One Helpful content article for its page in Reading room (IH7); null for a draft or one without a summary, as for one that never existed. */
 export const getForReader = tenantQuery({
   args: { articleId: v.id("libraryArticles"), language: v.string() },
   returns: v.union(v.null(), readerValidator),

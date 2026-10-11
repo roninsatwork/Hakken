@@ -10,7 +10,7 @@ import OnePagePage from "./ai/read/page/page";
 import OneBusinessPage from "./local/market/business/page";
 
 /**
- * Discovery's detail screens hold to the looks Anthony approved on the canvas
+ * Visibility's detail screens hold to the looks Anthony approved on the canvas
  * "Discovery — local, reviews, AI apps and mentions", page Detail screens
  * (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2, approved
  * 2026-10-10): each screen, and each view of its one table, rendered with
@@ -135,14 +135,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery's detail screens' approved looks", () => {
+describe("Visibility's detail screens' approved looks", () => {
   for (const [view, board, row] of [["", "DetailWebsite", "how much does a website cost in the uk"], ["pages", "DetailWebsite-pages", "clutch.co/uk/page-0"], ["who", "DetailWebsite-who", "brightsidedigital.co.uk"]] as const) {
     it(`One website${view ? `, ${view}` : ""}`, async () => {
       at("/app/sites/site_1/radar/sources/website", `website=clutch.co${view ? `&view=${view}` : ""}`);
       answer({ "siteRadarDetails:websiteDetail": WEBSITE });
       const { container } = render(<OneWebsitePage />);
       await screen.findByText(row);
-      await expectApprovedLook(container, PLAN, board, `Discovery → One website${view ? ` (${view})` : ""}`);
+      await expectApprovedLook(container, PLAN, board, `Visibility → One website${view ? ` (${view})` : ""}`);
     });
   }
 
@@ -158,7 +158,7 @@ describe("Discovery's detail screens' approved looks", () => {
       answer({ "siteBusinessDetail:businessDetail": BUSINESS });
       const { container } = render(<OneBusinessPage />);
       await screen.findAllByText(row);
-      await expectApprovedLook(container, PLAN, board, `Discovery → One business${view ? ` (${view})` : ""}`);
+      await expectApprovedLook(container, PLAN, board, `Visibility → One business${view ? ` (${view})` : ""}`);
     });
   }
 
@@ -168,7 +168,7 @@ describe("Discovery's detail screens' approved looks", () => {
       answer({ "siteAiPageDetail:aiPageDetail": PAGE });
       const { container } = render(<OnePagePage />);
       await screen.findAllByText(row);
-      await expectApprovedLook(container, PLAN, board, `Discovery → One page${view ? ` (${view})` : ""}`);
+      await expectApprovedLook(container, PLAN, board, `Visibility → One page${view ? ` (${view})` : ""}`);
     });
   }
 
@@ -178,7 +178,7 @@ describe("Discovery's detail screens' approved looks", () => {
       answer({ "siteRadarDetails:questionDetail": QUESTION });
       const { container } = render(<OneQuestionPage />);
       await screen.findAllByText(row);
-      await expectApprovedLook(container, PLAN, board, `Discovery → One question${view ? ` (${view})` : ""}`);
+      await expectApprovedLook(container, PLAN, board, `Visibility → One question${view ? ` (${view})` : ""}`);
     });
   }
 });

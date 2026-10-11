@@ -63,7 +63,7 @@ const share = (part: number, whole: number) => (whole > 0 ? Math.round((part / w
 const dollars = (usd: number) => (usd < 0.01 ? `$${Number(usd.toPrecision(1))}` : `$${usd.toFixed(2)}`);
 
 /**
- * Discovery → Reviews → What customers say (docs/plans/active/discovery-
+ * Visibility → Reviews → What customers say (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 2, D4, D18; drawn as "More · What
  * customers say"): what the company's own reviews praise and complain about,
  * as its AI read them, beside what rivals' reviews talk about; how each

@@ -59,7 +59,7 @@ const SORTS: SiteSortColumns<Row, "search" | "volume" | "onMaps" | "change" | "b
 const keywordOf = (row: Row) => row.keyword;
 
 /**
- * Discovery → Local → Map rankings (docs/plans/active/discovery-local-
+ * Visibility → Local → Map rankings (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, D6, D18; drawn as "Local · Map rankings"): where an
  * office sits on Google Maps for each tracked search, checked from its own
  * address, against Google's map box and the business first on the map.

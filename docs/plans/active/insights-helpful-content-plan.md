@@ -135,7 +135,7 @@ phases 1 and 3). What clients read in Insights is unchanged (that plan's Q10).
     hover (IH17; `CompactList`'s `rowLink`).
   - Wording in English and Italian; the News and Helpful content Admin look
     outlines renamed (IH18); a look test for each new screen
-    (`app/_learn/insightsLook.test.tsx`, outlines in
+    (`app/_learn/readingRoomLook.test.tsx`, outlines in
     `docs/plans/assets/insights-helpful-content/look/`), each matching its
     board's parts. Checked in the running app on dev: Helpful content, an
     article, Knowledge, Who to follow, News, and both Admin lists.

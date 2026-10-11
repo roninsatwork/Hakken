@@ -47,7 +47,7 @@ const SORTS: SiteSortColumns<Row & { shown: number }, "business" | "shown" | "pl
 const nameOf = (row: Row) => `${row.host ?? ""}${row.name}`;
 
 /**
- * Discovery → AI answers → Businesses recommended (docs/plans/active/
+ * Visibility → AI answers → Businesses recommended (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, step 3, D5, D18; drawn as "AI
  * answers · Businesses recommended"): the businesses the ChatGPT app puts in
  * front of people for the website's questions, how often and how high, beside

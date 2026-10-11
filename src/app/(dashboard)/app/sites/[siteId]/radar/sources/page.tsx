@@ -50,7 +50,7 @@ const pathOf = (url: string) => {
 };
 
 /**
- * Discovery → Brand radar → Websites AI cites (docs/plans/active/discovery-
+ * Visibility → Brand radar → Websites AI cites (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 4, D18; drawn as "Brand radar · Websites
  * AI cites"): the websites Google's AI answers quote beside the website and
  * its rivals, and whether the website is cited beside them — the places to

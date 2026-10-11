@@ -59,7 +59,7 @@ const PARTS: Part[] = [
     id: "shell-sidebar",
     name: "Sidebar — the client's menu",
     source: "src/ui/components/layout/SidebarNavTrees.tsx (UserNavTree), SidebarNavigation.tsx",
-    use: "The real menu, Discovery open on Websites. Copy it whole; a new item under Discovery is a SubNavItem (below).",
+    use: "The real menu, Visibility open on Websites. Copy it whole; a new item under Visibility is a SubNavItem (below).",
     render: () => (
       <aside className="w-[240px] bg-sidebar border-r border-border-dim/50 flex flex-col shadow-2xl">
         <div className="flex-1 flex flex-col pt-6 pb-8 px-4 gap-6">
@@ -80,7 +80,7 @@ const PARTS: Part[] = [
     use: "A page under a menu section. The current one wears the pill.",
     render: () => (
       <div className="w-[240px] bg-sidebar p-4 flex flex-col gap-0.5">
-        <NavItem icon={Globe} label="Discovery" isActive hasChildren isOpen onToggle={noop} onClick={noop}>
+        <NavItem icon={Globe} label="Visibility" isActive hasChildren isOpen onToggle={noop} onClick={noop}>
           <SubNavItem label="Websites" href="#" isActive={false} onClick={noop} />
           <SubNavItem label="Keyword research" href="#" isActive onClick={noop} />
         </NavItem>
@@ -284,7 +284,7 @@ const PARTS: Part[] = [
     id: "hakken-sees",
     name: "What Hakken sees",
     source: "src/ui/components/screens/HakkenSees.tsx",
-    use: "Under the title of every Discovery screen: what the page means, then up to three steps to do first.",
+    use: "Under the title of every Visibility screen: what the page means, then up to three steps to do first.",
     render: () => (
       <HakkenSees
         says={[

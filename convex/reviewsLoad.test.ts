@@ -9,7 +9,7 @@ import schema from "./schema";
 import { packColumn, packDays } from "./utils/packedColumns";
 
 /**
- * Discovery's Reviews pages at five times a large client
+ * Visibility's Reviews pages at five times a large client
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, step 2 and rule
  * 6): ten offices of a thousand reviews each, words and all (D4), and five
  * rivals an office holding a year of their newest fifty a month — stars and

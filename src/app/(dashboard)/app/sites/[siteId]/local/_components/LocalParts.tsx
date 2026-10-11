@@ -12,7 +12,7 @@ import { sharedSiteQuery } from "../../../_components/useSiteParam";
 import { useSiteId } from "../../../_components/useSite";
 
 /**
- * What Discovery's Local pages share (docs/plans/active/discovery-local-
+ * What Visibility's Local pages share (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, §7): the office switch at the top of each, a
  * business's name with the line under it, a figure cell, and the one note a
  * page shows when there is nothing to show yet.

@@ -11,7 +11,7 @@ import { useEventName } from "./useEventName";
 /**
  * What Hakken sees on the Google Analytics screens
  * (docs/plans/active/google-analytics-plan.md §14): the same box as
- * Discovery's (`HakkenSees`), written by fixed rules over the figures each
+ * Visibility's (`HakkenSees`), written by fixed rules over the figures each
  * screen's query already reads (`convex/utils/sees/analytics.ts`), in the
  * reader's words (`googleAnalytics.seen.<screen>`).
  *

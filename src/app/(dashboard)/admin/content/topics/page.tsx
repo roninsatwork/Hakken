@@ -25,7 +25,7 @@ const countCell = (count: number) => <span className="font-mono text-[12px] tabu
 /**
  * Admin → Content → Topics (docs/plans/active/insights-helpful-content-plan.md,
  * IH20, board 16): the one topic list Knowledge, Helpful content and Who to
- * follow share, in the order Insights' side menu shows it, with how many of
+ * follow share, in the order Reading room's side menu shows it, with how many of
  * each use a topic. New and a topic each open on their own page; deleting asks
  * yes or no first and leaves what used it without a topic.
  */

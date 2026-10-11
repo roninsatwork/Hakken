@@ -11,7 +11,7 @@ import type { QueryCtx } from "./_generated/server";
 type Reader = { db: QueryCtx["db"] };
 
 /**
- * Discovery → Brand radar → AI Overview gaps (docs/plans/active/discovery-
+ * Visibility → Brand radar → AI Overview gaps (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 3, D18; drawn as "Brand radar · AI
  * Overview gaps"): the website's tracked searches where Google shows an AI
  * Overview, whether it quotes the website, who it quotes instead, and the

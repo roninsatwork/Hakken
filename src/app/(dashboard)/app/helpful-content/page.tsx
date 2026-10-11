@@ -10,7 +10,7 @@ import { HelpfulFront, HelpfulList } from "./_components/HelpfulFront";
 
 /**
  * Helpful content (docs/plans/active/insights-helpful-content-plan.md): the
- * best of what others have written, for every signed-in user, in Insights.
+ * best of what others have written, for every signed-in user, in Reading room.
  * The front page is set out as News's (IH5); a topic chosen in the side menu,
  * or a publication beside the lead, lists alone (IH6). Each article opens on
  * its own page, and its original on its own site.

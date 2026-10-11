@@ -14,7 +14,7 @@ import { canCollect, channelKindOf, MAX_CHANNELS, xHandleOf, type FollowKind } f
  * knowledge-plan.md, C2, C3, board 2): added by hand as addresses, each
  * read by the News Collector while its Collect tick is on. The person's own
  * row keeps every channel's kind and its first channel's link in step
- * (`syncFollowChannels`), for Admin's list and the Insights page.
+ * (`syncFollowChannels`), for Admin's list and the Reading room page.
  */
 
 /** A channel's address as it is kept, with the kind it is: X as its profile address, the rest as typed, https:// added when left off. */
@@ -40,7 +40,7 @@ async function channelsOf(ctx: QueryCtx, followId: Id<"newsFollows">): Promise<D
 /**
  * The person's row in step with their channels: every kind, in the order
  * added, for Admin's Channel filter and column; and their first channel as
- * the link Insights shows. Insights' counts follow.
+ * the link Reading room shows. Reading room's counts follow.
  */
 export async function syncFollowChannels(ctx: MutationCtx, followId: Id<"newsFollows">): Promise<void> {
   const follow = await ctx.db.get(followId);
@@ -146,7 +146,7 @@ export const setChannelCollect = superAdminMutation({
   handler: async (ctx, args) => {
     const channel = await ctx.db.get(args.channelId);
     if (!channel) throw appError("NOT_FOUND", "That channel is no longer here.");
-    if (args.collect && !canCollect(channel.kind)) throw appError("INVALID_INPUT", "LinkedIn can't be read, so it is shown in Insights only.");
+    if (args.collect && !canCollect(channel.kind)) throw appError("INVALID_INPUT", "LinkedIn can't be read, so it is shown in Reading room only.");
     if (channel.collect === args.collect) return null;
     await ctx.db.patch(args.channelId, { collect: args.collect, updatedAt: Date.now() });
     await auditContentChange(ctx, args.collect ? "COLLECT_FOLLOW_CHANNEL" : "STOP_FOLLOW_CHANNEL", "followChannels", args.channelId, { address: channel.address });
@@ -156,7 +156,7 @@ export const setChannelCollect = superAdminMutation({
 
 /**
  * Removes a channel. What it brought into News stays. A person keeps at least
- * one channel — Insights links to it — so the last is refused, saying to
+ * one channel — Reading room links to it — so the last is refused, saying to
  * delete the person instead.
  */
 export const removeChannel = superAdminMutation({

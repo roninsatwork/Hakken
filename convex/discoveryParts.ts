@@ -7,7 +7,7 @@ import { isLocalOperation } from "./dataForSeoLocalOperations";
 import { isReviewOperation } from "./dataForSeoReviewOperations";
 
 /**
- * Which of Discovery's held parts a purchase belongs to (docs/plans/active/
+ * Which of Visibility's held parts a purchase belongs to (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, D16), or null for one that is not
  * held by a part: the queue keeps a held purchase while its part is on for a
  * company asking it, whatever that company's collection schedule says.

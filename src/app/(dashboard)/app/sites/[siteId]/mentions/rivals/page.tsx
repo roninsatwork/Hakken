@@ -36,7 +36,7 @@ const hostOf = (row: Business) => row.host;
 const pagedOnly = <Footer extends { totalCount: number; pageSize: number }>(footer: Footer) => (footer.totalCount > footer.pageSize ? footer : undefined);
 
 /**
- * Discovery → Web mentions → Against rivals (docs/plans/active/discovery-
+ * Visibility → Web mentions → Against rivals (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 6, D18; drawn as "Web mentions · Against
  * rivals"): how often the web names the business and each rival watched
  * beside it, month by month, and how it speaks of each.

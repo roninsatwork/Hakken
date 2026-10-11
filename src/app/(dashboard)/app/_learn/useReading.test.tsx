@@ -20,7 +20,7 @@ function Article({ thing }: { thing: ReadingThing | null }) {
 }
 
 /**
- * Reading in Insights, counted (docs/plans/active/content-people-knowledge-
+ * Reading room's reading, counted (docs/plans/active/content-people-knowledge-
  * plan.md, phase 4; Q1): a view when the article is on screen, a read after 30
  * seconds or on reaching its end — once a visit — and a click on its original.
  */

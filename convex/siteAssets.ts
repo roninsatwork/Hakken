@@ -5,7 +5,7 @@ import { assetsOf } from "./assetSummaries";
 import { assetRowValidator } from "./radarSchema";
 
 /**
- * Discovery → Site → Your assets (docs/plans/active/discovery-local-
+ * Visibility → Site → Your assets (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 5, D18; drawn as "Site · Your assets"): a
  * website's every asset as worked out after its last collection
  * (`assetSummaries.ts`) — one small record read.

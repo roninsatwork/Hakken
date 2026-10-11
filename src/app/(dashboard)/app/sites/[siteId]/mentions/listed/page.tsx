@@ -40,7 +40,7 @@ const hostOf = (row: Row) => row.host;
 const RIVALS_NAMED = 3;
 
 /**
- * Discovery → Web mentions → Where to get listed (docs/plans/active/
+ * Visibility → Web mentions → Where to get listed (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, step 6, D18; drawn as "Web mentions
  * · Where to get listed"): the directories, review sites and press that
  * Google's AI answers quote or that link to two rivals or more, where the

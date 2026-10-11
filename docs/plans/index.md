@@ -7,6 +7,13 @@ completed work.
 
 ## Active Plans
 
+- [The client's menu: Visibility, Reading room, and a new Insights](./active/menu-names-plan.md)
+  — Discovery renamed Visibility (the supplier cannot be named, and Discovery
+  is kept for something else); Insights renamed Reading room; a new Insights
+  item under Ask Hakken for the AI analyst section; Hakken tasks moved
+  below Reading room. Addresses and the code's own names stay. **Drawing approved
+  2026-10-11 (`docs/plans/assets/menu-names/`); phases 1–6 built on dev
+  2026-10-11; phase 7, the new Insights item, waits for its first page.**
 - [Discovery — detail screens, rows that open, and What Hakken sees](./active/discovery-detail-and-hakken-sees-plan.md)
   — every row in Discovery opens something: four new detail screens (one
   business, one website, one question in Google's AI answers, one page), each

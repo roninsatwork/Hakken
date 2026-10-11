@@ -50,7 +50,7 @@ const pathOf = (url: string) => {
 };
 
 /**
- * Discovery → One question (docs/plans/active/discovery-detail-and-hakken-
+ * Visibility → One question (docs/plans/active/discovery-detail-and-hakken-
  * sees-plan.md §3, DS2–DS3; drawn as "Detail · One question in Google's AI"):
  * a question Google's AI answers are given for, as Brand radar reads it — the
  * businesses it names, in order, and every page it quotes. Opened from Brand

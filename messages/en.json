@@ -606,7 +606,7 @@
     "roninsRun3D": "Ronin's Run 3D",
     "badgeWaiting": "{count} waiting",
     "billing": "Billing",
-    "sites": "Discovery",
+    "sites": "Visibility",
     "searchConsole": "Search Console",
     "googleAnalytics": "Google Analytics",
     "yourSites": "Websites",
@@ -618,7 +618,7 @@
     "googleUpdates": "Google updates",
     "whoToFollow": "Who to follow",
     "outbox": "Outbox",
-    "learn": "Insights",
+    "learn": "Reading room",
     "usage": "Usage",
     "usageOverview": "Overview",
     "usageByWork": "By work",
@@ -1981,7 +1981,7 @@
       },
       "parts": {
         "title": "New kinds of data",
-        "intro": "Discovery's newer pages, each bought for this company only once it is switched on here. Off, nothing of it is bought on any run, and its Find button says so. Switched on, it is planned on the company's next run.",
+        "intro": "Visibility's newer pages, each bought for this company only once it is switched on here. Off, nothing of it is bought on any run, and its Find button says so. Switched on, it is planned on the company's next run.",
         "local": {
           "label": "Local: Google profiles and Maps",
           "description": "Each office's Google profile and its rivals' weekly, every tracked search on Google Maps from each office every run ($0.002 each), and each office's local market monthly."
@@ -4688,7 +4688,7 @@
           },
           "readingEvents": {
             "title": "Reading Events",
-            "description": "Each time a client viewed, read or clicked an article, story or person in Insights, and each article an answer drew on. Analytics reads the daily totals, kept for good, never these."
+            "description": "Each time a client viewed, read or clicked an article, story or person in Reading room, and each article an answer drew on. Analytics reads the daily totals, kept for good, never these."
           },
           "purgeHistory": {
             "title": "Purge History",
@@ -5946,7 +5946,7 @@
           "waitingToSend": "The Collector starts within minutes",
           "out": "{count} out for {duration}: {operation} — {hosts}",
           "outNoHosts": "{count} out for {duration}: {operation}",
-          "closing": "Every answer is back: counting credits and building Discovery's figures",
+          "closing": "Every answer is back: counting credits and building Visibility's figures",
           "reused": "{count} served from data already held",
           "googleEmpty": "No clicks or impressions in these days. Worth a look in Search Console itself.",
           "stoppedPlan": "Stopped at the company's plan limit"
@@ -5987,7 +5987,7 @@
           "answers": "Answers",
           "answersLine": "{back} back, {out} out",
           "closes": "Closes",
-          "closesLine": "Credits counted on Usage; Discovery's figures and the run report built",
+          "closesLine": "Credits counted on Usage; Visibility's figures and the run report built",
           "closed": "Closed",
           "downloaded": "{done} of {total} days stored",
           "downloadedLine": "{rows} rows of searches and pages",
@@ -6253,17 +6253,17 @@
         },
         "google": {
           "title": "Google data for each website",
-          "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Discovery screens, and cost more.",
+          "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Visibility screens, and cost more.",
           "footer": "Changes apply from each website’s next run, or its next weekly refresh."
         },
         "local": {
           "title": "Local: Google profiles and Maps",
-          "intro": "What Discovery's Local pages read for each website: its own Google profiles, one per office, the rivals' profiles watched against each, where each office sits on Google Maps, and the businesses of its kind nearby. Bought from DataForSEO only for companies with Local switched on in their Collection schedule.",
+          "intro": "What Visibility's Local pages read for each website: its own Google profiles, one per office, the rivals' profiles watched against each, where each office sits on Google Maps, and the businesses of its kind nearby. Bought from DataForSEO only for companies with Local switched on in their Collection schedule.",
           "footer": "Changes apply from each website's next run."
         },
         "radar": {
           "title": "Brand radar and web mentions",
-          "intro": "What Discovery's Brand radar and Web mentions read for each website: the questions where Google's AI answers name it each month, the pages across the web naming it each week, and as many for the rivals watched beside it. Bought only for companies with Brand radar or Web mentions switched on in their Collection schedule.",
+          "intro": "What Visibility's Brand radar and Web mentions read for each website: the questions where Google's AI answers name it each month, the pages across the web naming it each week, and as many for the rivals watched beside it. Bought only for companies with Brand radar or Web mentions switched on in their Collection schedule.",
           "footer": "Changes apply from each website's next monthly reading."
         },
         "ai": {
@@ -6303,7 +6303,7 @@
         },
         "research": {
           "title": "Keyword research",
-          "intro": "A company’s own lookups in Discovery → Keyword research: any search, its overview, Google’s results, its ideas and what the AI says. Each lookup is bought from DataForSEO by the Keyword research agent, within that agent’s own spend limit per run.",
+          "intro": "A company’s own lookups in Visibility → Keyword research: any search, its overview, Google’s results, its ideas and what the AI says. Each lookup is bought from DataForSEO by the Keyword research agent, within that agent’s own spend limit per run.",
           "footer": "Changes apply to the next Look up."
         }
       },
@@ -6360,7 +6360,7 @@
         },
         "consoleLiveFactsRows": {
           "label": "Rows given intent and searches on a list asked of Google",
-          "description": "A list for other dates, or for a country not kept ready, is asked of Google when it is chosen. Discovery’s intent and monthly searches, or a page’s type and estimated visits, are looked up for this many of the rows the page lists, the most clicks first. The rest show none.",
+          "description": "A list for other dates, or for a country not kept ready, is asked of Google when it is chosen. Visibility’s intent and monthly searches, or a page’s type and estimated visits, are looked up for this many of the rows the page lists, the most clicks first. The rest show none.",
           "cost": "No cost. More rows take longer to look up."
         },
         "consoleRichResultKinds": {
@@ -6389,8 +6389,8 @@
           "cost": "No cost."
         },
         "consoleMissedKeywords": {
-          "label": "Discovery keywords Missed demand reads",
-          "description": "Missed demand reads this many of the website’s most-searched keywords in Discovery, to find those Google barely shows the website for.",
+          "label": "Visibility keywords Missed demand reads",
+          "description": "Missed demand reads this many of the website’s most-searched keywords in Visibility, to find those Google barely shows the website for.",
           "cost": "No cost."
         },
         "consoleSearchedALot": {
@@ -6405,7 +6405,7 @@
         },
         "consoleEstimateOff": {
           "label": "How far an estimate can be from Google’s clicks",
-          "description": "Real against estimated calls Discovery’s estimate too high, or too low, when it is further than this from Google’s clicks, as a share of the clicks.",
+          "description": "Real against estimated calls Visibility’s estimate too high, or too low, when it is further than this from Google’s clicks, as a share of the clicks.",
           "cost": "No cost."
         },
         "consoleCurvePositions": {
@@ -6771,7 +6771,7 @@
       "topicLabel": "Topic",
       "noTopic": "No topic",
       "addFromLink": "Add from a link",
-      "clientsNotice": "Clients read every published article in Insights. For an article from the web they see our summary and what it means for them, then open the original: never its copied words. Articles ticked in News arrive here on their own.",
+      "clientsNotice": "Clients read every published article in Reading room. For an article from the web they see our summary and what it means for them, then open the original: never its copied words. Articles ticked in News arrive here on their own.",
       "counts": "{published, plural, other {# published}} · {ours, plural, other {# ours}}, {web, plural, other {# from the web}}",
       "download": "Download CSV",
       "downloading": "Preparing…",
@@ -6799,8 +6799,8 @@
     },
     "libraryArticles": {
       "title": "Helpful content",
-      "subtitle": "Articles from other websites. Readers find them in Insights and open the original; Ask {platformName} reads them and links to it.",
-      "explanation": "Paste an article's address and {platformName} reads the page through Firecrawl — its words, title, publication, author and date — and writes a short summary for readers. Readers see the summary in Insights and open the original to read it; Ask {platformName} reads the whole article to answer questions. Only you see the copy kept here.",
+      "subtitle": "Articles from other websites. Readers find them in Reading room and open the original; Ask {platformName} reads them and links to it.",
+      "explanation": "Paste an article's address and {platformName} reads the page through Firecrawl — its words, title, publication, author and date — and writes a short summary for readers. Readers see the summary in Reading room and open the original to read it; Ask {platformName} reads the whole article to answer questions. Only you see the copy kept here.",
       "create": "Add article",
       "searchPlaceholder": "Search articles and publications…",
       "empty": "No articles yet. Add the first one.",
@@ -6858,7 +6858,7 @@
       },
       "duplicate": "That article is already in Knowledge: <link>{title}</link>.",
       "whoLabel": "Who reads it",
-      "whoAsk": "Published — readers in Insights, and Ask {platformName}",
+      "whoAsk": "Published — readers in Reading room, and Ask {platformName}",
       "whoDraft": "Draft — kept here only",
       "topicLabel": "Topic",
       "noTopic": "No topic",
@@ -6911,7 +6911,7 @@
     },
     "googleUpdates": {
       "title": "Google updates",
-      "subtitle": "Google's announced updates, entered by hand. Each one shows in News straight away, and on every Discovery chart that covers its dates.",
+      "subtitle": "Google's announced updates, entered by hand. Each one shows in News straight away, and on every Visibility chart that covers its dates.",
       "create": "New update",
       "createTitle": "New Google update",
       "editTitle": "Edit Google update",
@@ -6930,7 +6930,7 @@
       "edit": "Edit update",
       "delete": "Delete update",
       "deleteTitle": "Delete Google update",
-      "deleteWarning": "It leaves News and the Discovery charts straight away.",
+      "deleteWarning": "It leaves News and the Visibility charts straight away.",
       "deleteConfirm": "Delete <highlight>{title}</highlight>?",
       "columns": {
         "update": "Update",
@@ -6986,7 +6986,7 @@
       "edit": "Edit {name}",
       "delete": "Delete {name}",
       "deleteTitle": "Delete person",
-      "deleteWarning": "They leave Insights straight away and their channels stop being collected. What they brought into News stays.",
+      "deleteWarning": "They leave Reading room straight away and their channels stop being collected. What they brought into News stays.",
       "deleteConfirm": "Delete <highlight>{name}</highlight>?",
       "errors": {
         "saveFailed": "Could not save. Try again.",
@@ -6994,23 +6994,23 @@
         "pickFailed": "Could not change the picks. Try again.",
         "channelFailed": "Could not change the channel. Try again."
       },
-      "picksNotice": "Our picks: {names}, {count} of {max}. Insights shows them first.",
-      "picksNone": "No one is picked yet. Tick “Our pick” on up to {max} people to show them first in Insights.",
+      "picksNotice": "Our picks: {names}, {count} of {max}. Reading room shows them first.",
+      "picksNone": "No one is picked yet. Tick “Our pick” on up to {max} people to show them first in Reading room.",
       "pickLabel": "Pick {name}",
       "pickFull": "{max} are picked: untick one first",
       "back": "Who to follow",
       "editTitle": "Edit details",
-      "editorSubtitle": "Who they are and why, in English. Insights shows it translated into every language. Their channels are changed on their own page.",
+      "editorSubtitle": "Who they are and why, in English. Reading room shows it translated into every language. Their channels are changed on their own page.",
       "save": "Save",
       "nameLabel": "Name",
       "whyLabel": "Why we recommend them",
-      "whyHint": "Clients read this in Insights. Written in English; {platformName} translates it.",
+      "whyHint": "Clients read this in Reading room. Written in English; {platformName} translates it.",
       "topicLabel": "Topic",
       "noTopic": "No topic",
-      "topicHint": "What clients browse by in Insights.",
+      "topicHint": "What clients browse by in Reading room.",
       "picksLabel": "Our picks",
       "pickCheckbox": "One of our picks",
-      "pickHint": "Insights shows our picks first. Up to {max}, in the order they were picked. {free, plural, =0 {No place is free.} =1 {# place is free.} other {# places are free.}}",
+      "pickHint": "Reading room shows our picks first. Up to {max}, in the order they were picked. {free, plural, =0 {No place is free.} =1 {# place is free.} other {# places are free.}}",
       "pickHintFull": "{max} are picked: {names}. Untick one of them to pick {name}.",
       "thisEntry": "this person",
       "add": {
@@ -7025,7 +7025,7 @@
         "removeOne": "Remove this address",
         "channelsHint": "One address a line: their website, YouTube, X or LinkedIn. You can add more later on their page.",
         "kindIs": "{kind}",
-        "notice": "When you add them, {platformName} reads the newest five articles from each channel it can read, then collects whatever they publish next. LinkedIn can't be read: it shows in Insights only.",
+        "notice": "When you add them, {platformName} reads the newest five articles from each channel it can read, then collects whatever they publish next. LinkedIn can't be read: it shows in Reading room only.",
         "save": "Add person",
         "namePlaceholder": "Aleyda Solis"
       },
@@ -7037,7 +7037,7 @@
         "picked": "Our pick",
         "figures": {
           "channels": "Channels",
-          "channelsDetail": "{collecting} being collected · {shown} shown in Insights only",
+          "channelsDetail": "{collecting} being collected · {shown} shown in Reading room only",
           "collected": "Articles collected",
           "added": "Added {when}",
           "newest": "Newest",
@@ -7067,7 +7067,7 @@
           "status": {
             "COLLECTING": "Collecting",
             "OFF": "Off",
-            "LINKEDIN": "Shown in Insights only: LinkedIn can't be read",
+            "LINKEDIN": "Shown in Reading room only: LinkedIn can't be read",
             "X_NOT_SET_UP": "Waiting for X to be set up",
             "PROBLEM": "Can't be read: {problem}"
           },
@@ -7311,13 +7311,13 @@
     },
     "topics": {
       "title": "Topics",
-      "subtitle": "What readers browse by in Insights. Knowledge, Helpful content and Who to follow share one list.",
-      "explanation": "Written once, in English; readers see each topic in their own language. The order here is the order in Insights' side menu. Deleting a topic asks first, and what used it is left without a topic until you choose another.",
+      "subtitle": "What readers browse by in Reading room. Knowledge, Helpful content and Who to follow share one list.",
+      "explanation": "Written once, in English; readers see each topic in their own language. The order here is the order in Reading room's side menu. Deleting a topic asks first, and what used it is left without a topic until you choose another.",
       "create": "New topic",
       "createTitle": "New topic",
       "editorSubtitle": "Written once, in English; readers see it in their own language.",
       "nameLabel": "Name",
-      "nameHint": "As readers see it in Insights' side menu, its filters and each article's facts.",
+      "nameHint": "As readers see it in Reading room's side menu, its filters and each article's facts.",
       "orderLabel": "Order",
       "orderHint": "1 comes first in the side menu and the filters.",
       "orderHintNew": "1 comes first in the side menu and the filters. Left blank, it goes last.",
@@ -7343,7 +7343,7 @@
       "save": "Save topic",
       "back": "Topics",
       "deleteTitle": "Delete topic",
-      "deleteWarning": "It leaves Insights' side menu and filters straight away.",
+      "deleteWarning": "It leaves Reading room's side menu and filters straight away.",
       "deleteConfirm": "Delete <highlight>{name}</highlight>? {knowledge} Knowledge articles, {helpful} Helpful content articles and {people} people to follow use it; they will have no topic until you choose another.",
       "errors": {
         "saveFailed": "Could not save the topic. Try again.",
@@ -7422,7 +7422,7 @@
         "readersTitle": "Readers and companies, by day",
         "readersHint": "How many people read something each day, and how many companies they came from."
       },
-      "definitions": "A view is a client opening an article or story in Insights. A read is staying on it for 30 seconds or reaching the end. A click is opening the original, or one of a person's channels. Our own team's reading is not counted.",
+      "definitions": "A view is a client opening an article or story in Reading room. A read is staying on it for 30 seconds or reaching the end. A click is opening the original, or one of a person's channels. Our own team's reading is not counted.",
       "top": {
         "title": "The top five",
         "hint": "The most read and most active in these {days} days.",
@@ -9415,7 +9415,7 @@
       "wiki": "Wiki",
       "seo": "SEO",
       "knowledge": "Knowledge",
-      "discovery": "Discovery"
+      "discovery": "Visibility"
     },
     "certainty": {
       "SURE": "Sure",
@@ -9600,7 +9600,7 @@
       },
       "seoPageType": {
         "name": "What kind of page is this?",
-        "description": "Labels each page a site ranks with — service, article, case study, location and so on — so the Discovery Top pages report shows which kinds of page bring the visitors.",
+        "description": "Labels each page a site ranks with — service, article, case study, location and so on — so Visibility's Top pages report shows which kinds of page bring the visitors.",
         "rule": "Without it, only pages whose address says what they are (the home page, /contact, anything under /blog) are labelled; the rest show as not sorted yet.",
         "answers": {
           "home": "Home page",
@@ -14276,7 +14276,7 @@
     },
     "performance": {
       "title": "Performance",
-      "description": "What Google itself counted for this website: real clicks and impressions, where Discovery shows estimates."
+      "description": "What Google itself counted for this website: real clicks and impressions, where Visibility shows estimates."
     },
     "searches": {
       "title": "Searches",
@@ -14353,7 +14353,7 @@
       "pageDescription": "What Google counted for this page in the dates chosen, and the keywords that brought people to it.",
       "backToSearches": "Back to Searches",
       "backToPages": "Back to Pages",
-      "openInSites": "Open it in Discovery",
+      "openInSites": "Open it in Visibility",
       "openPage": "Open the page",
       "pagesFor": "Pages it brought people to",
       "searchesFor": "Searches Google showed it for",
@@ -14513,11 +14513,11 @@
     },
     "almost": {
       "title": "Almost there",
-      "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Discovery. These are the ones closest to the top three.",
+      "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Visibility. These are the ones closest to the top three.",
       "at4to10": "Keywords at 4–10",
       "at11to20": "Keywords at 11–20",
       "searches": "Searches a month behind them",
-      "sitesFigures": "Discovery's figures",
+      "sitesFigures": "Visibility's figures",
       "tracked": "Tracked",
       "youTrack": "Keywords you track"
     },
@@ -14533,7 +14533,7 @@
     },
     "demand": {
       "title": "Missed demand",
-      "description": "Keywords many people search for that Google barely shows you for, from Discovery's monthly searches. And keywords Google shows you for that you don't track yet: tick one to track it.",
+      "description": "Keywords many people search for that Google barely shows you for, from Visibility's monthly searches. And keywords Google shows you for that you don't track yet: tick one to track it.",
       "fewer": "Fewer than {count} impressions in these dates",
       "ofShown": "Of the {count} keywords Google showed"
     },
@@ -14593,7 +14593,7 @@
     },
     "updates": {
       "title": "Google updates",
-      "description": "What each of Google's updates did to your website: clicks and average position read the {days} days before it began → the {days} days after it finished. The updates are the ones kept in Admin → Content → Google updates, the same list the Discovery charts mark.",
+      "description": "What each of Google's updates did to your website: clicks and average position read the {days} days before it began → the {days} days after it finished. The updates are the ones kept in Admin → Content → Google updates, the same list the Visibility charts mark.",
       "chartTitle": "Clicks, with Google's updates",
       "chartHint": "Hover a G for the update: when it started and finished, and what Google said about it.",
       "searchPlaceholder": "Search updates…",
@@ -14672,8 +14672,8 @@
     },
     "estimates": {
       "title": "Real against estimated",
-      "description": "Clicks are what Google counted; Estimate is the visits Discovery estimated for the same {days} days. Where they differ a lot, trust Google's.",
-      "sites": "Discovery's estimate",
+      "description": "Clicks are what Google counted; Estimate is the visits Visibility estimated for the same {days} days. Where they differ a lot, trust Google's.",
+      "sites": "Visibility's estimate",
       "visitsIn": "Visits in the last {days} days",
       "google": "Google's clicks",
       "high": "Pages estimated too high",
@@ -14813,7 +14813,7 @@
       "searchPlaceholder": "Find a website…",
       "period": "The last 30 days to Analytics' newest day",
       "noMatch": "No website matches that search.",
-      "empty": "Your company has no website of its own yet. Add one in Discovery → Websites.",
+      "empty": "Your company has no website of its own yet. Add one in Visibility → Websites.",
       "columns": {
         "website": "Website",
         "status": "Status",
@@ -15462,7 +15462,7 @@
         "hero": "It's one of your heroes: change it only with a test."
       },
       "websites": {
-        "none": "None of your company's own websites is here yet. Add one in Discovery to see what Google Analytics counts on it.",
+        "none": "None of your company's own websites is here yet. Add one in Visibility to see what Google Analytics counts on it.",
         "noneConnected": "{count, plural, =1 {Your website isn't} other {None of your # websites is}} connected to Google Analytics yet, so nobody can say which pages bring in enquiries or sales.",
         "notCounting": "{text} had {a} visits in the last 30 days, but nothing counts as a conversion there yet, so its pages can't be weighed by what they bring in.",
         "made": "{text} made {aMoney} from {countB, plural, =1 {one conversion} other {# conversions}} in the last 30 days.",
@@ -15678,7 +15678,7 @@
         "conversions": "Conversions",
         "landingPages": "Landing pages",
         "aiAssistants": "AI assistants",
-        "aiAnswers": "AI answers in Discovery",
+        "aiAnswers": "AI answers in Visibility",
         "unsortedPages": "The unsorted pages",
         "referrals": "Referral",
         "addGoogleAnalytics": "Add Google Analytics"
@@ -16219,7 +16219,7 @@
   "knowledgeArticles": {
     "list": {
       "title": "Knowledge",
-      "description": "Short answers to the questions we get asked most, like how the figures in Discovery are worked out."
+      "description": "Short answers to the questions we get asked most, like how the figures in Visibility are worked out."
     },
     "article": {
       "back": "Knowledge",
@@ -16337,7 +16337,7 @@
   },
   "learn": {
     "menu": {
-      "label": "Insights",
+      "label": "Reading room",
       "jumpLabel": "Jump to a page",
       "jumpPlaceholder": "Jump to a page…",
       "groups": {

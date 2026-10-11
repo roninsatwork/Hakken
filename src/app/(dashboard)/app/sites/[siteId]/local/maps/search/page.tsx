@@ -49,7 +49,7 @@ const SORTS: SiteSortColumns<Business, "place" | "business" | "rating" | "review
 const nameOf = (row: Business) => row.name;
 
 /**
- * Discovery → Local → Map rankings → one search (docs/plans/active/discovery-
+ * Visibility → Local → Map rankings → one search (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, D18; drawn as "Local · One search on the
  * map"): everyone on Google Maps for one search from one office, in Google's
  * order, with Google's own reason for showing each.

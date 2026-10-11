@@ -182,7 +182,7 @@ describe("News", () => {
     expect(screen.getByText("news.front.emptyTitle")).toBeInTheDocument();
   });
 
-  it("has Insights' side menu: news by kind, who to follow, and the topics that have articles", () => {
+  it("has Reading room's side menu: news by kind, who to follow, and the topics that have articles", () => {
     render(<NewsPage />);
 
     const menu = screen.getByRole("navigation", { name: "learn.menu.label" });

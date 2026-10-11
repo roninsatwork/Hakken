@@ -2,7 +2,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 /**
- * Clearing what Discovery's Local pages keep past its time
+ * Clearing what Visibility's Local pages keep past its time
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, §5): a map check
  * after 90 days, as Google's results pages are; and a business nobody links
  * and nothing has named for 90 days, with its weeks, activity and map places.

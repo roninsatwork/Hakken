@@ -12,7 +12,7 @@ import { KindIcon, StoryKicker, type StoryKind } from "../news/_components/NewsS
 import { formatWireDay } from "./learnDates";
 
 /**
- * Insights' shared parts (docs/plans/active/insights-helpful-content-plan.md):
+ * Reading room's shared parts (docs/plans/active/insights-helpful-content-plan.md):
  * the News front page's own pieces — its dateline, its story columns and its
  * one-line list — made one set for News, Knowledge, Helpful content and Who to
  * follow, each panel one link that lights when the mouse is over it (IH17).

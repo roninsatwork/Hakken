@@ -8,7 +8,7 @@ import BrandRadarPage from "./page";
 import RadarSourcesPage from "./sources/page";
 
 /**
- * Discovery's Brand radar screens hold to the looks Anthony approved on the
+ * Visibility's Brand radar screens hold to the looks Anthony approved on the
  * canvas "Discovery — local, reviews, AI apps and mentions" (docs/plans/
  * active/discovery-local-reputation-ai-plan.md, D18; design-drift-plan D4):
  * each screen, rendered with sample rows in English, reads as the outline
@@ -89,13 +89,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery → Brand radar's approved looks", () => {
+describe("Visibility → Brand radar's approved looks", () => {
   it("Overview", async () => {
     at("/app/sites/site_1/radar");
     answer({ "siteBrandRadar:radarOverview": OVERVIEW });
     const { container } = render(<BrandRadarPage />);
     await screen.findByText("how much does a website cost in the uk");
-    await expectApprovedLook(container, PLAN, "AiRadar", "Discovery → Brand radar → Overview");
+    await expectApprovedLook(container, PLAN, "AiRadar", "Visibility → Brand radar → Overview");
   });
 
   it("Websites AI cites", async () => {
@@ -103,6 +103,6 @@ describe("Discovery → Brand radar's approved looks", () => {
     answer({ "siteBrandRadar:radarSources": SOURCES });
     const { container } = render(<RadarSourcesPage />);
     await screen.findByText("clutch.co");
-    await expectApprovedLook(container, PLAN, "AiRadarSources", "Discovery → Brand radar → Websites AI cites");
+    await expectApprovedLook(container, PLAN, "AiRadarSources", "Visibility → Brand radar → Websites AI cites");
   });
 });

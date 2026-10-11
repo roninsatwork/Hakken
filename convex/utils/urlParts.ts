@@ -1,5 +1,5 @@
 /**
- * The parts of a page's address the Discovery screens compare: its website
+ * The parts of a page's address the Visibility screens compare: its website
  * (lowercase, without "www.") and its path. Shared by Brand radar, Your
  * assets and the detail screens, which each held a copy.
  */

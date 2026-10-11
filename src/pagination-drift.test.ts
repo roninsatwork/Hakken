@@ -14,7 +14,7 @@ import {
 /**
  * The reporting sections whose tables keep the Sites standard: Sites, and
  * Search Console, built on the same parts (docs/plans/active/
- * search-console-plan.md §5) — and Keyword research, Discovery's second
+ * search-console-plan.md §5) — and Keyword research, Visibility's second
  * section beside Websites (docs/plans/active/keyword-research-plan.md).
  */
 const REPORTING_ROOTS = [

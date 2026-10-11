@@ -1,4 +1,4 @@
-# Discovery → Keyword research → a keyword's What the AI says — the approved look (board "Ai" of docs/plans/assets/keyword-research/).
+# Visibility → Keyword research → a keyword's What the AI says — the approved look (board "Ai" of docs/plans/assets/keyword-research/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 detail-header

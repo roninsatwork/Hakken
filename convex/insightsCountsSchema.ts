@@ -2,7 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 
 /**
- * Insights' counts, kept as they change (docs/plans/active/insights-helpful-
+ * Reading room's counts, kept as they change (docs/plans/active/insights-helpful-
  * content-plan.md, IH21): one row, rewritten by every write to Knowledge,
  * Helpful content, Who to follow or the topic list (`insightsCounts.ts`), so
  * a page view reads one row and never counts a list. Keys are topic keys
@@ -13,7 +13,7 @@ const tally = v.record(v.string(), v.number());
 export const insightsCountsTables = {
   insightsCounts: defineTable({
     key: v.literal("all"),
-    /** Published Knowledge articles, all and by topic: Insights' side menu. */
+    /** Published Knowledge articles, all and by topic: Reading room's side menu. */
     knowledge: v.object({ all: v.number(), byTopic: tally }),
     /** Helpful content shown to readers, all and by topic, and its publications with how many each. */
     helpful: v.object({ all: v.number(), byTopic: tally, publications: v.array(v.object({ name: v.string(), count: v.number() })) }),

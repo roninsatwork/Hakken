@@ -57,7 +57,7 @@ export function useSeenWords(namespace: "sites.seen" | "keywordResearch.seen", s
 }
 
 /**
- * A Discovery screen's What Hakken sees box (discovery-detail-and-hakken-sees-
+ * A Visibility screen's What Hakken sees box (discovery-detail-and-hakken-sees-
  * plan.md §6): the codes its query worked out, in this screen's words
  * (`sites.seen.<screen>`), each step's link (`sites.seen.links`) leading to a
  * record or a page of this site with the way back to here. Nothing while the

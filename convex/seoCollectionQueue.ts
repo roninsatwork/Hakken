@@ -175,7 +175,7 @@ async function stillWanted(ctx: MutationCtx, pull: Doc<"seoDataPulls">): Promise
   for (const line of lines) companies.add(line.companyId);
   if (companies.size === 0) return true;
 
-  // Discovery's Local and Reviews purchases are held by the company's switch
+  // Visibility's Local and Reviews purchases are held by the company's switch
   // for each (discovery-local-reputation-ai-plan.md, D16), not its collection
   // schedule: a Find on a company whose runs are off is still wanted while
   // Local is on.

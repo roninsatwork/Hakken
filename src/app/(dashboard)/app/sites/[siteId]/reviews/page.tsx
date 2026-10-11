@@ -38,7 +38,7 @@ const idOf = (row: Row) => row.id;
 const daysBetween = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS));
 
 /**
- * Discovery → Reviews → Your reviews (docs/plans/active/discovery-local-
+ * Visibility → Reviews → Your reviews (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 2, D18; drawn as "Reviews · Your reviews"):
  * every review on the company's own listings, newest first, and whether it
  * was answered — the reviews a month and their stars above.

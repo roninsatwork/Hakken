@@ -20,14 +20,14 @@ import { syncOursInList, syncWebInList } from "./knowledgeList";
  * Topics (docs/plans/active/insights-helpful-content-plan.md, IH20): one list,
  * shared by Knowledge, Helpful content and Who to follow, that the super admin
  * adds to, changes and deletes in Admin → Content → Topics. Readers see it in
- * Insights' side menu and filters, in its order and in their language.
+ * Reading room's side menu and filters, in its order and in their language.
  *
  * What uses a topic keeps its key (`topicsSchema.ts`). Deleting a topic asks
  * first on screen, then takes it off everything that used it in the same
  * write: those are left without a topic until another is chosen.
  */
 
-/** The most topics: each is a line in Insights' side menu, and the list is read whole. */
+/** The most topics: each is a line in Reading room's side menu, and the list is read whole. */
 export const MAX_TOPICS = 30;
 /** A topic's name sits in a side menu and a filter chip. */
 export const MAX_TOPIC_NAME = 40;
@@ -123,7 +123,7 @@ async function placeAt(ctx: MutationCtx, topicId: Id<"topics">, order: number | 
   }
 }
 
-/** The list in order, in the reader's language: Insights' side menu, its filters and each article's facts. */
+/** The list in order, in the reader's language: Reading room's side menu, its filters and each article's facts. */
 export const listTopics = tenantQuery({
   args: { language: v.string() },
   returns: v.array(v.object({ key: v.string(), name: v.string() })),

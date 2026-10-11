@@ -377,11 +377,11 @@ describe("Billing navigation belongs to the correct frontend", () => {
 });
 
 /**
- * Discovery holds Websites and, since 2026-10-04, Keyword research
+ * Visibility holds Websites and, since 2026-10-04, Keyword research
  * (docs/plans/active/keyword-research-plan.md): each sub-item is lit on its
- * own pages only, and Discovery opens on either.
+ * own pages only, and Visibility opens on either.
  */
-describe("Discovery's menu", () => {
+describe("Visibility's menu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useMutationMock.mockReturnValue(vi.fn());
@@ -398,6 +398,17 @@ describe("Discovery's menu", () => {
     expect(websites.compareDocumentPosition(research) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(research.className).toContain(NAV_ACTIVE_TEXT);
     expect(websites.className).not.toContain(NAV_ACTIVE_TEXT);
+  });
+
+  it("keeps the approved order: Visibility after Ask Hakken, Hakken tasks after Reading room (menu-names-plan.md)", () => {
+    vi.mocked(usePathname).mockReturnValue("/app");
+    render(<SidebarNavigation />);
+
+    const order: (string | RegExp)[] = ["Dashboard", /^Ask /, "sites", "searchConsole", "googleAnalytics", "learn", "hakkenTasks", "usage"];
+    const items = order.map((label) => screen.getAllByText(label)[0]);
+    items.slice(1).forEach((item, index) => {
+      expect(items[index].compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING, `${order[index]} before ${order[index + 1]}`).toBeTruthy();
+    });
   });
 
   it("keeps Websites lit on a website's pages, and Keyword research not", () => {

@@ -7,7 +7,7 @@ import { expectApprovedLook } from "@/src/test/lookOutline";
 import YourAssetsPage from "./page";
 
 /**
- * Discovery's Your assets holds to the look Anthony approved on the canvas
+ * Visibility's Your assets holds to the look Anthony approved on the canvas
  * "Discovery — local, reviews, AI apps and mentions" (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, D18; design-drift-plan D4): rendered
  * with sample rows in English, it reads as the outline saved beside its board
@@ -53,12 +53,12 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery → Site's approved looks", () => {
+describe("Visibility → Site's approved looks", () => {
   it("Your assets", async () => {
     nav.pathname = "/app/sites/site_1/assets";
     answer({ "siteAssets:yourAssets": ASSETS });
     const { container } = render(<YourAssetsPage />);
     await screen.findByText("clutch.co");
-    await expectApprovedLook(container, PLAN, "Assets", "Discovery → Site → Your assets");
+    await expectApprovedLook(container, PLAN, "Assets", "Visibility → Site → Your assets");
   });
 });

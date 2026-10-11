@@ -5,7 +5,7 @@ import { tenantMutation } from "./tenantFunctions";
 import type { ReadingKind, ReadingScope } from "./readingSchema";
 
 /**
- * Reading in Insights, counted as it happens (docs/plans/active/content-
+ * Reading room's reading, counted as it happens (docs/plans/active/content-
  * people-knowledge-plan.md, phase 4). A client's screen says what was viewed,
  * read or clicked; Ask Hakken says which articles it drew on. Each lands as
  * one event and moves the day's totals — overall, its item, its person, the

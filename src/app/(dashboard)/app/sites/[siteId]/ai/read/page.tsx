@@ -35,7 +35,7 @@ const pageOf = (row: Row) => row.page;
 const share = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : null);
 
 /**
- * Discovery → AI answers → Read but not cited (docs/plans/active/discovery-
+ * Visibility → AI answers → Read but not cited (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 3, D5, D18; drawn as "AI answers · Read
  * but not cited"): the pages the ChatGPT app opened while answering the
  * website's questions, and how often it then quoted each — a page read but

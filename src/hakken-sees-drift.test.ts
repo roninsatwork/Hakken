@@ -5,7 +5,7 @@ import it from "@/messages/it.json";
 import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUtils";
 
 /**
- * Every Discovery screen opens with What Hakken sees (docs/plans/active/
+ * Every Visibility screen opens with What Hakken sees (docs/plans/active/
  * discovery-detail-and-hakken-sees-plan.md DS4; Anthony, 2026-10-10: "do we
  * need to add the what hakken sees across the entire discovery section — i
  * think its a good idea — so its not just these screens"): every page in a
@@ -26,10 +26,10 @@ const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root
 
 const carriesBox = (file: string) => /<(SiteSees|HakkenSees|ResearchSees)\b/.test(readRepoFile(file));
 
-describe("What Hakken sees on every Discovery screen", () => {
+describe("What Hakken sees on every Visibility screen", () => {
   test("every screen opens with the box", () => {
     const missing = screens().filter((file) => !carriesBox(file));
-    expect(missing, "A Discovery screen without What Hakken sees. Render <SiteSees> under its title (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §6).").toEqual([]);
+    expect(missing, "A Visibility screen without What Hakken sees. Render <SiteSees> under its title (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §6).").toEqual([]);
   });
 
   test("every box names a screen whose words exist in English and Italian", () => {

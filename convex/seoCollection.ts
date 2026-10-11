@@ -378,7 +378,7 @@ async function websiteSteps(
     ...await volumeSteps(ctx, cycle, companyWebsite, (params, sendIndex) => planSharedPull(ctx, cycle, {
       operation: findSeoOperation(SEARCH_VOLUME_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex,
     })),
-    // Discovery's Local pages, when the company has them switched on (`localPlanning.ts`).
+    // Visibility's Local pages, when the company has them switched on (`localPlanning.ts`).
     ...await localSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
       operation, params, sentinel: "listing", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
     })),

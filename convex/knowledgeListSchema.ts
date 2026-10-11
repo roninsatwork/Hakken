@@ -11,7 +11,7 @@ export const knowledgeCameValidator = v.union(v.literal("WRITTEN"), v.literal("L
  * plan.md, phase 3, board 5): ours and the web's together. An article of ours
  * holds its whole text, so the two tables cannot be read whole to page and
  * sort across both; each article keeps one small row here instead, written on
- * every save, the way `insightsCounts` keeps Insights' totals.
+ * every save, the way `insightsCounts` keeps Reading room's totals.
  */
 export const knowledgeListTables = {
   knowledgeList: defineTable({

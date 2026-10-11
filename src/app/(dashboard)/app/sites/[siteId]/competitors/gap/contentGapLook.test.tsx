@@ -79,6 +79,6 @@ describe("Content gap's approved look", () => {
     answer({ "sites:getMySite": SITE, "siteCompetitors:listContentGap": GAP });
     const { container } = render(<SiteContentGapPage />);
     await screen.findByText("single page app");
-    await expectApprovedLook(container, PLAN, "ContentGap", "Discovery → Websites → Content gap");
+    await expectApprovedLook(container, PLAN, "ContentGap", "Visibility → Websites → Content gap");
   });
 });

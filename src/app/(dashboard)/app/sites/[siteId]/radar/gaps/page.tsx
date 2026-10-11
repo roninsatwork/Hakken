@@ -41,7 +41,7 @@ const keywordOf = (row: Row) => row.keyword;
 const TOP = 10;
 
 /**
- * Discovery → Brand radar → AI Overview gaps (docs/plans/active/discovery-
+ * Visibility → Brand radar → AI Overview gaps (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 3, D18; drawn as "Brand radar · AI
  * Overview gaps"): the tracked searches where the website ranks on Google
  * but the AI Overview above every result quotes someone else — read from the

@@ -11,7 +11,7 @@ import schema from "./schema";
 import { packColumn } from "./utils/packedColumns";
 
 /**
- * Discovery's Brand radar screens at their largest
+ * Visibility's Brand radar screens at their largest
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, step 4 and rule
  * 6): the website and six rivals watched beside it, each read at the most
  * questions a month a website may take (500), ten pages quoted under each

@@ -38,7 +38,7 @@ export function listPageResult<Row extends Validator<unknown, "required", string
   });
 }
 
-/** A page of a Discovery list with its What Hakken sees box, worked out over the whole list the page is cut from. */
+/** A page of a Visibility list with its What Hakken sees box, worked out over the whole list the page is cut from. */
 export function listPageSeenResult<Row extends Validator<unknown, "required", string>>(row: Row) {
   return v.object({ ...listPageResult(row).fields, seen: seenValidator });
 }

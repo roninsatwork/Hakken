@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 /**
  * What Hakken sees (docs/plans/active/discovery-detail-and-hakken-sees-plan.md
- * §2 and §6): the box under the title of every Discovery screen, saying what
+ * §2 and §6): the box under the title of every Visibility screen, saying what
  * the page means for the business and what to do first. Written by fixed
  * rules over the rows the page's own query already reads — never an AI model,
  * never a purchase (DS5) — and sent as codes with their numbers, so the words

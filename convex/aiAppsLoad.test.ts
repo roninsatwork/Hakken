@@ -12,7 +12,7 @@ import { packColumn } from "./utils/packedColumns";
 import { AI_ENGINES } from "./seoAiEngines";
 
 /**
- * Discovery's AI app screens at five times a large client
+ * Visibility's AI app screens at five times a large client
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, step 3 and rule
  * 6): fifty questions, each with four answers read from the ChatGPT app —
  * twenty businesses, fifty pages read, eight cited and five searches each —

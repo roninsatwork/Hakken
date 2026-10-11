@@ -2,7 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 
 /**
- * Reading in Insights, counted (docs/plans/active/content-people-knowledge-
+ * Reading room's reading, counted (docs/plans/active/content-people-knowledge-
  * plan.md, phase 4; Q1–Q4 answered 2026-10-10). A **view** is a client
  * opening an article or story; a **read** is staying on it 30 seconds or
  * reaching its end; a **click** is opening the original or one of a person's

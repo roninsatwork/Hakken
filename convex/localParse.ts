@@ -2,7 +2,7 @@ import type { ActivityKind, ListingSource } from "./localSchema";
 
 /**
  * Reading what the Local purchases answer (`dataForSeoLocalOperations.ts`)
- * into the shapes Discovery's Local records hold. Pure, as every parser is
+ * into the shapes Visibility's Local records hold. Pure, as every parser is
  * (`dataForSeoParsers.ts`): tested against the answers bought on 2026-10-09,
  * and a fix is a re-read of the answers held, never a purchase.
  *

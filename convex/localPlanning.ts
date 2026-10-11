@@ -26,7 +26,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { wordsOf } from "./utils/wordStarts";
 
 /**
- * What a run buys for Discovery's Local pages (docs/plans/active/discovery-
+ * What a run buys for Visibility's Local pages (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 1), for one of a company's own websites —
  * and only when the company has Local switched on (D16). Its own module
  * because the collection planner (`seoCollection.ts`) is at its size ceiling;

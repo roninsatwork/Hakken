@@ -1,4 +1,4 @@
-# Discovery → Websites → Tracked fan-out queries — the approved look (board "TrackedFanOut" of docs/plans/assets/search-console-redesign/).
+# Visibility → Websites → Tracked fan-out queries — the approved look (board "TrackedFanOut" of docs/plans/assets/search-console-redesign/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracked fan-out queries

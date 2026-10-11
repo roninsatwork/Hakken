@@ -16,7 +16,7 @@ import { ownReviewDepth } from "./reviewPlanning";
 import { reviewsAtMonthEnds } from "./siteReviews";
 
 /**
- * Discovery's Reviews (discovery-local-reputation-ai-plan.md, step 2): each
+ * Visibility's Reviews (discovery-local-reputation-ai-plan.md, step 2): each
  * review filed once by its own number, words kept for a company's own
  * listings only (D4), a reply dated "a year ago" kept as answered but never
  * timed, and nothing rewritten when nothing changed (rule 11). The answers

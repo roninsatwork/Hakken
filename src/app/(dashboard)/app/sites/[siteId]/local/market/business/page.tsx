@@ -64,7 +64,7 @@ const POST_SORTS: SiteSortColumns<Post, "day"> = { day: { value: (row) => row.da
 const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, "");
 
 /**
- * Discovery → One business (docs/plans/active/discovery-detail-and-hakken-
+ * Visibility → One business (docs/plans/active/discovery-detail-and-hakken-
  * sees-plan.md §3, DS2–DS3; drawn as "Detail · One business"): a business the
  * website is up against — where Google's AI names it, where ChatGPT shows it,
  * its place on Google Maps for the website's searches, the pages naming it and

@@ -126,7 +126,7 @@ export async function summaryRow(ctx: QueryCtx, row: Doc<"knowledgeArticles">, l
 /**
  * Published articles, newest first, a page at a time — all, or one topic's
  * through its index (insights-helpful-content-plan.md, IH12, IH21): Knowledge
- * in Insights, and "Keep reading" under an article.
+ * in Reading room, and "Keep reading" under an article.
  */
 export const listPublishedPage = tenantQuery({
   args: { language: v.string(), topic: v.optional(v.string()), paginationOpts: paginationOptsValidator },

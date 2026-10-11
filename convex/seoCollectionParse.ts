@@ -95,7 +95,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (pull.operationId === AI_OVERVIEW_FAN_OUT_OPERATION) return await fileAiOverviewPull(ctx, args.pullId, pull);
   // How many search for the fan-out queries, and what a click costs (`searchVolumes.ts`).
   if (pull.operationId === SEARCH_VOLUME_OPERATION) return await fileSearchVolumePull(ctx, args.pullId, pull);
-  // Discovery's Local pages: profiles, map checks, markets, posts and found lists (`localFiling.ts`).
+  // Visibility's Local pages: profiles, map checks, markets, posts and found lists (`localFiling.ts`).
   if (isLocalOperation(pull.operationId)) return await fileLocalPull(ctx, args.pullId, pull);
   if (isReviewOperation(pull.operationId)) return await fileReviewPull(ctx, args.pullId, pull);
   // How often searches are asked of AI tools (`aiDemand.ts`).

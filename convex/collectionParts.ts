@@ -5,7 +5,7 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 
 /**
- * Which of Discovery's new kinds of data a company buys on its schedule
+ * Which of Visibility's new kinds of data a company buys on its schedule
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, D16). Anthony,
  * 2026-10-09: "hold until I say" — per company and per part, on the
  * company's Collection schedule screen. Every part starts off: a part that is

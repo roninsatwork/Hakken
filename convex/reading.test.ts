@@ -6,7 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 /**
- * Reading in Insights, counted (docs/plans/active/content-people-knowledge-
+ * Reading room's reading, counted (docs/plans/active/content-people-knowledge-
  * plan.md, phase 4; Q1–Q4 answered 2026-10-10): each view, read and click a
  * client makes lands as one event and moves the day's totals — overall, the
  * item, its person, the company, the user, the item at the company and the
@@ -52,7 +52,7 @@ async function setUp(t: ReturnType<typeof harness>) {
   return { ...ids, as, totals };
 }
 
-describe("reading in Insights, counted", () => {
+describe("Reading room's reading, counted", () => {
   beforeEach(() => {
     useFixedDay("2026-10-09");
   });

@@ -1,4 +1,4 @@
-# Discovery → Websites → Content gap — the approved look (board "ContentGap" of docs/plans/assets/content-gap-ahrefs-layout/).
+# Visibility → Websites → Content gap — the approved look (board "ContentGap" of docs/plans/assets/content-gap-ahrefs-layout/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Content gap

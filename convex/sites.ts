@@ -258,12 +258,12 @@ export const getMySite = tenantQuery({
       paidKeywords: numberOrNull,
       /** Every page of the company's own website once: the menu's count beside Your pages; null on a competitor or before it is built. */
       yourPages: numberOrNull,
-      /** Discovery's Local numbers (`localSummaries.ts`): searches checked on Maps, the local market, rivals' posts in 30 days, the company's own listings. */
+      /** Visibility's Local numbers (`localSummaries.ts`): searches checked on Maps, the local market, rivals' posts in 30 days, the company's own listings. */
       localMapSearches: v.number(),
       localMarket: v.number(),
       localRivalPosts: v.number(),
       localListings: v.number(),
-      /** Discovery's Reviews: the reviews held on the company's own listings. */
+      /** Visibility's Reviews: the reviews held on the company's own listings. */
       localReviews: v.number(),
       /** Your assets as last worked out (`assetSummaries.ts`): the menu's count beside it. */
       assets: v.number(),

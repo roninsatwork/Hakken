@@ -79,7 +79,7 @@ type CompactListProps<Row> = {
   rowLink?: { href: (row: Row) => string | null; label: (row: Row) => string; external?: boolean };
 };
 
-/** A linked row: the whole row lights on hover, as Insights' panels do. */
+/** A linked row: the whole row lights on hover, as Reading room's panels do. */
 const LINKED_ROW = "relative transition-colors hover:bg-hover";
 
 const HEADER_ROW = "text-[11px] uppercase tracking-[0.08em] text-muted";

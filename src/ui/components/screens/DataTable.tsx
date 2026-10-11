@@ -179,7 +179,7 @@ type DataTableProps<Row> = {
   filters?: ReactNode;
   /**
    * A switch between the table's views (`SegmentedChoice size="compact"`),
-   * first on the search row: a Discovery detail screen's one table, which
+   * first on the search row: a Visibility detail screen's one table, which
    * lists questions, pages or businesses as the switch says
    * (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2).
    */

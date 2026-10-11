@@ -62,7 +62,7 @@ the set but i need to be told"):
 - `src/ui/components/screens/NoFigure.tsx`: `NoFigure` — a figure a row has none of, as a muted dash in the tables' figure size (12px). Use it rather than writing a dash: eighteen screens wrote their own and left it at the page's 16px, taller than the numbers beside it (audit, 2026-10-04). `Change` draws it for no change.
 - `src/ui/components/screens/Change.tsx`: `Change` — a move in a table cell, "▲ 12", "▼ 0.8 places", "New", or a dash; `ChangeLine` — the colour rule for a figure's change sentence. The arrow carries the meaning; the colour only repeats it.
 - `src/ui/components/screens/Meter.tsx`: a share as a thin bar, always beside its number, coloured from `chartPalette.ts`. `then` adds a lighter second band for work under way but not done — a collection's requests out, beside those back (Collection pipeline, 2026-10-05).
-- `src/ui/components/screens/HakkenSees.tsx`: `HakkenSees` — **What Hakken sees**, the box under the title of every Discovery screen: two or three sentences saying what the page means for the business, then "Do first" and up to three numbered steps, each with a quiet link to where it is done. A `SettingsCard` with fixed contents. Its words come from fixed rules over what the page already reads, as codes (`convex/utils/hakkenSees.ts`); Sites' `SiteSees` turns them into the screen's words and links. Added 2026-10-10 (discovery-detail-and-hakken-sees-plan.md §2; Anthony: "I love the what hakken sees addition").
+- `src/ui/components/screens/HakkenSees.tsx`: `HakkenSees` — **What Hakken sees**, the box under the title of every Visibility screen: two or three sentences saying what the page means for the business, then "Do first" and up to three numbered steps, each with a quiet link to where it is done. A `SettingsCard` with fixed contents. Its words come from fixed rules over what the page already reads, as codes (`convex/utils/hakkenSees.ts`); Sites' `SiteSees` turns them into the screen's words and links. Added 2026-10-10 (discovery-detail-and-hakken-sees-plan.md §2; Anthony: "I love the what hakken sees addition").
 - `SegmentedChoice` (in `SettingsCard.tsx`) gained `size="compact"`: as wide as its choices, for switching between views of one card or table. Sites' `SiteViewSwitch` is it.
 
 Parts shared by one area rather than the whole app, in the narrowest folder their callers reach:
@@ -250,8 +250,8 @@ IH17): pass `rowLink` — where each row goes, what a screen reader says for it,
 and `external` for someone's own page in a new tab. The whole row lights on
 hover (`hover:bg-hover`) and a click anywhere on it follows the link; a row
 whose `href` is null stays plain. Anything clickable inside a cell sits above
-the row's link with `relative` and `LAYER.RAISED`. Insights' story lists, its
-count panels and Who to follow are built this way; Insights' own panels
+the row's link with `relative` and `LAYER.RAISED`. Reading room's story lists, its
+count panels and Who to follow are built this way; Reading room's own panels
 (`app/_learn/StoryParts.tsx`: `PANEL`, `PanelLink`) do the same for a story's
 column or a lead, without a box.
 

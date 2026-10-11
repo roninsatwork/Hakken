@@ -43,7 +43,7 @@ const SORTS: SiteSortColumns<Row, "asset" | "stage"> = {
 const keyOf = (row: Row) => row.key;
 
 /**
- * Discovery → Site → Your assets (docs/plans/active/discovery-local-
+ * Visibility → Site → Your assets (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 5, D18; drawn as "Site · Your assets"): every
  * place people can find the business, how often each is seen and chosen,
  * the stage where it loses people, and the first thing to fix.

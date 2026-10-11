@@ -24,7 +24,7 @@ import { readReviews } from "./localReviews";
 import { starsByTopic } from "./siteReviews";
 
 /**
- * Discovery → Local → Business profile, and Every office side by side
+ * Visibility → Local → Business profile, and Every office side by side
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, §7; drawn as
  * "Local · Business profile" and "Business profile, every office"): each
  * office's Google profile as people see it, what it is missing against the

@@ -58,7 +58,7 @@ const keywordOf = (row: SearchRow) => row.keyword;
 const OFFICE_COLUMNS = 10;
 
 /**
- * Discovery → Local → Business profile, every office side by side
+ * Visibility → Local → Business profile, every office side by side
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, D2, D6; drawn as
  * "Local · Business profile, every office"): the same figures for each
  * office's profile, so the weaker one shows, and every tracked search with

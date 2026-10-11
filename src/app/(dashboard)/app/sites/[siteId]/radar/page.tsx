@@ -51,7 +51,7 @@ const dollars = (usd: number) => (usd < 0.01 ? `$${Number(usd.toPrecision(1))}` 
 const pagedOnly = <Footer extends { totalCount: number; pageSize: number }>(footer: Footer) => (footer.totalCount > footer.pageSize ? footer : undefined);
 
 /**
- * Discovery → Brand radar → Overview (docs/plans/active/discovery-local-
+ * Visibility → Brand radar → Overview (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 4, D18; drawn as "Brand radar · Overview"): how
  * often Google's AI answers name the website beside the rivals watched with
  * it, month by month, and the real questions behind them — questions nobody

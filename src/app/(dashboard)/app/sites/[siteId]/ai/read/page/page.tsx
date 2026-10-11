@@ -49,7 +49,7 @@ const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, "");
 const percent = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : "–");
 
 /**
- * Discovery → One page (docs/plans/active/discovery-detail-and-hakken-sees-
+ * Visibility → One page (docs/plans/active/discovery-detail-and-hakken-sees-
  * plan.md §3, DS2–DS3; drawn as "Detail · One page"): a page the ChatGPT app
  * read while answering the website's questions — every answer that read it
  * and whether it was cited, the pages cited in its place, and the questions

@@ -1,6 +1,6 @@
 /**
  * How Helpful content shows an article's address and language, in Admin and
- * in Insights (insights-helpful-content-plan.md): shared, so the two never
+ * in Reading room (insights-helpful-content-plan.md): shared, so the two never
  * word them differently.
  */
 

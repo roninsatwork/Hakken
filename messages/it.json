@@ -606,7 +606,7 @@
     "roninsRun3D": "Ronin's Run 3D",
     "badgeWaiting": "{count} in attesa",
     "billing": "Fatturazione",
-    "sites": "Scoperta",
+    "sites": "Visibilità",
     "searchConsole": "Search Console",
     "googleAnalytics": "Google Analytics",
     "yourSites": "Siti web",
@@ -618,7 +618,7 @@
     "googleUpdates": "Aggiornamenti di Google",
     "whoToFollow": "Chi seguire",
     "outbox": "Posta in uscita",
-    "learn": "Insights",
+    "learn": "Sala di lettura",
     "usage": "Utilizzo",
     "usageOverview": "Panoramica",
     "usageByWork": "Per lavoro",
@@ -1981,7 +1981,7 @@
       },
       "parts": {
         "title": "Nuovi tipi di dati",
-        "intro": "Le pagine più recenti di Scoperta, acquistate per questa azienda solo dopo averle attivate qui. Spente, non si acquista nulla in nessuna esecuzione e il pulsante Trova lo dice. Attivate, vengono pianificate alla prossima esecuzione dell'azienda.",
+        "intro": "Le pagine più recenti di Visibilità, acquistate per questa azienda solo dopo averle attivate qui. Spente, non si acquista nulla in nessuna esecuzione e il pulsante Trova lo dice. Attivate, vengono pianificate alla prossima esecuzione dell'azienda.",
         "local": {
           "label": "Locale: profili Google e Maps",
           "description": "Il profilo Google di ogni sede e quelli dei concorrenti ogni settimana, ogni ricerca seguita su Google Maps da ogni sede a ogni esecuzione (0,002 $ ciascuna) e il mercato locale di ogni sede ogni mese."
@@ -4688,7 +4688,7 @@
           },
           "readingEvents": {
             "title": "Eventi di lettura",
-            "description": "Ogni volta che un cliente ha visto, letto o cliccato un articolo, una storia o una persona in Insights, e ogni articolo usato in una risposta. Analytics legge i totali giornalieri, conservati per sempre, mai questi."
+            "description": "Ogni volta che un cliente ha visto, letto o cliccato un articolo, una storia o una persona nella Sala di lettura, e ogni articolo usato in una risposta. Analytics legge i totali giornalieri, conservati per sempre, mai questi."
           },
           "purgeHistory": {
             "title": "Cronologia Purge",
@@ -5946,7 +5946,7 @@
           "waitingToSend": "Il Collector parte entro pochi minuti",
           "out": "{count} in attesa da {duration}: {operation} — {hosts}",
           "outNoHosts": "{count} in attesa da {duration}: {operation}",
-          "closing": "Tutte le risposte sono tornate: conteggio dei crediti e calcolo dei dati di Discovery",
+          "closing": "Tutte le risposte sono tornate: conteggio dei crediti e calcolo dei dati di Visibilità",
           "reused": "{count} servite da dati già disponibili",
           "googleEmpty": "Nessun clic né impressione in questi giorni. Vale la pena controllare in Search Console.",
           "stoppedPlan": "Interrotta al limite del piano dell'azienda"
@@ -5987,7 +5987,7 @@
           "answers": "Risposte",
           "answersLine": "{back} tornate, {out} in attesa",
           "closes": "Chiusura",
-          "closesLine": "Crediti contati in Utilizzo; dati di Discovery e resoconto dell'esecuzione calcolati",
+          "closesLine": "Crediti contati in Utilizzo; dati di Visibilità e resoconto dell'esecuzione calcolati",
           "closed": "Chiusa",
           "downloaded": "{done} di {total} giorni salvati",
           "downloadedLine": "{rows} righe di ricerche e pagine",
@@ -6253,17 +6253,17 @@
         },
         "google": {
           "title": "Dati Google per ogni sito",
-          "intro": "Ciò che la piattaforma acquista da Google, tramite DataForSEO, per ogni sito: i siti dell’azienda e ogni concorrente che segue. Numeri più alti danno elenchi più completi nelle schermate Scoperta, e costano di più.",
+          "intro": "Ciò che la piattaforma acquista da Google, tramite DataForSEO, per ogni sito: i siti dell’azienda e ogni concorrente che segue. Numeri più alti danno elenchi più completi nelle schermate di Visibilità, e costano di più.",
           "footer": "Le modifiche valgono dalla prossima raccolta di ogni sito, o dal suo prossimo aggiornamento settimanale."
         },
         "local": {
           "title": "Locale: profili Google e Maps",
-          "intro": "Cosa leggono le pagine Locale di Scoperta per ogni sito web: i suoi profili Google, uno per sede, i profili dei concorrenti seguiti per ciascuna, dove si trova ogni sede su Google Maps e le attività dello stesso tipo nelle vicinanze. Acquistati da DataForSEO solo per le aziende con Locale attivo nella loro pianificazione della raccolta.",
+          "intro": "Cosa leggono le pagine Locale di Visibilità per ogni sito web: i suoi profili Google, uno per sede, i profili dei concorrenti seguiti per ciascuna, dove si trova ogni sede su Google Maps e le attività dello stesso tipo nelle vicinanze. Acquistati da DataForSEO solo per le aziende con Locale attivo nella loro pianificazione della raccolta.",
           "footer": "Le modifiche valgono dalla prossima esecuzione di ogni sito web."
         },
         "radar": {
           "title": "Radar del marchio e citazioni sul web",
-          "intro": "Cosa leggono il Radar del marchio e le Citazioni sul web di Discovery per ogni sito: le domande in cui le risposte IA di Google lo nominano ogni mese, le pagine sul web che lo nominano ogni settimana, e altrettante per i concorrenti seguiti accanto. Acquistato solo per le aziende con il Radar del marchio o le Citazioni sul web attivi nella loro pianificazione della raccolta.",
+          "intro": "Cosa leggono il Radar del marchio e le Citazioni sul web di Visibilità per ogni sito: le domande in cui le risposte IA di Google lo nominano ogni mese, le pagine sul web che lo nominano ogni settimana, e altrettante per i concorrenti seguiti accanto. Acquistato solo per le aziende con il Radar del marchio o le Citazioni sul web attivi nella loro pianificazione della raccolta.",
           "footer": "Le modifiche valgono dalla prossima lettura mensile di ogni sito."
         },
         "ai": {
@@ -6303,7 +6303,7 @@
         },
         "research": {
           "title": "Ricerca parole chiave",
-          "intro": "Le ricerche di un’azienda in Scoperta → Ricerca parole chiave: qualsiasi ricerca, la sua panoramica, i risultati di Google, le sue idee e cosa dice l’IA. Ogni ricerca è acquistata da DataForSEO dall’agente Ricerca parole chiave, entro il suo limite di spesa per esecuzione.",
+          "intro": "Le ricerche di un’azienda in Visibilità → Ricerca parole chiave: qualsiasi ricerca, la sua panoramica, i risultati di Google, le sue idee e cosa dice l’IA. Ogni ricerca è acquistata da DataForSEO dall’agente Ricerca parole chiave, entro il suo limite di spesa per esecuzione.",
           "footer": "Le modifiche valgono dalla prossima ricerca."
         }
       },
@@ -6360,7 +6360,7 @@
         },
         "consoleLiveFactsRows": {
           "label": "Righe con intento e ricerche in un elenco chiesto a Google",
-          "description": "Un elenco per altre date, o per un paese non tenuto pronto, viene chiesto a Google quando lo si sceglie. L’intento e le ricerche mensili di Scoperta, o il tipo di pagina e le visite stimate, vengono cercati per questo numero di righe dell’elenco, prima quelle con più clic. Le altre non ne mostrano.",
+          "description": "Un elenco per altre date, o per un paese non tenuto pronto, viene chiesto a Google quando lo si sceglie. L’intento e le ricerche mensili di Visibilità, o il tipo di pagina e le visite stimate, vengono cercati per questo numero di righe dell’elenco, prima quelle con più clic. Le altre non ne mostrano.",
           "cost": "Nessun costo. Più righe richiedono più tempo."
         },
         "consoleRichResultKinds": {
@@ -6389,8 +6389,8 @@
           "cost": "Nessun costo."
         },
         "consoleMissedKeywords": {
-          "label": "Parole chiave di Scoperta lette da Domanda mancata",
-          "description": "Domanda mancata legge questo numero di parole chiave più cercate del sito in Scoperta, per trovare quelle per cui Google mostra il sito appena.",
+          "label": "Parole chiave di Visibilità lette da Domanda mancata",
+          "description": "Domanda mancata legge questo numero di parole chiave più cercate del sito in Visibilità, per trovare quelle per cui Google mostra il sito appena.",
           "cost": "Nessun costo."
         },
         "consoleSearchedALot": {
@@ -6405,7 +6405,7 @@
         },
         "consoleEstimateOff": {
           "label": "Quanto una stima può discostarsi dai clic di Google",
-          "description": "Reali e stimati chiama la stima di Scoperta troppo alta, o troppo bassa, quando si discosta dai clic di Google più di così, in percentuale dei clic.",
+          "description": "Reali e stimati chiama la stima di Visibilità troppo alta, o troppo bassa, quando si discosta dai clic di Google più di così, in percentuale dei clic.",
           "cost": "Nessun costo."
         },
         "consoleCurvePositions": {
@@ -6771,7 +6771,7 @@
       "topicLabel": "Argomento",
       "noTopic": "Nessun argomento",
       "addFromLink": "Aggiungi da un link",
-      "clientsNotice": "I clienti leggono ogni articolo pubblicato in Insights. Per un articolo dal web vedono il nostro riassunto e cosa significa per loro, poi aprono l'originale: mai il testo copiato. Gli articoli spuntati in Notizie arrivano qui da soli.",
+      "clientsNotice": "I clienti leggono ogni articolo pubblicato nella Sala di lettura. Per un articolo dal web vedono il nostro riassunto e cosa significa per loro, poi aprono l'originale: mai il testo copiato. Gli articoli spuntati in Notizie arrivano qui da soli.",
       "counts": "{published, plural, one {# pubblicato} other {# pubblicati}} · {ours, plural, one {# nostro} other {# nostri}}, {web, plural, other {# dal web}}",
       "download": "Scarica CSV",
       "downloading": "Preparazione…",
@@ -6799,8 +6799,8 @@
     },
     "libraryArticles": {
       "title": "Contenuti utili",
-      "subtitle": "Articoli di altri siti. I lettori li trovano in Insights e aprono l'originale; Chiedi a {platformName} li legge e rimanda all'originale.",
-      "explanation": "Incolla l'indirizzo di un articolo e {platformName} legge la pagina tramite Firecrawl — testo, titolo, testata, autore e data — e scrive un breve riassunto per i lettori. I lettori vedono il riassunto in Insights e aprono l'originale per leggerlo; Chiedi a {platformName} legge l'intero articolo per rispondere alle domande. Solo tu vedi la copia conservata qui.",
+      "subtitle": "Articoli di altri siti. I lettori li trovano nella Sala di lettura e aprono l'originale; Chiedi a {platformName} li legge e rimanda all'originale.",
+      "explanation": "Incolla l'indirizzo di un articolo e {platformName} legge la pagina tramite Firecrawl — testo, titolo, testata, autore e data — e scrive un breve riassunto per i lettori. I lettori vedono il riassunto nella Sala di lettura e aprono l'originale per leggerlo; Chiedi a {platformName} legge l'intero articolo per rispondere alle domande. Solo tu vedi la copia conservata qui.",
       "create": "Aggiungi articolo",
       "searchPlaceholder": "Cerca articoli e testate…",
       "empty": "Ancora nessun articolo. Aggiungi il primo.",
@@ -6858,7 +6858,7 @@
       },
       "duplicate": "Questo articolo è già in Conoscenza: <link>{title}</link>.",
       "whoLabel": "Chi lo legge",
-      "whoAsk": "Pubblicato: lettori in Insights e Chiedi a {platformName}",
+      "whoAsk": "Pubblicato: lettori nella Sala di lettura e Chiedi a {platformName}",
       "whoDraft": "Bozza: conservato solo qui",
       "topicLabel": "Argomento",
       "noTopic": "Nessun argomento",
@@ -6911,7 +6911,7 @@
     },
     "googleUpdates": {
       "title": "Aggiornamenti di Google",
-      "subtitle": "Gli aggiornamenti annunciati da Google, inseriti a mano. Ognuno compare subito in Notizie e su ogni grafico di Scoperta che copre le sue date.",
+      "subtitle": "Gli aggiornamenti annunciati da Google, inseriti a mano. Ognuno compare subito in Notizie e su ogni grafico di Visibilità che copre le sue date.",
       "create": "Nuovo aggiornamento",
       "createTitle": "Nuovo aggiornamento di Google",
       "editTitle": "Modifica aggiornamento di Google",
@@ -6930,7 +6930,7 @@
       "edit": "Modifica aggiornamento",
       "delete": "Elimina aggiornamento",
       "deleteTitle": "Elimina aggiornamento di Google",
-      "deleteWarning": "Scompare subito da Notizie e dai grafici di Scoperta.",
+      "deleteWarning": "Scompare subito da Notizie e dai grafici di Visibilità.",
       "deleteConfirm": "Eliminare <highlight>{title}</highlight>?",
       "columns": {
         "update": "Aggiornamento",
@@ -6986,7 +6986,7 @@
       "edit": "Modifica {name}",
       "delete": "Elimina {name}",
       "deleteTitle": "Elimina persona",
-      "deleteWarning": "Scompare subito da Insights e i suoi canali non vengono più raccolti. Ciò che ha portato in Notizie resta.",
+      "deleteWarning": "Scompare subito dalla Sala di lettura e i suoi canali non vengono più raccolti. Ciò che ha portato in Notizie resta.",
       "deleteConfirm": "Eliminare <highlight>{name}</highlight>?",
       "errors": {
         "saveFailed": "Impossibile salvare. Riprova.",
@@ -6994,23 +6994,23 @@
         "pickFailed": "Impossibile cambiare i consigli. Riprova.",
         "channelFailed": "Impossibile cambiare il canale. Riprova."
       },
-      "picksNotice": "I nostri consigli: {names}, {count} di {max}. Insights li mostra per primi.",
-      "picksNone": "Nessuno è ancora scelto. Spunta “Nostro consiglio” su un massimo di {max} persone per mostrarle per prime in Insights.",
+      "picksNotice": "I nostri consigli: {names}, {count} di {max}. La Sala di lettura li mostra per primi.",
+      "picksNone": "Nessuno è ancora scelto. Spunta “Nostro consiglio” su un massimo di {max} persone per mostrarle per prime nella Sala di lettura.",
       "pickLabel": "Scegli {name}",
       "pickFull": "Ne sono già scelti {max}: togline uno prima",
       "back": "Chi seguire",
       "editTitle": "Modifica i dettagli",
-      "editorSubtitle": "Chi sono e perché, in inglese. Insights lo mostra tradotto in ogni lingua. I loro canali si cambiano sulla loro pagina.",
+      "editorSubtitle": "Chi sono e perché, in inglese. La Sala di lettura lo mostra tradotto in ogni lingua. I loro canali si cambiano sulla loro pagina.",
       "save": "Salva",
       "nameLabel": "Nome",
       "whyLabel": "Perché li consigliamo",
-      "whyHint": "I clienti lo leggono in Insights. Scritto in inglese; {platformName} lo traduce.",
+      "whyHint": "I clienti lo leggono nella Sala di lettura. Scritto in inglese; {platformName} lo traduce.",
       "topicLabel": "Argomento",
       "noTopic": "Nessun argomento",
-      "topicHint": "Ciò che i clienti sfogliano in Insights.",
+      "topicHint": "Ciò che i clienti sfogliano nella Sala di lettura.",
       "picksLabel": "I nostri consigli",
       "pickCheckbox": "Uno dei nostri consigli",
-      "pickHint": "Insights mostra per primi i nostri consigli. Fino a {max}, nell'ordine in cui sono stati scelti. {free, plural, =0 {Nessun posto libero.} =1 {# posto libero.} other {# posti liberi.}}",
+      "pickHint": "La Sala di lettura mostra per primi i nostri consigli. Fino a {max}, nell'ordine in cui sono stati scelti. {free, plural, =0 {Nessun posto libero.} =1 {# posto libero.} other {# posti liberi.}}",
       "pickHintFull": "Ne sono già scelti {max}: {names}. Togline uno per scegliere {name}.",
       "thisEntry": "questa persona",
       "add": {
@@ -7025,7 +7025,7 @@
         "removeOne": "Togli questo indirizzo",
         "channelsHint": "Un indirizzo per riga: il suo sito, YouTube, X o LinkedIn. Potrai aggiungerne altri sulla sua pagina.",
         "kindIs": "{kind}",
-        "notice": "Quando la aggiungi, {platformName} legge i cinque articoli più recenti di ogni canale che può leggere, poi raccoglie ciò che pubblica dopo. LinkedIn non si può leggere: compare solo in Insights.",
+        "notice": "Quando la aggiungi, {platformName} legge i cinque articoli più recenti di ogni canale che può leggere, poi raccoglie ciò che pubblica dopo. LinkedIn non si può leggere: compare solo nella Sala di lettura.",
         "save": "Aggiungi la persona",
         "namePlaceholder": "Aleyda Solis"
       },
@@ -7037,7 +7037,7 @@
         "picked": "Nostro consiglio",
         "figures": {
           "channels": "Canali",
-          "channelsDetail": "{collecting} in raccolta · {shown} solo in Insights",
+          "channelsDetail": "{collecting} in raccolta · {shown} solo nella Sala di lettura",
           "collected": "Articoli raccolti",
           "added": "Aggiunta il {when}",
           "newest": "Più recente",
@@ -7067,7 +7067,7 @@
           "status": {
             "COLLECTING": "In raccolta",
             "OFF": "Spento",
-            "LINKEDIN": "Solo in Insights: LinkedIn non si può leggere",
+            "LINKEDIN": "Solo nella Sala di lettura: LinkedIn non si può leggere",
             "X_NOT_SET_UP": "In attesa che X venga configurato",
             "PROBLEM": "Non si può leggere: {problem}"
           },
@@ -7311,13 +7311,13 @@
     },
     "topics": {
       "title": "Argomenti",
-      "subtitle": "Ciò che i lettori sfogliano in Insights. Conoscenza, Contenuti utili e Chi seguire condividono un unico elenco.",
-      "explanation": "Scritti una volta, in inglese; i lettori vedono ogni argomento nella loro lingua. L'ordine qui è l'ordine nel menu laterale di Insights. Eliminare un argomento chiede prima conferma, e ciò che lo usava resta senza argomento finché non ne scegli un altro.",
+      "subtitle": "Ciò che i lettori sfogliano nella Sala di lettura. Conoscenza, Contenuti utili e Chi seguire condividono un unico elenco.",
+      "explanation": "Scritti una volta, in inglese; i lettori vedono ogni argomento nella loro lingua. L'ordine qui è l'ordine nel menu laterale della Sala di lettura. Eliminare un argomento chiede prima conferma, e ciò che lo usava resta senza argomento finché non ne scegli un altro.",
       "create": "Nuovo argomento",
       "createTitle": "Nuovo argomento",
       "editorSubtitle": "Scritto una volta, in inglese; i lettori lo vedono nella loro lingua.",
       "nameLabel": "Nome",
-      "nameHint": "Come lo vedono i lettori nel menu laterale di Insights, nei suoi filtri e nei dati di ogni articolo.",
+      "nameHint": "Come lo vedono i lettori nel menu laterale della Sala di lettura, nei suoi filtri e nei dati di ogni articolo.",
       "orderLabel": "Ordine",
       "orderHint": "1 viene per primo nel menu laterale e nei filtri.",
       "orderHintNew": "1 viene per primo nel menu laterale e nei filtri. Se lo lasci vuoto, va in fondo.",
@@ -7343,7 +7343,7 @@
       "save": "Salva argomento",
       "back": "Argomenti",
       "deleteTitle": "Elimina argomento",
-      "deleteWarning": "Scompare subito dal menu laterale e dai filtri di Insights.",
+      "deleteWarning": "Scompare subito dal menu laterale e dai filtri della Sala di lettura.",
       "deleteConfirm": "Eliminare <highlight>{name}</highlight>? Lo usano {knowledge} articoli di Conoscenza, {helpful} articoli di Contenuti utili e {people} persone da seguire; resteranno senza argomento finché non ne scegli un altro.",
       "errors": {
         "saveFailed": "Impossibile salvare l'argomento. Riprova.",
@@ -7422,7 +7422,7 @@
         "readersTitle": "Lettori e aziende, per giorno",
         "readersHint": "Quante persone hanno letto qualcosa ogni giorno, e da quante aziende venivano."
       },
-      "definitions": "Una visualizzazione è un cliente che apre un articolo o una storia in Insights. Una lettura è restarci 30 secondi o arrivare alla fine. Un clic è aprire l'originale, o uno dei canali di una persona. Le letture del nostro team non sono contate.",
+      "definitions": "Una visualizzazione è un cliente che apre un articolo o una storia nella Sala di lettura. Una lettura è restarci 30 secondi o arrivare alla fine. Un clic è aprire l'originale, o uno dei canali di una persona. Le letture del nostro team non sono contate.",
       "top": {
         "title": "I primi cinque",
         "hint": "I più letti e i più attivi in questi {days} giorni.",
@@ -9415,7 +9415,7 @@
       "wiki": "Wiki",
       "seo": "SEO",
       "knowledge": "Conoscenza",
-      "discovery": "Scoperta"
+      "discovery": "Visibilità"
     },
     "certainty": {
       "SURE": "Sicuro",
@@ -9600,7 +9600,7 @@
       },
       "seoPageType": {
         "name": "Che tipo di pagina è?",
-        "description": "Etichetta ogni pagina con cui un sito si posiziona — servizio, articolo, caso di studio, località e così via — così il report Pagine principali di Scoperta mostra quali tipi di pagina portano i visitatori.",
+        "description": "Etichetta ogni pagina con cui un sito si posiziona — servizio, articolo, caso di studio, località e così via — così il report Pagine principali di Visibilità mostra quali tipi di pagina portano i visitatori.",
         "rule": "Senza, sono etichettate solo le pagine il cui indirizzo dice cosa sono (la home, /contact, tutto sotto /blog); le altre risultano non ancora classificate.",
         "answers": {
           "home": "Pagina iniziale",
@@ -14276,7 +14276,7 @@
     },
     "performance": {
       "title": "Rendimento",
-      "description": "Quello che Google stesso ha contato per questo sito: clic e impressioni reali, dove Scoperta mostra stime."
+      "description": "Quello che Google stesso ha contato per questo sito: clic e impressioni reali, dove Visibilità mostra stime."
     },
     "searches": {
       "title": "Ricerche",
@@ -14353,7 +14353,7 @@
       "pageDescription": "Cosa ha contato Google per questa pagina nelle date scelte, e le parole chiave che le hanno portato visitatori.",
       "backToSearches": "Torna a Ricerche",
       "backToPages": "Torna a Pagine",
-      "openInSites": "Aprila in Scoperta",
+      "openInSites": "Aprila in Visibilità",
       "openPage": "Apri la pagina",
       "pagesFor": "Pagine a cui ha portato visitatori",
       "searchesFor": "Ricerche per cui Google l'ha mostrata",
@@ -14513,11 +14513,11 @@
     },
     "almost": {
       "title": "Quasi in cima",
-      "description": "Parole chiave per cui Google ti mostra già nelle posizioni da 4 a 20, con quante persone le cercano ogni mese, da Scoperta. Sono le più vicine alle prime tre.",
+      "description": "Parole chiave per cui Google ti mostra già nelle posizioni da 4 a 20, con quante persone le cercano ogni mese, da Visibilità. Sono le più vicine alle prime tre.",
       "at4to10": "Parole chiave in 4–10",
       "at11to20": "Parole chiave in 11–20",
       "searches": "Ricerche al mese dietro di loro",
-      "sitesFigures": "Dati di Scoperta",
+      "sitesFigures": "Dati di Visibilità",
       "tracked": "Seguite",
       "youTrack": "Parole chiave che segui"
     },
@@ -14533,7 +14533,7 @@
     },
     "demand": {
       "title": "Domanda persa",
-      "description": "Parole chiave che molte persone cercano ma per cui Google ti mostra appena, dalle ricerche mensili di Scoperta. E parole chiave per cui Google ti mostra ma che non segui ancora: spuntane una per seguirla.",
+      "description": "Parole chiave che molte persone cercano ma per cui Google ti mostra appena, dalle ricerche mensili di Visibilità. E parole chiave per cui Google ti mostra ma che non segui ancora: spuntane una per seguirla.",
       "fewer": "Meno di {count} impressioni in queste date",
       "ofShown": "Delle {count} parole chiave mostrate da Google"
     },
@@ -14593,7 +14593,7 @@
     },
     "updates": {
       "title": "Aggiornamenti di Google",
-      "description": "Cosa ha fatto al tuo sito ciascun aggiornamento di Google: clic e posizione media si leggono dai {days} giorni prima dell'inizio → ai {days} giorni dopo la fine. Gli aggiornamenti sono quelli in Admin → Contenuti → Aggiornamenti di Google, lo stesso elenco segnato sui grafici di Scoperta.",
+      "description": "Cosa ha fatto al tuo sito ciascun aggiornamento di Google: clic e posizione media si leggono dai {days} giorni prima dell'inizio → ai {days} giorni dopo la fine. Gli aggiornamenti sono quelli in Admin → Contenuti → Aggiornamenti di Google, lo stesso elenco segnato sui grafici di Visibilità.",
       "chartTitle": "Clic, con gli aggiornamenti di Google",
       "chartHint": "Passa il mouse su una G per vedere l'aggiornamento: quando è iniziato e finito, e cosa ne ha detto Google.",
       "searchPlaceholder": "Cerca aggiornamenti…",
@@ -14672,8 +14672,8 @@
     },
     "estimates": {
       "title": "Reali contro stimati",
-      "description": "I clic sono quelli contati da Google; la Stima sono le visite stimate da Scoperta per gli stessi {days} giorni. Dove differiscono molto, fidati di Google.",
-      "sites": "Stima di Scoperta",
+      "description": "I clic sono quelli contati da Google; la Stima sono le visite stimate da Visibilità per gli stessi {days} giorni. Dove differiscono molto, fidati di Google.",
+      "sites": "Stima di Visibilità",
       "visitsIn": "Visite negli ultimi {days} giorni",
       "google": "Clic di Google",
       "high": "Pagine stimate troppo in alto",
@@ -14813,7 +14813,7 @@
       "searchPlaceholder": "Trova un sito…",
       "period": "Gli ultimi 30 giorni fino al giorno più recente di Analytics",
       "noMatch": "Nessun sito corrisponde alla ricerca.",
-      "empty": "La tua azienda non ha ancora un sito proprio. Aggiungine uno in Discovery → Siti.",
+      "empty": "La tua azienda non ha ancora un sito proprio. Aggiungine uno in Visibilità → Siti.",
       "columns": {
         "website": "Sito",
         "status": "Stato",
@@ -15462,7 +15462,7 @@
         "hero": "È una delle tue pagine eroe: cambiala solo con un test."
       },
       "websites": {
-        "none": "Qui non c'è ancora nessuno dei siti della tua azienda. Aggiungine uno in Discovery per vedere cosa conta Google Analytics.",
+        "none": "Qui non c'è ancora nessuno dei siti della tua azienda. Aggiungine uno in Visibilità per vedere cosa conta Google Analytics.",
         "noneConnected": "{count, plural, =1 {Il tuo sito non è} other {Nessuno dei tuoi # siti è}} ancora collegato a Google Analytics, quindi nessuno può dire quali pagine portano richieste o vendite.",
         "notCounting": "{text} ha avuto {a} visite negli ultimi 30 giorni, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
         "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} negli ultimi 30 giorni.",
@@ -15678,7 +15678,7 @@
         "conversions": "Conversioni",
         "landingPages": "Pagine di destinazione",
         "aiAssistants": "Assistenti AI",
-        "aiAnswers": "Risposte AI in Discovery",
+        "aiAnswers": "Risposte AI in Visibilità",
         "unsortedPages": "Le pagine non ordinate",
         "referrals": "Referral",
         "addGoogleAnalytics": "Aggiungi Google Analytics"
@@ -16219,7 +16219,7 @@
   "knowledgeArticles": {
     "list": {
       "title": "Conoscenza",
-      "description": "Risposte brevi alle domande che ci fanno più spesso, come il modo in cui vengono calcolati i dati in Scoperta."
+      "description": "Risposte brevi alle domande che ci fanno più spesso, come il modo in cui vengono calcolati i dati in Visibilità."
     },
     "article": {
       "back": "Conoscenza",
@@ -16337,7 +16337,7 @@
   },
   "learn": {
     "menu": {
-      "label": "Insights",
+      "label": "Sala di lettura",
       "jumpLabel": "Vai a una pagina",
       "jumpPlaceholder": "Vai a una pagina…",
       "groups": {

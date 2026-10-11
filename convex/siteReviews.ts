@@ -12,7 +12,7 @@ import type { Site } from "./websiteSiteRows";
 import { REPLIER } from "./utils/reviewReplier";
 
 /**
- * Discovery → Reviews (docs/plans/active/discovery-local-reputation-ai-plan.md,
+ * Visibility → Reviews (docs/plans/active/discovery-local-reputation-ai-plan.md,
  * step 2, D4, D18; drawn as "Reviews · Your reviews", "Reviews · Against
  * rivals" and "More · What customers say"): a company's own reviews in full,
  * its rivals' by their figures, and what its customers praise and complain

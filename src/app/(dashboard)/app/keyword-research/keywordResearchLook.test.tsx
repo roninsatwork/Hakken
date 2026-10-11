@@ -75,7 +75,7 @@ describe("Keyword research's approved looks", () => {
     at("/app/keyword-research");
     const { container } = render(<KeywordResearchPage />);
     await screen.findByText("brand identity prism");
-    await expectApprovedLook(container, PLAN, "Main", "Discovery → Keyword research");
+    await expectApprovedLook(container, PLAN, "Main", "Visibility → Keyword research");
   });
 
   it("Overview", async () => {
@@ -85,7 +85,7 @@ describe("Keyword research's approved looks", () => {
       ({ container } = render(<LookupLayout><LookupOverviewPage /></LookupLayout>));
     });
     await screen.findByText("Improve your page");
-    await expectApprovedLook(container, PLAN, "Overview", "Discovery → Keyword research → a keyword's Overview");
+    await expectApprovedLook(container, PLAN, "Overview", "Visibility → Keyword research → a keyword's Overview");
   });
 
   it("Results", async () => {
@@ -95,7 +95,7 @@ describe("Keyword research's approved looks", () => {
       ({ container } = render(<LookupLayout><LookupResultsPage /></LookupLayout>));
     });
     await screen.findByText("MadeByShape: Web Design Agency");
-    await expectApprovedLook(container, PLAN, "Results", "Discovery → Keyword research → a keyword's Google's results");
+    await expectApprovedLook(container, PLAN, "Results", "Visibility → Keyword research → a keyword's Google's results");
   });
 
   it("Ideas", async () => {
@@ -105,7 +105,7 @@ describe("Keyword research's approved looks", () => {
       ({ container } = render(<LookupLayout><LookupIdeasPage /></LookupLayout>));
     });
     await screen.findAllByText("web design agency near me");
-    await expectApprovedLook(container, PLAN, "Ideas", "Discovery → Keyword research → a keyword's Keyword ideas");
+    await expectApprovedLook(container, PLAN, "Ideas", "Visibility → Keyword research → a keyword's Keyword ideas");
   });
 
   it("Ai", async () => {
@@ -115,20 +115,20 @@ describe("Keyword research's approved looks", () => {
       ({ container } = render(<LookupLayout><LookupAnswersPage /></LookupLayout>));
     });
     await screen.findByText("“Which web design agency should I use in the UK?”");
-    await expectApprovedLook(container, PLAN, "Ai", "Discovery → Keyword research → a keyword's What the AI says");
+    await expectApprovedLook(container, PLAN, "Ai", "Visibility → Keyword research → a keyword's What the AI says");
   });
 
   it("StartFrom", async () => {
     at("/app/keyword-research/competitor/rival_1", { rivalSiteId: "rival_1" }, "site=site_1");
     const { container } = render(<CompetitorStartPage />);
     await screen.findByText("how much does a website cost uk");
-    await expectApprovedLook(container, PLAN, "StartFrom", "Discovery → Keyword research → Start from a competitor");
+    await expectApprovedLook(container, PLAN, "StartFrom", "Visibility → Keyword research → Start from a competitor");
   });
 
   it("List", async () => {
     at("/app/keyword-research/lists/list_1", { listId: "list_1" });
     const { container } = render(<ResearchListPage />);
     await screen.findByText("web design agency near me");
-    await expectApprovedLook(container, PLAN, "List", "Discovery → Keyword research → a research list");
+    await expectApprovedLook(container, PLAN, "List", "Visibility → Keyword research → a research list");
   });
 });

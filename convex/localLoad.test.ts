@@ -10,7 +10,7 @@ import { packColumn, packDays } from "./utils/packedColumns";
 import { ACTIVITY_KINDS } from "./localSchema";
 
 /**
- * Discovery's Local pages at five times a large client
+ * Visibility's Local pages at five times a large client
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, §8 and rule 6):
  * ten offices with five rivals each, a hundred tracked searches checked from
  * every office every day for a year, a market of 250 businesses round each,

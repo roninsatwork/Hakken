@@ -15,7 +15,7 @@ import { validateSafeUrl } from "./utils/security";
  * knowledge-plan.md, C4, boards 2 and 4): Hakken reads the whole article once
  * — one paid page through Firecrawl — and keeps it in Knowledge as Helpful
  * content keeps an article added from a link, so Ask Hakken advises from every
- * word and clients read the story's summary in Insights. An X post keeps the
+ * word and clients read the story's summary in Reading room. An X post keeps the
  * article it points to; a video, or a post that points nowhere, has no article
  * to keep and says so (Q5, summary only until answered). Unticking takes the
  * kept copy out again. Nothing here decides by itself: a person ticks.
@@ -202,7 +202,7 @@ export const saveKeptInternal = internalMutation({
       language: read.language,
       body: read.body,
       readAt: Date.now(),
-      // What clients read in Insights: the story's own summary, which the admin can change on the article's page.
+      // What clients read in Reading room: the story's own summary, which the admin can change on the article's page.
       summaryEn: item.summaryEn.slice(0, LIBRARY_MAX_SUMMARY_LENGTH),
       meaningEn: item.meaningEn.slice(0, LIBRARY_MAX_MEANING_LENGTH),
     });

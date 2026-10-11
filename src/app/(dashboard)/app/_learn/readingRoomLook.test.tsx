@@ -11,7 +11,7 @@ import KnowledgeArticlePage from "../knowledge/[articleId]/page";
 import WhoToFollowPage from "../who-to-follow/page";
 
 /**
- * Insights' screens hold to the looks Anthony approved on the "Helpful content
+ * Reading room's screens hold to the looks Anthony approved on the "Helpful content
  * in Insights" canvas, 2026-10-06 (docs/plans/active/insights-helpful-content-
  * plan.md; design-drift-plan D4): each, rendered with sample rows in English,
  * reads as the outline saved beside its board in
@@ -102,12 +102,12 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("Insights' approved looks", () => {
+describe("Reading room's approved looks", () => {
   it("Helpful content", async () => {
     nav.pathname = "/app/helpful-content";
     const { container } = render(<HelpfulContentPage />);
     await screen.findByText("Link building for SEO");
-    await expectApprovedLook(container, PLAN, "Main", "Insights → Helpful content");
+    await expectApprovedLook(container, PLAN, "Main", "Reading room → Helpful content");
   });
 
   it("Helpful content article", async () => {
@@ -115,7 +115,7 @@ describe("Insights' approved looks", () => {
     nav.params = { articleId: "helpful_1" };
     const { container } = render(<HelpfulArticlePage />);
     await screen.findByText("A guide to Google Search ranking systems");
-    await expectApprovedLook(container, PLAN, "Article", "Insights → Helpful content → an article");
+    await expectApprovedLook(container, PLAN, "Article", "Reading room → Helpful content → an article");
   });
 
   it("Helpful content topic", async () => {
@@ -123,14 +123,14 @@ describe("Insights' approved looks", () => {
     nav.search = "topic=RANKINGS";
     const { container } = render(<HelpfulContentPage />);
     await screen.findByText("Link building for SEO");
-    await expectApprovedLook(container, PLAN, "Topic", "Insights → Helpful content → a topic");
+    await expectApprovedLook(container, PLAN, "Topic", "Reading room → Helpful content → a topic");
   });
 
   it("Knowledge", async () => {
     nav.pathname = "/app/knowledge";
     const { container } = render(<KnowledgePage />);
     await screen.findByText("How is traffic worked out?");
-    await expectApprovedLook(container, PLAN, "Knowledge", "Insights → Knowledge");
+    await expectApprovedLook(container, PLAN, "Knowledge", "Reading room → Knowledge");
   });
 
   it("Knowledge article", async () => {
@@ -138,13 +138,13 @@ describe("Insights' approved looks", () => {
     nav.params = { articleId: "article_1" };
     const { container } = render(<KnowledgeArticlePage />);
     await screen.findByText("What does position mean?");
-    await expectApprovedLook(container, PLAN, "KnowledgeArticle", "Insights → Knowledge → an article");
+    await expectApprovedLook(container, PLAN, "KnowledgeArticle", "Reading room → Knowledge → an article");
   });
 
   it("Who to follow", async () => {
     nav.pathname = "/app/who-to-follow";
     const { container } = render(<WhoToFollowPage />);
     await screen.findByText("Search Engine Land");
-    await expectApprovedLook(container, PLAN, "WhoC", "Insights → Who to follow");
+    await expectApprovedLook(container, PLAN, "WhoC", "Reading room → Who to follow");
   });
 });

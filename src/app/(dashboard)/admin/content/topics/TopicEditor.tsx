@@ -22,7 +22,7 @@ const BACK_HREF = "/admin/content/topics";
 /**
  * Adding a topic, or one topic's own page (docs/plans/active/insights-helpful-
  * content-plan.md, IH20, board 17): its English name — the Translator writes
- * the rest — and its place in Insights' side menu and filters, with what uses
+ * the rest — and its place in Reading room's side menu and filters, with what uses
  * it in the header and Delete beside it, asked yes or no first.
  */
 export function TopicEditor({ topicId }: { topicId?: Id<"topics"> }) {

@@ -252,7 +252,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     for (const row of await ctx.db.query("siteSitemaps").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).take(5)) {
       await ctx.db.delete(row._id);
     }
-    // Discovery's readings of it (discovery-local-reputation-ai-plan.md): Brand radar, its mentions, its rivals' shared links.
+    // Visibility's readings of it (discovery-local-reputation-ai-plan.md): Brand radar, its mentions, its rivals' shared links.
     for (const table of ["brandRadarMonths", "brandRadarQuestionParts"] as const) {
       for (const row of await ctx.db.query(table).withIndex("by_website_place", (q) => q.eq("websiteId", args.websiteId)).take(10)) await ctx.db.delete(row._id);
     }

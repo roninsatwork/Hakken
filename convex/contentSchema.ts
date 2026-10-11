@@ -24,10 +24,10 @@ export const contentTables = {
   ...libraryArticleTables,
   // Topics, shared by Knowledge, Helpful content and Who to follow (insights-helpful-content-plan.md, IH20).
   ...topicTables,
-  // Insights' counts, kept as they change (IH21).
+  // Reading room's counts, kept as they change (IH21).
   ...insightsCountsTables,
   // Knowledge's one list of ours and the web's (content-people-knowledge-plan.md, phase 3).
   ...knowledgeListTables,
-  // Reading in Insights, counted for Analytics (content-people-knowledge-plan.md, phase 4).
+  // Reading room's reading, counted for Analytics (content-people-knowledge-plan.md, phase 4).
   ...readingTables,
 };

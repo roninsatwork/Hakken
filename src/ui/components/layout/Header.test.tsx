@@ -161,7 +161,7 @@ describe("Header route labels", () => {
     expect(screen.getByLabelText("Organization / Team Members")).toBeInTheDocument();
   });
 
-  it("names Keyword research's pages Discovery, as Websites' are", () => {
+  it("names Keyword research's pages Visibility, as Websites' are", () => {
     for (const path of ["/app/keyword-research", "/app/keyword-research/lookup_1/results", "/app/keyword-research/lists/list_1"]) {
       vi.mocked(usePathname).mockReturnValue(path);
       const { unmount } = render(<Header />);

@@ -251,7 +251,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * under the keys their articles carry, with their Italian (`topics.ts`,
    * insights-helpful-content-plan.md, IH20).
    */
-  // Insights (insights-helpful-content-plan.md; `insightsMigrations.ts`): its topic list, server-side reading, and Helpful content by meaning.
+  // Reading room (insights-helpful-content-plan.md; `insightsMigrations.ts`): its topic list, server-side reading, and Helpful content by meaning.
   "2026-10-06-helpful-content-meaning": (ctx) => recutHelpfulContent(ctx),
   "2026-10-06-insights-reading": (ctx) => fillInsightsReading(ctx),
   "2026-10-06-first-topics": (ctx) => addFirstTopics(ctx),
@@ -812,7 +812,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       updated,
     };
   },
-  // Discovery's step 3 (discovery-local-reputation-ai-plan.md): in `discoveryMigrations.ts`.
+  // Visibility's step 3 (discovery-local-reputation-ai-plan.md): in `discoveryMigrations.ts`.
   "2026-10-09-serp-overviews": fillSerpOverviews,
   "2026-10-09-ai-mode-on-every-question": addAiModeToQuestions,
 };

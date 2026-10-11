@@ -24,7 +24,7 @@ export type MenuCounts = {
   citedPages: number;
   /** Every page of the company's own website once; null on a competitor, or before the list is built. */
   yourPages: number | null;
-  /** Discovery's Local pages (`localSummaries`): absent from a deployment older than them. */
+  /** Visibility's Local pages (`localSummaries`): absent from a deployment older than them. */
   localMapSearches?: number;
   localMarket?: number;
   localRivalPosts?: number;

@@ -10,7 +10,7 @@ import { trendOf } from "./utils/rankFacts";
 import { unpackColumn } from "./utils/packedColumns";
 
 /**
- * Discovery → AI answers → AI demand (docs/plans/active/discovery-local-
+ * Visibility → AI answers → AI demand (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 3, D18; drawn as "AI answers · AI demand"):
  * each of the website's searches — tracked, from the AI's own searches, or
  * among its biggest keywords — with how often it is asked of AI tools a

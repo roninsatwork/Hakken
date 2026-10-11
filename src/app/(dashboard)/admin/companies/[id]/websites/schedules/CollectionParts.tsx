@@ -14,7 +14,7 @@ type Part = (typeof PARTS)[number];
 type Parts = Record<Part, boolean>;
 
 /**
- * Which of Discovery's new kinds of data this company buys on its schedule
+ * Which of Visibility's new kinds of data this company buys on its schedule
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, D16; Anthony,
  * 2026-10-09: "hold until I say", per company, per part). Each starts off;
  * switched on, the part is planned on the company's next run.

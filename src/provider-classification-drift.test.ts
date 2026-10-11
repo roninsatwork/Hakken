@@ -77,7 +77,7 @@ describe('Provider Classification Drift', () => {
       // The keeping-less-history plan's table of what each screen answers names
       // the assistants a company's AI questions are asked of: naming them is the subject.
       'docs/plans/active/keep-less-history-plan.md',
-      // The Discovery local and AI-apps plan reads the ChatGPT and Gemini apps
+      // The Visibility local and AI-apps plan reads the ChatGPT and Gemini apps
       // as people see them, and prices each: naming them is the subject.
       'docs/plans/active/discovery-local-reputation-ai-plan.md',
       // The Google Analytics plan lists the AI assistants whose visitors get a

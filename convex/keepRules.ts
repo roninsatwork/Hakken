@@ -281,7 +281,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   fanOutFirstChecks: RECORD,
   fanOutQuestionSettings: LATEST,
 
-  // ── Discovery's Local pages (discovery-local-reputation-ai-plan.md) ──────
+  // ── Visibility's Local pages (discovery-local-reputation-ai-plan.md) ──────
   listings: cleared("90 days unseen, unless a company links it", "localSweep/purgeExpiredLocal"),
   listingWeeks: forever("a listing's rating, reviews and photos by week, drawn on Business profile and Rival activity"),
   holdListings: RECORD,

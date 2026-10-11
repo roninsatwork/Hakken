@@ -35,7 +35,7 @@ const PICKS = [follow("follow_9", "WEBSITE", "Nacho Mascort", "Long, careful pie
 const page = (rows: unknown[], total = rows.length) => ({ rows, total, page: 1, pages: Math.max(1, Math.ceil(total / 25)), size: 25, cut: null, preparing: false });
 
 /**
- * Who to follow in Insights (docs/plans/active/insights-helpful-content-plan.md,
+ * Who to follow in Reading room (docs/plans/active/insights-helpful-content-plan.md,
  * IH13 — option C): our picks first; then everyone, A to Z in two columns,
  * searched and filtered by the server one numbered page at a time (IH21); each
  * person opening their own page in a new tab.

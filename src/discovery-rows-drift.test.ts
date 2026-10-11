@@ -3,10 +3,10 @@ import { describe, expect, test } from "vitest";
 import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUtils";
 
 /**
- * Every row in Discovery opens something (docs/plans/active/discovery-detail-
+ * Every row in Visibility opens something (docs/plans/active/discovery-detail-
  * and-hakken-sees-plan.md DS1; Anthony, 2026-10-10: "why do none of the
  * tables click through" and "this is just one example"): a detail screen, a
- * screen that exists, or the page itself. Each `DataTable` under Discovery's
+ * screen that exists, or the page itself. Each `DataTable` under Visibility's
  * websites gives its rows an `onRowClick`, but the few whose rows are the
  * whole record already.
  */
@@ -41,7 +41,7 @@ const unopened = () => Object.fromEntries(
     .filter(([, left]) => left > 0),
 );
 
-describe("Every Discovery row opens something", () => {
+describe("Every Visibility row opens something", () => {
   test("no table's rows open nothing, but those that stay and those being given their link", () => {
     const over = Object.entries(unopened())
       .filter(([file, left]) => left > (STAYS[file]?.tables ?? 0) + (PENDING[file] ?? 0))

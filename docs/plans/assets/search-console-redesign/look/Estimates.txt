@@ -4,7 +4,7 @@
 page-header: Real against estimated
 choice: Kind of result: Web | Video | News | Discover | Google News
 figures
-  figure: Discovery's estimate
+  figure: Visibility's estimate
   figure: Google's clicks
   figure: Pages estimated too high
   figure: Pages estimated too low

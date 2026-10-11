@@ -95,7 +95,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Keyword research",
     agentName: "Keyword research",
     description:
-      "Buys a company's keyword lookups from DataForSEO when someone presses Look up in Discovery → Keyword "
+      "Buys a company's keyword lookups from DataForSEO when someone presses Look up in Visibility → Keyword "
       + "research: each keyword's overview, Google's results, its ideas and what the AI assistants say.",
     systemPrompt:
       "You turn one Google search into the question a person would ask an AI assistant such as ChatGPT when they "

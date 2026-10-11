@@ -64,7 +64,7 @@ const topicOf = (row: Topic) => row.topic;
 const detailOrder = () => "";
 
 /**
- * Discovery → Local → Business profile (docs/plans/active/discovery-local-
+ * Visibility → Local → Business profile (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, §7, D18; drawn as "Local · Business profile"): one
  * office's Google profile as people see it, each detail checked against the
  * businesses people also look at, and the words Google picks out of its

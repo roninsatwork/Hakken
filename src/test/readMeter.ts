@@ -93,7 +93,7 @@ export async function bytesReadBy(t: Harness, subject: string, fn: Registered, a
 /**
  * The same, with what the function answered: a load test checks what a
  * screen says at its size from the one call that measured it, rather than
- * calling it again — the second call of Discovery's AI app screens was a
+ * calling it again — the second call of Visibility's AI app screens was a
  * fifth of their test's time (2026-10-11).
  */
 export async function readBy(t: Harness, subject: string, fn: Registered, args: Record<string, unknown>): Promise<{ bytes: number; answer: unknown }> {

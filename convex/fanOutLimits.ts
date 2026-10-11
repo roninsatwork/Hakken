@@ -186,7 +186,7 @@ export const FAN_OUT_LIMITS = {
    */
   researchOverviewSearches: { choices: [0, 25, 50, 100], fallback: 25, scope: "company" },
   /**
-   * Discovery's Local pages (docs/plans/active/discovery-local-reputation-ai-plan.md,
+   * Visibility's Local pages (docs/plans/active/discovery-local-reputation-ai-plan.md,
    * D9, agreed 2026-10-09 "as drawn"). Offices: a website's own Google
    * profiles, each one its own map checks — every tracked search from each
    * office is $0.002 a run. Rival profiles watched against each office.

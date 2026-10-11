@@ -2,7 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 
 /**
- * Discovery's Local pages (docs/plans/active/discovery-local-reputation-ai-plan.md,
+ * Visibility's Local pages (docs/plans/active/discovery-local-reputation-ai-plan.md,
  * step 1): a business's Google profiles, one per office, where each sits on
  * Google Maps, the businesses of its kind around it and what its rivals do.
  *

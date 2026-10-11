@@ -54,7 +54,7 @@ const questionName = (row: Question) => row.text;
 const DAY_MS = 86_400_000;
 
 /**
- * Discovery → Local → Rival activity (docs/plans/active/discovery-local-
+ * Visibility → Local → Rival activity (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, D18; drawn as "More · Rival activity"): what the
  * rivals watched do on Google — their posts and offers, changes to their
  * profiles, their rating moving — and the questions people ask on profiles.

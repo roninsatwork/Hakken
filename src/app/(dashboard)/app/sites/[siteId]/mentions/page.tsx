@@ -54,7 +54,7 @@ const pathOf = (url: string) => {
 };
 
 /**
- * Discovery → Web mentions → All mentions (docs/plans/active/discovery-local-
+ * Visibility → Web mentions → All mentions (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 6, D13, D18, D20; drawn as "Web mentions · All
  * mentions"): the pages across the web naming the business, how they speak
  * of it and whether they link to it — pages about another of the name left

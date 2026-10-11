@@ -4,13 +4,13 @@ import type { ReactNode } from "react";
  * A section's own title and what it holds, above the part it introduces —
  * a table, a settings card, a list. First drawn for Keyword research's Past
  * lookups and Research lists (`ResearchSection`), shared here when
- * Discovery's Local pages needed the same (discovery-local-reputation-ai-plan.md,
+ * Visibility's Local pages needed the same (discovery-local-reputation-ai-plan.md,
  * D18). The title is marked for the screens' look tests.
  */
 export function PageSection({ title, description, tight = false, children }: {
   title: string;
   description?: ReactNode;
-  /** The line under the title right beneath it, as Discovery's Local pages are drawn; Keyword research's sit apart. */
+  /** The line under the title right beneath it, as Visibility's Local pages are drawn; Keyword research's sit apart. */
   tight?: boolean;
   children: ReactNode;
 }) {

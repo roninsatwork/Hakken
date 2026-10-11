@@ -8,7 +8,7 @@ import SiteTrackedFanOutPage from "./google/fan-out/page";
 import SiteYourPagesPage from "./your-pages/page";
 
 /**
- * Discovery → Websites' screens hold to the looks Anthony approved
+ * Visibility → Websites' screens hold to the looks Anthony approved
  * (design-drift-plan D4): each screen, rendered with sample rows in English,
  * reads as the outline saved beside its board in
  * docs/plans/assets/search-console-redesign/look/.
@@ -89,7 +89,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery → Websites' approved looks", () => {
+describe("Visibility → Websites' approved looks", () => {
   it("Tracked fan-out queries", async () => {
     at("/app/sites/site_1/google/fan-out");
     answer({
@@ -99,7 +99,7 @@ describe("Discovery → Websites' approved looks", () => {
     });
     const { container } = render(<SiteTrackedFanOutPage />);
     await screen.findByText("AI consultants London 1");
-    await expectApprovedLook(container, PLAN, "TrackedFanOut", "Discovery → Websites → Tracked fan-out queries");
+    await expectApprovedLook(container, PLAN, "TrackedFanOut", "Visibility → Websites → Tracked fan-out queries");
   });
 
   it("Your pages", async () => {
@@ -110,6 +110,6 @@ describe("Discovery → Websites' approved looks", () => {
     });
     const { container } = render(<SiteYourPagesPage />);
     await screen.findByText("/ai-agency/");
-    await expectApprovedLook(container, PLAN, "YourPages", "Discovery → Websites → Your pages");
+    await expectApprovedLook(container, PLAN, "YourPages", "Visibility → Websites → Your pages");
   });
 });

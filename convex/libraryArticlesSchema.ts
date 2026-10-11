@@ -37,7 +37,7 @@ export const libraryArticleTables = {
     /** When Firecrawl last read the page; absent for words pasted by hand. */
     readAt: v.optional(v.number()),
     /**
-     * What readers see in Insights (insights-helpful-content-plan.md, IH1, IH2):
+     * What readers see in Reading room (insights-helpful-content-plan.md, IH1, IH2):
      * Hakken's own summary of the article and what it means for them, never
      * the article's words. Written when the page is read, or on Write again,
      * and changed by the admin as they like; translated. An article without a

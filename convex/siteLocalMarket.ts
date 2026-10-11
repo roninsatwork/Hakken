@@ -10,7 +10,7 @@ import { MAP_BOX, listingsById, localSetup, officeChecks, officeSearches, openOf
 import { unpackColumn } from "./utils/packedColumns";
 
 /**
- * Discovery → Local → Local market and Rival activity
+ * Visibility → Local → Local market and Rival activity
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, §7; drawn as
  * "More · Local market" and "More · Rival activity"): every business of an
  * office's kind round it, and what the rivals watched do on Google — their

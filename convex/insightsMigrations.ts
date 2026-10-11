@@ -5,7 +5,7 @@ import { nameKeyOf } from "./newsFollows";
 import { seedFirstTopics } from "./topics";
 
 /**
- * Insights' one-off migrations (docs/plans/active/insights-helpful-content-
+ * Reading room's one-off migrations (docs/plans/active/insights-helpful-content-
  * plan.md), registered by name in `dataMigrations.ts`. Each is one batch:
  * the lists they read are read whole at their limits.
  */

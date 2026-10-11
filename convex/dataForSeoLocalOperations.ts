@@ -2,7 +2,7 @@ import type { SeoOperation } from "./dataForSeoRegistry";
 import { DEFAULT_LOCATION_CODE, countryCodeOf } from "./utils/seoLocations";
 
 /**
- * What Discovery's Local pages buy (docs/plans/active/discovery-local-reputation-ai-plan.md,
+ * What Visibility's Local pages buy (docs/plans/active/discovery-local-reputation-ai-plan.md,
  * §6): a business's Google profile, where it sits on Google Maps, the
  * businesses of its kind near it, its posts, and finding a business by name.
  *

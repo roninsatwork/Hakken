@@ -10,7 +10,7 @@ import { hostOfUrl, isOnHost, pathOfUrl } from "./utils/urlParts";
 import { seen, seenValidator, toPage, toRecord, type SeenPhrase, type SeenStep } from "./utils/hakkenSees";
 
 /**
- * Discovery's One website and One question (docs/plans/active/discovery-
+ * Visibility's One website and One question (docs/plans/active/discovery-
  * detail-and-hakken-sees-plan.md §3, DS2–DS3; drawn as "Detail · One website"
  * and "Detail · One question in Google's AI"): a website Google's AI answers
  * quote, and one question those answers are given for — each worked out from

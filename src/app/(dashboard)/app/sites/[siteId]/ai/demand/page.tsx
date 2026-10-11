@@ -48,7 +48,7 @@ const YEAR = 11;
 const percentChange = (now: number, before: number) => (before > 0 ? Math.round(((now - before) / before) * 100) : null);
 
 /**
- * Discovery → AI answers → AI demand (docs/plans/active/discovery-local-
+ * Visibility → AI answers → AI demand (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 3, D18; drawn as "AI answers · AI demand"): how
  * often the website's searches are asked of AI tools a month, beside how often
  * they are searched on Google — an estimate, built from Google's "People also

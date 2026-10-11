@@ -1,4 +1,4 @@
-# Discovery → One business (chatgpt) — the approved look (board "DetailBusiness-chatgpt" of docs/plans/assets/discovery-detail-screens/).
+# Visibility → One business (chatgpt) — the approved look (board "DetailBusiness-chatgpt" of docs/plans/assets/discovery-detail-screens/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 detail-header

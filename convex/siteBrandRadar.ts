@@ -16,7 +16,7 @@ import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import type { Site } from "./websiteSiteRows";
 
 /**
- * Discovery → Brand radar (docs/plans/active/discovery-local-reputation-ai-
+ * Visibility → Brand radar (docs/plans/active/discovery-local-reputation-ai-
  * plan.md, step 4, D18; drawn as "Brand radar · Overview" and "Brand radar ·
  * Websites AI cites"): how often Google's AI answers name the website beside
  * the rivals watched with it, the questions behind them, and the websites

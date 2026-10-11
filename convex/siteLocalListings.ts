@@ -33,10 +33,10 @@ import { reusableByKey } from "./seoPullReuse";
 import { startCollector } from "./seoAgentRuns";
 
 /**
- * Discovery → Your listings (docs/plans/active/discovery-local-reputation-ai-plan.md,
+ * Visibility → Your listings (docs/plans/active/discovery-local-reputation-ai-plan.md,
  * D3, D19): the profiles that are the company's own, one per office, and the
  * rivals' it watches — found by name and linked by a person, the client or a
- * super admin in the company's Discovery. Each listing is the platform's
+ * super admin in the company's Visibility. Each listing is the platform's
  * (`listings`); the link is the company's (`holdListings`), on its own website.
  *
  * Find buys one search when it is pressed, through the Collector, as

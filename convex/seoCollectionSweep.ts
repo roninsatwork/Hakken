@@ -182,7 +182,7 @@ export const sweepDuty = internalMutation({
       case "thinPositions":
         return { ...FINISHED, ...(await coarsenPositions(ctx, now)) };
       case "purgeLocal":
-        // Discovery's Local map checks and the businesses nobody links (`localSweep.ts`).
+        // Visibility's Local map checks and the businesses nobody links (`localSweep.ts`).
         return { ...FINISHED, ...(await purgeExpiredLocal(ctx, now)) };
     }
   },

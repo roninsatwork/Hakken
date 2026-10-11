@@ -22,7 +22,7 @@ import { NOT_SORTED_KIND } from "../pageKinds";
  * Overview, the lists, and Conversions run their rules in their queries; the
  * screens that read only the website's connection — Your websites, Tracking
  * health, Connection, Choose what counts, Not connected yet — run theirs over
- * the same answer on screen, as Discovery's Websites list does.
+ * the same answer on screen, as Visibility's Websites list does.
  */
 
 type Maybe<T> = T | null | undefined | false;

@@ -10,7 +10,7 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  * (docs/plans/active/google-analytics-plan.md §14; Anthony, 2026-10-10: "Its
  * the system acting as an SEO agent and SEO expert giving advice on the
  * screen … could add them across each of the analytics screens"), the
- * sibling of Discovery's guard (`hakken-sees-drift.test.ts`).
+ * sibling of Visibility's guard (`hakken-sees-drift.test.ts`).
  *
  * The list is explicit, screen by screen as §15 numbers them. The states a
  * screen passes through carry their box in the same file: Not connected yet

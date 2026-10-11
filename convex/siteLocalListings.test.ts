@@ -5,7 +5,7 @@ import schema from "./schema";
 import { LISTING_FIND_OPERATION, BUSINESS_PROFILE_OPERATION, emptyIsAnAnswer, BUSINESS_QUESTIONS_OPERATION, MAP_CHECK_OPERATION } from "./dataForSeoLocalOperations";
 
 /**
- * Discovery → Your listings (discovery-local-reputation-ai-plan.md, D3, D16,
+ * Visibility → Your listings (discovery-local-reputation-ai-plan.md, D3, D16,
  * D19): Find buys one search only while the company has Local on; a listing
  * linked as an office is read whole at once, within the website's limit of
  * offices; nothing reaches another company's website; and the queue keeps a

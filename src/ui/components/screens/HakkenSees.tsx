@@ -10,7 +10,7 @@ import { SettingsCard } from "./SettingsCard";
 export type HakkenSeesStep = { words: string; link: string; href: string; external?: boolean };
 
 /**
- * What Hakken sees: the box under the title of every Discovery screen
+ * What Hakken sees: the box under the title of every Visibility screen
  * (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2), saying in
  * two or three sentences what the page means for the business, then the
  * first things to do, each with a quiet link to where it is done. Anthony,

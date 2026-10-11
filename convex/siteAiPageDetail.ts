@@ -10,7 +10,7 @@ import { hostOfUrl, isOnHost, pageKeyOfUrl, pathOfUrl } from "./utils/urlParts";
 import { seen, seenValidator, toRecord, type SeenPhrase, type SeenStep } from "./utils/hakkenSees";
 
 /**
- * Discovery → One page (docs/plans/active/discovery-detail-and-hakken-sees-
+ * Visibility → One page (docs/plans/active/discovery-detail-and-hakken-sees-
  * plan.md §3, DS2–DS3; drawn as "Detail · One page"): a page the ChatGPT app
  * read while answering the website's questions, or Google's AI answers quote
  * — every answer that read it and whether it cited it, the pages cited in its

@@ -46,7 +46,7 @@ const nameOf = (row: Row) => `${row.name}${row.source}`;
 const pagedOnly = <Footer extends { totalCount: number; pageSize: number }>(footer: Footer) => (footer.totalCount > footer.pageSize ? footer : undefined);
 
 /**
- * Discovery → Reviews → Against rivals (docs/plans/active/discovery-local-
+ * Visibility → Reviews → Against rivals (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 2, D18; drawn as "Reviews · Against rivals"):
  * an office's reviews beside the rivals watched against it — how many, how
  * good, how fast each answers — and how fast each collects them.

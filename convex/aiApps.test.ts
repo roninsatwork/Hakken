@@ -10,7 +10,7 @@ import { APP_ENGINES, aiAppOperationId, aiCitationOperationId, engineForOperatio
 import { unpackColumn } from "./utils/packedColumns";
 
 /**
- * Discovery's AI apps and AI demand (discovery-local-reputation-ai-plan.md,
+ * Visibility's AI apps and AI demand (discovery-local-reputation-ai-plan.md,
  * step 3): the two apps read as shown and Google AI Mode asked only while a
  * company has "AI apps" on (D5, D16, D17), each answer read into the shape
  * the models' answers are filed in plus what only an app shows, and AI

@@ -15,7 +15,7 @@ import { readFanOutLimits } from "./fanOutLimits";
 import type { Site } from "./websiteSiteRows";
 
 /**
- * Discovery → AI answers → Businesses recommended and Read but not cited
+ * Visibility → AI answers → Businesses recommended and Read but not cited
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, step 3, D5, D18):
  * what the ChatGPT app put in front of people for a website's questions — the
  * businesses beside its answers, and the pages it read before choosing which

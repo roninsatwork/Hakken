@@ -10,7 +10,7 @@ import MentionsAgainstRivalsPage from "./rivals/page";
 import WhereToGetListedPage from "./listed/page";
 
 /**
- * Discovery's Web mentions screens hold to the looks Anthony approved on the
+ * Visibility's Web mentions screens hold to the looks Anthony approved on the
  * canvas "Discovery — local, reviews, AI apps and mentions" (docs/plans/
  * active/discovery-local-reputation-ai-plan.md, D18; design-drift-plan D4):
  * each screen, rendered with sample rows in English, reads as the outline
@@ -89,13 +89,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("Discovery → Web mentions' approved looks", () => {
+describe("Visibility → Web mentions' approved looks", () => {
   it("All mentions", async () => {
     at("/app/sites/site_1/mentions");
     answer({ "siteWebMentions:webMentions": MENTIONS });
     const { container } = render(<WebMentionsPage />);
     await screen.findByText("The 10 best web design agencies in Surrey for 2026");
-    await expectApprovedLook(container, PLAN, "WebMentions", "Discovery → Web mentions → All mentions");
+    await expectApprovedLook(container, PLAN, "WebMentions", "Visibility → Web mentions → All mentions");
   });
 
   it("Against rivals", async () => {
@@ -103,7 +103,7 @@ describe("Discovery → Web mentions' approved looks", () => {
     answer({ "siteWebMentions:mentionsAgainstRivals": RIVALS });
     const { container } = render(<MentionsAgainstRivalsPage />);
     await screen.findByText("ronins.co.uk · you");
-    await expectApprovedLook(container, PLAN, "WebMentionsRivals", "Discovery → Web mentions → Against rivals");
+    await expectApprovedLook(container, PLAN, "WebMentionsRivals", "Visibility → Web mentions → Against rivals");
   });
 
   it("Where to get listed", async () => {
@@ -111,6 +111,6 @@ describe("Discovery → Web mentions' approved looks", () => {
     answer({ "siteWebMentions:whereToGetListed": LISTED });
     const { container } = render(<WhereToGetListedPage />);
     await screen.findByText("clutch.co");
-    await expectApprovedLook(container, PLAN, "ListingsGap", "Discovery → Web mentions → Where to get listed");
+    await expectApprovedLook(container, PLAN, "ListingsGap", "Visibility → Web mentions → Where to get listed");
   });
 });

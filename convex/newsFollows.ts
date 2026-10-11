@@ -19,7 +19,7 @@ import { syncFollowInList } from "./knowledgeList";
 /**
  * "Who to follow" (docs/plans/active/knowledge-news-and-digest-plan.md, phase
  * 3): people Anthony recommends, with why — written in English, translated by
- * the Translator — shown in Insights and written in Admin → Content. Since
+ * the Translator — shown in Reading room and written in Admin → Content. Since
  * 2026-10-10 each person has channels (`followChannels.ts`) that the News
  * Collector reads (content-people-knowledge-plan.md, C2, C3).
  */
@@ -183,7 +183,7 @@ async function readerRow(ctx: QueryCtx, row: Doc<"newsFollows">, language: strin
 const MAX_PAGE_ROWS = 100;
 
 /**
- * Who to follow in Insights, one numbered page at a time, A to Z under Where
+ * Who to follow in Reading room, one numbered page at a time, A to Z under Where
  * and Topic or by a search, in the reader's language (IH13, IH21). The total
  * is exact — kept as the list changes, or what the search found — so the
  * footer shows the last page and any page opens straight away. Only the rows
@@ -222,7 +222,7 @@ function followTotal(follows: InsightsCounts["follows"], { kind, topic }: Follow
   return follows.all;
 }
 
-/** "Our picks" for Insights, in the order they were picked: four at most, through their own index (IH13). */
+/** "Our picks" for Reading room, in the order they were picked: four at most, through their own index (IH13). */
 export const listPicks = tenantQuery({
   args: { language: v.string() },
   returns: v.array(readerValidator),
@@ -293,7 +293,7 @@ export const getFollow = superAdminQuery({
 /**
  * Add a person (board 3): their name, why, topic and pick, and their channels —
  * one address each, at least one, at most `MAX_CHANNELS`. Each channel added is
- * collected; LinkedIn is shown in Insights only.
+ * collected; LinkedIn is shown in Reading room only.
  */
 export const createFollow = superAdminMutation({
   args: { ...followDetails, channels: v.array(v.string()) },

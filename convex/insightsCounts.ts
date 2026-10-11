@@ -3,7 +3,7 @@ import type { Doc } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 
 /**
- * Insights' counts, kept as they change (docs/plans/active/insights-helpful-
+ * Reading room's counts, kept as they change (docs/plans/active/insights-helpful-
  * content-plan.md, IH21). Every write to Knowledge, Helpful content, Who to
  * follow or the topic list rewrites the one summary row from the lists — reads
  * that happen on a write, which is rare — so the side menu, Admin → Topics and

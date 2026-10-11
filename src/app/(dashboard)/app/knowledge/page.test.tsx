@@ -117,7 +117,7 @@ describe("Knowledge", () => {
     expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toEqual({ language: "it" });
   });
 
-  // Insights' side menu lists Knowledge by topic (R9), from the shared topic list in its readers' words (IH20).
+  // Reading room's side menu lists Knowledge by topic (R9), from the shared topic list in its readers' words (IH20).
   it("lists one topic's articles alone, through the server, when the side menu asks for it", () => {
     nav.search = "topic=TRAFFIC";
     render(<KnowledgePage />);

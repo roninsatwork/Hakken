@@ -15,7 +15,7 @@ import { unpackColumn } from "./utils/packedColumns";
 import type { Site } from "./websiteSiteRows";
 
 /**
- * Discovery → Web mentions (docs/plans/active/discovery-local-reputation-ai-
+ * Visibility → Web mentions (docs/plans/active/discovery-local-reputation-ai-
  * plan.md, step 6, D18; drawn as "Web mentions · All mentions", "· Against
  * rivals" and "· Where to get listed"): the pages naming the website, how
  * they speak of it and whether they link to it; the same for the rivals

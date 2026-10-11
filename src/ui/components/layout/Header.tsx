@@ -65,7 +65,7 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/hakken-tasks")) return [tasksLabel];
   if (pathname.startsWith("/app/tasks")) return [t("tasks")];
   if (pathname.startsWith("/app/calls")) return [t("calls")];
-  // Keyword research sits under Discovery beside Websites (keyword-research-plan.md).
+  // Keyword research sits under Visibility beside Websites (keyword-research-plan.md).
   if (pathname.startsWith("/app/sites") || pathname.startsWith("/app/keyword-research")) return [t("sites")];
   if (pathname.startsWith("/app/search-console")) return [t("searchConsole")];
   if (pathname.startsWith("/app/analytics")) return [t("googleAnalytics")];

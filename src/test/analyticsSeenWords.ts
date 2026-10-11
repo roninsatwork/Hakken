@@ -9,7 +9,7 @@ import type { Seen, SeenPhrase } from "@/convex/utils/hakkenSees";
  * words in English and Italian (`googleAnalytics.seen.<screen>`), and every
  * step's link its name (`googleAnalytics.seen.links`), and each formats with
  * the values `AnalyticsSees` gives it — numbers, money, shares, plurals and a
- * conversion's own name — as Discovery's `expectWords` holds its boxes: a code
+ * conversion's own name — as Visibility's `expectWords` holds its boxes: a code
  * without words would show its key on screen, and a slot the screen does not
  * fill would fail there.
  */

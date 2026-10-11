@@ -101,7 +101,7 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // waiting or being sent stays whatever its age (keep-less-history-plan.md,
   // part 4; Anthony, 2026-10-07: "60 days is ok").
   sentEmails: { ...DAILY_2AM, retentionDays: 60 },
-  // Each view, read, click and use in an answer in Insights; Analytics reads
+  // Each view, read, click and use in an answer in Reading room; Analytics reads
   // the daily totals, kept for good, never these (content-people-knowledge-
   // plan.md, Q4; Anthony, 2026-10-10: "90 days").
   readingEvents: { ...DAILY_2AM, retentionDays: 90 },

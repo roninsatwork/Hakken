@@ -50,7 +50,7 @@ const ON_TONE = { LINKS: "success", NAMES: "success", NOT_LINKED: "warning" } as
 const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, "");
 
 /**
- * Discovery → One website (docs/plans/active/discovery-detail-and-hakken-sees-
+ * Visibility → One website (docs/plans/active/discovery-detail-and-hakken-sees-
  * plan.md §3, DS2–DS3; drawn as "Detail · One website"): a website Google's
  * AI answers quote — how often beside the business and beside its rivals, the
  * questions it is quoted for, its pages, and who it links to. Opened from

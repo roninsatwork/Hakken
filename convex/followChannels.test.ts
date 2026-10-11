@@ -48,7 +48,7 @@ describe("people and their channels", () => {
       expect.objectContaining({ kind: "X", address: "https://x.com/glenngabe", collect: true, status: "X_NOT_SET_UP" }),
       expect.objectContaining({ kind: "LINKEDIN", collect: false, status: "LINKEDIN" }),
     ]);
-    // The person's row keeps every kind, and their first channel as Insights' link.
+    // The person's row keeps every kind, and their first channel as Reading room's link.
     expect(await t.run(async (ctx) => await ctx.db.get(followId))).toMatchObject({
       channelKinds: ["WEBSITE", "X", "LINKEDIN"], kind: "WEBSITE", url: "https://gsqi.com/marketing-blog",
     });
@@ -66,7 +66,7 @@ describe("people and their channels", () => {
     await expect(admin.mutation(api.followChannels.addChannel, { followId, address: "@lilyraynyc" })).rejects.toThrow("one of their channels already");
   });
 
-  test("channels are added, ticked and removed by hand; LinkedIn can't be ticked, the last channel can't go, and the first one is Insights' link", async () => {
+  test("channels are added, ticked and removed by hand; LinkedIn can't be ticked, the last channel can't go, and the first one is Reading room's link", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const followId = await admin.mutation(api.newsFollows.createFollow, person("Edward Sturm", ["https://x.com/edwardeachday"]));

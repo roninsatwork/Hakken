@@ -60,7 +60,7 @@ const SORTS: SiteSortColumns<Row, "business" | "category" | "distance" | "rating
 const nameOf = (row: Row) => row.name;
 
 /**
- * Discovery → Local → Local market (docs/plans/active/discovery-local-
+ * Visibility → Local → Local market (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, D9, D18; drawn as "More · Local market"): every
  * business Google lists as the office's kind round it — who they are, how
  * they look on Google, and who is in its map box without being watched.

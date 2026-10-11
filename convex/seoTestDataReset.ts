@@ -90,7 +90,7 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "websiteSearchStats", page: 500 },
   { table: "websiteQuestionStats", page: 500 },
   { table: "websiteMoves", page: 500 },
-  // Discovery's Local pages (`localSchema.ts`): the businesses and what was
+  // Visibility's Local pages (`localSchema.ts`): the businesses and what was
   // read of them. Each company's own links stay, as its lists do; its last
   // finds and menu numbers are worked out again.
   { table: "listings", page: 200 },

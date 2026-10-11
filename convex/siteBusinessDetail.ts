@@ -19,7 +19,7 @@ import { seen, seenValidator, toPage, toRecord, type SeenPhrase, type SeenStep }
 import type { Site } from "./websiteSiteRows";
 
 /**
- * Discovery → One business (docs/plans/active/discovery-detail-and-hakken-
+ * Visibility → One business (docs/plans/active/discovery-detail-and-hakken-
  * sees-plan.md §3, DS2–DS3; drawn as "Detail · One business"): a business the
  * website is up against — where Google's AI names it, where ChatGPT shows it,
  * where it sits on Google Maps for the website's searches, the pages naming

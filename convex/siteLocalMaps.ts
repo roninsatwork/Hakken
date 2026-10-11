@@ -19,7 +19,7 @@ import {
 import { unpackColumn } from "./utils/packedColumns";
 
 /**
- * Discovery → Local → Map rankings, and one search on the map
+ * Visibility → Local → Map rankings, and one search on the map
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, §7; drawn as
  * "Local · Map rankings" and "Local · One search on the map"): where an office
  * sits on Google Maps for each tracked search, checked from its own address

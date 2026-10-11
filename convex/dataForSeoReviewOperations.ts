@@ -2,7 +2,7 @@ import type { SeoOperation } from "./dataForSeoRegistry";
 import { DEFAULT_LOCATION_CODE, countryCodeOf } from "./utils/seoLocations";
 
 /**
- * What Discovery's Reviews pages buy (docs/plans/active/discovery-local-
+ * What Visibility's Reviews pages buy (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 2): the reviews on a listing, newest first, from
  * Google, Trustpilot and Tripadvisor. Each body was tried with one paid call
  * on 2026-10-09 (§6A), and each price is that call's:

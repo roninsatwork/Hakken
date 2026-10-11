@@ -69,7 +69,7 @@ const nameOf = (row: { name: string }) => row.name;
 const pagedOnly = <Footer extends { totalCount: number; pageSize: number }>(footer: Footer) => (footer.totalCount > footer.pageSize ? footer : undefined);
 
 /**
- * Discovery → Local → Your listings (docs/plans/active/discovery-local-
+ * Visibility → Local → Your listings (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, D3, D18; drawn as "Local · Your listings"): the
  * profiles that are the company's own, one per office, finding one by name,
  * and the rivals watched. Find buys one search; nothing else is bought here.

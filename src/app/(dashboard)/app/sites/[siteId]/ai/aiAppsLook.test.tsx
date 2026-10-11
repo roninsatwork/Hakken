@@ -12,7 +12,7 @@ import AiDemandPage from "./demand/page";
 import AiOverviewGapsPage from "../radar/gaps/page";
 
 /**
- * Discovery's AI app screens hold to the looks Anthony approved on the canvas
+ * Visibility's AI app screens hold to the looks Anthony approved on the canvas
  * "Discovery — local, reviews, AI apps and mentions" (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, D18; design-drift-plan D4): each
  * screen, rendered with sample rows in English, reads as the outline saved
@@ -147,13 +147,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery → AI answers' approved looks", () => {
+describe("Visibility → AI answers' approved looks", () => {
   it("One answer, five ways", async () => {
     at("/app/sites/site_1/ai/answers/answer", `answer=${ANSWER_ID}`);
     answer({ "siteAnswers:answerRecord": RECORD, "siteAnswerShown:answerShown": SHOWN });
     const { container } = render(<SiteAnswerPage />);
     await screen.findByText("Brightside Digital");
-    await expectApprovedLook(container, PLAN, "AiAnswerApp", "Discovery → AI answers → One answer, five ways");
+    await expectApprovedLook(container, PLAN, "AiAnswerApp", "Visibility → AI answers → One answer, five ways");
   });
 
   it("Businesses recommended", async () => {
@@ -161,7 +161,7 @@ describe("Discovery → AI answers' approved looks", () => {
     answer({ "siteAiApps:businessesRecommended": BUSINESSES });
     const { container } = render(<BusinessesRecommendedPage />);
     await screen.findByText("Business 3");
-    await expectApprovedLook(container, PLAN, "AiBusinesses", "Discovery → AI answers → Businesses recommended");
+    await expectApprovedLook(container, PLAN, "AiBusinesses", "Visibility → AI answers → Businesses recommended");
   });
 
   it("Read but not cited", async () => {
@@ -169,7 +169,7 @@ describe("Discovery → AI answers' approved looks", () => {
     answer({ "siteAiApps:readNotCited": READ });
     const { container } = render(<ReadNotCitedPage />);
     await screen.findByText("clutch.co/uk/web-designers/surrey");
-    await expectApprovedLook(container, PLAN, "AiReadNotCited", "Discovery → AI answers → Read but not cited");
+    await expectApprovedLook(container, PLAN, "AiReadNotCited", "Visibility → AI answers → Read but not cited");
   });
 
   it("AI demand", async () => {
@@ -177,7 +177,7 @@ describe("Discovery → AI answers' approved looks", () => {
     answer({ "siteAiDemand:aiDemand": DEMAND });
     const { container } = render(<AiDemandPage />);
     await screen.findByText("search 47", { selector: "a" });
-    await expectApprovedLook(container, PLAN, "AiDemand", "Discovery → AI answers → AI demand");
+    await expectApprovedLook(container, PLAN, "AiDemand", "Visibility → AI answers → AI demand");
   });
 
   it("AI Overview gaps", async () => {
@@ -185,6 +185,6 @@ describe("Discovery → AI answers' approved looks", () => {
     answer({ "siteAiOverviewGaps:overviewGaps": GAPS });
     const { container } = render(<AiOverviewGapsPage />);
     await screen.findByText("how much does a website cost uk", { selector: "a" });
-    await expectApprovedLook(container, PLAN, "AiOverviewGaps", "Discovery → Brand radar → AI Overview gaps");
+    await expectApprovedLook(container, PLAN, "AiOverviewGaps", "Visibility → Brand radar → AI Overview gaps");
   });
 });

@@ -334,14 +334,10 @@ export function UserNavTree({
     onClick={() => setActiveItem('Assistant')}
   />
 
-  {/* What Hakken keeps doing for the person reading — theirs alone (docs/plans/active/hakken-tasks-plan.md, 1.5). */}
-  <NavItem
-    icon={ListTodo}
-    label={t('hakkenTasks', { platformName: settings.platformName })}
-    href="/app/hakken-tasks"
-    isActive={activeItem === 'PlatformTasks' || pathname.startsWith('/app/hakken-tasks')}
-    onClick={() => setActiveItem('PlatformTasks')}
-  />
+  {/*
+    Insights, the AI analyst's findings, goes here, straight under Ask Hakken,
+    once its first page is built (docs/plans/active/menu-names-plan.md, phase 7).
+  */}
 
   {hasCapability(CORE_MODULES.tasks) && (
   <NavItem
@@ -364,7 +360,8 @@ export function UserNavTree({
   )}
 
   {/*
-    Discovery: Websites, the company's websites with their competitors — a
+    Visibility (called Discovery until 2026-10-11, menu-names-plan.md):
+    Websites, the company's websites with their competitors — a
     website is switched from its own header (docs/plans/active/
     sites-website-switcher-plan.md, W5 — Anthony, 2026-10-01) — then Keyword
     research (docs/plans/active/keyword-research-plan.md, 2026-10-04). Each
@@ -406,8 +403,9 @@ export function UserNavTree({
   />
 
   {/*
-    Learn, after Search Console, for every signed-in user: News, Who to follow
-    and Knowledge behind one item, with their own side menu
+    Reading room (Learn, then Insights, until 2026-10-11, menu-names-plan.md),
+    after Google Analytics, for every signed-in user: News, Who to follow,
+    Knowledge and Helpful content behind one item, with their own side menu
     (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R4).
   */}
   <NavItem
@@ -418,7 +416,19 @@ export function UserNavTree({
     onClick={() => setActiveItem('Learn')}
   />
 
-  {/* Usage, after Learn: where the company's credits go (docs/plans/active/usage-credits-plan.md, step 3). */}
+  {/*
+    What Hakken keeps doing for the person reading — theirs alone (docs/plans/active/hakken-tasks-plan.md, 1.5),
+    after Reading room since 2026-10-11 (menu-names-plan.md).
+  */}
+  <NavItem
+    icon={ListTodo}
+    label={t('hakkenTasks', { platformName: settings.platformName })}
+    href="/app/hakken-tasks"
+    isActive={activeItem === 'PlatformTasks' || pathname.startsWith('/app/hakken-tasks')}
+    onClick={() => setActiveItem('PlatformTasks')}
+  />
+
+  {/* Usage, after Hakken tasks: where the company's credits go (docs/plans/active/usage-credits-plan.md, step 3). */}
   <NavItem
     icon={Gauge}
     label={t('usage')}

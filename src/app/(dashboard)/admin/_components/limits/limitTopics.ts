@@ -21,9 +21,9 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
     id: "google",
     keys: ["keywordsPerSite", "everydayKeywords", "trackedPerSite", "backlinksPerSite", "competitorsPerSite", "consoleDays"],
   },
-  // Discovery's Local pages (discovery-local-reputation-ai-plan.md, D9): a website's offices, its rivals' profiles, Maps and the local market.
+  // Visibility's Local pages (discovery-local-reputation-ai-plan.md, D9): a website's offices, its rivals' profiles, Maps and the local market.
   { id: "local", keys: ["localOffices", "localRivalsPerOffice", "localMapDepth", "localMarketBusinesses", "localMarketKm", "localRivalReviews"] },
-  // Discovery's Brand radar (the same plan, D9): Google's AI answers naming the website and its rivals, monthly.
+  // Visibility's Brand radar (the same plan, D9): Google's AI answers naming the website and its rivals, monthly.
   { id: "radar", keys: ["radarQuestions", "radarRivals", "mentionsPerCheck"] },
   { id: "ai", keys: ["promptsPerSite", "fanOutTrackedPerSite", "searchesPerEngine", "wordingsPerAngle", "anglesShown", "googleSearchesRead"] },
   {

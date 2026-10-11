@@ -26,7 +26,7 @@ export const newsTables = {
    * reads while `collect` is on (content-people-knowledge-plan.md, C2, C3):
    * added by hand, on Add a person or on the person's own page. It replaced
    * News sources, a list of its own (2026-10-10). LinkedIn cannot be read, so
-   * a LinkedIn channel is shown in Insights and never collected.
+   * a LinkedIn channel is shown in Reading room and never collected.
    */
   followChannels: defineTable({
     followId: v.id("newsFollows"),
@@ -164,10 +164,10 @@ export const newsTables = {
   }).index("by_external", ["externalKey"]),
 
   /**
-   * "Who to follow": a person Anthony recommends, shown in Insights, whose
+   * "Who to follow": a person Anthony recommends, shown in Reading room, whose
    * channels (`followChannels`) the News Collector reads
    * (content-people-knowledge-plan.md, C2). `kind` and `url` are the person's
-   * first channel, kept in step with it, for the Insights page's link and its
+   * first channel, kept in step with it, for the Reading room page's link and its
    * Where filter.
    */
   newsFollows: defineTable({

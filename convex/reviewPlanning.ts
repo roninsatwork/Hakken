@@ -19,7 +19,7 @@ import { localWatchList, type LocalPlan } from "./localPlanning";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
- * What a run buys for Discovery's Reviews pages (docs/plans/active/discovery-
+ * What a run buys for Visibility's Reviews pages (docs/plans/active/discovery-
  * local-reputation-ai-plan.md, step 2, D8, D9), for one of a company's own
  * websites while it has Reviews switched on (D16):
  *

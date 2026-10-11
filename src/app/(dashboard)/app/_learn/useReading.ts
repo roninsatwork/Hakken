@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 /**
- * Reading in Insights, counted for Analytics (docs/plans/active/content-
+ * Reading room's reading, counted for Analytics (docs/plans/active/content-
  * people-knowledge-plan.md, phase 4). Opening an article or story is a view;
  * staying on it 30 seconds, or reaching its end, is a read — once a visit
  * (Q1); opening its original, or one of a person's channels, is a click. The

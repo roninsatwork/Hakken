@@ -14,7 +14,7 @@ export type FollowKind = (typeof FOLLOW_KINDS)[number];
 /** The most channels one person has: website, YouTube, X, LinkedIn and room for two more. */
 export const MAX_CHANNELS = 6;
 
-/** Whether the News Collector can read a channel of this kind: LinkedIn shows in Insights only. */
+/** Whether the News Collector can read a channel of this kind: LinkedIn shows in Reading room only. */
 export function canCollect(kind: FollowKind): boolean {
   return kind !== "LINKEDIN";
 }

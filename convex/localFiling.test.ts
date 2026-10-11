@@ -21,7 +21,7 @@ import {
 import { officesForSearch } from "./localPlanning";
 
 /**
- * Discovery's Local filing and planning (discovery-local-reputation-ai-plan.md,
+ * Visibility's Local filing and planning (discovery-local-reputation-ai-plan.md,
  * step 1): each answer filed once into shared records, nothing written when
  * nothing changed (rule 11), an office's place kept for each search, rivals
  * matched to the company's competitors, and nothing planned until the company

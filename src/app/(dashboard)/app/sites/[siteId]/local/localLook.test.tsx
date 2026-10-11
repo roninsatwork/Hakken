@@ -13,7 +13,7 @@ import LocalActivityPage from "./activity/page";
 import LocalListingsPage from "./listings/page";
 
 /**
- * Discovery's Local screens hold to the looks Anthony approved on the canvas
+ * Visibility's Local screens hold to the looks Anthony approved on the canvas
  * "Discovery — local, reviews, AI apps and mentions" (docs/plans/active/
  * discovery-local-reputation-ai-plan.md, D18; design-drift-plan D4): each
  * screen, rendered with sample rows in English, reads as the outline saved
@@ -146,13 +146,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Discovery → Local's approved looks", () => {
+describe("Visibility → Local's approved looks", () => {
   it("Business profile", async () => {
     at("/app/sites/site_1/local");
     answer({ "siteLocalProfile:businessProfile": PROFILE });
     const { container } = render(<LocalProfilePage />);
     await screen.findByText("Brightside Digital");
-    await expectApprovedLook(container, PLAN, "Main", "Discovery → Local → Business profile");
+    await expectApprovedLook(container, PLAN, "Main", "Visibility → Local → Business profile");
   });
 
   it("Business profile, every office", async () => {
@@ -160,7 +160,7 @@ describe("Discovery → Local's approved looks", () => {
     answer({ "siteLocalProfile:everyOffice": EVERY_OFFICE, "siteLocalProfile:businessProfile": PROFILE });
     const { container } = render(<LocalOfficesPage />);
     await screen.findByText("seo agency");
-    await expectApprovedLook(container, PLAN, "ProfileOffices", "Discovery → Local → Business profile, every office");
+    await expectApprovedLook(container, PLAN, "ProfileOffices", "Visibility → Local → Business profile, every office");
   });
 
   it("Map rankings", async () => {
@@ -168,7 +168,7 @@ describe("Discovery → Local's approved looks", () => {
     answer({ "siteLocalMaps:mapRankings": MAPS });
     const { container } = render(<LocalMapsPage />);
     await screen.findByText("web design woking");
-    await expectApprovedLook(container, PLAN, "MapRankings", "Discovery → Local → Map rankings");
+    await expectApprovedLook(container, PLAN, "MapRankings", "Visibility → Local → Map rankings");
   });
 
   it("One search on the map", async () => {
@@ -176,7 +176,7 @@ describe("Discovery → Local's approved looks", () => {
     answer({ "siteLocalMaps:mapSearch": MAP_SEARCH });
     const { container } = render(<LocalMapSearchPage />);
     await screen.findByText("Brightside Digital");
-    await expectApprovedLook(container, PLAN, "MapSearch", "Discovery → Local → One search on the map");
+    await expectApprovedLook(container, PLAN, "MapSearch", "Visibility → Local → One search on the map");
   });
 
   it("Local market", async () => {
@@ -184,7 +184,7 @@ describe("Discovery → Local's approved looks", () => {
     answer({ "siteLocalMarket:localMarket": MARKET });
     const { container } = render(<LocalMarketPage />);
     await screen.findByText("Hilltop Websites");
-    await expectApprovedLook(container, PLAN, "LocalMarket", "Discovery → Local → Local market");
+    await expectApprovedLook(container, PLAN, "LocalMarket", "Visibility → Local → Local market");
   });
 
   it("Rival activity", async () => {
@@ -192,7 +192,7 @@ describe("Discovery → Local's approved looks", () => {
     answer({ "siteLocalMarket:rivalActivity": ACTIVITY });
     const { container } = render(<LocalActivityPage />);
     await screen.findByText("\"Do you build Shopify stores?\"");
-    await expectApprovedLook(container, PLAN, "RivalActivity", "Discovery → Local → Rival activity");
+    await expectApprovedLook(container, PLAN, "RivalActivity", "Visibility → Local → Rival activity");
   });
 
   it("Your listings", async () => {
@@ -200,6 +200,6 @@ describe("Discovery → Local's approved looks", () => {
     answer({ "siteLocalListings:localListings": LISTINGS });
     const { container } = render(<LocalListingsPage />);
     await screen.findByText("Ronins Martial Arts");
-    await expectApprovedLook(container, PLAN, "Listings", "Discovery → Local → Your listings");
+    await expectApprovedLook(container, PLAN, "Listings", "Visibility → Local → Your listings");
   });
 });

@@ -9,7 +9,7 @@ import schema from "./schema";
 import { packColumn } from "./utils/packedColumns";
 
 /**
- * Discovery's Web mentions screens at their largest
+ * Visibility's Web mentions screens at their largest
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, step 6 and rule
  * 6): the website and six rivals, each holding the most pages kept (1,000
  * within a year), the rivals' shared links for every pair, and Brand radar's

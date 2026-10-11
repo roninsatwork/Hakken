@@ -5,7 +5,7 @@ import { v } from "convex/values";
  * Topics (docs/plans/active/insights-helpful-content-plan.md, IH20): one list
  * the super admin adds to, changes and deletes in Admin → Content → Topics,
  * shared by Knowledge, Helpful content and Who to follow, and listed in that
- * order in Insights' side menu and filters. Written once, in English; the
+ * order in Reading room's side menu and filters. Written once, in English; the
  * Translator writes every other language (`contentTranslation.ts`).
  *
  * What uses a topic keeps its `key`, never its id: a key stays the same when
