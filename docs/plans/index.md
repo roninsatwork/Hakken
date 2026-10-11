@@ -24,8 +24,11 @@ completed work.
   events, tagged links, shops, titles): about 86 days, plus 5 once Google
   approves Business Profile access. The Google Analytics work it waited
   for landed and was checked on 2026-10-11, adding the enquiry check, last
-  year's figures, a year of daily history and one read per screen. ON HOLD
-  until Anthony says go.**
+  year's figures, a year of daily history and one read per screen. Built
+  overnight 11–12 October on dev, committed and not pushed: every phase done
+  and checked on ronins.co.uk, about 95%; waiting on Anthony for the PDF's
+  making, the shop screens' drawings, the Buyer questions switch, Live mode,
+  a PageSpeed key and Clarity tokens (the plan's §13).**
 - [The client's menu: Visibility, Reading room, and a new Insights](./active/menu-names-plan.md)
   — Discovery renamed Visibility (the supplier cannot be named, and Discovery
   is kept for something else); Insights renamed Reading room; a new Insights

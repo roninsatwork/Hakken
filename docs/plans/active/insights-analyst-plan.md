@@ -675,3 +675,32 @@ first; section screens are drawn from the running app.
   read per screen added (I42–I45; Anthony: "Yes please, I think they are very
   valuable"); I32's reason corrected. Still 86 days, plus 5 for Business
   Profile. On hold until Anthony says go.
+- 2026-10-11 to 12, overnight: built on dev and committed, not pushed
+  (Anthony: "go", spend approved, PDF downloadable only). Every phase 0–16 has
+  its build done and checked on ronins.co.uk's real data in Chrome, and a team
+  run costs about $0.20 a week. About 95% of the 86 days; what is left needs
+  Anthony or an outside step:
+  - **Waiting on Anthony:** the PDF's making revisited with him (§4.2; fonts
+    are Helvetica and Courier for now); a shop's own screens, Product reviews
+    and A product, drawn and approved first (I40); approving the buyer
+    questions' collection per company (it starts off, D16); Live mode for the
+    Head of Strategy (Test reads only companies a super admin is in).
+  - **Waiting on a key or a token:** real-visitor speed needs a PageSpeed
+    Insights key in the backend (`PAGESPEED_API_KEY`), Google refuses keyless
+    calls; Clarity needs each website's Data Export token pasted.
+  - **Built differently from the plan, said here:** an approved draft is
+    copied for the person to use, not a Hakken task (Hakken tasks are alerts
+    and reports, with no to-do kind; I23); experiments measure the page's 30
+    days before and its last 30 eight weeks on, from Analytics' landing
+    lists, not the year of daily series (I44); the specialists read
+    Analytics through Insights' own reads, not the screens' shared functions
+    (I45); findings are written in English, not yet translated (§16); the
+    daily quick check shows on Insights, not in the bell.
+  - **Not built yet, smaller:** a website's own sites competing for one
+    search (I4); a screen's What Hakken sees box linking to the finding
+    where they'd differ (I14); the change log's completed Hakken tasks, page
+    fingerprints and profile or link changes (I25); journeys between pages
+    and the funnel's page step (I36, I37); a rival's pages AI cites, on the
+    rival page and a page's review; Clarity's Pages by device and its
+    Frustration page; a chart of visitors per enquiry over time on a page's
+    review.
