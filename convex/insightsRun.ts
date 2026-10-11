@@ -184,7 +184,9 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   }
   // The enquiry check (I42): the specialists are told when the count may be wrong.
   const check = enquiryCheck(reading.facts);
-  const caveat = enquiryCheckBrief(check);
+  // What changes have taught, read when the specialists advise (I30).
+  const learnings = await ctx.runQuery(internal.insightsTeam.learningsFor, { holdId: args.holdId }).catch(() => []);
+  const caveat = [enquiryCheckBrief(check), learnings.length > 0 ? `What changes have taught (use it when you advise; say "this worked on N of M websites like yours" only from the lines that say so): ${learnings.join("; ")}.` : null].filter(Boolean).join("\n\n") || null;
   // 3. Each specialist thinks and tests, side by side (§2.3).
   const drafts: Draft[] = [];
   const answers = await Promise.all(SIDE_BY_SIDE.map(async (specialist) => {

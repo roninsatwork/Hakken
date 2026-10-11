@@ -512,3 +512,25 @@ export const saveChanges = internalMutation({
     return added;
   },
 });
+
+/**
+ * What the changes have taught, for the specialists' brief (I30): this
+ * website's own changes and how each turned out, and — once five companies
+ * have made a change of a kind — how often it kept its enquiries across
+ * Hakken, from totals only.
+ */
+export const learningsFor = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const changes = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId)).take(100);
+    const lines = changes.slice(0, 10).map((change) => `${change.kind.toLowerCase()} ${change.from ?? ""}${change.to ? ` into ${change.to}` : ""}: ${change.before} enquiries a year, then ${change.after} (${change.result.toLowerCase()})`);
+    for (const kind of ["REPLACED", "MERGED", "REMOVED"] as const) {
+      const learning = await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", kind)).first();
+      if (learning && learning.companies.length >= 5) {
+        lines.push(`across ${learning.companies.length} businesses, ${kind.toLowerCase()} pages kept their enquiries ${learning.held + learning.grew} times of ${learning.lost + learning.held + learning.grew}`);
+      }
+    }
+    return lines;
+  },
+});
