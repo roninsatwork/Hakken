@@ -17,6 +17,8 @@ import InsightsReportsPage from "./reports/page";
 import InsightsStrategyPage from "./strategy/page";
 import InsightsServicePage from "./strategy/service/page";
 import InsightsTrackRecordPage from "./track-record/page";
+import InsightsMeasurementPage from "./measurement/page";
+import InsightsSourcesPage from "./sources/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -226,5 +228,46 @@ describe("Insights' looks", () => {
     const { container } = render(<InsightsTrackRecordPage />);
     await screen.findByText(/Merged \/blockchain-developers\//);
     await expectApprovedLook(container, PLAN, "Track", "Insights → Track record");
+  });
+
+  it("29 · Measurement check", async () => {
+    nav.pathname = "/app/insights/measurement";
+    const check = (id: string, status: string, found: string, names: string[] = [], a: number | null = null, b: number | null = null) => ({ check: id, status, found, names, a, b });
+    answer({
+      "insightsReads:insightsHome": HOME,
+      "insightsReads:insightsMeasurement": {
+        siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05",
+        measurement: {
+          checks: [
+            check("enquiryCounted", "LOOK", "leavesBefore", ["click"], 255, 271), check("everyWayCounted", "LOOK", "neverFired", ["phone_click", "email_click"], 2, 3),
+            check("enquiriesValued", "PASSING", "valued"), check("visitsHavePage", "LOOK", "noPage", [], 33, 14), check("googleAgrees", "LOOK", "fewer", [], 306, 642),
+            check("googleTiesPages", "LIMIT", "partTied", [], 53, 1070), check("analyticsSteady", "PASSING", "steady"), check("referralsReal", "PASSING", "real"),
+            check("onlyThisWebsite", "LOOK", "strangers", ["nclnet.org"], 39),
+          ],
+          byDay: [{ day: "2026-10-06", clicks: 12, visits: 6 }, { day: "2026-10-07", clicks: 15, visits: 8 }],
+        },
+      },
+    });
+    const { container } = render(<InsightsMeasurementPage />);
+    await screen.findByText("Each enquiry counts once");
+    await expectApprovedLook(container, PLAN, "Measurement", "Insights → Measurement check");
+  });
+
+  it("30 · Sources", async () => {
+    nav.pathname = "/app/insights/sources";
+    answer({
+      "insightsReads:insightsHome": HOME,
+      "insightsReads:insightsSources": [{
+        siteId: "site_1", host: "ronins.co.uk",
+        sources: [
+          { source: "market", status: "CONNECTED", since: "2019-01-31", count: null }, { source: "searchConsole", status: "CONNECTED", since: "2026-07-08", count: null },
+          { source: "analytics", status: "CONNECTED", since: "2024-10-01", count: null }, { source: "businessProfiles", status: "CONNECTED", since: null, count: 2 },
+          { source: "pages", status: "SOON", since: null, count: null }, { source: "enquiryValue", status: "NOT_SET", since: null, count: 3 },
+        ],
+      }],
+    });
+    const { container } = render(<InsightsSourcesPage />);
+    await screen.findByText("Google Search Console");
+    await expectApprovedLook(container, PLAN, "Sources", "Insights → Sources");
   });
 });

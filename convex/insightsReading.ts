@@ -5,7 +5,7 @@ import { internalQuery, type ActionCtx, type QueryCtx } from "./_generated/serve
 import { decodePages } from "./holdPageRefs";
 import { holdAiSummary } from "./holdLists";
 import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
-import { EVERY_DEVICE, slotKey, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { EVERY_DEVICE, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { channelOf } from "./utils/aiAssistants";
 import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
 import { BookNames } from "./searchConsolePeriodBooks";
@@ -95,6 +95,10 @@ async function searchConsoleFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
       readPeriod(ctx, hold._id, "web", list, "90", "BEFORE"),
     ]);
     if (!now) continue;
+    // What the pages add up to: the clicks Google ties to a page (S2), against the website's whole.
+    if (list === "page") {
+      facts.add({ key: factKey("sc", "tiedClicks", 90, "now"), value: now.rows.reduce((sum, row) => sum + row.clicks, 0), unit: "count", source: "searchConsole", label: "Google clicks tied to a page", from: now.from, to: now.to, country });
+    }
     const top = [...now.rows].sort((a, b) => b.clicks - a.clicks).slice(0, TOP_ROWS);
     const names = list === "query" && now.book ? await new BookNames(ctx, now.book).textsOf(top.map((row) => row.key)) : null;
     const beforeNames = list === "query" && before?.book ? await new BookNames(ctx, before.book).textsOf(before.rows.map((row) => row.key)) : null;
@@ -378,6 +382,40 @@ export const analyticsFactsInternal = internalQuery({
     // Without a part, every part: the tests' and a small website's one read.
     if (args.part) return await analyticsFacts(ctx, hold, args.part);
     return [...await analyticsFacts(ctx, hold, "totals"), ...await analyticsFacts(ctx, hold, "landing"), ...await analyticsFacts(ctx, hold, "events")];
+  },
+});
+
+/** The days the Measurement check's chart draws: eight weeks, as Analytics keeps its channel days. */
+const MEASUREMENT_DAYS = 56;
+
+/**
+ * What the Measurement check reads besides the facts (phase 13): Analytics'
+ * own checks, as its connection keeps them (never worked out twice, I38), and
+ * Google's clicks against Analytics' visits from Google a day each, both for
+ * the main home country (I33).
+ */
+export const measurementInternal = internalQuery({
+  args: holdArgs,
+  returns: v.object({
+    health: v.union(v.null(), v.array(v.object({ check: v.string(), passing: v.boolean(), names: v.optional(v.array(v.string())), count: v.optional(v.number()), share: v.optional(v.number()) }))),
+    byDay: v.array(v.object({ day: v.string(), clicks: v.number(), visits: v.number() })),
+  }),
+  handler: async (ctx, args) => {
+    const analytics = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    const console = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    const health = analytics?.status === "CONNECTED" && analytics.health ? analytics.health.checks : null;
+    if (!analytics?.newestDay || !console?.newestDay) return { health, byDay: [] };
+    // The days both hold: Search Console settles three days later than Analytics.
+    const last = analytics.newestDay < console.newestDay ? analytics.newestDay : console.newestDay;
+    const first = shiftDay(last, -(MEASUREMENT_DAYS - 1));
+    const clicks = new Map((await daysOf(ctx, args.holdId, "web", first, last)).map((day) => [day.day, day.clicks]));
+    const parts = await ctx.db
+      .query("googleAnalyticsDays")
+      .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", args.holdId).eq("list", "channel").eq("device", EVERY_DEVICE).gte("day", first).lte("day", last))
+      .take(MEASUREMENT_DAYS + 2);
+    const visits = new Map(parts.map((part) => [part.day, unpackPart(part as PackedPart).filter((row) => splitChannelKey(row.key).channel === "Organic Search").reduce((sum, row) => sum + row.visits, 0)]));
+    const days = [...new Set([...clicks.keys(), ...visits.keys()])].filter((day) => clicks.has(day) && visits.has(day)).sort();
+    return { health, byDay: days.map((day) => ({ day, clicks: clicks.get(day) ?? 0, visits: visits.get(day) ?? 0 })) };
   },
 });
 

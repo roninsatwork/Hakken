@@ -8,7 +8,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { countryName } from "./countries";
 import { useSiteFiguresFor } from "./SearchConsoleFigures";
-import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 /**
  * The clicks Google doesn't tie to a page (insights-analyst-plan.md §7, S2,

@@ -34,8 +34,8 @@ export const INSIGHTS_PAGES: readonly InsightsPage[] = [
   { id: "funnel", segment: "funnel", group: "growth", built: false },
   { id: "pageReviews", segment: "page-reviews", group: "growth", built: false },
   { id: "experiments", segment: "experiments", group: "growth", built: false },
-  { id: "measurement", segment: "measurement", group: "growth", built: false },
-  { id: "sources", segment: "sources", group: "setup", built: false },
+  { id: "measurement", segment: "measurement", group: "growth", built: true },
+  { id: "sources", segment: "sources", group: "setup", built: true },
 ];
 
 /** The page a path is: the longest segment it starts with. */

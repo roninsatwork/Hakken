@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
+import { measurementValidator } from "./utils/insightMeasurement";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -138,6 +139,19 @@ export const insightsTables = {
    * change and how often it held, so a specialist can say "this fix worked
    * on 7 of 10 websites like yours". No company's figures are kept here.
    */
+  /**
+   * The Measurement check (§4.1, phase 13): whether a website's figures can be
+   * trusted, as the newest run found — one row a website, replaced each run,
+   * kept apart from the week so the screens that read every week stay light.
+   */
+  insightMeasurements: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    week: v.string(),
+    ...measurementValidator.fields,
+    createdAt: v.number(),
+  }).index("by_hold", ["companyWebsiteId"]),
+
   insightLearnings: defineTable({
     kind: v.string(),
     companies: v.array(v.id("companies")),

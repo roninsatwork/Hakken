@@ -1,0 +1,12 @@
+# Insights → Measurement check — the approved look (board "Measurement" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Measurement check
+settings-card: What Hakken sees
+chart-card: Google's clicks against Analytics' visits from Google, day by day
+search: Search checks
+filter: Status
+table: Check | What Hakken found | Status
+  table-bar: # checks · # need a look
+    download: Download CSV
+  table-footer

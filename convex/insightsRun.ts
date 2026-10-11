@@ -32,6 +32,7 @@ import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
 import { outcomeOf } from "./utils/insightTrack";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
+import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
@@ -187,13 +188,17 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   // What changes have taught, read when the specialists advise (I30).
   const learnings = await ctx.runQuery(internal.insightsTeam.learningsFor, { holdId: args.holdId }).catch(() => []);
   const caveat = [enquiryCheckBrief(check), learnings.length > 0 ? `What changes have taught (use it when you advise; say "this worked on N of M websites like yours" only from the lines that say so): ${learnings.join("; ")}.` : null].filter(Boolean).join("\n\n") || null;
+  // The Measurement check (phase 13): whether the figures can be trusted, for the page and the Measurement specialist.
+  const measured = await ctx.runQuery(internal.insightsReading.measurementInternal, { holdId: args.holdId }).catch(() => ({ health: null, byDay: [] }));
+  const measurement = { checks: measurementFrom(reading.facts, check, measured.health), byDay: measured.byDay };
+  const caveatFor = (specialist: string) => (specialist === "measurement" ? [caveat, measurementBrief(measurement.checks)].filter(Boolean).join("\n\n") || null : caveat);
   // 3. Each specialist thinks and tests, side by side (§2.3).
   const drafts: Draft[] = [];
   const answers = await Promise.all(SIDE_BY_SIDE.map(async (specialist) => {
     const mine = candidates.filter((candidate) => candidate.specialist === specialist);
     if (mine.length === 0) return [];
     try {
-      return await askSpecialist(ctx, args, specialist, mine, reading.facts, member(SPECIALIST_ROLE[specialist]) ?? lead, caveat);
+      return await askSpecialist(ctx, args, specialist, mine, reading.facts, member(SPECIALIST_ROLE[specialist]) ?? lead, caveatFor(specialist));
     } catch (error) {
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: specialist, detail: failureSummary(error), failed: true });
       return [];
@@ -268,6 +273,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     findings: saved,
     costUsd,
     summary,
+    measurement,
   });
   // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
   const reports: string[] = [];

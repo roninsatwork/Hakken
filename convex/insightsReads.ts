@@ -7,6 +7,8 @@ import { LEAGUE_IDS, leaguesFrom } from "./utils/insightLeagues";
 import { factValidator } from "./utils/insightFacts";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { serviceValidator } from "./utils/insightStrategy";
+import { measurementValidator } from "./utils/insightMeasurement";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 
 /**
@@ -528,5 +530,83 @@ export const markInsightFindingActed = tenantMutation({
     if (!finding || finding.companyId !== ctx.companyId || finding.actedAt) return null;
     await ctx.db.patch(finding._id, { actedAt: Date.now() });
     return null;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Growth and setup (§4.1, phase 13): the Measurement check and Sources
+
+/**
+ * The Measurement check (§4.1, drawn as the Measurement board): whether the
+ * figures can be trusted, as the newest week's run found — the same checks the
+ * findings were written beside, so the page and the findings never disagree.
+ */
+export const insightsMeasurement = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.union(v.null(), v.object({
+    siteId: v.id("companyWebsites"),
+    host: v.string(),
+    week: v.union(v.string(), v.null()),
+    measurement: v.union(measurementValidator, v.null()),
+  })),
+  handler: async (ctx, args) => {
+    const [site] = await sitesFor(ctx, args.siteId);
+    if (!site) return null;
+    const held = await ctx.db.query("insightMeasurements").withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id)).first();
+    return { siteId: site.hold._id, host: site.host, week: held?.week ?? null, measurement: held ? { checks: held.checks, byDay: held.byDay } : null };
+  },
+});
+
+export const SOURCE_IDS = ["market", "searchConsole", "analytics", "businessProfiles", "pages", "enquiryValue"] as const;
+export type SourceId = (typeof SOURCE_IDS)[number];
+
+const sourceRow = v.object({
+  source: v.union(...SOURCE_IDS.map((source) => v.literal(source))),
+  /** CONNECTED, NOT_CONNECTED, SET, NOT_SET, or SOON for a source Hakken doesn't read yet. */
+  status: v.union(v.literal("CONNECTED"), v.literal("NOT_CONNECTED"), v.literal("SET"), v.literal("NOT_SET"), v.literal("SOON")),
+  /** The first day held, where it has one. */
+  since: v.union(v.string(), v.null()),
+  count: v.union(v.number(), v.null()),
+});
+
+/** A website's Business Profiles read at most: a business's own are few. */
+const LISTINGS_READ = 40;
+
+/**
+ * Sources (§4.1, drawn as the Sources board): for each of the company's
+ * websites, what it gives Hakken — each source, whether it is connected, how
+ * far back it goes — and what connecting or setting the rest would unlock.
+ * Read live from the connections themselves: one document each.
+ */
+export const insightsSources = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), sources: v.array(sourceRow) })),
+  handler: async (ctx, args) => {
+    const sites = await sitesFor(ctx, args.siteId);
+    const out: Array<{ siteId: Id<"companyWebsites">; host: string; sources: Array<typeof sourceRow.type> }> = [];
+    for (const site of sites) {
+      const hold = site.hold;
+      const first = await ctx.db.query("siteDaySummaries").withIndex("by_site_day", (q) => q.eq("websiteId", hold.websiteId).eq("locationCode", hold.locationCode ?? DEFAULT_LOCATION_CODE)).first();
+      const console = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+      const analytics = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+      const listings = (await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(LISTINGS_READ)).filter((entry) => entry.role === "OWN");
+      const consoleOn = console?.status === "CONNECTED" && Boolean(console.newestDay);
+      const analyticsOn = analytics?.status === "CONNECTED";
+      const counted = (analytics?.events ?? []).filter((event) => event.counted);
+      const valued = counted.some((event) => event.analyticsValue !== null || event.hakkenValue !== null || event.eventName === "purchase");
+      out.push({
+        siteId: hold._id,
+        host: site.host,
+        sources: [
+          { source: "market", status: first ? "CONNECTED" : "NOT_CONNECTED", since: first?.day ?? null, count: null },
+          { source: "searchConsole", status: consoleOn ? "CONNECTED" : "NOT_CONNECTED", since: consoleOn ? console?.oldestDay ?? null : null, count: null },
+          { source: "analytics", status: analyticsOn ? "CONNECTED" : "NOT_CONNECTED", since: analyticsOn ? analytics?.oldestDay ?? null : null, count: null },
+          { source: "businessProfiles", status: listings.length > 0 ? "CONNECTED" : "NOT_CONNECTED", since: null, count: listings.length },
+          { source: "pages", status: "SOON", since: null, count: null },
+          { source: "enquiryValue", status: !analyticsOn ? "NOT_SET" : valued ? "SET" : "NOT_SET", since: null, count: counted.length },
+        ],
+      });
+    }
+    return out;
   },
 });

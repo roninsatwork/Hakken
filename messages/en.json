@@ -18282,6 +18282,196 @@
       "notYet": "Not yet",
       "noMatch": "Nothing matches that search.",
       "empty": "No findings yet."
+    },
+    "measurement": {
+      "title": "Measurement check",
+      "description": "Before Hakken advises on conversion, it checks the figures can be trusted: every enquiry counted, every visit on a page, and Google and Analytics agreeing.",
+      "emptyTitle": "No check yet",
+      "emptyDescription": "The Measurement check runs with each week's findings, and appears after the first.",
+      "search": "Search checks",
+      "status": "Status",
+      "everyStatus": "Every status",
+      "tableTitle": "{count} checks · {look, plural, =0 {all passing} one {1 needs a look} other {# need a look}}",
+      "download": "Download CSV",
+      "noMatch": "No check matches",
+      "columns": {
+        "check": "Check",
+        "found": "What Hakken found",
+        "status": "Status"
+      },
+      "statuses": {
+        "LOOK": "Needs a look",
+        "LIMIT": "Google's limit",
+        "UNKNOWN": "Can't tell yet",
+        "PASSING": "Passing"
+      },
+      "checks": {
+        "enquiryCounted": "Each enquiry counts once",
+        "everyWayCounted": "Every way to enquire is counted",
+        "enquiriesValued": "Enquiries have a value",
+        "visitsHavePage": "Every visit has a page",
+        "googleAgrees": "Google and Analytics agree",
+        "googleTiesPages": "Google ties clicks to pages",
+        "analyticsSteady": "Analytics keeps counting",
+        "referralsReal": "Referrals are real",
+        "onlyThisWebsite": "Only this website is counted"
+      },
+      "found": {
+        "enquiryCounted": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "countedTwice": "Two ways of counting, {names}, rise and fall together ({a} and {b} in 12 months): one enquiry may count twice",
+          "repeated": "\"{names}\" happened {a} times from {b} people in 12 months: some are repeats, or not people",
+          "leavesBefore": "{a} of the {b} people who clicked a link off the website went on to enquire: the form may count as leaving, or bots fill it in",
+          "tooFew": "Only {a} enquiries in 12 months: too few to tell either way",
+          "countsOnce": "{a} enquiries in 12 months, each counted once"
+        },
+        "everyWayCounted": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "nothingCounted": "Nothing is counted as an enquiry yet",
+          "neverFired": "{names} {count, plural, one {hasn't} other {haven't}} registered once in 12 months, so any enquiry made that way is invisible",
+          "allFired": "All {a} ways to enquire registered in the last 12 months"
+        },
+        "enquiriesValued": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "noValue": "No value set for {names}: counted, not priced",
+          "valued": "Every enquiry has a value"
+        },
+        "visitsHavePage": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "noPage": "{a} visits in 30 days, {b}%, have no page or no channel",
+          "havePage": "Nearly every visit in 30 days has a page and a channel"
+        },
+        "googleAgrees": {
+          "needsBoth": "Needs Search Console and Google Analytics connected",
+          "fewer": "Analytics counts {share}% of Google's clicks ({a} visits against {b} clicks in 90 days): mostly visitors who say no to cookies",
+          "more": "Analytics counts more visits from Google than Google's clicks ({a} against {b} in 90 days): some visits may count twice",
+          "agree": "Analytics counts {share}% of Google's clicks in 90 days: they agree"
+        },
+        "googleTiesPages": {
+          "needsSearchConsole": "Needs Search Console connected",
+          "partTied": "Only {a}% of Google's clicks in your home country are tied to a page",
+          "tied": "{a}% of Google's clicks in your home country are tied to a page"
+        },
+        "analyticsSteady": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "stopped": "No visits on {names} after weeks of steady ones: the tracking may have come off the website",
+          "fell": "The last week fell {a}% under the four weeks before",
+          "steady": "Counting steadily, with no sudden falls"
+        },
+        "referralsReal": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "selfReferral": "The website's own address shows as a referral ({a} visits): visits are split in two",
+          "paymentReferrals": "Payment pages take the credit as referrals: {names}",
+          "real": "No referrals from the website itself or from payment pages"
+        },
+        "onlyThisWebsite": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "strangers": "{a} visits were recorded on {names}",
+          "only": "Only this website's visits are counted"
+        }
+      },
+      "fix": {
+        "enquiryCounted": "Send the enquiry form yourself and see what Google Analytics records.",
+        "everyWayCounted": "Check the ways to enquire that never registered in Google Analytics.",
+        "enquiriesValued": "Give an enquiry a value in Tracking health.",
+        "visitsHavePage": "Find the visits with no page or channel in Tracking health.",
+        "googleAgrees": "Check the cookie banner lets Analytics count the visitors who agree.",
+        "googleTiesPages": "Nothing to fix: Google keeps some searches private.",
+        "analyticsSteady": "Check the Google Analytics tag is still on every page.",
+        "referralsReal": "Stop the website and payment pages showing as referrals.",
+        "onlyThisWebsite": "Stop other addresses being counted as this website."
+      },
+      "fixAt": {
+        "trackingHealth": "Tracking health",
+        "analytics": "Google Analytics",
+        "searchConsole": "Search Console"
+      },
+      "sees": {
+        "look": "{count, plural, one {One thing needs} other {# things need}} a look. The biggest: {first}.",
+        "allGood": "The figures can be trusted: {count} checks pass, so advice about enquiries stands on firm ground."
+      },
+      "chart": {
+        "title": "Google's clicks against Analytics' visits from Google, day by day",
+        "hint": "Your home country, {from} to {to}. Analytics counted {share}% of Google's clicks.",
+        "none": "Needs Search Console and Google Analytics connected, with eight weeks of days.",
+        "day": "Day",
+        "clicks": "Google's clicks",
+        "visits": "Analytics' visits from Google"
+      }
+    },
+    "sources": {
+      "title": "Sources",
+      "description": "What Hakken reads for each of your websites, how far back it goes, and what connecting or setting the rest would let it tell you.",
+      "emptyTitle": "No websites yet",
+      "emptyDescription": "Add your website in Sites, and Hakken starts reading it.",
+      "search": "Search sources",
+      "website": "Website",
+      "tableTitle": "{count} sources · {host}",
+      "download": "Download CSV",
+      "noMatch": "No source matches",
+      "columns": {
+        "source": "Source",
+        "status": "Status",
+        "history": "History",
+        "gives": "What it gives Hakken"
+      },
+      "names": {
+        "market": "Google's results and your rivals",
+        "searchConsole": "Google Search Console",
+        "analytics": "Google Analytics",
+        "businessProfiles": "Google Business Profile",
+        "pages": "Your pages, read by Hakken",
+        "enquiryValue": "A value for an enquiry"
+      },
+      "gives": {
+        "market": "Places, rivals, AI answers, links and Business Profiles",
+        "searchConsole": "What people search, how often you're shown and clicked",
+        "analytics": "Visits, sources, pages and enquiries",
+        "businessProfiles": "Ratings, reviews, posts, categories and map places",
+        "pages": "The words on each money page, and what changed",
+        "enquiryValue": "Findings and reports in money, not just enquiries"
+      },
+      "statuses": {
+        "CONNECTED": "Connected",
+        "NOT_CONNECTED": "Not connected",
+        "SET": "Set",
+        "NOT_SET": "Not set",
+        "SOON": "Coming soon"
+      },
+      "listings": "{count, plural, one {# listing} other {# listings}}",
+      "history": {
+        "since": "Since {day}",
+        "searchConsole": "Since {day}; grows to 16 months",
+        "analytics": "The last 12 months and the 12 before"
+      },
+      "sees": {
+        "everything": "{host} gives Hakken every source it reads. More Search Console history arrives on its own each day.",
+        "missing": "{host} is missing {count, plural, one {one source} other {# sources}}. The first would let Hakken {first}."
+      },
+      "unlocks": {
+        "market": "rank you against your rivals",
+        "searchConsole": "see what people search before they click",
+        "analytics": "count your visits and enquiries",
+        "businessProfiles": "read your reviews and map places",
+        "pages": "read the words on your pages",
+        "enquiryValue": "put a money value on findings and reports"
+      },
+      "fix": {
+        "market": "Check your website's place in Sites.",
+        "searchConsole": "Connect Google Search Console.",
+        "analytics": "Connect Google Analytics.",
+        "businessProfiles": "Add your Google Business Profile.",
+        "pages": "Nothing to do: Hakken will read your pages itself.",
+        "enquiryValue": "Give an enquiry a value in Tracking health."
+      },
+      "fixLink": {
+        "market": "Sites",
+        "searchConsole": "Search Console",
+        "analytics": "Google Analytics",
+        "businessProfiles": "Local",
+        "pages": "Sites",
+        "enquiryValue": "Tracking health"
+      }
     }
   }
 }

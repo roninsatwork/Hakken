@@ -33,6 +33,10 @@ const fact = (key: string, value: number) => ({ key, value, unit: "count" as con
 const score = (measure: "enquiries" | "visitors") => ({ measure, now: 26, before: 74, unit: "count" as const, lowerIsBetter: false, place: 3, places: 11, status: "BEHIND" as const });
 const months = Array.from({ length: 12 }, (_, at) => ({ month: `2026-${String(at + 1).padStart(2, "0")}`, visits: 400, conversions: 12 }));
 const shares = Array.from({ length: 22 }, (_, at) => ({ month: `20${25 + Math.floor(at / 12)}-${String((at % 12) + 1).padStart(2, "0")}`, you: 900, total: 9000 }));
+const measurement = {
+  checks: Array.from({ length: 9 }, () => ({ check: "everyWayCounted" as const, status: "LOOK" as const, found: "neverFired", names: ["phone_click", "email_click", "chat_open"], a: 3, b: 4 })),
+  byDay: Array.from({ length: 56 }, (_, at) => ({ day: dayOf(at), clicks: 40, visits: 25 })),
+};
 const body = (findings: number) => ({
   headline: "Winning the market, losing the enquiries", summary: "A paragraph about the quarter against the same weeks last year and our rivals. ".repeat(4),
   points: ["One point about the period, in a sentence.", "Another point.", "A third point."], next: ["A next step.", "Another next step.", "A third."],
@@ -106,13 +110,14 @@ describe("Insights' screens at their largest", () => {
       for (let quarter = 0; quarter < 8; quarter += 1) {
         await ctx.db.insert("insightReports", { companyId, companyWebsiteId: holdId, kind: "BOARD", from: dayOf(quarter * 91), to: dayOf(quarter * 91), period: `q${quarter}`, title: "Board report", status: "READ", body: body(6), createdAt: now - quarter * 91 * 86_400_000 });
       }
+      await ctx.db.insert("insightMeasurements", { companyId, companyWebsiteId: holdId, week: dayOf(0), ...measurement, createdAt: now });
       return { userId, holdId, findingId: findingId!, reportId: reportId! };
     });
   });
 
   const withinBudget = (name: string, bytes: number) => {
     read[name] = Math.ceil(bytes / 1024);
-    if (process.env.INSIGHTS_READ_REPORT) console.log(`${name}: ${read[name]} KiB`);
+    if (process.env.INSIGHTS_READ_REPORT) process.stderr.write(`${name}: ${read[name]} KiB\n`);
     expect(bytes).toBeLessThan(HALF_A_READ);
     expect(read[name], `${name} reads more than its budget in code-ratchets.json (insightsReadKiB)`).toBeLessThanOrEqual(readBudgets[name]);
   };
@@ -126,6 +131,8 @@ describe("Insights' screens at their largest", () => {
     ["reports", () => [api.insightsReads.insightsReports, {}]],
     ["a report", () => [api.insightsReads.insightsReport, { reportId: seeded.reportId }]],
     ["your month", () => [api.insightsReads.insightsLatestReport, { kind: "MONTHLY" }]],
+    ["measurement", () => [api.insightsReads.insightsMeasurement, {}]],
+    ["sources", () => [api.insightsReads.insightsSources, {}]],
   ];
   const modules = import.meta.glob("./*.ts");
 

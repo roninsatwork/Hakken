@@ -126,7 +126,6 @@ describe("the enquiry check (I42)", () => {
 });
 
 describe("keeping score and the change log (§2.7, I25)", () => {
-  const count = (key: string, value: number): Fact => ({ key, value, unit: "count", source: "analytics", label: key });
 
   test("a finding is proved right when its figure moved the way it said, and too early when the move could be chance", async () => {
     const { outcomeOf } = await import("./insightTrack");

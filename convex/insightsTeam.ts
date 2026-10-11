@@ -12,6 +12,7 @@ import { assertSeoInterval } from "./seoScheduleService";
 import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
+import { measurementValidator } from "./utils/insightMeasurement";
 import { insightSpecialistValidator, insightSureValidator } from "./insightsSchema";
 
 /**
@@ -284,6 +285,7 @@ export const saveWeek = internalMutation({
     findings: v.array(savedFindingValidator),
     costUsd: v.number(),
     summary: v.optional(weekSummaryValidator),
+    measurement: v.optional(measurementValidator),
   },
   /** The published findings' ids, in their order, for the week's brief. */
   returns: v.array(v.id("insightFindings")),
@@ -313,6 +315,13 @@ export const saveWeek = internalMutation({
     };
     if (week) await ctx.db.replace(week._id, record);
     else await ctx.db.insert("insightWeeks", record);
+    // The Measurement check, the newest only: one row a website.
+    if (args.measurement) {
+      const held = await ctx.db.query("insightMeasurements").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+      const row = { companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, ...args.measurement, createdAt: now };
+      if (held) await ctx.db.replace(held._id, row);
+      else await ctx.db.insert("insightMeasurements", row);
+    }
     // Two years kept (I7): the website's weeks and findings older than that go as each new week is saved.
     const cutoff = new Date(now - KEPT_MS).toISOString().slice(0, 10);
     const oldWeeks = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).lt("week", cutoff)).take(10);

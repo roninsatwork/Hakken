@@ -18282,6 +18282,196 @@
       "notYet": "Non ancora",
       "noMatch": "Nulla corrisponde alla ricerca.",
       "empty": "Ancora nessun risultato."
+    },
+    "measurement": {
+      "title": "Verifica delle misure",
+      "description": "Prima di consigliare sulle conversioni, Hakken verifica che i dati siano affidabili: ogni richiesta contata, ogni visita su una pagina, e Google e Analytics d'accordo.",
+      "emptyTitle": "Nessuna verifica ancora",
+      "emptyDescription": "La verifica delle misure gira con le scoperte di ogni settimana e compare dopo la prima.",
+      "search": "Cerca verifiche",
+      "status": "Stato",
+      "everyStatus": "Ogni stato",
+      "tableTitle": "{count} verifiche · {look, plural, =0 {tutte superate} one {1 da guardare} other {# da guardare}}",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna verifica corrisponde",
+      "columns": {
+        "check": "Verifica",
+        "found": "Cosa ha trovato Hakken",
+        "status": "Stato"
+      },
+      "statuses": {
+        "LOOK": "Da guardare",
+        "LIMIT": "Limite di Google",
+        "UNKNOWN": "Non ancora chiaro",
+        "PASSING": "Superata"
+      },
+      "checks": {
+        "enquiryCounted": "Ogni richiesta conta una volta",
+        "everyWayCounted": "Ogni modo di contattarti è contato",
+        "enquiriesValued": "Le richieste hanno un valore",
+        "visitsHavePage": "Ogni visita ha una pagina",
+        "googleAgrees": "Google e Analytics sono d'accordo",
+        "googleTiesPages": "Google lega i clic alle pagine",
+        "analyticsSteady": "Analytics continua a contare",
+        "referralsReal": "I referral sono reali",
+        "onlyThisWebsite": "Si conta solo questo sito"
+      },
+      "found": {
+        "enquiryCounted": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "countedTwice": "Due modi di contare, {names}, salgono e scendono insieme ({a} e {b} in 12 mesi): una richiesta può contare due volte",
+          "repeated": "\"{names}\" è avvenuto {a} volte da {b} persone in 12 mesi: alcune sono ripetizioni, o non persone",
+          "leavesBefore": "{a} delle {b} persone che hanno cliccato un link verso un altro sito hanno poi inviato una richiesta: il modulo può contare come uscita, o lo compilano dei bot",
+          "tooFew": "Solo {a} richieste in 12 mesi: troppo poche per dirlo",
+          "countsOnce": "{a} richieste in 12 mesi, ognuna contata una volta"
+        },
+        "everyWayCounted": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "nothingCounted": "Ancora nulla è contato come richiesta",
+          "neverFired": "{names} non {count, plural, one {si è} other {si sono}} mai registrati in 12 mesi, quindi una richiesta fatta così è invisibile",
+          "allFired": "Tutti i {a} modi di contattarti si sono registrati negli ultimi 12 mesi"
+        },
+        "enquiriesValued": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "noValue": "Nessun valore per {names}: contate, non valutate",
+          "valued": "Ogni richiesta ha un valore"
+        },
+        "visitsHavePage": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "noPage": "{a} visite in 30 giorni, il {b}%, non hanno pagina o canale",
+          "havePage": "Quasi ogni visita in 30 giorni ha una pagina e un canale"
+        },
+        "googleAgrees": {
+          "needsBoth": "Servono Search Console e Google Analytics collegati",
+          "fewer": "Analytics conta il {share}% dei clic di Google ({a} visite contro {b} clic in 90 giorni): soprattutto visitatori che rifiutano i cookie",
+          "more": "Analytics conta più visite da Google dei clic di Google ({a} contro {b} in 90 giorni): alcune visite possono contare due volte",
+          "agree": "Analytics conta il {share}% dei clic di Google in 90 giorni: sono d'accordo"
+        },
+        "googleTiesPages": {
+          "needsSearchConsole": "Serve Search Console collegata",
+          "partTied": "Solo il {a}% dei clic di Google nel tuo paese è legato a una pagina",
+          "tied": "Il {a}% dei clic di Google nel tuo paese è legato a una pagina"
+        },
+        "analyticsSteady": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "stopped": "Nessuna visita il {names} dopo settimane regolari: il tracciamento potrebbe essere stato tolto dal sito",
+          "fell": "L'ultima settimana è scesa del {a}% rispetto alle quattro precedenti",
+          "steady": "Conta regolarmente, senza cali improvvisi"
+        },
+        "referralsReal": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "selfReferral": "L'indirizzo del sito stesso compare come referral ({a} visite): le visite si dividono in due",
+          "paymentReferrals": "Le pagine di pagamento si prendono il merito come referral: {names}",
+          "real": "Nessun referral dal sito stesso o da pagine di pagamento"
+        },
+        "onlyThisWebsite": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "strangers": "{a} visite registrate su {names}",
+          "only": "Si contano solo le visite di questo sito"
+        }
+      },
+      "fix": {
+        "enquiryCounted": "Invia tu il modulo di richiesta e guarda cosa registra Google Analytics.",
+        "everyWayCounted": "Controlla in Google Analytics i modi di contattarti che non si sono mai registrati.",
+        "enquiriesValued": "Dai un valore a una richiesta in Salute del tracciamento.",
+        "visitsHavePage": "Trova in Salute del tracciamento le visite senza pagina o canale.",
+        "googleAgrees": "Controlla che il banner dei cookie lasci contare ad Analytics chi accetta.",
+        "googleTiesPages": "Niente da correggere: Google tiene private alcune ricerche.",
+        "analyticsSteady": "Controlla che il tag di Google Analytics sia ancora su ogni pagina.",
+        "referralsReal": "Evita che il sito e le pagine di pagamento compaiano come referral.",
+        "onlyThisWebsite": "Evita che altri indirizzi siano contati come questo sito."
+      },
+      "fixAt": {
+        "trackingHealth": "Salute del tracciamento",
+        "analytics": "Google Analytics",
+        "searchConsole": "Search Console"
+      },
+      "sees": {
+        "look": "{count, plural, one {Una cosa va guardata} other {# cose vanno guardate}}. La più importante: {first}.",
+        "allGood": "I dati sono affidabili: {count} verifiche superate, quindi i consigli sulle richieste poggiano su basi solide."
+      },
+      "chart": {
+        "title": "Clic di Google contro visite da Google in Analytics, giorno per giorno",
+        "hint": "Il tuo paese, dal {from} al {to}. Analytics ha contato il {share}% dei clic di Google.",
+        "none": "Servono Search Console e Google Analytics collegati, con otto settimane di giorni.",
+        "day": "Giorno",
+        "clicks": "Clic di Google",
+        "visits": "Visite da Google in Analytics"
+      }
+    },
+    "sources": {
+      "title": "Fonti",
+      "description": "Cosa legge Hakken per ognuno dei tuoi siti, quanto indietro arriva e cosa ti direbbe collegando o impostando il resto.",
+      "emptyTitle": "Ancora nessun sito",
+      "emptyDescription": "Aggiungi il tuo sito in Siti e Hakken inizia a leggerlo.",
+      "search": "Cerca fonti",
+      "website": "Sito",
+      "tableTitle": "{count} fonti · {host}",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna fonte corrisponde",
+      "columns": {
+        "source": "Fonte",
+        "status": "Stato",
+        "history": "Storico",
+        "gives": "Cosa dà a Hakken"
+      },
+      "names": {
+        "market": "I risultati di Google e i tuoi concorrenti",
+        "searchConsole": "Google Search Console",
+        "analytics": "Google Analytics",
+        "businessProfiles": "Profilo dell'attività su Google",
+        "pages": "Le tue pagine, lette da Hakken",
+        "enquiryValue": "Un valore per una richiesta"
+      },
+      "gives": {
+        "market": "Posizioni, concorrenti, risposte AI, link e profili dell'attività",
+        "searchConsole": "Cosa cercano le persone, quanto sei mostrato e cliccato",
+        "analytics": "Visite, fonti, pagine e richieste",
+        "businessProfiles": "Voti, recensioni, post, categorie e posizioni sulla mappa",
+        "pages": "Le parole di ogni pagina che porta clienti, e cosa è cambiato",
+        "enquiryValue": "Scoperte e report in denaro, non solo in richieste"
+      },
+      "statuses": {
+        "CONNECTED": "Collegato",
+        "NOT_CONNECTED": "Non collegato",
+        "SET": "Impostato",
+        "NOT_SET": "Non impostato",
+        "SOON": "In arrivo"
+      },
+      "listings": "{count, plural, one {# scheda} other {# schede}}",
+      "history": {
+        "since": "Dal {day}",
+        "searchConsole": "Dal {day}; arriva a 16 mesi",
+        "analytics": "Gli ultimi 12 mesi e i 12 precedenti"
+      },
+      "sees": {
+        "everything": "{host} dà a Hakken ogni fonte che legge. Altro storico di Search Console arriva da solo ogni giorno.",
+        "missing": "A {host} {count, plural, one {manca una fonte} other {mancano # fonti}}. La prima permetterebbe a Hakken di {first}."
+      },
+      "unlocks": {
+        "market": "metterti a confronto con i concorrenti",
+        "searchConsole": "vedere cosa cercano le persone prima di cliccare",
+        "analytics": "contare visite e richieste",
+        "businessProfiles": "leggere recensioni e posizioni sulla mappa",
+        "pages": "leggere le parole delle tue pagine",
+        "enquiryValue": "dare un valore in denaro a scoperte e report"
+      },
+      "fix": {
+        "market": "Controlla la posizione del sito in Siti.",
+        "searchConsole": "Collega Google Search Console.",
+        "analytics": "Collega Google Analytics.",
+        "businessProfiles": "Aggiungi il profilo dell'attività su Google.",
+        "pages": "Niente da fare: Hakken leggerà le pagine da solo.",
+        "enquiryValue": "Dai un valore a una richiesta in Salute del tracciamento."
+      },
+      "fixLink": {
+        "market": "Siti",
+        "searchConsole": "Search Console",
+        "analytics": "Google Analytics",
+        "businessProfiles": "Locale",
+        "pages": "Siti",
+        "enquiryValue": "Salute del tracciamento"
+      }
     }
   }
 }
