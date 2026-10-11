@@ -124,3 +124,26 @@ describe("the enquiry check (I42)", () => {
     expect(enquiryCheck([count("ga.counted.form_submission.times.365.now", 12), count("ga.event.form_submission.people.365.now", 4)]).ok).toBe(true);
   });
 });
+
+describe("keeping score and the change log (§2.7, I25)", () => {
+  const count = (key: string, value: number): Fact => ({ key, value, unit: "count", source: "analytics", label: key });
+
+  test("a finding is proved right when its figure moved the way it said, and too early when the move could be chance", async () => {
+    const { outcomeOf } = await import("./insightTrack");
+    expect(outcomeOf(101, 140, "UP", "count")).toBe("RIGHT");
+    expect(outcomeOf(101, 70, "UP", "count")).toBe("WRONG");
+    expect(outcomeOf(10, 12, "UP", "count")).toBe("TOO_EARLY");
+  });
+
+  test("a page that brought enquiries and is gone is replaced when a new page shares its words, with what its enquiries did", async () => {
+    const { pageChanges } = await import("./insightTrack");
+    const changes = pageChanges(
+      [{ path: "/blockchain-development-company/", visits: 300, enquiries: 3 }, { path: "/", visits: 900, enquiries: 40 }, { path: "/web-design-surrey/", visits: 30, enquiries: 4 }],
+      [{ path: "/blockchain-developers/", visits: 400, enquiries: 13 }, { path: "/old-offer/", visits: 200, enquiries: 4 }, { path: "/", visits: 900, enquiries: 50 }, { path: "/web-design-surrey/", visits: 50, enquiries: 6 }],
+    );
+    expect(changes).toEqual([
+      { kind: "REPLACED", from: "/blockchain-developers/", to: "/blockchain-development-company/", before: 13, after: 3, result: "LOST" },
+      { kind: "REMOVED", from: "/old-offer/", to: null, before: 4, after: 0, result: "LOST" },
+    ]);
+  });
+});

@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { useParams } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
+import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Lightbulb } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -11,7 +11,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { Notice } from "@/src/ui/components/screens/Notice";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { DetailHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
@@ -51,6 +51,8 @@ export default function InsightsFindingPage() {
   const words = useInsightWords();
   const href = useInsightsHref();
   const finding = useQuery(api.insightsReads.insightsFinding, { findingId: params.findingId as Id<"insightFindings"> });
+  const router = useRouter();
+  const markActed = useMutation(api.insightsReads.markInsightFindingActed);
   const facts = new Map((finding?.facts ?? []).map((fact) => [fact.key, fact]));
   const pairs = (finding?.comparisons ?? [])
     .map(([a, b]) => ({ now: facts.get(a), then: facts.get(b) }))
@@ -82,6 +84,12 @@ export default function InsightsFindingPage() {
   if (finding === null) return <HakkenEmptyState icon={Lightbulb} title={t("notFound")} description={t("notFoundDescription")} />;
 
   const sources = finding.sources.map(words.source).join(t("and"));
+  // The steps to Hakken tasks, as Heroes hands its own (google-analytics-plan.md §13): Ask Hakken proposes the task to approve.
+  const toTasks = async () => {
+    await markActed({ findingId: finding.findingId });
+    const ask = t("taskAsk", { host: finding.host, action: finding.action, how: finding.howWeKnow, day: finding.checkOn ? formatDay(finding.checkOn) : "" });
+    router.push(`/app/assistant?ask=${encodeURIComponent(ask)}`);
+  };
   const bars = pairs.slice(0, 6).map((pair) => ({ label: heading(pair.now.label), then: pair.then.value, now: pair.now.value }));
   const csv = () => toCsv([t("chart.figure"), t("chart.then"), t("chart.now")], bars.map((row) => [row.label, row.then, row.now]));
   // The story's sentences, each its own line, as the box says them.
@@ -102,6 +110,7 @@ export default function InsightsFindingPage() {
             <TagLabel>{words.pattern(finding.pattern)}</TagLabel>
           </>
         }
+        action={<PagePrimaryAction variant="brand" onClick={toTasks}>{t("toTasks")}</PagePrimaryAction>}
       />
       <HakkenSees says={says} steps={[{ words: finding.action, link: t("seeAll"), href: href("this-week") }]} />
       {pairs.length > 0 ? (

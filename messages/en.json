@@ -17903,7 +17903,9 @@
         "empty": "Nothing was ruled out for this finding."
       },
       "download": "Download CSV",
-      "howWeKnow": "How we'll know: Hakken checks again on {day}. {how} The result goes on your Track record either way."
+      "howWeKnow": "How we'll know: Hakken checks again on {day}. {how} The result goes on your Track record either way.",
+      "taskAsk": "Set up Hakken tasks for {host}: {action} Then keep an eye on it: {how} Tell me how it went by {day}.",
+      "toTasks": "Add the steps to Hakken tasks"
     },
     "summary": {
       "title": "Executive summary",
@@ -18205,6 +18207,81 @@
         "enquiries": "Enquiries",
         "per": "For one enquiry"
       }
+    },
+    "track": {
+      "title": "Track record",
+      "description": "Every finding Hakken has written, whether you acted on it, and whether it proved right, checked on the date each one names.",
+      "sees": {
+        "checked": "Of {checked} findings checked so far, {right} proved right and {wrong} didn't hold.",
+        "none": "Hakken has written {written} findings and none is due yet: the first checks are on {day}, and this page fills in as they come.",
+        "act": "Act on a finding so its result can be measured."
+      },
+      "seeFinding": "See the finding",
+      "figures": {
+        "written": "Findings written",
+        "writtenDetail": "kept for two years",
+        "acted": "Acted on",
+        "of": "of {all}",
+        "right": "Proved right",
+        "firstDue": "first results {day}",
+        "wrong": "Didn't hold",
+        "wrongDetail": "shown here too"
+      },
+      "changes": {
+        "title": "The change log",
+        "search": "Search changes...",
+        "change": "Change",
+        "seenIn": "Seen in",
+        "analytics": "Google Analytics",
+        "followed": "What followed",
+        "followedWords": "Enquiries: {before} a year, then {after}",
+        "result": "Result",
+        "results": {
+          "GREW": "Grew",
+          "HELD": "Held",
+          "LOST": "Lost"
+        },
+        "kinds": {
+          "REPLACED": "Replaced {from} with {to}",
+          "REMOVED": "Removed {from}",
+          "ADDED": "Added {to}",
+          "MERGED": "Merged {from} into {to}"
+        },
+        "kindNames": {
+          "REPLACED": "replacing a page",
+          "REMOVED": "removing a page",
+          "ADDED": "adding a page",
+          "MERGED": "merging pages"
+        },
+        "empty": "No changes seen yet: Hakken logs each change it sees in your figures, with what followed."
+      },
+      "learnings": {
+        "intro": "What your changes teach: {learnings}",
+        "own": "From your own changes, {kind} kept the enquiries in {held} of {all}.",
+        "across": "Across {companies} businesses, it kept them in {held} of {all}.",
+        "none": "As changes are measured, Hakken says what each kind of fix has done for you, and how often it works for businesses like yours."
+      },
+      "search": "Search findings...",
+      "result": "Result",
+      "everyResult": "Every result",
+      "results": {
+        "DUE": "Due",
+        "RIGHT": "Proved right",
+        "WRONG": "Didn't hold",
+        "TOO_EARLY": "No clear change"
+      },
+      "findingsTitle": "Findings, due first",
+      "download": "Download CSV",
+      "columns": {
+        "finding": "Finding",
+        "acted": "Acted on",
+        "checkOn": "Check on",
+        "result": "Result"
+      },
+      "yes": "Yes",
+      "notYet": "Not yet",
+      "noMatch": "Nothing matches that search.",
+      "empty": "No findings yet."
     }
   }
 }

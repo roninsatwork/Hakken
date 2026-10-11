@@ -4,6 +4,7 @@
 detail-header
   back: All findings
   page-header: ‹the record's name›
+    primary-action: Add the steps to Hakken tasks
 settings-card: What Hakken sees
 figures
   figure: Conversions from Organic Search

@@ -1,0 +1,22 @@
+# Insights → Track record — the approved look (board "Track" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Track record
+settings-card: What Hakken sees
+figures
+  figure: Findings written
+  figure: Acted on
+  figure: Proved right
+  figure: Didn't hold
+search: Search changes...
+table: Change | Seen in | What followed | Result
+  table-bar: The change log
+    download: Download CSV
+  table-footer
+notice (info)
+search: Search findings...
+filter: Result
+table: Finding | Acted on | Check on | Result
+  table-bar: Findings, due first
+    download: Download CSV
+  table-footer

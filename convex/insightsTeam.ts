@@ -416,3 +416,99 @@ export const saveReport = internalMutation({
     return reportId;
   },
 });
+
+// ---------------------------------------------------------------------------
+// Keeping score and the change log (§2.7, I25, I30)
+
+/** A website's findings due to be checked by today, not yet checked. */
+export const dueFindings = internalQuery({
+  args: { holdId: v.id("companyWebsites"), today: v.string() },
+  returns: v.array(v.object({
+    findingId: v.id("insightFindings"),
+    specialist: v.string(),
+    watch: v.object({ key: v.string(), direction: v.union(v.literal("UP"), v.literal("DOWN")) }),
+    then: v.union(v.null(), factValidator),
+  })),
+  handler: async (ctx, args) => {
+    const due = await ctx.db.query("insightFindings").withIndex("by_check", (q) => q.eq("status", "PUBLISHED").lte("checkOn", args.today)).take(500);
+    return due
+      .filter((finding) => finding.companyWebsiteId === args.holdId && !finding.outcome && finding.watch)
+      .map((finding) => ({ findingId: finding._id, specialist: finding.specialist, watch: finding.watch!, then: finding.facts.find((fact) => fact.key === finding.watch!.key) ?? null }));
+  },
+});
+
+/** How each checked finding turned out, and the company's tally — kept after the findings go (I7). */
+export const scoreFindings = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    outcomes: v.array(v.object({ findingId: v.id("insightFindings"), specialist: v.string(), outcome: v.union(v.literal("RIGHT"), v.literal("WRONG"), v.literal("TOO_EARLY")), note: v.string() })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    for (const scored of args.outcomes) {
+      await ctx.db.patch(scored.findingId, { outcome: scored.outcome, outcomeNote: scored.note });
+      const tally = await ctx.db.query("insightTally").withIndex("by_company_specialist", (q) => q.eq("companyId", args.companyId).eq("specialist", scored.specialist)).first();
+      const add = { right: scored.outcome === "RIGHT" ? 1 : 0, wrong: scored.outcome === "WRONG" ? 1 : 0, unclear: scored.outcome === "TOO_EARLY" ? 1 : 0 };
+      if (tally) await ctx.db.patch(tally._id, { right: tally.right + add.right, wrong: tally.wrong + add.wrong, unclear: tally.unclear + add.unclear, updatedAt: now });
+      else await ctx.db.insert("insightTally", { companyId: args.companyId, specialist: scored.specialist, ...add, updatedAt: now });
+    }
+    return null;
+  },
+});
+
+const changeValidator = v.object({
+  kind: v.union(v.literal("REPLACED"), v.literal("MERGED"), v.literal("REMOVED"), v.literal("ADDED")),
+  from: v.union(v.string(), v.null()),
+  to: v.union(v.string(), v.null()),
+  before: v.number(),
+  after: v.number(),
+  result: v.union(v.literal("LOST"), v.literal("HELD"), v.literal("GREW")),
+});
+
+/**
+ * The changes seen this run, each logged once (I25), and the learning each
+ * adds across every company, from totals only (I30). Changes older than two
+ * years go with their findings.
+ */
+export const saveChanges = internalMutation({
+  args: { holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), changes: v.array(changeValidator), notRemoved: v.optional(v.array(v.string())) },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    let added = 0;
+    // A page logged as removed that had visits after all was never removed: it leaves the log.
+    for (const from of args.notRemoved ?? []) {
+      const wrong = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "REMOVED").eq("from", from)).first();
+      if (wrong) await ctx.db.delete(wrong._id);
+    }
+    for (const change of args.changes) {
+      // A page first seen removed and later found replaced is one change: the replacement.
+      if (change.kind === "REPLACED" || change.kind === "MERGED") {
+        const removed = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "REMOVED").eq("from", change.from)).first();
+        if (removed) await ctx.db.patch(removed._id, { kind: change.kind, to: change.to, before: change.before, after: change.after, result: change.result });
+      }
+      const held = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", change.kind).eq("from", change.from)).first();
+      if (held) {
+        // What followed, as it stands now.
+        if (held.after !== change.after || held.result !== change.result || held.to !== change.to) await ctx.db.patch(held._id, { to: change.to, after: change.after, result: change.result });
+        continue;
+      }
+      await ctx.db.insert("insightChanges", { ...change, companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, seenIn: "analytics", createdAt: now });
+      added += 1;
+      const learning = await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", change.kind)).first();
+      const count = { lost: change.result === "LOST" ? 1 : 0, held: change.result === "HELD" ? 1 : 0, grew: change.result === "GREW" ? 1 : 0 };
+      if (learning) {
+        await ctx.db.patch(learning._id, {
+          companies: learning.companies.includes(args.companyId) ? learning.companies : [...learning.companies, args.companyId],
+          lost: learning.lost + count.lost, held: learning.held + count.held, grew: learning.grew + count.grew, updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("insightLearnings", { kind: change.kind, companies: [args.companyId], ...count, updatedAt: now });
+      }
+    }
+    const expired = await ctx.db.query("insightChanges").withIndex("by_company_created", (q) => q.eq("companyId", args.companyId).lt("createdAt", now - KEPT_MS)).take(20);
+    for (const change of expired) await ctx.db.delete(change._id);
+    return added;
+  },
+});

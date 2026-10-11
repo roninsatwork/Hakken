@@ -16,6 +16,7 @@ import InsightsYourMonthPage from "./your-month/page";
 import InsightsReportsPage from "./reports/page";
 import InsightsStrategyPage from "./strategy/page";
 import InsightsServicePage from "./strategy/service/page";
+import InsightsTrackRecordPage from "./track-record/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -209,5 +210,21 @@ describe("Insights' looks", () => {
     await screen.findByText("ai agency");
     await expectApprovedLook(container, PLAN, "ServiceDetail", "Insights → A service");
     nav.search = "";
+  });
+
+  it("24 · Track record", async () => {
+    nav.pathname = "/app/insights/track-record";
+    answer({
+      "insightsReads:insightsHome": HOME,
+      "insightsReads:insightsTrackRecord": {
+        findings: [{ findingId: "finding_1", host: "ronins.co.uk", headline: FINDING_ROW.headline, week: "2026-10-05", checkOn: "2027-01-09", actedAt: null, outcome: null, outcomeNote: null }],
+        tally: { right: 0, wrong: 0, unclear: 0 },
+        changes: [{ changeId: "change_1", host: "ronins.co.uk", kind: "MERGED", from: "/blockchain-developers/", to: "/blockchain-development-company/", seenIn: "analytics", before: 12, after: 2, result: "LOST", week: "2026-10-05" }],
+        learnings: [{ kind: "MERGED", own: { lost: 1, held: 0, grew: 0 }, across: null }],
+      },
+    });
+    const { container } = render(<InsightsTrackRecordPage />);
+    await screen.findByText(/Merged \/blockchain-developers\//);
+    await expectApprovedLook(container, PLAN, "Track", "Insights → Track record");
   });
 });

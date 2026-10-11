@@ -332,6 +332,9 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   insightFindings: cleared("2 years", "insightsTeam/saveWeek"),
   insightWeeks: cleared("2 years", "insightsTeam/saveWeek"),
   insightReports: cleared("2 years", "insightsTeam/saveReport"),
+  insightChanges: cleared("2 years", "insightsTeam/saveChanges"),
+  insightTally: RECORD,
+  insightLearnings: RECORD,
 
   // ── Keyword research ──────────────────────────────────────────────────────
   keywordLookups: RECORD,

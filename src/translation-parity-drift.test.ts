@@ -71,6 +71,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['insights.words.sources.analytics', "Google's product name, the same in both languages"],
     ['insights.pdf.page', 'placeholders and a separator only: no words to translate'],
     ['insights.pdf.author', "the product's name"],
+    ['insights.track.changes.analytics', "Google's product name, the same in both languages"],
     ['insights.reports.report', '"Report" is the word Italian uses too'],
     ['admin.settings.appearance.sizes.standard', '"Standard" plus a CSS unit'],
     ['admin.settings.appearance.sizes.micro', '"Micro" is written the same way in Italian'],

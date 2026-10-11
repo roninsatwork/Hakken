@@ -30,6 +30,7 @@ import {
 } from "./utils/insightTeam";
 import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
+import { outcomeOf } from "./utils/insightTrack";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
@@ -165,6 +166,22 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     failed: false,
   });
 
+  // Keeping score (§2.7): each finding due today, its watched figure read again against what it was when written.
+  try {
+    const due = await ctx.runQuery(internal.insightsTeam.dueFindings, { holdId: args.holdId, today });
+    const outcomes = due.flatMap((finding) => {
+      const then = finding.then, current = facts.get(finding.watch.key);
+      if (!then || !current) return [];
+      const outcome = outcomeOf(then.value, current.value, finding.watch.direction, then.unit);
+      return [{ findingId: finding.findingId, specialist: finding.specialist, outcome, note: `${then.label}: ${formatFact(then)} then, ${formatFact(current)} now.` }];
+    });
+    if (outcomes.length > 0) await ctx.runMutation(internal.insightsTeam.scoreFindings, { companyId: args.companyId, outcomes });
+    // The change log (I25): the page changes the website's own figures show, each once, with what followed.
+    const { changes, notRemoved } = await ctx.runQuery(internal.insightsReading.pageChangesInternal, { holdId: args.holdId });
+    if (changes.length > 0 || notRemoved.length > 0) await ctx.runMutation(internal.insightsTeam.saveChanges, { holdId: args.holdId, companyId: args.companyId, week: weekOf(now), changes, notRemoved });
+  } catch (error) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Track record", detail: failureSummary(error), failed: true });
+  }
   // The enquiry check (I42): the specialists are told when the count may be wrong.
   const check = enquiryCheck(reading.facts);
   const caveat = enquiryCheckBrief(check);

@@ -472,3 +472,61 @@ export const insightsService = tenantQuery({
     return { host: newest.host, service, siteClicks: siteClicks > 0 ? siteClicks : null, searches };
   },
 });
+
+// ---------------------------------------------------------------------------
+// The Track record (§4.1, I25, I30; drawn as the Track board)
+
+/** Learnings across companies show once this many companies have made a change of that kind: none is ever shown another's figures. */
+const LIKE_YOURS = 5;
+
+export const insightsTrackRecord = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.object({
+    findings: v.array(v.object({ findingId: v.id("insightFindings"), host: v.string(), headline: v.string(), week: v.string(), checkOn: v.union(v.string(), v.null()), actedAt: v.union(v.number(), v.null()), outcome: v.union(v.string(), v.null()), outcomeNote: v.union(v.string(), v.null()) })),
+    tally: v.object({ right: v.number(), wrong: v.number(), unclear: v.number() }),
+    changes: v.array(v.object({ changeId: v.id("insightChanges"), host: v.string(), kind: v.string(), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), seenIn: v.string(), before: v.number(), after: v.number(), result: v.string(), week: v.string() })),
+    learnings: v.array(v.object({ kind: v.string(), own: v.object({ lost: v.number(), held: v.number(), grew: v.number() }), across: v.union(v.null(), v.object({ companies: v.number(), lost: v.number(), held: v.number(), grew: v.number() })) })),
+  }),
+  handler: async (ctx, args) => {
+    const sites = await sitesFor(ctx, args.siteId);
+    const hosts = new Map(sites.map((site) => [site.hold._id, site.host]));
+    const findings = [];
+    for (const site of sites) {
+      const rows = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", site.hold._id)).order("desc").take(500);
+      findings.push(...rows.filter((row) => row.status === "PUBLISHED").map((row) => ({
+        findingId: row._id, host: site.host, headline: row.headline, week: row.week, checkOn: row.checkOn ?? null, actedAt: row.actedAt ?? null, outcome: row.outcome ?? null, outcomeNote: row.outcomeNote ?? null,
+      })));
+    }
+    const tallies = ctx.companyId ? await ctx.db.query("insightTally").withIndex("by_company_specialist", (q) => q.eq("companyId", ctx.companyId!)).take(20) : [];
+    const changes = ctx.companyId ? (await ctx.db.query("insightChanges").withIndex("by_company_created", (q) => q.eq("companyId", ctx.companyId!)).order("desc").take(200)).filter((change) => hosts.has(change.companyWebsiteId)) : [];
+    const kinds = [...new Set(changes.map((change) => change.kind))];
+    const learnings = [];
+    for (const kind of kinds) {
+      const mine = changes.filter((change) => change.kind === kind);
+      const across = await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", kind)).first();
+      learnings.push({
+        kind,
+        own: { lost: mine.filter((change) => change.result === "LOST").length, held: mine.filter((change) => change.result === "HELD").length, grew: mine.filter((change) => change.result === "GREW").length },
+        across: across && across.companies.length >= LIKE_YOURS ? { companies: across.companies.length, lost: across.lost, held: across.held, grew: across.grew } : null,
+      });
+    }
+    return {
+      findings: findings.sort((a, b) => (a.checkOn ?? "9").localeCompare(b.checkOn ?? "9")),
+      tally: tallies.reduce((sum, row) => ({ right: sum.right + row.right, wrong: sum.wrong + row.wrong, unclear: sum.unclear + row.unclear }), { right: 0, wrong: 0, unclear: 0 }),
+      changes: changes.map((change) => ({ changeId: change._id, host: hosts.get(change.companyWebsiteId) ?? "", kind: change.kind, from: change.from, to: change.to, seenIn: change.seenIn, before: change.before, after: change.after, result: change.result, week: change.week })),
+      learnings,
+    };
+  },
+});
+
+/** A finding's steps taken on (Add the steps to Hakken tasks): the Track record's "acted on". Any member of the company. */
+export const markInsightFindingActed = tenantMutation({
+  args: { findingId: v.id("insightFindings") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const finding = await ctx.db.get(args.findingId);
+    if (!finding || finding.companyId !== ctx.companyId || finding.actedAt) return null;
+    await ctx.db.patch(finding._id, { actedAt: Date.now() });
+    return null;
+  },
+});

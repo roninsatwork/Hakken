@@ -22,6 +22,7 @@ import { unpackColumn } from "./utils/packedColumns";
 import { factKey, factValidator, percentOf, shiftDay, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
+import { pageChanges, type PageYear } from "./utils/insightTrack";
 
 /**
  * Insights' reading layer (docs/plans/active/insights-analyst-plan.md §2,
@@ -616,5 +617,35 @@ export const strategyInternal = internalQuery({
       ...(beforeHeld ? {} : { clicksBefore: null, impressionsBefore: null }),
     }));
     return rankedServices(services);
+  },
+});
+
+/**
+ * The page changes for the change log (I25), from the whole landing page lists
+ * of the last 12 months and the 12 before (`utils/insightTrack.ts`), and the
+ * pages logged as removed that had visits after all — dropped from the log.
+ */
+export const pageChangesInternal = internalQuery({
+  args: holdArgs,
+  returns: v.object({
+    changes: v.array(v.object({ kind: v.union(v.literal("REPLACED"), v.literal("MERGED"), v.literal("REMOVED"), v.literal("ADDED")), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), before: v.number(), after: v.number(), result: v.union(v.literal("LOST"), v.literal("HELD"), v.literal("GREW")) })),
+    notRemoved: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    const connection = hold ? await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first() : null;
+    if (!hold || !connection?.property) return { changes: [], notRemoved: [] };
+    const counted = countedOf(connection);
+    const yearOf = async (which: "NOW" | "YEAR"): Promise<PageYear[] | null> => {
+      const landing = await readSlot(ctx, hold._id, slotKey("landing", "365", which, EVERY_DEVICE));
+      if (!landing) return null;
+      const addresses = await decodePages(ctx, hold._id, landing.rows.map((row) => row.key));
+      return landing.rows.map((row, index) => ({ path: pathOf(addresses[index]), visits: row.visits, enquiries: conversionsOf(row, counted).conversions }));
+    };
+    const [now, year] = [await yearOf("NOW"), await yearOf("YEAR")];
+    if (!now || !year) return { changes: [], notRemoved: [] };
+    const live = new Set(now.filter((page) => page.visits > 0).map((page) => page.path));
+    const removed = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id).eq("kind", "REMOVED")).take(200);
+    return { changes: pageChanges(now, year), notRemoved: removed.map((change) => change.from).filter((from): from is string => from !== null && live.has(from)) };
   },
 });

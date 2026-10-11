@@ -62,6 +62,8 @@ export const insightsTables = {
     checkOn: v.optional(v.string()),
     outcome: v.optional(insightOutcomeValidator),
     outcomeNote: v.optional(v.string()),
+    /** When someone at the company took its steps on (Add the steps to Hakken tasks): the Track record's "acted on". */
+    actedAt: v.optional(v.number()),
     /** Why the Editor sent it back, or what it changed. */
     editorNote: v.optional(v.string()),
     createdAt: v.number(),
@@ -94,6 +96,56 @@ export const insightsTables = {
     .index("by_hold_week", ["companyWebsiteId", "week"])
     .index("by_company_week", ["companyId", "week"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * The change log (I25): each change Hakken sees on a website — a page
+   * replaced or removed, read from its own Analytics — with what followed,
+   * once a change, kept with its findings' two years.
+   */
+  insightChanges: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    /** The week it was first seen in. */
+    week: v.string(),
+    kind: v.union(v.literal("REPLACED"), v.literal("MERGED"), v.literal("REMOVED"), v.literal("ADDED")),
+    from: v.union(v.string(), v.null()),
+    to: v.union(v.string(), v.null()),
+    seenIn: v.string(),
+    before: v.number(),
+    after: v.number(),
+    result: v.union(v.literal("LOST"), v.literal("HELD"), v.literal("GREW")),
+    createdAt: v.number(),
+  })
+    .index("by_hold_kind_from", ["companyWebsiteId", "kind", "from"])
+    .index("by_company_created", ["companyId", "createdAt"]),
+
+  /**
+   * How findings turned out, counted (§2.7, I7): kept after the findings
+   * themselves go, so the Track record's tally outlives its two years.
+   * One row a company and specialist.
+   */
+  insightTally: defineTable({
+    companyId: v.id("companies"),
+    specialist: v.string(),
+    right: v.number(),
+    wrong: v.number(),
+    unclear: v.number(),
+    updatedAt: v.number(),
+  }).index("by_company_specialist", ["companyId", "specialist"]),
+
+  /**
+   * Learnings across every company (I30), from totals only: each kind of
+   * change and how often it held, so a specialist can say "this fix worked
+   * on 7 of 10 websites like yours". No company's figures are kept here.
+   */
+  insightLearnings: defineTable({
+    kind: v.string(),
+    companies: v.array(v.id("companies")),
+    lost: v.number(),
+    held: v.number(),
+    grew: v.number(),
+    updatedAt: v.number(),
+  }).index("by_kind", ["kind"]),
 
   /**
    * The reports Hakken writes, frozen as written (§4.1, §4.2, I6): the weekly

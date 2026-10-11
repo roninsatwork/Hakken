@@ -17903,7 +17903,9 @@
         "empty": "Per questo risultato non è stato escluso nulla."
       },
       "download": "Scarica CSV",
-      "howWeKnow": "Come lo sapremo: Hakken ricontrolla il {day}. {how} Il risultato va nel tuo storico in ogni caso."
+      "howWeKnow": "Come lo sapremo: Hakken ricontrolla il {day}. {how} Il risultato va nel tuo storico in ogni caso.",
+      "taskAsk": "Imposta delle attività Hakken per {host}: {action} Poi tienilo d'occhio: {how} Dimmi com'è andata entro il {day}.",
+      "toTasks": "Aggiungi i passi alle attività Hakken"
     },
     "summary": {
       "title": "Sintesi per la direzione",
@@ -18205,6 +18207,81 @@
         "enquiries": "Richieste",
         "per": "Per una richiesta"
       }
+    },
+    "track": {
+      "title": "Storico",
+      "description": "Ogni risultato che Hakken ha scritto, se hai agito e se si è rivelato giusto, verificato nella data che ognuno indica.",
+      "sees": {
+        "checked": "Dei {checked} risultati verificati finora, {right} si sono rivelati giusti e {wrong} non hanno tenuto.",
+        "none": "Hakken ha scritto {written} risultati e nessuno è ancora da verificare: le prime verifiche sono il {day}, e questa pagina si riempie man mano.",
+        "act": "Agisci su un risultato perché se ne possa misurare l'esito."
+      },
+      "seeFinding": "Vedi il risultato",
+      "figures": {
+        "written": "Risultati scritti",
+        "writtenDetail": "conservati per due anni",
+        "acted": "Su cui hai agito",
+        "of": "su {all}",
+        "right": "Giusti",
+        "firstDue": "primi esiti il {day}",
+        "wrong": "Non hanno tenuto",
+        "wrongDetail": "mostrati anche qui"
+      },
+      "changes": {
+        "title": "Il registro delle modifiche",
+        "search": "Cerca modifiche...",
+        "change": "Modifica",
+        "seenIn": "Visto in",
+        "analytics": "Google Analytics",
+        "followed": "Cosa è seguito",
+        "followedWords": "Richieste: {before} in un anno, poi {after}",
+        "result": "Esito",
+        "results": {
+          "GREW": "Cresciuto",
+          "HELD": "Mantenuto",
+          "LOST": "Perso"
+        },
+        "kinds": {
+          "REPLACED": "Sostituita {from} con {to}",
+          "REMOVED": "Rimossa {from}",
+          "ADDED": "Aggiunta {to}",
+          "MERGED": "Unita {from} a {to}"
+        },
+        "kindNames": {
+          "REPLACED": "sostituire una pagina",
+          "REMOVED": "rimuovere una pagina",
+          "ADDED": "aggiungere una pagina",
+          "MERGED": "unire pagine"
+        },
+        "empty": "Ancora nessuna modifica vista: Hakken registra ogni modifica che vede nei tuoi dati, con cosa è seguito."
+      },
+      "learnings": {
+        "intro": "Cosa insegnano le tue modifiche: {learnings}",
+        "own": "Dalle tue modifiche, {kind} ha mantenuto le richieste in {held} casi su {all}.",
+        "across": "Su {companies} aziende, le ha mantenute in {held} casi su {all}.",
+        "none": "Man mano che le modifiche vengono misurate, Hakken dice cosa ha fatto ogni tipo di intervento per te, e quanto spesso funziona per aziende come la tua."
+      },
+      "search": "Cerca risultati...",
+      "result": "Esito",
+      "everyResult": "Tutti gli esiti",
+      "results": {
+        "DUE": "Da verificare",
+        "RIGHT": "Giusto",
+        "WRONG": "Non ha tenuto",
+        "TOO_EARLY": "Nessun cambiamento chiaro"
+      },
+      "findingsTitle": "Risultati, prima quelli in scadenza",
+      "download": "Scarica CSV",
+      "columns": {
+        "finding": "Risultato",
+        "acted": "Agito",
+        "checkOn": "Verifica il",
+        "result": "Esito"
+      },
+      "yes": "Sì",
+      "notYet": "Non ancora",
+      "noMatch": "Nulla corrisponde alla ricerca.",
+      "empty": "Ancora nessun risultato."
     }
   }
 }
