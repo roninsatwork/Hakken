@@ -5,6 +5,12 @@ page-header: Pages
 settings-card: What Hakken sees
 choice: Kind of result: Web | Video | News | Discover | Google News
 figures
+  figure: Clicks in your home country
+  figure: Tied to a page
+  figure: Not tied to a page
+  figure: Clicks worldwide
+notice (info)
+figures
   figure: Clicks
   figure: Impressions
   figure: Click-through rate

@@ -14938,6 +14938,18 @@
         "connect": "Connect Search Console for {text}.",
         "oneWebsite": "{text} brought {a} clicks in the last 30 days."
       }
+    },
+    "pageGap": {
+      "homeCountry": "your home country",
+      "total": "Clicks in {place}",
+      "totalDetail": "last {days} days, every search",
+      "tied": "Tied to a page",
+      "tiedDetail": "{share}%: the pages below add up to this",
+      "untied": "Not tied to a page",
+      "untiedDetail": "searches Google keeps private",
+      "worldwide": "Clicks worldwide",
+      "worldwideDetail": "from the country list",
+      "why": "Google ties only part of your clicks in {place} to a page: the rest come from searches it keeps private. So the pages below add up to the clicks tied to a page, not to every click."
     }
   },
   "googleAnalytics": {

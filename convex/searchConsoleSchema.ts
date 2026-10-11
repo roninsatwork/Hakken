@@ -126,7 +126,7 @@ export const SEARCH_CONSOLE_PERIODS = ["7", "30", "90", "365"] as const;
 /**
  * Fan-out's own periods (§15, decision 4): its "Days of Search Console
  * averaged" setting offers 14 and 28 days, so each is kept ready too — the
- * web keyword list for all countries only, with no period before.
+ * web keyword list for the main home country only, with no period before.
  */
 export const FAN_OUT_PERIODS = ["14", "28"] as const;
 /**
@@ -280,7 +280,7 @@ export const searchConsoleTables = {
   /** A day's totals, rare searches Google hides included. */
   searchConsoleDays: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means the website's main home country (the connection's `mainCountry`): every ask but the country list is filtered to it (search-console-home-countries-plan.md; insights-analyst-plan.md §7, S1). */
     country: v.optional(v.string()),
     searchType: searchTypeValidator,
     day: v.string(),
@@ -302,7 +302,7 @@ export const searchConsoleTables = {
    */
   searchConsoleLists: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means the website's main home country (the connection's `mainCountry`): every ask but the country list is filtered to it (search-console-home-countries-plan.md; insights-analyst-plan.md §7, S1). */
     country: v.optional(v.string()),
     searchType: searchTypeValidator,
     list: listValidator,
@@ -351,8 +351,8 @@ export const searchConsoleTables = {
 
   /**
    * Each keyword the daily lines hold, once a month (keep-less-history-plan.md,
-   * part 8.3; `searchConsoleKeywordBooks.ts`): all countries' book and each
-   * country kept ready's, in records of 4,000 — a keyword's place is its record
+   * part 8.3; `searchConsoleKeywordBooks.ts`): the main home country's book and
+   * each other country kept ready's, in records of 4,000 — a keyword's place is its record
    * times 4,000 plus its place in the record. Cleared with its month's lines.
    */
   searchConsoleKeywordBooks: defineTable({
@@ -375,7 +375,7 @@ export const searchConsoleTables = {
    */
   searchConsolePeriods: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means the website's main home country (the connection's `mainCountry`): every ask but the country list is filtered to it (search-console-home-countries-plan.md; insights-analyst-plan.md §7, S1). */
     country: v.optional(v.string()),
     searchType: searchTypeValidator,
     list: periodListValidator,
@@ -434,7 +434,7 @@ export const searchConsoleTables = {
    */
   searchConsoleWeeks: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means the website's main home country (the connection's `mainCountry`): every ask but the country list is filtered to it (search-console-home-countries-plan.md; insights-analyst-plan.md §7, S1). */
     country: v.optional(v.string()),
     searchType: searchTypeValidator,
     /**
@@ -472,7 +472,7 @@ export const searchConsoleTables = {
   /** When each search and each page was first and last shown, for New and lost (plan §14.3, item 6), for each kind of result. */
   searchConsoleSeen: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means the website's main home country (the connection's `mainCountry`): every ask but the country list is filtered to it (search-console-home-countries-plan.md; insights-analyst-plan.md §7, S1). */
     country: v.optional(v.string()),
     /** The kind of result (`seenType`): missing means web results, as every row held before 2026-10-03 (drift fixes: web had been the only one). */
     searchType: v.optional(searchTypeValidator),
@@ -494,7 +494,7 @@ export const searchConsoleTables = {
    */
   searchConsoleSeenDays: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    /** One country's, as the register's; missing means all countries (§16). */
+    /** One country's, as the register's; missing means the website's main home country (`mainCountry`). */
     country: v.optional(v.string()),
     /** As the register's (`seenType`): missing means web results. */
     searchType: v.optional(searchTypeValidator),

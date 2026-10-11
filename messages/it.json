@@ -14938,6 +14938,18 @@
         "connect": "Collega Search Console per {text}.",
         "oneWebsite": "{text} ha portato {a} clic negli ultimi 30 giorni."
       }
+    },
+    "pageGap": {
+      "homeCountry": "il tuo paese principale",
+      "total": "Clic in {place}",
+      "totalDetail": "ultimi {days} giorni, ogni ricerca",
+      "tied": "Legati a una pagina",
+      "tiedDetail": "{share}%: le pagine qui sotto sommano a questo",
+      "untied": "Non legati a una pagina",
+      "untiedDetail": "ricerche che Google tiene private",
+      "worldwide": "Clic in tutto il mondo",
+      "worldwideDetail": "dall'elenco dei paesi",
+      "why": "Google lega a una pagina solo una parte dei tuoi clic in {place}: il resto viene da ricerche che tiene private. Per questo le pagine qui sotto sommano ai clic legati a una pagina, non a tutti i clic."
     }
   },
   "googleAnalytics": {
