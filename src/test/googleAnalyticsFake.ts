@@ -30,6 +30,8 @@ export type Visit = {
   title?: string;
   /** The page viewed just before (`pageReferrer`): none unless a test says otherwise. */
   referrer?: string;
+  /** A shop's products on the line (§18.6.6): each looked at, added to the basket, bought, and its revenue. */
+  items?: Array<{ name: string; category: string; viewed: number; added: number; bought: number; revenue: number }>;
   /** Who the visitors were (§18.6.6): new, on Chrome and Windows, their age, gender and interests unknown, unless a test says otherwise. */
   visitor?: "new" | "returning";
   browser?: string;
@@ -119,6 +121,21 @@ export function fakeGoogle(visits: Visit[]): Google {
       const { startDate, endDate } = ask.dateRanges[0];
       const names = ask.dimensions.map((dimension) => dimension.name);
       const metrics = ask.metrics.map((metric) => metric.name);
+      // A product list (§18.6.6): each product of each line, by its own name and category, never mixed with visits.
+      if (metrics.includes("itemsViewed")) {
+        const items = new Map<string, { keys: string[]; values: number[] }>();
+        for (const visit of google.visits) {
+          if (visit.date < ask.dateRanges[0].startDate || visit.date > ask.dateRanges[0].endDate || !passes(visit, ask.dimensionFilter)) continue;
+          for (const item of visit.items ?? []) {
+            const keys = ask.dimensions.map(({ name }) => (name === "itemName" ? item.name : name === "itemCategory" ? item.category : FIELD[name](visit)));
+            const sum = items.get(keys.join("|")) ?? { keys, values: [0, 0, 0, 0] };
+            [item.viewed, item.added, item.bought, item.revenue].forEach((value, at) => (sum.values[at] += value));
+            items.set(keys.join("|"), sum);
+          }
+        }
+        const rows = [...items.values()].map((sum) => ({ dimensionValues: sum.keys.map((value) => ({ value })), metricValues: sum.values.map((value) => ({ value: String(value) })) }));
+        return Response.json({ rows, rowCount: rows.length, metadata: {} });
+      }
       // Every event, as Events asks (§18.6.5): times, people and visits — a line's page views and visit starts among them.
       const everyEvent = metrics.includes("eventCount");
       const byEvent = names.includes("eventName") || everyEvent;

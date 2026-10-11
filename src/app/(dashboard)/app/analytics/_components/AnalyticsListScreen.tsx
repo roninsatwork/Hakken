@@ -27,7 +27,7 @@ import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader
 export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
 /** The lists asked of Google for one device when a screen opens (`googleAnalyticsRows.LiveList`). */
 type LiveList = "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"
-  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries";
+  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries" | "product" | "productSeries";
 export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
 /** Visitors' lists (§18.2 board 15). */

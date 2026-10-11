@@ -20,10 +20,13 @@ import {
   KEPT_BY_DEVICE,
   LIST_DIMENSIONS,
   MAIN_METRICS,
+  ITEM_METRICS,
+  SHOP_STEPS,
   VISITOR_LISTS,
   fingerprint,
   groupKeys,
   isEventList,
+  isItemList,
   joinAsks,
   packList,
   pageAddress,
@@ -133,29 +136,40 @@ const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landi
 /** The lists kept as each period a day for its chart, every device: each event, each campaign, new and returning people. */
 const DAY_LISTS: readonly AnalyticsList[] = ["eventSeries", "campaignSeries", "visitorSeries"];
 
+/** A shop's own lists (§18.6.6): each product, with the span before, and the products bought a day. */
+const SHOP_LISTS: readonly AnalyticsList[] = ["product"];
+const SHOP_DAY_LISTS: readonly AnalyticsList[] = ["productSeries"];
+
 /**
  * The ready-made lists a run asks for: the 7 and 30 days every run, and the
  * 90 days and 12 months once a week (§4.1) — with their long charts. The
  * same span a year before is asked for the long periods (§10, Q2); for the
  * short ones it waits for the "Compare with" choice to be drawn (§4.1).
  */
-export function dueJobs(connection: Pick<Doc<"googleAnalyticsConnections">, "weeklyPeriodsAt">, now: number, others: readonly string[] = []): PeriodJob[] {
+export function dueJobs(
+  connection: Pick<Doc<"googleAnalyticsConnections">, "weeklyPeriodsAt" | "shop">,
+  now: number,
+  others: readonly string[] = [],
+): PeriodJob[] {
   const jobs: PeriodJob[] = [];
   const weekly = connection.weeklyPeriodsAt === undefined || now - connection.weeklyPeriodsAt >= WEEK_MS;
+  // A shop's products beside the rest (§18.6.6): never asked of a website that sells nothing.
+  const lists = connection.shop ? [...PAGE_LISTS, ...SHOP_LISTS] : PAGE_LISTS;
+  const dayLists = connection.shop ? [...DAY_LISTS, ...SHOP_DAY_LISTS] : DAY_LISTS;
   for (const country of [undefined, ...others]) {
     const of = country ? { country } : {};
     for (const period of ["7", "30"] as const) {
-      for (const which of ["NOW", "BEFORE"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
+      for (const which of ["NOW", "BEFORE"] as const) for (const list of lists) jobs.push({ list, period, which, ...of });
       // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
       if (country) jobs.push({ list: "series", period, which: "NOW", ...of });
       // Each event and each campaign a day keep no days of their own: ready-made for every period's chart (§18.6.5, §18.6.6).
-      for (const list of DAY_LISTS) jobs.push({ list, period, which: "NOW", ...of });
+      for (const list of dayLists) jobs.push({ list, period, which: "NOW", ...of });
     }
     if (weekly) {
       for (const period of ["90", "365"] as const) {
-        for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
+        for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of lists) jobs.push({ list, period, which, ...of });
         jobs.push({ list: "series", period, which: "NOW", ...of });
-        for (const list of DAY_LISTS) jobs.push({ list, period, which: "NOW", ...of });
+        for (const list of dayLists) jobs.push({ list, period, which: "NOW", ...of });
       }
     }
   }
@@ -190,6 +204,8 @@ export type CollectTarget = {
    * round's figures are collected, and a new one at once.
    */
   untitled: boolean;
+  /** A shop (§18.6.6): its products are asked beside the other lists. */
+  shop: boolean;
   /**
    * No list of every event, campaign or visitor kept yet (§18.6.5, §18.6.6)
    * — the interests came last, so their list says for all: the weekly lists
@@ -227,9 +243,11 @@ export const collectTarget = internalQuery({
       country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
       others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
+      shop: connection.shop === true,
+      // A shop's first products are asked at once too, as every new list was.
       eventless: (await ctx.db
         .query("googleAnalyticsPeriodSlots")
-        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("interest", "365", "NOW", "")))
+        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey(connection.shop ? "product" : "interest", "365", "NOW", "")))
         .first()) === null,
     };
   },
@@ -320,11 +338,12 @@ export async function askList(
     ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } }
       : only.pagePath !== undefined ? { only: { dimension: "pagePath", values: only.pagePath } } : {}),
   };
-  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...(isEventList(list) ? EVENT_LIST_METRICS : MAIN_METRICS)] });
+  const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
+  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...metrics] });
   if (!main.ok) return main;
   let events: ({ ok: true } & Report) | null = null;
-  // An event list counts every event itself: no key events to join (§18.6.5).
-  if (target.events.length > 0 && !isEventList(list)) {
+  // An event list counts every event itself, and a product list cannot be split by event: no key events to join (§18.6.5, §18.6.6).
+  if (target.events.length > 0 && !isEventList(list) && !isItemList(list)) {
     const answer = await ask(session, target.property!, {
       ...base,
       dimensions: [...dimensions, "eventName"],
@@ -385,6 +404,7 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
     }
     for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) held[field] += row[field];
     if (row.times !== undefined) held.times = (held.times ?? 0) + row.times;
+    if (row.basket !== undefined) held.basket = (held.basket ?? 0) + row.basket;
     for (const [event, count] of row.counts) held.counts.set(event, (held.counts.get(event) ?? 0) + count);
     for (const [event, value] of row.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
   });
@@ -650,6 +670,11 @@ export async function collectPeriod(
   if (!asked.ok) return failed(session, asked);
   const devices = new Map<string, ListRow[]>();
   for (const [group, rows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, rows);
+  // A shop is one with any of its four steps in the last 90 days (§18.6.6): noted each time those events are read.
+  if (job.list === "event" && job.period === "90" && job.which === "NOW" && !job.country) {
+    const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
+    if (shop !== target.shop) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
+  }
   // People cannot be added up across devices (§18.6.2): the website's totals for every device are asked whole.
   if (job.list === "total" && lead.length > 0) {
     const whole = await askList(session, asking, "total", [], range);
@@ -682,6 +707,18 @@ export async function collectPeriod(
   }
   return { ok: true, rows, requests: session.requests };
 }
+
+/** Whether the website is a shop, as its last 90 days' events say (§18.6.6). */
+export const noteShop = internalMutation({
+  args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), shop: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.property !== args.property) return null;
+    await ctx.db.patch(connection._id, { shop: args.shop || undefined, updatedAt: Date.now() });
+    return null;
+  },
+});
 
 /** The run's last word on the connection: when it was collected, and the weekly lists when they were asked. */
 export const finishCollection = internalMutation({

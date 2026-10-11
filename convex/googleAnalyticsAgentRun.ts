@@ -304,7 +304,7 @@ export const collectSiteStep = internalAction({
       let weekly = args.weekly;
       let jobAt = args.jobAt;
       let rows = args.rows;
-      let jobs: PeriodJob[] = to === null ? jobsFor(weekly, target.others) : [];
+      let jobs: PeriodJob[] = to === null ? jobsFor(weekly, target.others, target.shop) : [];
       const stop = async (result: Extract<StepResult, { ok: false }>) => {
         if (result.access) {
           await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "NO_ACCESS" });
@@ -336,7 +336,7 @@ export const collectSiteStep = internalAction({
           to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
           if (to === null) {
             weekly = target.untitled || target.eventless || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
-            jobs = jobsFor(weekly, target.others);
+            jobs = jobsFor(weekly, target.others, target.shop);
           }
           continue;
         }
@@ -399,6 +399,6 @@ export const collectSiteStep = internalAction({
 });
 
 /** The ready-made lists a run asks, in order — the main home country's, then each other's: the same every step of the run. */
-function jobsFor(weekly: boolean, others: readonly string[]): PeriodJob[] {
-  return dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now() }, Date.now(), others);
+function jobsFor(weekly: boolean, others: readonly string[], shop: boolean): PeriodJob[] {
+  return dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others);
 }

@@ -680,6 +680,8 @@ export const statusConnectionValidator = v.object({
   attempt: v.union(v.null(), v.object({ outcome: analyticsAttemptValidator, account: orNull(v.string()), at: v.number() })),
   /** The tracking health checks' last results (§6). */
   health: v.union(v.null(), v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
+  /** A shop, as its last 90 days' events say: the Products page shows only for one (§18.6.6). */
+  shop: v.boolean(),
 });
 
 /**
@@ -761,6 +763,7 @@ async function asStatus(
     connectedAt: connection.connectedAt ?? null,
     disconnectedAt: connection.disconnectedAt ?? null,
     newestDay: connection.newestDay ?? null,
+    shop: connection.shop === true,
     oldestDay: connection.oldestDay ?? null,
     historyDone: connection.backfilledAt !== undefined,
     clearing: connection.clearing === true,

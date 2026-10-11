@@ -9853,6 +9853,7 @@
       "systems": "{count, plural, =1 {# operating system} other {# operating systems}}",
       "ageGroups": "{count, plural, =1 {# age group} other {# age groups}}",
       "interests": "{count, plural, =1 {# interest} other {# interests}}",
+      "products": "{count, plural, =1 {# product} other {# products}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
@@ -14954,6 +14955,7 @@
       "allPages": "All pages",
       "events": "Events",
       "conversions": "Conversions",
+      "products": "Products",
       "visitors": "Visitors",
       "trackingHealth": "Tracking health",
       "connection": "Connection"
@@ -15841,6 +15843,54 @@
       "channelsTitle": "Channels that brought them",
       "channelsDescription": "Where each of those visits came from."
     },
+    "products": {
+      "title": "Products",
+      "description": "What each product sold, and how far shoppers got with it: looked, added it to the basket, started checkout, bought.",
+      "notAShop": "Products shows for a website that sells online. Google Analytics has recorded no products looked at, added to a basket or bought on {host} in the last 90 days, so there's nothing to show here.",
+      "preparing": "The products come in with the next collection, within a day.",
+      "steps": {
+        "looked": "Looked at a product",
+        "basket": "Added to the basket",
+        "checkout": "Started checkout",
+        "bought": "Bought"
+      },
+      "ofLooks": "{rate} of looks",
+      "ofBaskets": "{rate} of baskets",
+      "ofCheckouts": "{rate} of checkouts · {revenue}",
+      "stepsTitle": "The shop's steps",
+      "stepsHint": "How far shoppers got, {period}.",
+      "times": "Times",
+      "bought": "Bought",
+      "chartTitle": {
+        "day": "Products bought a day",
+        "week": "Products bought a week",
+        "month": "Products bought a month"
+      },
+      "chartHint": "{period}.",
+      "findProduct": "Find a product…",
+      "categoryFilter": "Category",
+      "everyCategory": "Every category",
+      "columns": {
+        "product": "Product",
+        "looks": "Looks",
+        "basket": "Basket",
+        "bought": "Bought",
+        "revenue": "Revenue",
+        "change": "Change",
+        "changeTitle": "Revenue against the span before"
+      },
+      "csv": {
+        "category": "Category",
+        "revenue": "Revenue ({currency})",
+        "change": "Change in revenue (%)"
+      },
+      "asking": "Asking Google…",
+      "empty": "No products in these dates.",
+      "noMatch": "Nothing matches that search.",
+      "download": "Download CSV",
+      "downloading": "Downloading…",
+      "downloadFailed": "The products couldn't be downloaded just now. Try again in a moment."
+    },
     "visitors": {
       "title": "Visitors",
       "description": "Who visited: how many people, whether they'd been before, what they used, and their age, gender and interests where Google can tell.",
@@ -16236,6 +16286,16 @@
         "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
         "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
       },
+      "products": {
+        "none": "No products were looked at or bought in these dates.",
+        "looksToBasket": "Shoppers looked at products {a} times but added one to the basket only {b} times, {cRate}.",
+        "fewFinished": "Only {aRate} of the {b} checkouts started were finished.",
+        "finished": "{aRate} of the {b} checkouts started were finished.",
+        "stuck": "{text} was looked at {a} times and bought {countB, plural, =0 {never} =1 {once} other {# times}}.",
+        "bestSeller": "{text} sells best: {aMoney}.",
+        "seeProduct": "Look at the page for {text}: many looks, almost no sales.",
+        "whyUnfinished": "Find out why so many checkouts aren't finished: try one yourself, on a phone too."
+      },
       "visitors": {
         "none": "No visits in these dates.",
         "people": "{a} people made the {b} visits; {cRate} were new to the website.",
@@ -16328,7 +16388,8 @@
         "linksClicked": "Links clicked",
         "wordsSearched": "Words searched",
         "allPages": "All pages",
-        "events": "Events"
+        "events": "Events",
+        "checkoutEvent": "Started checkout"
       }
     }
   },

@@ -82,11 +82,14 @@ export const countedEventValidator = v.object({
  * campaign's visits a day, for Campaigns (GA28, §18.6.6): every device.
  * Visitors' lists — new or returning, browsers, operating systems, age,
  * gender and interests — and new and returning people a day (`visitorSeries`)
- * for Visitors (GA24, §18.6.6): every device.
+ * for Visitors (GA24, §18.6.6): every device. A shop's `product` list — each
+ * product's looks, baskets, sales and revenue — and `productSeries`, the
+ * products bought a day, for Products (GA34, §18.6.6): every device, only for
+ * a website that is a shop.
  */
 export const ANALYTICS_LISTS = [
   "total", "channel", "landing", "page", "series", "event", "eventSeries", "campaign", "adKeyword", "campaignSeries",
-  "visitorType", "browser", "system", "age", "gender", "interest", "visitorSeries",
+  "visitorType", "browser", "system", "age", "gender", "interest", "visitorSeries", "product", "productSeries",
 ] as const;
 export type AnalyticsList = (typeof ANALYTICS_LISTS)[number];
 export const analyticsListValidator = v.union(
@@ -107,6 +110,8 @@ export const analyticsListValidator = v.union(
   v.literal("gender"),
   v.literal("interest"),
   v.literal("visitorSeries"),
+  v.literal("product"),
+  v.literal("productSeries"),
 );
 
 /** The ready-made periods (§4.3): days, ending on the newest day held. */
@@ -143,6 +148,8 @@ export const analyticsPackedRows = {
   length: v.optional(v.string()),
   /** An event's times (`eventCount`): only an event list's parts (§18.6.5). */
   times: v.optional(v.string()),
+  /** A product's adds to the basket (`itemsAddedToCart`): only a product list's parts (§18.6.6). */
+  basket: v.optional(v.string()),
   events: v.array(v.string()),
   /** One packed column per event in `events`. */
   counts: v.array(v.string()),
@@ -220,6 +227,12 @@ export const googleAnalyticsTables = {
      * collected again (google-analytics-plan.md §18.6.1).
      */
     mainCountry: v.optional(v.string()),
+    /**
+     * A shop: a product looked at, added to a basket, checked out or bought in
+     * the last 90 days, noted by the collector each time it reads the 90 days'
+     * events; the Products page and its lists are only for a shop (§18.6.6).
+     */
+    shop: v.optional(v.boolean()),
     clearing: v.optional(v.boolean()),
     connectedBy: v.optional(v.id("users")),
     connectedAt: v.optional(v.number()),

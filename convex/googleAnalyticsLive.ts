@@ -8,12 +8,12 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { appError } from "./utils/appError";
 import { ask, askFunnel, askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
-import { beforeKey, emptyRow, packList, pageAddress, type ListRow } from "./googleAnalyticsLists";
+import { LIVE_PARTS, beforeKey, emptyRow, packList, pageAddress, type ListRow } from "./googleAnalyticsLists";
 import { encodePagesFromAction } from "./holdPageRefs";
 import { shiftDay } from "./searchConsoleDays";
 import { EVENT_DETAIL } from "./utils/analyticsEvents";
 import { analyticsPackedRows, analyticsPeriodValidator, type AnalyticsList } from "./googleAnalyticsSchema";
-import { liveAsk } from "./googleAnalyticsReads";
+import { liveAsk } from "./googleAnalyticsRows";
 import { DAY_JOIN, channelSeriesAsk } from "./googleAnalyticsChartReads";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { countryIdOf } from "./googleAnalyticsCollect";
@@ -63,6 +63,7 @@ export const liveTarget = internalQuery({
       country: countryIdOf(country || mainConsoleCountry(hold)),
       others: [],
       untitled: false,
+      shop: connection.shop === true,
       eventless: false,
     };
     // What counts as a conversion: an event's screen asks who converted after it (§18.6.5).
@@ -73,8 +74,6 @@ export const liveTarget = internalQuery({
 
 const packedPartValidator = v.object(analyticsPackedRows);
 
-/** A live list's parts: 2,000 rows each, as many as Google gives in one list. */
-export const LIVE_PARTS = 200;
 
 /** A live list, written whole: what was asked under the same name before goes. */
 export const putLive = internalMutation({
@@ -142,7 +141,7 @@ export const askGoogleAnalyticsLive = tenantAction({
       v.literal("landing"), v.literal("page"), v.literal("event"), v.literal("eventSeries"),
       v.literal("campaign"), v.literal("adKeyword"), v.literal("campaignSeries"),
       v.literal("visitorType"), v.literal("browser"), v.literal("system"), v.literal("age"), v.literal("gender"), v.literal("interest"),
-      v.literal("visitorSeries"),
+      v.literal("visitorSeries"), v.literal("product"), v.literal("productSeries"),
     )),
     /** Channels' chart, each channel a day, for dates or a country that keep no channel days (GA35). */
     chart: v.optional(v.literal("channel")),

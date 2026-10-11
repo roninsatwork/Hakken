@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SectionMenu } from "../../_components/SectionMenu";
-import { ANALYTICS_GROUPS, ANALYTICS_PAGES, pageForPath, useAnalyticsHref } from "./useAnalytics";
+import { ANALYTICS_GROUPS, ANALYTICS_PAGES, pageForPath, useAnalyticsHref, useAnalyticsStatus } from "./useAnalytics";
 
 /**
  * A website's pages in the Google Analytics section, as drawn (§11): the
@@ -15,6 +15,7 @@ export function AnalyticsMenu({ siteId }: { siteId: string }) {
   const t = useTranslations("googleAnalytics.menu");
   const pathname = usePathname();
   const hrefFor = useAnalyticsHref(siteId);
+  const shop = useAnalyticsStatus()?.connection?.shop === true;
   return (
     <SectionMenu
       label={t("label")}
@@ -23,7 +24,8 @@ export function AnalyticsMenu({ siteId }: { siteId: string }) {
       groups={ANALYTICS_GROUPS.map((group) => ({
         id: group,
         label: t(`groups.${group}`),
-        items: ANALYTICS_PAGES.filter((page) => page.group === group).map((page) => ({
+        // Products only for a shop (§18.6.6).
+        items: ANALYTICS_PAGES.filter((page) => page.group === group && (!("shopOnly" in page) || shop)).map((page) => ({
           id: page.id,
           label: t(page.id),
           href: hrefFor(page.segment),

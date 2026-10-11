@@ -41,6 +41,22 @@ export function isEventList(list: AnalyticsList): list is "event" | "eventSeries
   return list === "event" || list === "eventSeries";
 }
 
+/**
+ * The figures asked for a product list's rows (§18.6.6): looked at, added to
+ * the basket, bought, and the revenue — kept as `views`, `basket`, `purchases`
+ * and `revenue`. Google never mixes product figures with visit figures in one
+ * ask, so a product list is asked on its own and never joined to key events.
+ */
+export const ITEM_METRICS = ["itemsViewed", "itemsAddedToCart", "itemsPurchased", "itemRevenue"] as const;
+
+/** The lists of products: one ask each, with their own figures. */
+export function isItemList(list: AnalyticsList): list is "product" | "productSeries" {
+  return list === "product" || list === "productSeries";
+}
+
+/** The shop's four steps (§18.6.6), read from the events list: a website with any in the last 90 days is a shop. */
+export const SHOP_STEPS = ["view_item", "add_to_cart", "begin_checkout", "purchase"] as const;
+
 /** A day and what happened on it, as one key: a channel or an event each day (GA35, §18.6.5). */
 export const DAY_JOIN = "\u001e";
 
@@ -63,6 +79,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   gender: ["userGender"],
   interest: ["brandingInterest"],
   visitorSeries: ["date", "newVsReturning"],
+  product: ["itemName", "itemCategory"],
+  productSeries: ["date"],
 };
 
 /** Whether a list is kept by device (GA20): the small ones and the long charts; the page lists only for every device. */
@@ -85,6 +103,8 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   gender: false,
   interest: false,
   visitorSeries: false,
+  product: false,
+  productSeries: false,
 };
 
 /** Visitors' lists (§18.6.6), in the order the screen's switch offers them. */
@@ -102,6 +122,9 @@ export const UNTAGGED = "(not set)";
 export function isUntagged(name: string): boolean {
   return !name.trim() || /^\(.*\)$/.test(name.trim());
 }
+
+/** A live list's parts: 2,000 rows each, as many as Google gives in one list. */
+export const LIVE_PARTS = 200;
 
 /** Every device, as a kept record names it. */
 export const EVERY_DEVICE = "";
@@ -144,6 +167,8 @@ export type ListRow = {
   length: number;
   /** An event's times (`eventCount`): only an event list's rows carry it, beside its people and its visits (§18.6.5). */
   times?: number;
+  /** A product's adds to the basket (`itemsAddedToCart`): only a product list's rows carry it (§18.6.6). */
+  basket?: number;
   /** Each key event's count and value (in hundredths), by the event's name. */
   counts: Map<string, number>;
   values: Map<string, number>;
@@ -165,6 +190,9 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "campaign") return isUntagged(keys[0] ?? "") ? UNTAGGED : channelKey(keys[0] ?? "", `${keys[1] ?? ""} / ${keys[2] ?? ""}`);
   if (list === "adKeyword") return isUntagged(keys[0] ?? "") ? UNTAGGED : keys[0] ?? "";
   if (list === "visitorSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${keys[1] ?? ""}`;
+  if (list === "productSeries") return dayOf(keys[0] ?? "");
+  // A product with its category: one name can sit in two.
+  if (list === "product") return channelKey(keys[0] ?? "", keys[1] ?? "");
   return keys[0] ?? "";
 }
 
@@ -201,6 +229,16 @@ export function joinAsks(
     return [rowOf(leadKeys, key), rowOf(every, key)];
   };
   for (const row of main) {
+    if (isItemList(list)) {
+      // Looked at, added to the basket, bought, revenue (`ITEM_METRICS`).
+      for (const target of targets(row.keys)) {
+        target.views += row.values[0] ?? 0;
+        target.basket = (target.basket ?? 0) + (row.values[1] ?? 0);
+        target.purchases += row.values[2] ?? 0;
+        target.revenue += hundredths(row.values[3] ?? 0);
+      }
+      continue;
+    }
     if (isEventList(list)) {
       // Times, people and visits with one (`EVENT_LIST_METRICS`).
       for (const target of targets(row.keys)) {
@@ -255,6 +293,8 @@ export type PackedPart = {
   length?: string;
   /** An event's times: only an event list's parts. */
   times?: string;
+  /** A product's adds to the basket: only a product list's parts. */
+  basket?: string;
   events: string[];
   counts: string[];
   values: string[];
@@ -267,10 +307,13 @@ export type PackedPart = {
  * or not.
  */
 export function packList(list: AnalyticsList, rows: readonly ListRow[], events: readonly string[]): PackedPart[] {
-  const sorted = list === "series" || list === "eventSeries" || list === "campaignSeries" || list === "visitorSeries"
+  const sorted = list === "series" || list === "eventSeries" || list === "campaignSeries" || list === "visitorSeries" || list === "productSeries"
     ? [...rows].sort((left, right) => left.key.localeCompare(right.key))
-    : [...rows].sort((left, right) => (list === "page" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits) || left.key.localeCompare(right.key));
+    : [...rows].sort((left, right) => (
+      list === "page" || list === "product" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits
+    ) || left.key.localeCompare(right.key));
   const timed = rows.some((row) => row.times !== undefined);
+  const carted = rows.some((row) => row.basket !== undefined);
   const parts: PackedPart[] = [];
   for (let start = 0; start < Math.max(sorted.length, 1); start += PART_ROWS) {
     const slice = sorted.slice(start, start + PART_ROWS);
@@ -286,6 +329,7 @@ export function packList(list: AnalyticsList, rows: readonly ListRow[], events: 
       newPeople: packNumbers(slice.map((row) => row.newPeople)),
       length: packNumbers(slice.map((row) => row.length)),
       ...(timed ? { times: packNumbers(slice.map((row) => row.times ?? 0)) } : {}),
+      ...(carted ? { basket: packNumbers(slice.map((row) => row.basket ?? 0)) } : {}),
       events: [...events],
       counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
       values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
@@ -306,6 +350,7 @@ export function unpackPart(part: PackedPart): ListRow[] {
   const newPeople = part.newPeople ? unpackNumbers(part.newPeople) : [];
   const length = part.length ? unpackNumbers(part.length) : [];
   const times = part.times ? unpackNumbers(part.times) : null;
+  const basket = part.basket ? unpackNumbers(part.basket) : null;
   const counts = part.counts.map((column) => unpackNumbers(column));
   const values = part.values.map((column) => unpackNumbers(column));
   return part.keys.map((key, index) => ({
@@ -320,6 +365,7 @@ export function unpackPart(part: PackedPart): ListRow[] {
     newPeople: newPeople[index] ?? 0,
     length: length[index] ?? 0,
     ...(times ? { times: times[index] ?? 0 } : {}),
+    ...(basket ? { basket: basket[index] ?? 0 } : {}),
     counts: new Map(part.events.map((event, at) => [event, counts[at][index] ?? 0])),
     values: new Map(part.events.map((event, at) => [event, values[at][index] ?? 0])),
   }));

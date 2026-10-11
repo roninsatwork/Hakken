@@ -995,6 +995,16 @@
         "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
         "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
       },
+      "products": {
+        "none": "No products were looked at or bought in these dates.",
+        "looksToBasket": "Shoppers looked at products {a} times but added one to the basket only {b} times, {cRate}.",
+        "fewFinished": "Only {aRate} of the {b} checkouts started were finished.",
+        "finished": "{aRate} of the {b} checkouts started were finished.",
+        "stuck": "{text} was looked at {a} times and bought {countB, plural, =0 {never} =1 {once} other {# times}}.",
+        "bestSeller": "{text} sells best: {aMoney}.",
+        "seeProduct": "Look at the page for {text}: many looks, almost no sales.",
+        "whyUnfinished": "Find out why so many checkouts aren't finished: try one yourself, on a phone too."
+      },
       "visitors": {
         "none": "No visits in these dates.",
         "people": "{a} people made the {b} visits; {cRate} were new to the website.",
@@ -1087,7 +1097,8 @@
         "linksClicked": "Links clicked",
         "wordsSearched": "Words searched",
         "allPages": "All pages",
-        "events": "Events"
+        "events": "Events",
+        "checkoutEvent": "Started checkout"
       }
     },
     "searchConsole.seen": {
@@ -2274,6 +2285,16 @@
         "trySilent": "Prova tu stesso {event}, e controlla che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
         "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore."
       },
+      "products": {
+        "none": "Nessun prodotto è stato visto o comprato in queste date.",
+        "looksToBasket": "Gli acquirenti hanno visto i prodotti {a} volte ma ne hanno messo uno nel carrello solo {b} volte, il {cRate}.",
+        "fewFinished": "Solo il {aRate} dei {b} pagamenti iniziati è stato completato.",
+        "finished": "Il {aRate} dei {b} pagamenti iniziati è stato completato.",
+        "stuck": "{text} è stato visto {a} volte e comprato {countB, plural, =0 {mai} =1 {una volta} other {# volte}}.",
+        "bestSeller": "{text} è il più venduto: {aMoney}.",
+        "seeProduct": "Guarda la pagina di {text}: tante visualizzazioni, quasi nessuna vendita.",
+        "whyUnfinished": "Scopri perché tanti pagamenti non vengono completati: provane uno tu, anche da telefono."
+      },
       "visitors": {
         "none": "Nessuna visita in queste date.",
         "people": "{a} persone hanno fatto le {b} visite; il {cRate} era nuovo sul sito.",
@@ -2366,7 +2387,8 @@
         "linksClicked": "Link cliccati",
         "wordsSearched": "Parole cercate",
         "allPages": "Tutte le pagine",
-        "events": "Eventi"
+        "events": "Eventi",
+        "checkoutEvent": "Pagamento iniziato"
       }
     },
     "searchConsole.seen": {

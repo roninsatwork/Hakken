@@ -2,9 +2,8 @@ import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
-import { KEPT_BY_DEVICE, emptyRow, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
-import { slotKey } from "./googleAnalyticsCollect";
-import { LIVE_PARTS } from "./googleAnalyticsLive";
+// Only the lists' own module and utilities: every Analytics read imports this one, so it imports none of them.
+import { KEPT_BY_DEVICE, LIVE_PARTS, emptyRow, slotKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
 
 /**
@@ -143,7 +142,7 @@ export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: 
 /** The lists kept only for every device, asked of Google for one device when a screen opens: the pages, events, campaigns and visitors. */
 export type LiveList =
   | "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"
-  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries";
+  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries" | "product" | "productSeries";
 
 function isLiveList(list: AnalyticsList): list is LiveList {
   return !KEPT_BY_DEVICE[list];

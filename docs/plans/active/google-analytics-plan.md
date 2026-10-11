@@ -530,11 +530,11 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 12
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 13
 built on dev, each committed and none pushed, and "people who converted
-after it" (half a day more) — eighteen and a half of twenty-seven days, about
-69%; eight and a half left. Both rounds: about forty-four of fifty-two and a
-half days, about 84%.**
+after it" (half a day more) — twenty-one and a half of twenty-seven days,
+about 80%; five and a half left. Both rounds: about forty-seven of fifty-two
+and a half days, about 90%.**
 
 ## 9. Risks
 
@@ -1436,6 +1436,22 @@ every gender Google gives is unknown: on Ronins, age shows only "Unknown" —
 Google hides small age groups — but gender shows men and women, so signals is
 on and the box says Google held small groups back instead. Ronins, 30 days:
 167 people made 230 visits, 93% new; Chrome, Safari, Edge, Firefox, Opera.
+
+*Built 2026-10-11 (Phase 13, GA34).* Products, as board 25 draws it: What
+Hakken sees, the shop's four steps as figures and bars, the products bought
+a day, and each product's looks, basket, bought, revenue and change — paged,
+searched and sorted on the server, with a Category filter. A website is a
+shop when any of the four steps happened in its last 90 days: the collector
+notes it (`connection.shop`) each time it reads those events, and only then
+asks `product` (each product with its category) and `productSeries` (bought a
+day) — every device, asked on their own, never joined to key events — and
+shows Products in the menu; nothing is set in admin. A new shop's products
+are asked at its next run, the long periods at once. The four steps come from
+the events list at no extra ask. "Look at that product's page" opens All pages
+searched for the product's name. Every Analytics read's shared rows module
+now imports no other Analytics module, which ended an import loop the new
+reads exposed. Ronins sells nothing: no products asked, no Products in its
+menu, and the page says why when opened.
 
 **7. Live.** The Realtime API (`runRealtimeReport`), asked by the Live page
 itself through one action that returns the answer and stores nothing. The
