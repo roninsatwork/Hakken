@@ -17,6 +17,9 @@ import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils
 
 const siteValidator = v.object({ siteId: v.id("companyWebsites"), host: v.string() });
 
+/** Two years of weeks (I7): the most a website keeps. */
+const MOST_WEEKS_KEPT = 110;
+
 /** The section's frame: the company, its own websites, when the team last looked, and the menu's numbers. */
 export const insightsHome = tenantQuery({
   args: {},
@@ -31,12 +34,11 @@ export const insightsHome = tenantQuery({
     if (!ctx.companyId) return null;
     const company = await ctx.db.get(ctx.companyId);
     const holds = (await companyHolds(ctx, ctx.companyId)).filter((entry) => entry.summary.relationship === "OWNED");
-    const weeks = await ctx.db.query("insightWeeks").withIndex("by_company_week", (q) => q.eq("companyId", ctx.companyId!)).order("desc").take(10);
+    // The menu's numbers from the weeks' own counts, never the findings themselves (phase 2b).
+    const weeks = await ctx.db.query("insightWeeks").withIndex("by_company_week", (q) => q.eq("companyId", ctx.companyId!)).order("desc").take(MOST_WEEKS_KEPT);
     const latestWeek = weeks[0]?.week ?? null;
-    const thisWeek = latestWeek
-      ? (await ctx.db.query("insightFindings").withIndex("by_company_week", (q) => q.eq("companyId", ctx.companyId!).eq("week", latestWeek)).take(100)).filter((finding) => finding.status === "PUBLISHED").length
-      : 0;
-    const findings = (await ctx.db.query("insightFindings").withIndex("by_company_week", (q) => q.eq("companyId", ctx.companyId!)).order("desc").take(500)).filter((finding) => finding.status === "PUBLISHED").length;
+    const thisWeek = weeks.filter((week) => week.week === latestWeek).reduce((sum, week) => sum + week.published, 0);
+    const findings = weeks.reduce((sum, week) => sum + week.published, 0);
     return {
       company: company?.name ?? "",
       sites: holds.map((entry) => ({ siteId: entry.hold._id, host: entry.summary.host })),
@@ -191,10 +193,11 @@ export const insightsThisWeek = tenantQuery({
       const rows = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", week.companyWebsiteId).eq("week", week.week)).take(60);
       findings.push(...rows.filter((row) => row.status === "PUBLISHED").map((row) => rowOf(row, host, week.week)));
     }
+    // Open: every finding published in the weeks kept, from the weeks' own counts (phase 2b).
     let open = 0;
     for (const site of sites) {
-      open += (await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", site.hold._id)).order("desc").take(300))
-        .filter((row) => row.status === "PUBLISHED" && !row.outcome).length;
+      open += (await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", site.hold._id)).order("desc").take(MOST_WEEKS_KEPT))
+        .reduce((sum, week) => sum + week.published, 0);
     }
     return {
       weeks: weeks.map(({ week, host }) => ({

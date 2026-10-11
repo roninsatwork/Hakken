@@ -137,7 +137,14 @@ const GA_SPANS: ReadonlyArray<{ period: AnalyticsPeriod; which: readonly Analyti
   { period: "365", which: ["NOW", "BEFORE", "YEAR"] },
 ];
 
-async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promise<Fact[]> {
+/**
+ * Google Analytics' facts, a part at a time (Phase 2b): the totals and
+ * channels, the landing pages, and the events and visitors — each part its
+ * own query, so a large website's page lists never share one read's limits.
+ */
+type AnalyticsPart = "totals" | "landing" | "events";
+
+async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">, part: AnalyticsPart): Promise<Fact[]> {
   const facts = new Facts();
   const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
   if (!connection?.property || !connection.newestDay) return [];
@@ -162,7 +169,7 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
       if (rate !== null) facts.add({ ...base, key: factKey("ga", ...prefix, "conversionRate", period, which), value: rate, unit: "percent", label: `share of visits that converted${label}` });
     }
   };
-  for (const { period, which: spans } of GA_SPANS) {
+  for (const { period, which: spans } of part === "totals" ? GA_SPANS : []) {
     for (const which of spans) {
       const total = await slot("total", period, which);
       const row = total?.rows[0];
@@ -185,7 +192,7 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
     }
   }
   // Landing pages and the visits from search to each (§8), the biggest, now and a year before.
-  for (const period of ["90", "365"] as const) {
+  for (const period of part === "landing" ? (["90", "365"] as const) : []) {
     for (const which of ["NOW", "YEAR"] as const) {
       const landing = await slot("landing", period, which);
       if (landing) {
@@ -201,6 +208,7 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promis
       }
     }
   }
+  if (part !== "events") return facts.list;
   // Every event over 12 months, against the 12 months before (I38, I42), and new against returning people.
   for (const which of ["NOW", "YEAR"] as const) {
     const events = await slot("event", "365", which);
@@ -359,11 +367,14 @@ export const searchConsoleFactsInternal = internalQuery({
 });
 
 export const analyticsFactsInternal = internalQuery({
-  args: holdArgs,
+  args: { ...holdArgs, part: v.optional(v.union(v.literal("totals"), v.literal("landing"), v.literal("events"))) },
   returns: v.array(factValidator),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.holdId);
-    return hold ? await analyticsFacts(ctx, hold) : [];
+    if (!hold) return [];
+    // Without a part, every part: the tests' and a small website's one read.
+    if (args.part) return await analyticsFacts(ctx, hold, args.part);
+    return [...await analyticsFacts(ctx, hold, "totals"), ...await analyticsFacts(ctx, hold, "landing"), ...await analyticsFacts(ctx, hold, "events")];
   },
 });
 
@@ -382,16 +393,18 @@ export const marketFactsInternal = internalQuery({
  * blocked if anything fails"). The problems are the run's to log.
  */
 export async function readWebsiteFacts(ctx: Pick<ActionCtx, "runQuery">, holdId: Id<"companyWebsites">): Promise<{ facts: Fact[]; problems: string[] }> {
-  const reads = [
-    ["Search Console", internal.insightsReading.searchConsoleFactsInternal],
-    ["Google Analytics", internal.insightsReading.analyticsFactsInternal],
-    ["the market", internal.insightsReading.marketFactsInternal],
-  ] as const;
+  const reads: Array<[string, () => Promise<Fact[]>]> = [
+    ["Search Console", () => ctx.runQuery(internal.insightsReading.searchConsoleFactsInternal, { holdId })],
+    ["Google Analytics' totals", () => ctx.runQuery(internal.insightsReading.analyticsFactsInternal, { holdId, part: "totals" })],
+    ["Google Analytics' landing pages", () => ctx.runQuery(internal.insightsReading.analyticsFactsInternal, { holdId, part: "landing" })],
+    ["Google Analytics' events", () => ctx.runQuery(internal.insightsReading.analyticsFactsInternal, { holdId, part: "events" })],
+    ["the market", () => ctx.runQuery(internal.insightsReading.marketFactsInternal, { holdId })],
+  ];
   const facts: Fact[] = [];
   const problems: string[] = [];
   for (const [name, read] of reads) {
     try {
-      facts.push(...await ctx.runQuery(read, { holdId }));
+      facts.push(...await read());
     } catch (error) {
       problems.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
     }

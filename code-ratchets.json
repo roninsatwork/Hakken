@@ -93,5 +93,15 @@
     "all mentions": 128,
     "mentions against rivals": 880,
     "where to get listed": 1216
+  },
+  "insightsReadKiB": {
+    "home": 300,
+    "leagues": 160,
+    "this week": 450,
+    "all findings": 2400,
+    "a finding": 10,
+    "reports": 800,
+    "a report": 10,
+    "your month": 15
   }
 }
