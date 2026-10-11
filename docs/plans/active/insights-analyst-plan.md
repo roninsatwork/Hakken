@@ -12,11 +12,11 @@ with all of these"). Nothing is
 built. **Approved to build in full on 2026-10-11** ("I'm good with everything,
 please update the plan so we build it all"): every phase in §12, and
 Business Profile's own access (§7c) as soon as Google approves it. **Still ON
-HOLD: nothing starts until the Google Analytics work under way lands and
-Anthony says go**; this plan, its pages and its drawings are checked against
-that work first.** Checked against it on 2026-10-11 (§7d; Anthony: "Ok I
-agree, let's add them to the plan"): like with like is now home country with
-home country, and nine additions (I33–I41); 86 days. Follow `AGENTS.md`, the [drawing guide](../../developer/drawing-guide.md)
+HOLD until Anthony says go.** The Google Analytics work it waited for landed on
+2026-10-11 and was checked twice (§7d): like with like is now home country
+with home country; nine additions (I33–I41; Anthony: "Ok I agree, let's add
+them to the plan") and four more once it had finished (I42–I45; Anthony: "Yes
+please, I think they are very valuable"); 86 days.** Follow `AGENTS.md`, the [drawing guide](../../developer/drawing-guide.md)
 and the [menu names plan](menu-names-plan.md), which places Insights in the
 menu. Change a decision here, with a date, before building anything that
 disagrees with it. Progress: §12.
@@ -74,9 +74,13 @@ their answers to its buyers' questions and both Business Profile listings file
 it as a web designer; AI research tools searched "ronins.ai" 6,904 times in 90
 days and found no company facts; no Google review since August 2024. Every
 figure on the canvas is that real data unless §11 says otherwise. The
-Analytics figures here counted every country; Analytics now counts the home
-country only (I33), so they are measured again, UK with UK, in phase 1 before
-any customer sees them.
+Analytics figures here counted every country. Measured again UK with UK on
+2026-10-11 (I33), the story holds: over the 12 months to 10 October, UK visits
+rose 6% (4,494 against 4,248) while enquiries fell 30% (169 against 241),
+search visits rose 2%, and visitors from AI assistants enquired at 7.3%
+against search's 3.1%. The same weeks against last year are read in phase 1
+(I43), and the enquiry count itself is checked before any customer sees a
+finding about it (I42).
 
 ## 1. Decisions
 
@@ -113,7 +117,7 @@ any customer sees them.
 | I29 | **The Editor tells real changes from noise.** Each finding's numbers are tested: one too small to mean anything is dropped, or says plainly that it is too early to tell. Hakken never raises an alarm over chance. | Anthony, 2026-10-11 |
 | I30 | **Learnings, in this build.** Every change and its result (I25) becomes a learning: which fix moved which result, for this website and, from totals only, across every company. The specialists read the learnings when they advise ("this fix worked on 7 of 10 websites like yours"), and the Track record shows them. "Businesses like yours" comparisons switch on by themselves once enough companies are alike; no company's data is ever shown to another (tenant rules, `AGENTS.md`). | Anthony, 2026-10-11: "we need the learnings" |
 | I31 | **Google Business Profile's own access** (§7c). Apply to Google now; once approved, the profile's own figures (calls, direction requests, website clicks, how people found it, the searches that showed it) join Visibility's Local, and Hakken posts and replies to reviews directly, as approved tasks, instead of drafting. | Anthony, 2026-10-11: "let's plan this too" |
-| I32 | **Out of scope:** Hakken changing the website itself; writing pages (the later Surfer SEO-style feature); paid search. From Google Analytics, also left out: Live, ad keywords (paid search) and age, gender and interests (Google signals is off on ronins.co.uk). | Anthony, 2026-10-11; the Analytics ones with §7d |
+| I32 | **Out of scope:** Hakken changing the website itself; writing pages (the later Surfer SEO-style feature); paid search. From Google Analytics, also left out: Live, ad keywords (paid search) and age, gender and interests (not something an SEO or CRO agency acts on; on ronins.co.uk Google signals is on, but Google hides the small age groups). | Anthony, 2026-10-11; the Analytics ones with §7d, their reason corrected the same day |
 | I33 | **Like with like is home country with home country.** Since 2026-10-11 every Google Analytics ask is filtered to the website's home countries, as Search Console's are, so Insights compares the two directly and the worldwide reading is dropped (§7). Analytics still sees fewer than Google's clicks, mostly visitors who refuse cookies; the Measurement check says by how much. Figures measured on worldwide Analytics (§3, the test) are measured again before any customer sees them. | Anthony, 2026-10-11, with §7d |
 | I34 | **Visitors are people.** "Visitors for one enquiry" counts people, Analytics' own figure, not visits; new and returning people apart. Beside Search Console's searches for the business's own name, it shows whether the people who come back by name are the ones who enquire. | Anthony, 2026-10-11, with §7d |
 | I35 | **The channel that first brought each person.** One more small Analytics list: enquiries by the channel that first brought the person (Google's `firstUserDefaultChannelGroup`). An AI assistant that introduces a buyer who later comes back by typing the name gets the credit, which a visit's own channel never shows. Read by the AI visibility specialist and the Head of Strategy. | Anthony, 2026-10-11, with §7d |
@@ -123,6 +127,10 @@ any customer sees them.
 | I39 | **Tagged links prove each change.** Every post, review reply and outreach email Hakken drafts (I23) carries a tagged link, and the Business Profile's website link gets one, so Analytics' Campaigns counts the visits and enquiries each brought and the Track record shows them beside the change (I25), before Google approves Business Profile access. | Anthony, 2026-10-11, with §7d |
 | I40 | **Shops are read in sales.** A website the Google Analytics work finds to be a shop (its `shop` mark) is read in sales wherever enquiries are counted: visitors and Google clicks for one sale; the funnel as looked, basket, checkout, bought; and a product review joining "looked at often, rarely bought" with the product's Google searches and rivals. Built with Google faked, checked on a real shop when one connects; its screens drawn and approved first. | Anthony, 2026-10-11, with §7d |
 | I41 | **Page titles wherever pages are listed.** Every Insights table and screen naming a page shows its title over its address, with the title cell the Google Analytics work built (`PageNameCell`, titles on `holdPages`). | Anthony, 2026-10-11, with §7d |
+| I42 | **Enquiries are checked before they are counted.** The Measurement check's first test on every website, before any finding about enquiries is published: does the enquiry event fire once for each real enquiry? The Google Analytics work found on ronins.co.uk that 255 of the 271 people who clicked a link to another website in 12 months sent a form after it, and only 133 viewed a page after it: the form likely counts as leaving the website, or bots fill it in. Until the test passes, a finding about enquiries says what is uncertain, and the fix is a Hakken task (send the form and see what Google records; check it for spam). | Anthony, 2026-10-11: "Yes please, I think they are very valuable" |
+| I43 | **Last year's figures, already collected.** Every Analytics list (channels, landing pages, pages, events, campaigns, visitors) is asked each week for the same 90 days and 12 months a year before (the collector's `YEAR` slots), and no screen reads them yet. Insights reads them for "always against last year" (I12) with no new ask. Only the calendar month and the same month last year, for the monthly report, are asked in the run. | As I42 |
+| I44 | **A year of daily history.** Visits, each event (enquiries among them) and each campaign a day are kept ready-made for 12 months (`series`, `eventSeries`, `campaignSeries`), though other day detail is kept for 60 days. The Track record (I25) and Experiments measure before and after a change from them with no new ask; only a single page's days are asked in the run. | As I42 |
+| I45 | **One read per screen.** The specialists and the Editor read Analytics through the functions its screens and Ask Hakken already share (`readOverview`, `readListPage`, `readEvents`, `readVisitors`, `readProducts`, `readPage`, `readLandingPage`, `readHeroes`), so a figure in a finding is the figure on the screen, and the Editor's re-check (I21) reads what the customer will open. | As I42 |
 
 ## 2. How the team works
 
@@ -163,7 +171,7 @@ looks for the ones that cross disciplines:
 
 | Pattern | What it means | Seen on ronins.co.uk |
 |---|---|---|
-| Same visitors, fewer results | Traffic held but the people changed | 1,371 Google visitors either year; 21 enquiries against 59 |
+| Same visitors, fewer results | Traffic held but the people changed | UK, 12 months: visits up 6% (4,494 against 4,248), enquiries down 30% (169 against 241); search visits up 2% |
 | Strong in one place, missing in another | First on Google, absent from AI answers or wrongly filed on a profile | First for "ai agency"; ChatGPT names it in none of 44 answers |
 | The world isn't sure who you are | Different names; tools researching the wrong name | 6,904 searches for "ronins.ai" facts |
 | Gone quiet | Reviews, posts or mentions stopped while rivals continue | No review since August 2024 |
@@ -172,10 +180,12 @@ looks for the ones that cross disciplines:
 | Best page, buried | The page that converts best is hard to find | AI consultancy converts 7.4%, ranks 26th |
 | Traffic that doesn't pay | A page carries the visits and brings nothing | One guide: 24% of visits, one enquiry |
 | It's the market, not you | Everyone fell; the website's share rose | All five agencies fell since April; ronins' share rose |
-| Worth more per visit | A source sends fewer visitors who buy more | ChatGPT visitors enquire at 4.8%, Google's at 1.9% |
+| Worth more per visit | A source sends fewer visitors who buy more | UK, 12 months: AI assistants' visits enquire at 7.3% (19 of 260), search's at 3.1% (101 of 3,302) |
 
-The Analytics figures in this table counted every country; they are measured
-again, UK with UK, in phase 1 (I33). Added from the Google Analytics work
+The first and last rows were measured again UK with UK on 2026-10-11 (the 12
+months to 10 October against the 12 months before, through the read Ask Hakken
+uses); the page rows counted every country and are measured again in phase 1
+(I33). All of them rest on the enquiry count being right (I42). Added from the Google Analytics work
 (§7d), to be measured on ronins.co.uk in phase 1:
 
 | Pattern | What it means | Read from |
@@ -440,9 +450,30 @@ enquired" (I37), events for the specialists (I38), tagged links (I39), shops
 (I40) and page titles (I41). Left out: Live, ad keywords, and age, gender and
 interests (I32).
 
-One clash noted for that work, not changed from here: its drawings still say
-"Pages to push" and "Push /ai-consultancy/", a word Anthony rejected as unclear
-(I13); one voice (I14) needs the same words on both.
+**Finished, and checked again the same evening.** All eleven of its phases
+built and pushed to dev (GitHub's dev branch), not to main. Read again in its code and on ronins.co.uk's UK
+figures, through the read Ask Hakken uses: nothing it built weakens the advice
+or blocks this plan. What it means here:
+
+- **Smaller, truer numbers.** Ronins had 26 UK enquiries in the last 90 days
+  (713 visits), so the Editor's noise test (I29) holds back more page-level
+  findings; pages are judged on 90 days and 12 months, the week site-wide.
+- **Four more to use, agreed by Anthony** ("Yes please, I think they are very
+  valuable"): the enquiry check first (I42), last year's figures already
+  collected (I43), a year of daily history (I44) and one read per screen
+  (I45). I32's reason corrected: Google signals is on for ronins.co.uk.
+- **Build notes, inside the days.** The asks made when a screen opens are the
+  signed-in user's action (`askGoogleAnalyticsLive`); the run calls the same
+  helpers (`openSession`, `askList`, `pageAsk`, `eventAsk`, `runFunnelReport`)
+  from its own step. Google's funnel report as built takes events only; a page
+  step (filtered on the page's path) is added for "read a case study, then
+  enquired" (I37).
+
+One clash noted for that work, not changed from here: "push", a word Anthony
+rejected as unclear (I13), is now in the built app: Heroes' "Push to page one"
+tab and task, and What Hakken sees' "Push … onto page one" and "Pages to push"
+(`messages/en.json`, `googleAnalytics.heroes` and `googleAnalytics.seen`). One
+voice (I14) needs the same words on both.
 
 ## 8. Data: nothing stored twice, every screen inside its budget
 
@@ -477,8 +508,11 @@ the sources and no leaderboard snapshot table.
 
 **Asked in the run, not kept:** the page before each money page (I36), an
 event's detail (searches on the website, scroll depth by page, links clicked,
-I38) and the funnel report (I37), through the asks the Google Analytics work
-built; only the findings are kept. A shop's products and steps (I40) are read
+I38), the funnel report (I37), a page's own days for a before-and-after (I44)
+and the calendar month with the same month last year (I43), through the asks
+the Google Analytics work built (I45); only the findings are kept. Last year's
+90 days and 12 months (I43) and the year of daily history (I44) are read
+where they already are. A shop's products and steps (I40) are read
 from the lists that work keeps; nothing new is stored for them.
 
 **Never stored:** a second copy of any source; a page's HTML or full text (the
@@ -506,7 +540,9 @@ today); a PDF file; the AI's raw working.
 - DataForSEO's search counts and traffic estimates swung in ways the website's
   own figures did not: they rank rivals, they don't measure size.
 - Analytics counts the home countries only (I33); visitors who refuse
-  cookies stay outside it, so it sees fewer than Google's clicks.
+  cookies stay outside it, so it sees fewer than Google's clicks. A small
+  website's numbers are small: ronins.co.uk had 26 UK enquiries in 90 days.
+- Every enquiry figure rests on the enquiry count, tested first (I42).
 - Enquiry values: ronins.co.uk's forms have none, and its phone, email and chat
   events never fired in a year (both shown on the Measurement check).
 
@@ -526,7 +562,7 @@ report's light print look (a new part, added to the drawing kit when built)
 and all nine leagues stand as drawn; no agency prices (I5); every company
 (I16); no emails in alpha (I17); existing spend limits (I18); tested on
 ronins.co.uk only (I19); the Track record's tally kept past two years (I7);
-what the Google Analytics work adds (I33–I41).
+what the Google Analytics work adds (I33–I45).
 
 None open.
 
@@ -572,10 +608,10 @@ first; section screens are drawn from the running app.
 | Phase | What | When it's done, Anthony sees | Days |
 |---|---|---|---|
 | 0 | **Search Console fixes** S1 and S2 (§7). | Page lists in Search Console that add up to the total, with the gap explained | 1 |
-| 1 | **The reading layer.** Every source read for one website in a run, without copying it (§8); Analytics landing pages by channel and the first channel (I35); the page before, events' detail and the funnel report asked in the run (I36–I38); home country with home country (I33, S3), with §3's and the test's Analytics figures measured again; leaderboards read from the history already kept. | Nothing new on screen; what every later phase reads | 4 |
+| 1 | **The reading layer.** Every source read for one website in a run, without copying it (§8); Analytics landing pages by channel and the first channel (I35); the page before, events' detail and the funnel report asked in the run (I36–I38); home country with home country (I33, S3), with §3's page figures measured again; last year's figures (I43) and the year of daily history (I44), all through the screens' own reads (I45); leaderboards read from the history already kept. | Nothing new on screen; what every later phase reads | 3.5 |
 | 2 | **The team's frame and the Head of Strategy.** The Insights role group; the run order (specialists side by side, then lead, Editor, Writer); saved findings; the daily check; keeping score; Admin → Insights → Patterns and Weekly runs. | The first cross-source findings for ronins.co.uk, in Admin, with their cost | 7 |
 | 2b | **Measured.** Storage and speed on ronins.co.uk; reading budgets set for every Insights screen (§8). | The numbers, before any customer screen is built | 1 |
-| 3 | **The Editor** (I21, I29): every figure re-read from its source, like-with-like checks, claims against evidence, real change against noise. | Findings that passed, and the ones sent back | 6 |
+| 3 | **The Editor** (I21, I29): every figure re-read from its source through the screens' own reads (I45), like-with-like checks, claims against evidence, real change against noise; the enquiry check (I42) before any finding about enquiries goes out. | Findings that passed, the ones sent back, and whether ronins.co.uk's enquiries can be trusted | 6.5 |
 | 4 | **Market specialist and Leaderboards.** All leagues, nine league pages, the rank strip; Visibility's Competitors gains rival moves and a rival's page. | Insights in the menu, opening on the leaderboards | 5 |
 | 5 | **Overview.** Executive summary, This week, Your month, Strategy with service pages, Reports (two-year keep). | The executive summary, the weekly brief and the monthly report | 6 |
 | 6 | **Report Writer and the PDFs.** The board report and monthly report as PDFs in the approved print look. No email in alpha (I17). | The five-page board report and the monthly report as downloads | 4 |
@@ -586,8 +622,8 @@ first; section screens are drawn from the running app.
 | 10 | **Local and reputation specialist.** Visibility's Local and Reviews gain the drafts (I23), with tagged links (I39). | Profile fixes ready to approve as tasks | 3 |
 | 11 | **Links and PR specialist.** Visibility's Links and mentions gains outreach drafts (I23), with tagged links (I39). | Outreach ready to approve as tasks | 3 |
 | 12 | **AI visibility specialist and the buyer-question panel** (I28), in Visibility's AI answers. | Where AI names you and rivals, across real buyer questions | 7 |
-| 13 | **Measurement specialist.** Measurement check and Sources in Insights; Google Analytics' Tracking health gains its checks, agreed with the Google Analytics work. | Whether the figures can be trusted | 2 |
-| 14 | **Conversion specialist.** Page facts with Firecrawl; Funnel with what people did before they enquired (I37), Page reviews and page pages with their journeys (I36), Experiments; Analytics' scroll history (I38). | The CRO agency's pages, with visitors and clicks for one enquiry | 7 |
+| 13 | **Measurement specialist.** Measurement check (carrying the enquiry check, I42) and Sources in Insights; Google Analytics' Tracking health gains its checks, agreed with the Google Analytics work. | Whether the figures can be trusted | 2 |
+| 14 | **Conversion specialist.** Page facts with Firecrawl; Funnel with what people did before they enquired (I37), Page reviews and page pages with their journeys (I36), Experiments measured from the year of daily history (I44); the funnel report given a page step (I37); Analytics' scroll history (I38). | The CRO agency's pages, with visitors and clicks for one enquiry | 7 |
 | 14b | **Shops** (I40): sales wherever enquiries are counted; the shop's funnel; Product reviews and A product, drawn and approved first; built with Google faked. | A shop read in sales, on a made-up shop until one connects | 1.5 |
 | 15 | **Microsoft Clarity** (I24, I27, §7b): the connection, the daily ask and its history, its own section, behaviour on Page reviews. | Clarity in the menu, and where visitors stop, click in vain and leave | 6 |
 | 16 | **One voice and Ask Hakken.** Findings read by Ask Hakken (which already reads every Analytics figure, from the Google Analytics work) and repeated everywhere, section screens linking to them (I14); English and Italian; look tests against the approved boards. | Ask Hakken giving the same advice as the screens and reports | 3 |
@@ -624,3 +660,10 @@ first; section screens are drawn from the running app.
   tagged links, shops and page titles added (I33–I41; Anthony: "Ok I agree,
   let's add them to the plan"). This build 86 days, plus 5 for Business
   Profile's own access. Still on hold until that work lands.
+- 2026-10-11, evening: the Google Analytics work finished (all built and
+  pushed to dev, not main) and was checked again, in its code and on ronins.co.uk's UK
+  figures: nothing weakens the advice. The UK figures confirm the headline;
+  the enquiry check, last year's figures, a year of daily history and one
+  read per screen added (I42–I45; Anthony: "Yes please, I think they are very
+  valuable"); I32's reason corrected. Still 86 days, plus 5 for Business
+  Profile. On hold until Anthony says go.

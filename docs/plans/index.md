@@ -22,8 +22,10 @@ completed work.
   checked against the Google Analytics work the same day (home country with
   home country; people, first channel, journeys, "did this, then enquired",
   events, tagged links, shops, titles): about 86 days, plus 5 once Google
-  approves Business Profile access. ON HOLD: nothing
-  starts until the Google Analytics work under way lands and Anthony says go.**
+  approves Business Profile access. The Google Analytics work it waited
+  for landed and was checked on 2026-10-11, adding the enquiry check, last
+  year's figures, a year of daily history and one read per screen. ON HOLD
+  until Anthony says go.**
 - [The client's menu: Visibility, Reading room, and a new Insights](./active/menu-names-plan.md)
   — Discovery renamed Visibility (the supplier cannot be named, and Discovery
   is kept for something else); Insights renamed Reading room; a new Insights
