@@ -36,6 +36,7 @@ import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
 import { planBrief } from "./utils/insightPlan";
 import { DRAFT_RULES, draftsFrom, type Drafted } from "./utils/insightDrafts";
 import { PANEL_RULES, panelFrom } from "./utils/insightPanel";
+import { REVIEW_RULES, VERDICTS, funnelFrom, sourcesFrom, verdictByRule, type Verdict } from "./utils/insightConversion";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
@@ -320,6 +321,12 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   } catch (error) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Buyer questions", detail: failureSummary(error), failed: true });
   }
+  // 9. The Conversion specialist's pages (phase 14): the funnel, each source's rate, each money page reviewed, experiments.
+  try {
+    await reviewPages(ctx, args, weekOf(now), reading.facts, member(SPECIALIST_ROLE.conversion) ?? lead);
+  } catch (error) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Page reviews", detail: failureSummary(error), failed: true });
+  }
   const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
   return `${args.host}: ${reading.facts.length} facts read,${reports.length > 0 ? ` ${reports.join(", ")} written,` : ""}${drafted > 0 ? ` ${drafted} fixes drafted,` : ""} ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
 }
@@ -393,6 +400,49 @@ async function buildPanel(ctx: ActionCtx, args: RunArgs, member: TeamMember | un
   if (synced.overLimit > 0) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Buyer questions", detail: `${synced.overLimit} of the panel's questions are past the website's limit of questions and aren't asked.`, failed: false });
   }
+}
+
+/** Pages the Conversion specialist reviews at most each week: the money pages with the most visits. */
+const PAGES_REVIEWED = 8;
+
+/**
+ * The funnel, the sources and the page reviews (phase 14): the Conversion
+ * specialist gives each money page a verdict and two first steps from its
+ * figures and what its words show; a page it doesn't answer for takes the
+ * verdict the rules give.
+ */
+async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: readonly Fact[], member: TeamMember | undefined): Promise<void> {
+  const inputs = (await ctx.runQuery(internal.insightsConversion.reviewInputs, { holdId: args.holdId })).slice(0, PAGES_REVIEWED);
+  let answered = new Map<string, { verdict: Verdict; reason: string; steps: string[] }>();
+  if (inputs.length > 0) {
+    const system = [REVIEW_RULES, member?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({
+      website: args.host,
+      pages: inputs.map((page) => ({
+        page: page.page, kind: page.kind, title: page.title,
+        visits: page.visits, enquiries: page.enquiries, visitsYearBefore: page.visitsBefore, enquiriesYearBefore: page.enquiriesBefore,
+        headline: page.facts?.headline ?? null, words: page.facts?.words ?? null, showsPrice: page.facts?.price ?? null, showsProof: page.facts?.proof ?? null,
+        hasForm: page.facts?.form ?? null, firstAskAt: page.facts?.firstAsk ?? null, opening: page.facts?.opening ?? null, structuredData: page.structured,
+      })),
+    });
+    const answer = await ask(ctx, args, member, "the Conversion specialist's page reviews", system, prompt).catch(() => null) as { pages?: unknown } | null;
+    const list = Array.isArray(answer?.pages) ? answer.pages : [];
+    answered = new Map(list.flatMap((raw) => {
+      const entry = raw as Record<string, unknown>;
+      const verdict = VERDICTS.find((known) => known === entry.verdict);
+      if (typeof entry.page !== "string" || !verdict) return [];
+      const steps = Array.isArray(entry.steps) ? entry.steps.filter((step): step is string => typeof step === "string").map((step) => step.trim().slice(0, 300)).slice(0, 2) : [];
+      return [[entry.page, { verdict, reason: typeof entry.reason === "string" ? entry.reason.trim().slice(0, 300) : "", steps }]];
+    }));
+  }
+  const pages = inputs.map((page) => {
+    const said = answered.get(page.page);
+    return {
+      page: page.page, title: page.title, kind: page.kind, visits: page.visits, enquiries: page.enquiries, visitsBefore: page.visitsBefore, enquiriesBefore: page.enquiriesBefore,
+      verdict: said?.verdict ?? verdictByRule(page, page.facts, page.structured), reason: said?.reason ?? "", steps: said?.steps ?? [],
+    };
+  });
+  await ctx.runMutation(internal.insightsConversion.saveConversion, { holdId: args.holdId, companyId: args.companyId, week, conversion: { funnel: funnelFrom(facts), sources: sourcesFrom(facts), pages } });
 }
 
 type WrittenFinding = SavedFinding & { findingId: Id<"insightFindings"> | null };

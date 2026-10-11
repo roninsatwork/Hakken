@@ -338,6 +338,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   insightMeasurements: LATEST,
   insightPlans: LATEST,
   insightQuestionPanels: LATEST,
+  insightConversions: LATEST,
+  insightExperiments: RECORD,
   insightTally: RECORD,
   insightLearnings: RECORD,
 

@@ -129,3 +129,47 @@ export function missingStructuredData(kind: string | null, types: readonly strin
   if (kind === "SERVICE" && !has("Service", "Product", "Offer")) missing.push("SERVICE");
   return missing;
 }
+
+export const pageFactsValidator = v.object({
+  title: v.union(v.string(), v.null()),
+  headline: v.union(v.string(), v.null()),
+  words: v.number(),
+  /** A price or "from £…" anywhere on the page. */
+  price: v.boolean(),
+  /** Case studies, testimonials, client names or review stars on the page. */
+  proof: v.boolean(),
+  /** A form on the page itself. */
+  form: v.boolean(),
+  /** How far down the words the first way to enquire comes, as a share of them (0 at the top); null when none. */
+  firstAsk: v.union(v.number(), v.null()),
+  /** Its opening words after the headline, for the Conversion specialist to judge: replaced each week, never shown. */
+  opening: v.string(),
+});
+export type PageFacts = Infer<typeof pageFactsValidator>;
+
+/** Words that ask a visitor to get in touch. */
+const ASK = /\b(contact us|get in touch|get a quote|book a (call|demo|consultation)|request a (quote|call)|talk to us|enquire|let'?s talk|start a project|send (us )?a message)\b/i;
+const PROOF = /\b(case stud(y|ies)|testimonial|our clients|client stories|trusted by|reviews?|rated \d|★)\b/i;
+const PRICE = /(£|\$|€)\s?\d|\bfrom\s+(£|\$|€)|\bprices? (from|start)/i;
+
+/** A page's facts from its words: what the Conversion specialist reads; Hakken advises what a page should do, never rewrites it (I22). */
+export function pageFactsOf(html: string, markdown: string | null = null): PageFacts {
+  const strip = (text: string) => text.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  const body = markdown ? markdown.replace(/[#*_>`[\]()!-]/g, " ").replace(/\s+/g, " ").trim() : strip(html.replace(/[\s\S]*?<body[^>]*>/i, ""));
+  const words = body ? body.split(" ").length : 0;
+  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() ?? null;
+  const headline = (markdown ? /^#\s+(.+)$/m.exec(markdown)?.[1] : null) ?? (/<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html) ? strip(/<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html)![1]) : null);
+  const ask = ASK.exec(body);
+  const firstAsk = ask && words > 0 ? Math.round((body.slice(0, ask.index).split(" ").length / words) * 100) / 100 : null;
+  const after = headline ? body.slice(Math.max(0, body.indexOf(headline) + headline.length)) : body;
+  return {
+    title: title ? strip(title).slice(0, 200) : null,
+    headline: headline ? headline.slice(0, 200) : null,
+    words,
+    price: PRICE.test(body),
+    proof: PROOF.test(body),
+    form: /<form[\s>]/i.test(html) || /\bform\b/i.test(markdown ?? ""),
+    firstAsk,
+    opening: after.split(" ").slice(0, 120).join(" "),
+  };
+}

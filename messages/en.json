@@ -18814,6 +18814,169 @@
         "before": "The 12 months before",
         "now": "The last 12 months"
       }
+    },
+    "verdicts": {
+      "REWRITE_TOP": "Rewrite the top",
+      "ADD_PROOF": "Add proof",
+      "MOVE_BUTTON": "Move the button",
+      "ADD_PRICE": "Add a price",
+      "ADD_COMPANY_FACTS": "Add company facts",
+      "KEEP": "Keep"
+    },
+    "funnel": {
+      "title": "Funnel",
+      "description": "From being found on Google to making an enquiry, against last year, and by where visitors came from.",
+      "emptyTitle": "No funnel yet",
+      "emptyDescription": "Hakken builds the funnel with each week's findings, from Search Console and Google Analytics. It appears after the first.",
+      "search": "Find a source",
+      "noMatch": "No source matches",
+      "download": "Download CSV",
+      "stepsTitle": "Visitors from Google, the last 90 days",
+      "sourcesTitle": "{count, plural, one {# source} other {# sources}} · The last 12 months",
+      "do": "Fix what Google's visitors land on, page by page.",
+      "seeReviews": "See the page reviews",
+      "steps": {
+        "SHOWN": "Shown on Google",
+        "CLICKED": "Clicked",
+        "VISITED": "Visited",
+        "ENQUIRED": "Enquired"
+      },
+      "sources": {
+        "searchConsole": "Search Console",
+        "analytics": "Google Analytics"
+      },
+      "rates": {
+        "click": "Clicked when shown",
+        "visit": "Visits counted for each click",
+        "enquire": "Enquired when they visited"
+      },
+      "sees": {
+        "weakest": "The chain is weakest at {step}: {now}% now, against {year}% a year ago.",
+        "noYear": "There's no year before to compare yet, so the funnel shows this year only.",
+        "best": "Visitors from {channel} enquire at {rate}%, against {google}% from Google."
+      },
+      "chart": {
+        "title": "Each step's share, last 90 days",
+        "hint": "Visitors from Google: what share go on to the next step, against the same days last year.",
+        "year": "A year before",
+        "now": "The last 90 days"
+      },
+      "columns": {
+        "step": "Step",
+        "now": "Last 90 days",
+        "year": "Last year",
+        "change": "Change",
+        "source": "Source",
+        "channel": "Source",
+        "visits": "Visits",
+        "enquiries": "Enquiries",
+        "rate": "Enquiry rate",
+        "rateBefore": "The year before"
+      },
+      "searchSteps": "Find a step"
+    },
+    "pageReviews": {
+      "title": "Page reviews",
+      "description": "Each page that brings enquiries: how many visitors it takes to win one, against last year, and Hakken's verdict. Open a page for its review.",
+      "emptyTitle": "No page reviews yet",
+      "emptyDescription": "Hakken reviews your money pages with each week's findings, once it has read them. They appear after the first.",
+      "search": "Find a page",
+      "verdict": "Verdict",
+      "everyVerdict": "Every verdict",
+      "noMatch": "No page matches",
+      "download": "Download CSV",
+      "tableTitle": "{count, plural, one {# page} other {# pages}} · Visitors and enquiries over 12 months",
+      "do": "{verdict} on {page}.",
+      "seePage": "See the page",
+      "sees": {
+        "harder": "{count} of your {all} money pages need more visitors to win an enquiry than a year ago. The biggest change is {page}: {now} visitors for an enquiry, against {before}.",
+        "noneHarder": "No money page needs more visitors to win an enquiry than a year ago.",
+        "best": "{page} is the most efficient: {now} visitors for an enquiry."
+      },
+      "chart": {
+        "title": "Visitors for each enquiry, page by page",
+        "hint": "The 12 months before against the last 12. Lower is better.",
+        "before": "The 12 months before",
+        "now": "The last 12 months"
+      },
+      "columns": {
+        "page": "Page",
+        "visits": "Visitors",
+        "perEnquiry": "Visitors for one enquiry",
+        "before": "Last year",
+        "verdict": "Verdict"
+      }
+    },
+    "pageReview": {
+      "back": "Page reviews",
+      "emptyTitle": "No review for this page",
+      "emptyDescription": "Hakken reviews the money pages with each week's findings. This page isn't among them.",
+      "description": "{host} · {title} · From Google Analytics, Search Console and Hakken's read of the page",
+      "toTasks": "Add the steps to Hakken tasks",
+      "taskAsk": "On {host}, for the page {page}: {steps} Set up a Hakken task so I'm reminded and we can see what it changes.",
+      "seeExperiments": "See the experiments",
+      "searchesTitle": "{count, plural, one {# search} other {# searches}} · The searches this page ranks for, the most searched first",
+      "noSearches": "Google's results don't show this page for any search yet.",
+      "download": "Download CSV",
+      "sees": {
+        "figures": "{enquiries} enquiries in 12 months, against {before} the year before; {now} visitors for each one, against {then}."
+      },
+      "figures": {
+        "perEnquiry": "Visitors for each enquiry",
+        "yearBefore": "{value} the year before",
+        "enquiries": "Enquiries",
+        "visits": "Visitors",
+        "twelveMonths": "12 months",
+        "against": "{by}% on {before}, 12 months",
+        "clicks": "Google clicks",
+        "clicksDetail": "the last 90 days"
+      },
+      "columns": {
+        "search": "Search",
+        "volume": "Searches a month",
+        "place": "Your place",
+        "rival": "Best rival"
+      },
+      "search": "Find a search"
+    },
+    "experiments": {
+      "title": "Experiments",
+      "description": "Changes worth making, from the page reviews, each measured before and after. Most sites don't have the traffic for split tests; this is the honest way.",
+      "emptyTitle": "No experiments yet",
+      "emptyDescription": "Each page review's verdict becomes a change ready to try. They appear after the first reviews.",
+      "search": "Find a change",
+      "status": "Status",
+      "everyStatus": "Every status",
+      "noMatch": "No change matches",
+      "download": "Download CSV",
+      "failed": "That couldn't be saved. Try again.",
+      "tableTitle": "{count, plural, one {# change} other {# changes}} · Most visited page first",
+      "measuredBy": "Enquiries from the page",
+      "live": "It's live",
+      "notLive": "Not live after all",
+      "do": "Start with {page}: it has the most visitors.",
+      "seeReviews": "See the page reviews",
+      "sees": {
+        "ready": "{count, plural, one {One change is} other {# changes are}} ready to try, and {running, plural, =0 {none is} one {one is} other {# are}} being measured. When a change goes live, say so here: Hakken measures the page's last 30 days eight weeks on against the 30 days before it, and writes up the result."
+      },
+      "filter": {
+        "READY": "Ready",
+        "RUNNING": "Being measured",
+        "DONE": "Measured"
+      },
+      "statuses": {
+        "READY": "Ready",
+        "RUNNING": "Measured on {day}",
+        "DONE": "Enquiries: {before} before, {after} after"
+      },
+      "columns": {
+        "change": "Change",
+        "page": "Page",
+        "why": "Why",
+        "measured": "Measured by",
+        "status": "Status",
+        "act": "Live?"
+      }
     }
   }
 }

@@ -1,0 +1,16 @@
+# Insights → Funnel — the approved look (board "Funnel" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Funnel
+settings-card: What Hakken sees
+chart-card: Each step's share, last # days
+search: Find a step
+table: Step | Last # days | Last year | Change | Source
+  table-bar: Visitors from Google, the last # days
+    download: Download CSV
+  table-footer
+search: Find a source
+table: Source | Visits | Enquiries | Enquiry rate | The year before
+  table-bar: # sources · The last # months
+    download: Download CSV
+  table-footer

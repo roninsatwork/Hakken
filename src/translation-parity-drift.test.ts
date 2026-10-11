@@ -72,6 +72,8 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['insights.pdf.page', 'placeholders and a separator only: no words to translate'],
     ['insights.pdf.author', "the product's name"],
     ['insights.track.changes.analytics', "Google's product name, the same in both languages"],
+    ['insights.funnel.sources.searchConsole', "Google's product name, the same in both languages"],
+    ['insights.funnel.sources.analytics', "Google's product name, the same in both languages"],
     ['insights.measurement.fixAt.analytics', "Google's product name, the same in both languages"],
     ['insights.measurement.fixAt.searchConsole', "Google's product name, the same in both languages"],
     ['insights.sources.names.searchConsole', "Google's product name, the same in both languages"],

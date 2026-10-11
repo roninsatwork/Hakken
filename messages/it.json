@@ -18814,6 +18814,169 @@
         "before": "I 12 mesi precedenti",
         "now": "Gli ultimi 12 mesi"
       }
+    },
+    "verdicts": {
+      "REWRITE_TOP": "Riscrivere l'inizio",
+      "ADD_PROOF": "Aggiungere prove",
+      "MOVE_BUTTON": "Spostare il pulsante",
+      "ADD_PRICE": "Aggiungere un prezzo",
+      "ADD_COMPANY_FACTS": "Aggiungere i dati dell'azienda",
+      "KEEP": "Tenere"
+    },
+    "funnel": {
+      "title": "Funnel",
+      "description": "Dall'essere trovati su Google al fare una richiesta, rispetto all'anno scorso, e da dove arrivano i visitatori.",
+      "emptyTitle": "Ancora nessun funnel",
+      "emptyDescription": "Hakken costruisce il funnel con le scoperte di ogni settimana, da Search Console e Google Analytics. Compare dopo la prima.",
+      "search": "Trova una fonte",
+      "noMatch": "Nessuna fonte corrisponde",
+      "download": "Scarica CSV",
+      "stepsTitle": "Visitatori da Google, gli ultimi 90 giorni",
+      "sourcesTitle": "{count, plural, one {# fonte} other {# fonti}} · Gli ultimi 12 mesi",
+      "do": "Sistema le pagine su cui arrivano i visitatori da Google, una per una.",
+      "seeReviews": "Vedi le revisioni delle pagine",
+      "steps": {
+        "SHOWN": "Mostrato su Google",
+        "CLICKED": "Cliccato",
+        "VISITED": "Visitato",
+        "ENQUIRED": "Richiesta inviata"
+      },
+      "sources": {
+        "searchConsole": "Search Console",
+        "analytics": "Google Analytics"
+      },
+      "rates": {
+        "click": "Cliccato quando mostrato",
+        "visit": "Visite contate per ogni clic",
+        "enquire": "Richieste quando hanno visitato"
+      },
+      "sees": {
+        "weakest": "La catena è più debole a {step}: {now}% ora, contro il {year}% di un anno fa.",
+        "noYear": "Non c'è ancora un anno prima da confrontare, quindi il funnel mostra solo quest'anno.",
+        "best": "I visitatori da {channel} fanno richiesta al {rate}%, contro il {google}% da Google."
+      },
+      "chart": {
+        "title": "La quota di ogni passaggio, ultimi 90 giorni",
+        "hint": "Visitatori da Google: quale quota passa al passaggio successivo, rispetto agli stessi giorni dell'anno scorso.",
+        "year": "Un anno prima",
+        "now": "Gli ultimi 90 giorni"
+      },
+      "columns": {
+        "step": "Passaggio",
+        "now": "Ultimi 90 giorni",
+        "year": "Anno scorso",
+        "change": "Variazione",
+        "source": "Fonte",
+        "channel": "Fonte",
+        "visits": "Visite",
+        "enquiries": "Richieste",
+        "rate": "Tasso di richiesta",
+        "rateBefore": "L'anno prima"
+      },
+      "searchSteps": "Trova un passaggio"
+    },
+    "pageReviews": {
+      "title": "Revisioni delle pagine",
+      "description": "Ogni pagina che porta richieste: quanti visitatori servono per averne una, rispetto all'anno scorso, e il verdetto di Hakken. Apri una pagina per la sua revisione.",
+      "emptyTitle": "Ancora nessuna revisione",
+      "emptyDescription": "Hakken rivede le pagine che portano clienti con le scoperte di ogni settimana, una volta lette. Compaiono dopo la prima.",
+      "search": "Trova una pagina",
+      "verdict": "Verdetto",
+      "everyVerdict": "Ogni verdetto",
+      "noMatch": "Nessuna pagina corrisponde",
+      "download": "Scarica CSV",
+      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Visitatori e richieste in 12 mesi",
+      "do": "{verdict} su {page}.",
+      "seePage": "Vedi la pagina",
+      "sees": {
+        "harder": "{count} delle tue {all} pagine che portano clienti hanno bisogno di più visitatori per una richiesta rispetto a un anno fa. La variazione maggiore è {page}: {now} visitatori per richiesta, contro {before}.",
+        "noneHarder": "Nessuna pagina che porta clienti ha bisogno di più visitatori per una richiesta rispetto a un anno fa.",
+        "best": "{page} è la più efficiente: {now} visitatori per richiesta."
+      },
+      "chart": {
+        "title": "Visitatori per ogni richiesta, pagina per pagina",
+        "hint": "I 12 mesi precedenti contro gli ultimi 12. Più basso è meglio.",
+        "before": "I 12 mesi precedenti",
+        "now": "Gli ultimi 12 mesi"
+      },
+      "columns": {
+        "page": "Pagina",
+        "visits": "Visitatori",
+        "perEnquiry": "Visitatori per una richiesta",
+        "before": "Anno scorso",
+        "verdict": "Verdetto"
+      }
+    },
+    "pageReview": {
+      "back": "Revisioni delle pagine",
+      "emptyTitle": "Nessuna revisione per questa pagina",
+      "emptyDescription": "Hakken rivede le pagine che portano clienti con le scoperte di ogni settimana. Questa pagina non è tra loro.",
+      "description": "{host} · {title} · Da Google Analytics, Search Console e la lettura della pagina di Hakken",
+      "toTasks": "Aggiungi i passi ai compiti di Hakken",
+      "taskAsk": "Su {host}, per la pagina {page}: {steps} Imposta un compito di Hakken così me lo ricordo e vediamo cosa cambia.",
+      "seeExperiments": "Vedi gli esperimenti",
+      "searchesTitle": "{count, plural, one {# ricerca} other {# ricerche}} · Le ricerche per cui questa pagina si posiziona, prima le più cercate",
+      "noSearches": "I risultati di Google non mostrano ancora questa pagina per nessuna ricerca.",
+      "download": "Scarica CSV",
+      "sees": {
+        "figures": "{enquiries} richieste in 12 mesi, contro {before} l'anno prima; {now} visitatori per ognuna, contro {then}."
+      },
+      "figures": {
+        "perEnquiry": "Visitatori per ogni richiesta",
+        "yearBefore": "{value} l'anno prima",
+        "enquiries": "Richieste",
+        "visits": "Visitatori",
+        "twelveMonths": "12 mesi",
+        "against": "{by}% su {before}, 12 mesi",
+        "clicks": "Clic da Google",
+        "clicksDetail": "gli ultimi 90 giorni"
+      },
+      "columns": {
+        "search": "Ricerca",
+        "volume": "Ricerche al mese",
+        "place": "La tua posizione",
+        "rival": "Miglior concorrente"
+      },
+      "search": "Trova una ricerca"
+    },
+    "experiments": {
+      "title": "Esperimenti",
+      "description": "Modifiche che vale la pena fare, dalle revisioni delle pagine, ognuna misurata prima e dopo. La maggior parte dei siti non ha il traffico per i test A/B; questo è il modo onesto.",
+      "emptyTitle": "Ancora nessun esperimento",
+      "emptyDescription": "Il verdetto di ogni revisione diventa una modifica pronta da provare. Compaiono dopo le prime revisioni.",
+      "search": "Trova una modifica",
+      "status": "Stato",
+      "everyStatus": "Ogni stato",
+      "noMatch": "Nessuna modifica corrisponde",
+      "download": "Scarica CSV",
+      "failed": "Non è stato possibile salvare. Riprova.",
+      "tableTitle": "{count, plural, one {# modifica} other {# modifiche}} · Prima la pagina più visitata",
+      "measuredBy": "Richieste dalla pagina",
+      "live": "È online",
+      "notLive": "Non è online",
+      "do": "Inizia con {page}: ha più visitatori.",
+      "seeReviews": "Vedi le revisioni delle pagine",
+      "sees": {
+        "ready": "{count, plural, one {Una modifica è pronta} other {# modifiche sono pronte}} da provare, e {running, plural, =0 {nessuna è} one {una è} other {# sono}} in misurazione. Quando una modifica va online, dillo qui: Hakken misura gli ultimi 30 giorni della pagina otto settimane dopo contro i 30 giorni prima, e scrive il risultato."
+      },
+      "filter": {
+        "READY": "Pronta",
+        "RUNNING": "In misurazione",
+        "DONE": "Misurata"
+      },
+      "statuses": {
+        "READY": "Pronta",
+        "RUNNING": "Misurata il {day}",
+        "DONE": "Richieste: {before} prima, {after} dopo"
+      },
+      "columns": {
+        "change": "Modifica",
+        "page": "Pagina",
+        "why": "Perché",
+        "measured": "Misurata da",
+        "status": "Stato",
+        "act": "Online?"
+      }
     }
   }
 }

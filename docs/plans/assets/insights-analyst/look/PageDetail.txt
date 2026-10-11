@@ -1,0 +1,18 @@
+# Insights → A page's review — the approved look (board "PageDetail" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Page reviews
+  page-header: ‹the record's name›
+    primary-action: Add the steps to Hakken tasks
+settings-card: What Hakken sees
+figures
+  figure: Visitors for each enquiry
+  figure: Enquiries
+  figure: Visitors
+  figure: Google clicks
+search: Find a search
+table: Search | Searches a month | Your place | Best rival
+  table-bar: # search · The searches this page ranks for, the most searched first
+    download: Download CSV
+  table-footer

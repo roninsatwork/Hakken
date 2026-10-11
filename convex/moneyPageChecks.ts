@@ -7,7 +7,7 @@ import { callGoogle } from "./googleApi";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
-import { indexedFrom, indexedValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type Speed } from "./utils/moneyPageChecks";
+import { indexedFrom, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
 
 /**
  * The weekly checks on a website's money pages (docs/plans/active/
@@ -22,6 +22,8 @@ import { indexedFrom, indexedValidator, speedFrom, speedValidator, structuredDat
 export const MOST_MONEY_PAGES = 12;
 /** A website is checked again after this long. */
 export const CHECK_EVERY_MS = 7 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000;
+/** A plain read showing fewer words than this is a page drawn by its scripts. */
+const THIN_PAGE = 80;
 /** Pages checked at once: PageSpeed takes ten to twenty seconds a page. */
 const AT_ONCE = 4;
 const MONEY_KINDS = new Set(["HOME", "SERVICE", "ABOUT"]);
@@ -69,6 +71,7 @@ const checkRow = v.object({
   indexed: v.union(indexedValidator, v.null()),
   speed: v.union(speedValidator, v.null()),
   structured: v.union(v.array(v.string()), v.null()),
+  facts: v.union(pageFactsValidator, v.null()),
 });
 
 /** The week's checks, a row a page; pages no longer among the money pages go. */
@@ -91,10 +94,10 @@ export const saveChecks = internalMutation({
 });
 
 /** One page's three checks; each failing on its own reads as unknown. */
-async function checkPage(origin: string, page: string, inspect: ((address: string) => Promise<Indexed | null>) | null, problems: Set<string>): Promise<{ indexed: Indexed | null; speed: Speed | null; structured: string[] | null }> {
+async function checkPage(origin: string, page: string, inspect: ((address: string) => Promise<Indexed | null>) | null, problems: Set<string>): Promise<{ indexed: Indexed | null; speed: Speed | null; structured: string[] | null; facts: PageFacts | null }> {
   const address = `${origin}${page}`;
   const key = process.env.PAGESPEED_API_KEY;
-  const [indexed, speed, structured] = await Promise.all([
+  const [indexed, speed, read] = await Promise.all([
     inspect ? inspect(address).catch(() => null) : Promise.resolve(null),
     (async () => {
       const url = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(address)}&strategy=mobile&category=performance${key ? `&key=${key}` : ""}`;
@@ -104,10 +107,22 @@ async function checkPage(origin: string, page: string, inspect: ((address: strin
     })().catch(() => null),
     (async () => {
       const response = await fetch(address, { headers: { "User-Agent": "HakkenBot/1.0 (+https://hakken.ai)", Accept: "text/html" } });
-      return response.ok ? structuredDataOf(await response.text()) : null;
+      if (!response.ok) return null;
+      const html = await response.text();
+      let facts = pageFactsOf(html);
+      // A page drawn by its scripts shows almost no words to a plain read: Firecrawl renders it (plan §9).
+      if (facts.words < THIN_PAGE && process.env.FIRECRAWL_API_KEY) {
+        const rendered = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false }),
+        }).then((answer) => (answer.ok ? answer.json() : null)).catch(() => null) as { data?: { markdown?: string } } | null;
+        if (rendered?.data?.markdown) facts = pageFactsOf(html, rendered.data.markdown);
+      }
+      return { structured: structuredDataOf(html), facts };
     })().catch(() => null),
   ]);
-  return { indexed, speed, structured };
+  return { indexed, speed, structured: read?.structured ?? null, facts: read?.facts ?? null };
 }
 
 /** A website's money pages, checked: started by the team's run, or by hand for a first check. */

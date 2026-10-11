@@ -111,6 +111,16 @@ describe("Insights' screens at their largest", () => {
         await ctx.db.insert("insightReports", { companyId, companyWebsiteId: holdId, kind: "BOARD", from: dayOf(quarter * 91), to: dayOf(quarter * 91), period: `q${quarter}`, title: "Board report", status: "READ", body: body(6), createdAt: now - quarter * 91 * 86_400_000 });
       }
       await ctx.db.insert("insightMeasurements", { companyId, companyWebsiteId: holdId, week: dayOf(0), ...measurement, createdAt: now });
+      // The conversion pages at their largest: eight reviews and fifty experiments.
+      await ctx.db.insert("insightConversions", {
+        companyId, companyWebsiteId: holdId, week: dayOf(0), createdAt: now,
+        funnel: [{ step: "SHOWN", now: 1_272_709, year: 1_100_000, source: "searchConsole" }, { step: "CLICKED", now: 2_062, year: 2_100, source: "searchConsole" }, { step: "VISITED", now: 1_371, year: 1_387, source: "analytics" }, { step: "ENQUIRED", now: 21, year: 59, source: "analytics" }],
+        sources: Array.from({ length: 12 }, (_, at) => ({ channel: `A channel ${at}`, visits: 3302, enquiries: 101, visitsBefore: 3237, enquiriesBefore: 171 })),
+        pages: Array.from({ length: 8 }, (_, at) => ({ page: `/a-money-page-${at}/`, title: "A page's title, as Google Analytics last saw it", kind: "SERVICE", visits: 2052, enquiries: 98, visitsBefore: 1650, enquiriesBefore: 150, verdict: "REWRITE_TOP" as const, reason: "A sentence about why, a little over a line long.", steps: ["A first step, a sentence long.", "A second step, a sentence long."] })),
+      });
+      for (let at = 0; at < 50; at += 1) {
+        await ctx.db.insert("insightExperiments", { companyId, companyWebsiteId: holdId, key: `/a-money-page-${at}/|REWRITE_TOP`, page: `/a-money-page-${at}/`, verdict: "REWRITE_TOP", why: "A sentence about why.", status: at % 3 === 0 ? "READY" : at % 3 === 1 ? "RUNNING" : "DONE", createdAt: now });
+      }
       // The plan at its largest: a hundred opportunities and thirty pages.
       await ctx.db.insert("insightPlans", {
         companyId, companyWebsiteId: holdId, week: dayOf(0), siteRate: 3.7, createdAt: now,
@@ -140,6 +150,7 @@ describe("Insights' screens at their largest", () => {
     ["measurement", () => [api.insightsReads.insightsMeasurement, {}]],
     ["sources", () => [api.insightsReads.insightsSources, {}]],
     ["plan", () => [api.insightsReads.insightsPlan, {}]],
+    ["conversion", () => [api.insightsConversion.insightsConversion, {}]],
   ];
   const modules = import.meta.glob("./*.ts");
 

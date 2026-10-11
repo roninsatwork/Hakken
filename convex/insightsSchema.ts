@@ -7,6 +7,7 @@ import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
 import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./utils/insightDrafts";
 import { panelQuestionValidator } from "./utils/insightPanel";
+import { conversionValidator } from "./utils/insightConversion";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -208,6 +209,37 @@ export const insightsTables = {
     questions: v.array(panelQuestionValidator),
     builtAt: v.number(),
   }).index("by_hold", ["companyWebsiteId"]),
+
+  /** The funnel, the sources and the page reviews (§4.1, phase 14), as the newest run found them. One row a website. */
+  insightConversions: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    week: v.string(),
+    ...conversionValidator.fields,
+    createdAt: v.number(),
+  }).index("by_hold", ["companyWebsiteId"]),
+
+  /**
+   * Changes worth making, each measured before and after (§4.1, phase 14,
+   * I44): from the page reviews, ready until the person says it went live;
+   * then the page's 30 days before against its 30 days eight weeks on.
+   */
+  insightExperiments: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    /** The page and its verdict: one experiment for each. */
+    key: v.string(),
+    page: v.string(),
+    verdict: v.string(),
+    why: v.string(),
+    status: v.union(v.literal("READY"), v.literal("RUNNING"), v.literal("DONE"), v.literal("DROPPED")),
+    startedAt: v.optional(v.number()),
+    baseline: v.optional(v.object({ visits: v.number(), enquiries: v.number(), from: v.string(), to: v.string() })),
+    result: v.optional(v.object({ visits: v.number(), enquiries: v.number(), from: v.string(), to: v.string() })),
+    createdAt: v.number(),
+  })
+    .index("by_hold_key", ["companyWebsiteId", "key"])
+    .index("by_hold_status", ["companyWebsiteId", "status"]),
 
   insightLearnings: defineTable({
     kind: v.string(),

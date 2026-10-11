@@ -21,6 +21,10 @@ import InsightsMeasurementPage from "./measurement/page";
 import InsightsSourcesPage from "./sources/page";
 import InsightsOpportunitiesPage from "./opportunities/page";
 import InsightsPagePlanPage from "./page-plan/page";
+import InsightsFunnelPage from "./funnel/page";
+import InsightsPageReviewsPage from "./page-reviews/page";
+import InsightsPageReviewPage from "./page-reviews/page/page";
+import InsightsExperimentsPage from "./experiments/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -303,5 +307,53 @@ describe("Insights' looks", () => {
     const { container } = render(<InsightsPagePlanPage />);
     await screen.findByText("/chatbot-agency/");
     await expectApprovedLook(container, PLAN, "PagePlan", "Insights → Page plan");
+  });
+
+  const CONVERSION = {
+    siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05",
+    funnel: [
+      { step: "SHOWN", now: 1272709, year: null, source: "searchConsole" }, { step: "CLICKED", now: 2062, year: null, source: "searchConsole" },
+      { step: "VISITED", now: 1371, year: 1387, source: "analytics" }, { step: "ENQUIRED", now: 21, year: 59, source: "analytics" },
+    ],
+    sources: [{ channel: "Organic Search", visits: 3302, enquiries: 101, visitsBefore: 3237, enquiriesBefore: 171 }, { channel: "AI assistants", visits: 83, enquiries: 4, visitsBefore: 20, enquiriesBefore: 0 }],
+    pages: [
+      { page: "/", title: "Creative Digital Agency | Ronins", kind: "HOME", visits: 2052, enquiries: 98, visitsBefore: 1650, enquiriesBefore: 150, verdict: "REWRITE_TOP", reason: "The opening speaks to brand work while visitors come for AI.", steps: ["Lead the top of the page with AI services.", "Put the enquiry form's first question above the fold."] },
+      { page: "/ai-agency/", title: "AI Agency | Automation", kind: "SERVICE", visits: 1089, enquiries: 46, visitsBefore: 561, enquiriesBefore: 32, verdict: "ADD_PROOF", reason: "It asks without showing results.", steps: ["Add one case study with its result before the form."] },
+    ],
+    experiments: [{ experimentId: "experiment_1", page: "/", verdict: "REWRITE_TOP", why: "The opening speaks to brand work.", status: "READY", startedAt: null, baseline: null, result: null, visits: 2052 }],
+  };
+
+  it("33 · Funnel", async () => {
+    nav.pathname = "/app/insights/funnel";
+    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION });
+    const { container } = render(<InsightsFunnelPage />);
+    await screen.findByText("Shown on Google");
+    await expectApprovedLook(container, PLAN, "Funnel", "Insights → Funnel");
+  });
+
+  it("34 · Page reviews", async () => {
+    nav.pathname = "/app/insights/page-reviews";
+    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION });
+    const { container } = render(<InsightsPageReviewsPage />);
+    await screen.findAllByText("/ai-agency/");
+    await expectApprovedLook(container, PLAN, "PageReviews", "Insights → Page reviews");
+  });
+
+  it("35 · A page's review", async () => {
+    nav.pathname = "/app/insights/page-reviews/page";
+    nav.search = "page=%2Fai-agency%2F";
+    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION, "insightsReads:insightsService": { host: "ronins.co.uk", service: SERVICE, siteClicks: 540, searches: [{ keyword: "ai agency", volume: 9900, position: 1, rival: null, rivalPosition: null }] } });
+    const { container } = render(<InsightsPageReviewPage />);
+    await screen.findByText("ai agency");
+    await expectApprovedLook(container, PLAN, "PageDetail", "Insights → A page's review");
+    nav.search = "";
+  });
+
+  it("36 · Experiments", async () => {
+    nav.pathname = "/app/insights/experiments";
+    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION });
+    const { container } = render(<InsightsExperimentsPage />);
+    await screen.findByText("It's live");
+    await expectApprovedLook(container, PLAN, "Experiments", "Insights → Experiments");
   });
 });

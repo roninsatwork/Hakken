@@ -1,6 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
-import { indexedValidator, speedValidator } from "./utils/moneyPageChecks";
+import { indexedValidator, pageFactsValidator, speedValidator } from "./utils/moneyPageChecks";
 
 /**
  * A website's pages, and what each is in the company's own words
@@ -173,6 +173,8 @@ export const pagesTables = {
     speed: v.union(speedValidator, v.null()),
     /** Its structured data's kinds; null when the page could not be read. */
     structured: v.union(v.array(v.string()), v.null()),
+    /** What its words show — headline, price, proof, where it first asks — and its opening, for the Conversion specialist (phase 14). */
+    facts: v.optional(v.union(pageFactsValidator, v.null())),
     checkedAt: v.number(),
   }).index("by_hold_page", ["companyWebsiteId", "page"]),
 };
