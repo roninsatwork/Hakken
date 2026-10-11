@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board report: summary</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FCFCFC}
+.pg{width:794px;height:1123px;box-sizing:border-box;position:relative;overflow:hidden;font-family:Inter,sans-serif;color:#111111;background:#FFFFFF}
+.in{position:absolute;top:0;right:0;bottom:0;left:0;padding:52px 72px 44px;display:flex;flex-direction:column}
+.run{display:flex;justify-content:space-between;font-size:9px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:#999999;padding-bottom:14px;border-bottom:1px solid #E5E5E5}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#999999;padding-top:12px;border-top:1px solid #E5E5E5}
+.pn{font-family:'JetBrains Mono',monospace;font-size:10px;color:#666666}
+.eyebrow{display:flex;align-items:center;gap:10px;margin-top:28px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#666666}
+.eyebrow i{display:block;width:18px;height:2px;background:#f97316}
+.title{margin:12px 0 0;font-size:30px;line-height:1.14;font-weight:600;letter-spacing:-0.02em;color:#111111}
+.lead{margin:16px 0 0;font-size:13.5px;line-height:1.65;color:#111111;max-width:610px}
+.h3{margin:24px 0 10px;font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#111111}
+.small{font-size:9.5px;line-height:1.5;color:#999999;margin-top:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:22px;border-top:2px solid #111111;border-bottom:1px solid #E5E5E5}
+.kpi{padding:16px 16px 18px 0}
+.kpi+.kpi{padding-left:18px;border-left:1px solid #E5E5E5}
+.kl{font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#666666}
+.kv{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:30px;letter-spacing:-0.03em;color:#111111}
+.kc{margin-top:8px;font-size:10.5px;line-height:1.45;color:#666666}
+.ar{font-family:'JetBrains Mono',monospace;font-size:10px}
+.g{color:#10B981}.r{color:#EF4444}.a{color:#F59E0B}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;padding:0 0 8px;border-bottom:1px solid #111111}
+td{font-size:11.5px;padding:9px 0;border-bottom:1px solid #E5E5E5;vertical-align:top}
+.n{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;padding-left:12px}
+.mu{color:#999999}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.st svg{width:12px;height:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+.blk h4{margin:0 0 6px;font-size:12px;font-weight:600;color:#111111}
+.blk p{margin:0 0 16px;font-size:11.5px;line-height:1.6;color:#111111}
+.one{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid #E5E5E5;font-size:11.5px;line-height:1.55}
+.one b{font-family:'JetBrains Mono',monospace;font-weight:400;color:#f97316}
+.plan{display:grid;grid-template-columns:44px minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 56px;gap:14px;padding:14px 0;border-bottom:1px solid #E5E5E5;font-size:11px;line-height:1.5}
+.plan .no{font-family:'JetBrains Mono',monospace;font-size:26px;line-height:1;color:#111111}
+.plan .t{font-weight:600;font-size:12px;margin-bottom:4px}
+.plan .lab{font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;margin-bottom:4px}
+.plan .by{font-family:'JetBrains Mono',monospace;text-align:right;color:#666666}
+.decide{margin-top:30px;padding-top:16px;border-top:2px solid #111111}
+.decide p{margin:8px 0 0;font-size:17px;line-height:1.45;font-weight:500;letter-spacing:-0.01em}
+.cover{background:#18181A;color:#FFFFFF}
+.cover .run{color:#737373;border-bottom:1px solid #3A3A3C}
+.cover .brand{color:#E8E4DC}
+.ct{margin:0;font-size:42px;line-height:1.08;font-weight:300;letter-spacing:-0.03em;color:#FFFFFF}
+.cs{margin-top:12px;font-size:15px;color:#A1A1A6}
+.cq{margin-top:28px;padding-top:22px;border-top:1px solid #3A3A3C;font-size:23px;line-height:1.3;font-weight:500;letter-spacing:-0.015em;color:#E8E4DC;max-width:560px}
+.cf{display:flex;justify-content:space-between;margin-top:34px;font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#737373}
+</style>
+</helmet>
+<div class="pg"><div class="in"><div class="run"><span>Ronins Agency · Board report, Q3 2026</span><span>Summary</span></div><div class="eyebrow"><i></i>01 · Summary</div><h2 class="title">Winning the market,<br>losing the enquiries</h2>
+<p class="lead">Marketing brought in 48 enquiries this quarter, down from 110 in the same weeks last year, while our share of the market's Google visitors rose from 3% to 16%. We are third of the five agencies we compete with, up two places. The growth came from readers of our guides, not buyers. Next quarter we refocus on the pages that win work.</p>
+<div class="kpis">
+<div class="kpi"><div class="kl">Enquiries</div><div class="kv">48</div><div class="kc"><span class="ar r">▼</span> 56% on 110 last year</div></div>
+<div class="kpi"><div class="kl">Visitors</div><div class="kv">2,384</div><div class="kc"><span class="ar r">▼</span> 9% on 2,624 last year</div></div>
+<div class="kpi"><div class="kl">Share of market</div><div class="kv">16%</div><div class="kc"><span class="ar g">▲</span> 13 pts from 3% in July 2025</div></div>
+<div class="kpi"><div class="kl">Our place</div><div class="kv">3rd</div><div class="kc"><span class="ar g">▲</span> 2 places of 5 agencies</div></div>
+</div>
+<div class="h3">Scorecard</div>
+<table><thead><tr><th>Measure</th><th class="n">This quarter</th><th class="n">Same weeks last year</th><th class="n">Change</th><th style="padding-left:24px">Status</th></tr></thead><tbody>
+<tr><td>Enquiries</td><td class="n">48</td><td class="n mu">110</td><td class="n"><span class="ar r">▼</span> 56%</td><td style="padding-left:24px"><span class="st"><span class="r"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg></span>Behind</span></td></tr><tr><td>Visitors</td><td class="n">2,384</td><td class="n mu">2,624</td><td class="n"><span class="ar r">▼</span> 9%</td><td style="padding-left:24px"><span class="st"><span class="a"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>Watch</span></td></tr><tr><td>Visitors from Google</td><td class="n">1,371</td><td class="n mu">1,387</td><td class="n"><span class="ar r">▼</span> 1%</td><td style="padding-left:24px"><span class="st"><span class="g"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>On track</span></td></tr><tr><td>Enquiries from Google</td><td class="n">21</td><td class="n mu">59</td><td class="n"><span class="ar r">▼</span> 64%</td><td style="padding-left:24px"><span class="st"><span class="r"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg></span>Behind</span></td></tr><tr><td>Visitors from AI assistants</td><td class="n">96</td><td class="n mu">162</td><td class="n"><span class="ar r">▼</span> 41%</td><td style="padding-left:24px"><span class="st"><span class="a"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>Watch</span></td></tr><tr><td>New Google reviews</td><td class="n">0</td><td class="n mu">0</td><td class="n"><span class="mu">none since August 2024</span></td><td style="padding-left:24px"><span class="st"><span class="r"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg></span>Behind</span></td></tr>
+</tbody></table>
+<div class="h3">Same visitors from Google, a third of the enquiries</div>
+<div class="two"><svg role="img" aria-label="Visitors from Google" width="300" height="114" viewBox="0 0 300 114"><text x="0" y="11" font-size="10.5" font-weight="600" fill="#111111">Visitors from Google</text><line x1="0" x2="154" y1="80" y2="80" stroke="#E5E5E5"></line><rect x="8" y="29.6" width="56" height="50.4" fill="#94a3b8"></rect><text x="36" y="23.6" text-anchor="middle" font-size="12" font-family="JetBrains Mono" fill="#111111">1,387</text><text x="36" y="96" text-anchor="middle" font-size="9" fill="#999999">Last year</text><rect x="90" y="30.1" width="56" height="49.9" fill="#f97316"></rect><text x="118" y="24.1" text-anchor="middle" font-size="12" font-family="JetBrains Mono" fill="#111111">1,371</text><text x="118" y="96" text-anchor="middle" font-size="9" fill="#999999">This quarter</text></svg><svg role="img" aria-label="Enquiries from Google" width="300" height="114" viewBox="0 0 300 114"><text x="0" y="11" font-size="10.5" font-weight="600" fill="#111111">Enquiries from Google</text><line x1="0" x2="154" y1="80" y2="80" stroke="#E5E5E5"></line><rect x="8" y="29.6" width="56" height="50.4" fill="#94a3b8"></rect><text x="36" y="23.6" text-anchor="middle" font-size="12" font-family="JetBrains Mono" fill="#111111">59</text><text x="36" y="96" text-anchor="middle" font-size="9" fill="#999999">Last year</text><rect x="90" y="62.0" width="56" height="18.0" fill="#f97316"></rect><text x="118" y="56.0" text-anchor="middle" font-size="12" font-family="JetBrains Mono" fill="#111111">21</text><text x="118" y="96" text-anchor="middle" font-size="9" fill="#999999">This quarter</text></svg></div>
+<div class="h3">In one minute</div>
+<div class="one"><b>1</b><span>Google sends us as many visitors as last year, but they make a third of the enquiries. The enquiry form works; who Google sends has changed.</span></div>
+<div class="one"><b>2</b><span>We lead our rivals in AI searches on Google, with about 80% of the five agencies' visitors from them, but ChatGPT and Google's AI Mode don't name us.</span></div>
+<div class="one"><b>3</b><span>Our Google reviews stopped in August 2024, and AI tools searching for facts about us find none.</span></div>
+<div class="foot"><span>Written by Hakken from Google Search Console, Google Analytics and DataForSEO, to 9 October 2026.</span><span class="pn">02 / 05</span></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

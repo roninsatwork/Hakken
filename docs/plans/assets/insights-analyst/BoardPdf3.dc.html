@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board report: market position</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FCFCFC}
+.pg{width:794px;height:1123px;box-sizing:border-box;position:relative;overflow:hidden;font-family:Inter,sans-serif;color:#111111;background:#FFFFFF}
+.in{position:absolute;top:0;right:0;bottom:0;left:0;padding:52px 72px 44px;display:flex;flex-direction:column}
+.run{display:flex;justify-content:space-between;font-size:9px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:#999999;padding-bottom:14px;border-bottom:1px solid #E5E5E5}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#999999;padding-top:12px;border-top:1px solid #E5E5E5}
+.pn{font-family:'JetBrains Mono',monospace;font-size:10px;color:#666666}
+.eyebrow{display:flex;align-items:center;gap:10px;margin-top:28px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#666666}
+.eyebrow i{display:block;width:18px;height:2px;background:#f97316}
+.title{margin:12px 0 0;font-size:30px;line-height:1.14;font-weight:600;letter-spacing:-0.02em;color:#111111}
+.lead{margin:16px 0 0;font-size:13.5px;line-height:1.65;color:#111111;max-width:610px}
+.h3{margin:24px 0 10px;font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#111111}
+.small{font-size:9.5px;line-height:1.5;color:#999999;margin-top:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:22px;border-top:2px solid #111111;border-bottom:1px solid #E5E5E5}
+.kpi{padding:16px 16px 18px 0}
+.kpi+.kpi{padding-left:18px;border-left:1px solid #E5E5E5}
+.kl{font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#666666}
+.kv{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:30px;letter-spacing:-0.03em;color:#111111}
+.kc{margin-top:8px;font-size:10.5px;line-height:1.45;color:#666666}
+.ar{font-family:'JetBrains Mono',monospace;font-size:10px}
+.g{color:#10B981}.r{color:#EF4444}.a{color:#F59E0B}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;padding:0 0 8px;border-bottom:1px solid #111111}
+td{font-size:11.5px;padding:9px 0;border-bottom:1px solid #E5E5E5;vertical-align:top}
+.n{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;padding-left:12px}
+.mu{color:#999999}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.st svg{width:12px;height:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+.blk h4{margin:0 0 6px;font-size:12px;font-weight:600;color:#111111}
+.blk p{margin:0 0 16px;font-size:11.5px;line-height:1.6;color:#111111}
+.one{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid #E5E5E5;font-size:11.5px;line-height:1.55}
+.one b{font-family:'JetBrains Mono',monospace;font-weight:400;color:#f97316}
+.plan{display:grid;grid-template-columns:44px minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 56px;gap:14px;padding:14px 0;border-bottom:1px solid #E5E5E5;font-size:11px;line-height:1.5}
+.plan .no{font-family:'JetBrains Mono',monospace;font-size:26px;line-height:1;color:#111111}
+.plan .t{font-weight:600;font-size:12px;margin-bottom:4px}
+.plan .lab{font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;margin-bottom:4px}
+.plan .by{font-family:'JetBrains Mono',monospace;text-align:right;color:#666666}
+.decide{margin-top:30px;padding-top:16px;border-top:2px solid #111111}
+.decide p{margin:8px 0 0;font-size:17px;line-height:1.45;font-weight:500;letter-spacing:-0.01em}
+.cover{background:#18181A;color:#FFFFFF}
+.cover .run{color:#737373;border-bottom:1px solid #3A3A3C}
+.cover .brand{color:#E8E4DC}
+.ct{margin:0;font-size:42px;line-height:1.08;font-weight:300;letter-spacing:-0.03em;color:#FFFFFF}
+.cs{margin-top:12px;font-size:15px;color:#A1A1A6}
+.cq{margin-top:28px;padding-top:22px;border-top:1px solid #3A3A3C;font-size:23px;line-height:1.3;font-weight:500;letter-spacing:-0.015em;color:#E8E4DC;max-width:560px}
+.cf{display:flex;justify-content:space-between;margin-top:34px;font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#737373}
+</style>
+</helmet>
+<div class="pg"><div class="in"><div class="run"><span>Ronins Agency · Board report, Q3 2026</span><span>Market position</span></div><div class="eyebrow"><i></i>02 · Market position</div><h2 class="title">Third of five,<br>and the only one growing</h2>
+<p class="lead">Since July 2025 our estimated Google visitors doubled while every rival lost between 45% and 89% of theirs. We have passed pixelfield and plugandplaydesign; lightflows is 266 visitors a month ahead.</p>
+<div class="h3">Share of our market's Google visitors</div>
+<svg role="img" aria-label="Our share of our market's Google visitors, January 2025 to October 2026" width="650" height="290" viewBox="0 0 650 290"><line x1="34" x2="558" y1="262" y2="262" stroke="#F2F2F2"></line><text x="26" y="265" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">0%</text><line x1="34" x2="558" y1="212.8" y2="212.8" stroke="#F2F2F2"></line><text x="26" y="215.8" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">10%</text><line x1="34" x2="558" y1="163.6" y2="163.6" stroke="#F2F2F2"></line><text x="26" y="166.6" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">20%</text><line x1="34" x2="558" y1="114.4" y2="114.4" stroke="#F2F2F2"></line><text x="26" y="117.4" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">30%</text><line x1="34" x2="558" y1="65.19999999999999" y2="65.19999999999999" stroke="#F2F2F2"></line><text x="26" y="68.19999999999999" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">40%</text><line x1="34" x2="558" y1="16" y2="16" stroke="#F2F2F2"></line><text x="26" y="19" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">50%</text><text x="34" y="282" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">Jan 25</text><text x="81.63636363636363" y="282" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">Jul 25</text><text x="129.27272727272725" y="282" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">Jan 26</text><text x="272.1818181818182" y="282" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">Apr</text><text x="415.09090909090907" y="282" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">Jul</text><text x="558" y="282" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">Oct 26</text><polyline points="34.0,125.7 81.6,113.4 129.3,54.4 176.9,49.0 224.5,65.7 272.2,50.9 319.8,43.6 367.5,78.5 415.1,83.9 462.7,40.6 510.4,49.9 558.0,59.3" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"></polyline><polyline points="34.0,212.8 81.6,182.3 129.3,203.0 176.9,197.1 224.5,155.2 272.2,201.5 319.8,196.1 367.5,157.7 415.1,150.8 462.7,188.2 510.4,154.3 558.0,164.1" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"></polyline><polyline points="34.0,194.1 81.6,170.5 129.3,173.9 176.9,178.4 224.5,183.8 272.2,171.0 319.8,173.9 367.5,165.1 415.1,162.6 462.7,180.3 510.4,201.0 558.0,191.2" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"></polyline><polyline points="34.0,38.1 81.6,105.5 129.3,167.0 176.9,190.2 224.5,209.8 272.2,209.8 319.8,221.2 367.5,228.1 415.1,231.0 462.7,205.9 510.4,218.7 558.0,219.2" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"></polyline><polyline points="34.0,246.7 81.6,245.8 129.3,219.7 176.9,203.5 224.5,203.5 272.2,184.8 319.8,182.8 367.5,188.7 415.1,190.2 462.7,202.5 510.4,194.1 558.0,183.8" fill="none" stroke="#f97316" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"></polyline><circle cx="34" cy="246.748" r="3.5" fill="#f97316"></circle><circle cx="558" cy="183.772" r="4.5" fill="#f97316"></circle><text x="40" y="238.748" font-size="10" font-weight="600" fill="#f97316">Us 3.1%</text><text x="566" y="62.29599999999999" font-size="9" font-weight="400" fill="#999999">chilliapple 41.2%</text><text x="566" y="167.092" font-size="9" font-weight="400" fill="#999999">lightflows 19.9%</text><text x="566" y="186.772" font-size="9" font-weight="600" fill="#f97316">Us 15.9%</text><text x="566" y="198.772" font-size="9" font-weight="400" fill="#999999">pixelfield 14.4%</text><text x="566" y="222.196" font-size="9" font-weight="400" fill="#999999">plugandplay 8.7%</text></svg>
+<div class="small">DataForSEO's monthly estimates for the five agencies, used to compare us with rivals rather than to measure exactly.</div>
+<div class="h3">Google visitors a month, by agency</div>
+<svg role="img" aria-label="Google visitors a month by agency" width="650" height="130" viewBox="0 0 650 130"><text x="0" y="15" font-size="10.5" font-weight="400" fill="#111111">chilliapple</text><rect x="92" y="5" width="498.0" height="13" fill="#94a3b8"></rect><text x="598.0" y="15" font-size="10" font-family="JetBrains Mono" fill="#111111">2,739</text><text x="0" y="41" font-size="10.5" font-weight="400" fill="#111111">lightflows</text><rect x="92" y="31" width="240.0" height="13" fill="#94a3b8"></rect><text x="340.0" y="41" font-size="10" font-family="JetBrains Mono" fill="#111111">1,320</text><text x="0" y="67" font-size="10.5" font-weight="600" fill="#f97316">Us</text><rect x="92" y="57" width="191.6" height="13" fill="#f97316"></rect><text x="291.6" y="67" font-size="10" font-family="JetBrains Mono" fill="#111111">1,054</text><text x="0" y="93" font-size="10.5" font-weight="400" fill="#111111">pixelfield</text><rect x="92" y="83" width="173.8" height="13" fill="#94a3b8"></rect><text x="273.8" y="93" font-size="10" font-family="JetBrains Mono" fill="#111111">956</text><text x="0" y="119" font-size="10.5" font-weight="400" fill="#111111">plugandplay</text><rect x="92" y="109" width="104.7" height="13" fill="#94a3b8"></rect><text x="204.7" y="119" font-size="10" font-family="JetBrains Mono" fill="#111111">576</text></svg>
+<div class="h3">League table</div>
+<table><thead><tr><th>Measure</th><th class="n">Our place</th><th class="n">Since July 2025</th><th style="padding-left:24px">Leader</th><th class="n">Gap to the place above</th></tr></thead><tbody>
+<tr><td>Visitors from Google</td><td class="n"><strong>3rd of 5</strong></td><td class="n"><span class="ar g">▲</span> 2</td><td style="padding-left:24px">chilliapple</td><td class="n">266 a month</td></tr><tr><td>Recommended for our buyers' questions</td><td class="n"><strong>1st of 5</strong></td><td class="n"><span class="mu">–</span></td><td style="padding-left:24px">Us</td><td class="n">17 answers ahead</td></tr><tr><td>Named in AI answers generally</td><td class="n"><strong>4th of 5</strong></td><td class="n"><span class="mu">–</span></td><td style="padding-left:24px">chilliapple</td><td class="n">15 mentions</td></tr><tr><td>Strength in Google's eyes</td><td class="n"><strong>5th of 5</strong></td><td class="n"><span class="mu">–</span></td><td style="padding-left:24px">plugandplaydesign</td><td class="n">93 points</td></tr>
+</tbody></table>
+<div class="foot"><span>Written by Hakken from Google Search Console, Google Analytics and DataForSEO, to 9 October 2026.</span><span class="pn">03 / 05</span></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

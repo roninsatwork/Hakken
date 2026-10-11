@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board report: the quarter</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FCFCFC}
+.pg{width:794px;height:1123px;box-sizing:border-box;position:relative;overflow:hidden;font-family:Inter,sans-serif;color:#111111;background:#FFFFFF}
+.in{position:absolute;top:0;right:0;bottom:0;left:0;padding:52px 72px 44px;display:flex;flex-direction:column}
+.run{display:flex;justify-content:space-between;font-size:9px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:#999999;padding-bottom:14px;border-bottom:1px solid #E5E5E5}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#999999;padding-top:12px;border-top:1px solid #E5E5E5}
+.pn{font-family:'JetBrains Mono',monospace;font-size:10px;color:#666666}
+.eyebrow{display:flex;align-items:center;gap:10px;margin-top:28px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#666666}
+.eyebrow i{display:block;width:18px;height:2px;background:#f97316}
+.title{margin:12px 0 0;font-size:30px;line-height:1.14;font-weight:600;letter-spacing:-0.02em;color:#111111}
+.lead{margin:16px 0 0;font-size:13.5px;line-height:1.65;color:#111111;max-width:610px}
+.h3{margin:24px 0 10px;font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#111111}
+.small{font-size:9.5px;line-height:1.5;color:#999999;margin-top:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:22px;border-top:2px solid #111111;border-bottom:1px solid #E5E5E5}
+.kpi{padding:16px 16px 18px 0}
+.kpi+.kpi{padding-left:18px;border-left:1px solid #E5E5E5}
+.kl{font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#666666}
+.kv{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:30px;letter-spacing:-0.03em;color:#111111}
+.kc{margin-top:8px;font-size:10.5px;line-height:1.45;color:#666666}
+.ar{font-family:'JetBrains Mono',monospace;font-size:10px}
+.g{color:#10B981}.r{color:#EF4444}.a{color:#F59E0B}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;padding:0 0 8px;border-bottom:1px solid #111111}
+td{font-size:11.5px;padding:9px 0;border-bottom:1px solid #E5E5E5;vertical-align:top}
+.n{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;padding-left:12px}
+.mu{color:#999999}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.st svg{width:12px;height:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+.blk h4{margin:0 0 6px;font-size:12px;font-weight:600;color:#111111}
+.blk p{margin:0 0 16px;font-size:11.5px;line-height:1.6;color:#111111}
+.one{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid #E5E5E5;font-size:11.5px;line-height:1.55}
+.one b{font-family:'JetBrains Mono',monospace;font-weight:400;color:#f97316}
+.plan{display:grid;grid-template-columns:44px minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 56px;gap:14px;padding:14px 0;border-bottom:1px solid #E5E5E5;font-size:11px;line-height:1.5}
+.plan .no{font-family:'JetBrains Mono',monospace;font-size:26px;line-height:1;color:#111111}
+.plan .t{font-weight:600;font-size:12px;margin-bottom:4px}
+.plan .lab{font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;margin-bottom:4px}
+.plan .by{font-family:'JetBrains Mono',monospace;text-align:right;color:#666666}
+.decide{margin-top:30px;padding-top:16px;border-top:2px solid #111111}
+.decide p{margin:8px 0 0;font-size:17px;line-height:1.45;font-weight:500;letter-spacing:-0.01em}
+.cover{background:#18181A;color:#FFFFFF}
+.cover .run{color:#737373;border-bottom:1px solid #3A3A3C}
+.cover .brand{color:#E8E4DC}
+.ct{margin:0;font-size:42px;line-height:1.08;font-weight:300;letter-spacing:-0.03em;color:#FFFFFF}
+.cs{margin-top:12px;font-size:15px;color:#A1A1A6}
+.cq{margin-top:28px;padding-top:22px;border-top:1px solid #3A3A3C;font-size:23px;line-height:1.3;font-weight:500;letter-spacing:-0.015em;color:#E8E4DC;max-width:560px}
+.cf{display:flex;justify-content:space-between;margin-top:34px;font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#737373}
+</style>
+</helmet>
+<div class="pg"><div class="in"><div class="run"><span>Ronins Agency · Board report, Q3 2026</span><span>The quarter</span></div><div class="eyebrow"><i></i>03 · The quarter</div><h2 class="title">Growth came from readers,<br>not buyers</h2>
+<p class="lead">Our guides now bring 42% of all visits and almost no work. The pages that used to win work lost it as buyers changed the words they search with.</p>
+<div class="two" style="margin-top:26px">
+<div class="blk"><h4>Went well</h4><p>Our AI agency page is our best: 46 enquiries a year, up from 32. We are first on Google for "ai agency", searched 9,900 times a month.</p><h4>Didn't</h4><p>The chatbot page fell from 22 enquiries a year to 6, the blockchain page from 13 to 3, and Clutch from 21 to 6.</p><h4>Why</h4><p>Buyers now search for AI agents and automation, not chatbots, and Google sends more readers of our guides and fewer buyers.</p></div>
+<div><div class="h3" style="margin-top:0">Enquiries a year, by source of work</div><svg role="img" aria-label="Enquiries a year by source of work, against the year before" width="300" height="234" viewBox="0 0 300 234"><text x="0" y="21" font-size="10.5" fill="#111111">AI agency page</text>
+<rect x="118" y="10" width="38.5" height="9" fill="#94a3b8"></rect><text x="162.5040650406504" y="18" font-size="9" font-family="JetBrains Mono" fill="#999999">32</text>
+<rect x="118" y="22" width="55.3" height="9" fill="#f97316"></rect><text x="179.34959349593495" y="30" font-size="9" font-family="JetBrains Mono" fill="#111111">46</text><text x="0" y="55" font-size="10.5" fill="#111111">Homepage</text>
+<rect x="118" y="44" width="148.0" height="9" fill="#94a3b8"></rect><text x="272" y="52" font-size="9" font-family="JetBrains Mono" fill="#999999">123</text>
+<rect x="118" y="56" width="117.9" height="9" fill="#f97316"></rect><text x="241.9186991869919" y="64" font-size="9" font-family="JetBrains Mono" fill="#111111">98</text><text x="0" y="89" font-size="10.5" fill="#111111">Chatbot page</text>
+<rect x="118" y="78" width="26.5" height="9" fill="#94a3b8"></rect><text x="150.47154471544715" y="86" font-size="9" font-family="JetBrains Mono" fill="#999999">22</text>
+<rect x="118" y="90" width="7.2" height="9" fill="#f97316"></rect><text x="131.21951219512195" y="98" font-size="9" font-family="JetBrains Mono" fill="#111111">6</text><text x="0" y="123" font-size="10.5" fill="#111111">Clutch</text>
+<rect x="118" y="112" width="25.3" height="9" fill="#94a3b8"></rect><text x="149.26829268292684" y="120" font-size="9" font-family="JetBrains Mono" fill="#999999">21</text>
+<rect x="118" y="124" width="7.2" height="9" fill="#f97316"></rect><text x="131.21951219512195" y="132" font-size="9" font-family="JetBrains Mono" fill="#111111">6</text><text x="0" y="157" font-size="10.5" fill="#111111">Accessibility guide</text>
+<rect x="118" y="146" width="18.0" height="9" fill="#94a3b8"></rect><text x="142.0487804878049" y="154" font-size="9" font-family="JetBrains Mono" fill="#999999">15</text>
+<rect x="118" y="158" width="1.2" height="9" fill="#f97316"></rect><text x="125.20325203252033" y="166" font-size="9" font-family="JetBrains Mono" fill="#111111">1</text><text x="0" y="191" font-size="10.5" fill="#111111">Blockchain page</text>
+<rect x="118" y="180" width="15.6" height="9" fill="#94a3b8"></rect><text x="139.64227642276424" y="188" font-size="9" font-family="JetBrains Mono" fill="#999999">13</text>
+<rect x="118" y="192" width="3.6" height="9" fill="#f97316"></rect><text x="127.60975609756098" y="200" font-size="9" font-family="JetBrains Mono" fill="#111111">3</text><rect x="118" y="222" width="9" height="9" fill="#94a3b8"></rect><text x="132" y="230" font-size="9" fill="#666666">Year before</text><rect x="202" y="222" width="9" height="9" fill="#f97316"></rect><text x="216" y="230" font-size="9" fill="#666666">This year</text></svg></div>
+</div>
+<div class="h3">Enquiries a month</div>
+<svg role="img" aria-label="Enquiries a month, October 2025 to September 2026" width="650" height="210" viewBox="0 0 650 210"><line x1="0" x2="650" y1="188" y2="188" stroke="#E5E5E5"></line><rect x="9.9" y="63.7" width="25.2" height="124.3" fill="#94a3b8"></rect><text x="22.5" y="58.7" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">25</text><text x="22.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Oct</text><rect x="54.9" y="53.8" width="25.2" height="134.2" fill="#94a3b8"></rect><text x="67.5" y="48.8" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">27</text><text x="67.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Nov</text><rect x="99.9" y="93.5" width="25.2" height="94.5" fill="#94a3b8"></rect><text x="112.5" y="88.5" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">19</text><text x="112.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Dec</text><rect x="144.9" y="58.7" width="25.2" height="129.3" fill="#94a3b8"></rect><text x="157.5" y="53.7" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">26</text><text x="157.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Jan</text><rect x="189.9" y="73.7" width="25.2" height="114.3" fill="#94a3b8"></rect><text x="202.5" y="68.7" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">23</text><text x="202.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Feb</text><rect x="234.9" y="43.8" width="25.2" height="144.2" fill="#94a3b8"></rect><text x="247.5" y="38.8" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">29</text><text x="247.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Mar</text><rect x="279.9" y="48.8" width="25.2" height="139.2" fill="#94a3b8"></rect><text x="292.5" y="43.8" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">28</text><text x="292.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Apr</text><rect x="324.9" y="48.8" width="25.2" height="139.2" fill="#94a3b8"></rect><text x="337.5" y="43.8" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">28</text><text x="337.5" y="204" text-anchor="middle" font-size="9" fill="#999999">May</text><rect x="369.9" y="53.8" width="25.2" height="134.2" fill="#94a3b8"></rect><text x="382.5" y="48.8" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">27</text><text x="382.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Jun</text><rect x="414.9" y="93.5" width="25.2" height="94.5" fill="#f97316"></rect><text x="427.5" y="88.5" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">19</text><text x="427.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Jul</text><rect x="459.9" y="123.4" width="25.2" height="64.6" fill="#f97316"></rect><text x="472.5" y="118.4" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">13</text><text x="472.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Aug</text><rect x="504.9" y="88.6" width="25.2" height="99.4" fill="#f97316"></rect><text x="517.5" y="83.6" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#666666">20</text><text x="517.5" y="204" text-anchor="middle" font-size="9" fill="#999999">Sep</text><line x1="0" x2="650" y1="70.3" y2="70.3" stroke="#111111" stroke-dasharray="3 3"></line><text x="650" y="82.3" text-anchor="end" font-size="9" fill="#111111">Average 24 a month</text></svg>
+<div class="small">Every channel, from Google Analytics. The quarter in orange.</div>
+<div class="h3">Which visitors enquire</div>
+<svg role="img" aria-label="Enquiries a year by source of work, against the year before" width="650" height="166" viewBox="0 0 650 166"><text x="0" y="21" font-size="10.5" fill="#111111">Clutch</text>
+<rect x="118" y="10" width="498.0" height="9" fill="#94a3b8"></rect><text x="622" y="18" font-size="9" font-family="JetBrains Mono" fill="#999999">30.9%</text>
+<rect x="118" y="22" width="111.2" height="9" fill="#f97316"></rect><text x="235.20388349514565" y="30" font-size="9" font-family="JetBrains Mono" fill="#111111">6.9%</text><text x="0" y="55" font-size="10.5" fill="#111111">ChatGPT</text>
+<rect x="118" y="44" width="64.5" height="9" fill="#94a3b8"></rect><text x="188.46601941747574" y="52" font-size="9" font-family="JetBrains Mono" fill="#999999">4%</text>
+<rect x="118" y="56" width="77.4" height="9" fill="#f97316"></rect><text x="201.35922330097088" y="64" font-size="9" font-family="JetBrains Mono" fill="#111111">4.8%</text><text x="0" y="89" font-size="10.5" fill="#111111">Direct</text>
+<rect x="118" y="78" width="70.9" height="9" fill="#94a3b8"></rect><text x="194.9126213592233" y="86" font-size="9" font-family="JetBrains Mono" fill="#999999">4.4%</text>
+<rect x="118" y="90" width="45.1" height="9" fill="#f97316"></rect><text x="169.126213592233" y="98" font-size="9" font-family="JetBrains Mono" fill="#111111">2.8%</text><text x="0" y="123" font-size="10.5" fill="#111111">Google</text>
+<rect x="118" y="112" width="62.9" height="9" fill="#94a3b8"></rect><text x="186.85436893203882" y="120" font-size="9" font-family="JetBrains Mono" fill="#999999">3.9%</text>
+<rect x="118" y="124" width="30.6" height="9" fill="#f97316"></rect><text x="154.62135922330097" y="132" font-size="9" font-family="JetBrains Mono" fill="#111111">1.9%</text><rect x="118" y="154" width="9" height="9" fill="#94a3b8"></rect><text x="132" y="162" font-size="9" fill="#666666">Year before</text><rect x="202" y="154" width="9" height="9" fill="#f97316"></rect><text x="216" y="162" font-size="9" fill="#666666">This year</text></svg>
+<div class="foot"><span>Written by Hakken from Google Search Console, Google Analytics and DataForSEO, to 9 October 2026.</span><span class="pn">04 / 05</span></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

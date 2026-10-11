@@ -7,6 +7,23 @@ completed work.
 
 ## Active Plans
 
+- [Insights — Hakken as the SEO and CRO agency](./active/insights-analyst-plan.md)
+  — the new Insights item under Ask Hakken: where the data sources combine.
+  A team of specialist agents under a Head of Strategy reads every source for
+  each owned website, with its rivals, and an Editor checks every figure and
+  tells real change from noise before anything is published. Around the
+  findings: an executive summary, a monthly report, a quarterly strategy and a
+  five-page board report PDF, all written by Hakken with no person editing;
+  leaderboards led by domain authority, organic traffic, AI mindshare and
+  share of voice; a change log and learnings from every change. Each source's
+  own screens stay in its section (Visibility, Search Console, Google
+  Analytics, and Microsoft Clarity as a new section), which the plan extends.
+  **Drawings (44 boards) and the whole plan approved 2026-10-11, then
+  checked against the Google Analytics work the same day (home country with
+  home country; people, first channel, journeys, "did this, then enquired",
+  events, tagged links, shops, titles): about 86 days, plus 5 once Google
+  approves Business Profile access. ON HOLD: nothing
+  starts until the Google Analytics work under way lands and Anthony says go.**
 - [The client's menu: Visibility, Reading room, and a new Insights](./active/menu-names-plan.md)
   — Discovery renamed Visibility (the supplier cannot be named, and Discovery
   is kept for something else); Insights renamed Reading room; a new Insights

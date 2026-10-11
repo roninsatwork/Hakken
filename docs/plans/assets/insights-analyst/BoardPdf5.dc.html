@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board report: the plan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FCFCFC}
+.pg{width:794px;height:1123px;box-sizing:border-box;position:relative;overflow:hidden;font-family:Inter,sans-serif;color:#111111;background:#FFFFFF}
+.in{position:absolute;top:0;right:0;bottom:0;left:0;padding:52px 72px 44px;display:flex;flex-direction:column}
+.run{display:flex;justify-content:space-between;font-size:9px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:#999999;padding-bottom:14px;border-bottom:1px solid #E5E5E5}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#999999;padding-top:12px;border-top:1px solid #E5E5E5}
+.pn{font-family:'JetBrains Mono',monospace;font-size:10px;color:#666666}
+.eyebrow{display:flex;align-items:center;gap:10px;margin-top:28px;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#666666}
+.eyebrow i{display:block;width:18px;height:2px;background:#f97316}
+.title{margin:12px 0 0;font-size:30px;line-height:1.14;font-weight:600;letter-spacing:-0.02em;color:#111111}
+.lead{margin:16px 0 0;font-size:13.5px;line-height:1.65;color:#111111;max-width:610px}
+.h3{margin:24px 0 10px;font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#111111}
+.small{font-size:9.5px;line-height:1.5;color:#999999;margin-top:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:22px;border-top:2px solid #111111;border-bottom:1px solid #E5E5E5}
+.kpi{padding:16px 16px 18px 0}
+.kpi+.kpi{padding-left:18px;border-left:1px solid #E5E5E5}
+.kl{font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#666666}
+.kv{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:30px;letter-spacing:-0.03em;color:#111111}
+.kc{margin-top:8px;font-size:10.5px;line-height:1.45;color:#666666}
+.ar{font-family:'JetBrains Mono',monospace;font-size:10px}
+.g{color:#10B981}.r{color:#EF4444}.a{color:#F59E0B}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;padding:0 0 8px;border-bottom:1px solid #111111}
+td{font-size:11.5px;padding:9px 0;border-bottom:1px solid #E5E5E5;vertical-align:top}
+.n{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;padding-left:12px}
+.mu{color:#999999}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.st svg{width:12px;height:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+.blk h4{margin:0 0 6px;font-size:12px;font-weight:600;color:#111111}
+.blk p{margin:0 0 16px;font-size:11.5px;line-height:1.6;color:#111111}
+.one{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid #E5E5E5;font-size:11.5px;line-height:1.55}
+.one b{font-family:'JetBrains Mono',monospace;font-weight:400;color:#f97316}
+.plan{display:grid;grid-template-columns:44px minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 56px;gap:14px;padding:14px 0;border-bottom:1px solid #E5E5E5;font-size:11px;line-height:1.5}
+.plan .no{font-family:'JetBrains Mono',monospace;font-size:26px;line-height:1;color:#111111}
+.plan .t{font-weight:600;font-size:12px;margin-bottom:4px}
+.plan .lab{font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#999999;margin-bottom:4px}
+.plan .by{font-family:'JetBrains Mono',monospace;text-align:right;color:#666666}
+.decide{margin-top:30px;padding-top:16px;border-top:2px solid #111111}
+.decide p{margin:8px 0 0;font-size:17px;line-height:1.45;font-weight:500;letter-spacing:-0.01em}
+.cover{background:#18181A;color:#FFFFFF}
+.cover .run{color:#737373;border-bottom:1px solid #3A3A3C}
+.cover .brand{color:#E8E4DC}
+.ct{margin:0;font-size:42px;line-height:1.08;font-weight:300;letter-spacing:-0.03em;color:#FFFFFF}
+.cs{margin-top:12px;font-size:15px;color:#A1A1A6}
+.cq{margin-top:28px;padding-top:22px;border-top:1px solid #3A3A3C;font-size:23px;line-height:1.3;font-weight:500;letter-spacing:-0.015em;color:#E8E4DC;max-width:560px}
+.cf{display:flex;justify-content:space-between;margin-top:34px;font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#737373}
+</style>
+</helmet>
+<div class="pg"><div class="in"><div class="run"><span>Ronins Agency · Board report, Q3 2026</span><span>The plan</span></div><div class="eyebrow"><i></i>04 · Risks, opportunities and the plan</div><h2 class="title">Make AI our name everywhere</h2>
+<div class="two" style="margin-top:24px">
+<div class="blk"><div class="h3" style="margin-top:0">Risks</div><h4>Rivals are moving into AI</h4><p>chilliapple and pixelfield have new AI pages that AI assistants already cite.</p><h4>ChatGPT doesn't name us</h4><p>For chatbots in London it names pixelfield, though Google ranks us first.</p></div>
+<div class="blk"><div class="h3" style="margin-top:0">Opportunities</div><h4>Our best page is buried</h4><p>AI consultancy converts 7.4% of visitors, our best rate, and ranks 26th for searches made 2,400 times a month.</p><h4>People are researching us</h4><p>AI tools searched for facts about us 6,904 times this quarter and found none.</p></div>
+</div>
+<div class="h3">Where to grow: our services, by interest and enquiries</div>
+<svg role="img" aria-label="Our services: interest on Google against enquiries" width="650" height="230" viewBox="0 0 650 230"><line x1="40" x2="634" y1="84" y2="84" stroke="#111111"></line><line x1="337" x2="337" y1="14" y2="196" stroke="#E5E5E5" stroke-dasharray="3 3"></line>
+<text x="34" y="199" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">-80%</text><text x="34" y="143" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">-40%</text><text x="34" y="87" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">0%</text><text x="34" y="31" text-anchor="end" font-size="9" font-family="JetBrains Mono" fill="#999999">+40%</text>
+<text x="40" y="210" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">-35%</text><text x="209.71428571428572" y="210" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">-25%</text><text x="379.42857142857144" y="210" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">-15%</text><text x="549.1428571428571" y="210" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#999999">-5%</text>
+<text x="634" y="226" text-anchor="end" font-size="9" fill="#666666">Interest on Google, last 30 days against the 30 before</text>
+<text x="46" y="24" font-size="9" fill="#666666">Enquiries, this year against last</text><circle cx="447.3" cy="22.4" r="7" fill="#f97316"></circle><text x="457.3" y="26.4" font-size="10" font-weight="600" fill="#111111">AI agency</text><circle cx="362.5" cy="186.2" r="5" fill="#94a3b8"></circle><text x="372.5" y="190.2" font-size="10" font-weight="400" fill="#111111">Chatbots</text><circle cx="141.8" cy="113.4" r="5" fill="#94a3b8"></circle><text x="151.8" y="117.4" font-size="10" font-weight="400" fill="#111111">Web design</text><circle cx="158.8" cy="84.0" r="5" fill="#94a3b8"></circle><text x="168.8" y="88.0" font-size="10" font-weight="400" fill="#111111">App development</text><circle cx="362.5" cy="140.0" r="5" fill="#94a3b8"></circle><text x="372.5" y="144.0" font-size="10" font-weight="400" fill="#111111">Shopify</text><circle cx="464.3" cy="173.6" r="5" fill="#94a3b8"></circle><text x="474.3" y="177.6" font-size="10" font-weight="400" fill="#111111">Blockchain</text><circle cx="583.1" cy="140.0" r="5" fill="#94a3b8"></circle><text x="593.1" y="144.0" font-size="10" font-weight="400" fill="#111111">Guides</text></svg>
+<div class="small">AI agency is the only service with enquiries growing. AI consultancy, new this year with 8 enquiries, isn't plotted.</div>
+<div class="h3">Next quarter</div>
+<div class="plan"><div class="no">1</div><div><div class="t">Win back the pages that brought work</div>Rebuild the chatbot page as AI agents; restore what the blockchain page won.</div><div><div class="lab">Expect</div>About 5 enquiries a quarter back</div><div><div class="lab">How we'll know</div>Enquiries from both pages</div><div class="by">30 Nov</div></div><div class="plan"><div class="no">2</div><div><div class="t">Make AI our identity everywhere</div>Business Profiles, homepage and one page of company facts.</div><div><div class="lab">Expect</div>Named by ChatGPT for AI agencies</div><div><div class="lab">How we'll know</div>Hakken's AI answer checks</div><div class="by">15 Dec</div></div><div class="plan"><div class="no">3</div><div><div class="t">Restart reviews</div>Ask our last ten clients; answer every review.</div><div><div class="lab">Expect</div>Ten new Google reviews</div><div><div class="lab">How we'll know</div>Our Business Profiles</div><div class="by">31 Dec</div></div>
+<div class="decide"><div class="kl">Recommended decision for the board</div><p>Approve repositioning Ronins as an AI agency first, across our website and Business Profiles.</p></div>
+<div class="foot"><span>Written by Hakken from Google Search Console, Google Analytics and DataForSEO, to 9 October 2026.</span><span class="pn">05 / 05</span></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

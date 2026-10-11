@@ -1,0 +1,522 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-11T10:00:00Z"
+ },
+ "title": "Hakken Insights",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 3107,
+   "title": "1 \u00b7 Executive summary: where you rank, the verdict, the scorecard and the charts a board reads",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Week.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 1853,
+   "title": "2 \u00b7 This week: the analyst's brief",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Month.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 2074,
+   "title": "3 \u00b7 Your month: the monthly report, and the work Hakken did",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Strategy.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 2443,
+   "title": "4 \u00b7 Strategy: which services to grow, keep steady or change; open a service for the detail",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ServiceDetail.dc.html": {
+   "x": 6080,
+   "y": 0,
+   "w": 1440,
+   "h": 2150,
+   "title": "5 \u00b7 A service, opened from Strategy: why to grow it, its searches, its pages and its rivals",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Reports.dc.html": {
+   "x": 7600,
+   "y": 0,
+   "w": 1440,
+   "h": 1341,
+   "title": "6 \u00b7 Reports: everything Hakken wrote, frozen as written, kept two years",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Leagues.dc.html": {
+   "x": 0,
+   "y": 3487,
+   "w": 1440,
+   "h": 2918,
+   "title": "7 \u00b7 Leaderboards: the four main leagues (domain authority, organic traffic, AI mindshare, share of voice), then every other measure",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueStrength.dc.html": {
+   "x": 1520,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "8 \u00b7 Domain authority league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueVisitors.dc.html": {
+   "x": 3040,
+   "y": 3487,
+   "w": 1440,
+   "h": 2002,
+   "title": "9 \u00b7 Organic traffic league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueNamed.dc.html": {
+   "x": 4560,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "10 \u00b7 AI mindshare league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueTop3.dc.html": {
+   "x": 6080,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "11 \u00b7 Share of voice league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueLinks.dc.html": {
+   "x": 7600,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "12 \u00b7 Links league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueOverviews.dc.html": {
+   "x": 9120,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "13 \u00b7 Shown in Google's AI Overviews league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueRecommended.dc.html": {
+   "x": 10640,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "14 \u00b7 Recommended for your buyers' questions league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueCited.dc.html": {
+   "x": 12160,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "15 \u00b7 Pages AI assistants cite league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LeagueReviews.dc.html": {
+   "x": 13680,
+   "y": 3487,
+   "w": 1440,
+   "h": 1702,
+   "title": "16 \u00b7 Google reviews league: your place, the gap above and every rival",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "BoardPdf1.dc.html": {
+   "x": 0,
+   "y": 6785,
+   "w": 794,
+   "h": 1123,
+   "title": "17 \u00b7 Board report PDF, cover: written by Hakken, ready for the board"
+  },
+  "BoardPdf2.dc.html": {
+   "x": 874,
+   "y": 6785,
+   "w": 794,
+   "h": 1123,
+   "title": "18 \u00b7 Board report PDF, summary: headline, scorecard, same visitors and a third of the enquiries"
+  },
+  "BoardPdf3.dc.html": {
+   "x": 1748,
+   "y": 6785,
+   "w": 794,
+   "h": 1123,
+   "title": "19 \u00b7 Board report PDF, market position: share over time, visitors by agency, league table"
+  },
+  "BoardPdf4.dc.html": {
+   "x": 2622,
+   "y": 6785,
+   "w": 794,
+   "h": 1123,
+   "title": "20 \u00b7 Board report PDF, the quarter: what went well and why, enquiries by source and month"
+  },
+  "BoardPdf5.dc.html": {
+   "x": 3496,
+   "y": 6785,
+   "w": 794,
+   "h": 1123,
+   "title": "21 \u00b7 Board report PDF, the plan: risks, opportunities, where to push, next quarter, the decision"
+  },
+  "Findings.dc.html": {
+   "x": 0,
+   "y": 8288,
+   "w": 1440,
+   "h": 1830,
+   "title": "22 \u00b7 All findings: the memory of everything Hakken has found",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Finding.dc.html": {
+   "x": 1520,
+   "y": 8288,
+   "w": 1440,
+   "h": 2754,
+   "title": "23 \u00b7 A finding: the whole case, checked by the Editor (I21, I29)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Track.dc.html": {
+   "x": 3040,
+   "y": 8288,
+   "w": 1440,
+   "h": 1793,
+   "title": "24 \u00b7 Track record: how findings turned out, with the change log and learnings (I25, I30)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Opportunities.dc.html": {
+   "x": 0,
+   "y": 11422,
+   "w": 1440,
+   "h": 1984,
+   "title": "25 \u00b7 Opportunities: the next moves, ranked by what they're worth",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PagePlan.dc.html": {
+   "x": 1520,
+   "y": 11422,
+   "w": 1440,
+   "h": 1775,
+   "title": "26 \u00b7 Page plan: which page should win which search, and what to create, refresh or retire",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Funnel.dc.html": {
+   "x": 3040,
+   "y": 11422,
+   "w": 1440,
+   "h": 1986,
+   "title": "27 \u00b7 Funnel: found, clicked, visited, enquired, and where the chain breaks",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PageReviews.dc.html": {
+   "x": 4560,
+   "y": 11422,
+   "w": 1440,
+   "h": 1724,
+   "title": "28 \u00b7 Page reviews: what each money page takes to win an enquiry; open a row for its review",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PageDetail.dc.html": {
+   "x": 6080,
+   "y": 11422,
+   "w": 1440,
+   "h": 2227,
+   "title": "29 \u00b7 A page, opened from Page reviews: visitors and Google clicks for one enquiry, its searches, rivals' pages",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Experiments.dc.html": {
+   "x": 7600,
+   "y": 11422,
+   "w": 1440,
+   "h": 1341,
+   "title": "30 \u00b7 Experiments: each change measured before and after",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Measurement.dc.html": {
+   "x": 9120,
+   "y": 11422,
+   "w": 1440,
+   "h": 1626,
+   "title": "31 \u00b7 Measurement check: whether your figures tell the truth",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Sources.dc.html": {
+   "x": 10640,
+   "y": 11422,
+   "w": 1440,
+   "h": 1341,
+   "title": "32 \u00b7 Sources: what each website gives Hakken, and what connecting the rest would unlock",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VisAiAnswers.dc.html": {
+   "x": 0,
+   "y": 14029,
+   "w": 1440,
+   "h": 5234,
+   "title": "33 \u00b7 Visibility \u2192 AI answers, with the buyer-question panel (I28)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VisRival.dc.html": {
+   "x": 1520,
+   "y": 14029,
+   "w": 1440,
+   "h": 3870,
+   "title": "34 \u00b7 Visibility \u2192 Competitors \u2192 a rival, with its moves over time and where it beats you",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VisLinks.dc.html": {
+   "x": 3040,
+   "y": 14029,
+   "w": 1440,
+   "h": 2990,
+   "title": "35 \u00b7 Visibility \u2192 Where links come from, with outreach drafted (I23)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VisLocal.dc.html": {
+   "x": 4560,
+   "y": 14029,
+   "w": 1440,
+   "h": 3352,
+   "title": "36 \u00b7 Visibility \u2192 Local, with profile fixes drafted (I23) and Business Profile's own figures once approved (I31)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VisReviews.dc.html": {
+   "x": 6080,
+   "y": 14029,
+   "w": 1440,
+   "h": 4820,
+   "title": "37 \u00b7 Visibility \u2192 Reviews, with review pace against rivals and requests drafted (I23)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VisAudit.dc.html": {
+   "x": 7600,
+   "y": 14029,
+   "w": 1440,
+   "h": 3585,
+   "title": "38 \u00b7 Visibility \u2192 Site audit, with speed for real visitors, structured data and internal links",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ScPages.dc.html": {
+   "x": 0,
+   "y": 19643,
+   "w": 1440,
+   "h": 2872,
+   "title": "39 \u00b7 Search Console \u2192 Pages, with the clicks Google doesn't tie to a page (S2)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ScIndexing.dc.html": {
+   "x": 1520,
+   "y": 19643,
+   "w": 1440,
+   "h": 1429,
+   "title": "40 \u00b7 Search Console \u2192 Indexing (new page)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ScDemand.dc.html": {
+   "x": 3040,
+   "y": 19643,
+   "w": 1440,
+   "h": 1917,
+   "title": "41 \u00b7 Search Console \u2192 Demand by service (new page)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ClarityOverview.dc.html": {
+   "x": 0,
+   "y": 22895,
+   "w": 1440,
+   "h": 1279,
+   "title": "42 \u00b7 Microsoft Clarity \u2192 Overview (new section)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ClarityPages.dc.html": {
+   "x": 1520,
+   "y": 22895,
+   "w": 1440,
+   "h": 1320,
+   "title": "43 \u00b7 Microsoft Clarity \u2192 Pages (new section)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ClarityConnection.dc.html": {
+   "x": 3040,
+   "y": 22895,
+   "w": 1440,
+   "h": 1000,
+   "title": "44 \u00b7 Microsoft Clarity \u2192 Connection (new section)",
+   "expand": "fill",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Week.dc.html",
+  "Month.dc.html",
+  "Strategy.dc.html",
+  "ServiceDetail.dc.html",
+  "Reports.dc.html",
+  "Leagues.dc.html",
+  "LeagueStrength.dc.html",
+  "LeagueVisitors.dc.html",
+  "LeagueNamed.dc.html",
+  "LeagueTop3.dc.html",
+  "LeagueLinks.dc.html",
+  "LeagueOverviews.dc.html",
+  "LeagueRecommended.dc.html",
+  "LeagueCited.dc.html",
+  "LeagueReviews.dc.html",
+  "BoardPdf1.dc.html",
+  "BoardPdf2.dc.html",
+  "BoardPdf3.dc.html",
+  "BoardPdf4.dc.html",
+  "BoardPdf5.dc.html",
+  "Findings.dc.html",
+  "Finding.dc.html",
+  "Track.dc.html",
+  "Opportunities.dc.html",
+  "PagePlan.dc.html",
+  "Funnel.dc.html",
+  "PageReviews.dc.html",
+  "PageDetail.dc.html",
+  "Experiments.dc.html",
+  "Measurement.dc.html",
+  "Sources.dc.html",
+  "VisAiAnswers.dc.html",
+  "VisRival.dc.html",
+  "VisLinks.dc.html",
+  "VisLocal.dc.html",
+  "VisReviews.dc.html",
+  "VisAudit.dc.html",
+  "ScPages.dc.html",
+  "ScIndexing.dc.html",
+  "ScDemand.dc.html",
+  "ClarityOverview.dc.html",
+  "ClarityPages.dc.html",
+  "ClarityConnection.dc.html"
+ ],
+ "notes": {
+  "kit": {
+   "fill": "gray",
+   "size": 24,
+   "w": 1440,
+   "maxH": 340,
+   "x": 0,
+   "y": -700,
+   "text": "Insights and what it adds to each source's own section, drawn 11 Oct 2026 on the drawing kit (stylesheet 4c81ae0e448a, look 149d9f4fb243). Nothing is built. Insights holds only what combines the sources; Visibility's and Search Console's boards are copies of the running app's screens with the plan's additions. Figures are ronins.co.uk's real data except: speed, indexing and Clarity (not collected yet), drafted fixes' wording, how many things Hakken checked, the wording of page reviews, report dates and the roadmap's expected results. The Google Analytics additions wait for the Google Analytics work. Admin pages aren't drawn."
+  },
+  "row-overview": {
+   "kind": "title1",
+   "text": "Insights \u00b7 Overview",
+   "x": 0,
+   "y": -260,
+   "w": 240,
+   "maxW": 9040
+  },
+  "row-leagues": {
+   "kind": "title1",
+   "text": "Insights \u00b7 Leaderboards",
+   "x": 0,
+   "y": 3227,
+   "w": 240,
+   "maxW": 15120
+  },
+  "row-pdf": {
+   "kind": "title1",
+   "text": "Insights \u00b7 The board report: five pages Hakken writes each quarter",
+   "x": 0,
+   "y": 6525,
+   "w": 240,
+   "maxW": 4290
+  },
+  "row-findings": {
+   "kind": "title1",
+   "text": "Insights \u00b7 Findings",
+   "x": 0,
+   "y": 8028,
+   "w": 240,
+   "maxW": 4480
+  },
+  "row-growth": {
+   "kind": "title1",
+   "text": "Insights \u00b7 Growth and Setup: where the sources combine",
+   "x": 0,
+   "y": 11162,
+   "w": 240,
+   "maxW": 12080
+  },
+  "row-visibility": {
+   "kind": "title1",
+   "text": "Visibility: what Insights adds to its own screens",
+   "x": 0,
+   "y": 13769,
+   "w": 240,
+   "maxW": 9040
+  },
+  "row-sc": {
+   "kind": "title1",
+   "text": "Search Console: what Insights adds",
+   "x": 0,
+   "y": 19383,
+   "w": 240,
+   "maxW": 4480
+  },
+  "row-clarity": {
+   "kind": "title1",
+   "text": "Microsoft Clarity: a new section",
+   "x": 0,
+   "y": 22635,
+   "w": 240,
+   "maxW": 4480
+  }
+ },
+ "designSystems": []
+}
