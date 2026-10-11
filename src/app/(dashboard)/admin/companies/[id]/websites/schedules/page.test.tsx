@@ -59,7 +59,7 @@ describe("CompanyDataCollectionPage", () => {
       const path = convexPath(reference);
       if (path.includes("getCompanyById")) return { _id: "company_1", name: "Ronins Agency" };
       if (path.includes("getCompanySchedule")) return schedule;
-      if (path.includes("getCollectionParts")) return { local: false, reviews: false, aiApps: false, aiDemand: false, brandRadar: false, webMentions: false };
+      if (path.includes("getCollectionParts")) return { local: false, reviews: false, aiApps: false, aiDemand: false, brandRadar: false, webMentions: false, buyerPanel: false };
       if (path.includes("agents")) return agents;
       return undefined;
     }) as never);
@@ -214,7 +214,7 @@ describe("CompanyDataCollectionPage", () => {
 
     await waitFor(() => expect(setCollectionParts).toHaveBeenCalledWith({
       companyId: "company_1",
-      parts: { local: true, reviews: false, aiApps: false, aiDemand: false, brandRadar: false, webMentions: false },
+      parts: { local: true, reviews: false, aiApps: false, aiDemand: false, brandRadar: false, webMentions: false, buyerPanel: false },
     }));
     expect(saveCompanySchedule).not.toHaveBeenCalled();
   });

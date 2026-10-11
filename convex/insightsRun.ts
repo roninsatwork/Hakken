@@ -35,6 +35,7 @@ import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
 import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
 import { planBrief } from "./utils/insightPlan";
 import { DRAFT_RULES, draftsFrom, type Drafted } from "./utils/insightDrafts";
+import { PANEL_RULES, panelFrom } from "./utils/insightPanel";
 import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
@@ -313,6 +314,12 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   } catch (error) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Drafts", detail: failureSummary(error), failed: true });
   }
+  // 8. The buyer-question panel (I28): built every 90 days by the AI visibility specialist, and asked once its collection is on.
+  try {
+    await buildPanel(ctx, args, member(SPECIALIST_ROLE.aiVisibility) ?? lead);
+  } catch (error) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Buyer questions", detail: failureSummary(error), failed: true });
+  }
   const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
   return `${args.host}: ${reading.facts.length} facts read,${reports.length > 0 ? ` ${reports.join(", ")} written,` : ""}${drafted > 0 ? ` ${drafted} fixes drafted,` : ""} ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
 }
@@ -368,6 +375,24 @@ async function writeDrafts(ctx: ActionCtx, args: RunArgs, week: string, local: T
   }
   if (drafted.length === 0) return 0;
   return await ctx.runMutation(internal.insightsDrafts.saveDrafts, { holdId: args.holdId, companyId: args.companyId, week, origin: inputs.origin, drafts: drafted });
+}
+
+/** The buyer-question panel, built when due (I28); then put on or taken off the company's questions as its collection says. */
+async function buildPanel(ctx: ActionCtx, args: RunArgs, member: TeamMember | undefined): Promise<void> {
+  const inputs = await ctx.runQuery(internal.insightsPanel.panelInputs, { holdId: args.holdId });
+  if (!inputs) return;
+  if (inputs.due && inputs.searches.length > 0) {
+    const system = [PANEL_RULES, `You are the AI visibility specialist: ${DISCIPLINE.aiVisibility}.`, member?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({ business: inputs.name, website: inputs.host, searches: inputs.searches.map((row) => ({ search: row.search, monthly: row.volume, page: row.page })), services: inputs.services, guides: inputs.guides });
+    const answer = await ask(ctx, args, member, "the buyer-question panel", system, prompt);
+    const sources = new Map<string, number | null>([...inputs.searches.map((row) => [row.search.toLowerCase(), row.volume] as [string, number]), ...inputs.guides.map((guide) => [guide.toLowerCase(), null] as [string, null])]);
+    const questions = panelFrom(answer, inputs.name, sources);
+    if (questions.length > 0) await ctx.runMutation(internal.insightsPanel.savePanel, { holdId: args.holdId, companyId: args.companyId, questions });
+  }
+  const synced = await ctx.runMutation(internal.insightsPanel.syncPanel, { holdId: args.holdId });
+  if (synced.overLimit > 0) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Buyer questions", detail: `${synced.overLimit} of the panel's questions are past the website's limit of questions and aren't asked.`, failed: false });
+  }
 }
 
 type WrittenFinding = SavedFinding & { findingId: Id<"insightFindings"> | null };

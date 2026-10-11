@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useBuyerPanel } from "../../../_components/useBuyerPanel";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MessageSquareQuote } from "lucide-react";
@@ -19,7 +20,7 @@ import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
-import { useSiteId } from "../../../_components/useSite";
+import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -61,6 +62,8 @@ export default function SiteAnswersPage() {
   const [search, setSearch, term] = useSiteSearch();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
+  const site = useSite();
+  const panel = useBuyerPanel(siteId, site?.host ?? "site");
 
   const questions = catalogue?.questions ?? [];
   // A question asked for by name that is not on the list is said to be so,
@@ -92,6 +95,23 @@ export default function SiteAnswersPage() {
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MessageSquareQuote className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       <SiteSees screen="aiAnswers" seen={catalogue?.seen} />
+      {/* Insights' buyer-question panel (insights-analyst-plan.md I28): its questions, and whether each is asked yet. */}
+      {panel.shown ? (
+        <>
+          {panel.notice}
+          <DataTable
+            rows={panel.pager.pageRows}
+            rowKey={(row) => row.prompt}
+            search={panel.search}
+            filters={panel.filters}
+            cardHeader={<TableBar footer={panel.pager.footer} noun="results" title={panel.title} actions={panel.download} />}
+            empty={panel.empty}
+            footer={panel.pager.footer}
+            columns={panel.columns}
+          />
+          {panel.link}
+        </>
+      ) : null}
       <Notice>{t("keptFrom")}</Notice>
 
       {missing ? (

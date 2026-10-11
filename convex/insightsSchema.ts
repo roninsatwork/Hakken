@@ -6,6 +6,7 @@ import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
 import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./utils/insightDrafts";
+import { panelQuestionValidator } from "./utils/insightPanel";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -195,6 +196,18 @@ export const insightsTables = {
     .index("by_hold_area_created", ["companyWebsiteId", "area", "createdAt"])
     .index("by_hold_kind_target", ["companyWebsiteId", "kind", "target"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * A website's buyer-question panel (I28, phase 12): built by the AI
+   * visibility specialist, again every 90 days, and asked each week once the
+   * company's "Buyer questions" collection is on. One row a website.
+   */
+  insightQuestionPanels: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    questions: v.array(panelQuestionValidator),
+    builtAt: v.number(),
+  }).index("by_hold", ["companyWebsiteId"]),
 
   insightLearnings: defineTable({
     kind: v.string(),

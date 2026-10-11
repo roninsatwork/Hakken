@@ -2012,7 +2012,11 @@
         },
         "saved": "Salvato",
         "saveFailed": "Non è stato possibile salvare gli interruttori.",
-        "saveParts": "Salva gli interruttori"
+        "saveParts": "Salva gli interruttori",
+        "buyerPanel": {
+          "label": "Domande dei clienti",
+          "description": "Il gruppo di circa 40 domande che i clienti farebbero a un assistente AI, costruito da Hakken a partire dalle ricerche e dai servizi dell'azienda, posto a ogni assistente ogni settimana e pagato come le domande dell'azienda."
+        }
       },
       "insights": {
         "title": "Insights",
@@ -14381,6 +14385,37 @@
         "REVIEW_REQUEST": "Mandalo ai tuoi clienti recenti per email o messaggio, con il tuo link per le recensioni Google nello spazio.",
         "REVIEW_REPLIES": "Incolla ogni risposta sotto la sua recensione nel tuo Profilo dell'attività su Google: Leggi recensioni, poi Rispondi.",
         "OUTREACH": "Mandala dalla tua email al redattore o al titolare del sito. Completa prima gli spazi vuoti."
+      }
+    },
+    "buyerPanel": {
+      "noticeOff": "Il gruppo di domande dei clienti di Hakken: {count} domande costruite da ciò che i tuoi clienti cercano e dai servizi che vendi, con e senza il tuo nome. Saranno poste a ChatGPT, Gemini, Perplexity, Claude e alla Modalità AI di Google ogni settimana, una volta attivate le Domande dei clienti per la tua azienda.",
+      "noticeOn": "Il gruppo di domande dei clienti di Hakken: {count} domande costruite da ciò che i tuoi clienti cercano e dai servizi che vendi, con e senza il tuo nome; {asking} sono poste a ogni assistente ogni settimana, e le risposte entrano nella tabella qui sotto.",
+      "search": "Trova una domanda",
+      "builtFrom": "Costruita da",
+      "everySource": "Ogni fonte",
+      "kinds": {
+        "SEARCH": "Una ricerca dei clienti",
+        "NAME": "Il tuo nome",
+        "GUIDE": "Una guida che porta visitatori"
+      },
+      "tableTitle": "{count, plural, one {# domanda} other {# domande}} · Costruite il {day}, prima le più cercate",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna domanda corrisponde",
+      "yourName": "il tuo nome",
+      "withName": "Con il tuo nome",
+      "withoutName": "Senza",
+      "statuses": {
+        "ASKING": "Posta ogni settimana dal {day}",
+        "WAITING": "In attesa dell'attivazione",
+        "OVER_LIMIT": "Oltre il limite del sito"
+      },
+      "seeInsights": "Vedi le scoperte di Insights sulle risposte AI",
+      "columns": {
+        "question": "Domanda del cliente",
+        "builtFrom": "Costruita da",
+        "volume": "Ricerche al mese",
+        "name": "Con il tuo nome",
+        "status": "Stato"
       }
     }
   },

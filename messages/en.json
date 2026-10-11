@@ -2012,7 +2012,11 @@
         },
         "saved": "Saved",
         "saveFailed": "The switches could not be saved.",
-        "saveParts": "Save switches"
+        "saveParts": "Save switches",
+        "buyerPanel": {
+          "label": "Buyer questions",
+          "description": "Hakken's panel of about 40 questions buyers would ask an AI assistant, built from the company's searches and services, asked of every assistant each week and charged as the company's own questions are."
+        }
       },
       "insights": {
         "title": "Insights",
@@ -14381,6 +14385,37 @@
         "REVIEW_REQUEST": "Send it to your recent clients by email or message, with your Google review link in the gap.",
         "REVIEW_REPLIES": "Paste each reply under its review in your Google Business Profile: Read reviews, then Reply.",
         "OUTREACH": "Send it from your own email to the site's editor or owner. Fill in any gaps first."
+      }
+    },
+    "buyerPanel": {
+      "noticeOff": "Hakken's buyer-question panel: {count} questions built from what your buyers search for and the services you sell, phrased with and without your name. They'll be asked of ChatGPT, Gemini, Perplexity, Claude and Google's AI Mode every week once Buyer questions is switched on for your company.",
+      "noticeOn": "Hakken's buyer-question panel: {count} questions built from what your buyers search for and the services you sell, phrased with and without your name; {asking} are asked of every assistant each week, and their answers join the table below.",
+      "search": "Find a question",
+      "builtFrom": "Built from",
+      "everySource": "Every source",
+      "kinds": {
+        "SEARCH": "A search buyers make",
+        "NAME": "Your name",
+        "GUIDE": "A guide that brings visitors"
+      },
+      "tableTitle": "{count, plural, one {# question} other {# questions}} · Built {day}, most searched first",
+      "download": "Download CSV",
+      "noMatch": "No question matches",
+      "yourName": "your name",
+      "withName": "With your name",
+      "withoutName": "Without",
+      "statuses": {
+        "ASKING": "Asked weekly since {day}",
+        "WAITING": "Waiting for the switch",
+        "OVER_LIMIT": "Past the website's limit"
+      },
+      "seeInsights": "See the Insights findings about AI answers",
+      "columns": {
+        "question": "Buyer question",
+        "builtFrom": "Built from",
+        "volume": "Searches a month",
+        "name": "Your name in it",
+        "status": "Status"
       }
     }
   },

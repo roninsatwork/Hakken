@@ -300,6 +300,7 @@ export const localTables = {
     aiDemand: v.optional(v.boolean()),
     brandRadar: v.optional(v.boolean()),
     webMentions: v.optional(v.boolean()),
+    buyerPanel: v.optional(v.boolean()),
     updatedAt: v.number(),
   }).index("by_company", ["companyId"]),
 

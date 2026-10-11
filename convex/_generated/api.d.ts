@@ -267,6 +267,7 @@ import type * as insightsCounts from "../insightsCounts.js";
 import type * as insightsCountsSchema from "../insightsCountsSchema.js";
 import type * as insightsDrafts from "../insightsDrafts.js";
 import type * as insightsMigrations from "../insightsMigrations.js";
+import type * as insightsPanel from "../insightsPanel.js";
 import type * as insightsReading from "../insightsReading.js";
 import type * as insightsReads from "../insightsReads.js";
 import type * as insightsRun from "../insightsRun.js";
@@ -650,6 +651,7 @@ import type * as utils_insightEnquiryCheck from "../utils/insightEnquiryCheck.js
 import type * as utils_insightFacts from "../utils/insightFacts.js";
 import type * as utils_insightLeagues from "../utils/insightLeagues.js";
 import type * as utils_insightMeasurement from "../utils/insightMeasurement.js";
+import type * as utils_insightPanel from "../utils/insightPanel.js";
 import type * as utils_insightPlan from "../utils/insightPlan.js";
 import type * as utils_insightStrategy from "../utils/insightStrategy.js";
 import type * as utils_insightSummary from "../utils/insightSummary.js";
@@ -1089,6 +1091,7 @@ declare const fullApi: ApiFromModules<{
   insightsCountsSchema: typeof insightsCountsSchema;
   insightsDrafts: typeof insightsDrafts;
   insightsMigrations: typeof insightsMigrations;
+  insightsPanel: typeof insightsPanel;
   insightsReading: typeof insightsReading;
   insightsReads: typeof insightsReads;
   insightsRun: typeof insightsRun;
@@ -1472,6 +1475,7 @@ declare const fullApi: ApiFromModules<{
   "utils/insightFacts": typeof utils_insightFacts;
   "utils/insightLeagues": typeof utils_insightLeagues;
   "utils/insightMeasurement": typeof utils_insightMeasurement;
+  "utils/insightPanel": typeof utils_insightPanel;
   "utils/insightPlan": typeof utils_insightPlan;
   "utils/insightStrategy": typeof utils_insightStrategy;
   "utils/insightSummary": typeof utils_insightSummary;
