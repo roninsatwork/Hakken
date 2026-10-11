@@ -1,0 +1,77 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 2764,
+      "is_interactive": true,
+      "title": "1 \u00b7 Search Console \u2192 Volatility, What Hakken sees open",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "VolatilityFolded.dc.html": {
+      "expand": "fill",
+      "h": 2554,
+      "is_interactive": true,
+      "title": "2 \u00b7 Volatility, What Hakken sees folded: one line, its first sentence",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Updates.dc.html": {
+      "expand": "fill",
+      "h": 1398,
+      "is_interactive": true,
+      "title": "3 \u00b7 Search Console \u2192 Google updates, What Hakken sees open, Volatility in place of Moved",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "UpdatesFolded.dc.html": {
+      "expand": "fill",
+      "h": 1242,
+      "is_interactive": true,
+      "title": "4 \u00b7 Google updates, What Hakken sees folded",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-08T15:20:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "kit": {
+      "fill": "gray",
+      "maxH": 180,
+      "size": 24,
+      "text": "Redrawn 2026-10-10 from the running app's Search Console screens (Google updates, Wins and losses) on the drawing kit (stylesheet 76ecdc171e6d, look 149d9f4fb243). Approved 2026-10-10, with What Hakken sees folding away (boards 2 and 4), the look every screen's box takes. Volatility is not built; its numbers are examples, the keywords and the update ronins.co.uk's real ones.",
+      "w": 1440,
+      "x": 0,
+      "y": -560
+    },
+    "route": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Volatility: is it Google, or is it us?",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "VolatilityFolded.dc.html",
+    "Updates.dc.html",
+    "UpdatesFolded.dc.html"
+  ],
+  "pages": [],
+  "title": "Hakken Volatility"
+}

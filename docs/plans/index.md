@@ -14,6 +14,21 @@ completed work.
   below Reading room. Addresses and the code's own names stay. **Drawing approved
   2026-10-11 (`docs/plans/assets/menu-names/`); phases 1–6 built on dev
   2026-10-11; phase 7, the new Insights item, waits for its first page.**
+- [Search Console — Volatility, and What Hakken sees on every screen](./active/search-console-volatility-plan.md)
+  — one new page in Search Console's Changes group: how much the website's
+  positions moved each day, out of 10, read from Search Console's daily
+  figures (nothing bought), beside Google's updates, with What Hakken sees
+  saying whether it looks like Google, demand or the site, and what to do
+  first; Google updates gains a Volatility column; Google's update list fills
+  itself. And What Hakken sees on every screen: it folds away to one line and
+  opens again when its advice changes; each screen's advice saved, so the
+  screens, Ask Hakken and later the weekly note, tasks and messages say the
+  same thing; any screen in Discovery, Search Console or Google Analytics
+  missing a box gets one where it makes sense. Nine phases, about ten days,
+  built by the session that drew it. **Drawn and approved 2026-10-10 (four
+  boards in `docs/plans/assets/search-console-volatility/`); built on local
+  dev 2026-10-11, every phase, and checked on ronins.co.uk's real data;
+  committed on dev the same day, not pushed.**
 - [Discovery — detail screens, rows that open, and What Hakken sees](./active/discovery-detail-and-hakken-sees-plan.md)
   — every row in Discovery opens something: four new detail screens (one
   business, one website, one question in Google's AI answers, one page), each

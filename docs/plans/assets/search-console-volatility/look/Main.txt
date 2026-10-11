@@ -1,0 +1,19 @@
+# Search Console → Volatility — the approved look (board "Main" of docs/plans/assets/search-console-volatility/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Volatility
+settings-card: What Hakken sees
+figures
+  figure: Latest day, # Oct
+  figure: During Google's update
+  figure: Moved # places or more
+  figure: Clicks, last # days
+chart-card: Volatility, day by day
+  checkbox: Volatility
+search: Search keywords…
+filter: Brand or not
+filter: Up or down
+table: Keyword | Position | Moved | Clicks
+  table-bar
+    download: Download all (CSV)
+  table-footer
