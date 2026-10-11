@@ -13,6 +13,7 @@ import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useFindingsTable } from "../_components/FindingsTable";
+import { EnquiryCheckNotice } from "../_components/EnquiryCheckNotice";
 import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
 
 /**
@@ -51,6 +52,7 @@ export default function InsightsThisWeekPage() {
     <>
       <PageHeader icon={<CalendarCheck className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {data ? <HakkenSees says={says} steps={steps} /> : null}
+      <EnquiryCheckNotice check={data?.weeks[0]?.summary?.enquiryCheck} />
       <FigureRow>
         <Figure label={t("figures.new")} value={findings ? String(findings.length) : "…"} detail={<span className="text-secondary">{t("figures.open", { count: data?.open ?? 0 })}</span>} />
         <Figure label={t("figures.atStake")} value={atStake > 0 ? formatNumber(Math.round(atStake / 4)) : "–"} detail={<span className="text-secondary">{t("figures.atStakeDetail")}</span>} />

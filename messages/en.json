@@ -17787,7 +17787,8 @@
         "auditProblems": "Pages Google can't read well",
         "conversionsNeverFire": "Ways to enquire that never count",
         "analyticsSeesPart": "Analytics sees only part",
-        "joinedStory": "One story across sources"
+        "joinedStory": "One story across sources",
+        "enquiryCountUncertain": "Enquiries may be counted wrongly"
       },
       "sources": {
         "searchConsole": "Search Console",
@@ -18079,6 +18080,12 @@
       "work": "Work Hakken did",
       "howMuch": "How much",
       "noWork": "Nothing recorded for this month."
+    },
+    "enquiryCheck": {
+      "intro": "Hakken isn't sure every enquiry is counted once, so figures built on the count may read high. {problems} The Measurement check says what to test.",
+      "countedTwice": "\"{event}\" and \"{other}\" happened {a} and {b} times in 12 months: one enquiry may be counted twice.",
+      "repeated": "\"{event}\" happened {a} times from {b} people in 12 months: some are repeats, or not people.",
+      "leavesBefore": "{a} of the {b} people who clicked a link off your website went on to enquire: your form may count as leaving the website, or bots may be filling it in."
     }
   }
 }

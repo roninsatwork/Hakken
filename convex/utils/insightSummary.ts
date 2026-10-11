@@ -1,6 +1,7 @@
 import { v, type Infer } from "convex/values";
 import type { Fact } from "./insightFacts";
 import { leaguesFrom, type LeagueId } from "./insightLeagues";
+import { enquiryCheckValidator } from "./insightEnquiryCheck";
 
 /**
  * The executive summary's scorecard (docs/plans/active/insights-analyst-plan.md
@@ -35,6 +36,8 @@ export const shareMonthValidator = v.object({ month: v.string(), you: v.number()
 
 export const weekSummaryValidator = v.object({
   scorecard: v.array(scoreValidator),
+  /** Whether each real enquiry counts once (I42); absent on weeks before the check. */
+  enquiryCheck: v.optional(enquiryCheckValidator),
   enquiriesByMonth: v.array(monthValidator),
   shareByMonth: v.array(shareMonthValidator),
   /** How many facts the team read, and explanations its specialists ruled out. */

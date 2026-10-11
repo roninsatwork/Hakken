@@ -23,6 +23,7 @@ import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { RankStrip } from "../_components/LeagueCard";
 import { ReportDownloadAction } from "../_components/ReportDownload";
+import { EnquiryCheckNotice } from "../_components/EnquiryCheckNotice";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
 
 const STATUS_TONE = { ON_TRACK: "success", WATCH: "warning", BEHIND: "danger" } as const;
@@ -77,6 +78,7 @@ export default function InsightsSummaryPage() {
         action={<ReportDownloadAction report={board} label={t("downloadBoard")} />}
       />
       <HakkenSees says={says} steps={steps} />
+      <EnquiryCheckNotice check={newest?.summary?.enquiryCheck} />
       {leagues && leagues.leagues.length > 0 ? <RankStrip leagues={leagues.leagues} host={leagues.host} title={t("rank.title", { rivals: leagues.rivals })} hint={t("rank.hint")} /> : null}
       <FigureRow>
         <Figure label={t("measures.enquiries")} value={shown90(score("enquiries"))} detail={change(score("enquiries"))} />

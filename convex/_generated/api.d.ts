@@ -642,6 +642,7 @@ import type * as utils_heroes from "../utils/heroes.js";
 import type * as utils_holdPagesJoin from "../utils/holdPagesJoin.js";
 import type * as utils_insightChecks from "../utils/insightChecks.js";
 import type * as utils_insightEditor from "../utils/insightEditor.js";
+import type * as utils_insightEnquiryCheck from "../utils/insightEnquiryCheck.js";
 import type * as utils_insightFacts from "../utils/insightFacts.js";
 import type * as utils_insightLeagues from "../utils/insightLeagues.js";
 import type * as utils_insightSummary from "../utils/insightSummary.js";
@@ -1454,6 +1455,7 @@ declare const fullApi: ApiFromModules<{
   "utils/holdPagesJoin": typeof utils_holdPagesJoin;
   "utils/insightChecks": typeof utils_insightChecks;
   "utils/insightEditor": typeof utils_insightEditor;
+  "utils/insightEnquiryCheck": typeof utils_insightEnquiryCheck;
   "utils/insightFacts": typeof utils_insightFacts;
   "utils/insightLeagues": typeof utils_insightLeagues;
   "utils/insightSummary": typeof utils_insightSummary;

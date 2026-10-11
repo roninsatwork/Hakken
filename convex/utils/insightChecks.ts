@@ -1,4 +1,5 @@
 import { changeOf, type Fact } from "./insightFacts";
+import { enquiryCheck } from "./insightEnquiryCheck";
 import type { InsightSpecialist } from "./insightTeam";
 
 /**
@@ -337,6 +338,22 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
   }
 
   // ---------------------------------------------------------------- Measurement
+  // The enquiry check (I42): one enquiry counted twice, repeats, or the form counted as leaving the website.
+  {
+    const check = enquiryCheck(facts);
+    if (!check.ok) {
+      const keys = check.problems.flatMap((problem) => problem.code === "leavesBefore"
+        ? ["ga.funnel.click.then.365.now", "ga.funnel.click.did.365.now"]
+        : problem.code === "countedTwice"
+          ? [`ga.counted.${problem.event}.times.365.now`, `ga.counted.${problem.other}.times.365.now`]
+          : [`ga.counted.${problem.event}.times.365.now`, `ga.event.${problem.event}.people.365.now`]);
+      add({
+        specialist: "measurement", pattern: "enquiryCountUncertain", stake: 8,
+        seen: `The enquiry count may be wrong: ${check.problems.map((problem) => problem.code).join(", ")}.`,
+        facts: [...new Set(keys)].filter((key) => read.has(key)),
+      });
+    }
+  }
   // Ways to enquire counted as conversions that never happened in 12 months.
   {
     const silent = read.keys.filter((key) => /^ga\.counted\..+\.times\.365\.now$/.test(key) && read.get(key) === 0);

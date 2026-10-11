@@ -17787,7 +17787,8 @@
         "auditProblems": "Pagine che Google legge male",
         "conversionsNeverFire": "Modi di contattarti che non vengono mai contati",
         "analyticsSeesPart": "Analytics vede solo una parte",
-        "joinedStory": "Una storia tra le fonti"
+        "joinedStory": "Una storia tra le fonti",
+        "enquiryCountUncertain": "Le richieste potrebbero essere contate male"
       },
       "sources": {
         "searchConsole": "Search Console",
@@ -18079,6 +18080,12 @@
       "work": "Lavoro svolto da Hakken",
       "howMuch": "Quanto",
       "noWork": "Niente di registrato per questo mese."
+    },
+    "enquiryCheck": {
+      "intro": "Hakken non è sicuro che ogni richiesta sia contata una sola volta, quindi i dati basati sul conteggio potrebbero risultare alti. {problems} La verifica delle misurazioni dice cosa controllare.",
+      "countedTwice": "\"{event}\" e \"{other}\" sono avvenuti {a} e {b} volte in 12 mesi: una richiesta potrebbe essere contata due volte.",
+      "repeated": "\"{event}\" è avvenuto {a} volte da {b} persone in 12 mesi: alcune sono ripetizioni, o non sono persone.",
+      "leavesBefore": "{a} delle {b} persone che hanno cliccato un link verso un altro sito hanno poi fatto una richiesta: il tuo modulo potrebbe contare come uscita dal sito, o dei bot potrebbero compilarlo."
     }
   }
 }

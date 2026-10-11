@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { couldBeChance, editFinding, typedNumbers, unlike, type DraftFinding } from "./insightEditor";
 import { candidatesFor } from "./insightChecks";
+import { enquiryCheck } from "./insightEnquiryCheck";
 import { factsByKey, type Fact } from "./insightFacts";
 
 /**
@@ -100,5 +101,26 @@ describe("the checklists", () => {
     const ai = (key: string, value: number): Fact => ({ key, value, unit: "count", source: "ai", label: key });
     const found = candidatesFor([ai("ai.answers.chatgpt.asked", 40), ai("ai.answers.chatgpt.acme.test.named", 0), ai("ai.answers.chatgpt.rival.test.named", 3)], "acme.test");
     expect(found).toEqual([expect.objectContaining({ specialist: "aiVisibility", pattern: "missingFromAnAssistant", facts: ["ai.answers.chatgpt.acme.test.named", "ai.answers.chatgpt.asked", "ai.answers.chatgpt.rival.test.named"] })]);
+  });
+});
+
+describe("the enquiry check (I42)", () => {
+  const count = (key: string, value: number): Fact => ({ key, value, unit: "count", source: "analytics", label: key });
+
+  test("nearly everyone who leaves by a link going on to enquire is the form counted as leaving, or bots", () => {
+    const check = enquiryCheck([count("ga.counted.form_submission.times.365.now", 260), count("ga.event.form_submission.people.365.now", 255), count("ga.funnel.click.did.365.now", 271), count("ga.funnel.click.then.365.now", 255)]);
+    expect(check).toEqual({ ok: false, problems: [{ code: "leavesBefore", event: "click", other: null, a: 255, b: 271 }] });
+  });
+
+  test("two ways of counting that rise together, and repeats from the same people", () => {
+    const check = enquiryCheck([
+      count("ga.counted.form_submission.times.365.now", 100), count("ga.counted.generate_lead.times.365.now", 96),
+      count("ga.event.form_submission.people.365.now", 40), count("ga.event.generate_lead.people.365.now", 90),
+    ]);
+    expect(check.problems.map((problem) => problem.code)).toEqual(["countedTwice", "repeated"]);
+  });
+
+  test("small counts say nothing either way", () => {
+    expect(enquiryCheck([count("ga.counted.form_submission.times.365.now", 12), count("ga.event.form_submission.people.365.now", 4)]).ok).toBe(true);
   });
 });

@@ -13,6 +13,7 @@ import { readPeriod } from "./searchConsolePeriodReads";
 import { daysOf } from "./searchConsoleReads";
 import { addUp } from "./searchConsoleDays";
 import { mainConsoleCountry } from "./searchConsoleCountries";
+import { countryIdOf } from "./googleAnalyticsCollect";
 import { readings } from "./siteBrandRadar";
 import { latestBands, latestFigures, seriesFor } from "./siteFigures";
 import { listHold } from "./siteAccess";
@@ -411,6 +412,35 @@ export async function readWebsiteFacts(ctx: Pick<ActionCtx, "runQuery">, holdId:
   }
   return { facts, problems };
 }
+
+// ---------------------------------------------------------------------------
+// Asked of Google in the run (§8): what a screen asks when it opens, reached from the run's own step
+
+/** What the run needs to ask Google Analytics itself: the connection, its property, addresses, home country and what counts. */
+export const analyticsTargetInternal = internalQuery({
+  args: holdArgs,
+  returns: v.union(v.null(), v.object({
+    connectionId: v.id("googleAnalyticsConnections"),
+    property: v.string(),
+    addresses: v.array(v.string()),
+    country: v.string(),
+    counted: v.array(v.string()),
+    newestDay: v.string(),
+  })),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    const connection = hold ? await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first() : null;
+    if (!hold || !connection?.property || !connection.newestDay || connection.status !== "CONNECTED") return null;
+    return {
+      connectionId: connection._id,
+      property: connection.property,
+      addresses: connection.addresses ?? [],
+      country: countryIdOf(connection.mainCountry ?? mainConsoleCountry(hold)),
+      counted: countedOf(connection).map((event) => event.eventName),
+      newestDay: connection.newestDay,
+    };
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Month by month, for the executive summary's charts (§4.1)

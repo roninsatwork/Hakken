@@ -30,6 +30,8 @@ import {
 } from "./utils/insightTeam";
 import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
+import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
+import { askFunnel, openSession } from "./googleAnalyticsCollect";
 
 /**
  * The Insights team's weekly run (docs/plans/active/insights-analyst-plan.md
@@ -141,8 +143,9 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   const member = (role: string) => setup.members.find((entry) => entry.role === role && entry.isActive);
   const lead = member(INSIGHTS_LEAD_ROLE);
 
-  // 1. One reading of every source (§2.1).
+  // 1. One reading of every source (§2.1), and what the run asks Google itself (§8, I37, I42).
   const reading = await readWebsiteFacts(ctx, args.holdId);
+  reading.facts.push(...await askedInRun(ctx, args.holdId));
   const facts = factsByKey(reading.facts);
   const bySource = new Map<string, number>();
   for (const fact of reading.facts) bySource.set(fact.source, (bySource.get(fact.source) ?? 0) + 1);
@@ -162,13 +165,16 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     failed: false,
   });
 
+  // The enquiry check (I42): the specialists are told when the count may be wrong.
+  const check = enquiryCheck(reading.facts);
+  const caveat = enquiryCheckBrief(check);
   // 3. Each specialist thinks and tests, side by side (§2.3).
   const drafts: Draft[] = [];
   const answers = await Promise.all(SIDE_BY_SIDE.map(async (specialist) => {
     const mine = candidates.filter((candidate) => candidate.specialist === specialist);
     if (mine.length === 0) return [];
     try {
-      return await askSpecialist(ctx, args, specialist, mine, reading.facts, member(SPECIALIST_ROLE[specialist]) ?? lead);
+      return await askSpecialist(ctx, args, specialist, mine, reading.facts, member(SPECIALIST_ROLE[specialist]) ?? lead, caveat);
     } catch (error) {
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: specialist, detail: failureSummary(error), failed: true });
       return [];
@@ -224,6 +230,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   const monthly = await ctx.runQuery(internal.insightsReading.monthlyInternal, { holdId: args.holdId });
   const summary = {
     scorecard: scorecardFrom(reading.facts, args.host),
+    enquiryCheck: check,
     ...monthly,
     checked: reading.facts.length,
     ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),
@@ -400,6 +407,34 @@ function sentBack(draft: Draft, note: string): SavedFinding {
   };
 }
 
+/**
+ * What the run asks Google Analytics itself, as a screen asks it when it
+ * opens (§8, I37, I42): the people who clicked a link to another website in
+ * 12 months, and of them the people who went on to convert — the enquiry
+ * check's third sign. Kept only as facts of this run; a refusal leaves the
+ * figure unsaid.
+ */
+async function askedInRun(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Fact[]> {
+  try {
+    const target = await ctx.runQuery(internal.insightsReading.analyticsTargetInternal, { holdId });
+    if (!target || target.counted.length === 0) return [];
+    const opened = await openSession(ctx, target.connectionId);
+    if (!opened.ok) return [];
+    const from = shiftDay(target.newestDay, -364);
+    const funnel = await askFunnel(opened.session, target.property, {
+      startDate: from, endDate: target.newestDay, first: "click", then: target.counted, hostNames: target.addresses, countries: [target.country],
+    });
+    if (!funnel.ok) return [];
+    const base = { source: "analytics" as const, unit: "count" as const, from, to: target.newestDay };
+    return [
+      { ...base, key: "ga.funnel.click.did.365.now", value: funnel.did, label: "people who clicked a link to another website" },
+      { ...base, key: "ga.funnel.click.then.365.now", value: funnel.then, label: "of them, the people who went on to convert" },
+    ];
+  } catch {
+    return [];
+  }
+}
+
 /** The verdict with its figures filled in; null when it names one Hakken doesn't hold or types a number. */
 function verdictFrom(text: string, facts: ReadonlyMap<string, Fact>): string | null {
   if (!text.trim() || typedNumbers(text).length > 0) return null;
@@ -531,8 +566,9 @@ async function askSpecialist(
   candidates: readonly Candidate[],
   all: readonly Fact[],
   member: TeamMember | undefined,
+  caveat: string | null,
 ): Promise<Draft[]> {
-  const system = [GROUND_RULES, `Your discipline is ${DISCIPLINE[specialist]}.`, member?.instructions ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
+  const system = [GROUND_RULES, `Your discipline is ${DISCIPLINE[specialist]}.`, caveat ?? "", member?.instructions ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
   const prompt = JSON.stringify({
     website: args.host,
     candidates: candidates.map((candidate, number) => ({ number, pattern: candidate.pattern, seen: candidate.seen, atStake: Math.round(candidate.stake * 10) / 10, facts: candidate.facts })),
