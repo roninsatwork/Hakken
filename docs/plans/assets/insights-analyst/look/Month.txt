@@ -1,0 +1,15 @@
+# Insights → Your month — the approved look (board "Month" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Your month: September #
+  primary-action: Download the report
+settings-card: What Hakken sees
+figures
+  figure: Enquiries
+  figure: Visits
+  figure: Google clicks in your home country
+chart-card: Enquiries a month
+table: Work Hakken did | How much
+  table-bar: What Hakken did
+    download: Download CSV
+  table-footer

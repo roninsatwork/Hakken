@@ -9,13 +9,18 @@ import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
 import { readWebsiteFacts } from "./insightsReading";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
+import type { Score } from "./utils/insightSummary";
+
+type SavedScorecard = Score[];
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { candidatesFor, type Candidate } from "./utils/insightChecks";
 import { editFinding, type DraftFinding } from "./utils/insightEditor";
 import { factsByKey, fillFacts, formatFact, shiftDay, type Fact } from "./utils/insightFacts";
 import {
+  BOARD_FORMAT,
   DISCIPLINE,
   FINDINGS_FORMAT,
+  MONTH_FORMAT,
   GROUND_RULES,
   READS,
   SIDE_BY_SIDE,
@@ -224,7 +229,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),
   };
   const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: args.runId });
-  await ctx.runMutation(internal.insightsTeam.saveWeek, {
+  const publishedIds = await ctx.runMutation(internal.insightsTeam.saveWeek, {
     holdId: args.holdId,
     companyId: args.companyId,
     week: weekOf(now),
@@ -236,8 +241,144 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     costUsd,
     summary,
   });
+  // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
+  const reports: string[] = [];
+  try {
+    reports.push(...await writeReports(ctx, args, {
+      week: weekOf(now),
+      today,
+      verdict: verdictText,
+      findings: saved.filter((finding) => finding.status === "PUBLISHED").map((finding, index) => ({ ...finding, findingId: publishedIds[index] ?? null })),
+      summary,
+      facts: reading.facts,
+      writer: member("INSIGHTS_REPORT_WRITER") ?? lead,
+    }));
+  } catch (error) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Report Writer", detail: failureSummary(error), failed: true });
+  }
   const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
-  return `${args.host}: ${reading.facts.length} facts read, ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
+  return `${args.host}: ${reading.facts.length} facts read,${reports.length > 0 ? ` ${reports.join(", ")} written,` : ""} ${candidates.length} candidates, ${drafts.length} findings written, ${published} published and ${saved.length - published} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`;
+}
+
+type WrittenFinding = SavedFinding & { findingId: Id<"insightFindings"> | null };
+
+/** What Hakken did this run, for the reports' "work Hakken did". */
+function workDone(facts: readonly Fact[], findings: number): Array<{ work: string; count: number }> {
+  const rivals = new Set(facts.map((fact) => /^seo\.(.+)\.traffic\.now$/.exec(fact.key)?.[1]).filter(Boolean)).size - 1;
+  const asked = facts.filter((fact) => /^ai\.answers\.[^.]+\.asked$/.test(fact.key)).reduce((sum, fact) => sum + fact.value, 0);
+  const pages = facts.find((fact) => fact.key === "crawl.pages")?.value ?? 0;
+  return [
+    { work: "findings", count: findings },
+    { work: "facts", count: facts.length },
+    { work: "rivals", count: Math.max(0, rivals) },
+    { work: "pages", count: pages },
+    { work: "aiAnswers", count: asked },
+  ].filter((entry) => entry.count > 0);
+}
+
+/** A written line with its figures filled in, or null when it names a figure not held or types one. */
+function filled(text: unknown, facts: ReadonlyMap<string, Fact>): string | null {
+  if (typeof text !== "string" || !text.trim()) return null;
+  if (typedNumbers(text).length > 0) return null;
+  const answer = fillFacts(text.trim(), facts);
+  return answer.missing.length > 0 ? null : answer.text;
+}
+
+function lines(value: unknown, facts: ReadonlyMap<string, Fact>, most: number): string[] {
+  return (Array.isArray(value) ? value : []).map((line) => filled(line, facts)).filter((line): line is string => Boolean(line)).slice(0, most);
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const monthName = (key: string) => `${MONTHS[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
+const dayName = (day: string) => `${Number(day.slice(8, 10))} ${MONTHS[Number(day.slice(5, 7)) - 1]} ${day.slice(0, 4)}`;
+
+/**
+ * The Report Writer's work (§4.1, §4.2, I6): the week's brief from the
+ * week's verdict and findings, every run; the monthly report from the 4th,
+ * for the month before; the board report once a quarter, over the last 90
+ * days against the same weeks last year. The words name figures by their
+ * keys and are filled from the facts, as findings are; a line that names a
+ * figure not held, or types one, is left out. Frozen once saved.
+ */
+async function writeReports(
+  ctx: ActionCtx,
+  args: RunArgs,
+  input: {
+    week: string;
+    today: string;
+    verdict: string;
+    findings: WrittenFinding[];
+    summary: { scorecard: SavedScorecard; enquiriesByMonth: Array<{ month: string; visits: number; conversions: number }>; shareByMonth: Array<{ month: string; you: number; total: number }> };
+    facts: Fact[];
+    writer: TeamMember | undefined;
+  },
+): Promise<string[]> {
+  const written: string[] = [];
+  const findings = input.findings.map((finding) => ({ findingId: finding.findingId, headline: finding.headline, action: finding.action }));
+  const did = workDone(input.facts, input.findings.length);
+  const base = { scorecard: input.summary.scorecard, findings, did, enquiriesByMonth: input.summary.enquiriesByMonth, shareByMonth: input.summary.shareByMonth };
+  const weekEnd = shiftDay(input.week, 6);
+  await ctx.runMutation(internal.insightsTeam.saveReport, {
+    holdId: args.holdId, companyId: args.companyId, kind: "WEEKLY", from: input.week, to: weekEnd, period: input.week, title: "Weekly brief", runId: args.runId,
+    body: {
+      ...base,
+      headline: input.verdict,
+      summary: input.findings[0]?.story ?? input.verdict,
+      points: input.findings.slice(0, 5).map((finding) => finding.headline),
+      next: input.findings.slice(0, 3).map((finding) => finding.action),
+      risks: [], opportunities: [], decision: null, facts: [],
+    },
+  });
+  written.push("the weekly brief");
+  const due = await ctx.runQuery(internal.insightsTeam.reportsDue, { holdId: args.holdId, today: input.today });
+  const used = (facts: ReadonlyMap<string, Fact>) => [...facts.values()].map((fact) => ({ key: fact.key, label: fact.label, value: fact.value, unit: fact.unit }));
+  if (due.month) {
+    const monthFacts = await ctx.runQuery(internal.insightsReading.monthFactsInternal, { holdId: args.holdId, month: due.month });
+    const facts = factsByKey([...monthFacts, ...input.facts.filter((fact) => fact.source === "market" && fact.key.endsWith(".now"))]);
+    const system = [GROUND_RULES, MONTH_FORMAT, input.writer?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({ website: args.host, month: monthName(due.month), facts: factLines([...facts.values()]), findings: input.findings.slice(0, 5).map((finding) => ({ headline: finding.headline, action: finding.action })) });
+    const answer = await ask(ctx, args, input.writer, "the Report Writer's monthly report", system, prompt) as Record<string, unknown> | null;
+    const headline = filled(answer?.headline, facts) ?? input.verdict;
+    await ctx.runMutation(internal.insightsTeam.saveReport, {
+      holdId: args.holdId, companyId: args.companyId, kind: "MONTHLY", from: `${due.month}-01`, to: monthFacts.find((fact) => fact.key === "month.enquiries.now")?.to ?? `${due.month}-28`,
+      period: due.month, title: `Monthly report: ${monthName(due.month)}`, runId: args.runId,
+      body: {
+        ...base,
+        headline,
+        summary: filled(answer?.summary, facts) ?? headline,
+        points: lines(answer?.points, facts, 4),
+        next: lines(answer?.next, facts, 3),
+        risks: [], opportunities: [], decision: null,
+        facts: used(facts),
+      },
+    });
+    written.push(`the ${monthName(due.month)} report`);
+  }
+  if (due.quarter) {
+    const facts = factsByKey(input.facts.filter((fact) => /\.(90|365)\.(now|year|before)$/.test(fact.key) && /^(ga\.(conversions|people|visits|peoplePerConversion|channel\.(Organic Search|AI assistants|Direct)\.(visits|conversions))|sc\.clicks)/.test(fact.key) || fact.source === "market" || /^ai\.[^.]+\.mentions/.test(fact.key) || /^local\./.test(fact.key)));
+    const system = [GROUND_RULES, BOARD_FORMAT, input.writer?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({ website: args.host, quarter: due.quarter, facts: factLines([...facts.values()]), findings: input.findings.slice(0, 6).map((finding) => ({ headline: finding.headline, story: finding.story, action: finding.action })) });
+    const answer = await ask(ctx, args, input.writer, "the Report Writer's board report", system, prompt) as Record<string, unknown> | null;
+    const from = shiftDay(input.today, -90);
+    const to = shiftDay(input.today, -1);
+    const headline = typeof answer?.headline === "string" && typedNumbers(answer.headline).length === 0 && !/\[\[/.test(answer.headline) ? answer.headline.trim().slice(0, 80) : "The quarter, against last year and our rivals";
+    await ctx.runMutation(internal.insightsTeam.saveReport, {
+      holdId: args.holdId, companyId: args.companyId, kind: "BOARD", from, to, period: due.quarter, title: `Board report: ${dayName(from)} to ${dayName(to)}`, runId: args.runId,
+      body: {
+        ...base,
+        headline,
+        summary: filled(answer?.summary, facts) ?? input.verdict,
+        points: lines(answer?.points, facts, 3),
+        risks: lines(answer?.risks, facts, 3),
+        opportunities: lines(answer?.opportunities, facts, 3),
+        next: lines(answer?.next, facts, 3),
+        decision: filled(answer?.decision, facts),
+        facts: used(facts),
+      },
+    });
+    written.push(`the ${due.quarter} board report`);
+  }
+  return written;
 }
 
 function sentBack(draft: Draft, note: string): SavedFinding {

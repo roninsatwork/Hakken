@@ -22,9 +22,9 @@ export type InsightsPage = { id: string; segment: string; group: InsightsGroup; 
 export const INSIGHTS_PAGES: readonly InsightsPage[] = [
   { id: "summary", segment: "summary", group: "overview", built: true },
   { id: "week", segment: "this-week", group: "overview", built: true },
-  { id: "month", segment: "your-month", group: "overview", built: false },
+  { id: "month", segment: "your-month", group: "overview", built: true },
   { id: "strategy", segment: "strategy", group: "overview", built: false },
-  { id: "reports", segment: "reports", group: "overview", built: false },
+  { id: "reports", segment: "reports", group: "overview", built: true },
   { id: "findings", segment: "findings", group: "findings", built: true },
   { id: "track", segment: "track-record", group: "findings", built: false },
   { id: "leagues", segment: "leaderboards", group: "leaderboards", built: true },

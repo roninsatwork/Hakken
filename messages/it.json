@@ -17964,7 +17964,121 @@
         "rivals": "Rispetto ai concorrenti",
         "noMatch": "Nessuna misura corrisponde alla ricerca."
       },
-      "did": "Nella sua ultima lettura Hakken ha controllato {checked} dati tra le tue fonti e i concorrenti, ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e ha scritto {findings, plural, one {un risultato} other {# risultati}}."
+      "did": "Nella sua ultima lettura Hakken ha controllato {checked} dati tra le tue fonti e i concorrenti, ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e ha scritto {findings, plural, one {un risultato} other {# risultati}}.",
+      "downloadBoard": "Scarica il report per il consiglio"
+    },
+    "pdf": {
+      "boardReport": "Report per il consiglio",
+      "monthlyReport": "Report mensile",
+      "summary": "Sintesi",
+      "market": "Posizione nel mercato",
+      "quarter": "Il trimestre",
+      "plan": "Il piano",
+      "month": "Il mese",
+      "inOneMinute": "In un minuto",
+      "scorecard": "Quadro di valutazione",
+      "measure": "Misura",
+      "now": "Questo periodo",
+      "year": "Stesse settimane dell'anno scorso",
+      "change": "Variazione",
+      "status": "Stato",
+      "shareTitle": "La nostra quota dei visitatori da Google del nostro mercato",
+      "enquiriesTitle": "Richieste al mese",
+      "findings": "Cosa ha trovato Hakken",
+      "risks": "Rischi",
+      "opportunities": "Opportunità",
+      "next": "Le priorità del prossimo trimestre",
+      "decision": "La decisione che raccomandiamo",
+      "whatHappened": "Cosa è successo",
+      "whatsNext": "Cosa succede ora",
+      "did": "Cosa ha fatto Hakken",
+      "writtenBy": "Scritto da Hakken",
+      "confidential": "Riservato al consiglio di {company}",
+      "footer": "Scritto da Hakken da Google Search Console, Google Analytics e dati di mercato, fino al {day}.",
+      "page": "{page} / {of}",
+      "covers": "Report di marketing per il consiglio, dal {from} al {to}",
+      "points": "punti",
+      "author": "Hakken",
+      "visits": "Visite",
+      "googleClicks": "Clic da Google",
+      "drawing": "Preparazione del PDF…"
+    },
+    "reports": {
+      "title": "Report",
+      "description": "Ogni sintesi, report mensile e report per il consiglio che Hakken ha scritto per te, esattamente come è stato scritto. Conservati per due anni.",
+      "search": "Cerca report...",
+      "kind": "Tipo",
+      "everyKind": "Tutti i tipi",
+      "kinds": {
+        "WEEKLY": "Settimanale",
+        "MONTHLY": "Mensile",
+        "BOARD": "Consiglio"
+      },
+      "download": "Scarica CSV",
+      "report": "Report",
+      "covers": "Periodo",
+      "written": "Scritto",
+      "status": "Stato",
+      "statuses": {
+        "WRITTEN": "Scritto",
+        "READ": "Letto"
+      },
+      "noMatch": "Nessun report corrisponde alla ricerca.",
+      "empty": "Ancora nessun report: il team scrive la prima sintesi alla prossima esecuzione.",
+      "frozen": "Un report conserva i dati com'erano il giorno in cui è stato scritto. I report con più di due anni vengono eliminati; lo storico conserva il conteggio.",
+      "back": "Report",
+      "notFound": "Report non trovato",
+      "notFoundDescription": "Potrebbe avere più di due anni o appartenere a un'altra azienda.",
+      "about": "{host} · dal {from} al {to} · Scritto il {written}",
+      "downloadPdf": "Scarica il PDF",
+      "sectionsTitle": "Il report",
+      "section": "Sezione",
+      "words": "Cosa dice",
+      "noSections": "Questo report non ha sezioni oltre alla sintesi.",
+      "seeThisWeek": "Vedi questa settimana",
+      "sections": {
+        "inOneMinute": "In un minuto",
+        "happened": "Cosa è successo",
+        "findings": "Risultato",
+        "risk": "Rischio",
+        "opportunity": "Opportunità",
+        "next": "Prossimo passo",
+        "decision": "La decisione"
+      },
+      "figures": {
+        "enquiries": "Richieste",
+        "visits": "Visite",
+        "googleClicks": "Clic da Google nel tuo paese principale",
+        "onMonth": "rispetto a {before} il mese prima",
+        "onYear": "rispetto a {before} nelle stesse settimane dell'anno scorso",
+        "noBefore": "Ancora niente da confrontare"
+      },
+      "chart": {
+        "title": "Richieste al mese",
+        "hint": "Gli ultimi 12 mesi, da Google Analytics.",
+        "month": "Mese",
+        "enquiries": "Richieste",
+        "empty": "Si riempie quando Google Analytics ha contato richieste per qualche mese."
+      },
+      "work": {
+        "findings": "Risultati, analizzati e scritti",
+        "facts": "Dati letti tra le tue fonti",
+        "rivals": "Concorrenti controllati",
+        "pages": "Pagine controllate",
+        "aiAnswers": "Risposte dell'IA controllate"
+      }
+    },
+    "month": {
+      "title": "Il tuo mese: {month}",
+      "titleNone": "Il tuo mese",
+      "description": "Cosa è successo, perché, cosa ha fatto Hakken e cosa succede ora. Scritto il 4 di ogni mese.",
+      "download": "Scarica il report",
+      "noneTitle": "Ancora nessun report mensile",
+      "noneDescription": "Hakken scrive il report del mese dal 4 del mese successivo.",
+      "didTitle": "Cosa ha fatto Hakken",
+      "work": "Lavoro svolto da Hakken",
+      "howMuch": "Quanto",
+      "noWork": "Niente di registrato per questo mese."
     }
   }
 }

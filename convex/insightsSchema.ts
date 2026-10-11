@@ -2,7 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
-import { weekSummaryValidator } from "./utils/insightSummary";
+import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -94,4 +94,28 @@ export const insightsTables = {
     .index("by_hold_week", ["companyWebsiteId", "week"])
     .index("by_company_week", ["companyId", "week"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * The reports Hakken writes, frozen as written (§4.1, §4.2, I6): the weekly
+   * brief each run, the monthly report from the 4th, and the board report
+   * once a quarter. Kept two years (I7); a PDF is made when one is
+   * downloaded, never stored. No email in alpha (I17).
+   */
+  insightReports: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))),
+    /** The days it covers, and the week, month or quarter it is of. */
+    from: v.string(),
+    to: v.string(),
+    period: v.string(),
+    title: v.string(),
+    status: v.union(v.literal("WRITTEN"), v.literal("READ")),
+    readAt: v.optional(v.number()),
+    body: reportBodyValidator,
+    runId: v.optional(v.id("agentRuns")),
+    createdAt: v.number(),
+  })
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_hold_kind_period", ["companyWebsiteId", "kind", "period"]),
 };

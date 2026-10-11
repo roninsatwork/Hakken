@@ -11,7 +11,7 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertSeoInterval } from "./seoScheduleService";
 import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
-import { weekSummaryValidator } from "./utils/insightSummary";
+import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { insightSpecialistValidator, insightSureValidator } from "./insightsSchema";
 
 /**
@@ -285,13 +285,16 @@ export const saveWeek = internalMutation({
     costUsd: v.number(),
     summary: v.optional(weekSummaryValidator),
   },
-  returns: v.null(),
+  /** The published findings' ids, in their order, for the week's brief. */
+  returns: v.array(v.id("insightFindings")),
   handler: async (ctx, args) => {
     const now = Date.now();
     const old = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", args.week)).take(MOST_A_WEEK * 2);
     for (const finding of old) await ctx.db.delete(finding._id);
+    const published: Array<Id<"insightFindings">> = [];
     for (const finding of args.findings.slice(0, MOST_A_WEEK)) {
-      await ctx.db.insert("insightFindings", { ...finding, companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, runId: args.runId, createdAt: now });
+      const id = await ctx.db.insert("insightFindings", { ...finding, companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, runId: args.runId, createdAt: now });
+      if (finding.status === "PUBLISHED") published.push(id);
     }
     const week = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", args.week)).first();
     const record = {
@@ -318,7 +321,7 @@ export const saveWeek = internalMutation({
       const gone = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", oldWeek.week)).take(MOST_A_WEEK * 2);
       for (const finding of gone) await ctx.db.delete(finding._id);
     }
-    return null;
+    return published;
   },
 });
 
@@ -355,5 +358,61 @@ export const saveCompanyInsightsSchedule = superAdminMutation({
     assertSeoInterval(args.intervalStr);
     await ctx.db.patch(args.companyId, { insightsSchedule: { intervalStr: args.intervalStr, isActive: args.isActive } });
     return null;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Reports (§4.1, §4.2): the Report Writer's, frozen as written
+
+/** The month and quarter keys a day falls in: "2026-09", "2026-Q3". */
+export function monthKey(day: string): string {
+  return day.slice(0, 7);
+}
+export function quarterKey(day: string): string {
+  return `${day.slice(0, 4)}-Q${Math.floor((Number(day.slice(5, 7)) - 1) / 3) + 1}`;
+}
+
+/** The month before a day's month, "2026-09" on any day of October 2026. */
+export function previousMonth(day: string): string {
+  const year = Number(day.slice(0, 4)), month = Number(day.slice(5, 7));
+  return month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, "0")}`;
+}
+
+/** Which reports a website is due today: the monthly report from the 4th, for the month before; the board report once a quarter. */
+export const reportsDue = internalQuery({
+  args: { holdId: v.id("companyWebsites"), today: v.string() },
+  returns: v.object({ month: v.union(v.string(), v.null()), quarter: v.union(v.string(), v.null()) }),
+  handler: async (ctx, args) => {
+    const month = previousMonth(args.today);
+    const quarter = quarterKey(args.today);
+    const hasMonth = Number(args.today.slice(8, 10)) < 4 || (await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "MONTHLY").eq("period", month)).first()) !== null;
+    const hasQuarter = (await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "BOARD").eq("period", quarter)).first()) !== null;
+    return { month: hasMonth ? null : month, quarter: hasQuarter ? null : quarter };
+  },
+});
+
+/** A report, saved as written; the same website's report of the same kind and period replaced. Reports older than two years go (I7). */
+export const saveReport = internalMutation({
+  args: {
+    holdId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))),
+    from: v.string(),
+    to: v.string(),
+    period: v.string(),
+    title: v.string(),
+    body: reportBodyValidator,
+    runId: v.optional(v.id("agentRuns")),
+  },
+  returns: v.id("insightReports"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const { holdId, ...rest } = args;
+    const old = await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", holdId).eq("kind", args.kind).eq("period", args.period)).first();
+    if (old) await ctx.db.delete(old._id);
+    const reportId = await ctx.db.insert("insightReports", { ...rest, companyWebsiteId: holdId, status: "WRITTEN", createdAt: now });
+    const expired = await ctx.db.query("insightReports").withIndex("by_company_created", (q) => q.eq("companyId", args.companyId).lt("createdAt", now - KEPT_MS)).take(20);
+    for (const report of expired) await ctx.db.delete(report._id);
+    return reportId;
   },
 });

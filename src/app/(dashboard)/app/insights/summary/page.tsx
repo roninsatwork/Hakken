@@ -22,6 +22,7 @@ import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { RankStrip } from "../_components/LeagueCard";
+import { ReportDownloadAction } from "../_components/ReportDownload";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
 
 const STATUS_TONE = { ON_TRACK: "success", WATCH: "warning", BEHIND: "danger" } as const;
@@ -43,6 +44,7 @@ export default function InsightsSummaryPage() {
   const home = useInsightsHome();
   const leagues = useInsightsLeagues();
   const week = useQuery(api.insightsReads.insightsThisWeek, site ? { siteId: site } : {});
+  const board = useQuery(api.insightsReads.insightsLatestReport, site ? { kind: "BOARD", siteId: site } : { kind: "BOARD" });
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<string>("status", "");
   const newest = week?.weeks.find((entry) => !site || entry.siteId === site) ?? week?.weeks[0] ?? null;
@@ -68,7 +70,12 @@ export default function InsightsSummaryPage() {
 
   return (
     <>
-      <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={home ? t("description", { company: home.company }) : undefined} />
+      <PageHeader
+        icon={<LayoutDashboard className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={home ? t("description", { company: home.company }) : undefined}
+        action={<ReportDownloadAction report={board} label={t("downloadBoard")} />}
+      />
       <HakkenSees says={says} steps={steps} />
       {leagues && leagues.leagues.length > 0 ? <RankStrip leagues={leagues.leagues} host={leagues.host} title={t("rank.title", { rivals: leagues.rivals })} hint={t("rank.hint")} /> : null}
       <FigureRow>

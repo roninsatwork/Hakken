@@ -331,6 +331,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   // ── Insights (insights-analyst-plan.md §8, I7): findings and weeks kept two years, cleared as each new week is saved ──
   insightFindings: cleared("2 years", "insightsTeam/saveWeek"),
   insightWeeks: cleared("2 years", "insightsTeam/saveWeek"),
+  insightReports: cleared("2 years", "insightsTeam/saveReport"),
 
   // ── Keyword research ──────────────────────────────────────────────────────
   keywordLookups: RECORD,

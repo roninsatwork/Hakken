@@ -1,0 +1,11 @@
+# Insights → Reports — the approved look (board "Reports" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Reports
+search: Search reports...
+filter: Kind
+table: Report | Kind | Covers | Written | Status
+  table-bar
+    download: Download CSV
+  table-footer
+notice (info)

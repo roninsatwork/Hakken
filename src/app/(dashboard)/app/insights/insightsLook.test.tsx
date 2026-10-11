@@ -12,6 +12,8 @@ import InsightsSummaryPage from "./summary/page";
 import InsightsThisWeekPage from "./this-week/page";
 import InsightsAllFindingsPage from "./findings/page";
 import InsightsFindingPage from "./findings/[findingId]/page";
+import InsightsYourMonthPage from "./your-month/page";
+import InsightsReportsPage from "./reports/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -96,6 +98,16 @@ const FINDING = {
   comparisons: [["ga.channel.Organic Search.conversions.365.now", "ga.channel.Organic Search.conversions.365.before"]],
   checkOn: "2027-01-09",
 };
+const MONTH_REPORT = {
+  reportId: "report_1", host: "ronins.co.uk", company: "Ronins Agency", kind: "MONTHLY", title: "Monthly report: September 2026", period: "2026-09",
+  from: "2026-09-01", to: "2026-09-30", status: "WRITTEN", createdAt: Date.parse("2026-10-11T07:00:00Z"),
+  body: {
+    headline: "Enquiries grew to 10 in September.", summary: "Visits climbed from 201 to 241.", points: ["Google clicks rose."], next: ["Expand the service pages."],
+    risks: [], opportunities: [], decision: null, scorecard: SCORE, findings: [], did: [{ work: "findings", count: 9 }],
+    enquiriesByMonth: [{ month: "2026-08", visits: 201, conversions: 7 }, { month: "2026-09", visits: 241, conversions: 10 }], shareByMonth: [],
+    facts: [{ key: "month.enquiries.now", label: "enquiries", value: 10, unit: "count" }, { key: "month.enquiries.before", label: "enquiries", value: 7, unit: "count" }],
+  },
+};
 const HOME = { company: "Ronins Agency", sites: [{ siteId: "site_1", host: "ronins.co.uk" }], lastLooked: Date.parse("2026-10-11T05:00:00Z"), thisWeek: 9, findings: 9 };
 
 function answer(queries: Record<string, unknown>) {
@@ -159,5 +171,22 @@ describe("Insights' looks", () => {
     const { container } = render(<InsightsFindingPage />);
     await screen.findByText(FINDING.headline);
     await expectApprovedLook(container, PLAN, "Finding", "Insights → A finding");
+  });
+
+  it("3 · Your month", async () => {
+    nav.pathname = "/app/insights/your-month";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsLatestReport": MONTH_REPORT });
+    const { container } = render(<InsightsYourMonthPage />);
+    await screen.findByText(/Enquiries grew to 10 in September/);
+    await expectApprovedLook(container, PLAN, "Month", "Insights → Your month");
+  });
+
+  it("6 · Reports", async () => {
+    nav.pathname = "/app/insights/reports";
+    const row = { reportId: "report_1", siteId: "site_1", host: "ronins.co.uk", kind: "MONTHLY", title: "Monthly report: September 2026", period: "2026-09", from: "2026-09-01", to: "2026-09-30", status: "WRITTEN", createdAt: Date.parse("2026-10-11T07:00:00Z") };
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsReports": [row] });
+    const { container } = render(<InsightsReportsPage />);
+    await screen.findByText("Monthly report: September 2026");
+    await expectApprovedLook(container, PLAN, "Reports", "Insights → Reports");
   });
 });

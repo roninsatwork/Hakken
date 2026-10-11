@@ -1,11 +1,11 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { marketFacts } from "./insightsReading";
 import { LEAGUE_IDS, leaguesFrom } from "./utils/insightLeagues";
 import { factValidator } from "./utils/insightFacts";
-import { weekSummaryValidator } from "./utils/insightSummary";
+import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 
 /**
  * What the Insights screens read (docs/plans/active/insights-analyst-plan.md
@@ -280,5 +280,117 @@ export const insightsFinding = tenantQuery({
       outcome: finding.outcome ?? null,
       createdAt: finding.createdAt,
     };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Reports (§4.1: Reports, Your month; §4.2: the board report)
+
+const reportRow = v.object({
+  reportId: v.id("insightReports"),
+  siteId: v.id("companyWebsites"),
+  host: v.string(),
+  kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))),
+  title: v.string(),
+  period: v.string(),
+  from: v.string(),
+  to: v.string(),
+  status: v.union(v.literal("WRITTEN"), v.literal("READ")),
+  createdAt: v.number(),
+});
+
+/** Every report Hakken has written for the company, newest first, kept two years (I7). */
+export const insightsReports = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.array(reportRow),
+  handler: async (ctx, args) => {
+    const sites = await sitesFor(ctx, args.siteId);
+    const hosts = new Map(sites.map((site) => [site.hold._id, site.host]));
+    if (!ctx.companyId) return [];
+    const reports = await ctx.db.query("insightReports").withIndex("by_company_created", (q) => q.eq("companyId", ctx.companyId!)).order("desc").take(400);
+    return reports
+      .filter((report) => hosts.has(report.companyWebsiteId))
+      .map((report) => ({
+        reportId: report._id,
+        siteId: report.companyWebsiteId,
+        host: hosts.get(report.companyWebsiteId) ?? "",
+        kind: report.kind,
+        title: report.title,
+        period: report.period,
+        from: report.from,
+        to: report.to,
+        status: report.status,
+        createdAt: report.createdAt,
+      }));
+  },
+});
+
+const reportView = v.object({
+  reportId: v.id("insightReports"),
+  host: v.string(),
+  company: v.string(),
+  kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))),
+  title: v.string(),
+  period: v.string(),
+  from: v.string(),
+  to: v.string(),
+  status: v.union(v.literal("WRITTEN"), v.literal("READ")),
+  createdAt: v.number(),
+  body: reportBodyValidator,
+});
+
+async function viewOf(ctx: SiteReader, report: Doc<"insightReports">): Promise<typeof reportView.type | null> {
+  if (report.companyId !== ctx.companyId) return null;
+  const site = await requireMySite(ctx, report.companyWebsiteId);
+  const company = await ctx.db.get(report.companyId);
+  return {
+    reportId: report._id,
+    host: site.website.displayHost ?? site.website.host,
+    company: company?.name ?? "",
+    kind: report.kind,
+    title: report.title,
+    period: report.period,
+    from: report.from,
+    to: report.to,
+    status: report.status,
+    createdAt: report.createdAt,
+    body: report.body,
+  };
+}
+
+/** One report, exactly as written. */
+export const insightsReport = tenantQuery({
+  args: { reportId: v.id("insightReports") },
+  returns: v.union(v.null(), reportView),
+  handler: async (ctx, args) => {
+    const report = await ctx.db.get(args.reportId);
+    return report ? await viewOf(ctx, report) : null;
+  },
+});
+
+/** The newest report of a kind: Your month's monthly report, the executive summary's board report. */
+export const insightsLatestReport = tenantQuery({
+  args: { kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))), siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.union(v.null(), reportView),
+  handler: async (ctx, args) => {
+    const sites = await sitesFor(ctx, args.siteId);
+    let newest: Doc<"insightReports"> | null = null;
+    for (const site of sites) {
+      const report = (await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", site.hold._id).eq("kind", args.kind)).order("desc").first());
+      if (report && (!newest || report.createdAt > newest.createdAt)) newest = report;
+    }
+    return newest ? await viewOf(ctx, newest) : null;
+  },
+});
+
+/** A report read: its status says so (§4.1, Reports' Written and Read). Any member of the company. */
+export const markInsightReportRead = tenantMutation({
+  args: { reportId: v.id("insightReports") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const report = await ctx.db.get(args.reportId);
+    if (!report || report.companyId !== ctx.companyId || report.status === "READ") return null;
+    await ctx.db.patch(report._id, { status: "READ", readAt: Date.now() });
+    return null;
   },
 });

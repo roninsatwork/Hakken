@@ -65,3 +65,26 @@ export const CHART_EXPORT_BACKGROUND = "#0d0d0d";
 export const CHART_AXIS_TICK = "#a3a3a3";
 export const CHART_LEGEND_TEXT = "#888";
 export const CHART_RISK_RED = "#ef4444";
+
+/**
+ * The printed reports' colours (docs/plans/active/insights-analyst-plan.md
+ * §4.2, approved with the board report drawings 2026-10-11): the saved
+ * look's light colours (`hakken.theme.json`) on paper, the cover in the
+ * sidebar's dark, and you in orange against rivals in slate as on screen.
+ */
+export const PRINT_PALETTE = {
+  paper: "#FCFCFC",
+  ink: "#111111",
+  secondary: "#666666",
+  muted: "#999999",
+  rule: "#E5E5E5",
+  cover: "#18181A",
+  coverInk: "#FFFFFF",
+  coverAccent: "#E8E4DC",
+  coverMuted: "#A1A1A6",
+  you: CHART_SERIES_ORANGE,
+  rival: CHART_SERIES_SLATE,
+  good: "#10B981",
+  bad: "#EF4444",
+  watch: "#F59E0B",
+} as const;

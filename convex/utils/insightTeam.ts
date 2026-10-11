@@ -99,6 +99,26 @@ export const FINDINGS_FORMAT = [
   " \"comparisons\": [[\"one fact key\", \"the fact key it is compared with\"], ...] for every comparison the words make}.",
 ].join("\n");
 
+/** The Report Writer's monthly report: what happened, why, and what's next (§4.1, drawn as the Month board). */
+export const MONTH_FORMAT = [
+  "You are Hakken's Report Writer: you write the client's monthly report, the way their agency's account director would, for a business owner reading it in two minutes.",
+  "Reply with only JSON: {\"headline\": one sentence on the month, naming its most important figure by its key,",
+  " \"summary\": two or three sentences: what happened this month against the month before, and why, naming facts by their keys,",
+  " \"points\": up to four short sentences, what else happened,",
+  " \"next\": up to three short sentences, what happens next}.",
+].join("\n");
+
+/** The Report Writer's board report (§4.2, drawn as the five board pages). */
+export const BOARD_FORMAT = [
+  "You are Hakken's Report Writer: you write the quarter's board report, as the client's marketing director would present it to their fellow board members — calm, plain, in the first person plural (\"we\").",
+  "Reply with only JSON: {\"headline\": the report's title, at most eight words, in sentence case, no figures (\"Winning the market, losing the enquiries\"),",
+  " \"summary\": three or four sentences: the quarter against the same weeks last year and against our rivals, and what we will do next, naming facts by their keys,",
+  " \"points\": exactly three short sentences, \"in one minute\",",
+  " \"risks\": up to three short sentences, \"opportunities\": up to three short sentences,",
+  " \"next\": the next quarter's three priorities, one short sentence each,",
+  " \"decision\": one sentence: the decision we recommend the board takes}.",
+].join("\n");
+
 /** The Head of Strategy's answer: the week's verdict, the order, and any stories joined across specialists. */
 export const STRATEGY_FORMAT = [
   "Reply with only JSON: {\"verdict\": one sentence for a managing director, naming the week's most important figure with its key,",

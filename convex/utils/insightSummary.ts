@@ -97,3 +97,31 @@ export function scorecardFrom(facts: readonly Fact[], own: string): Score[] {
       return { ...row, place, places, status: statusOf(row.now, row.before, row.lowerIsBetter, place, places) };
     });
 }
+
+/**
+ * A report, frozen as written (§4.1, §4.2, I6, I7): its words with the figures
+ * filled in, the scorecard and the charts' figures as they were that day,
+ * the findings it names, what Hakken did, and — for the board — the risks,
+ * the opportunities and the decision it recommends. Never rewritten.
+ */
+export const reportBodyValidator = v.object({
+  headline: v.string(),
+  summary: v.string(),
+  /** "In one minute" for the board; what happened for a month; the findings for a week. */
+  points: v.array(v.string()),
+  next: v.array(v.string()),
+  risks: v.array(v.string()),
+  opportunities: v.array(v.string()),
+  decision: v.union(v.string(), v.null()),
+  scorecard: v.array(scoreValidator),
+  findings: v.array(v.object({ findingId: v.union(v.id("insightFindings"), v.null()), headline: v.string(), action: v.string() })),
+  did: v.array(v.object({ work: v.string(), count: v.number() })),
+  enquiriesByMonth: v.array(monthValidator),
+  shareByMonth: v.array(shareMonthValidator),
+  /** The figures the words were filled from, as read that day. */
+  facts: v.array(v.object({ key: v.string(), label: v.string(), value: v.number(), unit: v.string() })),
+});
+export type ReportBody = Infer<typeof reportBodyValidator>;
+
+export const REPORT_KINDS = ["WEEKLY", "MONTHLY", "BOARD"] as const;
+export type ReportKind = (typeof REPORT_KINDS)[number];

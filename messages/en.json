@@ -17964,7 +17964,121 @@
         "rivals": "Against your rivals",
         "noMatch": "No measure matches that search."
       },
-      "did": "In its newest read Hakken checked {checked} figures across your sources and rivals, ruled out {ruledOut, plural, one {one explanation} other {# explanations}}, and wrote {findings, plural, one {one finding} other {# findings}}."
+      "did": "In its newest read Hakken checked {checked} figures across your sources and rivals, ruled out {ruledOut, plural, one {one explanation} other {# explanations}}, and wrote {findings, plural, one {one finding} other {# findings}}.",
+      "downloadBoard": "Download the board report"
+    },
+    "pdf": {
+      "boardReport": "Board report",
+      "monthlyReport": "Monthly report",
+      "summary": "Summary",
+      "market": "Market position",
+      "quarter": "The quarter",
+      "plan": "The plan",
+      "month": "The month",
+      "inOneMinute": "In one minute",
+      "scorecard": "Scorecard",
+      "measure": "Measure",
+      "now": "This period",
+      "year": "Same weeks last year",
+      "change": "Change",
+      "status": "Status",
+      "shareTitle": "Our share of our market's Google visitors",
+      "enquiriesTitle": "Enquiries a month",
+      "findings": "What Hakken found",
+      "risks": "Risks",
+      "opportunities": "Opportunities",
+      "next": "Next quarter's priorities",
+      "decision": "The decision we recommend",
+      "whatHappened": "What happened",
+      "whatsNext": "What's next",
+      "did": "What Hakken did",
+      "writtenBy": "Written by Hakken",
+      "confidential": "Confidential to the board of {company}",
+      "footer": "Written by Hakken from Google Search Console, Google Analytics and market data, to {day}.",
+      "page": "{page} / {of}",
+      "covers": "Marketing report to the board, {from} to {to}",
+      "points": "pts",
+      "author": "Hakken",
+      "visits": "Visits",
+      "googleClicks": "Google clicks",
+      "drawing": "Drawing the PDF…"
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Every brief, monthly report and board report Hakken has written for you, exactly as it was written. Kept for two years.",
+      "search": "Search reports...",
+      "kind": "Kind",
+      "everyKind": "Every kind",
+      "kinds": {
+        "WEEKLY": "Weekly",
+        "MONTHLY": "Monthly",
+        "BOARD": "Board"
+      },
+      "download": "Download CSV",
+      "report": "Report",
+      "covers": "Covers",
+      "written": "Written",
+      "status": "Status",
+      "statuses": {
+        "WRITTEN": "Written",
+        "READ": "Read"
+      },
+      "noMatch": "No report matches that search.",
+      "empty": "No reports yet: the team writes its first brief on its next run.",
+      "frozen": "A report keeps its figures as they were on the day it was written. Reports older than two years are deleted; the Track record keeps the tally.",
+      "back": "Reports",
+      "notFound": "That report can't be found",
+      "notFoundDescription": "It may be older than two years, or belong to another company.",
+      "about": "{host} · {from} to {to} · Written {written}",
+      "downloadPdf": "Download the PDF",
+      "sectionsTitle": "The report",
+      "section": "Section",
+      "words": "What it says",
+      "noSections": "This report has no sections beyond its summary.",
+      "seeThisWeek": "See this week",
+      "sections": {
+        "inOneMinute": "In one minute",
+        "happened": "What happened",
+        "findings": "Finding",
+        "risk": "Risk",
+        "opportunity": "Opportunity",
+        "next": "Next",
+        "decision": "The decision"
+      },
+      "figures": {
+        "enquiries": "Enquiries",
+        "visits": "Visits",
+        "googleClicks": "Google clicks in your home country",
+        "onMonth": "on {before} the month before",
+        "onYear": "on {before} the same weeks last year",
+        "noBefore": "Nothing to compare with yet"
+      },
+      "chart": {
+        "title": "Enquiries a month",
+        "hint": "The last 12 months, from Google Analytics.",
+        "month": "Month",
+        "enquiries": "Enquiries",
+        "empty": "This fills in once Google Analytics has counted enquiries for a few months."
+      },
+      "work": {
+        "findings": "Findings, researched and written",
+        "facts": "Figures read across your sources",
+        "rivals": "Rivals checked",
+        "pages": "Pages checked for problems",
+        "aiAnswers": "AI answers checked"
+      }
+    },
+    "month": {
+      "title": "Your month: {month}",
+      "titleNone": "Your month",
+      "description": "What happened, why, what Hakken did and what's next. Written on the 4th of each month.",
+      "download": "Download the report",
+      "noneTitle": "No monthly report yet",
+      "noneDescription": "Hakken writes the month's report from the 4th of the next month.",
+      "didTitle": "What Hakken did",
+      "work": "Work Hakken did",
+      "howMuch": "How much",
+      "noWork": "Nothing recorded for this month."
     }
   }
 }

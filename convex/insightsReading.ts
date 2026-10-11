@@ -453,3 +453,51 @@ export const monthlyInternal = internalQuery({
     };
   },
 });
+
+/**
+ * A calendar month's figures against the month before, for the monthly
+ * report (§4.1): enquiries and visits from Analytics' 12 months a day (I44),
+ * Google clicks in the home country from Search Console's days.
+ */
+export const monthFactsInternal = internalQuery({
+  args: { holdId: v.id("companyWebsites"), month: v.string() },
+  returns: v.array(factValidator),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    if (!hold) return [];
+    const facts = new Facts();
+    const [year, month] = args.month.split("-").map(Number);
+    const before = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, "0")}`;
+    const lastDay = (key: string) => {
+      const [y, m] = key.split("-").map(Number);
+      return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    };
+    const spans = { now: { from: `${args.month}-01`, to: lastDay(args.month) }, before: { from: `${before}-01`, to: lastDay(before) } };
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (connection?.property) {
+      const counted = countedOf(connection);
+      const series = await readSlot(ctx, hold._id, slotKey("series", "365", "NOW", EVERY_DEVICE));
+      for (const which of ["now", "before"] as const) {
+        const span = spans[which];
+        const rows = (series?.rows ?? []).filter((row) => row.key >= span.from && row.key <= span.to);
+        if (rows.length === 0) continue;
+        const visits = rows.reduce((sum, row) => sum + row.visits, 0);
+        const conversions = rows.reduce((sum, row) => sum + conversionsOf(row, counted).conversions, 0);
+        facts.add({ key: factKey("month", "visits", which), value: visits, unit: "count", source: "analytics", label: "visits", ...span, country: connection.mainCountry });
+        facts.add({ key: factKey("month", "enquiries", which), value: conversions, unit: "count", source: "analytics", label: "enquiries", ...span, country: connection.mainCountry });
+      }
+    }
+    const sc = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (sc?.newestDay) {
+      const days = await daysOf(ctx, hold._id, "web", spans.before.from, spans.now.to);
+      for (const which of ["now", "before"] as const) {
+        const span = spans[which];
+        if (sc.oldestDay && span.from < sc.oldestDay) continue;
+        const inSpan = days.filter((day) => day.day >= span.from && day.day <= span.to);
+        if (inSpan.length === 0) continue;
+        facts.add({ key: factKey("month", "googleClicks", which), value: inSpan.reduce((sum, day) => sum + day.clicks, 0), unit: "count", source: "searchConsole", label: "Google clicks", ...span, country: sc.mainCountry ?? mainConsoleCountry(hold) });
+      }
+    }
+    return facts.list;
+  },
+});
