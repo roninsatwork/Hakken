@@ -14948,6 +14948,7 @@
         "settings": "Impostazioni"
       },
       "overview": "Panoramica",
+      "live": "In diretta",
       "heroes": "Eroi e attenzione",
       "channels": "Canali",
       "campaigns": "Campagne",
@@ -15444,6 +15445,55 @@
       "channelsDescription": "Da dove sono arrivate le visite, per il valore che hanno portato.",
       "noChannels": "Nessuna visita in queste date.",
       "landingLive": "Richiesta a Google delle pagine di destinazione di questo dispositivo…"
+    },
+    "live": {
+      "title": "In diretta",
+      "description": "Chi è sul sito in questo momento, e cosa ha fatto negli ultimi 30 minuti. I dati in diretta di Google chiamano le pagine con il loro titolo, contano l'intera proprietà di Google Analytics e non sanno da dove sono arrivati i visitatori.",
+      "askedAt": "Chiesto a Google una volta al minuto, solo mentre questa pagina è aperta e in primo piano; si ferma quando esci o cambi scheda, e non si conserva nulla. Ultima richiesta {time}.",
+      "behind": "In attesa: questa pagina chiede a Google solo mentre è aperta e in primo piano. Portala in primo piano per vedere chi è sul sito ora.",
+      "asking": "Chiediamo a Google…",
+      "paused": "In pausa: nessuno tocca questa pagina da 30 minuti, quindi ha smesso di chiedere a Google.",
+      "carryOn": "Continua",
+      "notConnected": "Google Analytics non è collegato per questo sito, quindi non ci sono dati in diretta.",
+      "busy": "Google non ha risposto ora. Questa pagina chiede di nuovo tra un minuto.",
+      "now": "Sul sito ora",
+      "lastFive": "Negli ultimi 5 minuti",
+      "people": "Persone",
+      "views": "Visualizzazioni",
+      "times": "Volte",
+      "lastThirty": "Negli ultimi 30 minuti",
+      "conversions": "Conversioni",
+      "convertedAgo": "{event}, {minutes, plural, =0 {proprio ora} =1 {un minuto fa} other {# minuti fa}}",
+      "noConversion": "Nessuna negli ultimi 30 minuti",
+      "chartTitle": "Persone ogni minuto",
+      "chartHint": "Gli ultimi 30 minuti, i più recenti a destra.",
+      "minute": "Minuto",
+      "minutesAgo": "{count, plural, =0 {Ora} =1 {1 min fa} other {# min fa}}",
+      "placesTitle": "Dove sono",
+      "placesHint": "Persone negli ultimi 30 minuti, per città.",
+      "showing": "Mostra",
+      "lists": {
+        "pages": "Pagine",
+        "places": "Luoghi",
+        "devices": "Dispositivi",
+        "events": "Eventi"
+      },
+      "find": {
+        "pages": "Trova una pagina…",
+        "places": "Trova un luogo…",
+        "devices": "Trova un dispositivo…",
+        "events": "Trova un evento…"
+      },
+      "columns": {
+        "pages": "Pagina",
+        "places": "Luogo",
+        "devices": "Dispositivo",
+        "events": "Evento"
+      },
+      "byTitle": "pagine per titolo, come le danno i dati in diretta di Google",
+      "download": "Scarica CSV",
+      "nobody": "Nessuno negli ultimi 30 minuti.",
+      "noMatch": "Nessun risultato per questa ricerca."
     },
     "heroes": {
       "title": "Eroi e attenzione",
@@ -16156,6 +16206,14 @@
           "rose": "Guarda cosa funziona su {text}: {count, plural, =1 {una conversione} other {# conversioni}}, in crescita da {b}."
         },
         "push": "Fai salire le tue pagine nei risultati di Google, dove vengono mostrate ma ricevono pochi clic."
+      },
+      "live": {
+        "nobody": "Nessuno è sul sito in questo momento.",
+        "quietNow": "Nessuno è sul sito in questo minuto; {a} persone l'hanno visitato negli ultimi 30 minuti.",
+        "onNow": "{count, plural, =1 {Una persona è} other {# persone sono}} sul sito ora, {countB, plural, =1 {una} other {#}} delle quali su “{text}”.",
+        "onNowOnly": "{count, plural, =1 {Una persona è} other {# persone sono}} sul sito ora.",
+        "converted": "Qualcuno ha fatto una conversione — {event} — {count, plural, =0 {proprio ora} =1 {un minuto fa} other {# minuti fa}}.",
+        "seeConversions": "Guarda le visite che hanno convertito oggi."
       },
       "channels": {
         "none": "Nessuna visita in queste date.",

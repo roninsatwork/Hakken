@@ -42,6 +42,8 @@ export function AnalyticsFilters() {
   const language = readerLanguage();
   const name = (code: string) => countryName(code, language) ?? code.toUpperCase();
   const countries = pageForPath(pathname, siteId) !== "heroes";
+  // Live is the last 30 minutes, minute by minute (GA34): no dates, no chart step.
+  const dated = pageForPath(pathname, siteId) !== "live";
   return (
     <div className="flex flex-wrap items-end gap-3">
       {countries ? (
@@ -53,12 +55,16 @@ export function AnalyticsFilters() {
       <Select aria-label={t("device")} value={device} onChange={(next) => setDevice(next as Device)}>
         {DEVICES.map((value) => <option key={value} value={value}>{t(`devices.${value}`)}</option>)}
       </Select>
-      <Select aria-label={t("period")} value={period} onChange={(next) => setPeriod(next as Period)}>
-        {PERIODS.map((value) => <option key={value} value={value}>{t(`periods.${value}`)}</option>)}
-      </Select>
-      <Select aria-label={t("step")} value={step} onChange={(next) => setStep(next as Step)}>
-        {STEPS.map((value) => <option key={value} value={value}>{t(`steps.${value}`)}</option>)}
-      </Select>
+      {dated ? (
+        <>
+          <Select aria-label={t("period")} value={period} onChange={(next) => setPeriod(next as Period)}>
+            {PERIODS.map((value) => <option key={value} value={value}>{t(`periods.${value}`)}</option>)}
+          </Select>
+          <Select aria-label={t("step")} value={step} onChange={(next) => setStep(next as Step)}>
+            {STEPS.map((value) => <option key={value} value={value}>{t(`steps.${value}`)}</option>)}
+          </Select>
+        </>
+      ) : null}
     </div>
   );
 }

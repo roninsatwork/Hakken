@@ -40,6 +40,7 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/campaigns/page.tsx`, // 17 · Campaigns
   `${ANALYTICS}/[siteId]/visitors/page.tsx`, // 15 · Visitors
   `${ANALYTICS}/[siteId]/products/page.tsx`, // 25 · Products
+  `${ANALYTICS}/[siteId]/live/page.tsx`, // 14 · Live
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, and 16 · Nothing counted yet
   `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
   `${ANALYTICS}/[siteId]/connection/page.tsx`, // 11 · Connection, and 14 · Choose what counts

@@ -11,7 +11,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
-import { runFunnelReport, runReport, type FunnelAsk, type ReportAsk, type Report } from "./googleAnalyticsApi";
+import { runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type RealtimeAsk, type ReportAsk, type ReportRow, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
   EVENT_LIST_METRICS,
@@ -278,6 +278,11 @@ export async function ask(session: Session, property: string, report: ReportAsk)
     const answer = await runReport(token, property, report);
     return { answer, requests: answer.ok ? answer.requests : 1 };
   });
+}
+
+/** Google's live figures (§18.6.7), asked as every report is; nothing is kept. */
+export async function askRealtime(session: Session, property: string, live: RealtimeAsk): Promise<{ ok: true; rows: ReportRow[] } | GoogleFailure> {
+  return await retried(session, async (token) => ({ answer: await runRealtimeReport(token, property, live), requests: 1 }));
 }
 
 /** Who did an event and then one of others (§18.6.5), asked as every report is: its sign-in renewed, Google waited for when busy. */

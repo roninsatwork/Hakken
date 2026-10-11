@@ -88,7 +88,10 @@ const FIELD: Record<string, (visit: Visit) => string> = {
 /** The figures a log line carries, in the order asked before the second round. */
 const BASE_METRICS = ["sessions", "engagedSessions", "userEngagementDuration", "screenPageViews", "ecommercePurchases", "purchaseRevenue"];
 
-export type Google = { visits: Visit[]; reportStatus?: number; calls: { url: string; body: string }[] };
+/** Someone on the website in the last 30 minutes, for Google's live figures (§18.6.7). */
+export type LivePerson = { minutesAgo: number; city: string; page: string; device: string; views: number; country?: string; events?: Record<string, number> };
+
+export type Google = { visits: Visit[]; live?: LivePerson[]; reportStatus?: number; calls: { url: string; body: string }[] };
 
 type Filter = { filter?: { fieldName: string; inListFilter?: { values: string[] }; stringFilter?: { value: string } }; andGroup?: { expressions: Filter[] } };
 
@@ -175,6 +178,36 @@ export function fakeGoogle(visits: Visit[]): Google {
         metricValues: (byEvent ? sum.values : ask.metrics.map((metric) => metricOf(metric.name, sum.values))).map((value) => ({ value: String(value) })),
       }));
       return Response.json({ rows, rowCount: rows.length, metadata: {} });
+    }
+    // Google's live figures (§18.6.7): each person counted once, their views and events added up.
+    if (url === `https://analyticsdata.googleapis.com/v1beta/${PROPERTY}:runRealtimeReport`) {
+      const ask = JSON.parse(body) as { dimensions: { name: string }[]; metrics: { name: string }[]; dimensionFilter?: Filter; minuteRanges?: { startMinutesAgo: number; endMinutesAgo: number }[] };
+      const range = ask.minuteRanges?.[0] ?? { startMinutesAgo: 29, endMinutesAgo: 0 };
+      const field = (person: LivePerson, name: string, eventName?: string) => (
+        name === "minutesAgo" ? String(person.minutesAgo).padStart(2, "0") : name === "city" ? person.city : name === "unifiedScreenName" ? person.page
+          : name === "deviceCategory" ? person.device : name === "countryId" ? person.country ?? "GB" : name === "eventName" ? eventName ?? "" : "");
+      const keep = (person: LivePerson, filter: Filter | undefined, eventName?: string): boolean => {
+        if (!filter) return true;
+        if (filter.andGroup) return filter.andGroup.expressions.every((one) => keep(person, one, eventName));
+        const value = field(person, filter.filter!.fieldName, eventName).toLowerCase();
+        return filter.filter!.inListFilter ? filter.filter!.inListFilter.values.map((one) => one.toLowerCase()).includes(value) : value === (filter.filter!.stringFilter?.value ?? "").toLowerCase();
+      };
+      const names = ask.dimensions.map(({ name }) => name);
+      const byEvent = names.includes("eventName") || ask.metrics.some(({ name }) => name === "eventCount");
+      const sums = new Map<string, { keys: string[]; values: number[] }>();
+      for (const person of google.live ?? []) {
+        if (person.minutesAgo > range.startMinutesAgo || person.minutesAgo < range.endMinutesAgo) continue;
+        const lines = byEvent ? Object.entries(person.events ?? {}).map(([eventName, count]) => ({ eventName, count })) : [{ eventName: undefined, count: 0 }];
+        for (const line of lines) {
+          if (!keep(person, ask.dimensionFilter, line.eventName)) continue;
+          const keys = names.map((name) => field(person, name, line.eventName));
+          const sum = sums.get(keys.join("|")) ?? { keys, values: ask.metrics.map(() => 0) };
+          ask.metrics.forEach(({ name }, at) => (sum.values[at] += name === "activeUsers" ? 1 : name === "screenPageViews" ? person.views : name === "eventCount" ? line.count : 0));
+          sums.set(keys.join("|"), sum);
+        }
+      }
+      const rows = [...sums.values()].map((sum) => ({ dimensionValues: sum.keys.map((value) => ({ value })), metricValues: sum.values.map((value) => ({ value: String(value) })) }));
+      return Response.json({ rows, rowCount: rows.length });
     }
     // Google's funnel report (§18.6.5): the people of each line with the first event, and of those lines the ones with a later one too.
     if (url === `https://analyticsdata.googleapis.com/v1alpha/${PROPERTY}:runFunnelReport`) {

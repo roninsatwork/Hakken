@@ -275,6 +275,35 @@ export async function runReport(accessToken: string, property: string, ask: Repo
   return { ok: true, rows, folded, thresholded, cut: rows.length < total, requests };
 }
 
+/**
+ * One ask of Google's live figures (§18.6.7, GA34): the last 30 minutes, or a
+ * stretch of them (`minutes`, 0 the minute now), split as asked. Live figures
+ * cannot be filtered by the website's address — Google keeps no `hostName`
+ * live — only by country, device and event.
+ */
+export type RealtimeAsk = Pick<ReportAsk, "dimensions" | "metrics" | "device" | "countries" | "eventNames"> & { minutes?: { from: number; to: number } };
+
+/** Google's live figures for one ask (`runRealtimeReport`): nothing is kept. */
+export async function runRealtimeReport(accessToken: string, property: string, ask: RealtimeAsk): Promise<{ ok: true; rows: ReportRow[] } | GoogleFailure> {
+  const filter = filterOf({ ...ask, startDate: "", endDate: "" });
+  const answer = await callGoogle(`${DATA}/${property}:runRealtimeReport`, accessToken, {
+    dimensions: ask.dimensions.map((name) => ({ name })),
+    metrics: ask.metrics.map((name) => ({ name })),
+    ...(filter ? { dimensionFilter: filter } : {}),
+    ...(ask.minutes ? { minuteRanges: [{ startMinutesAgo: ask.minutes.from, endMinutesAgo: ask.minutes.to }] } : {}),
+    limit: 250,
+  });
+  if (!answer.ok) return answer;
+  const json = answer.json as { rows?: { dimensionValues?: { value?: string }[]; metricValues?: { value?: string }[] }[] };
+  return {
+    ok: true,
+    rows: (json.rows ?? []).map((row) => ({
+      keys: (row.dimensionValues ?? []).map((value) => value.value ?? ""),
+      values: (row.metricValues ?? []).map((value) => Number(value.value ?? 0) || 0),
+    })),
+  };
+}
+
 /** Google's funnel report: still in its `v1alpha` (§18.6.5). */
 const FUNNEL = "https://analyticsdata.googleapis.com/v1alpha";
 

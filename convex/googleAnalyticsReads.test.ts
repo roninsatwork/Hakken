@@ -386,6 +386,40 @@ describe("Visitors (GA24)", () => {
   });
 });
 
+describe("Live (GA34)", () => {
+  test("who is on the website now and the last 30 minutes, from Google's live figures, and nothing kept", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const google = fakeGoogle(growing());
+    google.live = [
+      { minutesAgo: 1, city: "London", page: "AI Agency", device: "desktop", views: 3 },
+      { minutesAgo: 2, city: "London", page: "AI Agency", device: "mobile", views: 2, events: { generate_lead: 1 } },
+      { minutesAgo: 3, city: "Guildford", page: "Home", device: "desktop", views: 1 },
+      { minutesAgo: 20, city: "Leeds", page: "Home", device: "mobile", views: 4 },
+      // Another country's visitor: never counted.
+      { minutesAgo: 1, city: "Paris", page: "Home", device: "desktop", views: 9, country: "FR" },
+    ];
+    const kept = async () => await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).length);
+    const before = await kept();
+    const answer = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "", list: "pages" });
+    expect(answer).toMatchObject({ ok: true, now: 3, people: 4, views: 10, conversions: { count: 1, eventName: "generate_lead", minutesAgo: 2 } });
+    if (!answer.ok) throw new Error("unreachable");
+    expect(answer.minutes).toHaveLength(30);
+    expect(answer.minutes.slice(-4)).toEqual([1, 1, 1, 0]);
+    expect(answer.rows.map((row) => [row.name, row.people, row.views])).toEqual([["AI Agency", 2, 5], ["Home", 2, 5]]);
+    expect(answer.places.map((row) => [row.name, row.people])).toEqual([["London", 2], ["Guildford", 1], ["Leeds", 1]]);
+    expect(answer.seen).toEqual({
+      says: [{ code: "onNow", a: 3, b: 2, text: "AI Agency" }, { code: "converted", text: "generate_lead", a: 2 }],
+      steps: [{ code: "seeConversions", link: "conversions", to: { segment: "conversions" } }],
+    });
+    // One device, and the events list.
+    const phones = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "mobile", list: "events" });
+    expect(phones).toMatchObject({ ok: true, now: 1, people: 2, rows: [{ name: "generate_lead", people: 1, times: 1 }] });
+    // Nothing is kept: no held list, no row of any kind.
+    expect(await kept()).toBe(before);
+  });
+});
+
 describe("What Hakken sees, from what each screen already reads (§14)", () => {
   /** Search Console connected for the website, with its last 30 days held: 100 clicks from 20,000 showings. */
   async function withSearchConsole(t: Harness, siteId: Id<"companyWebsites">) {

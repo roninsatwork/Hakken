@@ -24,6 +24,8 @@ export type AnalyticsGroup = (typeof ANALYTICS_GROUPS)[number];
 /** The section's pages, in the order its menu lists them. */
 export const ANALYTICS_PAGES = [
   { id: "overview", segment: "", group: "figures" },
+  // Who is on the website now (GA34).
+  { id: "live", segment: "live", group: "figures" },
   // Each landing page from Google's results to its money (§13), after Overview.
   { id: "heroes", segment: "heroes", group: "figures" },
   { id: "channels", segment: "channels", group: "figures" },

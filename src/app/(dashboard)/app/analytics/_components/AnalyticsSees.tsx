@@ -27,13 +27,19 @@ import { useEventName } from "./useEventName";
  * page of this website's section, with the dates and device chosen
  * (`segment`, `filters`), or to an address of its own (`url`).
  */
-export function AnalyticsSees({ screen, seen, currency }: { screen: string; seen: Seen | null | undefined; currency: string | null | undefined }) {
+export function AnalyticsSees({ screen, seen, currency, keep = true }: {
+  screen: string;
+  seen: Seen | null | undefined;
+  currency: string | null | undefined;
+  /** Saved as the company's advice (`useNoteAdvice`): not for Live, worked out each minute and never kept (GA34). */
+  keep?: boolean;
+}) {
   const t = useTranslations("googleAnalytics.seen");
   const siteId = useAnalyticsSiteId();
   const hrefOf = useAnalyticsHref(siteId);
   const nameOf = useEventName();
   const locale = useLocale();
-  useNoteAdvice(siteId, `googleAnalytics.seen.${screen}`, seen, currency);
+  useNoteAdvice(keep ? siteId : null, `googleAnalytics.seen.${screen}`, seen, currency);
   if (!seen || seen.says.length === 0) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const events = (text: string) => eventList(text, nameOf, locale);

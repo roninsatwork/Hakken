@@ -530,11 +530,11 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 13
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 14
 built on dev, each committed and none pushed, and "people who converted
-after it" (half a day more) — twenty-one and a half of twenty-seven days,
-about 80%; five and a half left. Both rounds: about forty-seven of fifty-two
-and a half days, about 90%.**
+after it" (half a day more) — twenty-three and a half of twenty-seven days,
+about 87%; three and a half left. Both rounds: about forty-nine of fifty-two
+and a half days, about 93%.**
 
 ## 9. Risks
 
@@ -1460,6 +1460,24 @@ stops when hidden or closed, and pauses after 30 minutes untouched with a
 line to carry on. One ask a minute brings the figures, the minute chart and
 the chosen list together where Google allows, else three or four small
 asks. Filtered to the home country chosen.
+
+*Built 2026-10-11 (Phase 14, GA34).* Live, as board 14 draws it: What Hakken
+sees, on the website now (the last 5 minutes), people, views and conversions
+in the last 30 minutes — the newest conversion named, with how long ago —
+people each minute, where they are as bars, and one table switching between
+pages (by title), places, devices and events. One action
+(`googleAnalyticsRealtime.askGoogleAnalyticsRealtime`) asks Google's live
+figures side by side each minute and **stores nothing**: no table, no held
+list, and its box is not saved as advice (`AnalyticsSees keep={false}`). When
+the page asks is one rule (`liveTiming.ts`, held by its test): at once when
+opened or when the choice changes, then once a minute, only while the page is
+in front; nothing while hidden or closed; paused after 30 minutes untouched
+until "Carry on". Behind another tab the page says it is waiting. Live has
+no dates or chart step; country and device filter it. Google keeps no website
+address live, so Live counts the whole property, and the page says so.
+Checked on Ronins in Chrome: hidden, it asked nothing; in front, it asked
+Google at once and showed nobody from the United Kingdom in the last 30
+minutes.
 
 **8. Ask Hakken.** Ask Hakken reads every Google Analytics screen and figure
 the website holds — both rounds — through the same reads the screens use,

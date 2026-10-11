@@ -866,6 +866,14 @@
         },
         "push": "Move your pages up Google's results, where they're shown but rarely clicked."
       },
+      "live": {
+        "nobody": "Nobody is on the website right now.",
+        "quietNow": "Nobody is on the website this minute; {a} people visited in the last 30 minutes.",
+        "onNow": "{count, plural, =1 {One person is} other {# people are}} on the website now, {countB, plural, =1 {one} other {#}} of them reading “{text}”.",
+        "onNowOnly": "{count, plural, =1 {One person is} other {# people are}} on the website now.",
+        "converted": "Someone made a conversion — {event} — {count, plural, =0 {just now} =1 {a minute ago} other {# minutes ago}}.",
+        "seeConversions": "See the visits that converted today."
+      },
       "channels": {
         "none": "No visits in these dates.",
         "lead": "{text} sends {a} of your {b} visits, and {cMoney} of their value.",
@@ -2155,6 +2163,14 @@
           "rose": "Guarda cosa funziona su {text}: {count, plural, =1 {una conversione} other {# conversioni}}, in crescita da {b}."
         },
         "push": "Fai salire le tue pagine nei risultati di Google, dove vengono mostrate ma ricevono pochi clic."
+      },
+      "live": {
+        "nobody": "Nessuno è sul sito in questo momento.",
+        "quietNow": "Nessuno è sul sito in questo minuto; {a} persone l'hanno visitato negli ultimi 30 minuti.",
+        "onNow": "{count, plural, =1 {Una persona è} other {# persone sono}} sul sito ora, {countB, plural, =1 {una} other {#}} delle quali su “{text}”.",
+        "onNowOnly": "{count, plural, =1 {Una persona è} other {# persone sono}} sul sito ora.",
+        "converted": "Qualcuno ha fatto una conversione — {event} — {count, plural, =0 {proprio ora} =1 {un minuto fa} other {# minuti fa}}.",
+        "seeConversions": "Guarda le visite che hanno convertito oggi."
       },
       "channels": {
         "none": "Nessuna visita in queste date.",

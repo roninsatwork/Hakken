@@ -64,7 +64,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     ? t("withProperty", { name: connection.propertyName, id: connection.property.replace(/^properties\//, "") })
     : t("yourWebsite");
   const firstComing = state === "CONNECTED" && !connection?.historyDone;
-  const ownDates = pageForPath(pathname, siteId) === "heroes" || /\/landing-pages\/page\/?$/.test(pathname);
+  const ownDates = pageForPath(pathname, siteId) === "heroes" || pageForPath(pathname, siteId) === "live" || /\/landing-pages\/page\/?$/.test(pathname);
 
   return (
     <>
