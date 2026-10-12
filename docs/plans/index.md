@@ -105,8 +105,10 @@ completed work.
   first pick; the Head of Strategy hands each judgement to its agent when
   something changed; it is saved once and read by the screens, findings,
   reports and Ask Hakken. First the weekly run is made to hand itself on in
-  steps, after a run was cut off at Convex's 10-minute limit. Eight phases,
-  about 13 man-days; nothing built; four questions waiting on Anthony.
+  steps, after a run was cut off at Convex's 10-minute limit. Eight phases
+  plus keyword difficulty, about 14 man-days; built overnight 12 October on
+  local dev, each phase committed and not pushed, proved on ronins.co.uk;
+  about 95%, with seven items waiting on Anthony.
 - [Keyword cannibalisation — which page owns each search](./active/keyword-cannibalisation-owners-plan.md)
   — started 2026-10-12, after Anthony disagreed with Ronins' advice (Surrey's
   page kept over London's; the national mobile app page merged into London's).

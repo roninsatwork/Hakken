@@ -6,7 +6,7 @@ plan and ask questions … I want to build this overnight". "This standard" is
 the one Keyword cannibalisation reached the same day
 ([keyword-cannibalisation-owners-plan.md](keyword-cannibalisation-owners-plan.md)).
 
-Nothing here is built. The questions at the end are waiting on Anthony.
+Built overnight 2026-10-12 on local dev, committed phase by phase, not pushed: about 95%. What waits on Anthony is listed under "Waiting on Anthony".
 
 ## The standard
 
@@ -174,6 +174,49 @@ below are answered. Nothing is pushed.
   owns it, and Ask Hakken reads it too. **Not on the screen yet:** the
   "Difficulty" column changes the approved look of the searches table, so it
   waits for Anthony to see it drawn.
+
+- **Phase 7, proved 2026-10-12 (night).** The team's setup step made the
+  Page decisions specialist. Two ronins.co.uk runs followed:
+  - **First run:** 534 seconds, $0.35. All three steps handed on. The
+    cannibalisation specialist reviewed 6 groups and changed one owner. The
+    Page decisions specialist kept 19 of 19 pages with its reasons. All 6
+    boxes were written. 47 searches' difficulty was bought for $0.018 and
+    filed. The Head of Strategy was given up at 3 minutes and the week still
+    saved, which is why its limit became 4½ minutes.
+  - **Second run:** 420 seconds, $0.32. Every unchanged decision was kept
+    without asking: 0 of 6 groups, 0 pages and no difficulty bought twice.
+    The Head of Strategy answered in 3 minutes 41 seconds and called all 32
+    services.
+
+  Checked in Chrome: Page decisions, Strategy, AI search and Ask Hakken, which
+  gives the saved page advice word for word. The gate passed:
+  - `npm run check`: 953 files, 7,521 tests;
+  - `lint:all`;
+  - coverage, above every target;
+  - the smoke tests (19 of 19) and the build, run in a copy.
+
+  Nothing pushed.
+
+## Waiting on Anthony (2026-10-13)
+
+1. **The "Difficulty" column** on a cannibalisation group's searches table:
+   to see it drawn and approve its look.
+2. **The Head of Strategy's time:** 3 minutes 41 seconds of its 4½ on the
+   second run. If it runs long again, give it only the services that bring
+   enquiries rather than all 32.
+3. **Boxes still in the screens' own words:** Track record, the funnel,
+   Where enquiries come from, Page decisions' summary, and the
+   cannibalisation screens (with the parked "specialist alone writes the
+   page").
+4. **The parked cannibalisation questions:** the specialist alone writing
+   the page, and Jev picking each search's page.
+5. **The Executive summary's note:** says its period rather than following
+   each period chosen; the fuller version means more AI calls.
+6. **Coverage** cleared its next targets; raising them in
+   `coverage-thresholds.json` is Anthony's call.
+7. **The first run cut off before phase 0** still shows as running in its
+   record. The watches only cover runs from now on; a one-off fix can close
+   it.
 
 ## Answered by Anthony, 2026-10-12
 
