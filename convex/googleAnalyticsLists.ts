@@ -467,3 +467,43 @@ export function splitBeforeKey(key: string): { kind: BeforeKind; value: string }
   if (key.startsWith("site:")) return { kind: "site", value: key.slice(5) };
   return { kind: "none", value: "" };
 }
+
+/** Where a page's visitors were just before, as a share of its views (insights-analyst-plan.md I36). */
+export type Journey = { kind: BeforeKind; label: string; share: number };
+
+/**
+ * Each page's journeys from one report of `pagePath` by `pageReferrer`:
+ * `asked` maps each path Analytics may name (slash or not) to the page it is
+ * filed under. A page before itself is a reload, not a journey, and is left
+ * out; another website is named as people know it, so Google's many
+ * addresses add up to one row. The biggest `kept` of each, shares to one place.
+ */
+export function journeysOf(
+  rows: readonly ReportRow[],
+  asked: ReadonlyMap<string, string>,
+  addresses: readonly string[],
+  assistantOf: (source: string) => string | null,
+  kept: number,
+): Map<string, Journey[]> {
+  const views = new Map<string, Map<string, number>>();
+  for (const row of rows) {
+    const page = asked.get(row.keys[0] ?? "");
+    if (!page) continue;
+    const { kind, value } = splitBeforeKey(beforeKey(row.keys[1] ?? "", addresses));
+    if (kind === "page" && value.replace(/\/+$/, "") === page.replace(/\/+$/, "")) continue;
+    const key = kind === "site" ? `site:${siteNameOf(value, assistantOf)}` : kind === "page" ? `page:${value}` : "none";
+    const held = views.get(page) ?? new Map<string, number>();
+    held.set(key, (held.get(key) ?? 0) + (row.values[0] ?? 0));
+    views.set(page, held);
+  }
+  const out = new Map<string, Journey[]>();
+  for (const [page, held] of views) {
+    const total = [...held.values()].reduce((sum, count) => sum + count, 0);
+    if (total === 0) continue;
+    out.set(page, [...held.entries()].sort((a, b) => b[1] - a[1]).slice(0, kept).map(([key, count]) => {
+      const { kind, value } = splitBeforeKey(key);
+      return { kind, label: value, share: Math.round((count / total) * 1000) / 10 };
+    }));
+  }
+  return out;
+}

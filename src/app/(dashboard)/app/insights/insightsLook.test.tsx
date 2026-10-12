@@ -318,7 +318,7 @@ describe("Insights' looks", () => {
     sources: [{ channel: "Organic Search", visits: 3302, enquiries: 101, visitsBefore: 3237, enquiriesBefore: 171 }, { channel: "AI assistants", visits: 83, enquiries: 4, visitsBefore: 20, enquiriesBefore: 0 }],
     pages: [
       { page: "/", title: "Creative Digital Agency | Ronins", kind: "HOME", visits: 2052, enquiries: 98, visitsBefore: 1650, enquiriesBefore: 150, verdict: "REWRITE_TOP", reason: "The opening speaks to brand work while visitors come for AI.", steps: ["Lead the top of the page with AI services.", "Put the enquiry form's first question above the fold."] },
-      { page: "/ai-agency/", title: "AI Agency | Automation", kind: "SERVICE", visits: 1089, enquiries: 46, visitsBefore: 561, enquiriesBefore: 32, verdict: "ADD_PROOF", reason: "It asks without showing results.", steps: ["Add one case study with its result before the form."] },
+      { page: "/ai-agency/", title: "AI Agency | Automation", kind: "SERVICE", visits: 1089, enquiries: 46, visitsBefore: 561, enquiriesBefore: 32, verdict: "ADD_PROOF", reason: "It asks without showing results.", steps: ["Add one case study with its result before the form."], before: [{ kind: "site", label: "Google", share: 61.2 }, { kind: "page", label: "/", share: 24.5 }, { kind: "none", label: "", share: 14.3 }] },
     ],
     experiments: [{ experimentId: "experiment_1", page: "/", verdict: "REWRITE_TOP", why: "The opening speaks to brand work.", status: "READY", startedAt: null, baseline: null, result: null, visits: 2052 }],
   };
@@ -345,6 +345,8 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION, "insightsReads:insightsService": { host: "ronins.co.uk", service: SERVICE, siteClicks: 540, searches: [{ keyword: "ai agency", volume: 9900, position: 1, rival: null, rivalPosition: null }] } });
     const { container } = render(<InsightsPageReviewPage />);
     await screen.findByText("ai agency");
+    await screen.findByText("Google");
+    await screen.findByText("Typed in or a bookmark");
     await expectApprovedLook(container, PLAN, "PageDetail", "Insights → A page's review");
     nav.search = "";
   });

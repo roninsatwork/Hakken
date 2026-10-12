@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { beforeKey, siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
+import { beforeKey, journeysOf, siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
 import { assistantOf } from "./utils/aiAssistants";
 
 /**
@@ -32,5 +32,33 @@ describe("the page before", () => {
     expect(siteNameOf("t.co", assistantOf)).toBe("X");
     expect(siteNameOf("teams.public.onecdn.static.microsoft", assistantOf)).toBe("Microsoft Teams");
     expect(siteNameOf("www.example.org", assistantOf)).toBe("example.org");
+  });
+});
+
+describe("a money page's journeys (insights-analyst-plan.md I36)", () => {
+  const asked = new Map([["/services/", "/services/"], ["/services", "/services/"]]);
+
+  test("adds up a page asked slash or not, names a website as people know it, and leaves out reloads", () => {
+    const journeys = journeysOf([
+      { keys: ["/services/", "https://www.google.com/"], values: [40] },
+      { keys: ["/services", "https://www.google.co.uk/"], values: [20] },
+      { keys: ["/services/", "https://www.acme-shop.test/"], values: [25] },
+      { keys: ["/services/", "https://acme-shop.test/services/"], values: [500] },
+      { keys: ["/services/", "(not set)"], values: [15] },
+      { keys: ["/about/", "https://www.google.com/"], values: [99] },
+    ], asked, ADDRESSES, assistantOf, 5);
+    expect([...journeys.keys()]).toEqual(["/services/"]);
+    expect(journeys.get("/services/")).toEqual([
+      { kind: "site", label: "Google", share: 60 },
+      { kind: "page", label: "/", share: 25 },
+      { kind: "none", label: "", share: 15 },
+    ]);
+  });
+
+  test("keeps the biggest few, and nothing for a page with no views", () => {
+    const rows = ["a", "b", "c", "d"].map((stem, index) => ({ keys: ["/services/", `https://${stem}.example.org/`], values: [index + 1] }));
+    const journeys = journeysOf([...rows, { keys: ["/services/", "https://acme-shop.test/services"], values: [3] }], asked, ADDRESSES, assistantOf, 2);
+    expect(journeys.get("/services/")?.map((journey) => journey.label)).toEqual(["d.example.org", "c.example.org"]);
+    expect(journeysOf([{ keys: ["/services/", "https://www.google.com/"], values: [0] }], asked, ADDRESSES, assistantOf, 5).size).toBe(0);
   });
 });

@@ -40,7 +40,9 @@ import { DRAFT_RULES, draftsFrom, type Drafted } from "./utils/insightDrafts";
 import { PANEL_RULES, panelFrom } from "./utils/insightPanel";
 import { REVIEW_RULES, VERDICTS, funnelFrom, sourcesFrom, verdictByRule, type Verdict } from "./utils/insightConversion";
 import { missingStructuredData } from "./utils/moneyPageChecks";
-import { askFunnel, openSession } from "./googleAnalyticsCollect";
+import { ask as askAnalytics, askFunnel, openSession } from "./googleAnalyticsCollect";
+import { journeysOf, type Journey } from "./googleAnalyticsLists";
+import { assistantOf } from "./utils/aiAssistants";
 
 /**
  * The Insights team's weekly run (docs/plans/active/insights-analyst-plan.md
@@ -417,6 +419,37 @@ async function buildPanel(ctx: ActionCtx, args: RunArgs, member: TeamMember | un
   }
 }
 
+/** Where each page's visitors were just before, kept at most a page. */
+const BEFORE_KEPT = 5;
+
+/**
+ * Where visitors were just before each of the pages given (I36), from one
+ * report of Analytics' page-before over the last 90 days: a page of the
+ * website by its path, another website by its address, or none (typed in,
+ * a bookmark), each with its share of the page's views.
+ */
+async function pagesBefore(ctx: ActionCtx, holdId: Id<"companyWebsites">, pages: readonly string[]): Promise<Map<string, Journey[]>> {
+  const out = new Map<string, Journey[]>();
+  if (pages.length === 0) return out;
+  const target = await ctx.runQuery(internal.insightsReading.analyticsTargetInternal, { holdId });
+  if (!target) return out;
+  const opened = await openSession(ctx, target.connectionId);
+  if (!opened.ok) return out;
+  // Analytics names a page as it was viewed, slash or not: asked both ways, filed under the path given.
+  const asked = new Map<string, string>();
+  for (const page of pages) {
+    asked.set(page, page);
+    if (page.length > 1) asked.set(page.replace(/\/+$/, ""), page);
+  }
+  const answer = await askAnalytics(opened.session, target.property, {
+    startDate: shiftDay(target.newestDay, -89), endDate: target.newestDay,
+    dimensions: ["pagePath", "pageReferrer"], metrics: ["screenPageViews"],
+    hostNames: target.addresses, countries: [target.country],
+    only: { dimension: "pagePath", values: [...asked.keys()] },
+  });
+  return answer.ok ? journeysOf(answer.rows, asked, target.addresses, assistantOf, BEFORE_KEPT) : out;
+}
+
 /** Pages the Conversion specialist reviews at most each week: the money pages with the most visits. */
 const PAGES_REVIEWED = 8;
 
@@ -429,6 +462,8 @@ const PAGES_REVIEWED = 8;
 async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: readonly Fact[], member: TeamMember | undefined): Promise<void> {
   const inputs = (await ctx.runQuery(internal.insightsConversion.reviewInputs, { holdId: args.holdId })).slice(0, PAGES_REVIEWED);
   let answered = new Map<string, { verdict: Verdict; reason: string; steps: string[] }>();
+  // Where each page's visitors were just before (I36): one ask of Analytics, the last 90 days.
+  const beforeOf = await pagesBefore(ctx, args.holdId, inputs.map((page) => page.page)).catch(() => new Map<string, Journey[]>());
   if (inputs.length > 0) {
     const system = [REVIEW_RULES, args.shop ? SHOP_RULE : "", member?.instructions ?? ""].filter(Boolean).join("\n\n");
     const prompt = JSON.stringify({
@@ -439,6 +474,8 @@ async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: r
         headline: page.facts?.headline ?? null, words: page.facts?.words ?? null, showsPrice: page.facts?.price ?? null, showsProof: page.facts?.proof ?? null,
         hasForm: page.facts?.form ?? null, firstAskAt: page.facts?.firstAsk ?? null, opening: page.facts?.opening ?? null, structuredData: page.structured,
         // How visitors behave on it, from Microsoft Clarity's last 30 days where connected (I24): shares are per cent of visits.
+        // Where its visitors were just before, shares per cent of its views: a page of the website by path, another website, or none.
+        cameFrom: beforeOf.get(page.page) ?? [],
         behaviour: page.behaviour ? { visits: page.behaviour.sessions, scrollDepth: page.behaviour.scroll, deadClicks: page.behaviour.dead, rageClicks: page.behaviour.rage, quickBacks: page.behaviour.quickBack, activeSeconds: page.behaviour.activeSeconds } : null,
       })),
     });
@@ -461,6 +498,7 @@ async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: r
     return {
       page: page.page, title: page.title, kind: page.kind, visits: page.visits, enquiries: page.enquiries, visitsBefore: page.visitsBefore, enquiriesBefore: page.enquiriesBefore, visits90: page.visits90, enquiries90: page.enquiries90,
       verdict: said?.verdict ?? verdictByRule(page, page.facts, page.structured), reason: said?.reason ?? "", steps: said?.steps ?? [],
+      before: beforeOf.get(page.page) ?? [],
     };
   });
   await ctx.runMutation(internal.insightsConversion.saveConversion, { holdId: args.holdId, companyId: args.companyId, week, conversion: { funnel: funnelFrom(facts), sources: sourcesFrom(facts), pages } });

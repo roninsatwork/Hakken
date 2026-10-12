@@ -18982,6 +18982,24 @@
         "yearBefore": "The year before",
         "lastYear": "The last 12 months",
         "last90": "The last 90 days"
+      },
+      "cameFrom": {
+        "title": "Where its visitors were just before",
+        "hint": "The last 90 days, from Google Analytics. A page of your website, another website, or none when they typed the address or used a bookmark.",
+        "search": "Search where they came from",
+        "empty": "Google Analytics hasn't said yet where this page's visitors come from. It is asked with each week's findings.",
+        "noMatch": "Nothing matches that search.",
+        "columns": {
+          "from": "Came from",
+          "kind": "Kind",
+          "share": "Share of its views"
+        },
+        "kinds": {
+          "page": "A page of your website",
+          "site": "Another website",
+          "none": "Typed in or a bookmark"
+        },
+        "none": "No page before"
       }
     },
     "experiments": {

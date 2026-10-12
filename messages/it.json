@@ -18982,6 +18982,24 @@
         "yearBefore": "L'anno prima",
         "lastYear": "Gli ultimi 12 mesi",
         "last90": "Gli ultimi 90 giorni"
+      },
+      "cameFrom": {
+        "title": "Dove erano i suoi visitatori subito prima",
+        "hint": "Gli ultimi 90 giorni, da Google Analytics. Una pagina del tuo sito, un altro sito, o nessuna quando hanno digitato l’indirizzo o usato un segnalibro.",
+        "search": "Cerca da dove arrivano",
+        "empty": "Google Analytics non ha ancora detto da dove arrivano i visitatori di questa pagina. Viene chiesto con i risultati di ogni settimana.",
+        "noMatch": "Nessun risultato per questa ricerca.",
+        "columns": {
+          "from": "Da dove",
+          "kind": "Tipo",
+          "share": "Quota delle sue visualizzazioni"
+        },
+        "kinds": {
+          "page": "Una pagina del tuo sito",
+          "site": "Un altro sito",
+          "none": "Digitato o da un segnalibro"
+        },
+        "none": "Nessuna pagina prima"
       }
     },
     "experiments": {

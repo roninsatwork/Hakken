@@ -102,8 +102,10 @@ describe("UX Layer: Internationalization (i18n) Coverage", () => {
       // near-miss: on the company usage screen it reported five keys missing
       // that were present, under a namespace no call there uses. A file with
       // two translators cannot be checked this way and is skipped, which is
-      // what the count below is for.
-      const namespaces = [...source.matchAll(/useTranslations\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1]);
+      // what the count below is for. `usePlatformTranslations` declares one
+      // too: a screen holding it beside one `useTranslations` was counted as
+      // single-namespace, and its `t("…")` checked against the wrong one.
+      const namespaces = [...source.matchAll(/use(?:Platform)?Translations\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1]);
       if (new Set(namespaces).size !== 1) continue;
 
       for (const match of source.matchAll(/\bt\(\s*"([^"]+)"/g)) {

@@ -25,6 +25,12 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
 import { useCitedPagesTable } from "../../../sites/_components/useCitedPagesTable";
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
+import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
+import { useSiteRecordHref } from "../../../sites/_components/siteRecordLinks";
+
+type CameFrom = { kind: "page" | "site" | "none"; label: string; share: number };
+const shareOf = (row: CameFrom) => row.share;
 
 const moved = (now: number | null, before: number | null) => (now !== null && before ? Math.round(((now - before) / before) * 100) : null);
 
@@ -51,6 +57,19 @@ export default function InsightsPageReviewPage() {
   const tcp = useTranslations("sites.citedPages");
   const citedRows = useQuery(api.siteRivalCited.pageRivalCitedPages, data ? { siteId: data.siteId, page: path } : "skip");
   const cited = useCitedPagesTable(citedRows, { fileName: `${data?.host ?? "site"}-rival-pages-ai-cites`, withHost: true, table: "cited" });
+  // Where its visitors were just before (I36), from the week's ask of Analytics.
+  const recordHref = useSiteRecordHref(data?.siteId ?? "");
+  const fromName = (row: CameFrom) => (row.kind === "none" ? t("cameFrom.none") : row.label);
+  const [fromSearch, setFromSearch, fromTerm] = useSiteSearch("from", "cameFrom");
+  const fromMatches = wordStartMatcher(fromTerm.toLowerCase());
+  const reviewed = data?.pages.find((row) => row.page === path);
+  const cameFromRows = data === undefined ? undefined : (reviewed?.before ?? []).filter((row) => !fromMatches || fromMatches(fromName(row).toLowerCase()));
+  const fromColumns = useMemo<SiteSortColumns<CameFrom, "from" | "share">>(() => ({
+    from: { value: (row) => (row.kind === "none" ? "" : row.label), first: "asc" },
+    share: { value: shareOf, first: "desc" },
+  }), []);
+  const { rows: cameFromSorted, tableSort: cameFromSort } = useSiteSortedList(cameFromRows, fromColumns, { opening: "share", name: (row) => row.label, table: "cameFrom" });
+  const cameFrom = useSitePager(cameFromSorted, { isLoading: data === undefined, table: "cameFrom" });
   const back = { href: href("page-reviews"), label: t("back") };
   if (data === undefined) return <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   const review = data?.pages.find((row) => row.page === path);
@@ -103,6 +122,22 @@ export default function InsightsPageReviewPage() {
           { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           { key: "place", header: t("columns.place"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.position === null ? "–" : formatPosition(row.position)}</span> },
           { key: "rival", header: t("columns.rival"), cell: (row) => <span className="text-[12px] text-secondary">{row.rival ? `${row.rival} (${formatPosition(row.rivalPosition)})` : "–"}</span> },
+        ]}
+      />
+      {/* Where its visitors were just before: a page of the website opens that page's record. */}
+      <DataTable
+        rows={cameFrom.pageRows}
+        rowKey={(row) => `${row.kind}:${row.label}`}
+        onRowClick={(row) => { if (row.kind === "page") router.push(recordHref({ kind: "page", page: row.label })); }}
+        search={{ value: fromSearch, onChange: setFromSearch, placeholder: t("cameFrom.search") }}
+        cardHeader={<TableBar footer={cameFrom.footer} noun="results" title={t("cameFrom.title")} description={t("cameFrom.hint")} actions={<ListDownload label={t("download")} fileName={`${data.host}-page-came-from`} rows={cameFromSorted} columns={[{ header: t("cameFrom.columns.from"), value: fromName }, { header: t("cameFrom.columns.kind"), value: (row) => t(`cameFrom.kinds.${row.kind}`) }, { header: t("cameFrom.columns.share"), value: shareOf }]} />} />}
+        empty={{ icon: <ScanSearch className="h-8 w-8 text-muted/30" />, label: fromTerm ? t("cameFrom.noMatch") : t("cameFrom.empty") }}
+        footer={cameFrom.footer}
+        sort={cameFromSort}
+        columns={[
+          { key: "from", header: t("cameFrom.columns.from"), sortable: true, cell: (row) => <span className="text-[13px] text-foreground">{fromName(row)}</span> },
+          { key: "kind", header: t("cameFrom.columns.kind"), cell: (row) => <TagLabel>{t(`cameFrom.kinds.${row.kind}`)}</TagLabel> },
+          { key: "share", header: t("cameFrom.columns.share"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{`${formatNumber(row.share)}%`}</span> },
         ]}
       />
       {/* The rivals' pages AI assistants cite for the same questions as this page (the PageDetail board). */}
