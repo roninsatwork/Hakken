@@ -15,10 +15,10 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
-import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { shortName } from "@/convex/utils/insightLeagues";
 import type { Score } from "@/convex/utils/insightSummary";
-import { SITE_SERIES_COLOURS, SiteBarChart } from "../../sites/_components/SiteCharts";
+import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { monthRow } from "../../sites/_components/datedRows";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
@@ -28,6 +28,9 @@ import { LeagueCard } from "../_components/LeagueCard";
 import { ReportDownloadAction } from "../_components/ReportDownload";
 import { EnquiryCheckNotice } from "../_components/EnquiryCheckNotice";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
+
+/** Rivals' colours on the split share chart: none near your orange, so you never need telling apart by hue (he is colour blind). */
+const RIVAL_COLOURS = [CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL, CHART_SERIES_SLATE];
 
 const STATUS_TONE = { ON_TRACK: "success", WATCH: "warning", BEHIND: "danger" } as const;
 
@@ -75,13 +78,15 @@ export default function InsightsSummaryPage() {
   const shareMonths = newest?.summary?.shareByMonth ?? [];
   const rivalHosts = [...new Set(shareMonths.flatMap((month) => (month.rivals ?? []).map((rival) => rival.host)))];
   const shareOf = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 1000) / 10 : 0);
-  const shareBars = shareMonths.map((month) => monthRow(month.month, {
-    you: shareOf(month.you, month.total),
-    ...Object.fromEntries(rivalHosts.map((host, index) => [`rival${index}`, shareOf(month.rivals?.find((rival) => rival.host === host)?.value ?? 0, month.total)])),
-  }));
+  const shareBars = shareMonths.map((month) => {
+    const shares = rivalHosts.map((host) => shareOf(month.rivals?.find((rival) => rival.host === host)?.value ?? 0, month.total));
+    // The last rival takes what rounding leaves, so a month adds up to 100% and the scale stops there.
+    if (shares.length > 0) shares[shares.length - 1] = Math.max(0, Math.round((100 - shareOf(month.you, month.total) - shares.slice(0, -1).reduce((sum, share) => sum + share, 0)) * 10) / 10);
+    return monthRow(month.month, { you: shareOf(month.you, month.total), ...Object.fromEntries(shares.map((share, index) => [`rival${index}`, share])) });
+  });
   const shareSeries = [
     { key: "you", name: t("share.figure"), colour: CHART_SERIES_ORANGE },
-    ...rivalHosts.map((host, index) => ({ key: `rival${index}`, name: shortName(host), colour: SITE_SERIES_COLOURS[1 + (index % (SITE_SERIES_COLOURS.length - 1))] })),
+    ...rivalHosts.map((host, index) => ({ key: `rival${index}`, name: shortName(host), colour: RIVAL_COLOURS[index % RIVAL_COLOURS.length] })),
   ];
   const perBars = (newest?.summary?.enquiriesByMonth ?? []).filter((month) => month.conversions > 0).map((month) => monthRow(month.month, { visits: Math.round(month.visits / month.conversions) }));
 

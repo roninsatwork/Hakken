@@ -24,7 +24,7 @@ import {
   useXAxisScale,
   useYAxisScale,
 } from "recharts";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import { CHART_ACTIVE_BAR, CHART_CROSSHAIR, CHART_CURSOR, ChartTooltip, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import {
@@ -315,6 +315,17 @@ export function SiteBarChart({
   // How wide the chart is drawn, for an axis of months worded to the room each bar has.
   const [drawnWidth, setDrawnWidth] = useState(0);
   const months = !horizontal && data.length > 0 && data.every((row) => typeof row.month === "string");
+  // Each series' figures, worked out here and drawn the same way between draws: the chart library layers
+  // each label list and re-layers it when its drawing changes, which looped on a split chart's rivals
+  // (2026-10-12). A series with no figure to write gets no label list at all.
+  const labelWords = JSON.stringify(labels ? series.map((entry) => [entry.key, data.map((row) => {
+    const value = Number(row[entry.key]);
+    return Number.isFinite(value) ? labels(value, entry.key, row) : null;
+  })]) : []);
+  const labelContents = useMemo(() => new Map((JSON.parse(labelWords) as Array<[string, Array<string | null>]>).map(([key, words]) => {
+    const widest = words.reduce((most, word) => Math.max(most, word?.length ?? 0), 0);
+    return [key, widest > 0 ? barLabel((_value, index) => words[index] ?? null, { horizontal, stacked, widest }) : null] as const;
+  })), [labelWords, horizontal, stacked]);
   if (line && !horizontal) return <BarLineChart data={data} series={series} line={line} xKey={xKey} height={height} scale={scale} google={google} formatValue={formatValue} seriesLabel={seriesLabel} />;
   const barsPerRow = stacked ? 1 : series.length;
   const rowHeight = barsPerRow * ALONG_BAR + (barsPerRow - 1) * ALONG_BAR_GAP + ALONG_ROW_SPACE;
@@ -376,7 +387,7 @@ export function SiteBarChart({
                 {data.some(isPart) || highlight
                   ? data.map((row, index) => <Cell key={index} fillOpacity={isPart(row) ? PART_OPACITY : 1} {...(highlight?.rows(row) ? { fill: highlight.colour } : {})} />)
                   : null}
-                {labels ? <LabelList dataKey={entry.key} content={barLabel((value, index) => labels(value, entry.key, data[index] ?? {}), { horizontal, stacked, widest: widestLabel(data, entry.key, labels) })} /> : null}
+                {labelContents.get(entry.key) ? <LabelList dataKey={entry.key} content={labelContents.get(entry.key)!} /> : null}
               </Bar>
             ))}
             <GoogleUpdateMarkers google={google} />
@@ -463,14 +474,6 @@ const BAR_LABEL_ROOM = 56;
 const LABEL_LETTER = 6.7;
 
 type BarLabelProps = { x?: number | string; y?: number | string; width?: number | string; height?: number | string; value?: unknown; index?: number };
-
-/** The longest figure a series' bars would carry, in letters. */
-function widestLabel(data: ReadonlyArray<Record<string, unknown>>, key: string, labels: (value: number, key: string, row: Record<string, unknown>) => string | null): number {
-  return data.reduce((widest, row) => {
-    const value = Number(row[key]);
-    return Number.isFinite(value) ? Math.max(widest, labels(value, key, row)?.length ?? 0) : widest;
-  }, 0);
-}
 
 /**
  * A bar's figure, as `labels` words it: at the end of a bar along, above an
