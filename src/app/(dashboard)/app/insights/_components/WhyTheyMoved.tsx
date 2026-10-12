@@ -78,6 +78,7 @@ export function WhyTheyMoved({ view }: { view: PeriodView }) {
     switch (entry.id) {
       case "COUNTING":
         lines.push(t("tests.COUNTING.said", { now: fig(f.shareNow), then: fig(f.shareThen), period: thenWords }));
+        if (typeof f.clarityVisits === "number") lines.push(t("tests.COUNTING.clarity", { clarity: fig(f.clarityVisits), analytics: fig(f.analyticsVisits), days: Number(f.clarityDays) }));
         if (entry.part && entry.part > 0) lines.push(t("tests.COUNTING.part", { count: entry.part }));
         break;
       case "MARKET":
@@ -90,7 +91,9 @@ export function WhyTheyMoved({ view }: { view: PeriodView }) {
           ? t("tests.RANKINGS.place", { now: place(f.positionNow), then: place(f.positionThen), period: thenWords })
           : t("tests.RANKINGS.placeOnly", { now: place(f.positionNow), since: view.breakMonth ? formatMonth(view.breakMonth) : "" }));
         if (typeof f.bestMonth === "string") lines.push(t("tests.RANKINGS.best", { best: place(f.bestPosition), month: formatMonth(f.bestMonth) }));
-        if (f.pageOneNow !== null) lines.push(t("tests.RANKINGS.week", { now: fig(f.pageOneNow), before: fig(f.pageOneBefore) }));
+        // From the weekly readings kept across the period when held (phase 10), else this week against last.
+        if (f.pageOneNow !== null && typeof f.pageOneMonth === "string" && typeof f.pageOneThenMonth === "string") lines.push(t("tests.RANKINGS.period", { now: fig(f.pageOneNow), before: fig(f.pageOneBefore), month: formatMonth(f.pageOneMonth), thenMonth: formatMonth(f.pageOneThenMonth) }));
+        else if (f.pageOneNow !== null) lines.push(t("tests.RANKINGS.week", { now: fig(f.pageOneNow), before: fig(f.pageOneBefore) }));
         break;
       case "SHOWN":
         lines.push(f.shownThen !== null

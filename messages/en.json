@@ -19282,7 +19282,8 @@
         "analytics": "Google Analytics",
         "searchConsole": "Search Console",
         "dataForSeo": "Google's results and your rivals",
-        "googleUpdates": "Google's updates"
+        "googleUpdates": "Google's updates",
+        "clarity": "Microsoft Clarity"
       },
       "verdict": {
         "BIGGEST": "Likely, the biggest part",
@@ -19311,7 +19312,8 @@
           "part": "About {count} of the missing enquiries are visitors it no longer counts.",
           "chart": "Analytics' visits from Google for each 100 of Google's clicks, month by month",
           "chartHint": "Google counts its clicks itself; Analytics counts the visits it sees. The gap is people Analytics misses.",
-          "series": "Visits counted for each 100 clicks"
+          "series": "Visits counted for each 100 clicks",
+          "clarity": "Microsoft Clarity counted {clarity} visits on the {days, plural, one {# day} other {# days}} it and Analytics both hold, and Analytics {analytics}."
         },
         "MARKET": {
           "question": "Is your market shrinking?",
@@ -19328,6 +19330,7 @@
           "placeOnly": "Their average place in Google was {now}. Google changed what it counts as shown in {since}, so places before it can't be compared.",
           "best": "Their best was {best}, in {month}.",
           "week": "Your rankings this week: {now} searches on page one, against {before} the week before.",
+          "period": "Your rankings at the end of {month}: {now} searches on page one, against {before} at the end of {thenMonth}.",
           "chart": "Your service pages' average place in Google, month by month",
           "chartHint": "Lower is better. Search Console's average place for your service pages.",
           "series": "Average place"

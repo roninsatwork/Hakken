@@ -19,8 +19,12 @@ import { shiftDay } from "./utils/insightFacts";
  */
 
 const EXPORT_URL = "https://www.clarity.ms/export-data/api/v1/project-live-insights";
-/** Days of a website's figures kept: two years, as the other day lists. */
-const KEPT_DAYS = 730;
+/**
+ * Days of a website's figures kept: 13 months (Anthony, 2026-10-12, "13 is good"),
+ * enough to set a month against the same month a year before — the counting check's
+ * second witness — and nothing reads older.
+ */
+const KEPT_DAYS = 396;
 /** A day's pages kept at most: the most visited. */
 const PAGES_KEPT = 300;
 /** Days read for a screen at most. */
@@ -215,7 +219,7 @@ export const saveDay = internalMutation({
       ...(saved ? { newestDay: args.day, oldestDay: connection.oldestDay && connection.oldestDay < args.day ? connection.oldestDay : args.day, lastCollectedAt: now } : {}),
       updatedAt: now,
     });
-    // Two years kept: the oldest go as each day comes.
+    // 13 months kept: the oldest go as each day comes.
     for (const by of ["PAGE", "DEVICE", "PAGE_DEVICE"] as const) {
       const old = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", args.holdId).eq("by", by).lt("day", shiftDay(args.day, -KEPT_DAYS))).take(10);
       for (const row of old) await ctx.db.delete(row._id);

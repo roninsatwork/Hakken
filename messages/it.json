@@ -19282,7 +19282,8 @@
         "analytics": "Google Analytics",
         "searchConsole": "Search Console",
         "dataForSeo": "I risultati di Google e i tuoi concorrenti",
-        "googleUpdates": "gli aggiornamenti di Google"
+        "googleUpdates": "gli aggiornamenti di Google",
+        "clarity": "Microsoft Clarity"
       },
       "verdict": {
         "BIGGEST": "Probabile, la parte maggiore",
@@ -19311,7 +19312,8 @@
           "part": "Circa {count} delle richieste mancanti sono di visitatori che non conta più.",
           "chart": "Visite da Google contate da Analytics ogni 100 clic di Google, mese per mese",
           "chartHint": "Google conta i suoi clic da sé; Analytics conta le visite che vede. La differenza sono le persone che Analytics non vede.",
-          "series": "Visite contate ogni 100 clic"
+          "series": "Visite contate ogni 100 clic",
+          "clarity": "Microsoft Clarity ha contato {clarity} visite {days, plural, one {nell'unico giorno} other {nei # giorni}} che conserva insieme ad Analytics, e Analytics {analytics}."
         },
         "MARKET": {
           "question": "Il tuo mercato si sta riducendo?",
@@ -19328,6 +19330,7 @@
           "placeOnly": "La loro posizione media in Google è stata {now}. Google ha cambiato cosa conta come mostrato in {since}, quindi le posizioni precedenti non sono confrontabili.",
           "best": "La migliore è stata {best}, in {month}.",
           "week": "Le tue posizioni questa settimana: {now} ricerche in prima pagina, contro {before} la settimana prima.",
+          "period": "Le tue posizioni alla fine di {month}: {now} ricerche in prima pagina, rispetto a {before} alla fine di {thenMonth}.",
           "chart": "Posizione media in Google delle tue pagine dei servizi, mese per mese",
           "chartHint": "Più basso è meglio. La posizione media di Search Console per le tue pagine dei servizi.",
           "series": "Posizione media"

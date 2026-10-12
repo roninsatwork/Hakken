@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
+import { seriesFor } from "./siteFigures";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { loadSite } from "./websiteSiteRows";
 import { featuresOf } from "./utils/rankFacts";
@@ -21,6 +23,7 @@ import {
   sourceOf,
   spanFigures,
   whyInputOf,
+  type HistoryRecord,
   type MonthFigures,
   type PageKind,
   type SourceGroup,
@@ -165,10 +168,12 @@ export async function periodView(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWe
   let why: (Why & { compare: "YEAR_AGO" | "BEFORE"; paragraph: string | null }) | null = null;
   if (compare && then && thenMonths) {
     const rankings = week?.summary?.rankings ?? null;
+    const kept = await pageOneOver(ctx, hold, chosen.months, thenMonths);
     const input = whyInputOf(now, then, {
       rivals: { now: rivalsOver(rivals, chosen.months), then: rivalsOver(rivals, thenMonths) },
       best: bestServiceMonth(months, cut),
-      pageOne: rankings ? { now: rankings.pageOne, before: rankings.pageOneBefore } : null,
+      pageOne: kept ?? (rankings ? { now: rankings.pageOne, before: rankings.pageOneBefore } : null),
+      clarity: await clarityBeside(ctx, hold._id, records),
       aiOverviews: rankings ? { with: rankings.aiWith, of: rankings.aiOf } : null,
       shownComparable: sameSide(chosen.months, thenMonths, cut),
     });
@@ -236,6 +241,48 @@ export const insightsPeriodView = tenantQuery({
     return site ? await periodView(ctx, site.hold, site.host, args.period) : null;
   },
 });
+
+/** Days of Clarity read beside Analytics: the last month of mornings; a witness needs a week of them. */
+const CLARITY_DAYS_READ = 31;
+const CLARITY_LEAST_DAYS = 7;
+
+/**
+ * DataForSEO's searches on page one at the end of two spans, from the weekly
+ * readings kept with the website's days (`siteDaySummaries`; insights-
+ * intelligence-plan.md phase 10): the last reading in each span's last month,
+ * all the searches it ranks for. Null when either month has no reading.
+ */
+async function pageOneOver(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, now: readonly string[], then: readonly string[]): Promise<{ now: number; before: number; months: { now: string; then: string } } | null> {
+  const place = hold.locationCode ?? DEFAULT_LOCATION_CODE;
+  const atEnd = async (months: readonly string[]) => {
+    const month = months[months.length - 1];
+    const points = await seriesFor(ctx, hold.websiteId, place, `${month}-01`, `${month}-31`, "month");
+    const bands = points.at(-1)?.allBands ?? points.at(-1)?.bands;
+    return bands ? (bands.p01_03 ?? 0) + (bands.p04_10 ?? 0) : null;
+  };
+  const [pageOneNow, pageOneThen] = [await atEnd(now), await atEnd(then)];
+  return pageOneNow !== null && pageOneThen !== null ? { now: pageOneNow, before: pageOneThen, months: { now: now[now.length - 1], then: then[then.length - 1] } } : null;
+}
+
+/**
+ * Microsoft Clarity's visits against Analytics' on the days both hold, the
+ * last month (phase 10): a second witness to whether Analytics counts
+ * everyone. Null until they share a week of days Clarity was recording.
+ */
+async function clarityBeside(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">, records: readonly HistoryRecord[]): Promise<{ clarity: number; analytics: number; days: number } | null> {
+  const days = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", holdId).eq("by", "DEVICE")).order("desc").take(CLARITY_DAYS_READ);
+  const analytics = new Map((records.find((record) => record.kind === "DAYS")?.rows ?? []).map((row) => [row.key, row.visits ?? 0]));
+  let clarity = 0, counted = 0, shared = 0;
+  for (const day of days) {
+    const sessions = day.rows.reduce((sum, row) => sum + row.sessions, 0);
+    // A morning Clarity counted nobody it wasn't recording yet (connected that day): not a day it disagrees.
+    if (!analytics.has(day.day) || sessions === 0) continue;
+    clarity += sessions;
+    counted += analytics.get(day.day) ?? 0;
+    shared += 1;
+  }
+  return shared >= CLARITY_LEAST_DAYS ? { clarity, analytics: counted, days: shared } : null;
+}
 
 /** For the weekly run: the newest whole month's view, for the Analyst and the facts. */
 export const runView = internalQuery({

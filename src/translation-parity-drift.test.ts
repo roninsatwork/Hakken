@@ -51,6 +51,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['sidebar.googleAnalytics', "Google's product name"],
     ['insights.why.sources.analytics', "Google's product name"],
     ['insights.why.sources.searchConsole', "Google's product name"],
+    ['insights.why.sources.clarity', "Microsoft's product name"],
     ['insights.summary.periodFigure', 'placeholders and a comma, the same in every language'],
     ['insights.why.numbered', 'placeholders and a full stop, the same in every language'],
     ['insights.enquiries.figures.against', 'placeholders and «in», the same in Italian'],

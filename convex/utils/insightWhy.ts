@@ -28,8 +28,13 @@ export type WhyInput = {
     /** The service pages' best month for average place in the history, and the place. */
     best: { month: string; position: number } | null;
   };
-  /** DataForSEO's searches on page one, this week against last week; null when not held. */
-  pageOne: { now: number; before: number } | null;
+  /**
+   * DataForSEO's searches on page one: at the end of the period against the end of the one compared, from the
+   * weekly readings kept (insights-intelligence-plan.md phase 10), else this week against last; null when not held.
+   */
+  pageOne: { now: number; before: number; months?: { now: string; then: string } } | null;
+  /** Microsoft Clarity's visits against Analytics' on the days both hold: a second witness to the counting. */
+  clarity?: { clarity: number; analytics: number; days: number } | null;
   /** Page-one searches whose results show Google's AI overview, of those on page one. */
   aiOverviews: { with: number; of: number } | null;
   /** False when Google changed what it counts as shown between the two spans: times shown and place are not compared. */
@@ -114,8 +119,11 @@ export function whyEnquiriesMoved(input: WhyInput): Why {
     id: "COUNTING",
     verdict: shareMove === null ? "NO_DATA" : Math.abs(shareMove) < LEAST_MOVE ? "RULED_OUT" : "LIKELY",
     part: shareMove === null || Math.abs(shareMove) < LEAST_MOVE ? null : split.counting,
-    figures: { shareNow: perHundred(input.share.now), shareThen: perHundred(input.share.then) },
-    sources: ["analytics", "searchConsole"],
+    figures: {
+      shareNow: perHundred(input.share.now), shareThen: perHundred(input.share.then),
+      ...(input.clarity ? { clarityVisits: input.clarity.clarity, analyticsVisits: input.clarity.analytics, clarityDays: input.clarity.days } : {}),
+    },
+    sources: input.clarity ? ["analytics", "searchConsole", "clarity"] : ["analytics", "searchConsole"],
   });
 
   // 2. Is the market shrinking? The rivals' estimates, and how often Google showed the service pages.
@@ -147,6 +155,7 @@ export function whyEnquiriesMoved(input: WhyInput): Why {
       positionNow: position.now, positionThen: input.shownComparable ? position.then : null,
       bestMonth: best?.month ?? null, bestPosition: best?.position ?? null,
       pageOneNow: input.pageOne?.now ?? null, pageOneBefore: input.pageOne?.before ?? null,
+      ...(input.pageOne?.months ? { pageOneMonth: input.pageOne.months.now, pageOneThenMonth: input.pageOne.months.then } : {}),
     },
     sources: ["searchConsole", "dataForSeo", "googleUpdates"],
   });

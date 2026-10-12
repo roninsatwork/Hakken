@@ -106,6 +106,39 @@ describe("the period read", () => {
     expect(split.counting).toBeGreaterThan(0);
     expect(view?.why?.tests.find((test) => test.id === "SOURCES")?.figures.source0).toBe("AI");
   });
+
+  test("rankings across the period from the weekly readings kept, and Clarity's visits beside Analytics' (phase 10)", async () => {
+    const t = harness();
+    const holdId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+      const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
+      const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+      const records = [
+        ...month("2025-09", { google: 336, ai: 30, enquiries: 26, serviceClicks: 140, shown: 300_000, place: 22 }),
+        ...month("2026-08", { google: 190, ai: 11, enquiries: 7, serviceClicks: 117, shown: 290_000, place: 25 }),
+        ...month("2026-09", { google: 250, ai: 6, enquiries: 10, serviceClicks: 125, shown: 220_000, place: 21 }),
+        // Analytics' visits a day, a week of September; Clarity's first morning counted nobody (connected that day).
+        { kind: "DAYS" as const, month: "", from: "2026-09-14", to: "2026-09-21", rows: ["14", "15", "16", "17", "18", "19", "20", "21"].map((day) => ({ key: `2026-09-${day}`, visits: 15 })) },
+      ];
+      for (const record of records) await ctx.db.insert("insightHistory", { companyWebsiteId: holdId, ...record, fetchedAt: 1 });
+      // DataForSEO's weekly readings: 25 searches on page one at the end of September 2025, 15 a year later.
+      const bands = (top: number, rest: number) => ({ p01_03: top, p04_10: rest, p11_20: 40, p21_50: 60, p51_up: 80 });
+      await ctx.db.insert("siteDaySummaries", { websiteId, locationCode: 2826, day: "2025-09-28", allBands: bands(5, 20), updatedAt: 1 });
+      await ctx.db.insert("siteDaySummaries", { websiteId, locationCode: 2826, day: "2026-09-28", allBands: bands(3, 12), updatedAt: 1 });
+      // Clarity's mornings: nobody on the first, then 20 visits a day for a week, against Analytics' 15.
+      const row = (key: string, sessions: number) => ({ key, sessions, scroll: null, activeSeconds: null, dead: null, rage: null, quickBack: null, excessiveScroll: null });
+      await ctx.db.insert("clarityDays", { companyWebsiteId: holdId, day: "2026-09-14", by: "DEVICE", rows: [row("PC", 0)], createdAt: 1 });
+      for (const day of ["15", "16", "17", "18", "19", "20", "21"]) {
+        await ctx.db.insert("clarityDays", { companyWebsiteId: holdId, day: `2026-09-${day}`, by: "DEVICE", rows: [row("PC", 12), row("Mobile", 8)], createdAt: 1 });
+      }
+      return holdId;
+    });
+    const view = await t.query(internal.insightsPeriod.runView, { holdId });
+    expect(view?.why?.tests.find((test) => test.id === "RANKINGS")?.figures).toMatchObject({ pageOneNow: 15, pageOneBefore: 25, pageOneMonth: "2026-09", pageOneThenMonth: "2025-09" });
+    const counting = view?.why?.tests.find((test) => test.id === "COUNTING");
+    expect(counting?.figures).toMatchObject({ clarityVisits: 140, analyticsVisits: 105, clarityDays: 7 });
+    expect(counting?.sources).toContain("clarity");
+  });
 });
 
 describe("what brings enquiries", () => {

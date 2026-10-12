@@ -420,6 +420,17 @@ question is left out.
   page; the Executive summary, What brings enquiries, AI search, Page
   decisions and Keyword cannibalisation already split by kind. One source's
   page was built in phase 2.
+- **Phase 10**: both histories were already being kept — DataForSEO's
+  readings (every search's place daily for 90 days, weekly to a year, and the
+  page-one counts of each reading with the website's days) and Clarity's
+  visits each morning — so the work was using them. The rankings test now
+  sets the searches on page one at the end of the period chosen against the
+  end of the period compared (Ronins: 292 at the end of September 2026, 259 a
+  year before), not this week against last; and Clarity's visits stand beside
+  Analytics' on the counting test once the two share a week of days Clarity
+  was recording. Clarity is kept 13 months, not two years (Anthony, 12
+  October, "13 is good"): nothing reads older than the same month a year
+  before.
 
 ## Decisions for Anthony
 

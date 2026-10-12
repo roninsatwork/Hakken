@@ -288,9 +288,10 @@ export function whyInputOf(
   extras: {
     rivals: { now: number | null; then: number | null };
     best: { month: string; position: number } | null;
-    pageOne: { now: number; before: number } | null;
+    pageOne: { now: number; before: number; months?: { now: string; then: string } } | null;
     aiOverviews: { with: number; of: number } | null;
     shownComparable: boolean;
+    clarity?: { clarity: number; analytics: number; days: number } | null;
   },
 ): WhyInput {
   const share = (span: SpanFigures) => (span.googleClicks > 0 ? span.googleVisits / span.googleClicks : null);
@@ -317,6 +318,7 @@ export function whyInputOf(
       best: extras.best,
     },
     pageOne: extras.pageOne,
+    clarity: extras.clarity ?? null,
     aiOverviews: extras.aiOverviews,
     shownComparable: extras.shownComparable,
     sources: SOURCE_GROUPS.map((group) => ({ key: group, now: groupsNow.get(group)?.visits ?? 0, then: groupsThen.get(group)?.visits ?? 0 })).filter((source) => source.now > 0 || source.then > 0),

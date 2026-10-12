@@ -32,7 +32,7 @@ export const clarityTables = {
     .index("by_hold", ["companyWebsiteId"])
     .index("by_status", ["status"]),
 
-  /** One website's figures for one day, by page or by device: kept two years, as the other day lists. */
+  /** One website's figures for one day, by page or by device: kept 13 months. */
   clarityDays: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
     day: v.string(),
