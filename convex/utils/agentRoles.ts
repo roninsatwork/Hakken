@@ -67,6 +67,8 @@ export const INSIGHTS_ROLES = [
   "INSIGHTS_SEARCH",
   // Which page should own each search where pages compete, handed its groups by the Head of Strategy (Anthony, 2026-10-12).
   "INSIGHTS_CANNIBALISATION",
+  // Every page's verdict beyond the rule's — keep, improve, merge, redirect, remove — handed its pages by the Head of Strategy (2026-10-12).
+  "INSIGHTS_PAGE_DECISIONS",
   "INSIGHTS_LOCAL",
   "INSIGHTS_LINKS",
   "INSIGHTS_AI_VISIBILITY",

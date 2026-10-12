@@ -8,6 +8,8 @@ import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
 import { ask, factLines, filled, insightsStepArgs, lines, rulesFor, type InsightsRunArgs } from "./insightsAsk";
 import { readWebsiteFacts } from "./insightsReading";
+import { decideForRun } from "./insightDecisions";
+import { PAGE_DECISIONS_ROLE } from "./utils/insightPageAgent";
 import type { TeamMember } from "./insightsTeam";
 import type { WrittenFinding } from "./insightsRunSteps";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
@@ -66,8 +68,10 @@ export const afterWeek = internalAction({
         writeDrafts(ctx, runArgs, week, member(SPECIALIST_ROLE.local) ?? lead, member(SPECIALIST_ROLE.links) ?? lead).catch(failed("Drafts")),
         // 8. The buyer-question panel (I28): built every 90 days by the AI visibility specialist, and asked once its collection is on.
         buildPanel(ctx, runArgs, member(SPECIALIST_ROLE.aiVisibility) ?? lead).catch(failed("Buyer questions")),
-        // 9. The Conversion specialist's pages (phase 14): the funnel, each source's rate, each money page reviewed, experiments.
-        reviewPages(ctx, runArgs, week, facts, member(SPECIALIST_ROLE.conversion) ?? lead).catch(failed("Page reviews")),
+        // 9. The Conversion specialist's pages (phase 14): the funnel, each source's rate, each money page reviewed, experiments;
+        // then every page's decision, reading those reviews, the Page decisions specialist handed what the rule doesn't simply keep.
+        reviewPages(ctx, runArgs, week, facts, member(SPECIALIST_ROLE.conversion) ?? lead).catch(failed("Page reviews"))
+          .then(async () => await decideForRun(ctx, runArgs, week, rulesFor(runArgs), member(PAGE_DECISIONS_ROLE) ?? lead)),
       ]);
       const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: run.runId });
       const written = reports ?? [];

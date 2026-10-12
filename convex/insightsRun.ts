@@ -10,7 +10,6 @@ import { ask, factLines, insightsStepArgs, lines, rulesFor, whyNotFilled, words,
 import { readWebsiteFacts } from "./insightsReading";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
 import { COMPETING_ROLE, competingForRun, keepCompeting } from "./insightCompeting";
-import { decideForRun } from "./insightDecisions";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { briefFor } from "./utils/insightBriefs";
 import { COMPETING_RULE } from "./utils/insightCompeting";
@@ -404,9 +403,7 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
     ...(plan ? { plan } : {}),
   });
   await keepCompeting(ctx, args, weekOf(now), competing, saved, publishedIds);
-  // Page decisions (phase 4): every page's verdict, read with this week's plan and groups.
-  await decideForRun(ctx, args);
-  // 6–9 follow the save in a step of their own (insightsRunAfter.ts): the reports, drafts, buyer questions and page reviews.
+  // 6–10 follow the save in a step of their own (insightsRunAfter.ts): the reports, drafts, buyer questions, page reviews and Page decisions.
   const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
   return { week: weekOf(now), today, counts: { facts: reading.facts.length, candidates: candidates.length, written: drafts.length, published, sentBack: saved.length - published } };
 }

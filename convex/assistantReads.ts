@@ -11,6 +11,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { readWebsiteHost } from "./websiteIdentity";
 import { isTrackedHold } from "./utils/websitePairing";
 import { competingForAssistant } from "./utils/insightCompeting";
+import { pageDecisionsForAssistant } from "./utils/insightPageAgent";
 
 /**
  * The company's own figures, as the Assistant reads them
@@ -83,6 +84,8 @@ export const adviceInternal = internalQuery({
 const INSIGHT_FINDINGS_READ = 60;
 /** Groups of competing pages Ask Hakken reads at most, the biggest first. */
 const COMPETING_READ = 20;
+/** Parts of Page decisions read: every part kept (`MOST_PARTS` in insightDecisions.ts). */
+const PAGE_DECISION_PARTS = 16;
 
 /**
  * Insights for Ask Hakken (docs/plans/active/insights-analyst-plan.md I14,
@@ -121,6 +124,8 @@ export const insightsInternal = internalQuery({
       ...(report?.body ? { month: { title: report.title, headline: report.body.headline, link: `/app/insights/reports/${report._id}` } } : {}),
       // Every group of competing pages as the Keyword cannibalisation specialist decided it, not only the ones written up (12 Oct 2026).
       cannibalisation: competingForAssistant((await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", holdId)).take(COMPETING_READ)).map((row) => row.group)),
+      // Every page's verdict to act on, as Page decisions keeps it (insights-one-voice-plan.md phase 2).
+      pageDecisions: pageDecisionsForAssistant((await ctx.db.query("insightPageDecisions").withIndex("by_hold_part", (q) => q.eq("companyWebsiteId", holdId)).take(PAGE_DECISION_PARTS)).flatMap((row) => row.decisions)),
       links: { summary: "/app/insights/summary", thisWeek: "/app/insights/this-week", strategy: "/app/insights/strategy", pagePlan: "/app/insights/page-plan" },
     };
   },

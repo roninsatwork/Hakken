@@ -3440,6 +3440,7 @@
                 "INSIGHTS_TECHNICAL": "Insights: specialista SEO tecnico",
                 "INSIGHTS_SEARCH": "Insights: specialista di ricerca e contenuti",
                 "INSIGHTS_CANNIBALISATION": "Insights: specialista di cannibalizzazione delle parole chiave",
+                "INSIGHTS_PAGE_DECISIONS": "Insights: specialista delle decisioni sulle pagine",
                 "INSIGHTS_LOCAL": "Insights: specialista locale e reputazione",
                 "INSIGHTS_LINKS": "Insights: specialista di link e PR",
                 "INSIGHTS_AI_VISIBILITY": "Insights: specialista della visibilità nell'IA",
@@ -3531,6 +3532,7 @@
                 "competing": "Quale pagina ha una ricerca",
                 "owners": "Come si sceglie la pagina di una ricerca",
                 "competingAnswer": "Come si risponde a un gruppo di pagine in concorrenza",
+                "pageAnswer": "Come si risponde con le decisioni sulle pagine",
                 "editor": "I controlli dell’Editor"
               }
             }
@@ -19643,6 +19645,7 @@
       "everyVerdict": "Ogni decisione",
       "sees": {
         "every": "Delle tue {pages} pagine, {improve} da migliorare, {merge} da unire a un'altra, {redirect} da reindirizzare e {remove} da rimuovere; {keep} fanno il loro lavoro così come sono.",
+        "decided": "{agent, plural, =0 {Questa settimana ha deciso ogni pagina la regola di Hakken: allo specialista delle decisioni sulle pagine non ne è ancora stata affidata nessuna.} one {Lo specialista delle decisioni sulle pagine ha deciso una pagina, affidatagli dall'Head of Strategy, con la sua ragione accanto; lo specialista di cannibalizzazione ne ha decise {competing}, e la regola di Hakken le altre.} other {Lo specialista delle decisioni sulle pagine ha deciso # pagine, affidategli dall'Head of Strategy, con la sua ragione accanto a ognuna; lo specialista di cannibalizzazione ne ha decise {competing}, e la regola di Hakken le altre.}}",
         "create": "{count, plural, one {Una pagina} other {# pagine}} da creare, dalle ricerche che vincono i tuoi concorrenti e dalle domande dei tuoi clienti; la più cercata è “{search}” ({volume} al mese)."
       },
       "verdicts": {
@@ -19706,6 +19709,8 @@
         "REFRESH_OR_RETIRE": "Non porta più lavoro: aggiornala, o ritirala",
         "KEEP_ROUTE": "Molti la leggono e pochi chiedono: dai ai lettori un modo per chiedere",
         "COMPETING": "È in competizione con {into} per le stesse ricerche: rendila chiaramente diversa",
+        "COMPETING_LINK": "Un articolo accanto a {into}, la pagina che ha le sue ricerche: tienilo, e aggiungi un link a {into}",
+        "REVIEW": "La sua revisione chiede una modifica: vedi la revisione della pagina",
         "DUPLICATE": "L'analisi del sito ha trovato il suo contenuto ripetuto su un'altra pagina: rendila unica",
         "THIN": "L'analisi del sito l'ha trovata povera di contenuto: arricchiscila",
         "ORPHAN": "Nessuna pagina del tuo sito vi rimanda: aggiungi dei link",
@@ -19716,7 +19721,8 @@
         "BROKEN": "Non funziona e nulla vi rimanda: toglila dalla sitemap",
         "UNUSED": "Nessuno la visita, Google non la mostra e nessun sito vi rimanda: rimuovila",
         "WORKING": "Porta visite o richieste così com'è",
-        "QUIET": "Poco usata, ma un sito ne ha bisogno"
+        "QUIET": "Poco usata, ma un sito ne ha bisogno",
+        "SPECIALIST": "La scelta dello specialista delle decisioni sulle pagine"
       }
     },
     "aiSearch": {

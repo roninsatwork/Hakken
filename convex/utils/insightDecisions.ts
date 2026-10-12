@@ -1,6 +1,7 @@
 import { v, type Infer } from "convex/values";
 import type { PlanAction } from "./insightPlan";
 import { variantOf } from "./insightCompeting";
+import { decidedFields, type Decider } from "./insightDecided";
 
 /**
  * Page decisions (docs/plans/active/insights-intelligence-plan.md phase 4,
@@ -19,11 +20,13 @@ export type Verdict = (typeof VERDICTS)[number];
 
 export const REASONS = [
   // Improve: the Page plan's actions, a competing page made different, and the site audit's flags.
-  "REBUILD", "RESTORE", "STRENGTHEN", "REFRESH", "REFRESH_OR_RETIRE", "KEEP_ROUTE", "COMPETING", "DUPLICATE", "THIN", "ORPHAN", "NOT_INDEXABLE",
+  "REBUILD", "RESTORE", "STRENGTHEN", "REFRESH", "REFRESH_OR_RETIRE", "KEEP_ROUTE", "COMPETING", "COMPETING_LINK", "REVIEW", "DUPLICATE", "THIN", "ORPHAN", "NOT_INDEXABLE",
   // Merge, redirect, remove.
   "COMPETING_MERGE", "BROKEN_LINKED", "UNUSED_LINKED", "BROKEN", "UNUSED",
   // Keep.
   "WORKING", "QUIET",
+  // Any verdict the Page decisions specialist gave other than the rule's: its own sentence says why (`why`).
+  "SPECIALIST",
 ] as const;
 export type Reason = (typeof REASONS)[number];
 
@@ -58,11 +61,20 @@ export type DecisionInput = {
   status: number | null;
 };
 
-/** What the Page plan and Keyword cannibalisation already decided for a page. */
+/**
+ * What else already decided for a page: the Page plan's action; Keyword
+ * cannibalisation's decision, with its specialist's reason where it gave one
+ * (it stands here as decided, so the two screens never disagree); and the
+ * Conversion specialist's page review where it asked for a change.
+ */
 export type Decided = {
   plan: ReadonlyMap<string, PlanAction>;
-  competing: ReadonlyMap<string, { decision: "OWNER" | "MERGE" | "DIFFERENTIATE" | "LINK"; owner: string }>;
+  competing: ReadonlyMap<string, { decision: "OWNER" | "MERGE" | "DIFFERENTIATE" | "LINK"; owner: string; why?: string; decidedBy?: Decider }>;
+  reviews?: ReadonlyMap<string, string>;
 };
+
+/** The reasons Keyword cannibalisation gives: its decision stands, and the Page decisions specialist isn't asked. */
+export const COMPETING_REASONS: ReadonlySet<Reason> = new Set(["COMPETING_MERGE", "COMPETING", "COMPETING_LINK"]);
 
 export const decisionValidator = v.object({
   path: v.string(),
@@ -79,6 +91,8 @@ export const decisionValidator = v.object({
   clicks: v.number(),
   domains: v.union(v.number(), v.null()),
   flags: v.array(v.string()),
+  // Who decided it and why (utils/insightDecided.ts): the rule, the Page decisions specialist, or Keyword cannibalisation's.
+  ...decidedFields,
 });
 export type PageDecision = Infer<typeof decisionValidator>;
 
@@ -97,6 +111,7 @@ export function decide(page: DecisionInput, decided: Decided): Pick<PageDecision
   const planned = decided.plan.get(page.path);
   if (planned && planned !== "KEEP" && planned !== "CREATE") return { verdict: "IMPROVE", reason: planned, into: null };
   if (competing?.decision === "DIFFERENTIATE") return { verdict: "IMPROVE", reason: "COMPETING", into: competing.owner };
+  if (competing?.decision === "LINK") return { verdict: "IMPROVE", reason: "COMPETING_LINK", into: competing.owner };
   // Nobody visits it and Google doesn't show it: a page the website can do without, unless it is one a website needs.
   const unused = page.views !== null && page.views === 0 && page.visits === 0 && page.shown === 0 && page.clicks === 0;
   if (unused && !isHome(page.path) && !isListPage(page.path) && !NEEDED_TYPES.has(page.type)) {
@@ -106,6 +121,9 @@ export function decide(page: DecisionInput, decided: Decided): Pick<PageDecision
   if (THIN_FLAGS.some((flag) => flags.has(flag)) && (page.visits > 0 || page.shown > 0)) return { verdict: "IMPROVE", reason: "THIN", into: null };
   if (flags.has("non_indexable") && (page.visits > 0 || page.enquiries > 0)) return { verdict: "IMPROVE", reason: "NOT_INDEXABLE", into: null };
   if (flags.has("is_orphan_page") && !isHome(page.path)) return { verdict: "IMPROVE", reason: "ORPHAN", into: null };
+  // The Conversion specialist's page review asked for a change (`utils/insightConversion.VERDICTS`).
+  const review = decided.reviews?.get(page.path);
+  if (review && review !== "KEEP") return { verdict: "IMPROVE", reason: "REVIEW", into: null };
   return { verdict: "KEEP", reason: page.enquiries > 0 || page.visits > 0 || page.clicks > 0 ? "WORKING" : "QUIET", into: null };
 }
 
@@ -113,11 +131,17 @@ export function decide(page: DecisionInput, decided: Decided): Pick<PageDecision
 export function pageDecisionsFrom(pages: readonly DecisionInput[], decided: Decided): PageDecision[] {
   const order = (verdict: Verdict) => VERDICTS.indexOf(verdict);
   return pages
-    .map((page) => ({
-      path: page.path, kind: page.kind, type: page.type, ...decide(page, decided),
-      visits: page.visits, enquiries: page.enquiries, views: page.views, shown: page.shown, clicks: page.clicks, domains: page.domains,
-      flags: page.flags.filter((flag) => (DECISION_FLAGS as readonly string[]).includes(flag)),
-    }))
+    .map((page) => {
+      const verdict = decide(page, decided);
+      const competing = COMPETING_REASONS.has(verdict.reason) ? decided.competing.get(page.path) : undefined;
+      return {
+        path: page.path, kind: page.kind, type: page.type, ...verdict,
+        ...(competing?.why ? { why: competing.why } : {}),
+        ...(competing?.decidedBy ? { decidedBy: competing.decidedBy } : {}),
+        visits: page.visits, enquiries: page.enquiries, views: page.views, shown: page.shown, clicks: page.clicks, domains: page.domains,
+        flags: page.flags.filter((flag) => (DECISION_FLAGS as readonly string[]).includes(flag)),
+      };
+    })
     .sort((a, b) => order(a.verdict) - order(b.verdict) || b.enquiries - a.enquiries || b.visits - a.visits || b.shown - a.shown || a.path.localeCompare(b.path));
 }
 

@@ -5,6 +5,7 @@ import { DRAFT_RULES } from "./insightDrafts";
 import { PANEL_RULES } from "./insightPanel";
 import { COMPETING_RULE, OWNER_RULE } from "./insightCompeting";
 import { COMPETING_ANSWER } from "./insightCompetingAgent";
+import { PAGE_ANSWER } from "./insightPageAgent";
 
 /**
  * Each Insights agent's job and brief, as Hakken first gives them (Anthony,
@@ -78,6 +79,14 @@ export const INSIGHT_BRIEFS: Record<InsightsRole, { job: string; brief: string }
       "A page that brought enquiries may be merged too: the redirect carries them to the page it joins. Never merge a page that owns searches of its own, and say what to do with every page.",
     ].join("\n"),
   },
+  INSIGHTS_PAGE_DECISIONS: {
+    job: "Each week, after the week's findings are saved, when the Head of Strategy hands it the pages Hakken's rule would improve, merge, redirect or remove: decides what to do with each page, with a reason a client reads. What it decides is what Page decisions and Ask Hakken say. Keyword cannibalisation's pages are its specialist's, never this one's.",
+    brief: [
+      "You are the Page decisions specialist: the agency's senior SEO and content lead, deciding what each page of the website should become.",
+      "Hakken's rule has already given each page a verdict from its figures and the site audit. Keep it unless the evidence says otherwise — a page's title shows it does a job the figures miss, or the fix the rule names is the wrong one — and say why in one plain sentence.",
+      "A page other websites link to keeps those links: redirect it, never remove it. A service, product, company or legal page is never removed for want of visitors.",
+    ].join("\n"),
+  },
   INSIGHTS_LOCAL: { job: `${specialistJob("local")} Drafts the Business Profile fixes, posts and review requests its findings call for.`, brief: specialistBrief("local") },
   INSIGHTS_LINKS: { job: `${specialistJob("links")} Drafts the outreach its findings call for.`, brief: specialistBrief("links") },
   INSIGHTS_AI_VISIBILITY: { job: `${specialistJob("aiVisibility")} Keeps the buyers' questions asked of the AI assistants.`, brief: specialistBrief("aiVisibility") },
@@ -120,7 +129,7 @@ const EDITOR_CHECKS = [
 ].join("\n");
 
 /** Which fixed part each is, for the page's headings. */
-export type FixedPart = "ground" | "shop" | "competing" | "owners" | "competingAnswer" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
+export type FixedPart = "ground" | "shop" | "competing" | "owners" | "competingAnswer" | "pageAnswer" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
 
 /** What Hakken always adds to an agent's brief: shown read-only on its Instructions page, never edited there. */
 export function fixedRulesFor(role: InsightsRole): Array<{ part: FixedPart; text: string }> {
@@ -131,6 +140,7 @@ export function fixedRulesFor(role: InsightsRole): Array<{ part: FixedPart; text
     case "INSIGHTS_HEAD_OF_STRATEGY": return [...ground, competing, { part: "findings", text: FINDINGS_FORMAT }, { part: "strategy", text: STRATEGY_FORMAT }];
     case "INSIGHTS_SEARCH": return [...ground, competing, { part: "findings", text: FINDINGS_FORMAT }];
     case "INSIGHTS_CANNIBALISATION": return [...ground, { part: "owners", text: OWNER_RULE }, { part: "competingAnswer", text: COMPETING_ANSWER }];
+    case "INSIGHTS_PAGE_DECISIONS": return [...ground, { part: "pageAnswer", text: PAGE_ANSWER }];
     case "INSIGHTS_ANALYST": return [...ground, { part: "why", text: WHY_FORMAT }];
     case "INSIGHTS_CONVERSION": return [...ground, { part: "findings", text: FINDINGS_FORMAT }, { part: "review", text: REVIEW_RULES }];
     case "INSIGHTS_LOCAL":

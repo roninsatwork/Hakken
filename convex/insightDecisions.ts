@@ -16,6 +16,11 @@ import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 import { historyOf, monthsOf, pageKindsOf } from "./insightsPeriodData";
 import { normalisePage } from "./utils/pageClassification";
 import { createValidator, decisionValidator, pageDecisionsFrom, pagesToCreate, type DecisionInput, type PageDecision, type PageToCreate } from "./utils/insightDecisions";
+import { PAGE_ANSWER, PAGE_DECISIONS_ROLE, applyPageAnswer, carryPages, pageReading, pagesInputOf, pagesToHand } from "./utils/insightPageAgent";
+import { deciderValidator } from "./utils/insightDecided";
+import { briefFor } from "./utils/insightBriefs";
+import { ask, type InsightsRunArgs } from "./insightsAsk";
+import type { TeamMember } from "./insightsTeam";
 import { PLAN_ACTIONS, type PlanAction } from "./utils/insightPlan";
 
 /**
@@ -48,7 +53,7 @@ const keyOf = (address: string) => {
 export const pagesPart = internalQuery({
   args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
   returns: v.object({
-    pages: v.array(v.object({ path: v.string(), kind: v.union(v.string(), v.null()), type: v.string(), clicks: v.number() })),
+    pages: v.array(v.object({ path: v.string(), kind: v.union(v.string(), v.null()), type: v.string(), clicks: v.number(), title: v.optional(v.string()) })),
     continueCursor: v.string(),
     isDone: v.boolean(),
   }),
@@ -58,7 +63,7 @@ export const pagesPart = internalQuery({
     return {
       pages: page.page.map((row: Doc<"holdPages">) => {
         const kind = kindOf(row.page);
-        return { path: row.page, kind: kind.name, type: kind.type, clicks: row.clicks };
+        return { path: row.page, kind: kind.name, type: kind.type, clicks: row.clicks, ...(row.title ? { title: row.title } : {}) };
       }),
       continueCursor: page.continueCursor,
       isDone: page.isDone,
@@ -95,7 +100,11 @@ export const decisionSources = internalQuery({
     /** The newest site audit, read a part at a time (`crawlPart`). */
     crawlPull: v.union(v.null(), v.id("seoDataPulls")),
     plan: v.array(v.object({ key: v.string(), action: v.string() })),
-    competing: v.array(v.object({ key: v.string(), decision: v.union(v.literal("OWNER"), v.literal("MERGE"), v.literal("DIFFERENTIATE"), v.literal("LINK")), owner: v.string() })),
+    competing: v.array(v.object({
+      key: v.string(), decision: v.union(v.literal("OWNER"), v.literal("MERGE"), v.literal("DIFFERENTIATE"), v.literal("LINK")), owner: v.string(),
+      why: v.optional(v.string()), decidedBy: v.optional(deciderValidator),
+    })),
+    reviews: v.array(v.object({ key: v.string(), verdict: v.string() })),
     creates: v.array(createValidator),
   })),
   handler: async (ctx, args) => {
@@ -162,6 +171,8 @@ export const decisionSources = internalQuery({
     // What the Page plan and Keyword cannibalisation decided this week.
     const plan = await ctx.db.query("insightPlans").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
     const groups = await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", hold._id)).take(MOST_GROUPS_READ);
+    // The Conversion specialist's newest page reviews: a page it asked to change is one to improve.
+    const reviewed = await ctx.db.query("insightConversions").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").first();
 
     // The pages to create: searches rivals win that the website has no page for, and buyers' questions.
     const rivals = await loadRivalHolds(ctx, site);
@@ -178,21 +189,41 @@ export const decisionSources = internalQuery({
       crawlPull: crawl?.pullId ?? null,
       plan: (plan?.pages ?? []).map((row) => ({ key: keyOf(row.page), action: row.action })),
       // Each page read against the page it merges into or is made different from: the one owning most of what it is shown for.
-      competing: groups.flatMap((row) => row.group.pages.map((member) => ({ key: keyOf(member.path), decision: member.decision, owner: member.into ?? row.group.owner }))),
+      competing: groups.flatMap((row) => row.group.pages.map((member) => ({
+        key: keyOf(member.path), decision: member.decision, owner: member.into ?? row.group.owner,
+        ...(member.reason ? { why: member.reason } : {}), ...(row.group.decidedBy ? { decidedBy: row.group.decidedBy } : {}),
+      }))),
+      reviews: (reviewed?.pages ?? []).map((page) => ({ key: keyOf(page.page), verdict: page.verdict })),
       creates: pagesToCreate(gap?.rows ?? [], panel?.questions ?? [], ranked),
     };
   },
 });
 
+/** The Page decisions specialist, as the weekly run hands it its pages: the run, its member, the run's ground rules and the week. */
+export type PageSpecialist = { run: InsightsRunArgs; member: TeamMember | undefined; rules: string; week: string };
+
+/** The decisions kept last, every part, to keep the specialist's verdicts on pages the rule reads just the same. */
+export const keptDecisions = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.array(decisionValidator),
+  handler: async (ctx, args) => {
+    const parts = await ctx.db.query("insightPageDecisions").withIndex("by_hold_part", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOST_PARTS);
+    return parts.flatMap((row) => row.decisions);
+  },
+});
+
 /**
  * Every page's decision now: the website's page list read in parts, joined to
- * the other lists, decided and kept. Returns the verdicts' counts; null when
- * the website is gone.
+ * the other lists, decided by the rule; last week's specialist verdicts kept
+ * where the rule reads a page just the same; and, in the weekly run, the
+ * pages left that the rule doesn't simply keep handed to the Page decisions
+ * specialist (insights-one-voice-plan.md phase 2). Kept, and the verdicts'
+ * counts returned; null when the website is gone.
  */
-export async function buildDecisions(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Record<string, number> | null> {
+export async function buildDecisions(ctx: ActionCtx, holdId: Id<"companyWebsites">, specialist?: PageSpecialist): Promise<Record<string, number> | null> {
   const sources = await ctx.runQuery(internal.insightDecisions.decisionSources, { holdId });
   if (!sources) return null;
-  const listed: Array<{ path: string; kind: string | null; type: string; clicks: number }> = [];
+  const listed: Array<{ path: string; kind: string | null; type: string; clicks: number; title?: string }> = [];
   for (let cursor: string | null = null; ;) {
     const part: { pages: typeof listed; continueCursor: string; isDone: boolean } = await ctx.runQuery(internal.insightDecisions.pagesPart, { holdId, cursor });
     listed.push(...part.pages);
@@ -227,18 +258,48 @@ export async function buildDecisions(ctx: ActionCtx, holdId: Id<"companyWebsites
   });
   const byKey = new Map(listed.map((page) => [keyOf(page.path), page.path]));
   const plan = new Map(sources.plan.filter((row) => (PLAN_ACTIONS as readonly string[]).includes(row.action) && byKey.has(row.key)).map((row) => [byKey.get(row.key)!, row.action as PlanAction]));
-  const competing = new Map(sources.competing.filter((row) => byKey.has(row.key)).map((row) => [byKey.get(row.key)!, { decision: row.decision, owner: row.owner }]));
-  const decisions = pageDecisionsFrom(inputs, { plan, competing });
+  const competing = new Map(sources.competing.filter((row) => byKey.has(row.key)).map((row) => [byKey.get(row.key)!, { decision: row.decision, owner: row.owner, why: row.why, decidedBy: row.decidedBy }]));
+  const reviews = new Map(sources.reviews.filter((row) => byKey.has(row.key)).map((row) => [byKey.get(row.key)!, row.verdict]));
+  const decisions = pageDecisionsFrom(inputs, { plan, competing, reviews });
+  // The rule's reading of each page, and last week's specialist verdicts where it reads the page just the same.
+  for (const decision of decisions) Object.assign(decision, { signature: pageReading(decision), decidedBy: decision.decidedBy ?? "RULE" });
+  const before = new Map((await ctx.runQuery(internal.insightDecisions.keptDecisions, { holdId })).map((decision) => [decision.path, decision]));
+  const carried = carryPages(decisions, before);
+  if (specialist) await handToSpecialist(ctx, specialist, decisions, new Map(listed.flatMap((page) => (page.title ? [[page.path, page.title] as const] : []))), carried);
   await ctx.runMutation(internal.insightDecisions.saveDecisions, { holdId, decisions: decisions.slice(0, MOST_DECISIONS_KEPT), creates: sources.creates, pages: decisions.length });
   const counts: Record<string, number> = {};
   for (const decision of decisions) counts[decision.verdict] = (counts[decision.verdict] ?? 0) + 1;
   return { ...counts, CREATE: sources.creates.length };
 }
 
-/** For the weekly run: every page decided, and the run's log saying how many of each. */
-export async function decideForRun(ctx: ActionCtx, run: { holdId: Id<"companyWebsites">; runId: Id<"agentRuns">; companyId: Id<"companies"> }): Promise<void> {
+/**
+ * The Head of Strategy hands the Page decisions specialist the pages the rule
+ * doesn't simply keep, those Keyword cannibalisation hasn't decided and last
+ * week's verdicts don't cover, the most used first; its answer is put on them
+ * within the guards (`applyPageAnswer`), and the run's log says what went to
+ * whom. A failed or refused answer leaves the rule's verdicts, said so.
+ */
+async function handToSpecialist(ctx: ActionCtx, specialist: PageSpecialist, decisions: PageDecision[], titles: ReadonlyMap<string, string>, carried: number) {
+  const { run, member, rules, week } = specialist;
+  const handed = pagesToHand(decisions);
+  const log = async (detail: string, failed: boolean) => await ctx.runMutation(internal.roleRuns.logRunLine, { runId: run.runId, companyId: run.companyId, heading: "Page decisions specialist", detail: detail.slice(0, 900), failed });
+  const said = `Head of Strategy → Page decisions specialist: ${handed.length} pages${carried > 0 ? `, ${carried} more kept as it decided them last week` : ""}.`;
+  if (handed.length === 0) return await log(said, false);
   try {
-    const counts = await buildDecisions(ctx, run.holdId);
+    const system = [rules, briefFor(PAGE_DECISIONS_ROLE, member?.instructions), PAGE_ANSWER].filter(Boolean).join("\n\n");
+    const prompt = JSON.stringify({ website: run.host, pages: pagesInputOf(handed, titles) });
+    const answer = await ask(ctx, run, member, "the Page decisions specialist", system, prompt);
+    const applied = applyPageAnswer(handed, answer, new Set(decisions.map((decision) => decision.path)), week);
+    await log(`${said} It kept ${applied.kept}, changed ${applied.changed}${applied.refused > 0 ? `, and ${applied.refused} of its answers broke a guard or gave no reason, so the rule's verdict stands for them` : ""}.`, false);
+  } catch (error) {
+    await log(`${said} Not reached, so the rule's verdicts stand: ${error instanceof Error ? error.message : String(error)}`, true);
+  }
+}
+
+/** For the weekly run, after the week is saved: every page decided, the specialist's pages handed it, and the run's log saying how many of each. */
+export async function decideForRun(ctx: ActionCtx, run: InsightsRunArgs, week: string, rules: string, member: TeamMember | undefined): Promise<void> {
+  try {
+    const counts = await buildDecisions(ctx, run.holdId, { run, member, rules, week });
     const detail = counts ? Object.entries(counts).map(([verdict, count]) => `${verdict.toLowerCase()} ${count}`).join(", ") : "The website is gone.";
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: run.runId, companyId: run.companyId, heading: "Page decisions", detail, failed: !counts });
   } catch (error) {

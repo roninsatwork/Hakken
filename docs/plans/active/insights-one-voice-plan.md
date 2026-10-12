@@ -98,6 +98,21 @@ below are answered. Nothing is pushed.
   three minutes (`insightsAsk.ASK_LIMIT_MS`) and its step goes on without
   it. A step the platform stops is finished by its watch, saying where.
 
+- **Phases 1 and 2, built 2026-10-12 (night).** The standard's shared parts
+  (`utils/insightDecided.ts`): who decided, the week, the agent's reason and
+  the rule's reading on every judgement, with last week's decision kept where
+  the rule reads an item the same. Keyword cannibalisation now uses them too.
+  The **Page decisions specialist** (`INSIGHTS_PAGE_DECISIONS`,
+  `utils/insightPageAgent.ts`) works in the step after the save, reading this
+  week's page reviews. It is handed at most 40 pages the rule doesn't simply
+  keep, the most used first. Its guards: it never removes a page other
+  websites link to or a page a website needs, and merges or redirects only
+  into another page of the site. Keyword cannibalisation's pages stand as
+  that specialist decided them. The rule also reads cannibalisation's
+  keep-and-link decisions and page reviews asking for a change. Page decisions
+  shows who decided and each reason, and Ask Hakken reads every page to act
+  on.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

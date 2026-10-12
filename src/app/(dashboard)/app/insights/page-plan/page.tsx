@@ -17,7 +17,7 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_ROSE, CHART_SERIES_SLATE, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { PLAN_ACTIONS, type PlanPage } from "@/convex/utils/insightPlan";
-import { VERDICTS, type PageDecision } from "@/convex/utils/insightDecisions";
+import { COMPETING_REASONS, VERDICTS, type PageDecision } from "@/convex/utils/insightDecisions";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { formatPosition } from "../../search-console/_components/searchConsoleFormat";
@@ -91,6 +91,11 @@ export default function InsightsPagePlanPage() {
   const topCreate = decided?.creates[0];
   const says = [
     ...(decisions.length > 0 ? [tDecide("sees.every", { pages: decided?.pages ?? decisions.length, improve: count("IMPROVE"), merge: count("MERGE"), redirect: count("REDIRECT"), remove: count("REMOVE"), keep: count("KEEP") })] : []),
+    // Who decided (insights-one-voice-plan.md, the standard): the Page decisions specialist, Keyword cannibalisation's, or the rule.
+    ...(decisions.length > 0 ? [tDecide("sees.decided", {
+      agent: decisions.filter((row) => row.decidedBy === "AGENT" && !COMPETING_REASONS.has(row.reason)).length,
+      competing: decisions.filter((row) => COMPETING_REASONS.has(row.reason)).length,
+    })] : []),
     lost.length > 0 ? t("sees.lost", { count: lost.length, page: lost[0].page, a: formatNumber(lost[0].a ?? 0), b: formatNumber(lost[0].b ?? 0) }) : t("sees.noneLost"),
     ...(reach.length > 0 ? [t("sees.reach", { count: reach.length, pages: reach.map((row) => row.page).join(", ") })] : []),
     ...(topCreate ? [tDecide("sees.create", { count: decided?.creates.length ?? 0, search: topCreate.search, volume: formatNumber(topCreate.volume ?? 0) })] : []),
@@ -106,7 +111,8 @@ export default function InsightsPagePlanPage() {
     .map((kind): { label: string } & Record<string, string | number> => ({ label: kind, ...Object.fromEntries(VERDICTS.map((value) => [value, decisions.filter((row) => kindName(row) === kind && row.verdict === value).length])) }))
     .sort((a, b) => VERDICTS.reduce((sum, value) => sum + Number(b[value]), 0) - VERDICTS.reduce((sum, value) => sum + Number(a[value]), 0))
     .slice(0, 10);
-  const reasonWords = (row: PageDecision) => tDecide(`reasons.${row.reason}`, { into: row.into ?? "", domains: row.domains ?? 0 });
+  // The specialist's own sentence where one decided the page; else the rule's reason.
+  const reasonWords = (row: PageDecision) => row.why || tDecide(`reasons.${row.reason}`, { into: row.into ?? "", domains: row.domains ?? 0 });
   const mono = (value: number | null) => <span className="font-mono text-[12px] text-foreground">{value === null ? "–" : formatNumber(value)}</span>;
 
   return (

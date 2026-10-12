@@ -1,4 +1,5 @@
 import { settleGroup, type CompetingGroup, type Decision, type KeptGroup } from "./insightCompeting";
+import { readingOf, whyText } from "./insightDecided";
 
 /**
  * The Keyword cannibalisation specialist (Anthony, 12 October 2026: "it
@@ -11,8 +12,7 @@ import { settleGroup, type CompetingGroup, type Decision, type KeptGroup } from 
 
 /** Searches of a group the specialist is shown, the most searched first: the rest keep the rule's page. */
 export const SEARCHES_SHOWN = 60;
-/** Words a reason or a write-up may run to. */
-const MOST_REASON = 300;
+/** Words a write-up may run to. */
 const MOST_WORDS = 900;
 
 /** The shape of the specialist's answer, fixed in code so the run can read it (shown read-only on its Instructions page). */
@@ -26,13 +26,7 @@ export const COMPETING_ANSWER = [
 
 /** A short, stable reading of the rule's decision for a group: its pages and the page each of its most searched searches went to. */
 export function signatureOf(group: CompetingGroup | KeptGroup): string {
-  const text = [
-    [...group.pages.map((page) => page.path)].sort().join(","),
-    shownFirst(group).map((search) => `${search.search}>${search.owner ?? ""}`).join(";"),
-  ].join("|");
-  let hash = 5381;
-  for (let at = 0; at < text.length; at += 1) hash = ((hash * 33) ^ text.charCodeAt(at)) >>> 0;
-  return `${group.pages.length}.${hash.toString(36)}`;
+  return readingOf([...[...group.pages.map((page) => page.path)].sort(), ...shownFirst(group).map((search) => `${search.search}>${search.owner ?? ""}`)]);
 }
 
 /** A group's searches the specialist is shown: the most searched first, then the most shown. */
@@ -89,7 +83,7 @@ export function applyAnswer<Group extends CompetingGroup | KeptGroup>(group: Gro
       continue;
     }
     if (search.owner === page) continue;
-    Object.assign(search, { owner: page, why: ["AGENT"], reason: text(why, MOST_REASON) });
+    Object.assign(search, { owner: page, why: ["AGENT"], reason: whyText(why) });
     owners += 1;
   }
   settleGroup(group, websiteRate);
@@ -126,7 +120,7 @@ function applyPages(group: CompetingGroup | KeptGroup, raw: unknown) {
     if (decision !== page.decision) changed += 1;
     page.decision = decision;
     if (decision !== "OWNER" && target && (target.owns ?? 0) > 0) page.into = target.path;
-    const reason = text(why, MOST_REASON);
+    const reason = whyText(why);
     if (reason) page.reason = reason;
   }
   return { changed, refused };
