@@ -99,6 +99,25 @@ completed work.
   reading all of it — eleven phases, about twenty-seven days with "people who
   converted after it". All eleven built 2026-10-11 in local commits on dev,
   not pushed, each checked on Ronins in Chrome; the full gate passed.**
+- [Insights to one standard — every judgement decided once, by its agent](./active/insights-one-voice-plan.md)
+  — started 2026-10-12: every Insights screen to the standard Keyword
+  cannibalisation reached that day. Code gathers the evidence; a rule makes the
+  first pick; the Head of Strategy hands each judgement to its agent when
+  something changed; it is saved once and read by the screens, findings,
+  reports and Ask Hakken. First the weekly run is made to hand itself on in
+  steps, after a run was cut off at Convex's 10-minute limit. Eight phases,
+  about 13 man-days; nothing built; four questions waiting on Anthony.
+- [Keyword cannibalisation — which page owns each search](./active/keyword-cannibalisation-owners-plan.md)
+  — started 2026-10-12, after Anthony disagreed with Ronins' advice (Surrey's
+  page kept over London's; the national mobile app page merged into London's).
+  Each search gets its own owner, weighed by kind, place, words, Google's choice
+  and enquiries from Google, never one figure alone. A Keyword cannibalisation
+  specialist, handed the groups by the Head of Strategy, decides and writes the
+  page; the result is saved once and read by the screens, findings, Page
+  decisions and Ask Hakken. Built on local dev, not committed: about 80%. Four
+  questions are open (the specialist alone writing the page; Jev picking each
+  search's page; keyword difficulty from the monthly collection; "Your place"
+  elsewhere).
 - [Bing Webmaster — for your own websites](./active/bing-webmaster-plan.md)
   — a new "Bing Webmaster" item in the main menu, after Search Console:
   each owned website's real clicks, impressions, keywords, pages and
