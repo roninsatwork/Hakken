@@ -7,6 +7,7 @@ import { callGoogle } from "./googleApi";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
+import { changeKindValidator, fingerprintChanges } from "./utils/insightTrack";
 import { PAGE_READER_AGENT, indexedFrom, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
 
 /**
@@ -74,22 +75,32 @@ const checkRow = v.object({
   facts: v.union(pageFactsValidator, v.null()),
 });
 
-/** The week's checks, a row a page; pages no longer among the money pages go. */
+/** A part of a money page that changed since its last check, for the change log (I25). */
+const pageChangeSeen = v.object({ kind: changeKindValidator, page: v.string() });
+
+/**
+ * The week's checks, a row a page; pages no longer among the money pages go.
+ * Says what changed on each page since the week before, set against the
+ * check it replaces: the last one kept.
+ */
 export const saveChecks = internalMutation({
   args: { holdId: v.id("companyWebsites"), rows: v.array(checkRow) },
-  returns: v.null(),
+  returns: v.array(pageChangeSeen),
   handler: async (ctx, args) => {
     const now = Date.now();
     const held = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOST_MONEY_PAGES * 4);
     const wanted = new Set(args.rows.map((row) => row.page));
     for (const row of held) if (!wanted.has(row.page)) await ctx.db.delete(row._id);
+    const changed: Array<typeof pageChangeSeen.type> = [];
     for (const row of args.rows) {
       const existing = held.find((entry) => entry.page === row.page);
       const record = { companyWebsiteId: args.holdId, ...row, checkedAt: now };
-      if (existing) await ctx.db.replace(existing._id, record);
-      else await ctx.db.insert("moneyPageChecks", record);
+      if (existing) {
+        for (const kind of fingerprintChanges({ kind: existing.kind, facts: existing.facts ?? null, structured: existing.structured }, row)) changed.push({ kind, page: row.page });
+        await ctx.db.replace(existing._id, record);
+      } else await ctx.db.insert("moneyPageChecks", record);
     }
-    return null;
+    return changed;
   },
 });
 
@@ -128,12 +139,12 @@ async function checkPage(origin: string, page: string, inspect: ((address: strin
 /** A website's money pages, checked: started by the team's run, or by hand for a first check. */
 export const checkWebsite = internalAction({
   args: { holdId: v.id("companyWebsites"), force: v.optional(v.boolean()) },
-  /** How many pages, and why any check failed, as Google said: for the run's log. */
-  returns: v.object({ checked: v.number(), problems: v.array(v.string()) }),
+  /** How many pages, why any check failed, as Google said, for the run's log; and what changed on them, for the change log. */
+  returns: v.object({ checked: v.number(), problems: v.array(v.string()), changed: v.array(pageChangeSeen) }),
   handler: async (ctx, args) => {
     const targets = await ctx.runQuery(internal.moneyPageChecks.checkTargets, { holdId: args.holdId });
-    if (!targets || targets.pages.length === 0) return { checked: 0, problems: [] };
-    if (!args.force && targets.checkedAt !== null && Date.now() - targets.checkedAt < CHECK_EVERY_MS) return { checked: 0, problems: [] };
+    if (!targets || targets.pages.length === 0) return { checked: 0, problems: [], changed: [] };
+    if (!args.force && targets.checkedAt !== null && Date.now() - targets.checkedAt < CHECK_EVERY_MS) return { checked: 0, problems: [], changed: [] };
     const problems = new Set<string>();
     let inspect: ((address: string) => Promise<Indexed | null>) | null = null;
     if (targets.consoleId && targets.property) {
@@ -154,8 +165,9 @@ export const checkWebsite = internalAction({
       const found = await Promise.all(batch.map((page) => checkPage(targets.origin, page.page, inspect, problems)));
       batch.forEach((page, index) => rows.push({ ...page, ...found[index] }));
     }
-    await ctx.runMutation(internal.moneyPageChecks.saveChecks, { holdId: args.holdId, rows });
-    return { checked: rows.length, problems: [...problems] };
+    // Typed here: a result inferred from this module's own mutation collapses the API's types.
+    const changed: Array<typeof pageChangeSeen.type> = await ctx.runMutation(internal.moneyPageChecks.saveChecks, { holdId: args.holdId, rows });
+    return { checked: rows.length, problems: [...problems], changed };
   },
 });
 

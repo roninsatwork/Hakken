@@ -33,7 +33,13 @@ export const scoreValidator = v.object({
 export type Score = Infer<typeof scoreValidator>;
 
 export const monthValidator = v.object({ month: v.string(), visits: v.number(), conversions: v.number() });
-export const shareMonthValidator = v.object({ month: v.string(), you: v.number(), total: v.number() });
+export const shareMonthValidator = v.object({
+  month: v.string(),
+  you: v.number(),
+  total: v.number(),
+  /** Each rival's estimated Google visitors that month, by its address, so a chart shows the others too (Anthony, 2026-10-12); absent on weeks before it. */
+  rivals: v.optional(v.array(v.object({ host: v.string(), value: v.number() }))),
+});
 
 export const weekSummaryValidator = v.object({
   scorecard: v.array(scoreValidator),

@@ -32,7 +32,7 @@ import {
 } from "./utils/insightTeam";
 import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
-import { outcomeOf } from "./utils/insightTrack";
+import { outcomeOf, type Change } from "./utils/insightTrack";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
 import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
 import { planBrief } from "./utils/insightPlan";
@@ -167,8 +167,10 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   const lead = member(INSIGHTS_LEAD_ROLE);
 
   // 0. The money pages' weekly checks (phase 8), when a week has passed: indexing, speed, structured data.
+  let pagesChanged: Array<{ kind: Change["kind"]; page: string }> = [];
   try {
     const checked = await ctx.runAction(internal.moneyPageChecks.checkWebsite, { holdId: args.holdId });
+    pagesChanged = checked.changed;
     if (checked.checked > 0 || checked.problems.length > 0) {
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Money pages", detail: `Checked ${checked.checked} money pages.${checked.problems.length > 0 ? ` ${checked.problems.join(" ")}` : ""}`.slice(0, 900), failed: false });
     }
@@ -208,8 +210,11 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
       return [{ findingId: finding.findingId, specialist: finding.specialist, outcome, note: `${then.label}: ${formatFact(then)} then, ${formatFact(current)} now.` }];
     });
     if (outcomes.length > 0) await ctx.runMutation(internal.insightsTeam.scoreFindings, { companyId: args.companyId, outcomes });
-    // The change log (I25): the page changes the website's own figures show, each once, with what followed.
-    const { changes, notRemoved } = await ctx.runQuery(internal.insightsReading.pageChangesInternal, { holdId: args.holdId });
+    // The change log (I25): the page changes the website's own figures show, the parts of money pages
+    // this week's check saw change, and its own Google profile's changes, each once, with what followed.
+    const found = await ctx.runQuery(internal.insightsReading.pageChangesInternal, { holdId: args.holdId });
+    const { notRemoved } = found;
+    const changes = [...found.changes, ...await ctx.runQuery(internal.insightsReading.newChangesInternal, { holdId: args.holdId, today, seen: pagesChanged })];
     if (changes.length > 0 || notRemoved.length > 0) await ctx.runMutation(internal.insightsTeam.saveChanges, { holdId: args.holdId, companyId: args.companyId, week: weekOf(now), changes, notRemoved });
   } catch (error) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Track record", detail: failureSummary(error), failed: true });

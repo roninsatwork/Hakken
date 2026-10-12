@@ -12,7 +12,6 @@ chart-card: Domain authority league
 chart-card: Organic traffic league
 chart-card: AI mindshare league
 chart-card: Share of voice league
-chart-card: Where you rank in every league
 chart-card: Links league
 chart-card: Shown in Google's AI Overviews league
 chart-card: Recommended for your buyers' questions league

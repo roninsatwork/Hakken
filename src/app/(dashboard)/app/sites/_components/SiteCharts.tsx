@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -23,7 +24,7 @@ import {
   useXAxisScale,
   useYAxisScale,
 } from "recharts";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import { CHART_ACTIVE_BAR, CHART_CROSSHAIR, CHART_CURSOR, ChartTooltip, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import {
@@ -36,7 +37,7 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import { GoogleUpdateFrame, GoogleUpdateMarkers, googleLegend, useGoogleUpdates } from "./GoogleUpdateMarkers";
-import { formatCompact, formatNumber } from "./siteFormat";
+import { formatCompact, formatMonthName, formatNumber, formatShortMonth } from "./siteFormat";
 
 /**
  * The Sites screens' charts: lines over time, stacked bands, and bars — drawn
@@ -244,12 +245,13 @@ export function SiteStackedAreaChart({
 }
 
 /**
- * Bars along are as deep as the Overview's Pages by kind — 14px, 4px apart
- * within a row — rather than whatever the chart's height left them (Anthony,
- * 2026-09-30: "the line charts look a little thin and not in line with the
- * overview page"). The chart grows with its rows instead.
+ * Bars along are a set depth, 4px apart within a row, rather than whatever
+ * the chart's height left them (Anthony, 2026-09-30); the chart grows with
+ * its rows instead. 24px since 2026-10-12, on every bars-along chart in
+ * Insights, Visibility, Search Console and Analytics (Anthony: "fatter
+ * bars, these are too weedy and hard to read"; it was 14px).
  */
-const ALONG_BAR = 14;
+const ALONG_BAR = 24;
 const ALONG_BAR_GAP = 4;
 /** The room above and below each row's bars, as the Overview's rows have. */
 const ALONG_ROW_SPACE = 16;
@@ -266,10 +268,18 @@ export function SiteBarChart({
   seriesLabel,
   line,
   highlight,
+  labels,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
   xKey?: string;
+  /**
+   * Each bar's figure written on it, so no figure needs a hover (Anthony,
+   * 2026-10-12, of Insights' charts: "you have to hover to see the
+   * context"): how a series' figure reads, null to leave that series'
+   * bars unwritten. A figure too wide for its bar is left to the readout.
+   */
+  labels?: (value: number, key: string, row: Record<string, unknown>) => string | null;
   /**
    * Rows drawn in another colour: the website itself among its rivals on
    * Insights' leaderboards ("You in orange", insights-analyst-plan.md §5,
@@ -302,6 +312,9 @@ export function SiteBarChart({
   const scale = formatScale ? { allowDecimals: true, tickFormatter: formatScale } : { allowDecimals: false, tickFormatter: formatCompact };
   // Bars along compare named things; upright bars may run over dates.
   const google = useGoogleUpdates(data, { dated: !horizontal });
+  // How wide the chart is drawn, for an axis of months worded to the room each bar has.
+  const [drawnWidth, setDrawnWidth] = useState(0);
+  const months = !horizontal && data.length > 0 && data.every((row) => typeof row.month === "string");
   if (line && !horizontal) return <BarLineChart data={data} series={series} line={line} xKey={xKey} height={height} scale={scale} google={google} formatValue={formatValue} seriesLabel={seriesLabel} />;
   const barsPerRow = stacked ? 1 : series.length;
   const rowHeight = barsPerRow * ALONG_BAR + (barsPerRow - 1) * ALONG_BAR_GAP + ALONG_ROW_SPACE;
@@ -311,23 +324,33 @@ export function SiteBarChart({
     <GoogleUpdateFrame google={google}>
       {/* Upright bars rise; bars along grow from the left, as they read. */}
       <ChartReveal replay={revealKey(data, xKey)} motion={horizontal ? "along" : "rise"}>
-        <ResponsiveContainer width="100%" height={horizontal ? alongHeight : height} debounce={50}>
+        <ResponsiveContainer width="100%" height={horizontal ? alongHeight : height} debounce={50} onResize={months ? (width) => setDrawnWidth(width) : undefined}>
           <BarChart
             data={data}
             layout={horizontal ? "vertical" : "horizontal"}
             barSize={horizontal ? ALONG_BAR : undefined}
             barGap={horizontal ? ALONG_BAR_GAP : undefined}
-            margin={{ top: 8, right: 8, bottom: 0, left: horizontal ? 8 : 0 }}
+            margin={{ top: labels && !horizontal && !stacked ? 20 : 8, right: labels && horizontal ? BAR_LABEL_ROOM : 8, bottom: 0, left: horizontal ? 8 : 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="currentColor" className="text-border-dim" />
             {horizontal ? (
               <>
                 <XAxis type="number" {...scale} {...AXIS_PROPS} />
-                <YAxis type="category" dataKey={xKey} width={140} {...AXIS_PROPS} />
+                <YAxis type="category" dataKey={xKey} width={ALONG_NAMES} {...AXIS_PROPS} tick={<AlongTick />} interval={0} />
               </>
             ) : (
               <>
-                <XAxis {...AXIS_PROPS} minTickGap={12} {...google.axis(xKey)} />
+                {months ? (
+                  <XAxis
+                    {...AXIS_PROPS}
+                    {...google.axis(xKey)}
+                    interval={0}
+                    height={(google.shown ? GOOGLE_AXIS_HEIGHT : 8) + MONTH_TICK_HEIGHT}
+                    tick={<MonthTick months={data.map((row) => String(row.month))} room={(drawnWidth - 56) / data.length} />}
+                  />
+                ) : (
+                  <XAxis {...AXIS_PROPS} minTickGap={12} {...google.axis(xKey)} />
+                )}
                 <YAxis width={48} {...scale} {...AXIS_PROPS} />
               </>
             )}
@@ -353,6 +376,7 @@ export function SiteBarChart({
                 {data.some(isPart) || highlight
                   ? data.map((row, index) => <Cell key={index} fillOpacity={isPart(row) ? PART_OPACITY : 1} {...(highlight?.rows(row) ? { fill: highlight.colour } : {})} />)
                   : null}
+                {labels ? <LabelList dataKey={entry.key} content={barLabel((value, index) => labels(value, entry.key, data[index] ?? {}), { horizontal, stacked, widest: widestLabel(data, entry.key, labels) })} /> : null}
               </Bar>
             ))}
             <GoogleUpdateMarkers google={google} />
@@ -361,6 +385,116 @@ export function SiteBarChart({
       </ChartReveal>
     </GoogleUpdateFrame>
   );
+}
+
+/** The room the names beside bars along take, and about how many letters fit a line of it. */
+const ALONG_NAMES = 140;
+const ALONG_NAME_LETTERS = 22;
+/** Where a long name may break: after a space, a hyphen, a slash or a dot. */
+const NAME_BREAKS = [" ", "-", "/", ".", "_"];
+
+/**
+ * A long name on two lines, broken after a space, hyphen, slash or dot
+ * where one falls in the first line, cut with "…" only past two lines —
+ * never cut at its start, as "/european-accessibility-act-uk/" was
+ * (Anthony, 2026-10-12). The readout shows it whole.
+ */
+export function wrapName(name: string, most: number = ALONG_NAME_LETTERS): string[] {
+  if (name.length <= most) return [name];
+  const at = Math.max(...NAME_BREAKS.map((mark) => name.lastIndexOf(mark, most - 1)));
+  const cut = at >= most / 3 ? at + 1 : most;
+  const rest = name.slice(cut).trim();
+  return [name.slice(0, cut).trim(), rest.length <= most ? rest : `${rest.slice(0, most - 1)}…`];
+}
+
+/** A name beside its bars along, on one line or two (`wrapName`), centred on its row. */
+function AlongTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: unknown } }) {
+  if (x === undefined || y === undefined || !payload) return null;
+  const lines = wrapName(String(payload.value ?? ""));
+  return (
+    <text x={x} y={y} textAnchor="end" fontSize={11} fill="currentColor">
+      {lines.map((line, index) => (
+        <tspan key={index} x={x} dy={index === 0 ? (lines.length === 1 ? "0.355em" : "-0.3em") : "1.25em"}>{line}</tspan>
+      ))}
+    </text>
+  );
+}
+
+/** The room under the axis line a month's two lines take. */
+const MONTH_TICK_HEIGHT = 30;
+/** Below the axis line, the room the Google update markers take before the months. */
+const GOOGLE_AXIS_HEIGHT = 22;
+/** Room each month needs: one line, "Dec 24"; two, "Dec" over its year; less, every few months. */
+const MONTH_ONE_LINE = 48;
+const MONTH_TWO_LINES = 26;
+
+/**
+ * A month along a bar chart's axis, worded to the room each bar has
+ * (Anthony, 2026-10-12: "they are responsive but the labels are not"):
+ * "Dec 24" under every bar where it fits; "Dec" with the year beneath at the
+ * first month and each January where only the month fits; and on a narrow
+ * phone every second or third month, so none overlap.
+ */
+function MonthTick({ x, y, payload, index, months, room }: { x?: number; y?: number; payload?: { value: string }; index?: number; months: string[]; room: number }) {
+  if (x === undefined || y === undefined || index === undefined || !payload) return null;
+  const month = months[index] ?? String(payload.value).slice(0, 7);
+  const every = room >= MONTH_TWO_LINES || room <= 0 ? 1 : Math.ceil(MONTH_TWO_LINES / room);
+  if (index % every !== 0) return null;
+  const first = index === 0;
+  // The year under the first month shown and each January; with months left out, under the first shown of each year.
+  const yearShown = first || (every === 1 ? month.endsWith("-01") : months[index - every]?.slice(0, 4) !== month.slice(0, 4));
+  return (
+    <g transform={`translate(${x},${y})`} className="text-muted">
+      {room >= MONTH_ONE_LINE || room <= 0 ? (
+        <text textAnchor="middle" dy={10} fontSize={11} fill="currentColor">{formatShortMonth(month)}</text>
+      ) : (
+        <>
+          <text textAnchor="middle" dy={10} fontSize={11} fill="currentColor">{formatMonthName(month)}</text>
+          {yearShown ? <text textAnchor="middle" dy={23} fontSize={10} fill="currentColor">{month.slice(0, 4)}</text> : null}
+        </>
+      )}
+    </g>
+  );
+}
+
+/** Room right of bars along for the figure written at each one's end. */
+const BAR_LABEL_ROOM = 56;
+/** About how wide a figure's letters are at the labels' size, to leave off one its bar cannot hold. */
+const LABEL_LETTER = 6.7;
+
+type BarLabelProps = { x?: number | string; y?: number | string; width?: number | string; height?: number | string; value?: unknown; index?: number };
+
+/** The longest figure a series' bars would carry, in letters. */
+function widestLabel(data: ReadonlyArray<Record<string, unknown>>, key: string, labels: (value: number, key: string, row: Record<string, unknown>) => string | null): number {
+  return data.reduce((widest, row) => {
+    const value = Number(row[key]);
+    return Number.isFinite(value) ? Math.max(widest, labels(value, key, row)?.length ?? 0) : widest;
+  }, 0);
+}
+
+/**
+ * A bar's figure, as `labels` words it: at the end of a bar along, above an
+ * upright bar, inside a stacked one. Upright bars too narrow for the
+ * widest figure carry none, so a chart is never half written, as on a
+ * phone's many months; a stacked part too short for its figure goes without.
+ */
+function barLabel(word: (value: number, index: number) => string | null, { horizontal, stacked, widest }: { horizontal: boolean; stacked: boolean; widest: number }) {
+  function BarLabel(props: BarLabelProps) {
+    const value = typeof props.value === "number" ? props.value : Number(props.value);
+    const x = Number(props.x ?? 0), y = Number(props.y ?? 0), width = Number(props.width ?? 0), height = Number(props.height ?? 0);
+    if (!Number.isFinite(value)) return null;
+    const text = word(value, props.index ?? 0);
+    if (!text) return null;
+    const wide = text.length * LABEL_LETTER;
+    const look = { fontSize: 11, className: "fill-foreground font-mono" } as const;
+    if (horizontal && !stacked) return <text x={x + width + 6} y={y + height / 2} dominantBaseline="central" {...look}>{text}</text>;
+    if (horizontal) return wide + 6 <= width && height >= 12 ? <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="central" {...look}>{text}</text> : null;
+    // Above its bar a figure may use a little of the gap beside it, never so much that neighbours touch.
+    if (widest * LABEL_LETTER + 4 > width * 1.15) return null;
+    if (stacked) return height >= 14 ? <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="central" {...look}>{text}</text> : null;
+    return <text x={x + width / 2} y={y - 5} textAnchor="middle" {...look}>{text}</text>;
+  }
+  return BarLabel;
 }
 
 /** Upright bars on the left scale and one line on the right: `SiteBarChart`'s `line`. */

@@ -8,6 +8,7 @@ import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { monthRow } from "../../sites/_components/datedRows";
 import type { ReportView } from "./ReportPdf";
 import { useInsightsHref } from "./useInsights";
 
@@ -71,7 +72,7 @@ export function ReportTop({ report }: { report: ReportView }) {
         enoughData={months.length > 1}
         emptyText={t("chart.empty")}
       >
-        <SiteBarChart data={months.map((month) => ({ label: month.month, enquiries: month.conversions }))} series={[{ key: "enquiries", name: t("chart.enquiries"), colour: CHART_SERIES_ORANGE }]} />
+        <SiteBarChart data={months.map((month) => monthRow(month.month, { enquiries: month.conversions }))} series={[{ key: "enquiries", name: t("chart.enquiries"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
       </ChartCard>
     </>
   );

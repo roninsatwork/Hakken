@@ -17948,11 +17948,6 @@
       "league": "Classifica",
       "of": "Su",
       "seeLeague": "Vedi la classifica",
-      "everyLeague": {
-        "title": "La tua posizione in ogni classifica",
-        "hint": "Ogni classifica: più lunga è la barra, più in alto sei; il primo posto la riempie tutta.",
-        "figure": "La tua posizione"
-      },
       "cardTitle": "Classifica: {league}"
     },
     "leaderboards": {
@@ -18185,16 +18180,13 @@
       "place": "La tua posizione nel mercato",
       "placeMoved": "{count, plural, one {Un posto} other {# posti}} in un anno",
       "placeDetail": "per i visitatori da Google",
-      "rank": {
-        "title": "La tua posizione rispetto a {rivals, plural, one {un concorrente} other {# concorrenti}}",
-        "hint": "Ogni classifica: più lunga è la barra, più in alto sei."
-      },
       "share": {
         "title": "La tua quota dei visitatori da Google del tuo mercato",
         "hint": "I tuoi visitatori stimati da Google come quota dei tuoi e di quelli dei concorrenti, mese per mese.",
         "month": "Mese",
         "figure": "La tua quota",
-        "empty": "Si riempie quando {platformName} ha qualche mese del tuo mercato."
+        "empty": "Si riempie quando {platformName} ha qualche mese del tuo mercato.",
+        "hintRivals": "I visitatori da Google di ogni mese divisi tra te e i tuoi concorrenti: tu in arancione alla base di ogni barra, con la tua quota scritta sopra. Da visitatori stimati."
       },
       "per": {
         "title": "Visite per ogni richiesta, mese per mese",
@@ -18506,25 +18498,61 @@
           "GREW": "Cresciuto",
           "HELD": "Mantenuto",
           "LOST": "Perso",
-          "WAITING": "Ancora nessuna visita"
+          "WAITING": "Ancora nessuna visita",
+          "TOO_EARLY": "Troppo presto"
         },
         "kinds": {
           "REPLACED": "Sostituita {from} con {to}",
           "REMOVED": "Rimossa {from}",
           "ADDED": "Aggiunta {to}",
           "MERGED": "Unita {from} a {to}",
-          "FIX": "Approvata: {from} ({to})"
+          "FIX": "Approvata: {from} ({to})",
+          "TOP_REWRITTEN": "Riscritta la parte alta di {from}",
+          "PRICE_ADDED": "Aggiunto un prezzo a {from}",
+          "PRICE_REMOVED": "Tolto il prezzo da {from}",
+          "PROOF_ADDED": "Aggiunte prove a {from}: risultati, recensioni o clienti",
+          "PROOF_REMOVED": "Tolte le prove da {from}",
+          "FORM_ADDED": "Aggiunto un modulo a {from}",
+          "FORM_REMOVED": "Tolto il modulo da {from}",
+          "ASK_MOVED_UP": "Portato più in alto il primo invito a contattarvi in {from}",
+          "STRUCTURED_DATA_ADDED": "Aggiunti i dati che Google legge a {from}",
+          "PROFILE_CATEGORY_ADDED": "Profilo Google: aggiunta la categoria {from}",
+          "PROFILE_CATEGORY_REMOVED": "Profilo Google: tolta la categoria {from}",
+          "PROFILE_HOURS_CHANGED": "Profilo Google: cambiati gli orari",
+          "PROFILE_NAME_CHANGED": "Profilo Google: rinominato {from}",
+          "PROFILE_WEBSITE_CHANGED": "Profilo Google: il sito è diventato {from}"
         },
         "kindNames": {
           "REPLACED": "sostituire una pagina",
           "REMOVED": "rimuovere una pagina",
           "ADDED": "aggiungere una pagina",
           "MERGED": "unire pagine",
-          "FIX": "approvare una correzione scritta"
+          "FIX": "approvare una correzione scritta",
+          "TOP_REWRITTEN": "riscrivere la parte alta di una pagina",
+          "PRICE_ADDED": "aggiungere un prezzo",
+          "PRICE_REMOVED": "togliere un prezzo",
+          "PROOF_ADDED": "aggiungere prove",
+          "PROOF_REMOVED": "togliere prove",
+          "FORM_ADDED": "aggiungere un modulo",
+          "FORM_REMOVED": "togliere un modulo",
+          "ASK_MOVED_UP": "portare più in alto il primo invito a contattarvi",
+          "STRUCTURED_DATA_ADDED": "aggiungere i dati che Google legge",
+          "PROFILE_CATEGORY_ADDED": "aggiungere una categoria al profilo Google",
+          "PROFILE_CATEGORY_REMOVED": "togliere una categoria dal profilo Google",
+          "PROFILE_HOURS_CHANGED": "cambiare gli orari",
+          "PROFILE_NAME_CHANGED": "rinominare il profilo Google",
+          "PROFILE_WEBSITE_CHANGED": "cambiare il sito del profilo Google"
         },
         "empty": "Ancora nessuna modifica vista: {platformName} registra ogni modifica che vede nei tuoi dati, con cosa è seguito.",
         "campaigns": "Campagne di Analytics",
-        "fixFollowed": "{visits, plural, one {# visita} other {# visite}} e {enquiries, plural, one {# richiesta} other {# richieste}} dal suo link"
+        "fixFollowed": "{visits, plural, one {# visita} other {# visite}} e {enquiries, plural, one {# richiesta} other {# richieste}} dal suo link",
+        "pageCheck": "Controllo settimanale delle pagine",
+        "profile": "Profilo dell’attività su Google",
+        "when": "Quando",
+        "pageFollowed": "Richieste dalla pagina: {before} nei 30 giorni prima, poi {after} nei 30 dopo",
+        "pageWaiting": "Richieste dalla pagina: {before} nei 30 giorni prima; i 30 dopo non ci sono ancora",
+        "siteFollowed": "Richieste dal sito: {before} nei 30 giorni prima, poi {after} nei 30 dopo",
+        "siteWaiting": "Richieste dal sito: {before} nei 30 giorni prima; i 30 dopo non ci sono ancora"
       },
       "learnings": {
         "intro": "Cosa insegnano le tue modifiche: {learnings}",

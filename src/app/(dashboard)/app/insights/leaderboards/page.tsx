@@ -8,7 +8,7 @@ import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { MAIN_LEAGUES } from "@/convex/utils/insightLeagues";
-import { LeagueCard, RankStrip, leagueName, type LeagueData } from "../_components/LeagueCard";
+import { LeagueCard, leagueName, type LeagueData } from "../_components/LeagueCard";
 import { useInsightsHref, useInsightsLeagues } from "../_components/useInsights";
 import { formatNumber } from "../../sites/_components/siteFormat";
 
@@ -16,8 +16,9 @@ import { formatNumber } from "../../sites/_components/siteFormat";
  * Leaderboards (docs/plans/active/insights-analyst-plan.md §5, I8; drawn as
  * the Leagues board): where the website ranks against its rivals, the four
  * main leagues from Anthony's reference first — domain authority, organic
- * traffic, AI mindshare, share of voice — then where you rank in every
- * league, then every other measure Hakken reads. Each opens its own page.
+ * traffic, AI mindshare, share of voice — then every other measure Hakken
+ * reads, each a graph of every website with its figure on its bar. Each
+ * opens its own page.
  */
 export default function InsightsLeaderboardsPage() {
   const t = usePlatformTranslations("insights.leaderboards");
@@ -78,7 +79,6 @@ export default function InsightsLeaderboardsPage() {
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {main.map((league) => <LeagueCard key={league.id} league={league} host={data.host} href={href(`leaderboards/${league.id}`)} />)}
       </div>
-      <RankStrip leagues={leagues} host={data.host} />
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {others.map((league) => <LeagueCard key={league.id} league={league} host={data.host} href={href(`leaderboards/${league.id}`)} />)}
       </div>

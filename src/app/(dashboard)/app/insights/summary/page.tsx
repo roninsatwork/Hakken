@@ -16,13 +16,15 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+import { shortName } from "@/convex/utils/insightLeagues";
 import type { Score } from "@/convex/utils/insightSummary";
-import { SiteBarChart } from "../../sites/_components/SiteCharts";
+import { SITE_SERIES_COLOURS, SiteBarChart } from "../../sites/_components/SiteCharts";
+import { monthRow } from "../../sites/_components/datedRows";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { RankStrip } from "../_components/LeagueCard";
+import { LeagueCard } from "../_components/LeagueCard";
 import { ReportDownloadAction } from "../_components/ReportDownload";
 import { EnquiryCheckNotice } from "../_components/EnquiryCheckNotice";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
@@ -32,10 +34,11 @@ const STATUS_TONE = { ON_TRACK: "success", WATCH: "warning", BEHIND: "danger" } 
 /**
  * The executive summary (docs/plans/active/insights-analyst-plan.md §4.1,
  * drawn as the Main board): the page a managing director reads in thirty
- * seconds — the week's verdict and what to do first, where you rank in every
- * league, the four figures that matter against last year, your share of
- * your market over time, how many visits it takes to win an enquiry month by
- * month, and the scorecard against last year and your rivals. Read from the
+ * seconds — the week's verdict and what to do first, the four figures that
+ * matter against last year, your share of your market over time against
+ * each rival, how many visits it takes to win an enquiry month by month,
+ * where you rank in every league as a graph of every website, and the
+ * scorecard against last year and your rivals. Read from the
  * newest week the team saved; nothing is worked out when it opens (§8).
  */
 export default function InsightsSummaryPage() {
@@ -67,8 +70,20 @@ export default function InsightsSummaryPage() {
   const says = newest ? [newest.verdict, ...(findings[0] && findings[0].headline !== newest.verdict ? [findings[0].headline] : [])] : [t("noWeek")];
   const steps = findings.slice(0, 3).map((finding) => ({ words: finding.action, link: t("seeFinding"), href: href(`findings/${finding.findingId}`) }));
 
-  const shareBars = (newest?.summary?.shareByMonth ?? []).map((month) => ({ label: month.month, share: Math.round((month.you / month.total) * 1000) / 10 }));
-  const perBars = (newest?.summary?.enquiriesByMonth ?? []).filter((month) => month.conversions > 0).map((month) => ({ label: month.month, visits: Math.round(month.visits / month.conversions) }));
+  // Each month's Google visitors shared between you and each rival, you at the foot of the bar (Anthony, 2026-10-12:
+  // a share shows the others too); a week saved before the rivals were kept shows you alone.
+  const shareMonths = newest?.summary?.shareByMonth ?? [];
+  const rivalHosts = [...new Set(shareMonths.flatMap((month) => (month.rivals ?? []).map((rival) => rival.host)))];
+  const shareOf = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 1000) / 10 : 0);
+  const shareBars = shareMonths.map((month) => monthRow(month.month, {
+    you: shareOf(month.you, month.total),
+    ...Object.fromEntries(rivalHosts.map((host, index) => [`rival${index}`, shareOf(month.rivals?.find((rival) => rival.host === host)?.value ?? 0, month.total)])),
+  }));
+  const shareSeries = [
+    { key: "you", name: t("share.figure"), colour: CHART_SERIES_ORANGE },
+    ...rivalHosts.map((host, index) => ({ key: `rival${index}`, name: shortName(host), colour: SITE_SERIES_COLOURS[1 + (index % (SITE_SERIES_COLOURS.length - 1))] })),
+  ];
+  const perBars = (newest?.summary?.enquiriesByMonth ?? []).filter((month) => month.conversions > 0).map((month) => monthRow(month.month, { visits: Math.round(month.visits / month.conversions) }));
 
   return (
     <>
@@ -81,7 +96,6 @@ export default function InsightsSummaryPage() {
       <HakkenSees says={says} steps={steps} />
       <QuickCheckNotice />
       <EnquiryCheckNotice check={newest?.summary?.enquiryCheck} />
-      {leagues && leagues.leagues.length > 0 ? <RankStrip leagues={leagues.leagues} host={leagues.host} title={t("rank.title", { rivals: leagues.rivals })} hint={t("rank.hint")} /> : null}
       <FigureRow>
         <Figure label={t("measures.enquiries")} value={shown90(score("enquiries"))} detail={change(score("enquiries"))} />
         <Figure label={t("measures.visitors")} value={shown90(score("visitors"))} detail={change(score("visitors"))} />
@@ -92,12 +106,25 @@ export default function InsightsSummaryPage() {
           detail={market?.place && market.placeBefore ? <ChangeLine by={market.placeBefore - market.place}>{t("placeMoved", { count: Math.abs(market.placeBefore - market.place) })}</ChangeLine> : <span className="text-secondary">{t("placeDetail")}</span>}
         />
       </FigureRow>
-      <ChartCard title={t("share.title")} hint={t("share.hint")} exportName="insights-market-share" csv={() => toCsv([t("share.month"), t("share.figure")], shareBars.map((row) => [row.label, row.share]))} enoughData={shareBars.length > 1} emptyText={t("share.empty")}>
-        <SiteBarChart data={shareBars} series={[{ key: "share", name: t("share.figure"), colour: CHART_SERIES_ORANGE }]} formatScale={(value) => `${value}%`} formatValue={(value) => `${value}%`} />
+      <ChartCard title={t("share.title")} hint={t(rivalHosts.length > 0 ? "share.hintRivals" : "share.hint")} exportName="insights-market-share" csv={() => toCsv([t("share.month"), ...shareSeries.map((entry) => entry.name)], shareBars.map((row) => [String(row.day).slice(0, 7), ...shareSeries.map((entry) => Number(row[entry.key] ?? 0))]))} enoughData={shareBars.length > 1} emptyText={t("share.empty")}>
+        <SiteBarChart
+          data={shareBars}
+          series={shareSeries}
+          stacked={rivalHosts.length > 0}
+          formatScale={(value) => `${value}%`}
+          formatValue={(value) => `${value}%`}
+          labels={(value, key) => (key === "you" ? `${value}%` : null)}
+        />
       </ChartCard>
-      <ChartCard title={t("per.title")} hint={t("per.hint")} exportName="insights-visits-per-enquiry" csv={() => toCsv([t("share.month"), t("per.figure")], perBars.map((row) => [row.label, row.visits]))} enoughData={perBars.length > 1} emptyText={t("per.empty")}>
-        <SiteBarChart data={perBars} series={[{ key: "visits", name: t("per.figure"), colour: CHART_SERIES_ORANGE }]} />
+      <ChartCard title={t("per.title")} hint={t("per.hint")} exportName="insights-visits-per-enquiry" csv={() => toCsv([t("share.month"), t("per.figure")], perBars.map((row) => [String(row.day).slice(0, 7), Number(row.visits)]))} enoughData={perBars.length > 1} emptyText={t("per.empty")}>
+        <SiteBarChart data={perBars} series={[{ key: "visits", name: t("per.figure"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
       </ChartCard>
+      {/* Where you rank against your rivals: each league a graph of every website, its figure on its bar, you in orange (Anthony, 2026-10-12: a graph, further down the page). */}
+      {leagues && leagues.leagues.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {leagues.leagues.map((league) => <LeagueCard key={league.id} league={league} host={leagues.host} href={href(`leaderboards/${league.id}`)} />)}
+        </div>
+      ) : null}
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.measure}

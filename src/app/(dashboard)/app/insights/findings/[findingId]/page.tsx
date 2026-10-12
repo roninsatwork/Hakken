@@ -90,7 +90,7 @@ export default function InsightsFindingPage() {
     const ask = t("taskAsk", { host: finding.host, action: finding.action, how: finding.howWeKnow, day: finding.checkOn ? formatDay(finding.checkOn) : "" });
     router.push(`/app/assistant?ask=${encodeURIComponent(ask)}`);
   };
-  const bars = pairs.slice(0, 6).map((pair) => ({ label: heading(pair.now.label), then: pair.then.value, now: pair.now.value }));
+  const bars = pairs.slice(0, 6).map((pair) => ({ label: heading(pair.now.label), then: pair.then.value, now: pair.now.value, unit: pair.now.unit, currency: pair.now.currency }));
   const csv = () => toCsv([t("chart.figure"), t("chart.then"), t("chart.now")], bars.map((row) => [row.label, row.then, row.now]));
   // The story's sentences, each its own line, as the box says them.
   const says = finding.story.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean);
@@ -125,6 +125,7 @@ export default function InsightsFindingPage() {
           data={bars}
           series={[{ key: "then", name: t("chart.then"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]}
           horizontal
+          labels={(value, _key, row) => formatFact({ value, unit: row.unit as Fact["unit"], currency: row.currency as string | undefined })}
         />
       </ChartCard>
       <DataTable

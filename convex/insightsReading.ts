@@ -22,7 +22,9 @@ import { unpackColumn } from "./utils/packedColumns";
 import { factKey, factValidator, percentOf, shiftDay, spanDays, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
-import { pageChanges, type PageYear } from "./utils/insightTrack";
+import { CHANGE_DAYS, changeKindValidator, changeResultValidator, pageChangeResult, pageChanges, profileChangesOf, type Change, type PageYear } from "./utils/insightTrack";
+import { landingByPath } from "./insightsConversion";
+import { readListingActivity } from "./localListings";
 import { fastEnough, missingStructuredData } from "./utils/moneyPageChecks";
 import { NEAR, opportunitiesFrom, pagePlanFrom, planValidator, siteRateOf, type ConsoleSearch, type PageFigures, type RankedSearch } from "./utils/insightPlan";
 
@@ -642,22 +644,28 @@ export const monthlyInternal = internalQuery({
         enquiries.set(month, held);
       }
     }
-    const shares = new Map<string, { you: number; total: number; hosts: number }>();
+    const shares = new Map<string, { you: number; total: number; hosts: number; rivals: Array<{ host: string; value: number }> }>();
     const site = await loadSite(ctx, hold._id);
     let hosts = 0;
     if (site) {
       const rivals = await loadRivalHolds(ctx, site);
       const ids = [site.website._id, ...rivals.map((rival) => rival.websiteId)];
+      const names = new Map<Id<"websites">, string>();
+      for (const id of ids.slice(1)) {
+        const website = await ctx.db.get(id);
+        if (website) names.set(id, (website.displayHost ?? website.host).replace(/^https?:\/\//, "").replace(/^www\./, ""));
+      }
       hosts = ids.length;
       const from = shiftDay(site.today, -700);
       for (const [index, websiteId] of ids.entries()) {
         for (const point of await seriesFor(ctx, websiteId, site.place, from, site.today, "month")) {
           if (typeof point.estimatedTraffic !== "number") continue;
           const month = point.day.slice(0, 7);
-          const held = shares.get(month) ?? { you: 0, total: 0, hosts: 0 };
+          const held = shares.get(month) ?? { you: 0, total: 0, hosts: 0, rivals: [] };
           held.total += point.estimatedTraffic;
           held.hosts += 1;
           if (index === 0) held.you += point.estimatedTraffic;
+          else held.rivals.push({ host: names.get(websiteId) ?? "", value: point.estimatedTraffic });
           shares.set(month, held);
         }
       }
@@ -665,7 +673,7 @@ export const monthlyInternal = internalQuery({
     return {
       enquiriesByMonth: [...enquiries.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, held]) => ({ month, ...held })),
       // A month counts only when every website in the market has a figure for it.
-      shareByMonth: [...shares.entries()].filter(([, held]) => held.hosts === hosts && held.total > 0).sort(([a], [b]) => a.localeCompare(b)).map(([month, held]) => ({ month, you: held.you, total: held.total })),
+      shareByMonth: [...shares.entries()].filter(([, held]) => held.hosts === hosts && held.total > 0).sort(([a], [b]) => a.localeCompare(b)).map(([month, held]) => ({ month, you: held.you, total: held.total, rivals: held.rivals })),
     };
   },
 });
@@ -799,7 +807,7 @@ export const strategyInternal = internalQuery({
 export const pageChangesInternal = internalQuery({
   args: holdArgs,
   returns: v.object({
-    changes: v.array(v.object({ kind: v.union(v.literal("REPLACED"), v.literal("MERGED"), v.literal("REMOVED"), v.literal("ADDED")), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), before: v.number(), after: v.number(), result: v.union(v.literal("LOST"), v.literal("HELD"), v.literal("GREW")) })),
+    changes: v.array(v.object({ kind: changeKindValidator, from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), day: v.optional(v.string()), before: v.number(), after: v.number(), result: changeResultValidator })),
     notRemoved: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
@@ -818,5 +826,56 @@ export const pageChangesInternal = internalQuery({
     const live = new Set(now.filter((page) => page.visits > 0).map((page) => page.path));
     const removed = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id).eq("kind", "REMOVED")).take(200);
     return { changes: pageChanges(now, year), notRemoved: removed.map((change) => change.from).filter((from): from is string => from !== null && live.has(from)) };
+  },
+});
+
+/** Own Google profiles read for their changes at most. */
+const OWN_PROFILES_READ = 10;
+
+/**
+ * The page and profile changes for the change log (I25), each with what
+ * followed: the parts of money pages this week's check saw change, with the
+ * page's enquiries over the 30 days just gone; the page changes logged too
+ * early to judge, judged once Analytics' 30 days all fall after them; and
+ * the company's own Google profile changes over the last year, judged on
+ * the website's enquiries the 30 days either side, from the year of days.
+ */
+export const newChangesInternal = internalQuery({
+  args: { holdId: v.id("companyWebsites"), today: v.string(), seen: v.array(v.object({ kind: changeKindValidator, page: v.string() })) },
+  returns: v.array(v.object({
+    kind: changeKindValidator, from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), day: v.optional(v.string()), seenIn: v.optional(v.string()),
+    before: v.number(), after: v.number(), result: changeResultValidator,
+  })),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    if (!hold) return [];
+    const changes: Array<Change & { seenIn: string }> = [];
+    const landing = await landingByPath(ctx, hold._id, "30", "NOW");
+    const enquiriesOn = (page: string) => landing?.pages.get(page)?.enquiries ?? landing?.pages.get(page.replace(/\/+$/, ""))?.enquiries ?? 0;
+    for (const seen of args.seen) {
+      changes.push({ kind: seen.kind, from: seen.page, to: null, day: args.today, seenIn: "pageCheck", before: landing ? enquiriesOn(seen.page) : 0, ...pageChangeResult(0, null) });
+    }
+    // A page change is judged once Analytics' 30 days start after it.
+    if (landing) {
+      const held = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id)).take(300);
+      for (const change of held) {
+        if (change.seenIn !== "pageCheck" || change.result !== "TOO_EARLY" || !change.day || !change.from || landing.from <= change.day) continue;
+        changes.push({ kind: change.kind, from: change.from, to: null, day: change.day, seenIn: "pageCheck", before: change.before, ...pageChangeResult(change.before, enquiriesOn(change.from)) });
+      }
+    }
+    // The company's own Google profiles, against the website's enquiries a day.
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    const own = (await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(OWN_PROFILES_READ * 5)).filter((entry) => entry.role === "OWN").slice(0, OWN_PROFILES_READ);
+    if (connection?.property && own.length > 0) {
+      const counted = countedOf(connection);
+      const series = await readSlot(ctx, hold._id, slotKey("series", "365", "NOW", EVERY_DEVICE));
+      const days = (series?.rows ?? []).map((row) => ({ day: row.key, enquiries: conversionsOf(row, counted).conversions }));
+      const newest = days.reduce<string | null>((last, entry) => (last === null || entry.day > last ? entry.day : last), null);
+      for (const entry of own) {
+        const lines = await readListingActivity(ctx, entry.listingId);
+        for (const change of profileChangesOf(lines, days, newest, shiftDay(args.today, -365 + CHANGE_DAYS))) changes.push({ ...change, seenIn: "profile" });
+      }
+    }
+    return changes;
   },
 });

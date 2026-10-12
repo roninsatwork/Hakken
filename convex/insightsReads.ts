@@ -490,7 +490,7 @@ export const insightsTrackRecord = tenantQuery({
   returns: v.object({
     findings: v.array(v.object({ findingId: v.id("insightFindings"), host: v.string(), headline: v.string(), week: v.string(), checkOn: v.union(v.string(), v.null()), actedAt: v.union(v.number(), v.null()), outcome: v.union(v.string(), v.null()), outcomeNote: v.union(v.string(), v.null()) })),
     tally: v.object({ right: v.number(), wrong: v.number(), unclear: v.number() }),
-    changes: v.array(v.object({ changeId: v.id("insightChanges"), host: v.string(), kind: v.string(), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), seenIn: v.string(), before: v.number(), after: v.number(), result: v.string(), week: v.string() })),
+    changes: v.array(v.object({ changeId: v.id("insightChanges"), host: v.string(), kind: v.string(), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), seenIn: v.string(), before: v.number(), after: v.number(), result: v.string(), week: v.string(), day: v.union(v.string(), v.null()) })),
     learnings: v.array(v.object({ kind: v.string(), own: v.object({ lost: v.number(), held: v.number(), grew: v.number() }), across: v.union(v.null(), v.object({ companies: v.number(), lost: v.number(), held: v.number(), grew: v.number() })) })),
     /** Each drafted fix the person approved, with what its tagged link brought (I39). */
     fixes: v.array(v.object({ draftId: v.id("insightDrafts"), host: v.string(), title: v.string(), target: v.string(), approved: v.string(), visits: v.number(), enquiries: v.number() })),
@@ -549,7 +549,7 @@ export const insightsTrackRecord = tenantQuery({
       fixes: fixes.sort((a, b) => b.approved.localeCompare(a.approved)),
       findings: findings.sort((a, b) => (a.checkOn ?? "9").localeCompare(b.checkOn ?? "9")),
       tally: tallies.reduce((sum, row) => ({ right: sum.right + row.right, wrong: sum.wrong + row.wrong, unclear: sum.unclear + row.unclear }), { right: 0, wrong: 0, unclear: 0 }),
-      changes: changes.map((change) => ({ changeId: change._id, host: hosts.get(change.companyWebsiteId) ?? "", kind: change.kind, from: change.from, to: change.to, seenIn: change.seenIn, before: change.before, after: change.after, result: change.result, week: change.week })),
+      changes: changes.map((change) => ({ changeId: change._id, host: hosts.get(change.companyWebsiteId) ?? "", kind: change.kind, from: change.from, to: change.to, seenIn: change.seenIn, before: change.before, after: change.after, result: change.result, week: change.week, day: change.day ?? null })),
       learnings,
     };
   },

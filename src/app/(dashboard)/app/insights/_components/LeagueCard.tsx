@@ -45,6 +45,7 @@ export function LeagueCard({ league, host, href, title }: { league: LeagueData; 
           horizontal
           highlight={{ colour: CHART_SERIES_ORANGE, rows: (row) => row.you === true }}
           formatValue={(value) => formatNumber(value)}
+          labels={(value) => formatNumber(value)}
         />
         {href ? (
           <Link href={href} className="inline-flex items-center gap-1 self-start text-[12.5px] text-secondary hover:text-info">
@@ -54,35 +55,6 @@ export function LeagueCard({ league, host, href, title }: { league: LeagueData; 
         ) : null}
       </div>
       <span className="sr-only">{league.place ? tPlace("ofTotal", { place: league.place, total: league.rows.length }) : ""}</span>
-    </ChartCard>
-  );
-}
-
-/** Where you rank in every league, first to last: each league a bar as long as the places you're ahead of last. */
-export function RankStrip({ leagues, host, title, hint }: { leagues: Leagues["leagues"]; host: string; title?: string; hint?: string }) {
-  const t = usePlatformTranslations("insights.leagues");
-  const tPlace = usePlatformTranslations("insights.place");
-  const tMenu = usePlatformTranslations("insights.menu.pages");
-  const ranked = leagues.filter((league) => league.place !== null);
-  const data = ranked.map((league) => ({
-    label: tMenu(league.id),
-    value: league.rows.length - (league.place ?? league.rows.length) + 1,
-    place: league.place ?? 0,
-    total: league.rows.length,
-  }));
-  const csv = () => toCsv([t("league"), t("place"), t("of")], ranked.map((league) => [tMenu(league.id), league.place, league.rows.length]));
-  return (
-    <ChartCard title={title ?? t("everyLeague.title")} hint={hint ?? t("everyLeague.hint")} exportName={`${host}-every-league`} csv={csv}>
-      <SiteBarChart
-        data={data}
-        series={[{ key: "value", name: t("everyLeague.figure"), colour: CHART_SERIES_ORANGE }]}
-        horizontal
-        formatValue={(_value, entry) => {
-          const row = (entry as { payload?: { place?: number; total?: number } }).payload;
-          return row?.place ? tPlace("ofTotal", { place: row.place, total: row.total ?? 0 }) : "";
-        }}
-        formatScale={() => ""}
-      />
     </ChartCard>
   );
 }

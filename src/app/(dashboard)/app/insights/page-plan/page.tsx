@@ -65,7 +65,7 @@ export default function InsightsPagePlanPage() {
       {header}
       <HakkenSees says={says} steps={steps} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-page-plan`} csv={csv} enoughData={bars.length > 0}>
-        <SiteBarChart data={bars} series={[{ key: "before", name: t("chart.before"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal />
+        <SiteBarChart data={bars} series={[{ key: "before", name: t("chart.before"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>
       <DataTable
         rows={pages.pageRows}

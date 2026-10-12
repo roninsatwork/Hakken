@@ -69,6 +69,15 @@ export function formatMonthName(month: string): string {
   return new Date(`${month}-01T00:00:00Z`).toLocaleDateString(siteLocale(), { month: "short", timeZone: "UTC" });
 }
 
+/**
+ * `2024-12` as "Dec 24": a chart's month along its axis, short enough that
+ * two years of months fit a screen, the year on each so none is lost when a
+ * narrow screen leaves some out (Anthony, 2026-10-12).
+ */
+export function formatShortMonth(month: string): string {
+  return new Date(`${month}-01T00:00:00Z`).toLocaleDateString(siteLocale(), { month: "short", year: "2-digit", timeZone: "UTC" });
+}
+
 /** `2026-09` as "September 2026". */
 export function formatMonth(month: string): string {
   return new Date(`${month}-01T00:00:00Z`).toLocaleDateString(siteLocale(), { month: "long", year: "numeric", timeZone: "UTC" });

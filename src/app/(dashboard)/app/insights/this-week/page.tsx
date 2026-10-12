@@ -66,6 +66,7 @@ export default function InsightsThisWeekPage() {
           data={bars}
           series={[{ key: "year", name: t("per.year"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("per.now"), colour: CHART_SERIES_ORANGE }]}
           horizontal
+          labels={(value) => formatNumber(value)}
         />
       </ChartCard>
       <DataTable {...table} footer={table.footer} />

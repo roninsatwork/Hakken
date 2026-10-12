@@ -11,6 +11,7 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertSeoInterval } from "./seoScheduleService";
 import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
+import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
@@ -479,13 +480,30 @@ export const scoreFindings = internalMutation({
 });
 
 const changeValidator = v.object({
-  kind: v.union(v.literal("REPLACED"), v.literal("MERGED"), v.literal("REMOVED"), v.literal("ADDED")),
+  kind: changeKindValidator,
   from: v.union(v.string(), v.null()),
   to: v.union(v.string(), v.null()),
+  day: v.optional(v.string()),
+  /** Where it was seen, Analytics when not said. */
+  seenIn: v.optional(v.string()),
   before: v.number(),
   after: v.number(),
-  result: v.union(v.literal("LOST"), v.literal("HELD"), v.literal("GREW")),
+  result: changeResultValidator,
 });
+
+/** A change's result counted into what its kind has taught, across every company, from totals only (I30). */
+async function learnFrom(ctx: MutationCtx, kind: string, companyId: Id<"companies">, result: string, now: number): Promise<void> {
+  const learning = await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", kind)).first();
+  const count = { lost: result === "LOST" ? 1 : 0, held: result === "HELD" ? 1 : 0, grew: result === "GREW" ? 1 : 0 };
+  if (learning) {
+    await ctx.db.patch(learning._id, {
+      companies: learning.companies.includes(companyId) ? learning.companies : [...learning.companies, companyId],
+      lost: learning.lost + count.lost, held: learning.held + count.held, grew: learning.grew + count.grew, updatedAt: now,
+    });
+  } else {
+    await ctx.db.insert("insightLearnings", { kind, companies: [companyId], ...count, updatedAt: now });
+  }
+}
 
 /**
  * The changes seen this run, each logged once (I25), and the learning each
@@ -509,24 +527,19 @@ export const saveChanges = internalMutation({
         const removed = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "REMOVED").eq("from", change.from)).first();
         if (removed) await ctx.db.patch(removed._id, { kind: change.kind, to: change.to, before: change.before, after: change.after, result: change.result });
       }
-      const held = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", change.kind).eq("from", change.from)).first();
+      // A page or profile change is one change a day: a price put on, taken off and put on again is three.
+      const same = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", change.kind).eq("from", change.from)).take(20);
+      const held = same.find((row) => (row.day ?? null) === (change.day ?? null));
       if (held) {
-        // What followed, as it stands now.
+        // What followed, as it stands now; a change too early to judge teaches once its days are in.
         if (held.after !== change.after || held.result !== change.result || held.to !== change.to) await ctx.db.patch(held._id, { to: change.to, after: change.after, result: change.result });
+        if (held.result === "TOO_EARLY" && change.result !== "TOO_EARLY") await learnFrom(ctx, change.kind, args.companyId, change.result, now);
         continue;
       }
-      await ctx.db.insert("insightChanges", { ...change, companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, seenIn: "analytics", createdAt: now });
+      const { seenIn, ...fields } = change;
+      await ctx.db.insert("insightChanges", { ...fields, companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, seenIn: seenIn ?? "analytics", createdAt: now });
       added += 1;
-      const learning = await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", change.kind)).first();
-      const count = { lost: change.result === "LOST" ? 1 : 0, held: change.result === "HELD" ? 1 : 0, grew: change.result === "GREW" ? 1 : 0 };
-      if (learning) {
-        await ctx.db.patch(learning._id, {
-          companies: learning.companies.includes(args.companyId) ? learning.companies : [...learning.companies, args.companyId],
-          lost: learning.lost + count.lost, held: learning.held + count.held, grew: learning.grew + count.grew, updatedAt: now,
-        });
-      } else {
-        await ctx.db.insert("insightLearnings", { kind: change.kind, companies: [args.companyId], ...count, updatedAt: now });
-      }
+      if (change.result !== "TOO_EARLY") await learnFrom(ctx, change.kind, args.companyId, change.result, now);
     }
     const expired = await ctx.db.query("insightChanges").withIndex("by_company_created", (q) => q.eq("companyId", args.companyId).lt("createdAt", now - KEPT_MS)).take(20);
     for (const change of expired) await ctx.db.delete(change._id);
@@ -545,11 +558,15 @@ export const learningsFor = internalQuery({
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const changes = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", args.holdId)).take(100);
-    const lines = changes.slice(0, 10).map((change) => `${change.kind.toLowerCase()} ${change.from ?? ""}${change.to ? ` into ${change.to}` : ""}: ${change.before} enquiries a year, then ${change.after} (${change.result.toLowerCase()})`);
-    for (const kind of ["REPLACED", "MERGED", "REMOVED"] as const) {
+    const named = (kind: string) => kind.toLowerCase().replace(/_/g, " ");
+    const lines = changes.filter((change) => change.result !== "TOO_EARLY").slice(0, 10).map((change) => (change.day
+      // A page or profile change, judged on the 30 days either side of its day.
+      ? `${named(change.kind)}${change.from ? ` (${change.from})` : ""} on ${change.day}: ${change.before} enquiries in the 30 days before, then ${change.after} in the 30 after (${change.result.toLowerCase()})`
+      : `${named(change.kind)} ${change.from ?? ""}${change.to ? ` into ${change.to}` : ""}: ${change.before} enquiries a year, then ${change.after} (${change.result.toLowerCase()})`));
+    for (const kind of new Set(["REPLACED", "MERGED", "REMOVED", ...changes.map((change) => change.kind)])) {
       const learning = await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", kind)).first();
       if (learning && learning.companies.length >= 5) {
-        lines.push(`across ${learning.companies.length} businesses, ${kind.toLowerCase()} pages kept their enquiries ${learning.held + learning.grew} times of ${learning.lost + learning.held + learning.grew}`);
+        lines.push(`across ${learning.companies.length} businesses, a change of the kind "${named(kind)}" kept their enquiries ${learning.held + learning.grew} times of ${learning.lost + learning.held + learning.grew}`);
       }
     }
     return lines;

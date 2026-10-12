@@ -8,6 +8,7 @@ import { planValidator } from "./utils/insightPlan";
 import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./utils/insightDrafts";
 import { panelQuestionValidator } from "./utils/insightPanel";
 import { conversionValidator } from "./utils/insightConversion";
+import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -103,21 +104,26 @@ export const insightsTables = {
 
   /**
    * The change log (I25): each change Hakken sees on a website — a page
-   * replaced or removed, read from its own Analytics — with what followed,
-   * once a change, kept with its findings' two years.
+   * replaced or removed, read from its own Analytics; a money page's top,
+   * price, proof or form changed, seen by its weekly check; its own Google
+   * profile changed — with what followed, once a change, kept with its
+   * findings' two years.
    */
   insightChanges: defineTable({
     companyId: v.id("companies"),
     companyWebsiteId: v.id("companyWebsites"),
     /** The week it was first seen in. */
     week: v.string(),
-    kind: v.union(v.literal("REPLACED"), v.literal("MERGED"), v.literal("REMOVED"), v.literal("ADDED")),
+    kind: changeKindValidator,
     from: v.union(v.string(), v.null()),
     to: v.union(v.string(), v.null()),
+    /** The day it happened, for a page or profile change. */
+    day: v.optional(v.string()),
+    /** Where it was seen: "analytics", "pageCheck" or "profile". */
     seenIn: v.string(),
     before: v.number(),
     after: v.number(),
-    result: v.union(v.literal("LOST"), v.literal("HELD"), v.literal("GREW")),
+    result: changeResultValidator,
     createdAt: v.number(),
   })
     .index("by_hold_kind_from", ["companyWebsiteId", "kind", "from"])

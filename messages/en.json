@@ -17948,11 +17948,6 @@
       "league": "League",
       "of": "Of",
       "seeLeague": "See the league",
-      "everyLeague": {
-        "title": "Where you rank in every league",
-        "hint": "Each league, the longer the bar the higher you are: first is the whole way.",
-        "figure": "Your place"
-      },
       "cardTitle": "{league} league"
     },
     "leaderboards": {
@@ -18185,16 +18180,13 @@
       "place": "Your place in your market",
       "placeMoved": "{count, plural, one {One place} other {# places}} in a year",
       "placeDetail": "for visitors from Google",
-      "rank": {
-        "title": "Where you rank against your {rivals, plural, one {rival} other {# rivals}}",
-        "hint": "Each league: the longer the bar, the higher you are."
-      },
       "share": {
         "title": "Your share of your market's Google visitors",
         "hint": "Your estimated visitors from Google as a share of yours and your rivals', month by month.",
         "month": "Month",
         "figure": "Your share",
-        "empty": "This fills in once {platformName} holds a few months of your market."
+        "empty": "This fills in once {platformName} holds a few months of your market.",
+        "hintRivals": "Each month's Google visitors shared between you and your rivals: you in orange at the foot of each bar, your share written on it. From estimated visitors."
       },
       "per": {
         "title": "Visits for each enquiry, month by month",
@@ -18506,25 +18498,61 @@
           "GREW": "Grew",
           "HELD": "Held",
           "LOST": "Lost",
-          "WAITING": "No visits yet"
+          "WAITING": "No visits yet",
+          "TOO_EARLY": "Too early"
         },
         "kinds": {
           "REPLACED": "Replaced {from} with {to}",
           "REMOVED": "Removed {from}",
           "ADDED": "Added {to}",
           "MERGED": "Merged {from} into {to}",
-          "FIX": "Approved: {from} ({to})"
+          "FIX": "Approved: {from} ({to})",
+          "TOP_REWRITTEN": "Rewrote the top of {from}",
+          "PRICE_ADDED": "Added a price to {from}",
+          "PRICE_REMOVED": "Took the price off {from}",
+          "PROOF_ADDED": "Added proof to {from}: results, reviews or clients",
+          "PROOF_REMOVED": "Took the proof off {from}",
+          "FORM_ADDED": "Added a form to {from}",
+          "FORM_REMOVED": "Took the form off {from}",
+          "ASK_MOVED_UP": "Brought the first way to enquire higher up {from}",
+          "STRUCTURED_DATA_ADDED": "Added the details Google reads to {from}",
+          "PROFILE_CATEGORY_ADDED": "Google profile: added the category {from}",
+          "PROFILE_CATEGORY_REMOVED": "Google profile: took off the category {from}",
+          "PROFILE_HOURS_CHANGED": "Google profile: changed the opening hours",
+          "PROFILE_NAME_CHANGED": "Google profile: renamed {from}",
+          "PROFILE_WEBSITE_CHANGED": "Google profile: its website changed to {from}"
         },
         "kindNames": {
           "REPLACED": "replacing a page",
           "REMOVED": "removing a page",
           "ADDED": "adding a page",
           "MERGED": "merging pages",
-          "FIX": "approving a drafted fix"
+          "FIX": "approving a drafted fix",
+          "TOP_REWRITTEN": "rewriting the top of a page",
+          "PRICE_ADDED": "adding a price",
+          "PRICE_REMOVED": "taking a price off",
+          "PROOF_ADDED": "adding proof",
+          "PROOF_REMOVED": "taking proof off",
+          "FORM_ADDED": "adding a form",
+          "FORM_REMOVED": "taking a form off",
+          "ASK_MOVED_UP": "bringing the first way to enquire higher up",
+          "STRUCTURED_DATA_ADDED": "adding the details Google reads",
+          "PROFILE_CATEGORY_ADDED": "adding a Google profile category",
+          "PROFILE_CATEGORY_REMOVED": "taking off a Google profile category",
+          "PROFILE_HOURS_CHANGED": "changing opening hours",
+          "PROFILE_NAME_CHANGED": "renaming the Google profile",
+          "PROFILE_WEBSITE_CHANGED": "changing the Google profile's website"
         },
         "empty": "No changes seen yet: {platformName} logs each change it sees in your figures, with what followed.",
         "campaigns": "Analytics' campaigns",
-        "fixFollowed": "{visits, plural, one {# visit} other {# visits}} and {enquiries, plural, one {# enquiry} other {# enquiries}} from its link"
+        "fixFollowed": "{visits, plural, one {# visit} other {# visits}} and {enquiries, plural, one {# enquiry} other {# enquiries}} from its link",
+        "pageCheck": "Weekly page check",
+        "profile": "Google Business Profile",
+        "when": "When",
+        "pageFollowed": "Enquiries from the page: {before} in the 30 days before, then {after} in the 30 after",
+        "pageWaiting": "Enquiries from the page: {before} in the 30 days before; the 30 after aren't in yet",
+        "siteFollowed": "Website enquiries: {before} in the 30 days before, then {after} in the 30 after",
+        "siteWaiting": "Website enquiries: {before} in the 30 days before; the 30 after aren't in yet"
       },
       "learnings": {
         "intro": "What your changes teach: {learnings}",

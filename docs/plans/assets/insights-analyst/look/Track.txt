@@ -9,7 +9,7 @@ figures
   figure: Proved right
   figure: Didn't hold
 search: Search changes...
-table: Change | Seen in | What followed | Result
+table: Change | When | Seen in | What followed | Result
   table-bar: The change log
     download: Download CSV
   table-footer

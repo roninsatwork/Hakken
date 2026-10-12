@@ -25,7 +25,7 @@ export const EXPERIMENT_DAYS = 56;
 type Reader = { db: QueryCtx["db"] };
 
 /** A page's visitors (people, over 12 months; visits over 30 days, for experiments) and enquiries in one of Analytics' landing lists, by path. */
-async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "90" | "365", which: "NOW" | "YEAR") {
+export async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "90" | "365", which: "NOW" | "YEAR") {
   const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first();
   if (!connection?.property) return null;
   const counted = countedOf(connection);

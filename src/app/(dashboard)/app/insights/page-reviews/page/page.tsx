@@ -108,7 +108,7 @@ export default function InsightsPageReviewPage() {
         <Figure label={t("figures.clicks")} value={formatNumber(service?.service.clicks ?? null)} detail={<span className="text-secondary">{t("figures.clicksDetail")}</span>} />
       </FigureRow>
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-visitors-per-enquiry`} csv={csv} enoughData={bars.some((bar) => bar.value !== null)}>
-        <SiteBarChart data={bars.map((bar) => ({ label: bar.label, value: bar.value ?? 0 }))} series={[{ key: "value", name: t("chart.series"), colour: CHART_SERIES_ORANGE }]} />
+        <SiteBarChart data={bars.map((bar) => ({ label: bar.label, value: bar.value ?? 0 }))} series={[{ key: "value", name: t("chart.series"), colour: CHART_SERIES_ORANGE }]} labels={(value) => (value > 0 ? formatNumber(value) : null)} />
       </ChartCard>
       <DataTable
         rows={searches.pageRows}

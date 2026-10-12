@@ -72,7 +72,7 @@ export default function InsightsFunnelPage() {
       {header}
       <HakkenSees says={says} steps={[{ words: t("do"), link: t("seeReviews"), href: href("page-reviews") }]} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-funnel`} csv={csv} enoughData={bars.length > 0}>
-        <SiteBarChart data={bars} series={[{ key: "year", name: t("chart.year"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal />
+        <SiteBarChart data={bars} series={[{ key: "year", name: t("chart.year"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>
       <DataTable
         rows={steps.pageRows}

@@ -1,4 +1,4 @@
-import { formatShortDay } from "./siteFormat";
+import { formatMonth, formatShortDay, formatShortMonth } from "./siteFormat";
 
 /**
  * A row of a Sites chart that runs over dates: its `day` (the first day of
@@ -31,6 +31,18 @@ export function datedRow(
     ...(point.readout ? { readout: point.readout } : {}),
     ...(point.part ? { part: true } : {}),
   };
+}
+
+/**
+ * A month's row, `2024-12`, for a chart of calendar months: "Dec 24" along
+ * the axis, "December 2024" in the readout, dated so the chart knows it runs
+ * over dates; its `month` lets a bar chart word its axis to the room each
+ * bar has (`MonthTick`).
+ */
+export function monthRow(month: string, values: Record<string, unknown>): DatedRow {
+  const [year, number] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10);
+  return { ...datedRow({ day: `${month}-01`, lastDay, readout: formatMonth(month) }, values, formatShortMonth(month)), month };
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

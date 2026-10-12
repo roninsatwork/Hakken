@@ -142,3 +142,27 @@ describe("a finding's words", () => {
     });
   });
 });
+
+describe("the change log's page changes (I25)", () => {
+  test("a money page's week-to-week change is logged too early, then teaches once, when judged", async () => {
+    const t = harness();
+    const ids = await owned(t);
+    const facts = { title: "Services", headline: "We build websites", words: 800, price: false, proof: true, form: true, firstAsk: 0.3, opening: "We build" };
+    const row = (price: boolean) => ({ page: "/services/", kind: "SERVICE", clicks: 40, indexed: null, speed: null, structured: ["Service"], facts: { ...facts, price } });
+    expect(await t.mutation(internal.moneyPageChecks.saveChecks, { holdId: ids.siteId, rows: [row(false)] })).toEqual([]);
+    const seen = await t.mutation(internal.moneyPageChecks.saveChecks, { holdId: ids.siteId, rows: [row(true)] });
+    expect(seen).toEqual([{ kind: "PRICE_ADDED", page: "/services/" }]);
+
+    const change = { kind: "PRICE_ADDED" as const, from: "/services/", to: null, day: "2026-09-01", seenIn: "pageCheck", before: 4 };
+    const save = (after: number, result: "TOO_EARLY" | "GREW") => t.mutation(internal.insightsTeam.saveChanges, { holdId: ids.siteId, companyId: ids.companyId, week: "2026-08-31", changes: [{ ...change, after, result }] });
+    const learned = () => t.run(async (ctx) => await ctx.db.query("insightLearnings").withIndex("by_kind", (q) => q.eq("kind", "PRICE_ADDED")).first());
+    expect(await save(0, "TOO_EARLY")).toBe(1);
+    expect(await learned()).toBeNull();
+    expect(await save(9, "GREW")).toBe(0);
+    expect(await save(9, "GREW")).toBe(0);
+    expect(await learned()).toMatchObject({ grew: 1, held: 0, lost: 0 });
+    const logged = await t.run(async (ctx) => await ctx.db.query("insightChanges").collect());
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toMatchObject({ seenIn: "pageCheck", day: "2026-09-01", before: 4, after: 9, result: "GREW" });
+  });
+});
