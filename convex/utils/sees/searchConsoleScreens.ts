@@ -145,7 +145,8 @@ export function competingSees(list: ListFigures): Seen {
   if (list.rows === 0) return seen([{ code: "noneCompeting" }]);
   return seen(
     [{ code: "competing", a: list.rows, b: list.pagesInvolved ?? 0 }, { code: "splitsClicks" }],
-    [{ code: "pickOne", link: "seePages", to: toPage("pages") }],
+    // Which page owns each keyword is Keyword cannibalisation's specialist's to say (insights-one-voice-plan.md phase 5): one voice.
+    [{ code: "pickOne", link: "seeCannibalisation", to: { url: "/app/insights/cannibalisation" } }],
   );
 }
 

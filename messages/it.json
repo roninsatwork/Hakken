@@ -15130,6 +15130,7 @@
         "seeDemand": "Vedi Domanda persa",
         "connect": "Collegalo",
         "seeStrategy": "Vedi la strategia",
+        "seeCannibalisation": "Vedi la cannibalizzazione delle parole chiave",
         "openSearchConsole": "Apri Search Console"
       },
       "keywords": {
@@ -15184,7 +15185,7 @@
         "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
         "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
         "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
-        "pickOne": "Scegli una pagina per ogni parola chiave e collega le altre a quella."
+        "pickOne": "Lo specialista di cannibalizzazione delle parole chiave di Hakken dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
       "estimates": {
         "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",

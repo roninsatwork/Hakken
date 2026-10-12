@@ -144,6 +144,15 @@ below are answered. Nothing is pushed.
   summary and the cannibalisation screens. The cannibalisation screens wait
   on the parked question of the specialist alone writing the page.
 
+- **Phase 5, built 2026-10-12 (night).** Ask Hakken's Insights read holds
+  everything saved: the week's findings and the earlier ones still open
+  (published, not yet checked), Page decisions, Strategy's calls, each
+  screen's box and the cannibalisation groups. Its tool says so. Search
+  Console's pages-competing box no longer says "choose one page … and link
+  the others to it". It now says that Hakken's Keyword cannibalisation
+  specialist gives each keyword one page, and links there, so both screens
+  and Ask Hakken say the same.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

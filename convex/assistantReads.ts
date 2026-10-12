@@ -85,6 +85,9 @@ export const adviceInternal = internalQuery({
 
 /** Findings Ask Hakken reads at most: the week's, and the newest unresolved before it. */
 const INSIGHT_FINDINGS_READ = 60;
+/** Earlier weeks' findings read, and kept at most: the newest still open. */
+const EARLIER_READ = 120;
+const EARLIER_KEPT = 20;
 /** Groups of competing pages Ask Hakken reads at most, the biggest first. */
 const COMPETING_READ = 20;
 /** Parts of Page decisions read: every part kept (`MOST_PARTS` in insightDecisions.ts). */
@@ -108,6 +111,10 @@ export const insightsInternal = internalQuery({
     const findings = (await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", holdId).eq("week", week.week)).take(INSIGHT_FINDINGS_READ))
       .filter((finding) => finding.status === "PUBLISHED")
       .sort((a, b) => a.rank - b.rank);
+    // Earlier weeks' findings still open — published, not yet checked — as the Findings screens still show them (phase 5).
+    const earlier = (await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", holdId).lt("week", week.week)).order("desc").take(EARLIER_READ))
+      .filter((finding) => finding.status === "PUBLISHED" && !finding.outcome)
+      .slice(0, EARLIER_KEPT);
     const report = await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", holdId).eq("kind", "MONTHLY")).order("desc").first().catch(() => null);
     return {
       ok: true,
@@ -122,6 +129,11 @@ export const insightsInternal = internalQuery({
         how_we_will_know: finding.howWeKnow,
         check_on: finding.checkOn ?? null,
         sure: finding.sure,
+        link: `/app/insights/findings/${finding._id}`,
+      })),
+      earlierStillOpen: earlier.map((finding) => ({
+        week: finding.week, headline: finding.headline, do_first: finding.action, check_on: finding.checkOn ?? null,
+        ...(finding.actedAt ? { acted_on: new Date(finding.actedAt).toISOString().slice(0, 10) } : {}),
         link: `/app/insights/findings/${finding._id}`,
       })),
       ...(report?.body ? { month: { title: report.title, headline: report.body.headline, link: `/app/insights/reports/${report._id}` } } : {}),

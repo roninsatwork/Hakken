@@ -15130,6 +15130,7 @@
         "seeDemand": "See Missed demand",
         "connect": "Connect it",
         "seeStrategy": "See the strategy",
+        "seeCannibalisation": "See Keyword cannibalisation",
         "openSearchConsole": "Open Search Console"
       },
       "keywords": {
@@ -15184,7 +15185,7 @@
         "noneCompeting": "No keyword has two of your pages competing for it.",
         "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
         "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
-        "pickOne": "Choose one page for each keyword and link the others to it."
+        "pickOne": "Hakken's Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
       "estimates": {
         "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
