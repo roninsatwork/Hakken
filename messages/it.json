@@ -18537,7 +18537,8 @@
       "sees": {
         "grow": "{count, plural, =0 {Nessun servizio sta ancora crescendo nelle richieste.} one {Un servizio da far crescere: {services}.} other {# servizi da far crescere: {services}.}}",
         "change": "{count, plural, one {Uno da cambiare: {services}.} other {# da cambiare: {services}.}}",
-        "noChange": "Nessuno sta perdendo richieste rapidamente."
+        "noChange": "Nessuno sta perdendo richieste rapidamente.",
+        "called": "{agent, plural, =0 {Questa settimana ha deciso ogni scelta la regola di Hakken: l'Head of Strategy non ne ha ancora fatta nessuna.} one {L'Head of Strategy ha fatto una di queste scelte, con la sua ragione accanto; la regola di Hakken le altre.} other {L'Head of Strategy ha fatto # di queste scelte, con la sua ragione accanto a ognuna; la regola di Hakken le altre.}}"
       },
       "chart": {
         "title": "Richieste per servizio",
@@ -18576,7 +18577,8 @@
           "BUYERS_WORDS": "Le sue richieste si sono dimezzate mentre Google lo mostra ancora: i clienti ora cercano con altre parole.",
           "YOUR_CALL": "È sempre stato piccolo ed è calato: decidi se vale la pena farlo crescere.",
           "READERS": "Le persone le leggono, ma raramente fanno una richiesta."
-        }
+        },
+        "called": "L'Head of Strategy ha fatto questa scelta il {day}: {why}"
       },
       "figures": {
         "enquiries": "Richieste in un anno",

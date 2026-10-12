@@ -13,6 +13,7 @@ import { COMPETING_ROLE, competingForRun, keepCompeting } from "./insightCompeti
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { briefFor } from "./utils/insightBriefs";
 import { COMPETING_RULE } from "./utils/insightCompeting";
+import { applyServiceCalls, carryServices, serviceReading, servicesToCall, type Service } from "./utils/insightStrategy";
 import { candidatesFor, type Candidate } from "./utils/insightChecks";
 import { editFinding, type DraftFinding } from "./utils/insightEditor";
 import { factsByKey, fillFacts, formatFact, shiftDay, type Fact } from "./utils/insightFacts";
@@ -309,16 +310,29 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   drafts.push(...competing.drafts);
   reading.facts.push(...competing.facts);
 
-  // 4. The Head of Strategy connects them, ranks them and writes the week's verdict (§2.4).
+  // 4. The Head of Strategy connects them, ranks them and writes the week's verdict (§2.4) — and calls each service
+  // (insights-one-voice-plan.md phase 3): the rule's call first, its own last week's kept where the rule calls a service the same.
+  const services = (await ctx.runQuery(internal.insightsReading.strategyInternal, { holdId: args.holdId }).catch(() => []))
+    .map((service) => ({ ...service, signature: serviceReading(service), decidedBy: "RULE" as const }));
+  carryServices(services, await ctx.runQuery(internal.insightsRunSteps.lastServices, { holdId: args.holdId, before: weekOf(now) }).catch(() => []));
+  const toCall = servicesToCall(services);
   let verdict = "";
   let written: unknown = null;
   let ordered: Draft[] = [...drafts].sort((a, b) => b.stake - a.stake);
-  if (drafts.length > 0) {
+  if (drafts.length > 0 || toCall.length > 0) {
     try {
-      const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead);
+      const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead, toCall);
       ordered = strategy.ordered;
       verdict = strategy.verdict;
       written = strategy.summary;
+      const called = applyServiceCalls(toCall, strategy.services, weekOf(now));
+      if (toCall.length > 0) {
+        await ctx.runMutation(internal.roleRuns.logRunLine, {
+          runId: args.runId, companyId: args.companyId, heading: "Strategy's calls",
+          detail: `The Head of Strategy called ${called.kept + called.changed} of ${toCall.length} services, changing ${called.changed} of the rule's calls${called.refused > 0 ? `; ${called.refused} of its answers named no service it was given, no call a service can have, or no reason, so the rule's call stands` : ""}.`,
+          failed: false,
+        });
+      }
     } catch (error) {
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Head of Strategy", detail: failureSummary(error), failed: true });
     }
@@ -362,7 +376,6 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   // People each month, Google's count of each month whole, beside the enquiries counted from the days.
   const people = await peopleByMonth(ctx, args.holdId).catch(() => new Map<string, number>());
   const monthly = { ...read, enquiriesByMonth: read.enquiriesByMonth.map((month) => (people.has(month.month) ? { ...month, people: people.get(month.month)! } : month)) };
-  const services = await ctx.runQuery(internal.insightsReading.strategyInternal, { holdId: args.holdId }).catch(() => []);
   // The Head of Strategy's paragraphs, each kept only when every figure it names is held and none is typed;
   // a list or one block of text alike, and the run's log says what was kept and why any wasn't.
   const offered = (typeof written === "string" ? written.split(/\n\s*\n|\n/) : Array.isArray(written) ? written : []).filter((text): text is string => typeof text === "string" && text.trim().length > 0);
@@ -572,7 +585,8 @@ async function askStrategy(
   drafts: readonly Draft[],
   all: readonly Fact[],
   lead: TeamMember | undefined,
-): Promise<{ ordered: Draft[]; verdict: string; summary: unknown }> {
+  services: readonly Service[],
+): Promise<{ ordered: Draft[]; verdict: string; summary: unknown; services: unknown }> {
   const system = [rulesFor(args), briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), COMPETING_RULE, FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
   const used = new Set(drafts.flatMap((draft) => [...draft.comparisons.flat(), ...[draft.headline, draft.story].flatMap((text) => [...text.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1]))]));
   // The figures the Executive summary's boxes show — the last 90 days against the same 90 days a year ago — so the
@@ -586,14 +600,20 @@ async function askStrategy(
   const prompt = JSON.stringify({
     website: args.host,
     findings: drafts.map((draft, number) => ({ number, specialist: draft.specialist, pattern: draft.pattern, atStake: Math.round(draft.stake * 10) / 10, headline: draft.headline, story: draft.story, action: draft.action, sure: draft.sure })),
+    // The services to call, each with its figures and the rule's call (insights-one-voice-plan.md phase 3).
+    services: services.map((service) => ({
+      page: service.page, title: service.title, enquiries_12_months: service.enquiries, enquiries_year_before: service.enquiriesBefore,
+      google_clicks: service.clicks, google_clicks_year_before: service.clicksBefore, rule_call: service.verdict,
+    })),
     // And why the enquiries moved, the Analyst's tests (phase 8), so the verdict can say what caused the move.
     facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key) || fact.key.startsWith("why."))),
   });
-  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown } | null;
+  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown; services?: unknown } | null;
   const order = Array.isArray(answer?.order) ? answer.order.filter((number): number is number => Number.isInteger(number) && number >= 0 && number < drafts.length) : [];
   const joined = (Array.isArray(answer?.joined) ? answer.joined : []).flatMap((raw) => {
     const listed: unknown[] = Array.isArray((raw as { from?: unknown })?.from) ? (raw as { from: unknown[] }).from : [];
-    const from = listed.filter((number): number is number => typeof number === "number" && Number.isInteger(number) && number >= 0 && number < drafts.length);
+    // A Keyword cannibalisation finding is never joined: it stands as its specialist wrote it, with the group's own decisions (phase 6).
+    const from = listed.filter((number): number is number => typeof number === "number" && Number.isInteger(number) && number >= 0 && number < drafts.length && drafts[number].pattern !== "COMPETING_PAGES");
     if (from.length < 2) return [];
     const draft = draftFrom(raw, "strategy", "joinedStory", Math.max(...from.map((number) => drafts[number].stake)));
     // A joined story is the pattern of the finding most at stake it joins.
@@ -612,5 +632,5 @@ async function askStrategy(
     if (story && !ordered.includes(story)) ordered.push(story);
     if (!replaced.has(number) && (order.length === 0 || order.includes(number))) ordered.push(drafts[number]);
   }
-  return { ordered, verdict: words(answer?.verdict, 300), summary: answer?.summary };
+  return { ordered, verdict: words(answer?.verdict, 300), summary: answer?.summary, services: answer?.services };
 }

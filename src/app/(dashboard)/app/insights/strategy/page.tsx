@@ -65,6 +65,8 @@ export default function InsightsStrategyPage() {
   const says = [
     t("sees.grow", { count: grow.length, services: grow.slice(0, 3).map(name).join(", ") }),
     change.length > 0 ? t("sees.change", { count: change.length, services: change.slice(0, 3).map(name).join(", ") }) : t("sees.noChange"),
+    // Who made the calls (insights-one-voice-plan.md phase 3): the Head of Strategy, or the rule.
+    t("sees.called", { agent: data.services.filter((service) => service.decidedBy === "AGENT").length }),
   ];
   const steps = [...grow.slice(0, 2), ...change.slice(0, 1)].map((service) => ({ words: t(`do.${service.verdict}`, { service: name(service) }), link: t("seeService"), href: serviceHref(service) }));
   const bars = data.services.filter((service) => service.kind !== "GUIDES").slice(0, 8).map((service) => ({ label: name(service), before: service.enquiriesBefore ?? 0, now: service.enquiries }));
@@ -113,7 +115,7 @@ export default function InsightsStrategyPage() {
               return moved === null ? <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> : <ChangeLine by={moved}>{`${Math.abs(moved)}%`}</ChangeLine>;
             },
           },
-          { key: "call", header: t("columns.call"), cell: (row) => <StatusLabel tone={TONE[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel> },
+          { key: "call", header: t("columns.call"), cell: (row) => <span className="flex flex-col gap-1"><StatusLabel tone={TONE[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel>{row.why ? <span className="text-[12px] text-secondary">{row.why}</span> : null}</span> },
         ]}
       />
       <DataTable

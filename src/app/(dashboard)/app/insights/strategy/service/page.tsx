@@ -13,7 +13,7 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
-import { formatNumber } from "../../../sites/_components/siteFormat";
+import { formatDay, formatNumber } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
@@ -49,7 +49,8 @@ export default function InsightsServicePage() {
     service.enquiriesBefore === null
       ? t("sees.noYear", { enquiries: service.enquiries })
       : t("sees.enquiries", { enquiries: service.enquiries, before: service.enquiriesBefore }),
-    t(`sees.call.${service.verdict}`),
+    // The Head of Strategy's own reason where it made the call; else what the rule saw.
+    service.decidedBy === "AGENT" && service.why && service.decidedWeek ? t("sees.called", { day: formatDay(service.decidedWeek), why: service.why }) : t(`sees.call.${service.verdict}`),
   ];
 
   return (

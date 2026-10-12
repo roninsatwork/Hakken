@@ -8,6 +8,7 @@ import { appendRunStep } from "./agentRunStepWriter";
 import { lastMoved } from "./roleRuns";
 import { cancelQuietly } from "./seoCollectorRun";
 import { weekSummaryValidator } from "./utils/insightSummary";
+import { serviceValidator } from "./utils/insightStrategy";
 
 /**
  * A website's weekly Insights run in three steps, each handing on to the
@@ -149,3 +150,14 @@ export const savedWeek = internalQuery({
     return { verdict: week.verdict, summary: week.summary ?? null, findings };
   },
 });
+
+/** The services' calls kept with the newest week before this one: last week's Head of Strategy's, to keep where nothing changed. */
+export const lastServices = internalQuery({
+  args: { holdId: v.id("companyWebsites"), before: v.string() },
+  returns: v.array(serviceValidator),
+  handler: async (ctx, args) => {
+    const week = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).lt("week", args.before)).order("desc").first();
+    return week?.summary?.services ?? [];
+  },
+});
+

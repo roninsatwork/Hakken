@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import { decidedFields, readingOf, stillDecided, whyText } from "./insightDecided";
 
 /**
  * The quarter's strategy (docs/plans/active/insights-analyst-plan.md §4.1,
@@ -27,6 +28,8 @@ export const serviceValidator = v.object({
   impressions: v.number(),
   impressionsBefore: v.union(v.number(), v.null()),
   verdict: v.union(...VERDICTS.map((verdict) => v.literal(verdict))),
+  // Who called it and why (utils/insightDecided.ts): the rule, or the Head of Strategy (insights-one-voice-plan.md phase 3).
+  ...decidedFields,
 });
 export type Service = Infer<typeof serviceValidator>;
 
@@ -60,3 +63,71 @@ export function rankedServices(services: Array<Omit<Service, "verdict">>): Servi
     .sort((a, b) => b.enquiries - a.enquiries || b.clicks - a.clicks)
     .slice(0, 40);
 }
+
+/** The reading a service's call is made on: the rule's call for the same kind of service, the same reading. */
+export function serviceReading(service: Pick<Service, "verdict" | "kind">): string {
+  return readingOf([service.verdict, service.kind]);
+}
+
+/** Last week's Head of Strategy's calls kept where the rule calls a service the same; returns how many. */
+export function carryServices(services: Service[], before: readonly Service[]): number {
+  const last = new Map(before.map((service) => [service.page, service]));
+  let kept = 0;
+  for (const service of services) {
+    const held = last.get(service.page);
+    if (!held || !stillDecided(service, held)) continue;
+    Object.assign(service, { verdict: held.verdict, why: held.why, decidedBy: "AGENT", decidedWeek: held.decidedWeek });
+    kept += 1;
+  }
+  return kept;
+}
+
+/** The services the Head of Strategy is asked to call: not guides, which are for readers, and not called already. */
+export function servicesToCall(services: readonly Service[]): Service[] {
+  return services.filter((service) => service.kind !== "GUIDES" && service.decidedBy !== "AGENT");
+}
+
+/**
+ * The Head of Strategy's calls put on the services it was asked about, each
+ * with its sentence: one of the calls a service can have — never "for
+ * readers", which is the guides' — and nothing it wasn't asked about.
+ */
+export function applyServiceCalls(asked: readonly Service[], raw: unknown, week: string) {
+  const byPage = new Map(asked.map((service) => [service.page, service]));
+  let changed = 0, kept = 0, refused = 0;
+  for (const entry of Array.isArray(raw) ? raw : []) {
+    const { page, call, why } = (entry ?? {}) as { page?: unknown; call?: unknown; why?: unknown };
+    const service = typeof page === "string" ? byPage.get(page) : undefined;
+    const verdict = typeof call === "string" && (VERDICTS as readonly string[]).includes(call) && call !== "READERS" ? (call as Verdict) : undefined;
+    const reason = whyText(why);
+    if (!service || !verdict || !reason) {
+      refused += 1;
+      continue;
+    }
+    if (verdict === service.verdict) kept += 1;
+    else changed += 1;
+    Object.assign(service, { verdict, why: reason, decidedBy: "AGENT", decidedWeek: week });
+  }
+  return { changed, kept, refused };
+}
+
+/** Each call as Ask Hakken reads it (the screens word them from `insights.strategy.verdicts`). */
+const CALL_WORDS: Record<Verdict, string> = {
+  GROW: "grow it", STEADY: "keep it steady", BUYERS_WORDS: "use the words its buyers use now", YOUR_CALL: "your call: it was always small", READERS: "for readers",
+};
+
+/** Strategy's calls for Ask Hakken, as kept, with why and who called each. */
+export function servicesForAssistant(services: readonly Service[]) {
+  return {
+    rule: "Strategy's call for each of the business's services, as Hakken keeps them. Give them as written; never your own call.",
+    link: "/app/insights/strategy",
+    services: services.map((service) => ({
+      service: service.title ?? service.page,
+      page: service.page,
+      call: CALL_WORDS[service.verdict],
+      ...(service.why ? { why: service.why } : {}),
+      called_by: service.decidedBy === "AGENT" ? `the Head of Strategy${service.decidedWeek ? `, on ${service.decidedWeek}` : ""}` : "Hakken's rule",
+    })),
+  };
+}
+

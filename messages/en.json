@@ -18537,7 +18537,8 @@
       "sees": {
         "grow": "{count, plural, =0 {No service is growing its enquiries yet.} one {One service to grow: {services}.} other {# services to grow: {services}.}}",
         "change": "{count, plural, one {One to change: {services}.} other {# to change: {services}.}}",
-        "noChange": "None is losing its enquiries fast."
+        "noChange": "None is losing its enquiries fast.",
+        "called": "{agent, plural, =0 {Hakken's rule made every call this week: the Head of Strategy hasn't called any yet.} one {The Head of Strategy made one of these calls, with its reason beside it; Hakken's rule the rest.} other {The Head of Strategy made # of these calls, with its reason beside each; Hakken's rule the rest.}}"
       },
       "chart": {
         "title": "Enquiries by service",
@@ -18576,7 +18577,8 @@
           "BUYERS_WORDS": "Its enquiries halved while Google still shows it: buyers now search with other words.",
           "YOUR_CALL": "It was always small and it fell: decide whether it's worth growing.",
           "READERS": "People read these, but rarely enquire."
-        }
+        },
+        "called": "The Head of Strategy made this call on {day}: {why}"
       },
       "figures": {
         "enquiries": "Enquiries a year",

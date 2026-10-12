@@ -113,6 +113,17 @@ below are answered. Nothing is pushed.
   shows who decided and each reason, and Ask Hakken reads every page to act
   on.
 
+- **Phase 3, built 2026-10-12 (night).** The Head of Strategy calls each
+  service in its one weekly call: no second request, no added time. Each
+  service carries the rule's call and its figures, and the Head of Strategy
+  keeps or changes it with a sentence. Last week's call stands where the rule
+  calls a service the same. Guides stay "for readers", and no service can be
+  given that call. The Strategy screen shows each reason and who called it;
+  a service's page shows the Head of Strategy's reason in place of the
+  rule's sentence when it made the call. Ask Hakken reads every call. Phase
+  6's first item went in with it: the Head of Strategy can no longer join a
+  Keyword cannibalisation finding into another story.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

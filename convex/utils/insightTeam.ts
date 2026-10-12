@@ -128,7 +128,8 @@ export const STRATEGY_FORMAT = [
   "Reply with only JSON: {\"verdict\": one sentence for a managing director, naming the week's most important figure with its key and the period it covers (\"in the last 90 days\", \"over the last 12 months\"),",
   " \"summary\": two or three short paragraphs for the managing director, an agency's cover note: where the business stands, what changed and why, and where it leads or trails its rivals — every figure named by its key in [[ ]], never typed, no headings,",
   " \"order\": the findings' numbers, the most at stake first, leaving out any that repeat another,",
-  " \"joined\": [ ... ] for two or more specialists' findings that share one cause — each as a finding in the specialists' format, with \"from\": the numbers it joins instead of \"candidate\"]}.",
+  " \"joined\": [ ... ] for two or more specialists' findings that share one cause — each as a finding in the specialists' format, with \"from\": the numbers it joins instead of \"candidate\"; never a Keyword cannibalisation finding, which stands as its specialist wrote it,",
+  " \"services\": [{\"page\": a service's page as given, \"call\": GROW, STEADY, BUYERS_WORDS or YOUR_CALL, \"why\": one sentence a managing director reads}] — a call for each service you are given, the rule's unless the findings or the figures say otherwise]}.",
 ].join("\n");
 
 /**
