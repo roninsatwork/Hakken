@@ -14,7 +14,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
-import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
+import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteFormat";
@@ -60,8 +60,19 @@ export default function InsightsCannibalisationPage() {
     t("sees.biggest", { name: biggest.name, pages: biggest.pages.length, shared: formatNumber(biggest.shared), shown: formatNumber(biggest.shown), clicks: formatNumber(biggest.clicks) }),
   ];
   const steps = [{ words: t("do", { owner: biggest.owner, name: biggest.name }), link: t("seeGroup"), href: open(biggest.key) }];
-  const shownBars = groups.map((group) => ({ label: group.name, shown: group.shown }));
-  const clickBars = groups.map((group) => ({ label: group.name, clicks: group.clicks }));
+  // Each group's times shown, Google clicks and clicks with the right page in the top three, over the whole span: the times shown
+  // on a scale of their own, the two clicks on one so they compare (Anthony, 12 Oct 2026: "I want the chart to look like this").
+  const prizeBars = data.groups.map(({ group, months }) => ({
+    label: group.name,
+    shown: group.shown,
+    clicks: group.clicks,
+    top3: group.gainClicks === null ? null : Math.round(group.clicks + group.gainClicks * months),
+  }));
+  const prizeLabel = (value: number, key: string) => {
+    if (key === "shown") return t("charts.shownLabel", { count: formatNumber(value) });
+    if (key === "clicks") return t("charts.clicksLabel", { count: value });
+    return t("charts.top3Label", { count: formatNumber(value) });
+  };
   const mono = (value: number | null) => <span className="font-mono text-[12px] text-foreground">{value === null ? "–" : formatNumber(value)}</span>;
 
   return (
@@ -74,11 +85,27 @@ export default function InsightsCannibalisationPage() {
         <Figure label={t("figures.shown")} value={formatNumber(sum("shown"))} detail={<span className="text-secondary">{t("figures.span", span)}</span>} />
         <Figure label={t("figures.clicks")} value={formatNumber(sum("clicks"))} detail={<span className="text-secondary">{t("figures.span", span)}</span>} />
       </FigureRow>
-      <ChartCard title={t("charts.shown")} hint={t("charts.shownHint", span)} exportName={`${data.host}-cannibalisation-shown`} csv={() => toCsv([t("columns.group"), t("columns.shown")], shownBars.map((row) => [row.label, row.shown]))} enoughData={shownBars.length > 0}>
-        <SiteBarChart horizontal data={shownBars} series={[{ key: "shown", name: t("columns.shown"), colour: CHART_SERIES_SLATE }]} labels={(value) => formatNumber(value)} />
-      </ChartCard>
-      <ChartCard title={t("charts.clicks")} hint={t("charts.clicksHint", span)} exportName={`${data.host}-cannibalisation-clicks`} csv={() => toCsv([t("columns.group"), t("columns.clicks")], clickBars.map((row) => [row.label, row.clicks]))} enoughData={clickBars.length > 0}>
-        <SiteBarChart horizontal data={clickBars} series={[{ key: "clicks", name: t("columns.clicks"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
+      <ChartCard
+        title={t("charts.title")}
+        hint={t("charts.hint", span)}
+        exportName={`${data.host}-cannibalisation-clicks`}
+        csv={() => toCsv(
+          [t("columns.group"), t("columns.shown"), t("columns.clicks"), t("charts.top3Column")],
+          prizeBars.map((row) => [row.label, row.shown, row.clicks, row.top3 ?? ""]),
+        )}
+        enoughData={prizeBars.length > 0}
+      >
+        <SiteBarChart
+          horizontal
+          divided
+          data={prizeBars}
+          series={[
+            { key: "shown", name: t("charts.shown"), colour: CHART_SERIES_SLATE, scale: "shown" },
+            { key: "clicks", name: t("charts.clicks"), colour: CHART_SERIES_BLUE },
+            { key: "top3", name: t("charts.top3"), colour: CHART_SERIES_ORANGE },
+          ]}
+          labels={prizeLabel}
+        />
       </ChartCard>
       <DataTable
         rows={pager.pageRows}

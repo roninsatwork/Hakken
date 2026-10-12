@@ -3439,6 +3439,7 @@
                 "INSIGHTS_MARKET": "Insights: specialista del mercato",
                 "INSIGHTS_TECHNICAL": "Insights: specialista SEO tecnico",
                 "INSIGHTS_SEARCH": "Insights: specialista di ricerca e contenuti",
+                "INSIGHTS_CANNIBALISATION": "Insights: specialista di cannibalizzazione delle parole chiave",
                 "INSIGHTS_LOCAL": "Insights: specialista locale e reputazione",
                 "INSIGHTS_LINKS": "Insights: specialista di link e PR",
                 "INSIGHTS_AI_VISIBILITY": "Insights: specialista della visibilità nell'IA",
@@ -3527,6 +3528,9 @@
                 "panel": "Come si risponde con le domande dei clienti",
                 "month": "Come si risponde con il report mensile",
                 "board": "Come si risponde con il report per il consiglio",
+                "competing": "Quale pagina ha una ricerca",
+                "owners": "Come si sceglie la pagina di una ricerca",
+                "competingAnswer": "Come si risponde a un gruppo di pagine in concorrenza",
                 "editor": "I controlli dell’Editor"
               }
             }
@@ -19515,7 +19519,7 @@
       "pagesCount": "{count, plural, one {# pagina} other {# pagine}}",
       "notSorted": "Non classificata",
       "seeGroup": "Vedi il gruppo",
-      "do": "Rendi {owner} la pagina per \"{name}\" e le ricerche che condivide.",
+      "do": "Dai a ogni ricerca di \"{name}\" una sola pagina: {owner} dovrebbe averne di più.",
       "sees": {
         "groups": "{groups, plural, one {Un gruppo} other {# gruppi}} di tue pagine ({pages} pagine) si dividono le ricerche di Google: mostrate {shown} volte dal {from} al {to} per {clicks} clic.",
         "biggest": "Il più grande è \"{name}\": {pages} pagine condividono {shared} ricerche, mostrate {shown} volte per {clicks} clic."
@@ -19533,10 +19537,15 @@
         "recentAgainst": "{count} negli ultimi 3 mesi, {before} un anno prima"
       },
       "charts": {
-        "shown": "Quante volte Google ha mostrato le pagine di ogni gruppo per le ricerche condivise",
-        "shownHint": "Dal {from} al {to}: quanto Google sta soppesando tra le tue stesse pagine.",
-        "clicks": "Clic da Google che le pagine di ogni gruppo hanno avuto",
-        "clicksHint": "Dal {from} al {to}: mostrate spesso, cliccate di rado, perché nessuna pagina ha una posizione alta."
+        "title": "Ogni gruppo: quante volte Google ha mostrato le sue pagine, i clic e i clic con la pagina giusta tra i primi tre",
+        "hint": "Dal {from} al {to}, per le ricerche condivise da ogni gruppo. Le visualizzazioni hanno una scala propria; le due barre dei clic ne condividono una, così si confrontano.",
+        "shown": "Volte in cui Google ha mostrato le pagine",
+        "clicks": "Clic da Google",
+        "top3": "Clic con la pagina giusta tra i primi tre",
+        "shownLabel": "{count} visualizzazioni",
+        "clicksLabel": "{count, plural, one {# clic da Google} other {# clic da Google}}",
+        "top3Label": "circa {count} tra i primi tre",
+        "top3Column": "Clic con la pagina giusta tra i primi tre"
       },
       "columns": {
         "group": "Gruppo",
@@ -19547,18 +19556,22 @@
         "clicks": "Clic da Google",
         "enquiries": "Richieste, 12 mesi",
         "recent": "Ultimi 3 mesi",
-        "owner": "Dovrebbe averle",
+        "owner": "Dovrebbe averne di più",
         "sure": "Affidabilità",
         "page": "Pagina",
         "kind": "Tipo di pagina",
         "decision": "Cosa fare",
         "searches": "Ricerche",
+        "owns": "Dovrebbe avere",
         "visits": "Visite, 12 mesi",
         "search": "Ricerca",
         "volume": "Ricerche al mese",
-        "place": "La tua posizione",
+        "place": "Posizione",
         "pagesShown": "Pagine mostrate",
         "top": "Google manda più clic a",
+        "searchOwner": "Dovrebbe averla",
+        "why": "Perché",
+        "why": "Perché",
         "gain": "Clic in più al mese tra i primi tre"
       },
       "sure": {
@@ -19566,10 +19579,22 @@
         "ROUGH": "Una lettura approssimativa"
       },
       "decisions": {
-        "OWNER": "Ha queste ricerche",
-        "MERGE": "Unirla alla principale, con un reindirizzamento",
-        "DIFFERENTIATE": "Renderla chiaramente diversa",
-        "LINK": "Tenerla, con un link alla principale"
+        "OWNER": "Tenerla per le ricerche che dovrebbe avere",
+        "MERGE": "Unirla a {into}, con un reindirizzamento",
+        "DIFFERENTIATE": "Renderla chiaramente diversa da {into}",
+        "LINK": "Tenerla, con un link a {into}"
+      },
+      "why": {
+        "PLACE": "Nomina {place}",
+        "OTHER_PLACE": "Nomina {place}, per cui nessuna di queste pagine è fatta",
+        "NEAR": "Vicino a me: una pagina per dove hai una sede",
+        "NO_PLACE": "Non nomina un luogo",
+        "ARTICLE": "Una domanda: risponde un articolo",
+        "SELLS": "Una pagina che vende, non un articolo",
+        "WORDS": "Le sue parole corrispondono meglio alla ricerca",
+        "GOOGLE": "Google la mostra già di più",
+        "ENQUIRIES": "Più richieste da Google",
+        "AGENT": "La scelta dello specialista di cannibalizzazione delle parole chiave"
       },
       "group": {
         "description": "{count} tue pagine che Google mostra per le stesse ricerche, dal {from} al {to}.",
@@ -19579,6 +19604,11 @@
           "split": "Google ha mostrato queste {pages} pagine per {shared} delle stesse ricerche e ne ha divise {split} tra due o più: {shown} visualizzazioni dal {from} al {to}, per {clicks} clic.",
           "owner": "{owner} porta più richieste di tutte ({enquiries} negli ultimi 12 mesi), quindi dovrebbe avere queste ricerche.",
           "ownerClicks": "{owner} ha più clic di tutte, quindi dovrebbe avere queste ricerche.",
+          "agent": "Lo specialista di cannibalizzazione delle parole chiave le ha decise il {day}, affidategli dall'Head of Strategy; le sue ragioni sono accanto a ogni ricerca e pagina che ha cambiato.",
+          "ruleOnly": "Le ha decise la regola di Hakken: lo specialista di cannibalizzazione delle parole chiave non ha ancora esaminato questo gruppo.",
+          "rule": "Ogni ricerca dovrebbe avere una sola pagina. Una ricerca che nomina un luogo va alla pagina di quel luogo, una che non ne nomina alcuno a una pagina non legata a un luogo; poi alla pagina le cui parole le corrispondono meglio, e a quella che Google mostra già di più. Quante volte una ricerca viene fatta non lo decide mai.",
+          "lead": "{owner} dovrebbe averne di più: {count, plural, one {# ricerca} other {# ricerche}}.",
+          "leadVolume": "{owner} dovrebbe averne di più: {count, plural, one {# ricerca} other {# ricerche}}, cercate circa {volume} volte al mese.",
           "gain": "Tra i primi tre per le ricerche divise, avrebbe circa {clicks} clic in più da Google al mese, e circa {enquiries} richieste in più.",
           "gainClicks": "Tra i primi tre per le ricerche divise, avrebbe circa {clicks} clic in più da Google al mese."
         },
@@ -19586,7 +19616,8 @@
           "MERGE": "Unisci {page} a {owner}, con un reindirizzamento.",
           "DIFFERENTIATE": "Rendi {page} chiaramente diversa da {owner}.",
           "LINK": "Tieni {page}, con un link a {owner}.",
-          "OWNER": "{page} ha queste ricerche."
+          "OWNER": "{page} ha queste ricerche.",
+          "KEEP": "Tieni {page} per {count, plural, one {la ricerca che dovrebbe avere, e rendila chiaramente dedicata a quella} other {le # ricerche che dovrebbe avere, e rendila chiaramente dedicata a loro}}."
         },
         "seePage": "Vedi la pagina",
         "finding": "La scoperta in cui è descritto questo gruppo.",

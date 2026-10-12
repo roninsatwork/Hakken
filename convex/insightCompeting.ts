@@ -2,8 +2,12 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
-import { MOST_A_WEEK, type SavedFinding } from "./insightsTeam";
-import { shiftDay } from "./utils/insightFacts";
+import { MOST_A_WEEK, type SavedFinding, type TeamMember } from "./insightsTeam";
+import { ask, factLines, type AskRun } from "./insightsAsk";
+import { factsByKey, fillFacts, type Fact } from "./utils/insightFacts";
+import { typedNumbers } from "./utils/insightEditor";
+import { briefFor } from "./utils/insightBriefs";
+import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf } from "./utils/insightCompetingAgent";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { readPeriod } from "./searchConsolePeriodReads";
@@ -12,9 +16,13 @@ import { askVolumesFor, searchVolumeOf } from "./searchVolumes";
 import { normaliseKeyword } from "./seoJudgments";
 import { historyOf, monthsOf, pageKindsOf } from "./insightsPeriodData";
 import { clickRatesOf } from "./utils/heroes";
-import { shiftMonth } from "./utils/insightHistory";
-import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
-import { brandWordsOf, competingFinding, competingGroupValidator, competingGroups, competingSummary, pathOfPage, type CompetingPair, type KeptGroup, type PageFigures, type SearchFigures } from "./utils/insightCompeting";
+import { SOURCE_JOIN, fromGoogleSearch, shiftMonth } from "./utils/insightHistory";
+import { DEFAULT_LOCATION_CODE, findSeoLocation, resolveLocationCode } from "./utils/seoLocations";
+import { namedIn } from "./utils/placeNames";
+import {
+  OWNER_RULE, brandWordsOf, competingDraft, competingFacts, competingGroupValidator, competingGroups, competingSummary, nameGroups, pathOfPage,
+  type CompetingPair, type KeptGroup, type PageFigures, type Places, type SearchFigures,
+} from "./utils/insightCompeting";
 
 /**
  * Keyword cannibalisation (docs/plans/active/insights-intelligence-plan.md
@@ -22,54 +30,117 @@ import { brandWordsOf, competingFinding, competingGroupValidator, competingGroup
  * cannibalisation section, under Findings"): each week the run reads Search
  * Console's Pages competing list over the last 90 days, gathers the pages
  * into groups (utils/insightCompeting.ts), weighs each search by how often it
- * is searched, keeps the groups for the screens and writes the biggest up as
- * findings. Only the caller's own company is ever read.
+ * is searched, and the rule gives each search its page. The Head of Strategy
+ * then hands the groups the rule reads anew to its Keyword cannibalisation
+ * specialist, which decides and writes them up (Anthony, 12 October 2026: "it
+ * should be routed to the head of strategy then assigned to the
+ * cannibalisation agent when appropriate … this way we get consistency").
+ * What it decided is kept once and read by the screens, the findings, Page
+ * decisions and Ask Hakken. Only the caller's own company is ever read.
  */
 
-/** Groups written up as findings a week, the most shown first, and the days until each is checked. */
+/** Groups written up as findings a week, the most shown first. */
 const GROUP_FINDINGS = 5;
-const GROUP_CHECK_DAYS = 56;
+/** Groups the specialist is asked about at once. */
+const AT_ONCE = 4;
+/** The specialist's role: the run asks it as this member, or as the lead while it has none. */
+export const COMPETING_ROLE = "INSIGHTS_CANNIBALISATION";
 
 type RunCompeting = Awaited<ReturnType<typeof competingForRun>>;
+type CompetingRun = AskRun & { holdId: Id<"companyWebsites"> };
 
 /**
- * For the weekly run: the groups now, the biggest the run is sure of written
- * up as findings after the specialists' — built from their own figures, every
- * number the group's — and the Executive summary's summing up.
+ * For the Head of Strategy's weekly run: the groups now, each the rule reads
+ * just as it did last week keeping last week's decision, every other handed
+ * to the Keyword cannibalisation specialist (`rules` the run's ground rules);
+ * the biggest written up as drafts for the Head of Strategy to rank and the
+ * Editor to check, with the facts they name; and the Executive summary's
+ * summing up. A group the specialist wasn't reached for keeps the rule's
+ * decision, said so on its screen. Never throws: the week goes on without it.
  */
-export async function competingForRun(ctx: ActionCtx, holdId: Id<"companyWebsites">, today: string, rank: number) {
-  const competing = await ctx.runQuery(internal.insightCompeting.groupsForRun, { holdId }).catch(() => null);
-  const findings = new Map<string, SavedFinding>();
-  for (const group of (competing?.groups ?? []).filter((entry) => entry.sure === "LIKELY").slice(0, GROUP_FINDINGS)) {
-    findings.set(group.key, { ...competingFinding(group, competing!, shiftDay(today, GROUP_CHECK_DAYS)), status: "PUBLISHED", rank: rank + findings.size + 1 });
+export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: string, rules: string, member: TeamMember | undefined) {
+  const competing = await ctx.runQuery(internal.insightCompeting.groupsForRun, { holdId: run.holdId }).catch(() => null);
+  const none = { competing, drafts: [] as ReturnType<typeof competingDraft>[], facts: [] as Fact[], summary: null };
+  if (!competing || competing.groups.length === 0) return none;
+  const last = await ctx.runQuery(internal.insightCompeting.keptForRun, { holdId: run.holdId }).catch(() => []);
+  const span = { from: competing.from, to: competing.to };
+  const titles = new Map(competing.titles.map((entry) => [entry.path, entry.title]));
+
+  // Handed on only when the rule reads a group anew: the same pages and the same page for its most searched searches keep last week's.
+  const assigned = competing.groups.filter((group) => !last.some((before) => carryOver(group, before, competing.websiteRate)));
+  const system = [rules, briefFor(COMPETING_ROLE, member?.instructions), OWNER_RULE, COMPETING_ANSWER].filter(Boolean).join("\n\n");
+  const words = new Map<KeptGroup, { headline: string; story: string }>();
+  const failed: string[] = [];
+  let changed = 0;
+  for (let at = 0; at < assigned.length; at += AT_ONCE) {
+    await Promise.all(assigned.slice(at, at + AT_ONCE).map(async (group) => {
+      try {
+        const prompt = JSON.stringify({ website: run.host, ...agentInputOf(group, titles), facts: factLines(competingFacts(group, span)) });
+        const answer = await ask(ctx, run, member, `the Keyword cannibalisation specialist, on "${group.name}"`, system, prompt);
+        if (answer === null) throw new Error("its answer wasn't JSON");
+        const applied = applyAnswer(group, answer, competing.websiteRate, week);
+        changed += applied.owners + applied.pages;
+        // Its words kept only when every figure they name is the group's own, and none is typed.
+        const held = factsByKey(competingFacts(group, span));
+        const usable = applied.words && [applied.words.headline, applied.words.story].every((text) => typedNumbers(text).length === 0 && fillFacts(text, held).missing.length === 0);
+        if (applied.words && usable) words.set(group, applied.words);
+      } catch (error) {
+        failed.push(`"${group.name}": ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }));
   }
-  return { competing, findings, summary: competing && competing.groups.length > 0 ? competingSummary(competing.groups) : null };
+  nameGroups(competing.groups);
+  await ctx.runMutation(internal.roleRuns.logRunLine, {
+    runId: run.runId, companyId: run.companyId, heading: "Keyword cannibalisation",
+    detail: [
+      `Head of Strategy → Keyword cannibalisation specialist: ${assigned.length} of ${competing.groups.length} groups${assigned.length < competing.groups.length ? `, the other ${competing.groups.length - assigned.length} unchanged since last week and kept as decided` : ""}.`,
+      assigned.length > 0 ? ` It changed ${changed} of the rule's choices.` : "",
+      failed.length > 0 ? ` Not reached, so the rule decided: ${failed.join("; ")}.` : "",
+    ].join("").slice(0, 900),
+    failed: failed.length > 0 && failed.length === assigned.length,
+  });
+
+  const written = competing.groups.filter((group) => group.sure === "LIKELY").slice(0, GROUP_FINDINGS);
+  return {
+    competing,
+    drafts: written.map((group) => competingDraft(group, words.get(group) ?? null)),
+    facts: written.flatMap((group) => competingFacts(group, span)),
+    summary: competingSummary(competing.groups),
+  };
 }
+
+/** The group a saved finding writes up, by the facts it names. */
+const groupKeyOf = (finding: SavedFinding) => finding.facts.map((fact) => /^competing\.(.+)\.(?:pages|shared|split|shown|clicks|enquiries|recent|recentBefore|gainClicks|gainEnquiries)$/.exec(fact.key)?.[1]).find(Boolean);
 
 /** After the week is saved: its groups kept beside their findings, their searches' volumes asked for, and the run's log saying so. */
 export async function keepCompeting(
   ctx: ActionCtx,
   run: { holdId: Id<"companyWebsites">; runId: Id<"agentRuns">; companyId: Id<"companies"> },
   week: string,
-  { competing, findings }: RunCompeting,
+  { competing }: RunCompeting,
   saved: readonly SavedFinding[],
   publishedIds: readonly Id<"insightFindings">[],
 ): Promise<void> {
   if (!competing) return;
-  // The week keeps its first findings, and returns the published ones' ids in their order.
-  const ids = new Map<SavedFinding, Id<"insightFindings">>();
+  // The week keeps its first findings, and returns the published ones' ids in their order: each group's by the facts it names.
+  const ids = new Map<string, Id<"insightFindings">>();
   let at = 0;
-  for (const finding of saved.slice(0, MOST_A_WEEK)) if (finding.status === "PUBLISHED") ids.set(finding, publishedIds[at++]);
+  for (const finding of saved.slice(0, MOST_A_WEEK)) {
+    if (finding.status !== "PUBLISHED") continue;
+    const id = publishedIds[at++];
+    const key = finding.pattern === "COMPETING_PAGES" ? groupKeyOf(finding) : undefined;
+    if (key && id) ids.set(key, id);
+  }
   const kept = await ctx.runMutation(internal.insightCompeting.saveGroups, {
     holdId: run.holdId, week, from: competing.from, to: competing.to,
     groups: competing.groups.map((group) => {
-      const findingId = ids.get(findings.get(group.key)!);
+      const findingId = ids.get(group.key);
       return { group, ...(findingId ? { findingId } : {}) };
     }),
   });
   await ctx.runMutation(internal.roleRuns.logRunLine, {
     runId: run.runId, companyId: run.companyId, heading: "Keyword cannibalisation",
-    detail: `${kept.saved} groups of competing pages kept, ${findings.size} written up as findings; ${kept.volumesAsked} searches' monthly volumes asked for.`,
+    detail: `${kept.saved} groups of competing pages kept, ${ids.size} written up as findings; ${kept.volumesAsked} searches' monthly volumes asked for.`,
     failed: false,
   });
 }
@@ -85,7 +156,8 @@ const pathKey = (path: string) => (path.length > 1 ? path.replace(/\/$/, "") : p
 
 /**
  * Each page's visits and enquiries from the history: the last 12 whole months,
- * and the newest three against the same three a year before.
+ * and the newest three against the same three a year before; and of the
+ * year's enquiries, those from people who came from Google's own results.
  */
 function pageFiguresFrom(records: Awaited<ReturnType<typeof historyOf>>, whole: readonly string[]) {
   const months = [...whole].sort();
@@ -94,7 +166,14 @@ function pageFiguresFrom(records: Awaited<ReturnType<typeof historyOf>>, whole: 
   const before = recent.map((month) => shiftMonth(month, -12));
   const heldBefore = before.every((month) => months.includes(month));
   const totals = new Map<string, { visits: number; enquiries: number; recent: number; recentBefore: number }>();
+  const fromGoogle = new Map<string, number>();
   for (const record of records) {
+    if (record.kind === "GA_PAGE_SOURCES" && year.has(record.month)) {
+      for (const row of record.rows) {
+        const [path = "", channel = "", source = ""] = row.key.split(SOURCE_JOIN);
+        if (fromGoogleSearch(channel, source)) fromGoogle.set(pathKey(path), (fromGoogle.get(pathKey(path)) ?? 0) + (row.enquiries ?? 0));
+      }
+    }
     if (record.kind !== "GA_PAGES") continue;
     const inYear = year.has(record.month), inRecent = recent.includes(record.month), inBefore = before.includes(record.month);
     if (!inYear && !inBefore) continue;
@@ -112,8 +191,27 @@ function pageFiguresFrom(records: Awaited<ReturnType<typeof historyOf>>, whole: 
   }
   return (path: string) => {
     const held = totals.get(pathKey(path));
-    return { visits: held?.visits ?? 0, enquiries: held?.enquiries ?? 0, recent: held?.recent ?? 0, recentBefore: heldBefore ? held?.recentBefore ?? 0 : null };
+    return { visits: held?.visits ?? 0, enquiries: held?.enquiries ?? 0, recent: held?.recent ?? 0, recentBefore: heldBefore ? held?.recentBefore ?? 0 : null, googleEnquiries: fromGoogle.get(pathKey(path)) ?? 0 };
   };
+}
+
+/**
+ * What a website's searches are read against (`ownerOfSearch`): its own
+ * country, from the place it is measured from, and the places of the offices
+ * the company calls its own on Google — their towns and counties, for "near
+ * me" searches.
+ */
+async function placesFor(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">): Promise<Places> {
+  const homeIso = findSeoLocation(resolveLocationCode(hold.locationCode))?.countryIso ?? null;
+  const links = await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(50);
+  const offices = new Set<string>();
+  for (const link of links.filter((entry) => entry.role === "OWN")) {
+    const listing = await ctx.db.get(link.listingId);
+    if (listing?.source !== "GOOGLE") continue;
+    // Its town where Google names one: an address's "London Rd" in Guildford is no London office.
+    for (const place of namedIn(listing.town ?? listing.address ?? "", homeIso).places) offices.add(place);
+  }
+  return { homeIso, offices: [...offices] };
 }
 
 /**
@@ -122,7 +220,7 @@ function pageFiguresFrom(records: Awaited<ReturnType<typeof historyOf>>, whole: 
  * the company's page classifications, and the searches' monthly volumes as far
  * as they are held. Null when Search Console has built no competing list yet.
  */
-export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, host: string): Promise<{ from: string; to: string; groups: KeptGroup[] } | null> {
+export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, host: string): Promise<{ from: string; to: string; groups: KeptGroup[]; websiteRate: number | null } | null> {
   const competing = await readPeriod(ctx, hold._id, "web", "competing", "90", "NOW");
   if (!competing || competing.rows.length === 0) return null;
   const searches = await readPeriod(ctx, hold._id, "web", "query", "90", "NOW");
@@ -164,7 +262,7 @@ export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"company
   const lastYear = monthsOf(records, kindOf).filter((month) => month.whole).slice(-12);
   const yearVisits = lastYear.reduce((sum, month) => sum + month.visits, 0);
   const websiteRate = yearVisits > 0 ? lastYear.reduce((sum, month) => sum + month.enquiries, 0) / yearVisits : null;
-  const input = { pairs, brandSearches, brandWords: brandWordsOf(host), pageOf, clickRates, websiteRate, months };
+  const input = { pairs, brandSearches, brandWords: brandWordsOf(host), pageOf, clickRates, websiteRate, months, places: await placesFor(ctx, hold) };
   const first = competingGroups({ ...input, searchOf: (search) => bySearch.get(search) ?? { position: null, volume: null } });
 
   // The volumes bought for the groups' searches so far (DataForSEO, from the website's place), then the groups again with them.
@@ -175,17 +273,45 @@ export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"company
     bySearch.set(search, { position: bySearch.get(search)?.position ?? null, volume: held.volume });
   }
   const groups = competingGroups({ ...input, searchOf: (search) => bySearch.get(search) ?? { position: null, volume: null } });
-  return { from: competing.from, to: competing.to, groups };
+  // The rule's reading of each, so a group read just the same next week keeps the specialist's decision.
+  for (const group of groups) Object.assign(group, { decidedBy: "RULE", signature: signatureOf(group) });
+  return { from: competing.from, to: competing.to, groups, websiteRate };
 }
 
-/** For the weekly run: the groups now, read in one query. */
+/** For the weekly run: the groups now, read in one query, with the website's enquiry rate and its pages' titles for the specialist. */
 export const groupsForRun = internalQuery({
   args: { holdId: v.id("companyWebsites") },
-  returns: v.union(v.null(), v.object({ from: v.string(), to: v.string(), groups: v.array(competingGroupValidator) })),
+  returns: v.union(v.null(), v.object({
+    from: v.string(), to: v.string(), groups: v.array(competingGroupValidator), websiteRate: v.union(v.number(), v.null()),
+    titles: v.array(v.object({ path: v.string(), title: v.string() })),
+  })),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.holdId);
     const website = hold ? await ctx.db.get(hold.websiteId) : null;
-    return hold && website ? await competingNow(ctx, hold, website.displayHost ?? website.host) : null;
+    const now = hold && website ? await competingNow(ctx, hold, website.displayHost ?? website.host) : null;
+    if (!now) return null;
+    // Each page's title as Analytics last saw it (`holdPages`), kept by path with or without its closing slash.
+    const titles: Array<{ path: string; title: string }> = [];
+    for (const path of new Set(now.groups.flatMap((group) => group.pages.map((page) => page.path)))) {
+      for (const page of new Set([path, pathKey(path), `${pathKey(path)}/`])) {
+        const row = await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId).eq("page", page)).first();
+        if (row?.title) {
+          titles.push({ path, title: row.title });
+          break;
+        }
+      }
+    }
+    return { ...now, titles };
+  },
+});
+
+/** For the weekly run: the groups kept last week, each with what decided it, to keep a decision the rule reads just the same. */
+export const keptForRun = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.array(competingGroupValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOST_KEPT);
+    return rows.map((row) => row.group);
   },
 });
 
@@ -227,6 +353,8 @@ const keptValidator = v.object({
   week: v.string(),
   from: v.string(),
   to: v.string(),
+  /** The span in months, as the extra clicks a month were worked out (`monthsIn`): its clicks a month are `clicks / months`. */
+  months: v.number(),
   group: competingGroupValidator,
   findingId: v.union(v.id("insightFindings"), v.null()),
 });
@@ -243,7 +371,7 @@ async function siteFor(ctx: SiteReader, siteId: Id<"companyWebsites"> | undefine
   return owned[0] ? { hold: owned[0].hold, host: owned[0].summary.host } : null;
 }
 
-const keptOf = (row: Doc<"insightCompetingGroups">) => ({ rank: row.rank, week: row.week, from: row.from, to: row.to, group: row.group, findingId: row.findingId ?? null });
+const keptOf = (row: Doc<"insightCompetingGroups">) => ({ rank: row.rank, week: row.week, from: row.from, to: row.to, months: monthsIn(row.from, row.to), group: row.group, findingId: row.findingId ?? null });
 
 /** Keyword cannibalisation: every group of competing pages, biggest first. */
 export const insightsCannibalisation = tenantQuery({

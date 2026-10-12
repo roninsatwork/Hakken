@@ -3,6 +3,8 @@ import { BOARD_FORMAT, DISCIPLINE, FINDINGS_FORMAT, GROUND_RULES, MONTH_FORMAT, 
 import { REVIEW_RULES } from "./insightConversion";
 import { DRAFT_RULES } from "./insightDrafts";
 import { PANEL_RULES } from "./insightPanel";
+import { COMPETING_RULE, OWNER_RULE } from "./insightCompeting";
+import { COMPETING_ANSWER } from "./insightCompetingAgent";
 
 /**
  * Each Insights agent's job and brief, as Hakken first gives them (Anthony,
@@ -67,6 +69,15 @@ export const INSIGHT_BRIEFS: Record<InsightsRole, { job: string; brief: string }
   INSIGHTS_MARKET: { job: specialistJob("market"), brief: specialistBrief("market") },
   INSIGHTS_TECHNICAL: { job: specialistJob("technical"), brief: specialistBrief("technical") },
   INSIGHTS_SEARCH: { job: specialistJob("search"), brief: specialistBrief("search") },
+  INSIGHTS_CANNIBALISATION: {
+    job: "Each week, when the Head of Strategy hands it the groups of the website's pages that Google shows for the same searches: decides which page should own each search and what to do with every page, and writes each group up. What it decides is what the Keyword cannibalisation screens, the findings, Page decisions and Ask Hakken all say.",
+    brief: [
+      "You are the Keyword cannibalisation specialist: the agency's senior SEO who sorts out pages competing for the same Google searches.",
+      "Hakken's rule has already chosen a page for every search. Keep its choice unless the evidence says otherwise — a page's title shows it is about something else, or the rule has missed what the search is really for — and then say why in one plain sentence a business owner understands.",
+      "A broad search people make across the whole country belongs on a page for no one place; a search that names a town or a county belongs on that place's page.",
+      "A page that brought enquiries may be merged too: the redirect carries them to the page it joins. Never merge a page that owns searches of its own, and say what to do with every page.",
+    ].join("\n"),
+  },
   INSIGHTS_LOCAL: { job: `${specialistJob("local")} Drafts the Business Profile fixes, posts and review requests its findings call for.`, brief: specialistBrief("local") },
   INSIGHTS_LINKS: { job: `${specialistJob("links")} Drafts the outreach its findings call for.`, brief: specialistBrief("links") },
   INSIGHTS_AI_VISIBILITY: { job: `${specialistJob("aiVisibility")} Keeps the buyers' questions asked of the AI assistants.`, brief: specialistBrief("aiVisibility") },
@@ -109,13 +120,17 @@ const EDITOR_CHECKS = [
 ].join("\n");
 
 /** Which fixed part each is, for the page's headings. */
-export type FixedPart = "ground" | "shop" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
+export type FixedPart = "ground" | "shop" | "competing" | "owners" | "competingAnswer" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
 
 /** What Hakken always adds to an agent's brief: shown read-only on its Instructions page, never edited there. */
 export function fixedRulesFor(role: InsightsRole): Array<{ part: FixedPart; text: string }> {
   const ground = [{ part: "ground" as const, text: GROUND_RULES }, { part: "shop" as const, text: SHOP_RULE }];
+  // Which page owns a search, as the Keyword cannibalisation screens decide it: for the agents who write about pages competing.
+  const competing = { part: "competing" as const, text: COMPETING_RULE };
   switch (role) {
-    case "INSIGHTS_HEAD_OF_STRATEGY": return [...ground, { part: "findings", text: FINDINGS_FORMAT }, { part: "strategy", text: STRATEGY_FORMAT }];
+    case "INSIGHTS_HEAD_OF_STRATEGY": return [...ground, competing, { part: "findings", text: FINDINGS_FORMAT }, { part: "strategy", text: STRATEGY_FORMAT }];
+    case "INSIGHTS_SEARCH": return [...ground, competing, { part: "findings", text: FINDINGS_FORMAT }];
+    case "INSIGHTS_CANNIBALISATION": return [...ground, { part: "owners", text: OWNER_RULE }, { part: "competingAnswer", text: COMPETING_ANSWER }];
     case "INSIGHTS_ANALYST": return [...ground, { part: "why", text: WHY_FORMAT }];
     case "INSIGHTS_CONVERSION": return [...ground, { part: "findings", text: FINDINGS_FORMAT }, { part: "review", text: REVIEW_RULES }];
     case "INSIGHTS_LOCAL":

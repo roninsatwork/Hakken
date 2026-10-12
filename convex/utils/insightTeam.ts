@@ -159,6 +159,7 @@ export const TEAM_AGENTS: Record<InsightsRole, { name: string; description: stri
   INSIGHTS_MARKET: { name: "Insights: Market specialist", description: "The website against its rivals: their moves over time, the leagues and the website's share of the market." },
   INSIGHTS_TECHNICAL: { name: "Insights: Technical SEO specialist", description: "The site audit, pages Google can't read well, speed, structured data and internal links." },
   INSIGHTS_SEARCH: { name: "Insights: Search and content specialist", description: "The searches people use, which page should win which search, and demand moving between words." },
+  INSIGHTS_CANNIBALISATION: { name: "Insights: Keyword cannibalisation specialist", description: "Where the website's pages compete for the same Google searches: which page should own each search, and what to do with every other page." },
   INSIGHTS_LOCAL: { name: "Insights: Local and reputation specialist", description: "Google Business Profiles and reviews against rivals." },
   INSIGHTS_LINKS: { name: "Insights: Links and PR specialist", description: "The websites that link to the business and its rivals." },
   INSIGHTS_AI_VISIBILITY: { name: "Insights: AI visibility specialist", description: "How AI assistants and Google's AI answers name, cite and send people to the business and its rivals." },

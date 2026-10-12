@@ -10,6 +10,7 @@ import { readList } from "./searchConsoleLists";
 import { shiftDay } from "./searchConsoleDays";
 import { readWebsiteHost } from "./websiteIdentity";
 import { isTrackedHold } from "./utils/websitePairing";
+import { competingForAssistant } from "./utils/insightCompeting";
 
 /**
  * The company's own figures, as the Assistant reads them
@@ -80,6 +81,8 @@ export const adviceInternal = internalQuery({
 
 /** Findings Ask Hakken reads at most: the week's, and the newest unresolved before it. */
 const INSIGHT_FINDINGS_READ = 60;
+/** Groups of competing pages Ask Hakken reads at most, the biggest first. */
+const COMPETING_READ = 20;
 
 /**
  * Insights for Ask Hakken (docs/plans/active/insights-analyst-plan.md I14,
@@ -116,6 +119,8 @@ export const insightsInternal = internalQuery({
         link: `/app/insights/findings/${finding._id}`,
       })),
       ...(report?.body ? { month: { title: report.title, headline: report.body.headline, link: `/app/insights/reports/${report._id}` } } : {}),
+      // Every group of competing pages as the Keyword cannibalisation specialist decided it, not only the ones written up (12 Oct 2026).
+      cannibalisation: competingForAssistant((await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", holdId)).take(COMPETING_READ)).map((row) => row.group)),
       links: { summary: "/app/insights/summary", thisWeek: "/app/insights/this-week", strategy: "/app/insights/strategy", pagePlan: "/app/insights/page-plan" },
     };
   },

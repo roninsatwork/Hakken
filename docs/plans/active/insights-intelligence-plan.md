@@ -360,7 +360,11 @@ question is left out.
   would bring uses the website's own click rate at the top three and its
   enquiry rate (a page's own from 100 visits), each close variant counted
   once. Ronins, 13 July to 10 October: six groups, 29 pages, 221,590 times
-  shown for 50 clicks.
+  shown for 50 clicks. **Superseded on 12 October** by
+  [keyword-cannibalisation-owners-plan.md](keyword-cannibalisation-owners-plan.md):
+  the owner chosen for each search by kind, place, words, Google's choice and
+  enquiries from Google, never by enquiries alone, and decided by a Keyword
+  cannibalisation specialist the Head of Strategy hands the groups to.
 - **Phase 4**: the Page plan is now Page decisions: every page of the
   website's page list gets a verdict each week — improve, merge, redirect,
   remove or keep — kept with the week, beside the Page plan's own pages most
@@ -420,6 +424,16 @@ question is left out.
   page; the Executive summary, What brings enquiries, AI search, Page
   decisions and Keyword cannibalisation already split by kind. One source's
   page was built in phase 2.
+- **Keyword cannibalisation's two charts as one** (12 October, after the
+  build; Anthony: "this is two charts when it could be one"): three ways were
+  drawn on the canvas's board 4b
+  (`docs/plans/assets/insights-intelligence/CannibalisationCharts.dc.html`)
+  and he chose the third: each group's Google clicks a month now against
+  about how many with the right page in the top three, both in clicks, with
+  the times shown under each name. The bar chart gained a quieter note under
+  each row's name for it (`nameNote`), and room at the bars' ends for a
+  longer figure. Ronins: website designers, about 3 a month now, about 207
+  with the right page in the top three.
 - **Phase 9**: Search Console's screens reach back to Google's sixteen-month
   line. Once a website's first collection is whole, its day totals before
   collection began are fetched from Google back to the line, once, and kept

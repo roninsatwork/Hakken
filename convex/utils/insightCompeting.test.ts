@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { brandWordsOf, competingFinding, competingGroups, decisionFor, isHome, variantOf, type CompetingPair, type GroupPage, type PageFigures } from "./insightCompeting";
+import { COMPETING_RULE, brandWordsOf, competingDraft, competingForAssistant, competingFacts, competingGroups, decisionFor, isHome, variantOf, type CompetingPair, type GroupPage, type PageFigures } from "./insightCompeting";
+import { editFinding } from "./insightEditor";
+import { factsByKey } from "./insightFacts";
 
 /**
  * Keyword cannibalisation (insights-intelligence-plan.md phase 3): the
@@ -76,19 +78,124 @@ describe("groups of competing pages", () => {
   });
 });
 
+/**
+ * Ronins' own two groups, 13 July to 10 October 2026 (Anthony, 12 October:
+ * "it's recommending we keep app developers London … and merge in mobile app
+ * developers which could be anywhere in the UK"; "we're talking about folding
+ * a global phrase into … a minor county").
+ */
+describe("which page owns each search", () => {
+  const ronins = (path: string, impressions: number, search: string, clicks = 0): CompetingPair => ({ search, page: `https://www.ronins.co.uk${path}`, clicks, impressions });
+  const VOLUMES: Record<string, number> = {
+    "mobile app developers": 4_400, "app developers": 1_300, "app developers uk": 720, "mobile app developers london": 480, "app developers near me": 480,
+    "android app developers": 260, "web designers": 8_100, "web design surrey": 260, "web design guildford": 320, "web design london": 2_400,
+  };
+  const FIGURES: Record<string, PageFigures> = {
+    "/app-developers-london/": { kind: "Service", type: "SERVICE", visits: 30, enquiries: 4, recent: 1, recentBefore: null, shownAll: 56_602, googleEnquiries: 2 },
+    "/mobile-app-developers/": { kind: "Service", type: "SERVICE", visits: 36, enquiries: 0, recent: 0, recentBefore: null, shownAll: 53_039, googleEnquiries: 0 },
+    "/android-app-development/": { kind: "Service", type: "SERVICE", visits: 6, enquiries: 0, recent: 0, recentBefore: null, shownAll: 6_341, googleEnquiries: 0 },
+    "/web-design-surrey/": { kind: "Service", type: "SERVICE", visits: 26, enquiries: 5, recent: 1, recentBefore: null, shownAll: 33_655, googleEnquiries: 1 },
+    "/web-design-london/": { kind: "Service", type: "SERVICE", visits: 66, enquiries: 1, recent: 0, recentBefore: null, shownAll: 95_861, googleEnquiries: 1 },
+    "/hub/how-to-choose-a-web-design-agency/": { kind: "Content hub", type: "INFORMATIONAL", visits: 2, enquiries: 0, recent: 0, recentBefore: null, shownAll: 3_910, googleEnquiries: 0 },
+  };
+  const app = [
+    ronins("/mobile-app-developers/", 2_391, "mobile app developers"), ronins("/app-developers-london/", 600, "mobile app developers"),
+    ronins("/app-developers-london/", 2_989, "app developers"), ronins("/mobile-app-developers/", 2_200, "app developers"),
+    ronins("/app-developers-london/", 1_617, "app developers uk"), ronins("/mobile-app-developers/", 289, "app developers uk"),
+    ronins("/app-developers-london/", 474, "mobile app developers london"), ronins("/mobile-app-developers/", 112, "mobile app developers london"),
+    ronins("/app-developers-london/", 728, "app developers near me"), ronins("/mobile-app-developers/", 943, "app developers near me"),
+    ...["android app developers", "android app development company", "android app development uk"].flatMap((search) => [ronins("/android-app-development/", 300, search), ronins("/mobile-app-developers/", 200, search)]),
+  ];
+  const web = [
+    ronins("/web-design-london/", 1_976, "web designers"), ronins("/web-design-surrey/", 400, "web designers"), ronins("/hub/how-to-choose-a-web-design-agency/", 300, "web designers"),
+    ronins("/web-design-surrey/", 900, "web design surrey"), ronins("/web-design-london/", 300, "web design surrey"),
+    ronins("/web-design-surrey/", 200, "web design guildford"), ronins("/web-design-london/", 150, "web design guildford"),
+    ronins("/web-design-london/", 1_200, "web design london"), ronins("/web-design-surrey/", 200, "web design london"),
+    ronins("/hub/how-to-choose-a-web-design-agency/", 300, "how to choose a web design agency"), ronins("/web-design-london/", 250, "how to choose a web design agency"), ronins("/web-design-surrey/", 100, "how to choose a web design agency"),
+    ...["what does a web designer do", "web design agency tips"].flatMap((search) => [ronins("/hub/how-to-choose-a-web-design-agency/", 200, search), ronins("/web-design-london/", 200, search)]),
+  ];
+  const grouped = (pairs: CompetingPair[], offices: string[] = []) => competingGroups(input({
+    pairs, brandWords: brandWordsOf("www.ronins.co.uk"), searchOf: (search) => ({ position: 20, volume: VOLUMES[search] ?? null }),
+    pageOf: (path) => FIGURES[path], places: { homeIso: "GB", offices },
+  }));
+  const ownerOf = (groups: ReturnType<typeof competingGroups>, search: string) => {
+    const found = groups.flatMap((group) => group.searches).find((entry) => entry.search === search);
+    return [found?.owner, found?.why];
+  };
+
+  test("a search naming no place goes to the page for no one place; one naming London to London's", () => {
+    const groups = grouped(app);
+    expect(ownerOf(groups, "mobile app developers")).toEqual(["/mobile-app-developers/", ["NO_PLACE"]]);
+    expect(ownerOf(groups, "app developers")).toEqual(["/mobile-app-developers/", ["NO_PLACE"]]);
+    // The country alone names no one place.
+    expect(ownerOf(groups, "app developers uk")).toEqual(["/mobile-app-developers/", ["NO_PLACE"]]);
+    expect(ownerOf(groups, "mobile app developers london")).toEqual(["/app-developers-london/", ["PLACE"]]);
+    // Two pages for no one place: the one whose words fit.
+    expect(ownerOf(groups, "android app developers")).toEqual(["/android-app-development/", ["WORDS"]]);
+  });
+
+  test("nothing is merged that owns searches of its own, and the page owning the most searched keeps the group", () => {
+    const groups = grouped(app);
+    const group = groups.find((entry) => entry.pages.some((page) => page.path === "/mobile-app-developers/"))!;
+    expect(group.owner).toBe("/mobile-app-developers/");
+    expect(group.pages.map((page) => [page.path, page.decision])).toEqual([
+      ["/mobile-app-developers/", "OWNER"], ["/app-developers-london/", "OWNER"], ["/android-app-development/", "OWNER"],
+    ]);
+  });
+
+  test("\"near me\" goes to the page for a place the business has an office, else to the page for no one place", () => {
+    expect(ownerOf(grouped(app, ["london"]), "app developers near me")).toEqual(["/app-developers-london/", ["NEAR"]]);
+    expect(ownerOf(grouped(app), "app developers near me")).toEqual(["/mobile-app-developers/", ["NO_PLACE"]]);
+  });
+
+  test("a county's page owns its towns, a selling page a search to buy, and an article a question", () => {
+    const groups = grouped(web);
+    expect(ownerOf(groups, "web design surrey")).toEqual(["/web-design-surrey/", ["PLACE"]]);
+    expect(ownerOf(groups, "web design guildford")).toEqual(["/web-design-surrey/", ["PLACE"]]);
+    expect(ownerOf(groups, "web design london")).toEqual(["/web-design-london/", ["PLACE"]]);
+    // Both selling pages are for a place: the article for no one place never takes a search to buy.
+    expect(ownerOf(groups, "web designers")).toEqual(["/web-design-london/", ["SELLS", "GOOGLE"]]);
+    expect(ownerOf(groups, "how to choose a web design agency")).toEqual(["/hub/how-to-choose-a-web-design-agency/", ["ARTICLE"]]);
+    // London's page owns the most searched, so it keeps the group; Surrey's keeps its own.
+    const [group] = groups;
+    expect(group.owner).toBe("/web-design-london/");
+    expect(group.pages.find((page) => page.path === "/web-design-surrey/")).toMatchObject({ decision: "OWNER", owns: 2, place: "surrey" });
+  });
+
+  test("Ask Hakken reads every group as kept, in the screens' words, and is told never to advise for itself", () => {
+    const read = competingForAssistant(grouped(web).map((group) => ({ ...group, decidedBy: "RULE" as const })));
+    expect(read.rule).toMatch(/Give it as written/);
+    expect(read.rule).toMatch(/never your own advice/);
+    const [group] = read.groups;
+    expect(group).toMatchObject({ main_page: "/web-design-london/", decided_by: "Hakken's rule: the specialist hasn't looked at this group yet" });
+    expect(group.pages.find((page) => page.page === "/web-design-surrey/")?.do).toBe("keep it for the 2 searches it should own");
+    expect(group.searches.find((search) => search.search === "web design guildford")).toMatchObject({ should_own: "/web-design-surrey/", why: "names Guildford" });
+  });
+
+  test("the agents are told the same rule, kind and place first, and that volume never picks the owner", () => {
+    expect(COMPETING_RULE).toMatch(/First the kind: a question goes to an article/);
+    expect(COMPETING_RULE).toMatch(/How often a search is searched never decides which page owns it/);
+  });
+});
+
 describe("each page's decision", () => {
   const page = (path: string, figures: Partial<GroupPage>): GroupPage => ({
     path, kind: "Service", type: "SERVICE", visits: 10, enquiries: 0, recent: 0, recentBefore: null, clicks: 0, shown: 100, searches: 5, decision: "OWNER", shownAll: 1_000, ...figures,
   });
   const owner = page("/brand-identity-agency/", { enquiries: 1 });
 
-  test("merged when most of its showings are the owner's searches and it brings no enquiries", () => {
+  test("merged when most of its showings are the owner's searches, even when it brings enquiries the redirect carries over", () => {
     expect(decisionFor(page("/brand-design-agency/", { shown: 605, shownAll: 1_536 }), owner)).toBe("MERGE");
+    // Anthony, 12 October 2026: "I'm happy to merge pages that generate enquiries, that's valid in fixing cannibalisation".
+    expect(decisionFor(page("/ux-consultancy/", { shown: 900, shownAll: 1_000, enquiries: 2 }), owner)).toBe("MERGE");
   });
 
-  test("made clearly different when it has a topic of its own, or its own enquiries", () => {
+  test("made clearly different when it has a topic of its own", () => {
     expect(decisionFor(page("/seo-agency/", { shown: 229, shownAll: 7_437 }), owner)).toBe("DIFFERENTIATE");
-    expect(decisionFor(page("/ux-consultancy/", { shown: 900, shownAll: 1_000, enquiries: 2 }), owner)).toBe("DIFFERENTIATE");
+  });
+
+  test("a page owning searches of its own is kept for them", () => {
+    expect(decisionFor(page("/brand-design-agency/", { shown: 605, shownAll: 1_536, owns: 2 }), owner)).toBe("OWNER");
   });
 
   test("an article beside a page that sells keeps its place and links to it", () => {
@@ -97,15 +204,25 @@ describe("each page's decision", () => {
 });
 
 describe("a group written up as a finding", () => {
-  test("every number is the group's own, with the facts it rests on and the day it is checked", () => {
+  test("every number is named by the group's own facts, so the Editor fills it, and what to do is the group's decisions", () => {
     const [group] = competingGroups(input());
-    const finding = competingFinding(group, { from: "2026-07-13", to: "2026-10-10" }, "2026-12-07");
-    expect(finding.pattern).toBe("COMPETING_PAGES");
-    expect(finding.headline).toBe("2 of your pages split Google's searches for \"brand agency\": shown 4,500 times in 90 days for 5 clicks.");
-    expect(finding.action).toBe("Make /brand-identity-agency/ the page for these searches: merge /brand-design-agency/ into it, with a redirect.");
-    expect(finding.facts.find((fact) => fact.key === "competing./brand-identity-agency/.shown")).toMatchObject({ value: 4_500, source: "searchConsole", from: "2026-07-13" });
-    expect(finding.checkOn).toBe("2026-12-07");
-    expect(finding.howWeKnow).not.toMatch(/Hakken|DataForSEO/);
+    const facts = competingFacts(group, { from: "2026-07-13", to: "2026-10-10" });
+    const draft = competingDraft(group);
+    expect(draft.pattern).toBe("COMPETING_PAGES");
+    expect(draft.headline).toBe("[[competing./brand-identity-agency/.pages]] of your pages split Google's searches for \"brand agency\": shown [[competing./brand-identity-agency/.shown]] times in 90 days for [[competing./brand-identity-agency/.clicks]] clicks.");
+    expect(draft.action).toBe("Give each search one page: keep /brand-identity-agency/ and /brand-design-agency/ for the searches each should own, each made clearly about its own.");
+    expect(facts.find((fact) => fact.key === "competing./brand-identity-agency/.shown")).toMatchObject({ value: 4_500, source: "searchConsole", from: "2026-07-13" });
+    const checked = editFinding(draft, factsByKey(facts));
+    expect(checked.ok && checked.filled.headline).toBe("2 of your pages split Google's searches for \"brand agency\": shown 4,500 times in 90 days for 5 clicks.");
+    expect(draft.checkInDays).toBe(56);
+    expect(draft.howWeKnow).not.toMatch(/Hakken|DataForSEO/);
+  });
+
+  test("the specialist's own headline and story are used when it wrote them", () => {
+    const [group] = competingGroups(input());
+    const draft = competingDraft(group, { headline: "Two branding pages split [[competing./brand-identity-agency/.split]] searches.", story: "Each should own its own." });
+    expect(draft.headline).toBe("Two branding pages split [[competing./brand-identity-agency/.split]] searches.");
+    expect(draft.action).toMatch(/^Give each search one page/);
   });
 
   test("the home page is never in a group", () => {

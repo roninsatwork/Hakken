@@ -1,22 +1,22 @@
 "use node";
 
 import { v } from "convex/values";
-import { appError } from "./utils/appError";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, type ActionCtx } from "./_generated/server";
-import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
+import { ask, factLines } from "./insightsAsk";
 import { readWebsiteFacts } from "./insightsReading";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
-import { competingForRun, keepCompeting } from "./insightCompeting";
+import { COMPETING_ROLE, competingForRun, keepCompeting } from "./insightCompeting";
 import { decideForRun } from "./insightDecisions";
 import type { Score } from "./utils/insightSummary";
 
 type SavedScorecard = Score[];
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { briefFor } from "./utils/insightBriefs";
+import { COMPETING_RULE } from "./utils/insightCompeting";
 import { candidatesFor, type Candidate } from "./utils/insightChecks";
 import { editFinding, type DraftFinding } from "./utils/insightEditor";
 import { factsByKey, fillFacts, formatFact, shiftDay, type Fact } from "./utils/insightFacts";
@@ -255,7 +255,13 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   const plan = await ctx.runQuery(internal.insightsReading.planInternal, { holdId: args.holdId }).catch(() => null);
   const briefs: Record<string, string | null> = { measurement: measurementBrief(measurement.checks), search: plan ? planBrief(plan) : null };
   const caveatFor = (specialist: string) => [caveat, briefs[specialist] ?? null].filter(Boolean).join("\n\n") || null;
-  // 3. Each specialist thinks and tests, side by side (§2.3).
+  // 3. Each specialist thinks and tests, side by side (§2.3) — the Keyword cannibalisation specialist beside them, handed the groups
+  // the rule reads anew (insightCompeting.ts): asked after them, it cost the run a minute it had no room for (2026-10-12).
+  const competingWork = competingForRun(ctx, args, weekOf(now), rulesFor(args), member(COMPETING_ROLE) ?? lead)
+    .catch(async (error: unknown) => {
+      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Keyword cannibalisation", detail: failureSummary(error), failed: true });
+      return { competing: null, drafts: [], facts: [], summary: null };
+    });
   const drafts: Draft[] = [];
   const answers = await Promise.all(SIDE_BY_SIDE.map(async (specialist) => {
     const mine = candidates.filter((candidate) => candidate.specialist === specialist);
@@ -285,6 +291,11 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
     }
   }
 
+  // 3c. The Keyword cannibalisation specialist's write-ups, ranked and checked with the rest.
+  const competing = await competingWork;
+  drafts.push(...competing.drafts);
+  reading.facts.push(...competing.facts);
+
   // 4. The Head of Strategy connects them, ranks them and writes the week's verdict (§2.4).
   let verdict = "";
   let written: unknown = null;
@@ -301,7 +312,7 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   }
 
   // 5. The Editor checks every figure, comparison and claim, against a fresh reading (I21, I29).
-  const fresh = factsByKey([...(await readWebsiteFacts(ctx, args.holdId)).facts, ...why]);
+  const fresh = factsByKey([...(await readWebsiteFacts(ctx, args.holdId)).facts, ...why, ...competing.facts]);
   const saved: SavedFinding[] = [];
   let rank = 0;
   for (const draft of ordered) {
@@ -327,9 +338,6 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
       checkOn: shiftDay(today, Math.min(120, Math.max(14, Math.round(draft.checkInDays ?? 56)))),
     });
   }
-  // Keyword cannibalisation (insights-intelligence-plan.md phase 3): the biggest groups of competing pages written up as findings.
-  const competing = await competingForRun(ctx, args.holdId, today, rank);
-  saved.push(...competing.findings.values());
   // The Measurement check's ways to enquire, said by the run itself unless a specialist already wrote the same (phase 6).
   for (const finding of measurementFindings(measurement.checks, reading.facts, shiftDay(today, 28))) if (!saved.some((held) => held.status === "PUBLISHED" && held.pattern === finding.pattern)) saved.push({ ...finding, status: "PUBLISHED", rank: saved.length + 1 });
   const top = saved.find((finding) => finding.status === "PUBLISHED");
@@ -796,82 +804,6 @@ function factsFor(specialist: InsightSpecialist, candidates: readonly Candidate[
   return [...all.filter((fact) => must.has(fact.key)), ...rest].slice(0, MOST_FACTS);
 }
 
-function factLines(facts: readonly Fact[]) {
-  return facts.map((fact) => ({
-    key: fact.key,
-    what: fact.label,
-    value: formatFact(fact),
-    ...(fact.from ? { from: fact.from } : {}),
-    ...(fact.to ? { to: fact.to } : {}),
-    ...(fact.country ? { country: fact.country } : {}),
-  }));
-}
-
-/** The model a member works with, or the lead's, or the platform's default for agents. */
-async function modelFor(ctx: ActionCtx, args: RunArgs, member: TeamMember | undefined) {
-  return await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-    ...(member?.requestedModelId ? { requestedModelId: member.requestedModelId } : {}),
-    companyId: args.companyId,
-    useCase: "agent",
-  });
-}
-
-/** Ask the model, record the call and its cost on the run, and give back its JSON (or null). */
-async function ask(ctx: ActionCtx, args: RunArgs, member: TeamMember | undefined, what: string, system: string, prompt: string): Promise<unknown> {
-  const spend = await ctx.runQuery(internal.roleRuns.runSpendLeft, { runId: args.runId });
-  if (spend.limitReached) throw appError("CONFLICT", `The run reached its spend limit ($${spend.spentUsd.toFixed(2)}), so ${what} was not asked.`);
-  const model = await modelFor(ctx, args, member);
-  let text = "";
-  let tokens = { input: 0, output: 0 };
-  let failed = false;
-  try {
-    const response = await generateTextWithResolvedModel({
-      model,
-      systemInstruction: system,
-      contents: [{ type: "text", text: prompt }],
-      temperature: 0.2,
-    });
-    text = response.text ?? "";
-    tokens = { input: response.inputTokens ?? 0, output: response.outputTokens ?? 0 };
-  } catch (error) {
-    failed = true;
-    text = failureSummary(error);
-  }
-  const parsed = failed ? null : readJson(text);
-  await ctx.runMutation(internal.roleRuns.recordRunModelCall, {
-    runId: args.runId,
-    companyId: args.companyId,
-    actionContext: `Insights: ${what} for ${args.host}`,
-    modelId: model.modelId,
-    providerKey: model.providerKey,
-    providerModelId: model.providerModelId,
-    inputTokens: tokens.input,
-    outputTokens: tokens.output,
-    promptContent: prompt,
-    responseContent: text,
-    failed: failed || parsed === null,
-  });
-  if (failed) throw appError("UPSTREAM_FAILURE", text);
-  return parsed;
-}
-
-/** A model's JSON answer, its code fences taken off; null when it isn't JSON. */
-export function readJson(text: string): unknown {
-  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const start = trimmed.indexOf("{"), end = trimmed.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      try {
-        return JSON.parse(trimmed.slice(start, end + 1));
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }
-}
 
 const words = (value: unknown, most = 600) => (typeof value === "string" ? value.trim().slice(0, most) : "");
 
@@ -914,7 +846,8 @@ async function askSpecialist(
   member: TeamMember | undefined,
   caveat: string | null,
 ): Promise<Draft[]> {
-  const system = [rulesFor(args), briefFor(SPECIALIST_ROLE[specialist], member?.instructions), caveat ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
+  // The Search and content specialist works where pages compete, so it is given the rule the Keyword cannibalisation screens use.
+  const system = [rulesFor(args), briefFor(SPECIALIST_ROLE[specialist], member?.instructions), specialist === "search" ? COMPETING_RULE : "", caveat ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
   const prompt = JSON.stringify({
     website: args.host,
     candidates: candidates.map((candidate, number) => ({ number, pattern: candidate.pattern, seen: candidate.seen, atStake: Math.round(candidate.stake * 10) / 10, facts: candidate.facts })),
@@ -953,7 +886,7 @@ async function askStrategy(
   all: readonly Fact[],
   lead: TeamMember | undefined,
 ): Promise<{ ordered: Draft[]; verdict: string; summary: unknown }> {
-  const system = [rulesFor(args), briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
+  const system = [rulesFor(args), briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), COMPETING_RULE, FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
   const used = new Set(drafts.flatMap((draft) => [...draft.comparisons.flat(), ...[draft.headline, draft.story].flatMap((text) => [...text.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1]))]));
   // The figures the Executive summary's boxes show — the last 90 days against the same 90 days a year ago — so the
   // verdict and the note can speak with the page's one voice (Anthony, 2026-10-12: "we're still showing 19 in the box").

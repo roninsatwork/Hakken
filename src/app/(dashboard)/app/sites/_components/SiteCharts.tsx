@@ -85,6 +85,15 @@ export type SiteSeries = {
    * visits (google-analytics-plan.md §15, screen 2).
    */
   marks?: string;
+  /**
+   * Bars along only: a scale of the series' own, shared with any series of
+   * the same name — times shown beside clicks on Keyword cannibalisation's
+   * chart, where tens of thousands would flatten a dozen (Anthony,
+   * 2026-10-12, "I want the chart to look like this"). A chart with such a
+   * series writes every bar's figure on it and draws no scale, since one
+   * row of marks can't speak for two.
+   */
+  scale?: string;
 };
 
 /**
@@ -269,6 +278,7 @@ export function SiteBarChart({
   line,
   highlight,
   labels,
+  divided = false,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
@@ -286,6 +296,8 @@ export function SiteBarChart({
    * drawn and approved 2026-10-11). Extended here rather than drawn again.
    */
   highlight?: { colour: string; rows: (row: Record<string, unknown>) => boolean };
+  /** Bars along only: a line between rows, where each row is a set of bars about one thing (Keyword cannibalisation's groups). */
+  divided?: boolean;
   /** Upright bars only: bars along size themselves to their rows. */
   height?: number;
   stacked?: boolean;
@@ -326,11 +338,24 @@ export function SiteBarChart({
     const widest = words.reduce((most, word) => Math.max(most, word?.length ?? 0), 0);
     return [key, widest > 0 ? barLabel((_value, index) => words[index] ?? null, { horizontal, stacked, widest }) : null] as const;
   })), [labelWords, horizontal, stacked]);
+  // Bars along keep room at their ends for the widest figure written there, so a longer one —
+  // "about 207 (204 more)" — is not cut at the chart's edge (2026-10-12); a short one keeps the usual room.
+  const labelRoom = useMemo(() => {
+    const widest = (JSON.parse(labelWords) as Array<[string, Array<string | null>]>).reduce((most, [, words]) => Math.max(most, ...words.map((word) => word?.length ?? 0)), 0);
+    return Math.max(BAR_LABEL_ROOM, Math.ceil(widest * LABEL_LETTER) + 12);
+  }, [labelWords]);
   if (line && !horizontal) return <BarLineChart data={data} series={series} line={line} xKey={xKey} height={height} scale={scale} google={google} formatValue={formatValue} seriesLabel={seriesLabel} />;
   const barsPerRow = stacked ? 1 : series.length;
   const rowHeight = barsPerRow * ALONG_BAR + (barsPerRow - 1) * ALONG_BAR_GAP + ALONG_ROW_SPACE;
+  // Bars along with a series on a scale of its own: each scale an axis of its own, none of them drawn.
+  const ownScales = horizontal ? [...new Set(series.flatMap((entry) => (entry.scale ? [entry.scale] : [])))] : [];
+  const unscaled = ownScales.length > 0;
   // The rows, then the margin, the scale along the bottom and the legend under it.
-  const alongHeight = data.length * rowHeight + 8 + 30 + (series.length > 1 ? 30 : 0);
+  const alongHeight = data.length * rowHeight + 8 + (unscaled ? 0 : 30) + (series.length > 1 ? 30 : 0);
+  // A line between rows: where one row's band ends and the next begins.
+  const rowLines = divided && horizontal && data.length > 1
+    ? ({ offset }: { offset: { top?: number; height?: number } }) => Array.from({ length: data.length - 1 }, (_, at) => (offset.top ?? 0) + ((offset.height ?? 0) / data.length) * (at + 1))
+    : undefined;
   return (
     <GoogleUpdateFrame google={google}>
       {/* Upright bars rise; bars along grow from the left, as they read. */}
@@ -341,12 +366,17 @@ export function SiteBarChart({
             layout={horizontal ? "vertical" : "horizontal"}
             barSize={horizontal ? ALONG_BAR : undefined}
             barGap={horizontal ? ALONG_BAR_GAP : undefined}
-            margin={{ top: labels && !horizontal && !stacked ? 20 : 8, right: labels && horizontal ? BAR_LABEL_ROOM : 8, bottom: 0, left: horizontal ? 8 : 0 }}
+            margin={{ top: labels && !horizontal && !stacked ? 20 : 8, right: labels && horizontal ? (stacked ? BAR_LABEL_ROOM : labelRoom) : 8, bottom: 0, left: horizontal ? 8 : 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="currentColor" className="text-border-dim" />
+            {rowLines ? (
+              <CartesianGrid vertical={false} horizontal horizontalCoordinatesGenerator={rowLines} stroke="currentColor" className="text-border-dim" />
+            ) : (
+              <CartesianGrid strokeDasharray="3 3" vertical={horizontal && !unscaled} horizontal={!horizontal} stroke="currentColor" className="text-border-dim" />
+            )}
             {horizontal ? (
               <>
-                <XAxis type="number" {...scale} {...AXIS_PROPS} />
+                <XAxis type="number" {...scale} {...AXIS_PROPS} hide={unscaled} />
+                {ownScales.map((own) => <XAxis key={own} xAxisId={own} type="number" hide />)}
                 <YAxis type="category" dataKey={xKey} width={ALONG_NAMES} {...AXIS_PROPS} tick={<AlongTick />} interval={0} />
               </>
             ) : (
@@ -379,6 +409,7 @@ export function SiteBarChart({
                 dataKey={entry.key}
                 name={entry.name}
                 fill={entry.colour}
+                {...(entry.scale && horizontal ? { xAxisId: entry.scale } : {})}
                 stackId={stacked ? "stack" : undefined}
                 radius={stacked ? 0 : 3}
                 activeBar={CHART_ACTIVE_BAR}
@@ -419,7 +450,7 @@ export function wrapName(name: string, most: number = ALONG_NAME_LETTERS): strin
 }
 
 /** A name beside its bars along, on one line or two (`wrapName`), centred on its row. */
-function AlongTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: unknown } }) {
+export function AlongTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: unknown } }) {
   if (x === undefined || y === undefined || !payload) return null;
   const lines = wrapName(String(payload.value ?? ""));
   return (

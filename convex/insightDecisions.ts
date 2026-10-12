@@ -177,7 +177,8 @@ export const decisionSources = internalQuery({
       domains,
       crawlPull: crawl?.pullId ?? null,
       plan: (plan?.pages ?? []).map((row) => ({ key: keyOf(row.page), action: row.action })),
-      competing: groups.flatMap((row) => row.group.pages.map((member) => ({ key: keyOf(member.path), decision: member.decision, owner: row.group.owner }))),
+      // Each page read against the page it merges into or is made different from: the one owning most of what it is shown for.
+      competing: groups.flatMap((row) => row.group.pages.map((member) => ({ key: keyOf(member.path), decision: member.decision, owner: member.into ?? row.group.owner }))),
       creates: pagesToCreate(gap?.rows ?? [], panel?.questions ?? [], ranked),
     };
   },

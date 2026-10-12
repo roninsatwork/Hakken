@@ -14,12 +14,12 @@ chart-card: How Google splits the clicks between the pages
 chart-card: How often Google showed each page for them
 chart-card: The searches that would bring most in the top three
 search: Find a page…
-table: Page | Kind of page | What to do | Times shown | Google clicks | Searches | Visits, # months | Enquiries, # months
+table: Page | Kind of page | What to do | Should own | Times shown | Google clicks | Searches | Visits, # months | Enquiries, # months
   table-bar: The pages, and what to do with each
     download: Download
   table-footer
 search: Find a search…
-table: Search | Searched a month | Your place | Times shown | Google clicks | Pages shown | Google sends most to | Extra clicks a month in the top three
+table: Search | Searched a month | Position | Times shown | Google clicks | Pages shown | Google sends most to | Should own it | Extra clicks a month in the top three
   table-bar: The searches they share
     download: Download
   table-footer

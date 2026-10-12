@@ -8,10 +8,9 @@ figures
   figure: Searches split
   figure: Times shown
   figure: Google clicks
-chart-card: Times Google showed each group's pages for the searches they share
-chart-card: Google clicks each group's pages had for them
+chart-card: Each group: times Google showed its pages, the clicks, and the clicks with the right page in the top three
 search: Find a group or a page…
-table: Group | Searches shared | Split | Times shown | Google clicks | Enquiries, # months | Last # months | Should own them | How sure
+table: Group | Searches shared | Split | Times shown | Google clicks | Enquiries, # months | Last # months | Should own most of them | How sure
   table-bar: Each group
     download: Download
   table-footer

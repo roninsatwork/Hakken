@@ -62,7 +62,8 @@ describe("keyword cannibalisation kept", () => {
     const list = await t.withIdentity({ subject: userId }).query(api.insightCompeting.insightsCannibalisation, {});
     expect(list?.groups.map((row) => [row.rank, row.group.owner, row.group.split])).toEqual([[1, "/brand-identity-agency/", 5]]);
     const one = await t.withIdentity({ subject: userId }).query(api.insightCompeting.insightsCompetingGroup, { key: kept.key });
-    expect(one?.kept?.group.pages.map((page) => page.decision)).toEqual(["OWNER", "MERGE"]);
+    // Each page owns the searches its own words fit: "brand design agency" is /brand-design-agency/'s.
+    expect(one?.kept?.group.pages.map((page) => [page.decision, page.owns])).toEqual([["OWNER", 4], ["OWNER", 1]]);
     expect(one?.finding).toBeNull();
   });
 

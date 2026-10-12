@@ -65,6 +65,8 @@ export const INSIGHTS_ROLES = [
   "INSIGHTS_MARKET",
   "INSIGHTS_TECHNICAL",
   "INSIGHTS_SEARCH",
+  // Which page should own each search where pages compete, handed its groups by the Head of Strategy (Anthony, 2026-10-12).
+  "INSIGHTS_CANNIBALISATION",
   "INSIGHTS_LOCAL",
   "INSIGHTS_LINKS",
   "INSIGHTS_AI_VISIBILITY",

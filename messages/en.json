@@ -3439,6 +3439,7 @@
                 "INSIGHTS_MARKET": "Insights: Market specialist",
                 "INSIGHTS_TECHNICAL": "Insights: Technical SEO specialist",
                 "INSIGHTS_SEARCH": "Insights: Search and content specialist",
+                "INSIGHTS_CANNIBALISATION": "Insights: Keyword cannibalisation specialist",
                 "INSIGHTS_LOCAL": "Insights: Local and reputation specialist",
                 "INSIGHTS_LINKS": "Insights: Links and PR specialist",
                 "INSIGHTS_AI_VISIBILITY": "Insights: AI visibility specialist",
@@ -3527,6 +3528,9 @@
                 "panel": "How the buyers' questions are answered",
                 "month": "How the monthly report is answered",
                 "board": "How the board report is answered",
+                "competing": "Which page owns a search",
+                "owners": "How a search's page is chosen",
+                "competingAnswer": "How a group of competing pages is answered",
                 "editor": "The Editor's checks"
               }
             }
@@ -19515,7 +19519,7 @@
       "pagesCount": "{count, plural, one {# page} other {# pages}}",
       "notSorted": "Not sorted",
       "seeGroup": "See the group",
-      "do": "Make {owner} the page for \"{name}\" and the searches it shares.",
+      "do": "Give each search in \"{name}\" one page: {owner} should own the most of them.",
       "sees": {
         "groups": "{groups, plural, one {One group} other {# groups}} of your pages ({pages} pages) split Google's searches between them: shown {shown} times from {from} to {to} for {clicks} clicks.",
         "biggest": "The biggest is \"{name}\": {pages} pages share {shared} searches, shown {shown} times for {clicks} clicks."
@@ -19533,10 +19537,15 @@
         "recentAgainst": "{count} in the last 3 months, {before} a year before"
       },
       "charts": {
-        "shown": "Times Google showed each group's pages for the searches they share",
-        "shownHint": "From {from} to {to}: how much Google is weighing up between your own pages.",
-        "clicks": "Google clicks each group's pages had for them",
-        "clicksHint": "From {from} to {to}: shown often, clicked rarely, as none of the pages holds a high place."
+        "title": "Each group: times Google showed its pages, the clicks, and the clicks with the right page in the top three",
+        "hint": "{from} to {to}, for the searches each group shares. Times shown have their own scale; the two clicks bars share one, so they compare.",
+        "shown": "Times Google showed the pages",
+        "clicks": "Google clicks",
+        "top3": "Clicks with the right page in the top three",
+        "shownLabel": "{count} times shown",
+        "clicksLabel": "{count, plural, one {# Google click} other {# Google clicks}}",
+        "top3Label": "about {count} in the top three",
+        "top3Column": "Clicks with the right page in the top three"
       },
       "columns": {
         "group": "Group",
@@ -19547,18 +19556,22 @@
         "clicks": "Google clicks",
         "enquiries": "Enquiries, 12 months",
         "recent": "Last 3 months",
-        "owner": "Should own them",
+        "owner": "Should own most of them",
         "sure": "How sure",
         "page": "Page",
         "kind": "Kind of page",
         "decision": "What to do",
         "searches": "Searches",
+        "owns": "Should own",
         "visits": "Visits, 12 months",
         "search": "Search",
         "volume": "Searched a month",
-        "place": "Your place",
+        "place": "Position",
         "pagesShown": "Pages shown",
         "top": "Google sends most to",
+        "searchOwner": "Should own it",
+        "why": "Why",
+        "why": "Why",
         "gain": "Extra clicks a month in the top three"
       },
       "sure": {
@@ -19566,10 +19579,22 @@
         "ROUGH": "A rough read"
       },
       "decisions": {
-        "OWNER": "Owns these searches",
-        "MERGE": "Merge into the owner, with a redirect",
-        "DIFFERENTIATE": "Make it clearly different",
-        "LINK": "Keep it, and link to the owner"
+        "OWNER": "Keep it for the searches it should own",
+        "MERGE": "Merge into {into}, with a redirect",
+        "DIFFERENTIATE": "Make it clearly different from {into}",
+        "LINK": "Keep it, and link to {into}"
+      },
+      "why": {
+        "PLACE": "Names {place}",
+        "OTHER_PLACE": "Names {place}, which none of these pages is for",
+        "NEAR": "Near me: a page for where you have an office",
+        "NO_PLACE": "Names no one place",
+        "ARTICLE": "A question: an article answers it",
+        "SELLS": "A page that sells, not an article",
+        "WORDS": "Its words fit the search best",
+        "GOOGLE": "Google already shows it most",
+        "ENQUIRIES": "More enquiries from Google",
+        "AGENT": "The Keyword cannibalisation specialist's choice"
       },
       "group": {
         "description": "{count} of your pages Google shows for the same searches, from {from} to {to}.",
@@ -19579,6 +19604,11 @@
           "split": "Google showed these {pages} pages for {shared} of the same searches and split {split} of them between two or more: {shown} times shown from {from} to {to}, for {clicks} clicks.",
           "owner": "{owner} brings the most enquiries of them ({enquiries} in the last 12 months), so it should own these searches.",
           "ownerClicks": "{owner} has the most clicks of them, so it should own these searches.",
+          "agent": "The Keyword cannibalisation specialist decided these on {day}, handed them by the Head of Strategy; its reasons are beside each search and page it changed.",
+          "ruleOnly": "Hakken's rule decided these: the Keyword cannibalisation specialist hasn't looked at this group yet.",
+          "rule": "Each search should have one page. A search that names a place goes to that place's page, and one that names no place to a page for no one place; then to the page whose words fit it best, and the one Google already shows most. How often a search is searched never decides it.",
+          "lead": "{owner} should own the most of them: {count, plural, one {# search} other {# searches}}.",
+          "leadVolume": "{owner} should own the most of them: {count, plural, one {# search} other {# searches}}, searched about {volume} times a month.",
           "gain": "Held in the top three for the searches they split, it would have about {clicks} more Google clicks a month, and about {enquiries} more enquiries.",
           "gainClicks": "Held in the top three for the searches they split, it would have about {clicks} more Google clicks a month."
         },
@@ -19586,7 +19616,8 @@
           "MERGE": "Merge {page} into {owner}, with a redirect.",
           "DIFFERENTIATE": "Make {page} clearly about something different from {owner}.",
           "LINK": "Keep {page}, and link from it to {owner}.",
-          "OWNER": "{page} owns these searches."
+          "OWNER": "{page} owns these searches.",
+          "KEEP": "Keep {page} for {count, plural, one {the search it should own, and make it clearly about it} other {the # searches it should own, and make it clearly about them}}."
         },
         "seePage": "See the page",
         "finding": "The finding this group is written up as.",
