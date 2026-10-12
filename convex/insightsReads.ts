@@ -594,7 +594,10 @@ export const insightsTrackRecord = tenantQuery({
     return {
       fixes: fixes.sort((a, b) => b.approved.localeCompare(a.approved)),
       findings: findings.sort((a, b) => (a.checkOn ?? "9").localeCompare(b.checkOn ?? "9")),
-      tally: tallies.reduce((sum, row) => ({ right: sum.right + row.right, wrong: sum.wrong + row.wrong, unclear: sum.unclear + row.unclear }), { right: 0, wrong: 0, unclear: 0 }),
+      // One website chosen: its own findings' outcomes; else the company's tally (insights-one-voice-plan.md phase 6).
+      tally: args.siteId
+        ? { right: findings.filter((row) => row.outcome === "RIGHT").length, wrong: findings.filter((row) => row.outcome === "WRONG").length, unclear: findings.filter((row) => row.outcome === "TOO_EARLY").length }
+        : tallies.reduce((sum, row) => ({ right: sum.right + row.right, wrong: sum.wrong + row.wrong, unclear: sum.unclear + row.unclear }), { right: 0, wrong: 0, unclear: 0 }),
       changes: changes.map((change) => ({ changeId: change._id, host: hosts.get(change.companyWebsiteId) ?? "", kind: change.kind, from: change.from, to: change.to, seenIn: change.seenIn, before: change.before, after: change.after, result: change.result, week: change.week, day: change.day ?? null })),
       learnings,
     };

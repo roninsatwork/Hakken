@@ -153,6 +153,17 @@ below are answered. Nothing is pushed.
   specialist gives each keyword one page, and links there, so both screens
   and Ask Hakken say the same.
 
+- **Phase 6, built 2026-10-12 (night).** Three fixes:
+  - A joined story can't take in a cannibalisation finding (built with phase
+    3).
+  - Track record counts the chosen website's own checked findings, and the
+    company's only when no website is chosen.
+  - The Executive summary's note says the period it describes: the last 90
+    days against the same 90 days a year before, "whichever period is chosen
+    above". This is the lighter fix. Making the note follow every period
+    would mean rewriting it for each period, which means many more AI calls.
+    That fuller version is Anthony's to ask for.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

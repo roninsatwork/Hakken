@@ -18307,7 +18307,7 @@
       "downloadBoard": "Scarica il report per il consiglio",
       "strategy": {
         "title": "Questa settimana, dal tuo Head of Strategy",
-        "byline": "Scritto da {platformName} il {day}.",
+        "byline": "Scritto da {platformName} il {day}, sugli ultimi 90 giorni rispetto agli stessi 90 giorni di un anno prima, qualunque periodo sia scelto sopra.",
         "points": "I punti importanti",
         "seeFinding": "Vedi la scoperta"
       },

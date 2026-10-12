@@ -18307,7 +18307,7 @@
       "downloadBoard": "Download the board report",
       "strategy": {
         "title": "This week, from your Head of Strategy",
-        "byline": "Written by {platformName} on {day}.",
+        "byline": "Written by {platformName} on {day}, from the last 90 days against the same 90 days a year before, whichever period is chosen above.",
         "points": "The important points",
         "seeFinding": "See the finding"
       },
