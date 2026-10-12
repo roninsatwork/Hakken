@@ -9,7 +9,8 @@ import { Select } from "@/src/ui/components/screens/Select";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { InsightsMenu } from "./_components/InsightsMenu";
-import { useInsightsHome } from "./_components/useInsights";
+import { useInsightsHome, useInsightsPeriodChoice, useInsightsPeriodView } from "./_components/useInsights";
+import { periodWords } from "./_components/insightPeriodWords";
 
 /**
  * The Insights section (docs/plans/active/insights-analyst-plan.md §4.1; a
@@ -20,19 +21,25 @@ import { useInsightsHome } from "./_components/useInsights";
  */
 export default function InsightsLayout({ children }: { children: React.ReactNode }) {
   const t = usePlatformTranslations("insights.section");
+  const tPeriod = usePlatformTranslations("insights.period");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const home = useInsightsHome();
+  const view = useInsightsPeriodView();
+  const chosenPeriod = useInsightsPeriodChoice();
   const site = params.get("site") ?? "";
 
-  const choose = (next: string) => {
+  const choose = (key: "site" | "period", next: string) => {
     const query = new URLSearchParams(params.toString());
-    if (next) query.set("site", next);
-    else query.delete("site");
+    if (next) query.set(key, next);
+    else query.delete(key);
     const rest = query.toString();
     router.push(`${pathname}${rest ? `?${rest}` : ""}`);
   };
+  // The section's one period choice (insights-intelligence-plan.md phase 1; Anthony, 2026-10-12: "why so many drop downs"):
+  // each page reads it, none adds its own.
+  const periods = view?.periods ?? [];
 
   return (
     <>
@@ -44,11 +51,20 @@ export default function InsightsLayout({ children }: { children: React.ReactNode
           title={t("title")}
           description={home ? t("description", { company: home.company }) : undefined}
           pills={home?.lastLooked ? <span className="text-[12px] text-secondary">{t("lastLooked", { when: formatDateTime(home.lastLooked) })}</span> : undefined}
-          action={home && home.sites.length > 1 ? (
-            <Select aria-label={t("website")} value={site} onChange={choose}>
-              <option value="">{t("everyWebsite")}</option>
-              {home.sites.map((entry) => <option key={entry.siteId} value={entry.siteId}>{entry.host}</option>)}
-            </Select>
+          action={(home && home.sites.length > 1) || periods.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-3">
+              {home && home.sites.length > 1 ? (
+                <Select aria-label={t("website")} value={site} onChange={(next) => choose("site", next)}>
+                  <option value="">{t("everyWebsite")}</option>
+                  {home.sites.map((entry) => <option key={entry.siteId} value={entry.siteId}>{entry.host}</option>)}
+                </Select>
+              ) : null}
+              {periods.length > 0 ? (
+                <Select aria-label={tPeriod("label")} value={chosenPeriod ?? view?.chosen?.id ?? ""} onChange={(next) => choose("period", next)}>
+                  {periods.map((period) => <option key={period.id} value={period.id}>{periodWords(period.id, tPeriod)}</option>)}
+                </Select>
+              ) : null}
+            </div>
           ) : undefined}
         />
         {home === null ? (

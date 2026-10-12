@@ -7,7 +7,8 @@ import { formatDay } from "../../sites/_components/siteFormat";
 
 /** The important points shown at most. */
 const MOST_POINTS = 5;
-const LABEL = "text-[13px] font-semibold uppercase tracking-[0.12em] text-muted";
+/** A section heading on the Executive summary, as drawn: small, spaced capitals. */
+export const LABEL = "text-[13px] font-semibold uppercase tracking-[0.12em] text-muted";
 
 /**
  * The Head of Strategy's note for the managing director (Executive summary,

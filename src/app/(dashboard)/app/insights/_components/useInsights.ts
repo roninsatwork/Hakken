@@ -55,11 +55,32 @@ export function useInsightsSite(): Id<"companyWebsites"> | undefined {
   return (params.get("site") as Id<"companyWebsites"> | null) ?? undefined;
 }
 
-/** A link to an Insights page, carrying the website chosen. */
+/** A link to an Insights page, carrying the website and the period chosen. */
 export function useInsightsHref(): (segment: string) => string {
   const params = useSearchParams();
-  const site = params.get("site");
-  return (segment) => `/app/insights/${segment}${site ? `?site=${site}` : ""}`;
+  const kept = new URLSearchParams();
+  for (const key of ["site", "period"]) {
+    const value = params.get(key);
+    if (value) kept.set(key, value);
+  }
+  const rest = kept.toString();
+  return (segment) => `/app/insights/${segment}${rest ? `?${rest}` : ""}`;
+}
+
+/**
+ * The period chosen in the section's header (`period` in the address;
+ * insights-intelligence-plan.md phase 1): a month `2026-09`, a quarter
+ * `2026-Q3` or the last twelve months `12M`; none for the newest whole month.
+ */
+export function useInsightsPeriodChoice(): string | undefined {
+  return useSearchParams().get("period") ?? undefined;
+}
+
+/** The period's figures, months and why, for the website chosen: the header and the pages read one subscription. */
+export function useInsightsPeriodView() {
+  const site = useInsightsSite();
+  const period = useInsightsPeriodChoice();
+  return useQuery(api.insightsPeriod.insightsPeriodView, { ...(site ? { siteId: site } : {}), ...(period ? { period } : {}) });
 }
 
 /** The section's frame, shared by the layout and the pages: one subscription. */

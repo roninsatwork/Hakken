@@ -19,7 +19,9 @@ import { ReportDownloadAction } from "../_components/ReportDownload";
 import { RankDots } from "../_components/RankDots";
 import { ScorecardRows } from "../_components/ScorecardRows";
 import { StrategyNote, WorkLog, type WorkLine } from "../_components/StrategyNote";
-import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { WhyTheyMoved } from "../_components/WhyTheyMoved";
+import { monthsWords, periodWords } from "../_components/insightPeriodWords";
 
 /** Taken off a month's last share so the stack never tops 100% by a rounding and the scale ends at 100%. */
 const FULL_BAR_SLACK = 1e-6;
@@ -45,6 +47,8 @@ function nextMonthlyReport(today: Date): string {
  */
 export default function InsightsSummaryPage() {
   const t = usePlatformTranslations("insights.summary");
+  const tPeriod = usePlatformTranslations("insights.period");
+  const view = useInsightsPeriodView();
   const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
@@ -65,6 +69,29 @@ export default function InsightsSummaryPage() {
     return <ChangeLine by={(row.now - row.before) * (row.lowerIsBetter ? -1 : 1)}>{percent === null ? t("changeFromNone") : t("changeOn", { percent: Math.abs(percent), before: formatNumber(row.before) })}</ChangeLine>;
   };
   const market = leagues?.leagues.find((league) => league.id === "traffic") ?? null;
+  // The period chosen in the header (phase 1): each figure that period, against the period before and the same period a
+  // year ago — the week's last 90 days only until the history is held.
+  const chosen = view?.chosen ?? null;
+  const periodFigures = view?.figures ?? null;
+  const nowWords = chosen ? periodWords(chosen.id, tPeriod) : "";
+  const against = (now: number, before: number | null, months: string[] | null, percent = false, lowerIsBetter = false) => {
+    if (before === null || !months) return null;
+    const words = monthsWords(months, tPeriod);
+    const by = (now - before) * (lowerIsBetter ? -1 : 1);
+    return (
+      <ChangeLine by={by}>
+        {percent
+          ? t("againstPoints", { points: Math.abs(Math.round((now - before) * 10) / 10), period: words, before })
+          : t("againstCount", { count: formatNumber(Math.abs(now - before)), period: words, before: formatNumber(before) })}
+      </ChangeLine>
+    );
+  };
+  const twoWays = (now: number, trio: { before: number | null; yearAgo: number | null }, percent = false) => (
+    <span className="flex flex-col gap-0.5">
+      {against(now, trio.before, chosen?.before ?? null, percent)}
+      {against(now, trio.yearAgo, chosen?.yearAgo ?? null, percent)}
+    </span>
+  );
   const findings = (week?.findings ?? []).filter((finding) => !newest || finding.siteId === newest.siteId);
 
   // What Hakken did this week and does next, each line opening its page: an agency's report, never a to-do list.
@@ -117,25 +144,37 @@ export default function InsightsSummaryPage() {
       <PageHeader
         icon={<LayoutDashboard className="h-5 w-5 text-brand" />}
         title={t("title")}
-        description={home ? t("description", { company: home.company }) : undefined}
+        description={home ? (chosen ? t("descriptionPeriod", { company: home.company, period: nowWords }) : t("description", { company: home.company })) : undefined}
         action={<ReportDownloadAction report={board} label={t("downloadBoard")} />}
       />
       {newest ? (
-        <>
-          <StrategyNote verdict={newest.verdict} paragraphs={newest.summary?.paragraphs ?? []} writtenAt={newest.createdAt} points={findings.filter((finding) => finding.headline !== newest.verdict)} href={href} />
-          <WorkLog did={did} next={next} />
-        </>
+        <StrategyNote verdict={newest.verdict} paragraphs={newest.summary?.paragraphs ?? []} writtenAt={newest.createdAt} points={findings.filter((finding) => finding.headline !== newest.verdict)} href={href} />
       ) : week !== undefined ? <Notice>{t("noWeek")}</Notice> : null}
       <FigureRow>
-        <Figure label={t("figureLabel", { measure: t("measures.enquiries") })} value={shown90(score("enquiries"))} detail={change(score("enquiries"))} />
-        <Figure label={t("figureLabel", { measure: t("measures.visitors") })} value={shown90(score("visitors"))} detail={change(score("visitors"))} />
-        <Figure label={t("figureLabel", { measure: t("measures.visitorsPerEnquiry") })} value={shown90(score("visitorsPerEnquiry"))} detail={change(score("visitorsPerEnquiry"))} />
+        {periodFigures ? (
+          <>
+            <Figure label={t("periodFigure", { measure: t("measures.enquiries"), period: nowWords })} value={formatNumber(periodFigures.enquiries.now)} detail={twoWays(periodFigures.enquiries.now, periodFigures.enquiries)} />
+            {periodFigures.people ? (
+              <Figure label={t("periodFigure", { measure: t("measures.visitors"), period: nowWords })} value={formatNumber(periodFigures.people.now)} detail={twoWays(periodFigures.people.now, periodFigures.people)} />
+            ) : (
+              <Figure label={t("periodFigure", { measure: t("visits"), period: nowWords })} value={formatNumber(periodFigures.visits.now)} detail={twoWays(periodFigures.visits.now, periodFigures.visits)} />
+            )}
+            <Figure label={t("periodFigure", { measure: t("whoEnquired"), period: nowWords })} value={`${periodFigures.rate.now}%`} detail={twoWays(periodFigures.rate.now, periodFigures.rate, true)} />
+          </>
+        ) : (
+          <>
+            <Figure label={t("figureLabel", { measure: t("measures.enquiries") })} value={shown90(score("enquiries"))} detail={change(score("enquiries"))} />
+            <Figure label={t("figureLabel", { measure: t("measures.visitors") })} value={shown90(score("visitors"))} detail={change(score("visitors"))} />
+            <Figure label={t("figureLabel", { measure: t("measures.visitorsPerEnquiry") })} value={shown90(score("visitorsPerEnquiry"))} detail={change(score("visitorsPerEnquiry"))} />
+          </>
+        )}
         <Figure
           label={t("place")}
           value={market?.place ? tPlace("ofTotal", { place: market.place, total: market.rows.length }) : "–"}
           detail={market?.place && market.placeBefore ? <ChangeLine by={market.placeBefore - market.place}>{t("placeMoved", { count: Math.abs(market.placeBefore - market.place) })}</ChangeLine> : <span className="text-secondary">{t("placeDetail")}</span>}
         />
       </FigureRow>
+      {view ? <WhyTheyMoved view={view} /> : null}
       <ChartCard title={t("share.title")} hint={t(rivalHosts.length > 0 ? "share.hintRivals" : "share.hint")} exportName="insights-market-share" csv={() => toCsv([t("share.month"), ...shareSeries.map((entry) => entry.name)], shareBars.map((row) => [String(row.day).slice(0, 7), ...shareSeries.map((entry) => Number(row[entry.key] ?? 0))]))} enoughData={shareBars.length > 1} emptyText={t("share.empty")}>
         <SiteBarChart
           data={shareBars}
@@ -151,6 +190,7 @@ export default function InsightsSummaryPage() {
       </ChartCard>
       {leagues && leagues.leagues.some((league) => league.place !== null) ? <RankDots leagues={leagues.leagues} rivals={leagues.rivals} href={href} /> : null}
       {scorecard.length > 0 ? <ScorecardRows scorecard={scorecard} href={href} /> : null}
+      {newest ? <WorkLog did={did} next={next} /> : null}
     </>
   );
 }

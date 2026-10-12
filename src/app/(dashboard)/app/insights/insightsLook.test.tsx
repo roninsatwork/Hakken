@@ -84,6 +84,37 @@ const SCORE = [
   { measure: "visitorsPerEnquiry", now: 19, before: 10, unit: "count", lowerIsBetter: true, place: null, places: null, status: "BEHIND" },
   { measure: "marketShare", now: 15.9, before: 5, unit: "percent", lowerIsBetter: false, place: 3, places: 5, status: "ON_TRACK" },
 ];
+/** The period chosen in the header, as the history reads it (insights-intelligence-plan.md phases 1 and 8): three months of Ronins'. */
+const MONTH_POINT = (month: string, visits: number, enquiries: number) => ({
+  month, whole: true, visits, enquiries, people: Math.round(visits * 0.7), clicks: 390, shown: 294618, position: 19.2, share: 46,
+  service: { visits: Math.round(visits * 0.4), enquiries: Math.round(enquiries * 0.4), clicks: 125, shown: 218788, position: 20.7 },
+  groups: [{ group: "GOOGLE", visits: Math.round(visits * 0.7), enquiries: Math.round(enquiries * 0.5) }, { group: "AI", visits: 6, enquiries: 0 }],
+  rivals: 6132,
+});
+const PERIOD_VIEW = {
+  siteId: "site_1", host: "ronins.co.uk",
+  periods: [{ id: "2026-09", kind: "MONTH" }, { id: "2026-08", kind: "MONTH" }],
+  chosen: { id: "2026-09", kind: "MONTH", months: ["2026-09"], before: ["2026-08"], yearAgo: ["2025-09"] },
+  figures: {
+    enquiries: { now: 10, before: 7, yearAgo: 26 }, visits: { now: 240, before: 201, yearAgo: 366 }, people: { now: 175, before: 156, yearAgo: 235 },
+    rate: { now: 4.2, before: 3.5, yearAgo: 7.1 }, clicks: { now: 390, before: 338, yearAgo: 422 }, shown: { now: 294618, before: 376191, yearAgo: 329362 },
+  },
+  months: [MONTH_POINT("2025-09", 366, 26), MONTH_POINT("2026-08", 201, 7), MONTH_POINT("2026-09", 240, 10)],
+  kinds: [], sources: [],
+  why: {
+    compare: "YEAR_AGO", lost: 16, split: { counting: 3, visits: 5, rate: 8 }, paragraph: null,
+    tests: [
+      { id: "COUNTING", verdict: "LIKELY", part: 3, figures: { shareNow: 46, shareThen: 59 }, sources: ["analytics", "searchConsole"] },
+      { id: "MARKET", verdict: "PART", part: null, figures: { rivalsNow: 6132, rivalsThen: 17160, shownNow: null, shownThen: null, clicksNow: 125, clicksThen: 130 }, sources: ["dataForSeo", "searchConsole"] },
+      { id: "RANKINGS", verdict: "WATCH", part: null, figures: { positionNow: 20.7, positionThen: null, bestMonth: "2026-03", bestPosition: 17.5, pageOneNow: null, pageOneBefore: null }, sources: ["searchConsole", "dataForSeo", "googleUpdates"] },
+      { id: "SHOWN", verdict: "NO_DATA", part: null, figures: { shownNow: 218788, shownThen: null, aiWith: null, aiOf: null }, sources: ["searchConsole", "dataForSeo"] },
+      { id: "SOURCES", verdict: "LIKELY", part: 5, figures: { source0: "AI", source0Now: 6, source0Then: 32 }, sources: ["analytics"] },
+      { id: "CONVERSION", verdict: "BIGGEST", part: 8, figures: { rateNow: 4.2, rateThen: 7.1, serviceRateNow: 4.3, serviceRateThen: 8.6 }, sources: ["analytics"] },
+    ],
+  },
+  breakMonth: "2025-10",
+};
+
 const WEEK = {
   weeks: [{
     siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05", verdict: "Enquiries fell to 169 from 241 while visitors held.", createdAt: Date.parse("2026-10-11T07:00:00Z"),
@@ -157,8 +188,9 @@ describe("Insights' looks", () => {
 
   it("1 · Executive summary", async () => {
     nav.pathname = "/app/insights/summary";
-    answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME, "insightsReads:insightsThisWeek": WEEK });
+    answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME, "insightsReads:insightsThisWeek": WEEK, "insightsPeriod:insightsPeriodView": PERIOD_VIEW });
     const { container } = render(<InsightsSummaryPage />);
+    await screen.findByText(/Of the 16 fewer enquiries than September 2025/);
     await screen.findByText(/Enquiries fell to 169 from 241 while visitors held/);
     await screen.findByText("AI assistants are where you lead.");
     await screen.findByText(/Reads every source again on/);

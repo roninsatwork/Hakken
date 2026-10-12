@@ -3441,7 +3441,8 @@
                 "INSIGHTS_CONVERSION": "Insights: Conversion specialist",
                 "INSIGHTS_MEASUREMENT": "Insights: Measurement specialist",
                 "INSIGHTS_EDITOR": "Insights: Editor",
-                "INSIGHTS_REPORT_WRITER": "Insights: Report Writer"
+                "INSIGHTS_REPORT_WRITER": "Insights: Report Writer",
+                "INSIGHTS_ANALYST": "Insights: Analyst"
               },
               "mode": {
                 "label": "Mode",
@@ -3516,6 +3517,7 @@
                 "shop": "For a shop",
                 "findings": "How a finding is answered",
                 "strategy": "How the Head of Strategy answers",
+                "why": "How the Analyst answers",
                 "review": "How a page review is answered",
                 "drafts": "How a draft is answered",
                 "panel": "How the buyers' questions are answered",
@@ -18286,7 +18288,13 @@
         "status": "Status",
         "download": "Download CSV"
       },
-      "figureLabel": "{measure}, last 90 days"
+      "figureLabel": "{measure}, last 90 days",
+      "periodFigure": "{measure}, {period}",
+      "visits": "Visits",
+      "whoEnquired": "Visits that enquired",
+      "againstCount": "{count} on {period}'s {before}",
+      "againstPoints": "{points} points on {period}'s {before}%",
+      "descriptionPeriod": "{company} at a glance: {period} against the period before and the same period a year ago, and against your rivals."
     },
     "pdf": {
       "boardReport": "Board report",
@@ -19134,6 +19142,138 @@
       "PAGE_DOWN": "{page} didn't load ({status}).",
       "CLICKS_FELL": "Google's clicks on {day} were {clicks}, against a usual {usual}; {platformName} is watching whether it lasts.",
       "noAnswer": "no answer"
+    },
+    "period": {
+      "label": "Period",
+      "twelveMonths": "The last 12 months",
+      "quarter": "Q{quarter} {year}",
+      "span": "{from} to {to}"
+    },
+    "why": {
+      "title": {
+        "fell": "Why your enquiries fell: {now} against {then}",
+        "rose": "Why your enquiries rose: {now} against {then}",
+        "held": "Your enquiries held: {now} against {then}"
+      },
+      "hint": "The Analyst tests six causes every month across every source it holds, your service pages first, and names a cause only when two sources agree.",
+      "lead": {
+        "fell": "Of the {count} fewer enquiries than {then}, {parts}.",
+        "rose": "Of the {count} more enquiries than {then}, {parts}.",
+        "held": "Your enquiries held at {now}, as in {then}."
+      },
+      "clause": {
+        "fell": {
+          "counting": "about {count} are Analytics counting fewer of your visitors",
+          "visits": "about {count} are fewer visitors arriving",
+          "rate": "about {count} are fewer visitors enquiring"
+        },
+        "rose": {
+          "counting": "about {count} are Analytics counting more of your visitors",
+          "visits": "about {count} are more visitors arriving",
+          "rate": "about {count} are more visitors enquiring"
+        }
+      },
+      "part": {
+        "fell": {
+          "counting": "Analytics counting fewer visitors",
+          "visits": "Fewer visitors arriving",
+          "rate": "Fewer visitors enquiring"
+        },
+        "rose": {
+          "counting": "Analytics counting more visitors",
+          "visits": "More visitors arriving",
+          "rate": "More visitors enquiring"
+        }
+      },
+      "split": {
+        "title": "Where the {count} enquiries went",
+        "hint": "{then}'s enquiries, each cause's part, and {now}'s. About: each part is worked out from the figures below, and they add up to the whole.",
+        "step": "Step",
+        "enquiries": "Enquiries"
+      },
+      "numbered": "{number}. {question}",
+      "from": "From {sources}",
+      "sources": {
+        "analytics": "Google Analytics",
+        "searchConsole": "Search Console",
+        "dataForSeo": "Google's results and your rivals",
+        "googleUpdates": "Google's updates"
+      },
+      "verdict": {
+        "BIGGEST": "Likely, the biggest part",
+        "LIKELY": "Likely",
+        "PART": "Likely, a part",
+        "WATCH": "One to watch",
+        "NOT": "Not a cause",
+        "RULED_OUT": "Ruled out",
+        "NO_DATA": "Can't be compared"
+      },
+      "groups": {
+        "GOOGLE": "Google",
+        "AI": "AI assistants",
+        "OTHER_SEARCH": "Other search engines",
+        "TYPED": "Typed in",
+        "WEBSITES": "Other websites",
+        "SOCIAL": "Social media",
+        "OTHER": "Other"
+      },
+      "month": "Month",
+      "noChart": "Not enough months held yet.",
+      "tests": {
+        "COUNTING": {
+          "question": "Is Analytics counting everyone?",
+          "said": "Analytics counts {now} of every 100 people Google sends you, against {then} in {period}.",
+          "part": "About {count} of the missing enquiries are visitors it no longer counts.",
+          "chart": "Analytics' visits from Google for each 100 of Google's clicks, month by month",
+          "chartHint": "Google counts its clicks itself; Analytics counts the visits it sees. The gap is people Analytics misses.",
+          "series": "Visits counted for each 100 clicks"
+        },
+        "MARKET": {
+          "question": "Is your market shrinking?",
+          "rivals": "Your rivals together had {now} estimated Google visitors in {nowPeriod}, against {then} in {thenPeriod}.",
+          "shown": "Google showed your service pages {now} times, against {then}.",
+          "clicks": "Your own Google clicks to service pages: {now}, against {then}.",
+          "chart": "Your rivals' estimated Google visitors, month by month",
+          "chartHint": "An estimate of the visitors Google sends your rivals, added up: the whole market, not only you.",
+          "series": "Rivals' estimated visitors"
+        },
+        "RANKINGS": {
+          "question": "Did your service pages' rankings fall?",
+          "place": "Their average place in Google was {now}, against {then} in {period}.",
+          "placeOnly": "Their average place in Google was {now}. Google changed what it counts as shown in {since}, so places before it can't be compared.",
+          "best": "Their best was {best}, in {month}.",
+          "week": "Your rankings this week: {now} searches on page one, against {before} the week before.",
+          "chart": "Your service pages' average place in Google, month by month",
+          "chartHint": "Lower is better. Search Console's average place for your service pages.",
+          "series": "Average place"
+        },
+        "SHOWN": {
+          "question": "Does Google show your service pages as often?",
+          "shown": "Google showed them {now} times, against {then} in {period}.",
+          "notCompared": "Google changed what it counts as shown in {since}: times shown before it can't be compared.",
+          "ai": "Google's AI overview sits on {with} of your {of} page-one searches, answering some people before they click.",
+          "chart": "Times Google showed your service pages, month by month",
+          "chartHint": "Search Console's times shown for your service pages.",
+          "series": "Times shown"
+        },
+        "SOURCES": {
+          "question": "Which sources stopped sending people?",
+          "one": "{source}, {now} visits against {then}",
+          "said": "Against {period}: {sources}.",
+          "none": "No source fell by a third or more.",
+          "chart": "Visits by where people came from, month by month",
+          "chartHint": "Every visit Analytics counted, by its source."
+        },
+        "CONVERSION": {
+          "question": "Did fewer visitors enquire?",
+          "said": "{serviceNow}% of your service-page visits enquired, against {serviceThen}% in {period}; across the website, {now}% against {then}%.",
+          "part": "This is about {count} of the {of}.",
+          "chart": "Visits that enquired, month by month",
+          "chartHint": "The share of visits that ended in an enquiry: your service pages, and the whole website.",
+          "service": "Service pages",
+          "all": "Whole website"
+        }
+      }
     }
   },
   "clarity": {

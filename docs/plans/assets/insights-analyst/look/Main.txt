@@ -3,15 +3,29 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Executive summary
 strategy-note: This week, from your Head of Strategy
-work-log: What Hakken did this week
-work-log: What Hakken does next
 figures
-  figure: Enquiries, last # days
-  figure: Visitors, last # days
-  figure: Visitors for each enquiry, last # days
+  figure: Enquiries, September #
+  figure: Visitors, September #
+  figure: Visits that enquired, September #
   figure: Your place in your market
+why-moved: Why your enquiries fell: September # against September #
+  chart-card: Where the # enquiries went
+  why-test
+    chart-card: Analytics' visits from Google for each # of Google's clicks, month by month
+  why-test
+    chart-card: Your rivals' estimated Google visitors, month by month
+  why-test
+    chart-card: Your service pages' average place in Google, month by month
+  why-test
+    chart-card: Times Google showed your service pages, month by month
+  why-test
+    chart-card: Visits by where people came from, month by month
+  why-test
+    chart-card: Visits that enquired, month by month
 chart-card: Your share of your market's Google visitors
 chart-card: Visits for each enquiry, month by month
 chart-card: Where you rank against your # rivals
 scorecard: Your scorecard
   download: Download CSV
+work-log: What Hakken did this week
+work-log: What Hakken does next

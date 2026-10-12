@@ -3441,7 +3441,8 @@
                 "INSIGHTS_CONVERSION": "Insights: specialista delle conversioni",
                 "INSIGHTS_MEASUREMENT": "Insights: specialista delle misurazioni",
                 "INSIGHTS_EDITOR": "Insights: redattore",
-                "INSIGHTS_REPORT_WRITER": "Insights: autore dei report"
+                "INSIGHTS_REPORT_WRITER": "Insights: autore dei report",
+                "INSIGHTS_ANALYST": "Insights: analista"
               },
               "mode": {
                 "label": "Modalità",
@@ -3516,6 +3517,7 @@
                 "shop": "Per un negozio",
                 "findings": "Come si risponde con una scoperta",
                 "strategy": "Come risponde l’Head of Strategy",
+                "why": "Come risponde l'analista",
                 "review": "Come si risponde a una revisione di pagina",
                 "drafts": "Come si risponde con una bozza",
                 "panel": "Come si risponde con le domande dei clienti",
@@ -18286,7 +18288,13 @@
         "status": "Stato",
         "download": "Scarica CSV"
       },
-      "figureLabel": "{measure}, ultimi 90 giorni"
+      "figureLabel": "{measure}, ultimi 90 giorni",
+      "periodFigure": "{measure}, {period}",
+      "visits": "Visite",
+      "whoEnquired": "Visite con richiesta",
+      "againstCount": "{count} rispetto ai {before} di {period}",
+      "againstPoints": "{points} punti rispetto al {before}% di {period}",
+      "descriptionPeriod": "{company} in breve: {period} rispetto al periodo prima e allo stesso periodo di un anno fa, e rispetto ai concorrenti."
     },
     "pdf": {
       "boardReport": "Report per il consiglio",
@@ -19134,6 +19142,138 @@
       "PAGE_DOWN": "{page} non si è caricata ({status}).",
       "CLICKS_FELL": "I clic da Google del {day} sono stati {clicks}, contro i soliti {usual}; {platformName} controlla se dura.",
       "noAnswer": "nessuna risposta"
+    },
+    "period": {
+      "label": "Periodo",
+      "twelveMonths": "Gli ultimi 12 mesi",
+      "quarter": "T{quarter} {year}",
+      "span": "da {from} a {to}"
+    },
+    "why": {
+      "title": {
+        "fell": "Perché le richieste sono calate: {now} rispetto a {then}",
+        "rose": "Perché le richieste sono cresciute: {now} rispetto a {then}",
+        "held": "Le richieste sono stabili: {now} rispetto a {then}"
+      },
+      "hint": "L'analista verifica ogni mese sei cause su tutte le fonti che conserva, partendo dalle pagine dei servizi, e indica una causa solo quando due fonti concordano.",
+      "lead": {
+        "fell": "Delle {count} richieste in meno rispetto a {then}, {parts}.",
+        "rose": "Delle {count} richieste in più rispetto a {then}, {parts}.",
+        "held": "Le richieste sono rimaste {now}, come in {then}."
+      },
+      "clause": {
+        "fell": {
+          "counting": "circa {count} sono visitatori che Analytics non conta più",
+          "visits": "circa {count} sono visitatori in meno",
+          "rate": "circa {count} sono visitatori che chiedono meno"
+        },
+        "rose": {
+          "counting": "circa {count} sono visitatori che Analytics ora conta in più",
+          "visits": "circa {count} sono visitatori in più",
+          "rate": "circa {count} sono visitatori che chiedono di più"
+        }
+      },
+      "part": {
+        "fell": {
+          "counting": "Analytics conta meno visitatori",
+          "visits": "Meno visitatori",
+          "rate": "Meno visitatori che chiedono"
+        },
+        "rose": {
+          "counting": "Analytics conta più visitatori",
+          "visits": "Più visitatori",
+          "rate": "Più visitatori che chiedono"
+        }
+      },
+      "split": {
+        "title": "Dove sono andate le {count} richieste",
+        "hint": "Le richieste di {then}, la parte di ogni causa e quelle di {now}. Circa: ogni parte è calcolata dai dati qui sotto e insieme fanno il totale.",
+        "step": "Passo",
+        "enquiries": "Richieste"
+      },
+      "numbered": "{number}. {question}",
+      "from": "Da {sources}",
+      "sources": {
+        "analytics": "Google Analytics",
+        "searchConsole": "Search Console",
+        "dataForSeo": "I risultati di Google e i tuoi concorrenti",
+        "googleUpdates": "gli aggiornamenti di Google"
+      },
+      "verdict": {
+        "BIGGEST": "Probabile, la parte maggiore",
+        "LIKELY": "Probabile",
+        "PART": "Probabile, in parte",
+        "WATCH": "Da tenere d'occhio",
+        "NOT": "Non è una causa",
+        "RULED_OUT": "Esclusa",
+        "NO_DATA": "Non confrontabile"
+      },
+      "groups": {
+        "GOOGLE": "Google",
+        "AI": "Assistenti AI",
+        "OTHER_SEARCH": "Altri motori di ricerca",
+        "TYPED": "Indirizzo digitato",
+        "WEBSITES": "Altri siti",
+        "SOCIAL": "Social network",
+        "OTHER": "Altro"
+      },
+      "month": "Mese",
+      "noChart": "Non ci sono ancora abbastanza mesi.",
+      "tests": {
+        "COUNTING": {
+          "question": "Analytics conta tutti?",
+          "said": "Analytics conta {now} persone ogni 100 che Google ti manda, contro {then} in {period}.",
+          "part": "Circa {count} delle richieste mancanti sono di visitatori che non conta più.",
+          "chart": "Visite da Google contate da Analytics ogni 100 clic di Google, mese per mese",
+          "chartHint": "Google conta i suoi clic da sé; Analytics conta le visite che vede. La differenza sono le persone che Analytics non vede.",
+          "series": "Visite contate ogni 100 clic"
+        },
+        "MARKET": {
+          "question": "Il tuo mercato si sta riducendo?",
+          "rivals": "I tuoi concorrenti insieme hanno avuto {now} visitatori stimati da Google in {nowPeriod}, contro {then} in {thenPeriod}.",
+          "shown": "Google ha mostrato le tue pagine dei servizi {now} volte, contro {then}.",
+          "clicks": "I tuoi clic da Google sulle pagine dei servizi: {now}, contro {then}.",
+          "chart": "Visitatori stimati da Google dei tuoi concorrenti, mese per mese",
+          "chartHint": "Una stima dei visitatori che Google manda ai tuoi concorrenti, sommati: tutto il mercato, non solo tu.",
+          "series": "Visitatori stimati dei concorrenti"
+        },
+        "RANKINGS": {
+          "question": "Le posizioni delle tue pagine dei servizi sono calate?",
+          "place": "La loro posizione media in Google è stata {now}, contro {then} in {period}.",
+          "placeOnly": "La loro posizione media in Google è stata {now}. Google ha cambiato cosa conta come mostrato in {since}, quindi le posizioni precedenti non sono confrontabili.",
+          "best": "La migliore è stata {best}, in {month}.",
+          "week": "Le tue posizioni questa settimana: {now} ricerche in prima pagina, contro {before} la settimana prima.",
+          "chart": "Posizione media in Google delle tue pagine dei servizi, mese per mese",
+          "chartHint": "Più basso è meglio. La posizione media di Search Console per le tue pagine dei servizi.",
+          "series": "Posizione media"
+        },
+        "SHOWN": {
+          "question": "Google mostra le tue pagine dei servizi altrettanto spesso?",
+          "shown": "Google le ha mostrate {now} volte, contro {then} in {period}.",
+          "notCompared": "Google ha cambiato cosa conta come mostrato in {since}: le volte precedenti non sono confrontabili.",
+          "ai": "La panoramica AI di Google compare su {with} delle tue {of} ricerche in prima pagina e risponde ad alcune persone prima che clicchino.",
+          "chart": "Volte in cui Google ha mostrato le tue pagine dei servizi, mese per mese",
+          "chartHint": "Le volte mostrate di Search Console per le tue pagine dei servizi.",
+          "series": "Volte mostrate"
+        },
+        "SOURCES": {
+          "question": "Quali fonti hanno smesso di mandarti persone?",
+          "one": "{source}, {now} visite contro {then}",
+          "said": "Rispetto a {period}: {sources}.",
+          "none": "Nessuna fonte è calata di un terzo o più.",
+          "chart": "Visite per provenienza, mese per mese",
+          "chartHint": "Ogni visita contata da Analytics, per fonte."
+        },
+        "CONVERSION": {
+          "question": "Meno visitatori hanno fatto una richiesta?",
+          "said": "Il {serviceNow}% delle visite alle pagine dei servizi ha portato a una richiesta, contro il {serviceThen}% in {period}; su tutto il sito, {now}% contro {then}%.",
+          "part": "Questo vale circa {count} delle {of}.",
+          "chart": "Visite che hanno portato a una richiesta, mese per mese",
+          "chartHint": "La quota di visite finite con una richiesta: le pagine dei servizi e tutto il sito.",
+          "service": "Pagine dei servizi",
+          "all": "Tutto il sito"
+        }
+      }
     }
   },
   "clarity": {

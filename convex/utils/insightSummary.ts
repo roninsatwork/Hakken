@@ -65,6 +65,14 @@ export const weekSummaryValidator = v.object({
    * (Executive summary, approved 12 Oct 2026); absent on weeks before it.
    */
   paragraphs: v.optional(v.array(v.string())),
+  /**
+   * DataForSEO's rankings that week against the week before: searches on page
+   * one, and of them how many show Google's AI overview — for the six tests
+   * (insights-intelligence-plan.md, phase 8); absent on weeks before it.
+   */
+  rankings: v.optional(v.object({ day: v.string(), pageOne: v.number(), pageOneBefore: v.number(), aiWith: v.number(), aiOf: v.number() })),
+  /** The Analyst's words on why the enquiries moved, for the period it read; absent on weeks before it. */
+  why: v.optional(v.object({ period: v.string(), compare: v.union(v.literal("YEAR_AGO"), v.literal("BEFORE")), paragraph: v.string() })),
   /** How many facts the team read, and explanations its specialists ruled out. */
   checked: v.number(),
   ruledOut: v.number(),

@@ -60,6 +60,8 @@ export const RESEARCH_ROLES = ["KEYWORD_RESEARCH"] as const;
 export const INSIGHTS_LEAD_ROLE = "INSIGHTS_HEAD_OF_STRATEGY";
 export const INSIGHTS_ROLES = [
   INSIGHTS_LEAD_ROLE,
+  // Why the enquiries moved, each month, across every source (insights-intelligence-plan.md phase 8; Anthony, 2026-10-12).
+  "INSIGHTS_ANALYST",
   "INSIGHTS_MARKET",
   "INSIGHTS_TECHNICAL",
   "INSIGHTS_SEARCH",

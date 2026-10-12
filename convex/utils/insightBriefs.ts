@@ -1,5 +1,5 @@
 import type { InsightsRole } from "./agentRoles";
-import { BOARD_FORMAT, DISCIPLINE, FINDINGS_FORMAT, GROUND_RULES, MONTH_FORMAT, SHOP_RULE, STRATEGY_FORMAT, type InsightSpecialist } from "./insightTeam";
+import { BOARD_FORMAT, DISCIPLINE, FINDINGS_FORMAT, GROUND_RULES, MONTH_FORMAT, SHOP_RULE, STRATEGY_FORMAT, WHY_FORMAT, type InsightSpecialist } from "./insightTeam";
 import { REVIEW_RULES } from "./insightConversion";
 import { DRAFT_RULES } from "./insightDrafts";
 import { PANEL_RULES } from "./insightPanel";
@@ -54,6 +54,16 @@ export const INSIGHT_BRIEFS: Record<InsightsRole, { job: string; brief: string }
       "The page shows enquiries, visitors and visitors for each enquiry for the last 90 days against the same 90 days a year ago (keys ending .90.now and .90.year): when the verdict or the note names one of those, use those keys, so the page says one number. Name another period only for a change the 90 days can't show, and say which period.",
     ].join("\n"),
   },
+  INSIGHTS_ANALYST: {
+    job: "Each month, for every website the team reads: works out why the enquiries moved against the same month a year ago, or the month before where a year is not held — six tests across Search Console, Analytics, DataForSEO and Google's updates, the service pages first — and gives the Head of Strategy the cause of each part of the move.",
+    brief: [
+      "You are the Analyst: an agency's head of analytics, paid to say why a figure moved, never only that it did.",
+      // Anthony, 2026-10-12: "the whole point of this app is to not use one data source … use them all to make a decision and opinion".
+      "Name a cause only where two sources agree, and say which: Analytics against Search Console's own clicks for counting, DataForSEO's rivals and Search Console's showings for the market, Search Console's places and DataForSEO's week for rankings.",
+      "The service pages first: they are where enquiries come from. Never let articles' visitors hide what the service pages did.",
+      "Split the move the way the tests split it — counting, visitors, enquiring — biggest first, and say the period and what it is set against.",
+    ].join("\n"),
+  },
   INSIGHTS_MARKET: { job: specialistJob("market"), brief: specialistBrief("market") },
   INSIGHTS_TECHNICAL: { job: specialistJob("technical"), brief: specialistBrief("technical") },
   INSIGHTS_SEARCH: { job: specialistJob("search"), brief: specialistBrief("search") },
@@ -99,13 +109,14 @@ const EDITOR_CHECKS = [
 ].join("\n");
 
 /** Which fixed part each is, for the page's headings. */
-export type FixedPart = "ground" | "shop" | "findings" | "strategy" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
+export type FixedPart = "ground" | "shop" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
 
 /** What Hakken always adds to an agent's brief: shown read-only on its Instructions page, never edited there. */
 export function fixedRulesFor(role: InsightsRole): Array<{ part: FixedPart; text: string }> {
   const ground = [{ part: "ground" as const, text: GROUND_RULES }, { part: "shop" as const, text: SHOP_RULE }];
   switch (role) {
     case "INSIGHTS_HEAD_OF_STRATEGY": return [...ground, { part: "findings", text: FINDINGS_FORMAT }, { part: "strategy", text: STRATEGY_FORMAT }];
+    case "INSIGHTS_ANALYST": return [...ground, { part: "why", text: WHY_FORMAT }];
     case "INSIGHTS_CONVERSION": return [...ground, { part: "findings", text: FINDINGS_FORMAT }, { part: "review", text: REVIEW_RULES }];
     case "INSIGHTS_LOCAL":
     case "INSIGHTS_LINKS": return [...ground, { part: "findings", text: FINDINGS_FORMAT }, { part: "drafts", text: DRAFT_RULES }];

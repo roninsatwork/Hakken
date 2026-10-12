@@ -132,6 +132,17 @@ export const STRATEGY_FORMAT = [
 ].join("\n");
 
 /**
+ * The shape of the Analyst's answer (insights-intelligence-plan.md, phase 8):
+ * the run reads it, so it is fixed. The tests and the split are worked out
+ * in code; the Analyst says what they mean.
+ */
+export const WHY_FORMAT = [
+  "Reply with only JSON: {\"paragraph\": two or three sentences for a managing director saying why the enquiries moved over the period, against the period it is set against —",
+  " the move first, then its parts in the order of their size, the service pages first, each cause with the sources that agree; every figure named by its key in [[ ]], never typed;",
+  " a test ruled out is said only when the reader would expect it (\"your rankings held\"); never a cause the tests did not find}.",
+].join("\n");
+
+/**
  * The team's agents as first made (`insightsTeam.ensureTeamInternal`): names,
  * what each does, and the Head of Strategy's weekly schedule. Each agent's
  * model, instructions and spend limit are then changed in Admin → Agents.
@@ -140,6 +151,10 @@ export const TEAM_AGENTS: Record<InsightsRole, { name: string; description: stri
   INSIGHTS_HEAD_OF_STRATEGY: {
     name: "Insights: Head of Strategy",
     description: "Runs the Insights team each week: reads every owned website's sources with its rivals, has each specialist look at its own discipline, connects what they find into stories across sources, ranks them by what is at stake, and has the Editor check every figure before the week's findings are saved.",
+  },
+  INSIGHTS_ANALYST: {
+    name: "Insights: Analyst",
+    description: "Works out why the enquiries moved each month: six tests across every source, the service pages first, each cause named only where two sources agree, and the move split into what each cause cost.",
   },
   INSIGHTS_MARKET: { name: "Insights: Market specialist", description: "The website against its rivals: their moves over time, the leagues and the website's share of the market." },
   INSIGHTS_TECHNICAL: { name: "Insights: Technical SEO specialist", description: "The site audit, pages Google can't read well, speed, structured data and internal links." },

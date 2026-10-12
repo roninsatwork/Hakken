@@ -28,8 +28,10 @@ import {
   SIDE_BY_SIDE,
   SPECIALIST_ROLE,
   STRATEGY_FORMAT,
+  WHY_FORMAT,
   type InsightSpecialist,
 } from "./utils/insightTeam";
+import { whyFacts, type WhyView } from "./utils/insightWhyFacts";
 import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
 import { outcomeOf, type Change } from "./utils/insightTrack";
@@ -195,6 +197,12 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   // 1. One reading of every source (§2.1), and what the run asks Google itself (§8, I37, I42).
   const reading = await readWebsiteFacts(ctx, args.holdId);
   reading.facts.push(...await askedInRun(ctx, args.holdId));
+  // 1b. Why the enquiries moved (insights-intelligence-plan.md phase 8): DataForSEO's week kept with the week, and the
+  // newest whole month's six tests, from the sixteen months held, as facts the Analyst and the Head of Strategy may name.
+  const rankings = await ctx.runQuery(internal.insightsPeriod.rankSnapshot, { holdId: args.holdId }).catch(() => null);
+  const view: WhyView | null = await ctx.runQuery(internal.insightsPeriod.runView, { holdId: args.holdId }).catch(() => null);
+  const why = view ? whyFacts(view) : [];
+  reading.facts.push(...why);
   const facts = factsByKey(reading.facts);
   const bySource = new Map<string, number>();
   for (const fact of reading.facts) bySource.set(fact.source, (bySource.get(fact.source) ?? 0) + 1);
@@ -259,6 +267,22 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   }));
   for (const answer of answers) drafts.push(...answer);
 
+  // 3b. The Analyst says why the enquiries moved, from the tests' facts: its words kept only when every figure is held.
+  let whyWords: { period: string; compare: "YEAR_AGO" | "BEFORE"; paragraph: string } | undefined;
+  if (view?.chosen && view.why && why.length > 0) {
+    try {
+      const paragraph = await askAnalyst(ctx, args, view, why, member("INSIGHTS_ANALYST") ?? lead);
+      if (paragraph) whyWords = { period: view.chosen.id, compare: view.why.compare, paragraph };
+      await ctx.runMutation(internal.roleRuns.logRunLine, {
+        runId: args.runId, companyId: args.companyId, heading: "Analyst",
+        detail: paragraph ? `Why the enquiries moved in ${view.chosen.id}: ${paragraph}`.slice(0, 900) : "Its words named a figure not held, or typed one: none kept this week.",
+        failed: !paragraph,
+      });
+    } catch (error) {
+      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Analyst", detail: failureSummary(error), failed: true });
+    }
+  }
+
   // 4. The Head of Strategy connects them, ranks them and writes the week's verdict (§2.4).
   let verdict = "";
   let written: unknown = null;
@@ -275,7 +299,7 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   }
 
   // 5. The Editor checks every figure, comparison and claim, against a fresh reading (I21, I29).
-  const fresh = factsByKey((await readWebsiteFacts(ctx, args.holdId)).facts);
+  const fresh = factsByKey([...(await readWebsiteFacts(ctx, args.holdId)).facts, ...why]);
   const saved: SavedFinding[] = [];
   let rank = 0;
   for (const draft of ordered) {
@@ -328,6 +352,8 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
     scorecard: scorecardFrom(reading.facts, args.host),
     enquiryCheck: check,
     services,
+    ...(rankings ? { rankings } : {}),
+    ...(whyWords ? { why: whyWords } : {}),
     ...monthly,
     checked: reading.facts.length,
     ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),
@@ -894,6 +920,21 @@ async function askSpecialist(
   });
 }
 
+/** The Analyst's words on why the enquiries moved: kept only when every figure is named and held. */
+async function askAnalyst(ctx: ActionCtx, args: RunArgs, view: WhyView, facts: readonly Fact[], member: TeamMember | undefined): Promise<string | null> {
+  if (!view.chosen || !view.why) return null;
+  const system = [rulesFor(args), briefFor("INSIGHTS_ANALYST", member?.instructions), WHY_FORMAT].filter(Boolean).join("\n\n");
+  const prompt = JSON.stringify({
+    website: args.host,
+    period: view.chosen.id,
+    against: view.why.compare === "YEAR_AGO" ? "the same period a year before" : "the period just before",
+    tests: view.why.tests.map((test) => ({ test: test.id, verdict: test.verdict, enquiries: test.part })),
+    facts: factLines(facts),
+  });
+  const answer = await ask(ctx, args, member, "the Analyst", system, prompt) as { paragraph?: unknown } | null;
+  return verdictFrom(typeof answer?.paragraph === "string" ? answer.paragraph : "", factsByKey(facts));
+}
+
 async function askStrategy(
   ctx: ActionCtx,
   args: RunArgs,
@@ -914,7 +955,8 @@ async function askStrategy(
   const prompt = JSON.stringify({
     website: args.host,
     findings: drafts.map((draft, number) => ({ number, specialist: draft.specialist, pattern: draft.pattern, atStake: Math.round(draft.stake * 10) / 10, headline: draft.headline, story: draft.story, action: draft.action, sure: draft.sure })),
-    facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key))),
+    // And why the enquiries moved, the Analyst's tests (phase 8), so the verdict can say what caused the move.
+    facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key) || fact.key.startsWith("why."))),
   });
   const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown } | null;
   const order = Array.isArray(answer?.order) ? answer.order.filter((number): number is number => Number.isInteger(number) && number >= 0 && number < drafts.length) : [];
