@@ -34,7 +34,7 @@ const ALONE = "test-results/test-timings-alone.json";
 export const SLOW_TESTS = new Map([
   [
     "convex/sitesLoad.test.ts › a very large site every Sites query answers within the target on 50,000 keywords, 5,000 pages, 20,000 links and two years",
-    "The Sites speed test: every Sites query over 50,000 keywords, about three minutes by design. Runs only here, never on GitHub.",
+    "The Sites speed test: every Sites query over 50,000 keywords, about four minutes by design (3m50s alone, 2026-10-12). Runs only here, never on GitHub.",
   ],
 ]);
 

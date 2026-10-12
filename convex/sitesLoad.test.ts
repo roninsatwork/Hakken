@@ -5,7 +5,7 @@ import { getFunctionName, type FunctionReference } from "convex/server";
 import { bytesReadBy } from "@/src/test/readMeter";
 import budgets from "../code-ratchets.json";
 import schema from "./schema";
-import { RANK_BANDS, RANK_INTENTS, RANK_STATUSES, KD_BANDS, PAGE_TYPES } from "./utils/siteShapes";
+import { RANK_BANDS, RANK_INTENTS, RANK_STATUSES, KD_BANDS } from "./utils/siteShapes";
 import { AI_ENGINES } from "./seoAiEngines";
 
 /**
@@ -85,20 +85,26 @@ describe("a very large site", () => {
         }
       });
     }
-    // 5,000 pages and 20,000 links.
-    for (let batch = 0; batch < 5; batch += 1) {
-      await t.run(async (ctx) => {
-        for (let index = batch * 1_000; index < (batch + 1) * 1_000; index += 1) {
-          await ctx.db.insert("sitePageRanks", {
-            websiteId, locationCode: UK, page: `/section-${index % 40}/page-${index}/`, address: `https://big.co.uk/section-${index % 40}/page-${index}/`,
-            section: `/section-${index % 40}/`, keywords: (index % 30) + 1, bestPosition: (index % 50) + 1, top3: index % 3,
-            topKeyword: `search number ${index}`, topKeywordVolume: index, firstSeenDay: "2025-01-01",
-            day: "2026-09-23",
-            traffic: index % 700, pageType: PAGE_TYPES[index % PAGE_TYPES.length], rebuildId: "load",
-          });
-        }
-      });
-    }
+    // Two years of day summaries.
+    await t.run(async (ctx) => {
+      const start = Date.parse("2024-09-24T00:00:00Z");
+      for (let day = 0; day < 730; day += 1) {
+        await ctx.db.insert("siteDaySummaries", {
+          websiteId, locationCode: UK, day: new Date(start + day * 86_400_000).toISOString().slice(0, 10),
+          keywords: 50_000, estimatedTraffic: 10_000 + day, backlinks: 20_000, referringDomains: 3_000 + day,
+          bands: { p01_03: 1_000, p04_10: 5_000, p11_20: 10_000, p21_50: 20_000, p51_up: 14_000 },
+          rankedUp: day % 7, rankedDown: day % 5, rankedNew: day % 3, rankedLost: day % 2, updatedAt: Date.now(),
+        });
+      }
+    });
+    // The compact copies the big tables count from, built as a filing builds
+    // them (docs/plans/active/sites-table-pages-plan.md §5.2).
+    await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
+    await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "pages", key: `${websiteId}:${UK}` });
+    // The links go in after the rebuild, which never reads them: the test
+    // database checks every row it holds on each lookup, and the rebuild's
+    // ten thousand page lookups were most of this test's time (2026-10-12).
+    // Its 5,000 pages are the rebuild's own, written from the keywords' pages.
     // 20,000 links: every link, the big list with a compact copy — and a
     // thousand strongest-per-website, the list of its own read whole.
     const everyPull = await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
@@ -122,22 +128,6 @@ describe("a very large site", () => {
         }
       });
     }
-    // Two years of day summaries.
-    await t.run(async (ctx) => {
-      const start = Date.parse("2024-09-24T00:00:00Z");
-      for (let day = 0; day < 730; day += 1) {
-        await ctx.db.insert("siteDaySummaries", {
-          websiteId, locationCode: UK, day: new Date(start + day * 86_400_000).toISOString().slice(0, 10),
-          keywords: 50_000, estimatedTraffic: 10_000 + day, backlinks: 20_000, referringDomains: 3_000 + day,
-          bands: { p01_03: 1_000, p04_10: 5_000, p11_20: 10_000, p21_50: 20_000, p51_up: 14_000 },
-          rankedUp: day % 7, rankedDown: day % 5, rankedNew: day % 3, rankedLost: day % 2, updatedAt: Date.now(),
-        });
-      }
-    });
-    // The compact copies the big tables count from, built as a filing builds
-    // them (docs/plans/active/sites-table-pages-plan.md §5.2).
-    await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
-    await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "pages", key: `${websiteId}:${UK}` });
     await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "links", key: websiteId });
     // Five competitors watched against the site, the company's own questions
     // with what their answers said (`siteListAi.ts`), and two years of its
