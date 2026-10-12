@@ -6,7 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
-import { ask, factLines, insightsStepArgs, lines, rulesFor, whyNotFilled, words, type InsightsRunArgs } from "./insightsAsk";
+import { LEAD_ASK_LIMIT_MS, ask, factLines, insightsStepArgs, lines, rulesFor, whyNotFilled, words, type InsightsRunArgs } from "./insightsAsk";
 import { readWebsiteFacts } from "./insightsReading";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
 import { COMPETING_ROLE, competingForRun, keepCompeting } from "./insightCompeting";
@@ -608,7 +608,7 @@ async function askStrategy(
     // And why the enquiries moved, the Analyst's tests (phase 8), so the verdict can say what caused the move.
     facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key) || fact.key.startsWith("why."))),
   });
-  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown; services?: unknown } | null;
+  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt, LEAD_ASK_LIMIT_MS) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown; services?: unknown } | null;
   const order = Array.isArray(answer?.order) ? answer.order.filter((number): number is number => Number.isInteger(number) && number >= 0 && number < drafts.length) : [];
   const joined = (Array.isArray(answer?.joined) ? answer.joined : []).flatMap((raw) => {
     const listed: unknown[] = Array.isArray((raw as { from?: unknown })?.from) ? (raw as { from: unknown[] }).from : [];

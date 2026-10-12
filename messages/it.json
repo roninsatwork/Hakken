@@ -15186,7 +15186,7 @@
         "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
         "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
         "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
-        "pickOne": "Lo specialista di cannibalizzazione delle parole chiave di Hakken dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
+        "pickOne": "Lo specialista di cannibalizzazione delle parole chiave dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
       "estimates": {
         "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",
@@ -18541,7 +18541,7 @@
         "grow": "{count, plural, =0 {Nessun servizio sta ancora crescendo nelle richieste.} one {Un servizio da far crescere: {services}.} other {# servizi da far crescere: {services}.}}",
         "change": "{count, plural, one {Uno da cambiare: {services}.} other {# da cambiare: {services}.}}",
         "noChange": "Nessuno sta perdendo richieste rapidamente.",
-        "called": "{agent, plural, =0 {Questa settimana ha deciso ogni scelta la regola di Hakken: l'Head of Strategy non ne ha ancora fatta nessuna.} one {L'Head of Strategy ha fatto una di queste scelte, con la sua ragione accanto; la regola di Hakken le altre.} other {L'Head of Strategy ha fatto # di queste scelte, con la sua ragione accanto a ognuna; la regola di Hakken le altre.}}"
+        "called": "{agent, plural, =0 {Questa settimana ha deciso ogni scelta la regola di {platformName}: l'Head of Strategy non ne ha ancora fatta nessuna.} one {L'Head of Strategy ha fatto una di queste scelte, con la sua ragione accanto; la regola di {platformName} le altre.} other {L'Head of Strategy ha fatto # di queste scelte, con la sua ragione accanto a ognuna; la regola di {platformName} le altre.}}"
       },
       "chart": {
         "title": "Richieste per servizio",
@@ -19623,7 +19623,7 @@
           "owner": "{owner} porta più richieste di tutte ({enquiries} negli ultimi 12 mesi), quindi dovrebbe avere queste ricerche.",
           "ownerClicks": "{owner} ha più clic di tutte, quindi dovrebbe avere queste ricerche.",
           "agent": "Lo specialista di cannibalizzazione delle parole chiave le ha decise il {day}, affidategli dall'Head of Strategy; le sue ragioni sono accanto a ogni ricerca e pagina che ha cambiato.",
-          "ruleOnly": "Le ha decise la regola di Hakken: lo specialista di cannibalizzazione delle parole chiave non ha ancora esaminato questo gruppo.",
+          "ruleOnly": "Le ha decise la regola di {platformName}: lo specialista di cannibalizzazione delle parole chiave non ha ancora esaminato questo gruppo.",
           "rule": "Ogni ricerca dovrebbe avere una sola pagina. Una ricerca che nomina un luogo va alla pagina di quel luogo, una che non ne nomina alcuno a una pagina non legata a un luogo; poi alla pagina le cui parole le corrispondono meglio, e a quella che Google mostra già di più. Quante volte una ricerca viene fatta non lo decide mai.",
           "lead": "{owner} dovrebbe averne di più: {count, plural, one {# ricerca} other {# ricerche}}.",
           "leadVolume": "{owner} dovrebbe averne di più: {count, plural, one {# ricerca} other {# ricerche}}, cercate circa {volume} volte al mese.",
@@ -19661,7 +19661,7 @@
       "everyVerdict": "Ogni decisione",
       "sees": {
         "every": "Delle tue {pages} pagine, {improve} da migliorare, {merge} da unire a un'altra, {redirect} da reindirizzare e {remove} da rimuovere; {keep} fanno il loro lavoro così come sono.",
-        "decided": "{agent, plural, =0 {Questa settimana ha deciso ogni pagina la regola di Hakken: allo specialista delle decisioni sulle pagine non ne è ancora stata affidata nessuna.} one {Lo specialista delle decisioni sulle pagine ha deciso una pagina, affidatagli dall'Head of Strategy, con la sua ragione accanto; lo specialista di cannibalizzazione ne ha decise {competing}, e la regola di Hakken le altre.} other {Lo specialista delle decisioni sulle pagine ha deciso # pagine, affidategli dall'Head of Strategy, con la sua ragione accanto a ognuna; lo specialista di cannibalizzazione ne ha decise {competing}, e la regola di Hakken le altre.}}",
+        "decided": "{agent, plural, =0 {Questa settimana ha deciso ogni pagina la regola di {platformName}: allo specialista delle decisioni sulle pagine non ne è ancora stata affidata nessuna.} one {Lo specialista delle decisioni sulle pagine ha deciso una pagina, affidatagli dall'Head of Strategy, con la sua ragione accanto; lo specialista di cannibalizzazione ne ha decise {competing}, e la regola di {platformName} le altre.} other {Lo specialista delle decisioni sulle pagine ha deciso # pagine, affidategli dall'Head of Strategy, con la sua ragione accanto a ognuna; lo specialista di cannibalizzazione ne ha decise {competing}, e la regola di {platformName} le altre.}}",
         "create": "{count, plural, one {Una pagina} other {# pagine}} da creare, dalle ricerche che vincono i tuoi concorrenti e dalle domande dei tuoi clienti; la più cercata è “{search}” ({volume} al mese)."
       },
       "verdicts": {

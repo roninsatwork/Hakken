@@ -99,7 +99,7 @@ describe("Ask Hakken's read of Page decisions", () => {
     expect(read.rule).toMatch(/never advise removing, merging or redirecting a page this doesn't say to/);
     expect(read.toActOn).toEqual(expect.arrayContaining([
       { page: "/merged/", do: "merge", into: "/working/", why: "It lives off the working page's searches.", decided_by: "the Keyword cannibalisation specialist" },
-      { page: "/old-offer/", do: "remove", why: "nobody visits it, Google doesn't show it and no website links to it: remove it", decided_by: "Hakken's rule" },
+      { page: "/old-offer/", do: "remove", why: "nobody visits it, Google doesn't show it and no website links to it: remove it", decided_by: "the rule" },
     ]));
   });
 });

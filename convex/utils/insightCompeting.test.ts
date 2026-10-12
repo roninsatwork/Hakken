@@ -167,7 +167,7 @@ describe("which page owns each search", () => {
     expect(read.rule).toMatch(/Give it as written/);
     expect(read.rule).toMatch(/never your own advice/);
     const [group] = read.groups;
-    expect(group).toMatchObject({ main_page: "/web-design-london/", decided_by: "Hakken's rule: the specialist hasn't looked at this group yet" });
+    expect(group).toMatchObject({ main_page: "/web-design-london/", decided_by: "the rule: the specialist hasn't looked at this group yet" });
     expect(group.pages.find((page) => page.page === "/web-design-surrey/")?.do).toBe("keep it for the 2 searches it should own");
     expect(group.searches.find((search) => search.search === "web design guildford")).toMatchObject({ should_own: "/web-design-surrey/", why: "names Guildford" });
   });

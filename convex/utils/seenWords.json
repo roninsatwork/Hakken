@@ -1219,7 +1219,7 @@
         "noneCompeting": "No keyword has two of your pages competing for it.",
         "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
         "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
-        "pickOne": "Hakken's Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
+        "pickOne": "The Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
       "estimates": {
         "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
@@ -2535,7 +2535,7 @@
         "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
         "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
         "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
-        "pickOne": "Lo specialista di cannibalizzazione delle parole chiave di Hakken dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
+        "pickOne": "Lo specialista di cannibalizzazione delle parole chiave dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
       "estimates": {
         "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",

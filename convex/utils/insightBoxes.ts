@@ -77,7 +77,7 @@ export const BOXES: Record<BoxScreen, BoxSpec> = {
 
 /** The shape of a box answer, fixed in code so the run can read it (shown read-only on each writer's Instructions page). */
 export const BOX_FORMAT = [
-  "Some of the screens your discipline owns open with a box, \"What Hakken sees\", that a business owner reads first. Write it for each screen you are given, from the facts given.",
+  "Some of the screens your discipline owns open with a summary box that a business owner reads first. Write it for each screen you are given, from the facts given.",
   "Answer in JSON only: {\"boxes\": [{\"screen\": the screen as given, \"says\": [\"…\", \"…\"]}]} — two or three plain sentences a screen, what matters most first, against the business's own past or its rivals.",
   "Name every figure by its key in double square brackets, like [[ga.conversions.90.now]], never type a number; a sentence naming a figure not given is left out.",
 ].join("\n");
@@ -124,7 +124,7 @@ const WRITERS: Partial<Record<InsightsRole, string>> = {
 /** The boxes for Ask Hakken: what each screen says, as its specialist wrote it this week. */
 export function boxesForAssistant(boxes: ReadonlyArray<{ screen: BoxScreen; says: string[]; role: string; week: string }>) {
   return {
-    rule: "What each Insights screen's \"What Hakken sees\" box says, as its specialist wrote it. Give it as written when asked what a screen says; add detail from the screen when asked, never different advice.",
+    rule: "What each Insights screen's summary box says, as its specialist wrote it. Give it as written when asked what a screen says; add detail from the screen when asked, never different advice.",
     screens: boxes.map((box) => ({
       screen: BOXES[box.screen].link,
       says: box.says.join(" "),

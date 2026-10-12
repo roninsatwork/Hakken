@@ -672,12 +672,12 @@ const SEARCHES_FOR_ASSISTANT = 25;
  */
 export function competingForAssistant(groups: readonly KeptGroup[]) {
   return {
-    rule: "Keyword cannibalisation as the Keyword cannibalisation specialist decided it, handed the groups by the Head of Strategy (or Hakken's own rule where it says so). Give it as written: which page should own a search, and what to do with each page. For a page or a search not here, say the team hasn't looked at it yet — never your own advice.",
+    rule: "Keyword cannibalisation as the Keyword cannibalisation specialist decided it, handed the groups by the Head of Strategy (or the rule where it says so). Give it as written: which page should own a search, and what to do with each page. For a page or a search not here, say the team hasn't looked at it yet — never your own advice.",
     link: "/app/insights/cannibalisation",
     groups: groups.map((group) => ({
       name: group.name,
       link: `/app/insights/cannibalisation/group?key=${encodeURIComponent(group.key)}`,
-      decided_by: group.decidedBy === "AGENT" ? `the Keyword cannibalisation specialist${group.decidedWeek ? `, on ${group.decidedWeek}` : ""}` : "Hakken's rule: the specialist hasn't looked at this group yet",
+      decided_by: group.decidedBy === "AGENT" ? `the Keyword cannibalisation specialist${group.decidedWeek ? `, on ${group.decidedWeek}` : ""}` : "the rule: the specialist hasn't looked at this group yet",
       main_page: group.owner,
       pages: group.pages.map((page) => ({
         page: page.path,

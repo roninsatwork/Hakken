@@ -9,6 +9,7 @@ import { typedNumbers } from "./utils/insightEditor";
 import { briefFor } from "./utils/insightBriefs";
 import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf } from "./utils/insightCompetingAgent";
 import { tenantQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { BookNames } from "./searchConsolePeriodBooks";
@@ -77,7 +78,7 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
       try {
         const prompt = JSON.stringify({ website: run.host, ...agentInputOf(group, titles), facts: factLines(competingFacts(group, span)) });
         const answer = await ask(ctx, run, member, `the Keyword cannibalisation specialist, on "${group.name}"`, system, prompt);
-        if (answer === null) throw new Error("its answer wasn't JSON");
+        if (answer === null) throw appError("UPSTREAM_FAILURE", "Its answer wasn't JSON.");
         const applied = applyAnswer(group, answer, competing.websiteRate, week);
         changed += applied.owners + applied.pages;
         // Its words kept only when every figure they name is the group's own, and none is typed.

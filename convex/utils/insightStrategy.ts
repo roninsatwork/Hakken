@@ -119,14 +119,14 @@ const CALL_WORDS: Record<Verdict, string> = {
 /** Strategy's calls for Ask Hakken, as kept, with why and who called each. */
 export function servicesForAssistant(services: readonly Service[]) {
   return {
-    rule: "Strategy's call for each of the business's services, as Hakken keeps them. Give them as written; never your own call.",
+    rule: "Strategy's call for each of the business's services, as kept. Give them as written; never your own call.",
     link: "/app/insights/strategy",
     services: services.map((service) => ({
       service: service.title ?? service.page,
       page: service.page,
       call: CALL_WORDS[service.verdict],
       ...(service.why ? { why: service.why } : {}),
-      called_by: service.decidedBy === "AGENT" ? `the Head of Strategy${service.decidedWeek ? `, on ${service.decidedWeek}` : ""}` : "Hakken's rule",
+      called_by: service.decidedBy === "AGENT" ? `the Head of Strategy${service.decidedWeek ? `, on ${service.decidedWeek}` : ""}` : "the rule",
     })),
   };
 }

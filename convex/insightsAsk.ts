@@ -44,6 +44,15 @@ export const rulesFor = (args: InsightsRunArgs) => (args.shop ? `${GROUND_RULES}
  */
 export const ASK_LIMIT_MS = 3 * 60 * 1000;
 
+/**
+ * The Head of Strategy's own limit: it reads every specialist's findings and
+ * calls every service, and writes the most. Its step has the room — the
+ * specialists finish about two and a half minutes in — and the step still
+ * ends near seven minutes, inside Convex's ten (a run on 12 October 2026 gave
+ * it up at three minutes and saved the week without its verdict).
+ */
+export const LEAD_ASK_LIMIT_MS = 4.5 * 60 * 1000;
+
 /** The answer, or a refusal once `limitMs` has passed. */
 export async function within<T>(work: Promise<T>, limitMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -67,7 +76,7 @@ async function modelFor(ctx: ActionCtx, args: AskRun, member: TeamMember | undef
 }
 
 /** Ask the model, record the call and its cost on the run, and give back its JSON (or null). */
-export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined, what: string, system: string, prompt: string): Promise<unknown> {
+export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined, what: string, system: string, prompt: string, limitMs: number = ASK_LIMIT_MS): Promise<unknown> {
   const spend = await ctx.runQuery(internal.roleRuns.runSpendLeft, { runId: args.runId });
   if (spend.limitReached) throw appError("CONFLICT", `The run reached its spend limit ($${spend.spentUsd.toFixed(2)}), so ${what} was not asked.`);
   const model = await modelFor(ctx, args, member);
@@ -80,7 +89,7 @@ export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | und
       systemInstruction: system,
       contents: [{ type: "text", text: prompt }],
       temperature: 0.2,
-    }), ASK_LIMIT_MS);
+    }), limitMs);
     text = response.text ?? "";
     tokens = { input: response.inputTokens ?? 0, output: response.outputTokens ?? 0 };
   } catch (error) {

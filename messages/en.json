@@ -15186,7 +15186,7 @@
         "noneCompeting": "No keyword has two of your pages competing for it.",
         "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
         "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
-        "pickOne": "Hakken's Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
+        "pickOne": "The Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
       "estimates": {
         "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
@@ -18541,7 +18541,7 @@
         "grow": "{count, plural, =0 {No service is growing its enquiries yet.} one {One service to grow: {services}.} other {# services to grow: {services}.}}",
         "change": "{count, plural, one {One to change: {services}.} other {# to change: {services}.}}",
         "noChange": "None is losing its enquiries fast.",
-        "called": "{agent, plural, =0 {Hakken's rule made every call this week: the Head of Strategy hasn't called any yet.} one {The Head of Strategy made one of these calls, with its reason beside it; Hakken's rule the rest.} other {The Head of Strategy made # of these calls, with its reason beside each; Hakken's rule the rest.}}"
+        "called": "{agent, plural, =0 {{platformName}'s rule made every call this week: the Head of Strategy hasn't called any yet.} one {The Head of Strategy made one of these calls, with its reason beside it; {platformName}'s rule the rest.} other {The Head of Strategy made # of these calls, with its reason beside each; {platformName}'s rule the rest.}}"
       },
       "chart": {
         "title": "Enquiries by service",
@@ -19623,7 +19623,7 @@
           "owner": "{owner} brings the most enquiries of them ({enquiries} in the last 12 months), so it should own these searches.",
           "ownerClicks": "{owner} has the most clicks of them, so it should own these searches.",
           "agent": "The Keyword cannibalisation specialist decided these on {day}, handed them by the Head of Strategy; its reasons are beside each search and page it changed.",
-          "ruleOnly": "Hakken's rule decided these: the Keyword cannibalisation specialist hasn't looked at this group yet.",
+          "ruleOnly": "{platformName}'s rule decided these: the Keyword cannibalisation specialist hasn't looked at this group yet.",
           "rule": "Each search should have one page. A search that names a place goes to that place's page, and one that names no place to a page for no one place; then to the page whose words fit it best, and the one Google already shows most. How often a search is searched never decides it.",
           "lead": "{owner} should own the most of them: {count, plural, one {# search} other {# searches}}.",
           "leadVolume": "{owner} should own the most of them: {count, plural, one {# search} other {# searches}}, searched about {volume} times a month.",
@@ -19661,7 +19661,7 @@
       "everyVerdict": "Every decision",
       "sees": {
         "every": "Of your {pages} pages, {improve} to improve, {merge} to merge into another, {redirect} to redirect and {remove} to remove; {keep} are doing their job as they are.",
-        "decided": "{agent, plural, =0 {Hakken's rule decided every page this week: the Page decisions specialist hasn't been handed any yet.} one {The Page decisions specialist decided one page, handed it by the Head of Strategy, with its reason beside it; Keyword cannibalisation's specialist decided {competing}, and Hakken's rule the rest.} other {The Page decisions specialist decided # pages, handed them by the Head of Strategy, with its reason beside each; Keyword cannibalisation's specialist decided {competing}, and Hakken's rule the rest.}}",
+        "decided": "{agent, plural, =0 {{platformName}'s rule decided every page this week: the Page decisions specialist hasn't been handed any yet.} one {The Page decisions specialist decided one page, handed it by the Head of Strategy, with its reason beside it; Keyword cannibalisation's specialist decided {competing}, and {platformName}'s rule the rest.} other {The Page decisions specialist decided # pages, handed them by the Head of Strategy, with its reason beside each; Keyword cannibalisation's specialist decided {competing}, and {platformName}'s rule the rest.}}",
         "create": "{count, plural, one {One page} other {# pages}} to create, from searches your rivals win and your buyers' questions; the most searched is “{search}” ({volume} a month)."
       },
       "verdicts": {
