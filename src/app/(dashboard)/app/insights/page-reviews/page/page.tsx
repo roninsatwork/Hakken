@@ -23,6 +23,8 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
+import { useCitedPagesTable } from "../../../sites/_components/useCitedPagesTable";
+import { useTranslations } from "next-intl";
 
 const moved = (now: number | null, before: number | null) => (now !== null && before ? Math.round(((now - before) / before) * 100) : null);
 
@@ -46,6 +48,9 @@ export default function InsightsPageReviewPage() {
   const matches = wordStartMatcher(term.toLowerCase());
   const searchRows = service?.searches.filter((row) => !matches || matches(row.keyword));
   const searches = useSitePager(service ? searchRows : undefined, { isLoading: service === undefined, table: "searches" });
+  const tcp = useTranslations("sites.citedPages");
+  const citedRows = useQuery(api.siteRivalCited.pageRivalCitedPages, data ? { siteId: data.siteId, page: path } : "skip");
+  const cited = useCitedPagesTable(citedRows, { fileName: `${data?.host ?? "site"}-rival-pages-ai-cites`, withHost: true, table: "cited" });
   const back = { href: href("page-reviews"), label: t("back") };
   if (data === undefined) return <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   const review = data?.pages.find((row) => row.page === path);
@@ -99,6 +104,17 @@ export default function InsightsPageReviewPage() {
           { key: "place", header: t("columns.place"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.position === null ? "–" : formatPosition(row.position)}</span> },
           { key: "rival", header: t("columns.rival"), cell: (row) => <span className="text-[12px] text-secondary">{row.rival ? `${row.rival} (${formatPosition(row.rivalPosition)})` : "–"}</span> },
         ]}
+      />
+      {/* The rivals' pages AI assistants cite for the same questions as this page (the PageDetail board). */}
+      <DataTable
+        rows={cited.pager.pageRows}
+        rowKey={(row) => row.url}
+        search={cited.search}
+        cardHeader={<TableBar footer={cited.pager.footer} noun="results" title={tcp("pageTitle", { count: citedRows?.length ?? 0 })} actions={cited.download} />}
+        empty={cited.empty}
+        footer={cited.pager.footer}
+        sort={cited.sort}
+        columns={cited.columns}
       />
     </>
   );

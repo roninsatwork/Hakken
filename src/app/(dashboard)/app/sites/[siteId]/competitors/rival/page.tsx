@@ -29,6 +29,7 @@ import { sharedSiteQuery, useSiteParam } from "../../../_components/useSiteParam
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
+import { useCitedPagesTable } from "../../../_components/useCitedPagesTable";
 
 const LEADS = ["THEM", "YOU", "ALL"] as const;
 type Lead = (typeof LEADS)[number];
@@ -95,6 +96,10 @@ export default function SiteRivalPage() {
   const ownLine = trend?.find((line) => line.isYou), rivalLine = trend?.find((line) => !line.isYou && line.host === hold?.host);
   const months = [...new Set([...(ownLine?.points ?? []), ...(rivalLine?.points ?? [])].map((point) => point.day))].sort();
   const monthly = (you: boolean, day: string) => ((you ? ownLine : rivalLine)?.points.find((point) => point.day === day)?.estimatedTraffic ?? null);
+
+  const tcp = useTranslations("sites.citedPages");
+  const citedRows = useQuery(api.siteRivalCited.rivalCitedPages, rivalId ? { siteId, rivalId } : "skip");
+  const cited = useCitedPagesTable(citedRows, { fileName: `${site?.host ?? "site"}-${hold?.host ?? "rival"}-cited-pages`, withHost: false, table: "cited" });
 
   if (!asked) {
     return <DetailHeader back={back} icon={<Swords className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -202,6 +207,19 @@ export default function SiteRivalPage() {
             cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.theirTraffic)}</span>,
           },
         ]}
+      />
+
+      {/* What the rival is building: its pages AI assistants cite for the company's own questions (the VisRival board). */}
+      <DataTable
+        rows={cited.pager.pageRows}
+        rowKey={(row) => row.url}
+        onRowClick={() => { if (hold) router.push(`/app/sites/${hold.siteId}/ai/sources`); }}
+        search={cited.search}
+        cardHeader={<TableBar footer={cited.pager.footer} noun="results" title={tcp("rivalTitle", { count: citedRows?.length ?? 0 })} actions={cited.download} />}
+        empty={cited.empty}
+        footer={cited.pager.footer}
+        sort={cited.sort}
+        columns={cited.columns}
       />
     </div>
   );

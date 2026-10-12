@@ -14424,7 +14424,7 @@
     "rivalMoves": {
       "title": "What your rivals did lately",
       "empty": "No rival moves to show yet: they appear once Google's results have been checked twice.",
-      "biggest": "{keyword}: {position} ({volume} a month)",
+      "biggest": "{keyword}, place {position} ({volume} a month)",
       "columns": {
         "rival": "Rival",
         "new": "New searches, 30 days",
@@ -14432,6 +14432,21 @@
         "fell": "Fell",
         "biggest": "Biggest new search",
         "visits": "Visits a month"
+      }
+    },
+    "citedPages": {
+      "search": "Find a page or question",
+      "download": "Download CSV",
+      "noMatch": "No page matches",
+      "empty": "No page of theirs is cited for your questions yet.",
+      "andMore": " and {count, plural, one {# more} other {# more}}",
+      "rivalTitle": "{count, plural, one {# page} other {# pages}} · What they're building: their pages AI assistants cite",
+      "pageTitle": "{count, plural, one {# rival page} other {# rival pages}} · Rivals' pages AI assistants cite for the same questions",
+      "columns": {
+        "page": "Page",
+        "citedBy": "Cited by",
+        "for": "For",
+        "times": "Times cited"
       }
     }
   },

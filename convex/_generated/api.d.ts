@@ -552,6 +552,7 @@ import type * as siteRebuildSchema from "../siteRebuildSchema.js";
 import type * as siteRecords from "../siteRecords.js";
 import type * as siteReferringDomainParts from "../siteReferringDomainParts.js";
 import type * as siteReviews from "../siteReviews.js";
+import type * as siteRivalCited from "../siteRivalCited.js";
 import type * as siteRivalMoves from "../siteRivalMoves.js";
 import type * as siteSchema from "../siteSchema.js";
 import type * as siteSerp from "../siteSerp.js";
@@ -1383,6 +1384,7 @@ declare const fullApi: ApiFromModules<{
   siteRecords: typeof siteRecords;
   siteReferringDomainParts: typeof siteReferringDomainParts;
   siteReviews: typeof siteReviews;
+  siteRivalCited: typeof siteRivalCited;
   siteRivalMoves: typeof siteRivalMoves;
   siteSchema: typeof siteSchema;
   siteSerp: typeof siteSerp;

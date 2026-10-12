@@ -17,3 +17,8 @@ table: Search | Searches a month | Your place | Best rival
   table-bar: # search · The searches this page ranks for, the most searched first
     download: Download CSV
   table-footer
+search: Find a page or question
+table: Page | Cited by | For | Times cited
+  table-bar: # rival pages · Rivals' pages AI assistants cite for the same questions
+    download: Download CSV
+  table-footer

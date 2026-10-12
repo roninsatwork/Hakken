@@ -14424,7 +14424,7 @@
     "rivalMoves": {
       "title": "Cosa hanno fatto di recente i tuoi concorrenti",
       "empty": "Ancora nessuna mossa dei concorrenti: compaiono dopo due controlli dei risultati di Google.",
-      "biggest": "{keyword}: {position} ({volume} al mese)",
+      "biggest": "{keyword}, posizione {position} ({volume} al mese)",
       "columns": {
         "rival": "Concorrente",
         "new": "Nuove ricerche, 30 giorni",
@@ -14432,6 +14432,21 @@
         "fell": "Scese",
         "biggest": "Nuova ricerca più grande",
         "visits": "Visite al mese"
+      }
+    },
+    "citedPages": {
+      "search": "Trova una pagina o una domanda",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna pagina corrisponde",
+      "empty": "Nessuna loro pagina è ancora citata per le tue domande.",
+      "andMore": " e {count, plural, one {# altra} other {altre #}}",
+      "rivalTitle": "{count, plural, one {# pagina} other {# pagine}} · Cosa stanno costruendo: le loro pagine citate dagli assistenti AI",
+      "pageTitle": "{count, plural, one {# pagina di un concorrente} other {# pagine dei concorrenti}} · Pagine dei concorrenti citate dagli assistenti AI per le stesse domande",
+      "columns": {
+        "page": "Pagina",
+        "citedBy": "Citata da",
+        "for": "Per",
+        "times": "Volte citata"
       }
     }
   },

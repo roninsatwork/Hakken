@@ -40,7 +40,9 @@ export const rivalMoves = tenantQuery({
       const website = await ctx.db.get(rival.websiteId);
       if (!website) continue;
       const ranks = await ctx.db.query("siteKeywordRanks").withIndex("by_site_volume", (q) => q.eq("websiteId", website._id).eq("locationCode", site.place)).order("desc").take(RANKINGS_READ);
-      const fresh = ranks.filter((row) => row.status !== "LOST" && row.firstSeenDay >= since);
+      // New since the rival's first check, and within 30 days: a search held from the first check isn't news.
+      const firstCheck = ranks.reduce((earliest, row) => (row.firstSeenDay < earliest ? row.firstSeenDay : earliest), today);
+      const fresh = ranks.filter((row) => row.status !== "LOST" && row.firstSeenDay > firstCheck && row.firstSeenDay >= since);
       const biggest = fresh[0] ?? null;
       const latest = await latestFigures(ctx, website._id, site.place);
       const before = await seriesFor(ctx, website._id, site.place, shiftDay(today, -75), shiftDay(today, -31), "month");
