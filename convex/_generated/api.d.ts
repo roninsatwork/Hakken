@@ -282,6 +282,8 @@ import type * as insightsQuick from "../insightsQuick.js";
 import type * as insightsReading from "../insightsReading.js";
 import type * as insightsReads from "../insightsReads.js";
 import type * as insightsRun from "../insightsRun.js";
+import type * as insightsRunAfter from "../insightsRunAfter.js";
+import type * as insightsRunSteps from "../insightsRunSteps.js";
 import type * as insightsSchema from "../insightsSchema.js";
 import type * as insightsTeam from "../insightsTeam.js";
 import type * as inventoryRollups from "../inventoryRollups.js";
@@ -1133,6 +1135,8 @@ declare const fullApi: ApiFromModules<{
   insightsReading: typeof insightsReading;
   insightsReads: typeof insightsReads;
   insightsRun: typeof insightsRun;
+  insightsRunAfter: typeof insightsRunAfter;
+  insightsRunSteps: typeof insightsRunSteps;
   insightsSchema: typeof insightsSchema;
   insightsTeam: typeof insightsTeam;
   inventoryRollups: typeof inventoryRollups;

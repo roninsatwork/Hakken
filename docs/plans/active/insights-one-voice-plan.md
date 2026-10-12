@@ -85,6 +85,19 @@ Estimates are man-days, as a developer would take.
 **Total: about 13 man-days.** Built overnight on local dev if the questions
 below are answered. Nothing is pushed.
 
+## Progress
+
+- **Phase 0, built 2026-10-12 (night).** The weekly run is three steps,
+  each booked with a watch set past Convex's ten minutes
+  (`insightsRunSteps.ts`): gather (`insightsRun.runWebsite`), read and decide
+  (`insightsRun.decideWebsite`), and what follows the save
+  (`insightsRunAfter.afterWeek`). In the decide step the Analyst and the
+  Keyword cannibalisation specialist work beside the specialists. After the
+  save, the reports, drafts, buyer questions and page reviews work side by
+  side, each reading the saved week back. Any one AI call is given up after
+  three minutes (`insightsAsk.ASK_LIMIT_MS`) and its step goes on without
+  it. A step the platform stops is finished by its watch, saying where.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

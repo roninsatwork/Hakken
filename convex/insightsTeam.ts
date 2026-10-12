@@ -261,7 +261,7 @@ async function beginWebsiteRun(
   return runId;
 }
 
-const savedFindingValidator = v.object({
+export const savedFindingValidator = v.object({
   specialist: insightSpecialistValidator,
   pattern: v.string(),
   status: v.union(v.literal("PUBLISHED"), v.literal("SENT_BACK")),

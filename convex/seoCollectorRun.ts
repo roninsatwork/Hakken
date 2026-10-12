@@ -295,8 +295,8 @@ function stepOf(args: StepArgs & Record<string, unknown>): Omit<StepArgs, "watch
   };
 }
 
-/** Cancel a scheduled watch that may already have run or gone. */
-async function cancelQuietly(ctx: MutationCtx, watchId: Id<"_scheduled_functions">) {
+/** Cancel a scheduled watch that may already have run or gone; the Insights run's steps watch theirs the same way. */
+export async function cancelQuietly(ctx: MutationCtx, watchId: Id<"_scheduled_functions">) {
   const job = await ctx.db.system.get(watchId);
   if (job && job.state.kind === "pending") await ctx.scheduler.cancel(watchId);
 }
