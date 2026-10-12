@@ -459,7 +459,7 @@ async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: r
   const pages = inputs.map((page) => {
     const said = answered.get(page.page);
     return {
-      page: page.page, title: page.title, kind: page.kind, visits: page.visits, enquiries: page.enquiries, visitsBefore: page.visitsBefore, enquiriesBefore: page.enquiriesBefore,
+      page: page.page, title: page.title, kind: page.kind, visits: page.visits, enquiries: page.enquiries, visitsBefore: page.visitsBefore, enquiriesBefore: page.enquiriesBefore, visits90: page.visits90, enquiries90: page.enquiries90,
       verdict: said?.verdict ?? verdictByRule(page, page.facts, page.structured), reason: said?.reason ?? "", steps: said?.steps ?? [],
     };
   });

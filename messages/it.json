@@ -18958,7 +18958,16 @@
         "place": "La tua posizione",
         "rival": "Miglior concorrente"
       },
-      "search": "Trova una ricerca"
+      "search": "Trova una ricerca",
+      "chart": {
+        "title": "Visitatori per ogni richiesta",
+        "hint": "Più basso è meglio. Da Google Analytics.",
+        "series": "Visitatori per una richiesta",
+        "span": "Periodo",
+        "yearBefore": "L'anno prima",
+        "lastYear": "Gli ultimi 12 mesi",
+        "last90": "Gli ultimi 90 giorni"
+      }
     },
     "experiments": {
       "title": "Esperimenti",

@@ -18958,7 +18958,16 @@
         "place": "Your place",
         "rival": "Best rival"
       },
-      "search": "Find a search"
+      "search": "Find a search",
+      "chart": {
+        "title": "Visitors for each enquiry",
+        "hint": "Lower is better. From Google Analytics.",
+        "series": "Visitors for one enquiry",
+        "span": "Span",
+        "yearBefore": "The year before",
+        "lastYear": "The last 12 months",
+        "last90": "The last 90 days"
+      }
     },
     "experiments": {
       "title": "Experiments",

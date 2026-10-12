@@ -11,6 +11,7 @@ figures
   figure: Enquiries
   figure: Visitors
   figure: Google clicks
+chart-card: Visitors for each enquiry
 search: Find a search
 table: Search | Searches a month | Your place | Best rival
   table-bar: # search · The searches this page ranks for, the most searched first

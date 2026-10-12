@@ -34,6 +34,9 @@ export const pageReviewValidator = v.object({
   enquiries: v.number(),
   visitsBefore: v.union(v.number(), v.null()),
   enquiriesBefore: v.union(v.number(), v.null()),
+  /** Its last 90 days, for the review's chart beside the two years. */
+  visits90: v.optional(v.union(v.number(), v.null())),
+  enquiries90: v.optional(v.union(v.number(), v.null())),
   verdict: v.union(...VERDICTS.map((verdict) => v.literal(verdict))),
   /** Why, in a sentence; and the first steps, each a sentence. Hakken's words, never the page's (I22). */
   reason: v.string(),

@@ -13,7 +13,10 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { perEnquiry } from "@/convex/utils/insightConversion";
-import { formatNumber } from "../../../sites/_components/siteFormat";
+import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
+import { ChartCard } from "@/src/ui/components/screens/ChartCard";
+import { SiteBarChart } from "../../../sites/_components/SiteCharts";
+import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { formatPosition } from "../../../search-console/_components/searchConsoleFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
@@ -53,6 +56,14 @@ export default function InsightsPageReviewPage() {
     t("sees.figures", { enquiries: formatNumber(review.enquiries), before: review.enquiriesBefore === null ? "–" : formatNumber(review.enquiriesBefore), now: formatNumber(now), then: formatNumber(before) }),
     ...(review.reason ? [review.reason] : []),
   ];
+  // Visitors for one enquiry: the year before, the last 12 months, and the last 90 days — lower is better.
+  const recent = review.visits90 !== undefined && review.visits90 !== null ? perEnquiry(review.visits90, review.enquiries90 ?? null) : null;
+  const bars = [
+    { label: t("chart.yearBefore"), value: before },
+    { label: t("chart.lastYear"), value: now },
+    { label: t("chart.last90"), value: recent },
+  ];
+  const csv = () => toCsv([t("chart.span"), t("chart.series")], bars.map((bar) => [bar.label, bar.value ?? ""]));
   const toTasks = () => router.push(`/app/assistant?ask=${encodeURIComponent(t("taskAsk", { host: data.host, page: review.page, steps: review.steps.join(" ") || tVerdict(review.verdict) }))}`);
 
   return (
@@ -72,6 +83,9 @@ export default function InsightsPageReviewPage() {
         <Figure label={t("figures.visits")} value={formatNumber(review.visits)} detail={<span className="text-secondary">{moved(review.visits, review.visitsBefore) === null ? t("figures.twelveMonths") : t("figures.against", { by: formatNumber(moved(review.visits, review.visitsBefore)), before: formatNumber(review.visitsBefore) })}</span>} />
         <Figure label={t("figures.clicks")} value={formatNumber(service?.service.clicks ?? null)} detail={<span className="text-secondary">{t("figures.clicksDetail")}</span>} />
       </FigureRow>
+      <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-visitors-per-enquiry`} csv={csv} enoughData={bars.some((bar) => bar.value !== null)}>
+        <SiteBarChart data={bars.map((bar) => ({ label: bar.label, value: bar.value ?? 0 }))} series={[{ key: "value", name: t("chart.series"), colour: CHART_SERIES_ORANGE }]} />
+      </ChartCard>
       <DataTable
         rows={searches.pageRows}
         rowKey={(row) => row.keyword}

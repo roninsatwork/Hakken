@@ -25,7 +25,7 @@ export const EXPERIMENT_DAYS = 56;
 type Reader = { db: QueryCtx["db"] };
 
 /** A page's visitors (people, over 12 months; visits over 30 days, for experiments) and enquiries in one of Analytics' landing lists, by path. */
-async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "365", which: "NOW" | "YEAR") {
+async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "90" | "365", which: "NOW" | "YEAR") {
   const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first();
   if (!connection?.property) return null;
   const counted = countedOf(connection);
@@ -37,7 +37,7 @@ async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period:
     const path = pathOf(addresses[index]);
     const held = out.get(path) ?? { visits: 0, enquiries: 0 };
     // People, not visits (I34): "visitors for one enquiry" counts people, Analytics' own figure.
-    held.visits += period === "365" ? row.people : row.visits;
+    held.visits += period === "30" ? row.visits : row.people;
     held.enquiries += conversionsOf(row, counted).conversions;
     out.set(path, held);
   });
@@ -58,6 +58,7 @@ export const reviewInputs = internalQuery({
   returns: v.array(v.object({
     page: v.string(), title: v.union(v.string(), v.null()), kind: v.union(v.string(), v.null()),
     visits: v.number(), enquiries: v.number(), visitsBefore: v.union(v.number(), v.null()), enquiriesBefore: v.union(v.number(), v.null()),
+    visits90: v.union(v.number(), v.null()), enquiries90: v.union(v.number(), v.null()),
     facts: v.union(pageFactsValidator, v.null()), structured: v.union(v.array(v.string()), v.null()),
     /** Clarity's behaviour over its last 30 days, where it is connected (I24). */
     behaviour: v.union(v.null(), clarityRowValidator),
@@ -67,6 +68,7 @@ export const reviewInputs = internalQuery({
     if (checks.length === 0) return [];
     const now = await landingByPath(ctx, args.holdId, "365", "NOW");
     const year = await landingByPath(ctx, args.holdId, "365", "YEAR");
+    const recent = await landingByPath(ctx, args.holdId, "90", "NOW");
     // Clarity's last 30 days by page, where the website has it connected (I24).
     const clarity = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     const behaviour = new Map<string, ClarityRow>();
@@ -86,6 +88,7 @@ export const reviewInputs = internalQuery({
           page: check.page, title: titles.get(check.page) ?? null, kind: check.kind,
           visits: mine?.visits ?? 0, enquiries: mine?.enquiries ?? 0,
           visitsBefore: year ? before?.visits ?? 0 : null, enquiriesBefore: year ? before?.enquiries ?? 0 : null,
+          visits90: recent ? recent.pages.get(check.page)?.visits ?? 0 : null, enquiries90: recent ? recent.pages.get(check.page)?.enquiries ?? 0 : null,
           facts: check.facts ?? null, structured: check.structured, behaviour: behaviour.get(check.page) ?? null,
         };
       })
