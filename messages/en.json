@@ -3507,6 +3507,22 @@
               "title": "The job",
               "placeholder": "What this agent should do each time it runs. Include anything it needs — an address to collect from, which job to use, how much to gather. Leave blank if the task is different every time.",
               "label": "WHAT IT DOES"
+            },
+            "fixed": {
+              "title": "Always added to every run",
+              "note": "Fixed in the code, so a run can read every answer and every figure stays true. Your job and brief above come first; these follow them on every run, and can't be changed here.",
+              "parts": {
+                "ground": "The ground rules",
+                "shop": "For a shop",
+                "findings": "How a finding is answered",
+                "strategy": "How the Head of Strategy answers",
+                "review": "How a page review is answered",
+                "drafts": "How a draft is answered",
+                "panel": "How the buyers' questions are answered",
+                "month": "How the monthly report is answered",
+                "board": "How the board report is answered",
+                "editor": "The Editor's checks"
+              }
             }
           }
         },
@@ -18269,7 +18285,8 @@
         "measure": "Measure",
         "status": "Status",
         "download": "Download CSV"
-      }
+      },
+      "figureLabel": "{measure}, last 90 days"
     },
     "pdf": {
       "boardReport": "Board report",

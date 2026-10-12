@@ -3507,6 +3507,22 @@
               "title": "Il lavoro",
               "placeholder": "Cosa deve fare questo agente a ogni esecuzione. Includi tutto ciò che gli serve: un indirizzo da cui raccogliere, quale lavoro usare, quanto raccogliere. Lascia vuoto se il compito cambia ogni volta.",
               "label": "COSA FA"
+            },
+            "fixed": {
+              "title": "Aggiunto sempre a ogni esecuzione",
+              "note": "Fisso nel codice, così un’esecuzione può leggere ogni risposta e ogni dato resta vero. Il compito e le istruzioni qui sopra vengono prima; queste li seguono a ogni esecuzione e non si possono cambiare qui.",
+              "parts": {
+                "ground": "Le regole di base",
+                "shop": "Per un negozio",
+                "findings": "Come si risponde con una scoperta",
+                "strategy": "Come risponde l’Head of Strategy",
+                "review": "Come si risponde a una revisione di pagina",
+                "drafts": "Come si risponde con una bozza",
+                "panel": "Come si risponde con le domande dei clienti",
+                "month": "Come si risponde con il report mensile",
+                "board": "Come si risponde con il report per il consiglio",
+                "editor": "I controlli dell’Editor"
+              }
             }
           }
         },
@@ -18269,7 +18285,8 @@
         "measure": "Misura",
         "status": "Stato",
         "download": "Scarica CSV"
-      }
+      },
+      "figureLabel": "{measure}, ultimi 90 giorni"
     },
     "pdf": {
       "boardReport": "Report per il consiglio",

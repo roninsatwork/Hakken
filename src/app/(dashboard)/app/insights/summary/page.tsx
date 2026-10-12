@@ -127,9 +127,9 @@ export default function InsightsSummaryPage() {
         </>
       ) : week !== undefined ? <Notice>{t("noWeek")}</Notice> : null}
       <FigureRow>
-        <Figure label={t("measures.enquiries")} value={shown90(score("enquiries"))} detail={change(score("enquiries"))} />
-        <Figure label={t("measures.visitors")} value={shown90(score("visitors"))} detail={change(score("visitors"))} />
-        <Figure label={t("measures.visitorsPerEnquiry")} value={shown90(score("visitorsPerEnquiry"))} detail={change(score("visitorsPerEnquiry"))} />
+        <Figure label={t("figureLabel", { measure: t("measures.enquiries") })} value={shown90(score("enquiries"))} detail={change(score("enquiries"))} />
+        <Figure label={t("figureLabel", { measure: t("measures.visitors") })} value={shown90(score("visitors"))} detail={change(score("visitors"))} />
+        <Figure label={t("figureLabel", { measure: t("measures.visitorsPerEnquiry") })} value={shown90(score("visitorsPerEnquiry"))} detail={change(score("visitorsPerEnquiry"))} />
         <Figure
           label={t("place")}
           value={market?.place ? tPlace("ofTotal", { place: market.place, total: market.rows.length }) : "–"}

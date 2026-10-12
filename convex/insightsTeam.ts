@@ -11,6 +11,7 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertSeoInterval } from "./seoScheduleService";
 import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
+import { EARLIER_BRIEFS, INSIGHT_BRIEFS, fixedRulesFor } from "./utils/insightBriefs";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { measurementValidator } from "./utils/insightMeasurement";
@@ -140,6 +141,16 @@ export const ensureTeamInternal = internalMutation({
     for (const role of INSIGHTS_ROLES) {
       const existing = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
       if (existing) {
+        // Its Instructions page filled with Hakken's own job and brief where blank, so they can be read and refined (12 Oct 2026);
+        // never over what an administrator wrote.
+        const fill = {
+          ...((!existing.systemPrompt?.trim() || EARLIER_BRIEFS[role]?.includes(existing.systemPrompt)) && INSIGHT_BRIEFS[role].brief && existing.systemPrompt !== INSIGHT_BRIEFS[role].brief ? { systemPrompt: INSIGHT_BRIEFS[role].brief } : {}),
+          ...(!existing.standingObjective?.trim() ? { standingObjective: INSIGHT_BRIEFS[role].job } : {}),
+        };
+        if (Object.keys(fill).length > 0) {
+          await ctx.db.patch(existing._id, { ...fill, updatedAt: now });
+          made.push(`${existing.name}: its job and brief filled in`);
+        }
         // The lead's first schedule was weekly; each client now has its own, so the team looks every morning — unless an administrator changed it.
         if (role === INSIGHTS_LEAD_ROLE) {
           const first = await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", existing._id)).first();
@@ -153,6 +164,8 @@ export const ensureTeamInternal = internalMutation({
       const agentId = await ctx.db.insert("agents", {
         name: TEAM_AGENTS[role].name,
         description: TEAM_AGENTS[role].description,
+        ...(INSIGHT_BRIEFS[role].brief ? { systemPrompt: INSIGHT_BRIEFS[role].brief } : {}),
+        standingObjective: INSIGHT_BRIEFS[role].job,
         systemKey: role,
         modelId: "agent (resolved at run time)",
         modelSelectionMode: "inherit",
@@ -570,5 +583,21 @@ export const learningsFor = internalQuery({
       }
     }
     return lines;
+  },
+});
+
+/**
+ * What Hakken always adds to an Insights agent's brief, for its Instructions
+ * page to show read-only (12 Oct 2026): the ground rules that keep every
+ * figure true and the shape of each answer the run reads. Null for any other
+ * agent.
+ */
+export const insightFixedRules = superAdminQuery({
+  args: { agentId: v.id("agents") },
+  returns: v.union(v.null(), v.array(v.object({ part: v.string(), text: v.string() }))),
+  handler: async (ctx, args) => {
+    const agent = await ctx.db.get(args.agentId);
+    const role = INSIGHTS_ROLES.find((known) => known === agent?.systemKey);
+    return role ? fixedRulesFor(role) : null;
   },
 });

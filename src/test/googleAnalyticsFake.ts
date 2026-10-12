@@ -62,6 +62,7 @@ export type Visit = {
 
 const FIELD: Record<string, (visit: Visit) => string> = {
   date: (visit) => visit.date.replaceAll("-", ""),
+  yearMonth: (visit) => visit.date.slice(0, 7).replace("-", ""),
   deviceCategory: (visit) => visit.device,
   sessionDefaultChannelGroup: (visit) => visit.channel,
   firstUserDefaultChannelGroup: (visit) => visit.firstChannel ?? visit.channel,

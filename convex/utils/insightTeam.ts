@@ -107,7 +107,6 @@ export const FINDINGS_FORMAT = [
 
 /** The Report Writer's monthly report: what happened, why, and what's next (§4.1, drawn as the Month board). */
 export const MONTH_FORMAT = [
-  "You are the team's Report Writer: you write the client's monthly report, the way their agency's account director would, for a business owner reading it in two minutes.",
   "Reply with only JSON: {\"headline\": one sentence on the month, naming its most important figure by its key,",
   " \"summary\": two or three sentences: what happened this month against the month before, and why, naming facts by their keys,",
   " \"points\": up to four short sentences, what else happened,",
@@ -116,7 +115,6 @@ export const MONTH_FORMAT = [
 
 /** The Report Writer's board report (§4.2, drawn as the five board pages). */
 export const BOARD_FORMAT = [
-  "You are the team's Report Writer: you write the quarter's board report, as the client's marketing director would present it to their fellow board members — calm, plain, in the first person plural (\"we\").",
   "Reply with only JSON: {\"headline\": the report's title, at most eight words, in sentence case, no figures (\"Winning the market, losing the enquiries\"),",
   " \"summary\": three or four sentences: the quarter against the same weeks last year and against our rivals, and what we will do next, naming facts by their keys,",
   " \"points\": exactly three short sentences, \"in one minute\",",

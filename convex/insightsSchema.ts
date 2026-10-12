@@ -9,6 +9,7 @@ import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./
 import { panelQuestionValidator } from "./utils/insightPanel";
 import { conversionValidator } from "./utils/insightConversion";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
+import { historyKindValidator, historyRowValidator } from "./utils/insightHistory";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -268,6 +269,26 @@ export const insightsTables = {
     grew: v.number(),
     updatedAt: v.number(),
   }).index("by_kind", ["kind"]),
+
+  /**
+   * The research's history (utils/insightHistory.ts; Anthony, 2026-10-12, "go
+   * back 16 months"): sixteen months of Search Console and Google Analytics
+   * asked of Google for free and kept as small lines — each page and each
+   * source a month (one record a kind and month), people a month and the
+   * website a day (one record each, `month` empty). Months older than sixteen
+   * are removed as each new month is saved.
+   */
+  insightHistory: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    kind: historyKindValidator,
+    month: v.string(),
+    from: v.string(),
+    to: v.string(),
+    rows: v.array(historyRowValidator),
+    /** Google cut the list it answered: the rows past what Hakken reads are left out. */
+    cut: v.optional(v.boolean()),
+    fetchedAt: v.number(),
+  }).index("by_hold_kind_month", ["companyWebsiteId", "kind", "month"]),
 
   /**
    * The reports Hakken writes, frozen as written (§4.1, §4.2, I6): the weekly

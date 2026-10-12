@@ -166,3 +166,25 @@ describe("the change log's page changes (I25)", () => {
     expect(logged[0]).toMatchObject({ seenIn: "pageCheck", day: "2026-09-01", before: 4, after: 9, result: "GREW" });
   });
 });
+
+describe("an Insights agent's Instructions page (12 Oct 2026)", () => {
+  test("a blank page takes Hakken's job and brief, Hakken's own old wording is brought up to date, and an edited brief is never touched", async () => {
+    const t = harness();
+    await t.mutation(internal.insightsTeam.ensureTeamInternal, {});
+    const agentOf = (role: string) => t.run(async (ctx) => await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first());
+    const { INSIGHT_BRIEFS, EARLIER_BRIEFS } = await import("./utils/insightBriefs");
+    expect((await agentOf("INSIGHTS_SEARCH"))?.systemPrompt).toBe(INSIGHT_BRIEFS.INSIGHTS_SEARCH.brief);
+    expect((await agentOf("INSIGHTS_SEARCH"))?.standingObjective).toBe(INSIGHT_BRIEFS.INSIGHTS_SEARCH.job);
+
+    const search = await agentOf("INSIGHTS_SEARCH");
+    const lead = await agentOf("INSIGHTS_HEAD_OF_STRATEGY");
+    await t.run(async (ctx) => {
+      await ctx.db.patch(search!._id, { systemPrompt: "Look harder at local searches.", standingObjective: "" });
+      await ctx.db.patch(lead!._id, { systemPrompt: EARLIER_BRIEFS.INSIGHTS_HEAD_OF_STRATEGY![0] });
+    });
+    await t.mutation(internal.insightsTeam.ensureTeamInternal, {});
+    expect((await agentOf("INSIGHTS_SEARCH"))?.systemPrompt).toBe("Look harder at local searches.");
+    expect((await agentOf("INSIGHTS_SEARCH"))?.standingObjective).toBe(INSIGHT_BRIEFS.INSIGHTS_SEARCH.job);
+    expect((await agentOf("INSIGHTS_HEAD_OF_STRATEGY"))?.systemPrompt).toBe(INSIGHT_BRIEFS.INSIGHTS_HEAD_OF_STRATEGY.brief);
+  });
+});

@@ -23,6 +23,8 @@ export default function AgentSystemPromptPage() {
   const agentId = params.id as Id<"agents">;
 
   const agent = useQuery(api.agents.get, { id: agentId });
+  // An Insights agent's fixed rules, shown read-only beneath its brief so nothing it is told is out of sight (12 Oct 2026).
+  const fixedRules = useQuery(api.insightsTeam.insightFixedRules, { agentId });
   const updateAgent = useMutation(api.agents.updateAgent);
 
   const [promptValue, setPromptValue] = useState("");
@@ -193,6 +195,22 @@ export default function AgentSystemPromptPage() {
 
         <AiRuleSafetyWarningPanel trigger="" instruction={promptValue} subject="prompt" />
       </section>
+
+      {fixedRules && fixedRules.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 rounded-full bg-brand text-on-brand text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">3</div>
+            <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sections.fixed.title")}</span>
+          </div>
+          <p className="max-w-2xl text-[13px] leading-relaxed text-secondary">{t("sections.fixed.note")}</p>
+          {fixedRules.map((rule) => (
+            <div key={rule.part} className="flex flex-col gap-2">
+              <span className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase ml-1">{t(`sections.fixed.parts.${rule.part}`)}</span>
+              <div className="w-full whitespace-pre-wrap p-5 border border-border-dim rounded-[10px] text-secondary font-mono text-[13px] leading-relaxed tracking-wide">{rule.text}</div>
+            </div>
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }

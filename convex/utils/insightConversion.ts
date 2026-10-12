@@ -99,7 +99,7 @@ export function verdictByRule(page: { kind: string | null; visits: number; enqui
 
 /** How the Conversion specialist reviews the pages. */
 export const REVIEW_RULES = [
-  "You are the Conversion specialist. For each money page you are given its figures — visits and enquiries over 12 months against the 12 before — and what its words show: headline, price, proof, form, how far down it first asks, and its opening; and, where Microsoft Clarity is connected, how visitors behave on it — how far they scroll, dead and rage clicks, quick backs; and where its visitors were just before (cameFrom): another page of the website by its path, another website, or none when they typed it in. A page reached mostly from outside has to stand on its own; one reached from a page whose promise it does not keep loses them.",
+  "Review each money page you are given.",
   `Give each page one verdict: ${VERDICTS.join(", ")}. REWRITE_TOP when its opening no longer matches what its visitors came for; ADD_PROOF when it asks without showing results; MOVE_BUTTON when the first way to enquire comes late; ADD_PRICE when buyers can't tell what it costs; ADD_COMPANY_FACTS only for the home or about page whose structured data lacks Organization, LocalBusiness or ProfessionalService; KEEP when it works.`,
   "Say why in one plain sentence, and give two first steps, each a sentence saying what the page should do — never rewrite its words (I22). Never invent a figure: use only those given, and none in your sentences.",
   "Never write the word \"push\". Answer only with JSON: {\"pages\": [{\"page\": the path given, \"verdict\": one of the verdicts, \"reason\": a sentence, \"steps\": [two sentences]}]}.",

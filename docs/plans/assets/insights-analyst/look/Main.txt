@@ -6,9 +6,9 @@ strategy-note: This week, from your Head of Strategy
 work-log: What Hakken did this week
 work-log: What Hakken does next
 figures
-  figure: Enquiries
-  figure: Visitors
-  figure: Visitors for each enquiry
+  figure: Enquiries, last # days
+  figure: Visitors, last # days
+  figure: Visitors for each enquiry, last # days
   figure: Your place in your market
 chart-card: Your share of your market's Google visitors
 chart-card: Visits for each enquiry, month by month
