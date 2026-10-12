@@ -17898,7 +17898,8 @@
         "pageReviews": "Page reviews",
         "experiments": "Experiments",
         "measurement": "Measurement check",
-        "sources": "Sources"
+        "sources": "Sources",
+        "enquiries": "What brings enquiries"
       }
     },
     "place": {
@@ -19274,6 +19275,144 @@
           "all": "Whole website"
         }
       }
+    },
+    "enquiries": {
+      "title": "What brings enquiries",
+      "description": "Your enquiries by kind of page, by where people came from and by kind of enquiry, and the searches and pages behind them.",
+      "emptyTitle": "Nothing to read yet",
+      "emptyDescription": "Connect Google Analytics and hold a whole month to see what brings your enquiries.",
+      "sees": {
+        "service": "Your service pages bring {enquiries}% of your enquiries from {visits}% of your visits in {period}.",
+        "articles": "Your articles bring {visits}% of your visits but {enquiries}% of your enquiries, so they make the whole website look harder to convert than your service pages are.",
+        "estimates": "Google never says which search led to an enquiry: each search's enquiries below are an estimate from its page's enquiries and its share of the page's clicks."
+      },
+      "figures": {
+        "enquiries": "Enquiries, {period}",
+        "service": "From your service pages, {period}",
+        "articles": "From your articles, {period}",
+        "against": "{then} in {period}",
+        "perEnquiry": "Service visits per enquiry",
+        "perEnquiryDetail": "{then} in {period}"
+      },
+      "notSorted": "Not sorted",
+      "notRecorded": "Page not recorded",
+      "otherPages": "Other pages",
+      "month": "Month",
+      "kind": "Kind of page",
+      "then": "Before",
+      "source": "Source",
+      "unknownSource": "Source not recorded",
+      "sourcePage": {
+        "back": "What brings enquiries",
+        "title": "Enquiries from {name}",
+        "description": "The people this source sent to your website, the pages and kinds of page they arrived on, and the enquiries they made.",
+        "emptyTitle": "Nothing held for this source",
+        "emptyDescription": "No visits from this source in the months held.",
+        "visits": "Visits, {period}",
+        "enquiries": "Enquiries, {period}",
+        "rate": "Visits that enquired",
+        "monthly": "Visits and enquiries from {name}, month by month",
+        "monthlyHint": "Every visit and enquiry Google Analytics counted from it, with Google's updates.",
+        "visitsSeries": "Visits",
+        "enquiriesSeries": "Enquiries",
+        "kinds": "Which kinds of page {name} sends people to",
+        "kindsHint": "The period chosen, by your own classifications.",
+        "pages": "Pages {name} sent people to"
+      },
+      "download": "Download",
+      "noMatch": "Nothing matches that search.",
+      "underOne": "under 1",
+      "about": "about {count}",
+      "kinds": {
+        "title": "By kind of page",
+        "hint": "Your own classifications of your pages, added up by type: service, information, case study, product.",
+        "monthly": "Enquiries by kind of page, month by month",
+        "monthlyHint": "Every enquiry, by the kind of page the person arrived on, with Google's updates.",
+        "against": "Enquiries by kind of page: {period} against {then}",
+        "againstHint": "Each kind of page's enquiries, side by side.",
+        "rate": "Visits that enquired, by kind of page",
+        "rateHint": "The share of each kind of page's visits that ended in an enquiry.",
+        "share": "Share of visits against share of enquiries, by kind of page",
+        "shareHint": "A kind of page with far more of your visits than of your enquiries skews the whole website's figures.",
+        "shareVisits": "Share of visits",
+        "shareEnquiries": "Share of enquiries",
+        "table": "Each kind of page",
+        "search": "Find a kind of page…"
+      },
+      "columns": {
+        "type": "Type",
+        "visits": "Visits",
+        "enquiries": "Enquiries",
+        "rate": "Visits that enquired",
+        "perEnquiry": "Visits per enquiry",
+        "against": "Against {period}",
+        "kind": "Kind",
+        "search": "Search",
+        "page": "Page",
+        "clicks": "Google clicks",
+        "estimate": "Enquiries, estimated",
+        "fromGoogle": "From Google",
+        "enquiringVisits": "Visits that enquired",
+        "event": "Event",
+        "counted": "Counted",
+        "times": "Times",
+        "fromAi": "From AI assistants",
+        "typedIn": "Typed in",
+        "fromOthers": "From others",
+        "sure": "How sure"
+      },
+      "types": {
+        "SERVICE": "Service",
+        "INFORMATIONAL": "Information",
+        "PRODUCT": "Product",
+        "CASE_STUDY": "Case study",
+        "COMPANY": "Company",
+        "LEGAL": "Legal",
+        "OTHER": "Other",
+        "NOT_SORTED": "Not sorted",
+        "NOT_RECORDED": "Not recorded"
+      },
+      "sources": {
+        "title": "By where people came from",
+        "hint": "Google, each AI assistant by name, other search engines, websites and social sites, one by one. A source opens its own page.",
+        "against": "Enquiries by where people came from: {period} against {then}",
+        "againstHint": "Each kind of source's enquiries, side by side.",
+        "table": "Each source",
+        "search": "Find a source…"
+      },
+      "behind": {
+        "title": "The searches and pages behind them",
+        "hint": "Each search's enquiries are an estimate; each page's are Google Analytics' own.",
+        "searches": "Searches that bring enquiries, the last 90 days",
+        "searchSearch": "Find a search…",
+        "pages": "Pages that bring enquiries",
+        "pageSearch": "Find a page…",
+        "read": "Pages read in visits that enquired, the last 90 days",
+        "noEnquiries": "Searches that bring clicks but no enquiries, the last 90 days"
+      },
+      "events": {
+        "title": "By kind of enquiry",
+        "hint": "What counts as an enquiry: the Google Analytics events ticked on your Analytics connection, kind by kind, and the events not counted.",
+        "monthly": "Enquiries by kind, month by month",
+        "monthlyHint": "Each counted event's enquiries, with Google's updates.",
+        "table": "Each event",
+        "search": "Find an event…",
+        "counted": "Counted",
+        "notCounted": "Not counted"
+      },
+      "sure": {
+        "yes": "Fairly sure",
+        "no": "A rough guess"
+      }
+    },
+    "moved": {
+      "title": "What moved",
+      "hint": "{now} against {then}: enquiries by the kind of page people arrived on and by where they came from.",
+      "skew": "Articles bring {visitsShare}% of your visits but {enquiriesShare}% of your enquiries: {rateWith}% of all visits enquired, {rateWithout}% without the articles.",
+      "kinds": "Enquiries by kind of page: {now} against {then}",
+      "kindsHint": "Your own classifications of your pages, the five with the most visits.",
+      "sources": "Enquiries by where people came from: {now} against {then}",
+      "sourcesHint": "Google, AI assistants, typed in and other websites, each added up."
     }
   },
   "clarity": {

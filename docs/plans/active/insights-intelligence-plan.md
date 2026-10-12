@@ -327,6 +327,26 @@ bought from DataForSEO for the website's home country, priced per client per
 month, behind a switch; quarters are calendar quarters; the enquiry form's
 question is left out.
 
+### Built so far (12 October)
+
+- **Phase 8** and the core of **phase 1** (commit c1661f2f): one period choice
+  in the Insights header — a month, a calendar quarter or the last 12 months —
+  each against the period before and a year ago; the Executive summary's
+  figures follow it; "Why your enquiries fell" with the split and the six
+  tests; the Insights: Analyst agent.
+- **Phase 1's "What moved"**: enquiries by kind of page and by where people
+  came from against the period compared, and how far the articles skew the
+  figures (Ronins, September 2026: articles 23% of visits, 10% of enquiries),
+  above the six tests.
+- **Phase 2**: What brings enquiries under Growth, and a page for each source.
+  The history now also keeps each landing page by source and each event a
+  month, the pages read in visits that enquired and Search Console's searches
+  by page over the last 90 days. Searches are estimated over those 90 days
+  only: a search's history month by month would keep every search a month,
+  which the keep-less-history plan stopped. A page's estimate is shared over
+  all of its Google clicks, the private searches included, and says how sure
+  it is.
+
 ## Decisions for Anthony
 
 All settled on 12 October (Order and days, above).

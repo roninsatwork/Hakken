@@ -156,7 +156,9 @@ export function fakeGoogle(visits: Visit[]): Google {
         const lines: Array<{ eventName?: string; values: number[] }> = everyEvent
           ? happened.filter(([, count]) => count > 0).map(([eventName, count]) => ({
             eventName,
-            values: metrics.map((metric) => (metric === "eventCount" ? count : metric === "totalUsers" ? Math.ceil(count / 2) : metric === "sessions" ? Math.min(count, visit.sessions) : 0)),
+            // A visit's own events are its key events: Google counts them again as `keyEvents` (the history's events a month).
+            values: metrics.map((metric) => (metric === "eventCount" ? count : metric === "totalUsers" ? Math.ceil(count / 2) : metric === "sessions" ? Math.min(count, visit.sessions)
+              : metric === "keyEvents" && eventName in (visit.events ?? {}) ? count : 0)),
           }))
           : byEvent
             ? Object.entries(visit.events ?? {}).map(([eventName, [count, value]]) => ({ eventName, values: [count, value] }))

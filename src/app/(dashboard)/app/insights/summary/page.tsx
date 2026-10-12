@@ -21,6 +21,7 @@ import { ScorecardRows } from "../_components/ScorecardRows";
 import { StrategyNote, WorkLog, type WorkLine } from "../_components/StrategyNote";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
 import { WhyTheyMoved } from "../_components/WhyTheyMoved";
+import { WhatMoved } from "../_components/PeriodCharts";
 import { monthsWords, periodWords } from "../_components/insightPeriodWords";
 
 /** Taken off a month's last share so the stack never tops 100% by a rounding and the scale ends at 100%. */
@@ -174,6 +175,7 @@ export default function InsightsSummaryPage() {
           detail={market?.place && market.placeBefore ? <ChangeLine by={market.placeBefore - market.place}>{t("placeMoved", { count: Math.abs(market.placeBefore - market.place) })}</ChangeLine> : <span className="text-secondary">{t("placeDetail")}</span>}
         />
       </FigureRow>
+      {view ? <WhatMoved view={view} /> : null}
       {view ? <WhyTheyMoved view={view} /> : null}
       <ChartCard title={t("share.title")} hint={t(rivalHosts.length > 0 ? "share.hintRivals" : "share.hint")} exportName="insights-market-share" csv={() => toCsv([t("share.month"), ...shareSeries.map((entry) => entry.name)], shareBars.map((row) => [String(row.day).slice(0, 7), ...shareSeries.map((entry) => Number(row[entry.key] ?? 0))]))} enoughData={shareBars.length > 1} emptyText={t("share.empty")}>
         <SiteBarChart

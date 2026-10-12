@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
+import { enquiriesView, enquirySourceView } from "./insightsPeriod";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
 import { countingBreak, monthsOf, sourceOf, spanFigures, type HistoryRecord, type PageKind } from "./insightsPeriodData";
@@ -104,5 +105,66 @@ describe("the period read", () => {
     expect(split.counting + split.visits + split.rate).toBe(16);
     expect(split.counting).toBeGreaterThan(0);
     expect(view?.why?.tests.find((test) => test.id === "SOURCES")?.figures.source0).toBe("AI");
+  });
+});
+
+describe("what brings enquiries", () => {
+  /** A month's landing pages by source and its events, beside the month's own lists. */
+  function bySource(month: string, rows: Array<[string, string, string, number, number]>, events: Array<[string, number, number]>): HistoryRecord[] {
+    const span = { month, from: `${month}-01`, to: monthEnd(month) };
+    return [
+      { kind: "GA_PAGE_SOURCES", ...span, rows: rows.map(([path, channel, source, visits, enquiries]) => ({ key: [path, channel, source].join(SOURCE_JOIN), visits, enquiries })) },
+      { kind: "GA_EVENTS", ...span, rows: events.map(([key, times, enquiries]) => ({ key, times, enquiries })) },
+    ];
+  }
+
+  async function seeded() {
+    const t = harness();
+    const hold = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+      const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
+      const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+      const records: HistoryRecord[] = [
+        ...month("2026-07", { google: 200, ai: 10, enquiries: 6, serviceClicks: 100, shown: 200_000, place: 20 }),
+        ...month("2026-08", { google: 190, ai: 11, enquiries: 7, serviceClicks: 117, shown: 290_000, place: 25 }),
+        ...month("2026-09", { google: 250, ai: 6, enquiries: 10, serviceClicks: 125, shown: 220_000, place: 21 }),
+        ...bySource("2026-07", [["/ai-agency", "Organic Search", "google", 190, 2]], [["form_submission", 8, 6]]),
+        ...bySource("2026-08", [["/ai-agency", "Organic Search", "google", 180, 2], ["/ai-agency", "Referral", "chatgpt.com", 8, 0]], [["form_submission", 9, 7]]),
+        ...bySource("2026-09", [["/ai-agency", "Organic Search", "google", 240, 4], ["/ai-agency", "Referral", "chatgpt.com", 5, 1]], [["form_submission", 13, 10], ["contact", 2, 0]]),
+        // The page's clicks in the three months: 342, of which Google names "ai agency" for 171.
+        { kind: "SC_SEARCH_PAGES", month: "", from: "2026-07-03", to: "2026-09-30", rows: [
+          { key: ["ai agency", "/ai-agency/"].join(SOURCE_JOIN), clicks: 171, impressions: 3_000, positionSum: 9_000 },
+          { key: ["ai agency london", "/ai-agency/"].join(SOURCE_JOIN), clicks: 10, impressions: 500, positionSum: 4_000 },
+        ] },
+        { kind: "GA_JOURNEY", month: "", from: "2026-07-03", to: "2026-09-30", rows: [{ key: "/about-us/", visits: 65, enquiries: 4 }, { key: "/hub/guide/", visits: 20, enquiries: 0 }] },
+      ];
+      for (const record of records) await ctx.db.insert("insightHistory", { companyWebsiteId: holdId, ...record, fetchedAt: 1 });
+      return (await ctx.db.get(holdId))!;
+    });
+    return { t, hold };
+  }
+
+  test("each source by name, each event counted or not, and each search's share of its page's enquiries", async () => {
+    const { t, hold } = await seeded();
+    const view = await t.run(async (ctx) => await enquiriesView(ctx, hold, "acme-shop.test", "2026-09"));
+    expect(view?.chosen).toMatchObject({ id: "2026-09", before: ["2026-08"], yearAgo: null });
+    expect(view?.sources.find((row) => row.name === "ChatGPT")).toMatchObject({ group: "AI", visits: { now: 6, before: 11 } });
+    expect(view?.events.map((row) => [row.name, row.counted, row.enquiries.now])).toEqual([["form_submission", true, 10], ["contact", false, 0]]);
+    expect(view?.pages[0]).toMatchObject({ path: "/ai-agency", kind: null, from: { GOOGLE: 4, AI: 1, TYPED: 0, OTHER: 0 } });
+    // 8 enquiries from Google over the three months, shared by the page's 342 clicks: never all of them to one named search.
+    expect(view?.searches.map((row) => [row.search, row.estimate, row.sure])).toEqual([["ai agency", 4, true], ["ai agency london", 0.2, false]]);
+    expect(view?.noEnquiries).toEqual([]);
+    expect(view?.journey?.rows.map((row) => row.path)).toEqual(["/about-us/"]);
+    expect(view?.byMonth.at(-1)?.events).toEqual([{ name: "form_submission", enquiries: 10 }]);
+  });
+
+  test("one source's months, kinds of page and pages, by its own name", async () => {
+    const { t, hold } = await seeded();
+    const view = await t.run(async (ctx) => await enquirySourceView(ctx, hold, "ChatGPT", "2026-09"));
+    expect(view).toMatchObject({ group: "AI", figures: { visits: { now: 6, before: 11 }, enquiries: { now: 0, before: 0 } } });
+    expect(view?.months?.map((entry) => entry.visits)).toEqual([10, 11, 6]);
+    expect(view?.pages).toEqual([{ path: "/ai-agency", kind: null, visits: 5, enquiries: 1 }]);
+    const unknown = await t.run(async (ctx) => await enquirySourceView(ctx, hold, "Nowhere", "2026-09"));
+    expect(unknown).toEqual({ chosen: null });
   });
 });

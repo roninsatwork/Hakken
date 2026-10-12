@@ -1,0 +1,51 @@
+# Insights → What brings enquiries — the approved look (board "Enquiries" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: What brings enquiries
+settings-card: What Hakken sees
+figures
+  figure: Enquiries, September #
+  figure: From your service pages, September #
+  figure: From your articles, September #
+  figure: Service visits per enquiry
+chart-card: Enquiries by kind of page, month by month
+chart-card: Enquiries by kind of page: September # against September #
+chart-card: Visits that enquired, by kind of page
+chart-card: Share of visits against share of enquiries, by kind of page
+search: Find a kind of page…
+table: Kind of page | Type | Visits | Enquiries | Visits that enquired | Visits per enquiry | Against September #
+  table-bar: Each kind of page
+    download: Download
+  table-footer
+chart-card: Enquiries by where people came from: September # against September #
+search: Find a source…
+table: Source | Kind | Visits | Enquiries | Visits that enquired | Against September #
+  table-bar: Each source
+    download: Download
+  table-footer
+search: Find a search…
+table: Search | Page | Google clicks | Enquiries, estimated | How sure
+  table-bar: Searches that bring enquiries, the last # days
+    download: Download
+  table-footer
+search: Find a search…
+table: Search | Page | Kind of page | Google clicks
+  table-bar: Searches that bring clicks but no enquiries, the last # days
+    download: Download
+  table-footer
+search: Find a page…
+table: Page | Kind of page | Enquiries | From Google | From AI assistants | Typed in | From others | Against September #
+  table-bar: Pages that bring enquiries
+    download: Download
+  table-footer
+search: Find a page…
+table: Page | Kind of page | Visits that enquired | Visits
+  table-bar: Pages read in visits that enquired, the last # days
+    download: Download
+  table-footer
+chart-card: Enquiries by kind, month by month
+search: Find an event…
+table: Event | Counted | Times | Enquiries | Against September #
+  table-bar: Each event
+    download: Download
+  table-footer

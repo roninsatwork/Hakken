@@ -25,6 +25,8 @@ import InsightsFunnelPage from "./funnel/page";
 import InsightsPageReviewsPage from "./page-reviews/page";
 import InsightsPageReviewPage from "./page-reviews/page/page";
 import InsightsExperimentsPage from "./experiments/page";
+import InsightsEnquiriesPage from "./enquiries/page";
+import InsightsEnquirySourcePage from "./enquiries/source/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -115,6 +117,45 @@ const PERIOD_VIEW = {
   breakMonth: "2025-10",
 };
 
+const TRIO = (now: number, before: number, yearAgo: number) => ({ now, before, yearAgo });
+const KIND = (key: string, name: string | null, type: string, visits: [number, number, number], enquiries: [number, number, number]) => ({ key, name, type, visits: TRIO(...visits), enquiries: TRIO(...enquiries) });
+/** What brings enquiries (insights-intelligence-plan.md phase 2): Ronins' September 2026 by kind, source, search and event. */
+const ENQUIRY_VIEW = { ...PERIOD_VIEW, kinds: [
+  KIND("service", "Service", "SERVICE", [92, 80, 101], [4, 3, 12]), KIND("hub", "Content hub", "INFORMATIONAL", [54, 50, 120], [1, 1, 3]),
+  KIND("brand", "Brand", "OTHER", [53, 40, 90], [3, 2, 10]), KIND("NOT_SORTED", null, "NOT_SORTED", [12, 9, 20], [0, 0, 0]),
+], sources: [{ group: "GOOGLE", visits: TRIO(177, 150, 250), enquiries: TRIO(5, 4, 17) }, { group: "AI", visits: TRIO(6, 9, 32), enquiries: TRIO(0, 0, 2) }] };
+const ENQUIRIES = {
+  siteId: "site_1", host: "ronins.co.uk", chosen: PERIOD_VIEW.chosen,
+  sources: [
+    { key: "Organic Search\u001fgoogle", group: "GOOGLE", name: "Google", visits: TRIO(177, 150, 250), enquiries: TRIO(5, 4, 17) },
+    { key: "Direct\u001f(direct)", group: "TYPED", name: "(direct)", visits: TRIO(43, 30, 40), enquiries: TRIO(5, 3, 2) },
+    { key: "AI Assistant\u001fchatgpt.com", group: "AI", name: "ChatGPT", visits: TRIO(5, 8, 27), enquiries: TRIO(0, 0, 2) },
+  ],
+  events: [
+    { name: "form_submission", counted: true, times: TRIO(13, 9, 30), enquiries: TRIO(10, 7, 26) },
+    { name: "contact", counted: false, times: TRIO(2, 1, 4), enquiries: TRIO(0, 0, 0) },
+  ],
+  pages: [
+    { path: "/", kind: "Brand", type: "OTHER", visits: TRIO(51, 40, 70), enquiries: TRIO(3, 2, 9), from: { GOOGLE: 1, AI: 0, TYPED: 2, OTHER: 0 } },
+    { path: "/ai-agency", kind: "Service", type: "SERVICE", visits: TRIO(52, 40, 30), enquiries: TRIO(2, 1, 3), from: { GOOGLE: 1, AI: 1, TYPED: 0, OTHER: 0 } },
+  ],
+  journey: { from: "2026-07-14", to: "2026-10-11", rows: [{ path: "/about-us/", kind: "Brand", visits: 65, enquiries: 4 }, { path: "/ai-agency/", kind: "Service", visits: 158, enquiries: 3 }] },
+  searches: [{ search: "ai agency", page: "/ai-agency/", kind: "Service", clicks: 106, estimate: 1.6, sure: true }, { search: "ronins", page: "/", kind: "Brand", clicks: 41, estimate: 0.4, sure: false }],
+  noEnquiries: [{ search: "bespoke web design", page: "/hub/what-is-bespoke-web-design/", kind: "Content hub", clicks: 12 }],
+  byMonth: [
+    { month: "2025-09", kinds: [{ key: "service", visits: 101, enquiries: 12 }, { key: "brand", visits: 90, enquiries: 10 }], events: [{ name: "form_submission", enquiries: 26 }] },
+    { month: "2026-08", kinds: [{ key: "service", visits: 80, enquiries: 3 }, { key: "brand", visits: 40, enquiries: 2 }], events: [{ name: "form_submission", enquiries: 7 }] },
+    { month: "2026-09", kinds: [{ key: "service", visits: 92, enquiries: 4 }, { key: "brand", visits: 53, enquiries: 3 }], events: [{ name: "form_submission", enquiries: 10 }] },
+  ],
+};
+const ENQUIRY_SOURCE = {
+  chosen: PERIOD_VIEW.chosen, group: "AI",
+  figures: { visits: TRIO(5, 8, 27), enquiries: TRIO(0, 0, 2) },
+  months: [{ month: "2025-09", visits: 27, enquiries: 2 }, { month: "2026-08", visits: 8, enquiries: 0 }, { month: "2026-09", visits: 5, enquiries: 0 }],
+  kinds: [{ key: "service", name: "Service", type: "SERVICE", visits: 4, enquiries: 0 }, { key: "brand", name: "Brand", type: "OTHER", visits: 1, enquiries: 0 }],
+  pages: [{ path: "/ai-agency", kind: "Service", visits: 2, enquiries: 0 }, { path: "/venture-studio", kind: "Service", visits: 2, enquiries: 0 }],
+};
+
 const WEEK = {
   weeks: [{
     siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05", verdict: "Enquiries fell to 169 from 241 while visitors held.", createdAt: Date.parse("2026-10-11T07:00:00Z"),
@@ -188,7 +229,7 @@ describe("Insights' looks", () => {
 
   it("1 · Executive summary", async () => {
     nav.pathname = "/app/insights/summary";
-    answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME, "insightsReads:insightsThisWeek": WEEK, "insightsPeriod:insightsPeriodView": PERIOD_VIEW });
+    answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME, "insightsReads:insightsThisWeek": WEEK, "insightsPeriod:insightsPeriodView": ENQUIRY_VIEW });
     const { container } = render(<InsightsSummaryPage />);
     await screen.findByText(/Of the 16 fewer enquiries than September 2025/);
     await screen.findByText(/Enquiries fell to 169 from 241 while visitors held/);
@@ -384,6 +425,26 @@ describe("Insights' looks", () => {
     await screen.findByText("Google");
     await screen.findByText("Typed in or a bookmark");
     await expectApprovedLook(container, PLAN, "PageDetail", "Insights → A page's review");
+    nav.search = "";
+  });
+
+  it("37 · What brings enquiries", async () => {
+    nav.pathname = "/app/insights/enquiries";
+    answer({ "insightsReads:insightsHome": HOME, "insightsPeriod:insightsPeriodView": ENQUIRY_VIEW, "insightsPeriod:insightsEnquiries": ENQUIRIES });
+    const { container } = render(<InsightsEnquiriesPage />);
+    await screen.findAllByText("Typed in");
+    await screen.findByText("about 2");
+    await expectApprovedLook(container, PLAN, "Enquiries", "Insights → What brings enquiries");
+  });
+
+  it("38 · One source's enquiries", async () => {
+    nav.pathname = "/app/insights/enquiries/source";
+    nav.search = "name=ChatGPT";
+    answer({ "insightsReads:insightsHome": HOME, "insightsPeriod:insightsEnquirySource": ENQUIRY_SOURCE });
+    const { container } = render(<InsightsEnquirySourcePage />);
+    await screen.findByText("Enquiries from ChatGPT");
+    await screen.findByText("/venture-studio");
+    await expectApprovedLook(container, PLAN, "EnquirySource", "Insights → One source's enquiries");
     nav.search = "";
   });
 

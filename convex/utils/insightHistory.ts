@@ -25,7 +25,12 @@ export const OTHER_KEY = "(other)";
 /** Months re-asked every run while Google may still be settling them: the newest two. */
 const SETTLING_MONTHS = 2;
 
-export const HISTORY_KINDS = ["SC_PAGES", "GA_PAGES", "GA_SOURCES", "GA_MONTHS", "DAYS"] as const;
+/**
+ * The lists kept: Search Console's pages a month, and its searches by page over the last 90 days; Analytics' landing
+ * pages, sources, each landing page by source, and each event a month; people a month; the pages read in visits that
+ * ended in an enquiry over the last 90 days; and the website a day.
+ */
+export const HISTORY_KINDS = ["SC_PAGES", "SC_SEARCH_PAGES", "GA_PAGES", "GA_SOURCES", "GA_PAGE_SOURCES", "GA_EVENTS", "GA_MONTHS", "GA_JOURNEY", "DAYS"] as const;
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
 export const historyKindValidator = v.union(...HISTORY_KINDS.map((kind) => v.literal(kind)));
 
@@ -45,6 +50,8 @@ export const historyRowValidator = v.object({
   googleVisits: v.optional(v.number()),
   enquiries: v.optional(v.number()),
   people: v.optional(v.number()),
+  /** An event's times that month, counted as an enquiry or not (`GA_EVENTS`). */
+  times: v.optional(v.number()),
 });
 export type HistoryRow = Infer<typeof historyRowValidator>;
 
@@ -101,7 +108,7 @@ export function pathOf(address: string): string {
 }
 
 /** The figure a list is ranked by, to keep the most. */
-const weightOf = (row: HistoryRow) => row.impressions ?? row.visits ?? 0;
+const weightOf = (row: HistoryRow) => row.impressions ?? row.visits ?? row.times ?? 0;
 
 /** A month's list kept to `MOST_ROWS`, the most first; the rest added up as `OTHER_KEY` so the totals stay whole. */
 export function keepMost(rows: readonly HistoryRow[], most = MOST_ROWS): HistoryRow[] {
@@ -110,7 +117,7 @@ export function keepMost(rows: readonly HistoryRow[], most = MOST_ROWS): History
   const kept = sorted.slice(0, most - 1);
   const other: HistoryRow = { key: OTHER_KEY };
   for (const row of sorted.slice(most - 1)) {
-    for (const field of ["clicks", "impressions", "positionSum", "visits", "googleVisits", "enquiries"] as const) {
+    for (const field of ["clicks", "impressions", "positionSum", "visits", "googleVisits", "enquiries", "times"] as const) {
       const value = row[field];
       if (value !== undefined) other[field] = (other[field] ?? 0) + value;
     }
@@ -127,7 +134,7 @@ export function addUp(rows: readonly HistoryRow[]): HistoryRow[] {
       byKey.set(row.key, { ...row });
       continue;
     }
-    for (const field of ["clicks", "impressions", "positionSum", "visits", "googleVisits", "enquiries", "people"] as const) {
+    for (const field of ["clicks", "impressions", "positionSum", "visits", "googleVisits", "enquiries", "people", "times"] as const) {
       const value = row[field];
       if (value !== undefined) held[field] = (held[field] ?? 0) + value;
     }

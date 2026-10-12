@@ -72,6 +72,17 @@ describe("the research's history", () => {
     expect(days?.rows.find((row) => row.key === "2026-09-15")).toMatchObject({ visits: 16, googleVisits: 10, enquiries: 1 });
     const months = history.find((record) => record.kind === "GA_MONTHS");
     expect(months?.rows.map((row) => row.key)).toEqual(["2025-07", "2026-09"]);
+    // Phase 2: each landing page by its source, each event counted or not, and the pages read on the way to an enquiry.
+    const bySource = history.find((record) => record.kind === "GA_PAGE_SOURCES" && record.month === "2026-09");
+    expect(bySource?.rows.map((row) => [...row.key.split("\u001f"), row.visits, row.enquiries])).toEqual([
+      ["/", "Organic Search", "google", 10, 1], ["/ai-agency/", "Referral", "perplexity.ai", 4, 0], ["/contact/?utm=x", "Direct", "(direct)", 2, 0],
+    ]);
+    // Every event's times; enquiries only for the events ticked as counted on the connection.
+    const events = history.find((record) => record.kind === "GA_EVENTS" && record.month === "2026-09");
+    expect(events?.rows.map((row) => [row.key, row.times, row.enquiries])).toEqual([["page_view", 32, 0], ["session_start", 16, 0], ["click_tel", 1, 0], ["generate_lead", 1, 1]]);
+    const journey = history.find((record) => record.kind === "GA_JOURNEY");
+    expect(journey).toMatchObject({ from: "2026-07-11", to: NEWEST });
+    expect(journey?.rows.map((row) => row.key)).toEqual(["/", "/ai-agency/", "/contact/"]);
   });
 
   test("keeps nothing older than sixteen months, and writes a month over its own", async () => {

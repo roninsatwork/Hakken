@@ -7,6 +7,7 @@ import { ask as askAnalytics, countryIdOf, openSession } from "./googleAnalytics
 import type { ReportRow } from "./googleAnalyticsApi";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { askLive } from "./searchConsoleReads";
+import { shiftDay } from "./utils/insightFacts";
 import {
   SOURCE_JOIN,
   addUp,
@@ -34,11 +35,11 @@ import {
  */
 
 /**
- * Records a hold keeps at most: five kinds, each a record a month for
- * seventeen months at most, and the two whole-span ones — read in one bounded
- * read, never a collect.
+ * Records a hold keeps at most: six kinds a record a month for seventeen
+ * months at most, and the three whole-span ones — read in one bounded read,
+ * never a collect.
  */
-const RECORDS_MOST = 100;
+const RECORDS_MOST = 200;
 
 const recordValidator = v.object({
   kind: historyKindValidator,
@@ -174,6 +175,17 @@ export const fetchHistory = internalAction({
         const rows = addUp(answer.rows.map((row) => ({ key: pathOf(row.keys[0] ?? ""), clicks: row.clicks, impressions: row.impressions, positionSum: row.position * row.impressions })));
         records.push({ ...month, kind: "SC_PAGES", rows: keepMost(rows) });
       }
+      // Each search by the page Google showed for it, the last 90 days (phase 2, "the searches behind the enquiries"):
+      // a page's enquiries from Google shared out over its searches by their clicks.
+      asks += 1;
+      const searchFrom = shiftDay(sc.newestDay, -89);
+      const searchPages = await askLive(ctx, sc, { startDate: searchFrom, endDate: sc.newestDay, type: "web", dimensions: ["query", "page"] });
+      if (searchPages.ok) {
+        const rows = addUp(searchPages.rows.filter((row) => row.clicks > 0).map((row) => ({ key: [row.keys[0] ?? "", pathOf(row.keys[1] ?? "")].join(SOURCE_JOIN), clicks: row.clicks, impressions: row.impressions, positionSum: row.position * row.impressions })));
+        records.push({ kind: "SC_SEARCH_PAGES", month: "", from: searchFrom, to: sc.newestDay, rows: keepMost(rows) });
+      } else {
+        problems.push(`Search Console refused the searches by page (${searchPages.problem}).`);
+      }
       // The website's own days, whole: a few hundred rows, asked each run so the newest settle.
       asks += 1;
       const span = months[0];
@@ -233,6 +245,74 @@ export const fetchHistory = internalAction({
             for (const month of wanted) {
               records.push({ ...month, kind: "GA_PAGES", rows: keepMost([...(byMonth.get(month.month)?.values() ?? [])]), ...(pages.cut ? { cut: true } : {}) });
             }
+          }
+        }
+
+        // Each landing page by where its visitors came from, a month (phase 2): Google's share of a page's enquiries, and
+        // which pages each AI assistant sends people to.
+        const pagesBySource = monthsToFetch(months, heldOf(target.held, "GA_PAGE_SOURCES"));
+        if (pagesBySource.length > 0) {
+          const asked = await withEvents(pagesBySource[0].from, ["yearMonth", "landingPage", "sessionDefaultChannelGroup", "sessionSource"], ["sessions"]);
+          if (!asked) {
+            problems.push("Google Analytics refused the landing pages by source.");
+          } else {
+            const byMonth = new Map<string, Map<string, HistoryRow>>();
+            const add = (keys: readonly string[], field: "visits" | "enquiries", value: number) => {
+              const month = monthOfGoogle(keys[0] ?? "");
+              let rows = byMonth.get(month);
+              if (!rows) byMonth.set(month, (rows = new Map()));
+              const key = [pathOf(keys[1] ?? ""), keys[2] ?? "", keys[3] ?? ""].join(SOURCE_JOIN);
+              let row = rows.get(key);
+              if (!row) rows.set(key, (row = { key, visits: 0, enquiries: 0 }));
+              row[field] = (row[field] ?? 0) + value;
+            };
+            for (const row of asked.main) add(row.keys, "visits", row.values[0] ?? 0);
+            for (const row of asked.events) add(row.keys, "enquiries", row.values[0] ?? 0);
+            for (const month of pagesBySource) {
+              records.push({ ...month, kind: "GA_PAGE_SOURCES", rows: keepMost([...(byMonth.get(month.month)?.values() ?? [])]), ...(asked.cut ? { cut: true } : {}) });
+            }
+          }
+        }
+
+        // Each event a month, counted as an enquiry or not (phase 2, "each kind of enquiry"): its times, and its enquiries
+        // when it is one Hakken counts.
+        asks += 1;
+        const events = await askAnalytics(opened.session, analytics.property, { ...base, startDate: months[0].from, dimensions: ["yearMonth", "eventName"], metrics: ["eventCount", "keyEvents"] });
+        if (events.ok) {
+          const counted = new Set(analytics.counted);
+          const byMonth = new Map<string, HistoryRow[]>();
+          for (const row of events.rows) {
+            const month = monthOfGoogle(row.keys[0] ?? "");
+            const name = row.keys[1] ?? "";
+            const rows = byMonth.get(month) ?? [];
+            rows.push({ key: name, times: row.values[0] ?? 0, enquiries: counted.has(name) ? row.values[1] ?? 0 : 0 });
+            byMonth.set(month, rows);
+          }
+          for (const [month, rows] of byMonth) {
+            const span = spanOf(months, month);
+            if (span) records.push({ ...span, kind: "GA_EVENTS", rows: keepMost(rows) });
+          }
+        } else {
+          problems.push("Google Analytics refused the events by month.");
+        }
+
+        // The pages read in visits that ended in an enquiry, the last 90 days (phase 2, "pages read on the way"): each
+        // page's visits, and of them the visits with an enquiry, from each counted event's share of visits.
+        if (analytics.counted.length > 0) {
+          asks += 1;
+          const from = shiftDay(analytics.newestDay, -89);
+          const read = await askAnalytics(opened.session, analytics.property, {
+            ...base, startDate: from, dimensions: ["pagePath"], metrics: ["sessions", ...analytics.counted.slice(0, 9).map((event) => `sessionKeyEventRate:${event}`)],
+          });
+          if (read.ok) {
+            const rows = read.rows.map((row) => {
+              const sessions = row.values[0] ?? 0;
+              const rate = Math.min(1, row.values.slice(1).reduce((sum, value) => sum + (value ?? 0), 0));
+              return { key: pathOf(row.keys[0] ?? ""), visits: sessions, enquiries: Math.round(sessions * rate) };
+            });
+            records.push({ kind: "GA_JOURNEY", month: "", from, to: analytics.newestDay, rows: keepMost(addUp(rows)) });
+          } else {
+            problems.push("Google Analytics refused the pages read before an enquiry.");
           }
         }
 

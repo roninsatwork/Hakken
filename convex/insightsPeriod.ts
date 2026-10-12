@@ -6,6 +6,7 @@ import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { loadSite } from "./websiteSiteRows";
 import { featuresOf } from "./utils/rankFacts";
 import { RANK_BANDS } from "./utils/siteShapes";
+import { SOURCE_JOIN } from "./utils/insightHistory";
 import { beforeOf, heldWhole, openingPeriod, periodById, periodsFrom, yearAgoOf } from "./utils/insightPeriods";
 import { whyEnquiriesMoved, type Why } from "./utils/insightWhy";
 import {
@@ -14,11 +15,15 @@ import {
   byGroup,
   countingBreak,
   monthsOf,
+  listsOf,
   pageKindsOf,
+  sourceOf,
   spanFigures,
   whyInputOf,
   type HistoryRecord,
   type MonthFigures,
+  type PageKind,
+  type SourceGroup,
   type SpanFigures,
 } from "./insightsPeriodData";
 
@@ -33,7 +38,7 @@ import {
  */
 
 /** History records a website keeps at most (insightHistory.ts). */
-const RECORDS_MOST = 100;
+const RECORDS_MOST = 200;
 /** Rankings read a band, for the week's snapshot. */
 const RANKS_READ = 2_000;
 
@@ -278,5 +283,242 @@ export const rankSnapshot = internalQuery({
       }
     }
     return day ? { day, pageOne, pageOneBefore, aiWith, aiOf: pageOne } : null;
+  },
+});
+
+/** Rows a list on What brings enquiries shows at most: the most first. */
+const ENQUIRY_ROWS = 150;
+/** A search's estimate is fairly sure when its page had this many enquiries from Google and the search this part of its clicks. */
+const SURE_ENQUIRIES = 3;
+const SURE_SHARE = 0.25;
+/** The groups a page's enquiries are split by on screen; the rest are added up as OTHER. */
+const PAGE_GROUPS = ["GOOGLE", "AI", "TYPED"] as const;
+
+function fromGroups(groups: ReadonlyMap<SourceGroup, { visits: number; enquiries: number }> | undefined) {
+  const out = { GOOGLE: 0, AI: 0, TYPED: 0, OTHER: 0 };
+  for (const [group, entry] of groups ?? []) {
+    const key = (PAGE_GROUPS as readonly string[]).includes(group) ? (group as (typeof PAGE_GROUPS)[number]) : "OTHER";
+    out[key] += entry.enquiries;
+  }
+  return out;
+}
+
+const trioOfMaps = <T,>(key: string, now: ReadonlyMap<string, T>, before: ReadonlyMap<string, T> | null, year: ReadonlyMap<string, T> | null, value: (entry: T | undefined) => number): Trio =>
+  trioOf(value(now.get(key)), before ? value(before.get(key)) : null, year ? value(year.get(key)) : null);
+
+/**
+ * What brings enquiries (insights-intelligence-plan.md phase 2, drawn and
+ * approved 12 Oct): the period chosen, against the period before and a year
+ * ago — each kind of page month by month, each source by its own name, each
+ * kind of enquiry, each page with its share from Google, the pages read on the
+ * way to an enquiry, and the searches behind the pages, estimated.
+ */
+export async function enquiriesView(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, host: string, choice: string | undefined) {
+  const records = await historyOf(ctx, hold._id);
+  const kindOf = await pageKindsOf(ctx, hold._id);
+  const months = monthsOf(records, kindOf);
+  const whole = new Set(months.filter((month) => month.whole).map((month) => month.month));
+  const periods = periodsFrom([...whole]);
+  const chosen = periodById(choice, periods) ?? openingPeriod(periods);
+  if (!chosen) return null;
+  const before = heldWhole(beforeOf(chosen), whole) ? beforeOf(chosen) : null;
+  const yearAgoMonths = yearAgoOf(chosen);
+  const yearAgo = heldWhole(yearAgoMonths, whole) ? yearAgoMonths : null;
+  const lists = listsOf(records, kindOf);
+  const over = (span: readonly string[] | null) => (span ? lists.over(span) : null);
+  const now = over(chosen.months)!, then = over(before), year = over(yearAgo);
+  const visitsOf = (entry: { visits: number } | undefined) => entry?.visits ?? 0;
+  const enquiriesOf = (entry: { enquiries: number } | undefined) => entry?.enquiries ?? 0;
+  const timesOf = (entry: { times: number } | undefined) => entry?.times ?? 0;
+  const sources = [...now.sources.keys()].map((key) => ({
+    key,
+    ...sourceOf(key),
+    visits: trioOfMaps(key, now.sources, then?.sources ?? null, year?.sources ?? null, visitsOf),
+    enquiries: trioOfMaps(key, now.sources, then?.sources ?? null, year?.sources ?? null, enquiriesOf),
+  })).sort((a, b) => b.visits.now - a.visits.now).slice(0, ENQUIRY_ROWS);
+  const events = [...new Set([...now.events.keys(), ...(then?.events.keys() ?? []), ...(year?.events.keys() ?? [])])].map((name) => ({
+    name,
+    counted: [now, then, year].some((span) => (span?.events.get(name)?.enquiries ?? 0) > 0),
+    times: trioOfMaps(name, now.events, then?.events ?? null, year?.events ?? null, timesOf),
+    enquiries: trioOfMaps(name, now.events, then?.events ?? null, year?.events ?? null, enquiriesOf),
+  })).sort((a, b) => Number(b.counted) - Number(a.counted) || b.times.now - a.times.now);
+  const pages = [...now.pages.keys()].map((path) => {
+    const kind = kindOf(path);
+    return {
+      path,
+      kind: kind.name,
+      type: kind.type,
+      visits: trioOfMaps(path, now.pages, then?.pages ?? null, year?.pages ?? null, visitsOf),
+      enquiries: trioOfMaps(path, now.pages, then?.pages ?? null, year?.pages ?? null, enquiriesOf),
+      // Where the page's enquiries came from (insights-intelligence-plan.md phase 2, "every page … split by where
+      // people came from"): Google, AI assistants, typed in, and every other source together.
+      from: fromGroups(now.pagesByGroup.get(path)),
+    };
+  }).sort((a, b) => b.enquiries.now - a.enquiries.now || b.visits.now - a.visits.now).slice(0, ENQUIRY_ROWS);
+  const journeyRecord = records.find((record) => record.kind === "GA_JOURNEY");
+  const journey = journeyRecord
+    ? {
+      from: journeyRecord.from,
+      to: journeyRecord.to,
+      rows: journeyRecord.rows.filter((row) => (row.enquiries ?? 0) > 0).map((row) => ({ path: row.key, kind: kindOf(row.key).name, visits: row.visits ?? 0, enquiries: row.enquiries ?? 0 }))
+        .sort((a, b) => b.enquiries - a.enquiries).slice(0, ENQUIRY_ROWS),
+    }
+    : null;
+  // Each search's enquiries, estimated (Google never says which search led to one): the page's enquiries from Google
+  // over the newest three whole months, shared out by each search's part of the page's clicks — all its clicks, so the
+  // searches Google keeps private keep their share and one named click never takes a page's every enquiry.
+  const searchRecord = records.find((record) => record.kind === "SC_SEARCH_PAGES");
+  const recent = [...whole].sort().slice(-3);
+  const fromGoogle = lists.over(recent).googleByPage;
+  const consoleClicks = new Map<string, number>();
+  for (const record of records) {
+    if (record.kind !== "SC_PAGES" || !recent.includes(record.month)) continue;
+    for (const row of record.rows) consoleClicks.set(row.key, (consoleClicks.get(row.key) ?? 0) + (row.clicks ?? 0));
+  }
+  const googleOf = (page: string) => fromGoogle.get(page) ?? fromGoogle.get(page.endsWith("/") && page !== "/" ? page.slice(0, -1) : `${page}/`);
+  const pairs = (searchRecord?.rows ?? []).map((row) => {
+    const [search = "", page = ""] = row.key.split(SOURCE_JOIN);
+    return { search, page, clicks: row.clicks ?? 0 };
+  }).filter((pair) => pair.search && pair.page && pair.clicks > 0);
+  const pageClicks = new Map<string, number>();
+  for (const pair of pairs) pageClicks.set(pair.page, (pageClicks.get(pair.page) ?? 0) + pair.clicks);
+  for (const [page, clicks] of pageClicks) pageClicks.set(page, Math.max(clicks, consoleClicks.get(page) ?? 0));
+  const estimated = pairs.map((pair) => {
+    const enquiries = googleOf(pair.page)?.enquiries ?? 0;
+    const total = pageClicks.get(pair.page) ?? 0;
+    const share = total > 0 ? pair.clicks / total : 0;
+    return {
+      search: pair.search, page: pair.page, kind: kindOf(pair.page).name, clicks: pair.clicks,
+      estimate: Math.round(enquiries * share * 10) / 10,
+      // How sure: a page with a few enquiries from Google, and a search taking a good part of its clicks.
+      sure: enquiries >= SURE_ENQUIRIES && share >= SURE_SHARE,
+      pageEnquiries: enquiries,
+    };
+  });
+  const searches = estimated.filter((row) => row.pageEnquiries > 0)
+    .sort((a, b) => b.estimate - a.estimate || b.clicks - a.clicks).slice(0, ENQUIRY_ROWS)
+    .map(({ pageEnquiries: _, ...row }) => row);
+  // The searches that bring clicks to pages Google sent no enquiries from: the most clicks first.
+  const noEnquiries = estimated.filter((row) => row.pageEnquiries === 0)
+    .sort((a, b) => b.clicks - a.clicks).slice(0, ENQUIRY_ROWS)
+    .map(({ search, page, kind, clicks }) => ({ search, page, kind, clicks }));
+  const byMonth = [...whole].sort().map((month) => {
+    const one = lists.over([month]);
+    return {
+      month,
+      kinds: [...one.kinds.entries()].map(([key, entry]) => ({ key, visits: entry.visits, enquiries: entry.enquiries })),
+      events: [...one.events.entries()].filter(([, entry]) => entry.enquiries > 0).map(([name, entry]) => ({ name, enquiries: entry.enquiries })),
+    };
+  });
+  return { siteId: hold._id, host, chosen: { id: chosen.id, kind: chosen.kind, months: chosen.months, before, yearAgo }, sources, events, pages, journey, searches, noEnquiries, byMonth };
+}
+
+const sourceGroupValidator = v.union(...SOURCE_GROUPS.map((group) => v.literal(group)));
+const kindType = v.union(v.literal("SERVICE"), v.literal("INFORMATIONAL"), v.literal("PRODUCT"), v.literal("CASE_STUDY"), v.literal("COMPANY"), v.literal("LEGAL"), v.literal("OTHER"), v.literal("NOT_SORTED"), v.literal("NOT_RECORDED"));
+const chosenValidator = v.object({ id: v.string(), kind: periodKind, months: v.array(v.string()), before: v.union(v.null(), v.array(v.string())), yearAgo: v.union(v.null(), v.array(v.string())) });
+
+/** What brings enquiries: the period chosen in the section's header, for the website chosen. */
+export const insightsEnquiries = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")), period: v.optional(v.string()) },
+  returns: v.union(v.null(), v.object({
+    siteId: v.id("companyWebsites"),
+    host: v.string(),
+    chosen: chosenValidator,
+    sources: v.array(v.object({ key: v.string(), group: sourceGroupValidator, name: v.string(), visits: trio, enquiries: trio })),
+    events: v.array(v.object({ name: v.string(), counted: v.boolean(), times: trio, enquiries: trio })),
+    pages: v.array(v.object({
+      path: v.string(), kind: v.union(v.string(), v.null()), type: kindType, visits: trio, enquiries: trio,
+      from: v.object({ GOOGLE: v.number(), AI: v.number(), TYPED: v.number(), OTHER: v.number() }),
+    })),
+    journey: v.union(v.null(), v.object({ from: v.string(), to: v.string(), rows: v.array(v.object({ path: v.string(), kind: v.union(v.string(), v.null()), visits: v.number(), enquiries: v.number() })) })),
+    searches: v.array(v.object({ search: v.string(), page: v.string(), kind: v.union(v.string(), v.null()), clicks: v.number(), estimate: v.number(), sure: v.boolean() })),
+    noEnquiries: v.array(v.object({ search: v.string(), page: v.string(), kind: v.union(v.string(), v.null()), clicks: v.number() })),
+    byMonth: v.array(v.object({
+      month: v.string(),
+      kinds: v.array(v.object({ key: v.string(), visits: v.number(), enquiries: v.number() })),
+      events: v.array(v.object({ name: v.string(), enquiries: v.number() })),
+    })),
+  })),
+  handler: async (ctx, args) => {
+    const site = await siteFor(ctx, args.siteId);
+    return site ? await enquiriesView(ctx, site.hold, site.host, args.period) : null;
+  },
+});
+
+/**
+ * One source's enquiries, by its own name (Anthony, 2026-10-12: "which
+ * assistant or Google brought those enquiries … a detail click-through
+ * page"): its visits and enquiries month by month, the period chosen against
+ * the period before and a year ago, and the kinds of page and pages it sent
+ * people to.
+ */
+export async function enquirySourceView(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, name: string, choice: string | undefined) {
+  const records = await historyOf(ctx, hold._id);
+  const kindOf = await pageKindsOf(ctx, hold._id);
+  const months = monthsOf(records, kindOf);
+  const whole = new Set(months.filter((month) => month.whole).map((month) => month.month));
+  const chosen = periodById(choice, periodsFrom([...whole])) ?? openingPeriod(periodsFrom([...whole]));
+  if (!chosen) return null;
+  const before = heldWhole(beforeOf(chosen), whole) ? beforeOf(chosen) : null;
+  const yearAgoMonths = yearAgoOf(chosen);
+  const yearAgo = heldWhole(yearAgoMonths, whole) ? yearAgoMonths : null;
+  const lists = listsOf(records, kindOf);
+  // A source's name gathers its keys: Google Analytics may name one source under more than one channel.
+  const figuresOver = (span: readonly string[] | null) => {
+    if (!span) return null;
+    const over = lists.over(span);
+    let visits = 0, enquiries = 0, group: SourceGroup | null = null;
+    for (const [key, entry] of over.sources) {
+      const source = sourceOf(key);
+      if (source.name !== name) continue;
+      visits += entry.visits;
+      enquiries += entry.enquiries;
+      group ??= source.group;
+    }
+    return { visits, enquiries, group, pages: over.pagesBySource.get(name) ?? new Map<string, { visits: number; enquiries: number }>() };
+  };
+  const now = figuresOver(chosen.months)!, then = figuresOver(before), year = figuresOver(yearAgo);
+  const monthly = [...whole].sort().map((month) => {
+    const one = figuresOver([month])!;
+    return { month, visits: one.visits, enquiries: one.enquiries, group: one.group };
+  });
+  const group = now.group ?? monthly.find((month) => month.group)?.group ?? null;
+  if (!group) return { chosen: null };
+  const kinds = new Map<string, { name: string | null; type: PageKind["type"]; visits: number; enquiries: number }>();
+  for (const [path, entry] of now.pages) {
+    const kind = kindOf(path);
+    const held = kinds.get(kind.key) ?? { name: kind.name, type: kind.type, visits: 0, enquiries: 0 };
+    held.visits += entry.visits;
+    held.enquiries += entry.enquiries;
+    kinds.set(kind.key, held);
+  }
+  return {
+    chosen: { id: chosen.id, kind: chosen.kind, months: chosen.months, before, yearAgo },
+    group,
+    figures: {
+      visits: trioOf(now.visits, then?.visits, year?.visits),
+      enquiries: trioOf(now.enquiries, then?.enquiries, year?.enquiries),
+    },
+    months: monthly.map(({ month, visits, enquiries }) => ({ month, visits, enquiries })),
+    kinds: [...kinds.entries()].map(([key, entry]) => ({ key, ...entry })).sort((a, b) => b.visits - a.visits),
+    pages: [...now.pages.entries()].map(([path, entry]) => ({ path, kind: kindOf(path).name, visits: entry.visits, enquiries: entry.enquiries }))
+      .sort((a, b) => b.enquiries - a.enquiries || b.visits - a.visits).slice(0, ENQUIRY_ROWS),
+  };
+}
+
+/** One source's page under What brings enquiries. */
+export const insightsEnquirySource = tenantQuery({
+  args: { name: v.string(), siteId: v.optional(v.id("companyWebsites")), period: v.optional(v.string()) },
+  returns: v.union(v.null(), v.object({ chosen: v.null() }), v.object({
+    chosen: chosenValidator,
+    group: sourceGroupValidator,
+    figures: v.object({ visits: trio, enquiries: trio }),
+    months: v.array(v.object({ month: v.string(), visits: v.number(), enquiries: v.number() })),
+    kinds: v.array(v.object({ key: v.string(), name: v.union(v.string(), v.null()), type: kindType, visits: v.number(), enquiries: v.number() })),
+    pages: v.array(v.object({ path: v.string(), kind: v.union(v.string(), v.null()), visits: v.number(), enquiries: v.number() })),
+  })),
+  handler: async (ctx, args) => {
+    const site = await siteFor(ctx, args.siteId);
+    return site ? await enquirySourceView(ctx, site.hold, args.name, args.period) : null;
   },
 });

@@ -1,0 +1,17 @@
+# Insights → One source's enquiries — the approved look (board "EnquirySource" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: What brings enquiries
+  page-header: ‹the record's name›
+figures
+  figure: Visits, September #
+  figure: Enquiries, September #
+  figure: Visits that enquired
+chart-card: Visits and enquiries from ChatGPT, month by month
+chart-card: Which kinds of page ChatGPT sends people to
+search: Find a page…
+table: Page | Kind of page | Visits | Enquiries | Visits that enquired
+  table-bar: Pages ChatGPT sent people to
+    download: Download
+  table-footer

@@ -17898,7 +17898,8 @@
         "pageReviews": "Analisi delle pagine",
         "experiments": "Esperimenti",
         "measurement": "Verifica delle misurazioni",
-        "sources": "Fonti"
+        "sources": "Fonti",
+        "enquiries": "Cosa porta richieste"
       }
     },
     "place": {
@@ -19274,6 +19275,144 @@
           "all": "Tutto il sito"
         }
       }
+    },
+    "enquiries": {
+      "title": "Cosa porta richieste",
+      "description": "Le tue richieste per tipo di pagina, per provenienza e per tipo di richiesta, e le ricerche e le pagine dietro di esse.",
+      "emptyTitle": "Ancora niente da leggere",
+      "emptyDescription": "Collega Google Analytics e attendi un mese intero per vedere cosa porta le tue richieste.",
+      "sees": {
+        "service": "Le tue pagine dei servizi portano il {enquiries}% delle richieste dal {visits}% delle visite in {period}.",
+        "articles": "I tuoi articoli portano il {visits}% delle visite ma il {enquiries}% delle richieste, quindi fanno sembrare tutto il sito meno efficace di quanto lo siano le pagine dei servizi.",
+        "estimates": "Google non dice mai quale ricerca ha portato a una richiesta: le richieste di ogni ricerca qui sotto sono una stima dalle richieste della sua pagina e dalla sua quota di clic."
+      },
+      "figures": {
+        "enquiries": "Richieste, {period}",
+        "service": "Dalle pagine dei servizi, {period}",
+        "articles": "Dagli articoli, {period}",
+        "against": "{then} in {period}",
+        "perEnquiry": "Visite ai servizi per richiesta",
+        "perEnquiryDetail": "{then} in {period}"
+      },
+      "notSorted": "Non classificata",
+      "notRecorded": "Pagina non registrata",
+      "otherPages": "Altre pagine",
+      "month": "Mese",
+      "kind": "Tipo di pagina",
+      "then": "Prima",
+      "source": "Fonte",
+      "unknownSource": "Fonte non registrata",
+      "sourcePage": {
+        "back": "Cosa porta richieste",
+        "title": "Richieste da {name}",
+        "description": "Le persone che questa fonte ha mandato al tuo sito, le pagine e i tipi di pagina su cui sono arrivate e le richieste che hanno fatto.",
+        "emptyTitle": "Niente per questa fonte",
+        "emptyDescription": "Nessuna visita da questa fonte nei mesi conservati.",
+        "visits": "Visite, {period}",
+        "enquiries": "Richieste, {period}",
+        "rate": "Visite con richiesta",
+        "monthly": "Visite e richieste da {name}, mese per mese",
+        "monthlyHint": "Ogni visita e richiesta che Google Analytics ha contato da questa fonte, con gli aggiornamenti di Google.",
+        "visitsSeries": "Visite",
+        "enquiriesSeries": "Richieste",
+        "kinds": "Su quali tipi di pagina {name} manda le persone",
+        "kindsHint": "Il periodo scelto, per le tue classificazioni.",
+        "pages": "Pagine su cui {name} ha mandato persone"
+      },
+      "download": "Scarica",
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "underOne": "meno di 1",
+      "about": "circa {count}",
+      "kinds": {
+        "title": "Per tipo di pagina",
+        "hint": "Le tue classificazioni delle pagine, sommate per tipo: servizio, informazione, caso studio, prodotto.",
+        "monthly": "Richieste per tipo di pagina, mese per mese",
+        "monthlyHint": "Ogni richiesta, per il tipo di pagina su cui la persona è arrivata, con gli aggiornamenti di Google.",
+        "against": "Richieste per tipo di pagina: {period} rispetto a {then}",
+        "againstHint": "Le richieste di ogni tipo di pagina, affiancate.",
+        "rate": "Visite con richiesta, per tipo di pagina",
+        "rateHint": "La quota di visite di ogni tipo di pagina finite con una richiesta.",
+        "share": "Quota di visite rispetto a quota di richieste, per tipo di pagina",
+        "shareHint": "Un tipo di pagina con molte più visite che richieste altera i dati di tutto il sito.",
+        "shareVisits": "Quota di visite",
+        "shareEnquiries": "Quota di richieste",
+        "table": "Ogni tipo di pagina",
+        "search": "Trova un tipo di pagina…"
+      },
+      "columns": {
+        "type": "Tipo",
+        "visits": "Visite",
+        "enquiries": "Richieste",
+        "rate": "Visite con richiesta",
+        "perEnquiry": "Visite per richiesta",
+        "against": "Rispetto a {period}",
+        "kind": "Tipo",
+        "search": "Ricerca",
+        "page": "Pagina",
+        "clicks": "Clic da Google",
+        "estimate": "Richieste stimate",
+        "fromGoogle": "Da Google",
+        "enquiringVisits": "Visite con richiesta",
+        "event": "Evento",
+        "counted": "Contato",
+        "times": "Volte",
+        "fromAi": "Da assistenti AI",
+        "typedIn": "Accesso diretto",
+        "fromOthers": "Da altri",
+        "sure": "Affidabilità"
+      },
+      "types": {
+        "SERVICE": "Servizio",
+        "INFORMATIONAL": "Informazione",
+        "PRODUCT": "Prodotto",
+        "CASE_STUDY": "Caso studio",
+        "COMPANY": "Azienda",
+        "LEGAL": "Legale",
+        "OTHER": "Altro",
+        "NOT_SORTED": "Non classificata",
+        "NOT_RECORDED": "Non registrata"
+      },
+      "sources": {
+        "title": "Per provenienza",
+        "hint": "Google, ogni assistente AI per nome, altri motori di ricerca, siti e social, uno per uno. Ogni fonte apre la sua pagina.",
+        "against": "Richieste per provenienza: {period} rispetto a {then}",
+        "againstHint": "Le richieste di ogni tipo di fonte, affiancate.",
+        "table": "Ogni fonte",
+        "search": "Trova una fonte…"
+      },
+      "behind": {
+        "title": "Le ricerche e le pagine dietro le richieste",
+        "hint": "Le richieste di ogni ricerca sono una stima; quelle di ogni pagina sono di Google Analytics.",
+        "searches": "Ricerche che portano richieste, ultimi 90 giorni",
+        "searchSearch": "Trova una ricerca…",
+        "pages": "Pagine che portano richieste",
+        "pageSearch": "Trova una pagina…",
+        "read": "Pagine lette nelle visite con richiesta, ultimi 90 giorni",
+        "noEnquiries": "Ricerche che portano clic ma nessuna richiesta, ultimi 90 giorni"
+      },
+      "events": {
+        "title": "Per tipo di richiesta",
+        "hint": "Cosa conta come richiesta: gli eventi di Google Analytics spuntati nel collegamento ad Analytics, tipo per tipo, e gli eventi non contati.",
+        "monthly": "Richieste per tipo, mese per mese",
+        "monthlyHint": "Le richieste di ogni evento contato, con gli aggiornamenti di Google.",
+        "table": "Ogni evento",
+        "search": "Trova un evento…",
+        "counted": "Contato",
+        "notCounted": "Non contato"
+      },
+      "sure": {
+        "yes": "Abbastanza affidabile",
+        "no": "Stima approssimativa"
+      }
+    },
+    "moved": {
+      "title": "Cosa è cambiato",
+      "hint": "{now} rispetto a {then}: richieste per tipo di pagina di arrivo e per provenienza.",
+      "skew": "Gli articoli portano il {visitsShare}% delle visite ma il {enquiriesShare}% delle richieste: il {rateWith}% di tutte le visite ha fatto una richiesta, il {rateWithout}% senza gli articoli.",
+      "kinds": "Richieste per tipo di pagina: {now} rispetto a {then}",
+      "kindsHint": "Le tue classificazioni delle pagine, le cinque con più visite.",
+      "sources": "Richieste per provenienza: {now} rispetto a {then}",
+      "sourcesHint": "Google, assistenti AI, accessi diretti e altri siti, ciascuno sommato."
     }
   },
   "clarity": {

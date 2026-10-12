@@ -314,3 +314,58 @@ export function whyInputOf(
     kinds,
   };
 }
+
+type Visits = { visits: number; enquiries: number };
+type Times = { times: number; enquiries: number };
+
+/** A span's lists, added up: each page, each source by its own name, each event, each kind, and each page's visitors from Google's search. */
+export type SpanLists = {
+  pages: Map<string, Visits>;
+  sources: Map<string, Visits>;
+  events: Map<string, Times>;
+  kinds: Map<string, Visits>;
+  googleByPage: Map<string, Visits>;
+  /** Each source's pages: the landing pages it sent people to, by the source's own name. */
+  pagesBySource: Map<string, Map<string, Visits>>;
+  /** Each page's visitors and enquiries by where they came from, grouped: Google, AI assistants, typed in and the rest. */
+  pagesByGroup: Map<string, Map<SourceGroup, Visits>>;
+};
+
+const addTo = <T extends Record<string, number>>(map: Map<string, T>, key: string, empty: () => T, values: Partial<T>) => {
+  const held = map.get(key) ?? empty();
+  for (const [field, value] of Object.entries(values)) (held as Record<string, number>)[field] += value ?? 0;
+  map.set(key, held);
+};
+
+/** The history's month lists, ready to add up over any span of months. */
+export function listsOf(records: readonly HistoryRecord[], kindOf: (path: string) => PageKind) {
+  const monthly = (kind: HistoryKind) => new Map(records.filter((record) => record.kind === kind).map((record) => [record.month, record]));
+  const pages = monthly("GA_PAGES"), sources = monthly("GA_SOURCES"), pageSources = monthly("GA_PAGE_SOURCES"), events = monthly("GA_EVENTS");
+  const visits = () => ({ visits: 0, enquiries: 0 });
+  return {
+    over(span: readonly string[]): SpanLists {
+      const out: SpanLists = { pages: new Map(), sources: new Map(), events: new Map(), kinds: new Map(), googleByPage: new Map(), pagesBySource: new Map(), pagesByGroup: new Map() };
+      for (const month of span) {
+        for (const row of pages.get(month)?.rows ?? []) {
+          addTo(out.pages, row.key, visits, { visits: row.visits ?? 0, enquiries: row.enquiries ?? 0 });
+          addTo(out.kinds, kindOf(row.key).key, visits, { visits: row.visits ?? 0, enquiries: row.enquiries ?? 0 });
+        }
+        for (const row of sources.get(month)?.rows ?? []) addTo(out.sources, row.key, visits, { visits: row.visits ?? 0, enquiries: row.enquiries ?? 0 });
+        for (const row of events.get(month)?.rows ?? []) addTo(out.events, row.key, () => ({ times: 0, enquiries: 0 }), { times: row.times ?? 0, enquiries: row.enquiries ?? 0 });
+        for (const row of pageSources.get(month)?.rows ?? []) {
+          const [path = "", channel = "", source = ""] = row.key.split(SOURCE_JOIN);
+          const figures = { visits: row.visits ?? 0, enquiries: row.enquiries ?? 0 };
+          if (channel === "Organic Search" && source.trim().toLowerCase() === "google") addTo(out.googleByPage, path, visits, figures);
+          const { name, group } = sourceOf([channel, source].join(SOURCE_JOIN));
+          let bySource = out.pagesBySource.get(name);
+          if (!bySource) out.pagesBySource.set(name, (bySource = new Map()));
+          addTo(bySource, path, visits, figures);
+          let byGroup = out.pagesByGroup.get(path);
+          if (!byGroup) out.pagesByGroup.set(path, (byGroup = new Map()));
+          addTo(byGroup, group, visits, figures);
+        }
+      }
+      return out;
+    },
+  };
+}

@@ -29,6 +29,7 @@ export const INSIGHTS_PAGES: readonly InsightsPage[] = [
   { id: "track", segment: "track-record", group: "findings", built: true },
   { id: "leagues", segment: "leaderboards", group: "leaderboards", built: true },
   ...LEAGUE_IDS.map((league) => ({ id: league, segment: `leaderboards/${league}`, group: "leaderboards" as const, built: true })),
+  { id: "enquiries", segment: "enquiries", group: "growth", built: true },
   { id: "opportunities", segment: "opportunities", group: "growth", built: true },
   { id: "pagePlan", segment: "page-plan", group: "growth", built: true },
   { id: "funnel", segment: "funnel", group: "growth", built: true },

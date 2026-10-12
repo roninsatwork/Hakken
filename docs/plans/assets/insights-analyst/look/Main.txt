@@ -8,6 +8,9 @@ figures
   figure: Visitors, September #
   figure: Visits that enquired, September #
   figure: Your place in your market
+what-moved: What moved
+  chart-card: Enquiries by kind of page: September # against September #
+  chart-card: Enquiries by where people came from: September # against September #
 why-moved: Why your enquiries fell: September # against September #
   chart-card: Where the # enquiries went
   why-test

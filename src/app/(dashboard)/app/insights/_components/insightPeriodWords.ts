@@ -20,3 +20,13 @@ export function monthsWords(months: readonly string[], t: (key: string, values?:
   if (months.length === 3 && (number - 1) % 3 === 0 && first.slice(0, 4) === last.slice(0, 4)) return t("quarter", { quarter: (number - 1) / 3 + 1, year: first.slice(0, 4) });
   return t("span", { from: formatMonth(first), to: formatMonth(last) });
 }
+
+/**
+ * A source's name as a person reads it: Google Analytics' "(direct)" is
+ * visits typed in or bookmarked, and "(not set)" a source it never recorded.
+ */
+export function sourceWords(name: string, group: string, words: { typed: string; unknown: string }): string {
+  if (group === "TYPED") return words.typed;
+  if (!name || name === "(not set)") return words.unknown;
+  return name;
+}
