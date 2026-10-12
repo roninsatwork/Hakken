@@ -362,6 +362,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
       runId,
       top: args.top,
       processedFrom,
+      reachedFrom: processedFrom === args.from,
       error,
       ...counts,
     });
@@ -594,6 +595,9 @@ export const startRun = internalMutation({
   handler: async (ctx, args) => await ctx.db.insert("searchConsoleRuns", { ...args, requests: 0, rows: 0 }),
 });
 
+/** A history fetch asked again at most this often, while the days don't yet reach Google's line. */
+const HISTORY_RETRY_MS = 60 * 60 * 1000;
+
 /**
  * A step's end: its run finished, and the days it brought joined to the days
  * held when they meet them — all countries', or the one country's. A
@@ -608,6 +612,8 @@ export const finishStep = internalMutation({
     runId: v.id("searchConsoleRuns"),
     top: v.string(),
     processedFrom: v.union(v.string(), v.null()),
+    /** The step reached the oldest day its collection goes back to. */
+    reachedFrom: v.optional(v.boolean()),
     error: v.union(v.string(), v.null()),
     requests: v.number(),
     rows: v.number(),
@@ -636,6 +642,12 @@ export const finishStep = internalMutation({
       if (joined && args.country === undefined) {
         patch.newestDay = joined.newestDay;
         patch.oldestDay = joined.oldestDay;
+        // The days before collection began, fetched back to Google's sixteen-month line once collection reaches its
+        // oldest day (phase 9) — never mid-way, when its months are still to come — an hour apart at most.
+        if (args.reachedFrom && !connection.daysFrom && (!connection.historyAt || now - connection.historyAt > HISTORY_RETRY_MS)) {
+          patch.historyAt = now;
+          await ctx.scheduler.runAfter(0, internal.searchConsoleHistoryDays.fetchHistoryDays, { connectionId: connection._id });
+        }
       } else if (joined && args.country !== undefined && await stillKeptReady(ctx, connection.companyWebsiteId, args.country)) {
         patch.countriesHeld = withHeld(connection.countriesHeld, args.country, joined);
       }

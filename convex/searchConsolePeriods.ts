@@ -16,7 +16,7 @@ import {
   type SearchConsolePeriodList,
   type SearchType,
 } from "./searchConsoleSchema";
-import { shiftDay } from "./searchConsoleDays";
+import { historyLimitDay, shiftDay } from "./searchConsoleDays";
 import { UNKNOWN, factsFor, type Facts } from "./searchConsoleFacts";
 import { countryScope, stillKeptReady } from "./searchConsoleCountries";
 import { askLive, countryFilters } from "./searchConsoleReads";
@@ -99,7 +99,7 @@ export function spanBefore(period: SearchConsolePeriod, newest: string, oldest: 
 
 export type Kept = { grain: "DAY" | "WEEK" | "MONTH"; start: string; packed: Packed };
 
-const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1;
+export const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1;
 
 /**
  * The days a kept record holds. A week holds only the days rolled into it —
@@ -221,7 +221,7 @@ type ChartPeriod = {
 const lastDayOf = (grain: Grain, start: string): string => stepEnd(start, STEP_OF[grain]);
 
 /** The Monday the charts reach back to: as many weeks as they show (`consoleChartWeeks`), the newest among them. */
-const chartReach = (newest: string, chartWeeks: number) => weekStart(shiftDay(newest, -7 * (chartWeeks - 1)));
+export const chartReach = (newest: string, chartWeeks: number) => weekStart(shiftDay(newest, -7 * (chartWeeks - 1)));
 
 /**
  * The days, weeks and months the charts reach that the lines read cover:
@@ -351,7 +351,12 @@ export const writeWeeks = internalMutation({
     const fresh = new Set(args.weeks.map((week) => `${week.grain}|${week.week}`));
     const firstKept: Record<Grain, string> = { DAY: args.dayLine, WEEK: weekStart(args.reach), MONTH: monthStart(args.reach) };
     const rows = await weeksOf(ctx, args.companyWebsiteId, args.country, args.searchType);
-    const first = rows.length === 0;
+    // A first build holds none of its own rows: rows before its first week and month were filled from Google (phase 9).
+    const freshFrom = (grain: Grain) => args.weeks.filter((one) => one.grain === grain).map((one) => one.week).sort()[0];
+    const first = !rows.some((held) => {
+      const from = freshFrom(held.grain ?? "WEEK");
+      return from === undefined || held.week >= from;
+    });
     for (const held of rows) {
       // Rows built before 2026-10-04 carry no grain: they are weeks.
       const grain = held.grain ?? "WEEK";
@@ -451,15 +456,17 @@ export const searchConsoleChartFigures = tenantQuery({
     const oldest = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
     if (!newest || !oldest) return { ...nothing, notReady: false, preparing: false };
 
+    // The main country's weeks and months reach back past collection, filled from Google (phase 9): its days begin there.
+    const heldFrom = scope.read === "KEPT" ? oldest : (connection?.daysFrom ?? oldest);
     const dayLine = firstDayKeptFor(args.searchType, newest);
-    const byWeek = args.step === "day" && args.from < dayLine && oldest < dayLine;
+    const byWeek = args.step === "day" && args.from < dayLine && heldFrom < dayLine;
     // Weeks past six months are kept as months (`firstWeekKept`): weeks reaching there are shown by month.
     const weekLine = firstWeekKept(newest);
-    const byMonth = (byWeek || args.step === "week") && args.from < weekLine && oldest < weekLine;
+    const byMonth = (byWeek || args.step === "week") && args.from < weekLine && heldFrom < weekLine;
     const step: ChartStep = byMonth ? "month" : byWeek ? "week" : args.step;
     const grain = GRAIN_OF[step];
     const reachFrom = chartReach(newest, chartWeeks);
-    const reach = args.from < reachFrom && oldest < reachFrom ? reachFrom : null;
+    const reach = args.from < reachFrom && heldFrom < reachFrom ? reachFrom : null;
 
     const rows = await weeksOf(ctx, site.hold._id, scope.read === "KEPT" ? scope.country : undefined, args.searchType);
     // Rows built before 2026-10-04 carry no grain: they are weeks.
@@ -492,13 +499,21 @@ export const searchConsoleChartFigures = tenantQuery({
 });
 type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan };
 
-/** Every period and the period before it, as spans of days: null where the days before are not held. */
-function slotsOf(newest: string, oldest: string): Slot[] {
+/**
+ * Every period and the period before it, as spans of days: null where the
+ * days before are not held. The long periods are asked of Google a week at a
+ * time, so they reach back to Google's sixteen-month line (`googleFrom`;
+ * insights-intelligence-plan.md phase 9) — twelve months whole, and the 90
+ * days set against the 90 before — while the short ones are added up from the
+ * days collected and stop where collection began.
+ */
+export function slotsOf(newest: string, oldest: string, googleFrom: string = oldest): Slot[] {
   return SEARCH_CONSOLE_PERIODS.flatMap((period) => {
-    const now = periodSpan(period, newest, oldest);
+    const floor = LONG_PERIODS.includes(period) && googleFrom < oldest ? googleFrom : oldest;
+    const now = periodSpan(period, newest, floor);
     return [
       { period, which: "NOW" as const, span: now, now },
-      { period, which: "BEFORE" as const, span: spanBefore(period, newest, oldest), now },
+      { period, which: "BEFORE" as const, span: spanBefore(period, newest, floor), now },
     ];
   });
 }
@@ -643,7 +658,7 @@ export async function buildSitePeriods(
   const long = options.long ?? true;
   // Caught up when a screen asks (`searchConsoleCatchUp.ts`): the 90 days and twelve months alone, nothing nightly.
   const onlyLong = options.onlyLong === true;
-  const allSlots = slotsOf(newest, oldest);
+  const allSlots = slotsOf(newest, oldest, historyLimitDay(builtAt));
   const slots = onlyLong
     ? allSlots.filter((slot) => LONG_PERIODS.includes(slot.period))
     : long ? allSlots : allSlots.filter((slot) => !LONG_PERIODS.includes(slot.period));

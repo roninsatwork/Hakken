@@ -17,6 +17,7 @@ import { mainConsoleCountry } from "./searchConsoleCountries";
 export const NOTHING_HELD = {
   newestDay: undefined,
   oldestDay: undefined,
+  daysFrom: undefined,
   countriesHeld: undefined,
   countriesAsAll: undefined,
   backfilledAt: undefined,

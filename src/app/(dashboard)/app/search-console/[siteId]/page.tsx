@@ -59,7 +59,7 @@ export default function SearchConsolePerformancePage() {
                 title={t("chart.title")}
                 days={performance.days}
                 range={range}
-                held={{ from: status.connection?.oldestDay ?? null, to: status.connection?.newestDay ?? null }}
+                held={{ from: status.connection?.daysFrom ?? null, to: status.connection?.newestDay ?? null }}
                 host={status.host}
                 exportName={`${status.host}-search-console-${kind}-${range.from}-to-${range.to}`}
               />

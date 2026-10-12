@@ -94,7 +94,8 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
                 </Select>
               ) : null}
               <SearchConsoleCountryPicker />
-              <SiteDateRange />
+              {/* As far back as Google keeps, sixteen months (insights-intelligence-plan.md phase 9). */}
+              <SiteDateRange oldest={status.historyFrom} />
             </div>
           }
         />

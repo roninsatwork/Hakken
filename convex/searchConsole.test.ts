@@ -428,7 +428,7 @@ describe("collecting", () => {
     expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(false);
   });
 
-  test("a new website's first run brings its last 90 days, each day one record a list, and nothing older", async () => {
+  test("a new website's first run brings its last 90 days, each day one record a list, then its days back to Google's line", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
@@ -440,11 +440,17 @@ describe("collecting", () => {
     expect(connection?.problem).toBeUndefined();
 
     const days = await t.run(async (ctx) => await ctx.db.query("searchConsoleDays").collect());
+    // The 90 days collected, then the website's day totals before them, back to Google's sixteen-month line, fetched
+    // once (insights-intelligence-plan.md phase 9): Google's day in June 2025 is a day before collection began.
     expect(days.map((entry) => `${entry.searchType} ${entry.day} ${entry.clicks}`).sort()).toEqual([
       "discover 2026-09-26 1",
+      "web 2025-06-01 2",
       "web 2026-09-25 4",
       "web 2026-09-26 12",
     ]);
+    // Collection still began where it began: New and lost and Volatility count from there.
+    expect(connection?.oldestDay).toBe("2026-06-29");
+    expect((await connectionOf(t, siteId))?.daysFrom).toBe("2025-05-26");
     // A search's clicks are added up from its pairs; the rest of the day's total Google hides.
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
     expect(await rowsOf(t, siteId, "page", NEWEST)).toEqual([["https://acme-shop.test/", 8]]);
@@ -542,17 +548,23 @@ describe("collecting", () => {
         .collect());
       expect(pairsBefore).toEqual([]);
     }
-    // Twelve months of a website held for 90 days is the 90 days: kept once, its own slot only saying its days (finish-off plan 2E).
+    // Twelve months is asked of Google whole, back past the 90 days collected (insights-intelligence-plan.md phase 9).
     const year = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
       .collect());
-    expect(year).toEqual([expect.objectContaining({ from: "2026-06-29", to: NEWEST, keys: [] })]);
-    // And read as the 90 days, which it is.
+    expect(year).toEqual([expect.objectContaining({ from: shiftDay(NEWEST, -364), to: NEWEST })]);
+    // Its pages are the 90 days' here: nothing older was shown.
     const listed = (from: string) => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "web", dimension: "page", from, to: NEWEST, page: 1, rows: 25 });
     const twelveMonths = await listed(shiftDay(NEWEST, -364));
-    expect(twelveMonths.rows.map((one: { key: string }) => one.key)).toEqual(["https://acme-shop.test/"]);
-    expect(twelveMonths.rows).toEqual((await listed("2026-06-29")).rows);
+    const ninety = await listed("2026-06-29");
+    type Listed = { key: string; change: number | null };
+    expect(twelveMonths.rows.map((one: Listed) => one.key)).toEqual(["https://acme-shop.test/"]);
+    const withoutChange = (rows: Listed[]) => rows.map(({ change: _change, ...row }) => row);
+    expect(withoutChange(twelveMonths.rows)).toEqual(withoutChange(ninety.rows));
+    // The 90 days are set against the 90 before, asked of Google (phase 9): a page gained from nothing. Twelve months has none.
+    expect(ninety.rows.map((one: Listed) => one.change)).toEqual([8]);
+    expect(twelveMonths.rows.map((one: Listed) => one.change)).toEqual([null]);
     // Google Images keeps no searches (store less round two, A): its keyword list says so; its pages still list.
     const images = (dimension: "query" | "page") => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "image", dimension, from: "2026-06-29", to: NEWEST, page: 1, rows: 25 });
     expect(await images("query")).toMatchObject({ noSearches: true, preparing: false, rows: [] });
@@ -570,6 +582,10 @@ describe("collecting", () => {
       ["2026-06-01", 2], ["2026-07-01", 31], ["2026-08-01", 31], ["2026-09-01", 26],
     ]);
     expect(shown("MONTH").map((month) => [month.week, month.top10, month.otherClicks])).toEqual([["2026-09-01", 2, 12]]);
+    // The charts' sixteen weeks reach back past collection: the weeks before it filled from Google once collection was whole (phase 9).
+    expect(charted.filter((row) => row.grain === "WEEK" && row.week < "2026-06-29").map((week) => [week.week, week.days])).toEqual([
+      ["2026-06-08", 7], ["2026-06-15", 7], ["2026-06-22", 7],
+    ]);
     // Discover has no searches: no pairs or searches kept for it.
     const discover = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")

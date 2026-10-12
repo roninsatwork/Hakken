@@ -419,7 +419,8 @@ export const searchConsoleUpdates = tenantQuery({
     if (!connection?.newestDay || !connection.oldestDay) return { from: null, to: null, updates: [], live: false };
     if (scope.read === "LIVE") return { from: null, to: null, updates: [], live: true };
     const country = scope.read === "KEPT" ? scope.country : undefined;
-    const oldest = scope.read === "KEPT" ? scope.oldestDay : connection.oldestDay;
+    // The main country's days begin at Google's sixteen-month line once fetched back (phase 9).
+    const oldest = scope.read === "KEPT" ? scope.oldestDay : connection.daysFrom ?? connection.oldestDay;
     const newest = scope.read === "KEPT" ? scope.newestDay : connection.newestDay;
     checkedRange(args.from, args.to);
     const shown = within(args, oldest, newest);
@@ -459,7 +460,8 @@ export const liveUpdatesTarget = internalQuery({
     if (!hold || hold.companyId !== args.companyId || isTrackedHold(hold)) return null;
     const connection = await connectionOf(ctx, hold._id);
     if (!connection || connection.status !== "CONNECTED" || !connection.property) return null;
-    const oldest = connection.oldestDay ?? null;
+    // Asked of Google: as far back as Google keeps, once the website is collected (phase 9).
+    const oldest = connection.oldestDay ? historyLimitDay(Date.now()) : null;
     const newest = connection.newestDay ?? null;
     const limits = await consoleLimitsOf(ctx, hold);
     const shown = oldest && newest ? within(args, oldest, newest) : null;

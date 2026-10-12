@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { chartFigures, keptIn, periodSpan, spanBefore, type Kept } from "./searchConsolePeriods";
+import { chartFigures, keptIn, periodSpan, slotsOf, spanBefore, type Kept } from "./searchConsolePeriods";
 import { pack, type Packed } from "./utils/searchConsolePacks";
 
 /**
@@ -134,5 +134,18 @@ describe("the days, weeks and months the charts read", () => {
     expect(eight.filter((row) => row.grain === "WEEK")[0].week).toBe("2026-08-03");
     expect(eight.filter((row) => row.grain === "DAY")[0].week).toBe("2026-08-03");
     expect(eight.filter((row) => row.grain === "MONTH")[0].week).toBe("2026-08-01");
+  });
+});
+
+describe("how far the ready-made periods reach (insights-intelligence-plan.md phase 9)", () => {
+  test("the long periods reach back to Google's line; the short ones stop where collection began", () => {
+    const slots = slotsOf("2026-09-26", "2026-07-08", "2025-05-26");
+    const span = (period: string, which: "NOW" | "BEFORE") => slots.find((slot) => slot.period === period && slot.which === which)?.span ?? null;
+    // Twelve months whole, and the 90 days set against the 90 before: asked of Google a week at a time.
+    expect(span("365", "NOW")).toEqual({ from: "2025-09-27", to: "2026-09-26" });
+    expect(span("90", "BEFORE")).toEqual({ from: "2026-03-31", to: "2026-06-28" });
+    // The 30 days before are added up from the days collected: before collection began, nothing to set against.
+    expect(span("30", "BEFORE")).toEqual({ from: "2026-07-29", to: "2026-08-27" });
+    expect(slotsOf("2026-08-15", "2026-07-08", "2025-05-26").find((slot) => slot.period === "30" && slot.which === "BEFORE")?.span).toBeNull();
   });
 });

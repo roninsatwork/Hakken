@@ -420,6 +420,24 @@ question is left out.
   page; the Executive summary, What brings enquiries, AI search, Page
   decisions and Keyword cannibalisation already split by kind. One source's
   page was built in phase 2.
+- **Phase 9**: Search Console's screens reach back to Google's sixteen-month
+  line. Once a website's first collection is whole, its day totals before
+  collection began are fetched from Google back to the line, once, and kept
+  where none is held (`searchConsoleHistoryDays.ts`; `daysFrom` says where
+  they begin, `oldestDay` still where collection began). The 90 days and 12
+  months are asked of Google a week at a time back to the line, so the 90
+  days have the 90 before to compare with and 12 months is whole; the date
+  picker stops at the line; a comparison reaching past it says Google no
+  longer keeps those days. The Position bands and Brand and non-brand charts'
+  weeks and months before collection are filled from Google inside their
+  reach (the Limits setting, 16 weeks unless raised, 52 at most): weeks inside
+  the six months kept as weeks, months before. A check
+  (`src/search-console-history-drift.test.ts`) fails a screen that starts its
+  days where collection began. Not filled back: New and lost and Volatility,
+  which need each day's searches, count from where collection began; the
+  countries kept beside the main one; the week and month collection began in,
+  which hold its days only (Ronins: from 8 July). Ronins: 392 days written,
+  Performance from June 2025; its charts gain 22 and 29 June and June 2026.
 - **Phase 10**: both histories were already being kept — DataForSEO's
   readings (every search's place daily for 90 days, weekly to a year, and the
   page-one counts of each reading with the website's days) and Clarity's

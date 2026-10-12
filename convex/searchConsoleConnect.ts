@@ -233,7 +233,7 @@ async function connectTo(
     problem: undefined,
     problemAt: undefined,
     ...(another
-      ? { clearing: true, newestDay: undefined, oldestDay: undefined, countriesHeld: undefined, backfilledAt: undefined, historyAt: undefined }
+      ? { clearing: true, newestDay: undefined, oldestDay: undefined, daysFrom: undefined, countriesHeld: undefined, backfilledAt: undefined, historyAt: undefined }
       : {}),
     updatedAt: now,
   });
@@ -422,6 +422,8 @@ export const searchConsoleStatus = tenantQuery({
         disconnectedAt: v.union(v.number(), v.null()),
         newestDay: orNull(v.string()),
         oldestDay: orNull(v.string()),
+        /** Where the main country's day totals begin: Google's sixteen-month line once fetched back (phase 9), else `oldestDay`. */
+        daysFrom: orNull(v.string()),
         /** Each country kept ready and collected, with its own newest day: its quick picks end there (§16). */
         countriesNewest: v.array(v.object({ country: v.string(), newestDay: v.string() })),
         historyDone: v.boolean(),
@@ -465,6 +467,7 @@ export const searchConsoleStatus = tenantQuery({
           disconnectedAt: connection.disconnectedAt ?? null,
           newestDay: connection.newestDay ?? null,
           oldestDay: connection.oldestDay ?? null,
+          daysFrom: connection.daysFrom ?? connection.oldestDay ?? null,
           countriesNewest: (connection.countriesHeld ?? []).map((held) => ({ country: held.country, newestDay: held.newestDay })),
           historyDone: connection.backfilledAt !== undefined,
           clearing: connection.clearing === true,

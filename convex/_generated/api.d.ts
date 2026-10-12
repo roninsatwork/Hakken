@@ -431,6 +431,7 @@ import type * as searchConsoleCountries from "../searchConsoleCountries.js";
 import type * as searchConsoleDays from "../searchConsoleDays.js";
 import type * as searchConsoleDemand from "../searchConsoleDemand.js";
 import type * as searchConsoleFacts from "../searchConsoleFacts.js";
+import type * as searchConsoleHistoryDays from "../searchConsoleHistoryDays.js";
 import type * as searchConsoleKeep from "../searchConsoleKeep.js";
 import type * as searchConsoleKeywordBooks from "../searchConsoleKeywordBooks.js";
 import type * as searchConsoleKeywordList from "../searchConsoleKeywordList.js";
@@ -1278,6 +1279,7 @@ declare const fullApi: ApiFromModules<{
   searchConsoleDays: typeof searchConsoleDays;
   searchConsoleDemand: typeof searchConsoleDemand;
   searchConsoleFacts: typeof searchConsoleFacts;
+  searchConsoleHistoryDays: typeof searchConsoleHistoryDays;
   searchConsoleKeep: typeof searchConsoleKeep;
   searchConsoleKeywordBooks: typeof searchConsoleKeywordBooks;
   searchConsoleKeywordList: typeof searchConsoleKeywordList;

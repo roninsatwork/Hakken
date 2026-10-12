@@ -158,7 +158,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                   title={t("record.chartTitle")}
                   days={days.days}
                   range={range}
-                  held={{ from: status.connection?.oldestDay ?? null, to: status.connection?.newestDay ?? null }}
+                  held={{ from: status.connection ? status.historyFrom : null, to: status.connection?.newestDay ?? null }}
                   host={host}
                   exportName={`${host}-search-console-${dimension === "query" ? "keyword" : "page"}-${range.from}-to-${range.to}`}
                 />

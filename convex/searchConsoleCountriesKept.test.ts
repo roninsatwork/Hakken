@@ -182,6 +182,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Google's sixteen-month line on the tests' day: where the days before collection began are asked from. */
+const HISTORY_FROM = "2025-05-26";
+
 describe("collecting the main country and a country kept ready", () => {
   test("the main country is asked with its filter and held without a country, its list of every country asked whole; a country kept beside it gets its whole 90 days; image is never asked", async () => {
     const { t, siteId } = await setup(["gbr", "moz"]);
@@ -192,7 +195,10 @@ describe("collecting the main country and a country kept ready", () => {
     // Its collection's days, as its totals by date ask for them: the 90 days and twelve months are asked of Google
     // when its lists are added up (keep-less-history-plan.md, part 3).
     const main = asks.filter((ask) => countryOf(ask) === "gbr");
-    const collected = main.filter((ask) => ask.dimensions[0] === "date");
+    // Apart from the days before collection began, asked once back to Google's line (insights-intelligence-plan.md phase 9).
+    const history = main.filter((ask) => ask.dimensions[0] === "date" && ask.startDate === HISTORY_FROM);
+    expect(history.length).toBeGreaterThan(0);
+    const collected = main.filter((ask) => ask.dimensions[0] === "date" && ask.startDate !== HISTORY_FROM);
     expect(collected.map((ask) => `${ask.type} ${ask.startDate}`)).toContain("web 2026-09-22");
     expect(collected.every((ask) => ask.startDate >= "2026-09-22")).toBe(true);
     const whole = asks.filter((ask) => countryOf(ask) === undefined);
@@ -358,7 +364,8 @@ describe("switching to the main home country (2026-10-06)", () => {
     // The all-countries and image days cleared; a run started once they were gone collected the main country whole.
     expect(asks.length).toBeGreaterThan(0);
     expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
-    expect(asks.filter((ask) => ask.dimensions[0] === "date").map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
+    // The collection's days from its 90-day window; the days before it asked once back to Google's line (phase 9).
+    expect(asks.filter((ask) => ask.dimensions[0] === "date" && ask.startDate !== HISTORY_FROM).map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
     expect((await keptOf(t, siteId, undefined)).days.map((day) => `${day.searchType} ${day.day} ${day.clicks}`)).toEqual(["web 2026-08-01 2", `web ${NEWEST} 8`]);
   });
 

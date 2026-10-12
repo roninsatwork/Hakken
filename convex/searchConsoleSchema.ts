@@ -229,6 +229,13 @@ export const searchConsoleTables = {
      * the country's figures are cleared, so a country put back starts again.
      */
     countriesHeld: v.optional(v.array(v.object({ country: v.string(), newestDay: v.string(), oldestDay: v.string() }))),
+    /**
+     * Where the website's day totals begin, once they are fetched back to
+     * Google's sixteen-month line (`searchConsoleHistoryDays.ts`;
+     * insights-intelligence-plan.md phase 9): the screens charted from the
+     * days read back to here. `oldestDay` stays where collection began.
+     */
+    daysFrom: v.optional(v.string()),
     backfilledAt: v.optional(v.number()),
     /** When the history last took a step: one quiet for an hour has stopped, and the daily job resumes it. */
     historyAt: v.optional(v.number()),

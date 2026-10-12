@@ -27,7 +27,7 @@ export function useSiteRange(): SiteRange {
   return parseSiteRange(params);
 }
 
-export function SiteDateRange() {
+export function SiteDateRange({ oldest }: { oldest?: string } = {}) {
   const t = useTranslations("sites.range");
   const setParams = useSetSiteParams();
   const range = useSiteRange();
@@ -45,7 +45,8 @@ export function SiteDateRange() {
 
   const setDay = (which: "from" | "to", value: string) => {
     if (!value) return;
-    const from = which === "from" ? value : range.from;
+    // A day before the oldest the screens hold can't be chosen (Search Console: Google's sixteen months).
+    const from = which === "from" ? (oldest && value < oldest ? oldest : value) : range.from;
     const to = which === "to" ? value : range.to;
     apply({ from, to, step: defaultStep(from, to), preset: "custom" });
   };
@@ -62,7 +63,7 @@ export function SiteDateRange() {
       </Select>
       {range.preset === "custom" && (
         <>
-          <Field label={t("from")} labelHidden type="date" value={range.from} max={range.to} onChange={(event) => setDay("from", event.target.value)} />
+          <Field label={t("from")} labelHidden type="date" value={range.from} min={oldest} max={range.to} onChange={(event) => setDay("from", event.target.value)} />
           <Field label={t("to")} labelHidden type="date" value={range.to} min={range.from} onChange={(event) => setDay("to", event.target.value)} />
         </>
       )}

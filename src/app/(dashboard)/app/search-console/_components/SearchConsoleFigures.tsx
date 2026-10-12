@@ -70,8 +70,12 @@ export function DaysBeforeChange({ by, days, write, neutral = false, still = 0, 
   isNew?: boolean;
 }) {
   const t = useTranslations("searchConsole.figures");
+  const status = useSearchConsoleStatus();
+  const range = useSearchConsoleRange(status?.connection?.newestDay);
+  // The days before older than Google keeps say so, not that Hakken hasn't collected them (phase 9).
+  const beforeFrom = new Date(Date.parse(`${range.from}T00:00:00Z`) - range.days * 86_400_000).toISOString().slice(0, 10);
   if (isNew) return <ChangeLine by={1}>{t("new")}</ChangeLine>;
-  if (by === null) return <ChangeLine by={null}>{t("noBefore")}</ChangeLine>;
+  if (by === null) return <ChangeLine by={null}>{t(status && beforeFrom < status.historyFrom ? "beforeTooOld" : "noBefore")}</ChangeLine>;
   if (by === 0 || Math.abs(by) < still) return <ChangeLine by={0}>{t("same", { days })}</ChangeLine>;
   return <ChangeLine by={by} neutral={neutral}>{t(by > 0 ? "up" : "down", { change: write(Math.abs(by)), days })}</ChangeLine>;
 }

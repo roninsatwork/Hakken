@@ -133,7 +133,7 @@ export default function SearchConsoleUpdatesPage() {
               measures={CLICKS_ONLY}
               days={days.figures.days}
               range={range}
-              held={{ from: status.connection?.oldestDay ?? null, to: status.connection?.newestDay ?? null }}
+              held={{ from: status.connection?.daysFrom ?? null, to: status.connection?.newestDay ?? null }}
               host={host}
               exportName={`${host}-search-console-google-updates-${range.from}-to-${range.to}`}
             />

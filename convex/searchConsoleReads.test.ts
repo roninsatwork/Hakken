@@ -140,6 +140,30 @@ describe("performance", () => {
     await expect(otherReader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-09-25", to: "2026-09-26" }))
       .rejects.toThrow("not one your company holds");
   });
+
+  test("reads back to Google's sixteen-month line once the days before collection are fetched, never stopping where collection began", async () => {
+    const t = harness();
+    const companyId = await company(t, "Acme");
+    const siteId = await hold(t, companyId, "acme-shop.test");
+    // Collected from 1 September; the days before fetched back to Google's line (insights-intelligence-plan.md phase 9).
+    await connected(t, companyId, siteId, { oldestDay: "2026-09-01", newestDay: "2026-09-26" }, [
+      { day: "2026-09-10", clicks: 6, impressions: 200, position: 10 },
+      { day: "2025-09-10", clicks: 9, impressions: 300, position: 12 },
+      { day: "2025-08-10", clicks: 4, impressions: 100, position: 15 },
+    ]);
+    await t.run(async (ctx) => {
+      const connection = (await ctx.db.query("searchConsoleConnections").first())!;
+      await ctx.db.patch(connection._id, { daysFrom: "2025-05-26" });
+    });
+    const reader = await person(t, companyId);
+    const year = await reader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2025-09-01", to: "2026-09-26" });
+    // The first day shown is Google's, not the day collection began.
+    expect(year.days.map((day) => day.day)).toEqual(["2025-09-10", "2026-09-10"]);
+    expect(year.totals?.clicks).toBe(15);
+    // And the days before compare, held as far back as Google keeps them.
+    const month = await reader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2025-09-01", to: "2025-09-30" });
+    expect(month.previous?.clicks).toBe(4);
+  });
 });
 
 /** A search, page or split in a ready-made period: its key, clicks, impressions and position, then how many and the top one. */

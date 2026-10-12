@@ -161,7 +161,8 @@ export async function readPerformance(
   const scope = await countryScope(ctx, site.hold, connection, args.country);
   if (scope.read === "LIVE") return { days: [], totals: null, previous: null, named: null, live: true };
   const country = scope.read === "KEPT" ? scope.country : undefined;
-  const oldestDay = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
+  // The main country's days begin at Google's sixteen-month line once fetched back (phase 9), else where collection began.
+  const oldestDay = scope.read === "KEPT" ? scope.oldestDay : connection?.daysFrom ?? connection?.oldestDay;
   const before = periodBefore(args.from, args.to);
   const rows = await daysOf(ctx, site.hold._id, args.searchType, before.from, args.to, country);
   const inRange = rows.filter((row) => row.day >= args.from);

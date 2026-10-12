@@ -14577,6 +14577,7 @@
       "worse": "▼ {change} posizioni peggio",
       "points": "{change} punti",
       "noBefore": "I giorni precedenti non sono ancora disponibili",
+      "beforeTooOld": "Google conserva 16 mesi: i giorni prima non ci sono per il confronto",
       "new": "Nuova in queste date"
     },
     "named": "{named} dei {total} clic vengono da ricerche che Google nomina. Gli altri {hidden} vengono da ricerche che Google nasconde per la privacy: sono nei totali, mai in un elenco.",
@@ -14779,7 +14780,7 @@
       "disconnectedOn": "Scollegato il {day}",
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
-      "historyKept": "Dal {day}. I giorni si conservano per 90 giorni, poi come settimane; dopo 12 mesi, come mesi.",
+      "historyKept": "Totali dal {from}, e ricerche e pagine dal {day}; i periodi più lunghi si chiedono a Google. I giorni si conservano per 90 giorni, poi come settimane; dopo 12 mesi, come mesi.",
       "disconnectTitle": "Scollegare Search Console?"
     },
     "keywords": {

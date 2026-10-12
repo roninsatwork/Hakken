@@ -955,9 +955,9 @@ function totalsOf(days: readonly { clicks: number; impressions: number; position
 }
 
 /**
- * One search's or one page's days, and its totals against the period
- * before — in one country, when one is named — asked of Google when its
- * screen opens: nothing is kept per search or page per day.
+ * One search's or one page's days, and its totals against the period before
+ * where Google still keeps it (phase 9) — in one country, when one is named —
+ * asked of Google when its screen opens: nothing is kept per search or page per day.
  */
 export const searchConsoleKeySeries = tenantAction({
   args: {
@@ -993,8 +993,8 @@ export const searchConsoleKeySeries = tenantAction({
     const all = answer.rows
       .map((row) => ({ day: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))
       .sort((left, right) => left.day.localeCompare(right.day));
-    const days = all.filter((day) => day.day >= args.from);
-    const earlier = all.filter((day) => day.day < args.from);
-    return { ok: true as const, days, totals: totalsOf(days), previous: totalsOf(earlier), previousHeld: true };
+    const [days, earlier] = [all.filter((day) => day.day >= args.from), all.filter((day) => day.day < args.from)];
+    const previousHeld = before.from >= historyLimitDay(Date.now());
+    return { ok: true as const, days, totals: totalsOf(days), previous: previousHeld ? totalsOf(earlier) : null, previousHeld };
   },
 });

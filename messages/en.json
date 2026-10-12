@@ -14577,6 +14577,7 @@
       "worse": "▼ {change} places worse",
       "points": "{change} points",
       "noBefore": "The days before aren't held yet",
+      "beforeTooOld": "Google keeps 16 months: the days before aren't there to compare",
       "new": "New in these dates"
     },
     "named": "{named} of {total} clicks came from searches Google names. The other {hidden} came from searches Google hides for privacy: they are in the totals, never in a list.",
@@ -14779,7 +14780,7 @@
       "disconnectedOn": "Disconnected on {day}",
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
       "keptNone": "Nothing new comes in until it's connected again.",
-      "historyKept": "From {day}. Days are kept for 90 days, then as weeks; after 12 months, as months.",
+      "historyKept": "Totals from {from}, and searches and pages from {day}; longer periods are asked of Google. Days are kept for 90 days, then as weeks; after 12 months, as months.",
       "disconnectTitle": "Disconnect Search Console?"
     },
     "keywords": {
