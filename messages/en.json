@@ -18049,7 +18049,8 @@
         "moneyPageUnread": "Money pages Google hasn't read lately",
         "slowMoneyPages": "Money pages slow for real visitors",
         "missingMarkup": "Money pages without their structured data",
-        "orphanPages": "Pages no other page links to"
+        "orphanPages": "Pages no other page links to",
+        "ownSitesCompete": "Your own websites compete"
       },
       "sources": {
         "searchConsole": "Search Console",

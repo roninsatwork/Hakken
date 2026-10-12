@@ -18049,7 +18049,8 @@
         "moneyPageUnread": "Pagine che portano clienti non lette di recente da Google",
         "slowMoneyPages": "Pagine che portano clienti lente per i visitatori reali",
         "missingMarkup": "Pagine che portano clienti senza i loro dati strutturati",
-        "orphanPages": "Pagine a cui nessun'altra pagina rimanda"
+        "orphanPages": "Pagine a cui nessun'altra pagina rimanda",
+        "ownSitesCompete": "I tuoi siti competono tra loro"
       },
       "sources": {
         "searchConsole": "Search Console",

@@ -65,6 +65,9 @@ function landingPaths(read: Read, prefix: "landing" | "landingSearch", period: s
   return paths;
 }
 
+/** Fewer searches shared between the company's own websites than this, and it is chance, not a split. */
+const OWN_SHARED_FEW = 3;
+
 /** A money page Google hasn't read in this many days carries none of the changes made since. */
 const STALE_DAYS = 60;
 
@@ -122,6 +125,17 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
         specialist: "search", pattern: move.now > move.before ? "pageGaining" : "pageLosing", stake: Math.abs(move.now - move.before) / 10,
         seen: `${move.page} went from [[sc.page.${move.page}.clicks.90.before]] Google clicks to [[sc.page.${move.page}.clicks.90.now]].`,
         facts: [`sc.page.${move.page}.clicks.90.now`, `sc.page.${move.page}.clicks.90.before`, `sc.page.${move.page}.position.90.now`].filter((key) => read.has(key)),
+      });
+    }
+  }
+  // Its own websites competing for one search (I4): Google splits the search between them.
+  {
+    const count = read.get("own.shared.count");
+    if (count !== undefined && count >= OWN_SHARED_FEW) {
+      add({
+        specialist: "search", pattern: "ownSitesCompete", stake: count / 2,
+        seen: `This website and another of the company's own both rank in Google's top 20 for [[own.shared.count]] searches; on the most searched, this one is [[own.shared.top.position]] and the other [[own.shared.top.otherPosition]].`,
+        facts: ["own.shared.count", "own.shared.top.position", "own.shared.top.otherPosition", "own.shared.top.volume"].filter((key) => read.has(key)),
       });
     }
   }

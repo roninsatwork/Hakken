@@ -22,6 +22,7 @@ import { unpackColumn } from "./utils/packedColumns";
 import { factKey, factValidator, percentOf, shiftDay, spanDays, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
+import { sharedSearchFacts, sharedSearches, type RankedRow } from "./utils/insightOwnSites";
 import { CHANGE_DAYS, changeKindValidator, changeResultValidator, pageChangeResult, pageChanges, profileChangesOf, type Change, type PageYear } from "./utils/insightTrack";
 import { landingByPath } from "./insightsConversion";
 import { readListingActivity } from "./localListings";
@@ -554,6 +555,55 @@ export const planInternal = internalQuery({
   },
 });
 
+/** The company's other websites read at most for the searches they share with this one. */
+const OWN_SITES_READ = 10;
+/** Google's places counted as competing for a search: the bands to the top 20. */
+const SHARED_BANDS = ["p01_03", "p04_10", "p11_20"] as const;
+
+/** A website's searches in Google's top 20, in one place. */
+async function topRanks(ctx: Reader, websiteId: Id<"websites">, place: number): Promise<RankedRow[]> {
+  const rows: RankedRow[] = [];
+  for (const band of SHARED_BANDS) {
+    const found = await ctx.db.query("siteKeywordRanks")
+      .withIndex("by_site_band_position", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("band", band))
+      .take(RANKS_READ);
+    for (const row of found) {
+      if (row.status !== "LOST" && row.position !== undefined) rows.push({ keyword: row.keyword, position: row.position, page: row.page, volume: row.volumeKnown ? row.volume : null });
+    }
+  }
+  return rows;
+}
+
+/**
+ * The searches this website shares with the company's other websites (I4):
+ * each of its own websites read in the same place, the searches both rank
+ * for in Google's top 20 counted, the most searched named. Nothing for a
+ * company with one website.
+ */
+export const ownSitesFactsInternal = internalQuery({
+  args: holdArgs,
+  returns: v.array(factValidator),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    if (!hold || hold.relationship !== "OWNED") return [];
+    const others = (await ctx.db.query("companyWebsites").withIndex("by_company", (q) => q.eq("companyId", hold.companyId)).take(50))
+      .filter((other) => other.relationship === "OWNED" && other._id !== hold._id && other.websiteId !== hold.websiteId)
+      .slice(0, OWN_SITES_READ);
+    if (others.length === 0) return [];
+    const site = await loadSite(ctx, hold._id);
+    if (!site) return [];
+    const read = [];
+    for (const other of others) {
+      const otherSite = await loadSite(ctx, other._id);
+      // A search is the same search only in the same place.
+      if (!otherSite || otherSite.place !== site.place) continue;
+      read.push({ host: otherSite.website.displayHost ?? otherSite.website.host, rows: await topRanks(ctx, otherSite.website._id, site.place) });
+    }
+    if (read.length === 0) return [];
+    return sharedSearchFacts(site.website.displayHost ?? site.website.host, sharedSearches(await topRanks(ctx, site.website._id, site.place), read), site.today);
+  },
+});
+
 export const marketFactsInternal = internalQuery({
   args: holdArgs,
   returns: v.array(factValidator),
@@ -575,6 +625,7 @@ export async function readWebsiteFacts(ctx: Pick<ActionCtx, "runQuery">, holdId:
     ["Google Analytics' landing pages", () => ctx.runQuery(internal.insightsReading.analyticsFactsInternal, { holdId, part: "landing" })],
     ["Google Analytics' events", () => ctx.runQuery(internal.insightsReading.analyticsFactsInternal, { holdId, part: "events" })],
     ["the market", () => ctx.runQuery(internal.insightsReading.marketFactsInternal, { holdId })],
+    ["the company's other websites", () => ctx.runQuery(internal.insightsReading.ownSitesFactsInternal, { holdId })],
   ];
   const facts: Fact[] = [];
   const problems: string[] = [];
