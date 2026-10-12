@@ -1,12 +1,29 @@
 # Insights → Page plan — the approved look (board "PagePlan" of docs/plans/assets/insights-analyst/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
-page-header: Page plan
+page-header: Page decisions
 settings-card: What Hakken sees
+figures
+  figure: To improve
+  figure: To merge or redirect
+  figure: To remove
+  figure: To keep
+chart-card: What to do with your pages, by kind of page
 chart-card: Enquiries a year, the pages in the plan
 search: Search pages
 filter: What to do
 table: Page | Should win | What to do | Why
   table-bar: # pages · Most at stake first
+    download: Download CSV
+  table-footer
+search: Find a page…
+filter: Decision
+table: Page | Kind of page | Decision | Why | Visits, # months | Enquiries, # months | Google clicks, # days | Websites linking
+  table-bar: Each page's decision
+    download: Download CSV
+  table-footer
+search: Find a search…
+table: Search | From | Searched a month | Rivals ranking | Best rival's place
+  table-bar: The pages to create
     download: Download CSV
   table-footer

@@ -361,6 +361,22 @@ question is left out.
   enquiry rate (a page's own from 100 visits), each close variant counted
   once. Ronins, 13 July to 10 October: six groups, 29 pages, 221,590 times
   shown for 50 clicks.
+- **Phase 4**: the Page plan is now Page decisions: every page of the
+  website's page list gets a verdict each week — improve, merge, redirect,
+  remove or keep — kept with the week, beside the Page plan's own pages most
+  at stake and the pages to create. A broken page is redirected when anything
+  links to it, else taken out; Keyword cannibalisation's merges and the Page
+  plan's actions come next; a page nobody viewed in a year, that Google didn't
+  show in 90 days, is removed — redirected when another website links to it,
+  and never a page a website needs (service, company, legal, product) or a
+  list's further pages; then the site audit's duplicate, thin (too little
+  text: its text-to-code ratio flags nearly every page, so it isn't read),
+  not-indexable and orphan flags. Pages to create are searches two rivals win
+  that the website has no page for, searched 50 times a month or more, each
+  close variant once, then buyers' questions it doesn't rank for. Hakken has
+  no indexing state for every page, so Google not showing a page in 90 days
+  stands in for it. Ronins: 181 pages — 28 to improve, 3 to merge, 5 to
+  remove, 125 to keep — and 20 pages to create.
 
 ## Decisions for Anthony
 

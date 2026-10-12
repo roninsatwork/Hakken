@@ -17893,7 +17893,7 @@
         "cited": "Pagine citate dall'IA",
         "reviews": "Recensioni Google",
         "opportunities": "Opportunità",
-        "pagePlan": "Piano delle pagine",
+        "pagePlan": "Decisioni sulle pagine",
         "funnel": "Imbuto",
         "pageReviews": "Analisi delle pagine",
         "experiments": "Esperimenti",
@@ -18898,8 +18898,8 @@
       }
     },
     "pagePlan": {
-      "title": "Piano delle pagine",
-      "description": "Quale pagina dovrebbe vincere quale ricerca, e cosa fare con ognuna: ricostruire, ripristinare, rafforzare, aggiornare, tenere o ritirare.",
+      "title": "Decisioni sulle pagine",
+      "description": "Cosa fare con ogni pagina del tuo sito — migliorare, unire, reindirizzare, rimuovere o tenere — prima le pagine con più in gioco, e le pagine da creare.",
       "emptyTitle": "Ancora nessun piano",
       "emptyDescription": "{platformName} scrive il piano delle pagine con le scoperte di ogni settimana. Compare dopo la prima.",
       "search": "Cerca pagine",
@@ -19525,6 +19525,87 @@
           "gainHint": "Clic in più da Google al mese per le ricerche divise, da quante volte vengono cercate quando è noto.",
           "gainEmpty": "Non ancora noto: stiamo acquistando quante volte vengono cercate."
         }
+      }
+    },
+    "decisions": {
+      "notSorted": "Non classificata",
+      "everyVerdict": "Ogni decisione",
+      "sees": {
+        "every": "Delle tue {pages} pagine, {improve} da migliorare, {merge} da unire a un'altra, {redirect} da reindirizzare e {remove} da rimuovere; {keep} fanno il loro lavoro così come sono.",
+        "create": "{count, plural, one {Una pagina} other {# pagine}} da creare, dalle ricerche che vincono i tuoi concorrenti e dalle domande dei tuoi clienti; la più cercata è “{search}” ({volume} al mese)."
+      },
+      "verdicts": {
+        "IMPROVE": "Migliorare",
+        "MERGE": "Unire",
+        "REDIRECT": "Reindirizzare",
+        "REMOVE": "Rimuovere",
+        "KEEP": "Tenere"
+      },
+      "figures": {
+        "of": "su {pages} pagine",
+        "IMPROVE": "Da migliorare",
+        "MOVE": "Da unire o reindirizzare",
+        "REMOVE": "Da rimuovere",
+        "KEEP": "Da tenere"
+      },
+      "chart": {
+        "title": "Cosa fare con le tue pagine, per tipo di pagina",
+        "hint": "La decisione per ogni pagina, secondo le tue classificazioni: prima i tipi con più pagine."
+      },
+      "first": {
+        "title": "Prima: le pagine con più in gioco",
+        "hint": "Le pagine che hanno perso più richieste, o che ne vincerebbero di più, e la ricerca che ciascuna dovrebbe vincere."
+      },
+      "every": {
+        "title": "Ogni pagina",
+        "hint": "Una decisione per ogni pagina del tuo sito, dalle visite e richieste, dai clic di Google, dai siti che vi rimandano, dalle pagine in competizione e dall'analisi mensile del sito.",
+        "search": "Trova una pagina…",
+        "table": "La decisione per ogni pagina"
+      },
+      "create": {
+        "title": "Pagine da creare",
+        "hint": "Ricerche che almeno due concorrenti vincono e per cui non hai una pagina, e domande dei tuoi clienti per cui non sei posizionato.",
+        "search": "Trova una ricerca…",
+        "table": "Le pagine da creare"
+      },
+      "columns": {
+        "page": "Pagina",
+        "kind": "Tipo di pagina",
+        "verdict": "Decisione",
+        "why": "Perché",
+        "visits": "Visite, 12 mesi",
+        "enquiries": "Richieste, 12 mesi",
+        "clicks": "Clic da Google, 90 giorni",
+        "domains": "Siti che rimandano",
+        "search": "Ricerca",
+        "from": "Da",
+        "volume": "Ricerche al mese",
+        "rivals": "Concorrenti posizionati",
+        "best": "Posizione del miglior concorrente"
+      },
+      "from": {
+        "GAP": "La vincono i concorrenti",
+        "QUESTION": "Una domanda di un cliente"
+      },
+      "reasons": {
+        "REBUILD": "Le sue richieste sono crollate: ricostruiscila attorno alle ricerche che dovrebbe vincere",
+        "RESTORE": "Ha perso ciò che portava la pagina che ha sostituito: recuperalo",
+        "STRENGTHEN": "Converte bene dove quasi vince su Google: rafforzala",
+        "REFRESH": "Trasforma in richieste meno visitatori di prima: aggiornala",
+        "REFRESH_OR_RETIRE": "Non porta più lavoro: aggiornala, o ritirala",
+        "KEEP_ROUTE": "Molti la leggono e pochi chiedono: dai ai lettori un modo per chiedere",
+        "COMPETING": "È in competizione con {into} per le stesse ricerche: rendila chiaramente diversa",
+        "DUPLICATE": "L'analisi del sito ha trovato il suo contenuto ripetuto su un'altra pagina: rendila unica",
+        "THIN": "L'analisi del sito l'ha trovata povera di contenuto: arricchiscila",
+        "ORPHAN": "Nessuna pagina del tuo sito vi rimanda: aggiungi dei link",
+        "NOT_INDEXABLE": "Google ha istruzioni di non mostrarla, anche se viene usata: lascia che Google la mostri",
+        "COMPETING_MERGE": "Vive delle ricerche che dovrebbero essere di {into}: uniscila a {into}, con un reindirizzamento",
+        "BROKEN_LINKED": "Non funziona e altre pagine vi rimandano: reindirizzala alla pagina funzionante più vicina",
+        "UNUSED_LINKED": "Nessuno la visita e Google non la mostra, ma {domains, plural, one {un sito vi rimanda} other {# siti vi rimandano}}: reindirizzala",
+        "BROKEN": "Non funziona e nulla vi rimanda: toglila dalla sitemap",
+        "UNUSED": "Nessuno la visita, Google non la mostra e nessun sito vi rimanda: rimuovila",
+        "WORKING": "Porta visite o richieste così com'è",
+        "QUIET": "Poco usata, ma un sito ne ha bisogno"
       }
     }
   },

@@ -51,7 +51,7 @@ export type GapRow = {
 };
 
 /** The ranking rows of a copy that stand at its latest check. */
-function rankingNow(rows: KeywordCopyRow[], latestCheckDay: string | null): KeywordCopyRow[] {
+export function rankingNow(rows: KeywordCopyRow[], latestCheckDay: string | null): KeywordCopyRow[] {
   return rows.filter((row) => keywordStanding(row, latestCheckDay) === "current");
 }
 

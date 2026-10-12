@@ -11,6 +11,7 @@ import { finishRun } from "./searchConsoleAgentRun";
 import { readWebsiteFacts } from "./insightsReading";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
 import { competingForRun, keepCompeting } from "./insightCompeting";
+import { decideForRun } from "./insightDecisions";
 import type { Score } from "./utils/insightSummary";
 
 type SavedScorecard = Score[];
@@ -379,6 +380,8 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
     ...(plan ? { plan } : {}),
   });
   await keepCompeting(ctx, args, weekOf(now), competing, saved, publishedIds);
+  // Page decisions (phase 4): every page's verdict, read with this week's plan and groups.
+  await decideForRun(ctx, args);
   // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
   const reports: string[] = [];
   try {

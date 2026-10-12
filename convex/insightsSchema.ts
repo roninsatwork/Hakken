@@ -11,6 +11,7 @@ import { conversionValidator } from "./utils/insightConversion";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
 import { historyKindValidator, historyRowValidator } from "./utils/insightHistory";
 import { competingGroupValidator } from "./utils/insightCompeting";
+import { createValidator, decisionValidator } from "./utils/insightDecisions";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -309,6 +310,23 @@ export const insightsTables = {
     findingId: v.optional(v.id("insightFindings")),
     createdAt: v.number(),
   }).index("by_hold_rank", ["companyWebsiteId", "rank"]),
+
+  /**
+   * Page decisions (docs/plans/active/insights-intelligence-plan.md phase 4):
+   * every page's verdict as the newest weekly run gave it, in parts a screen
+   * reads whole; the first part also holds the pages to create. Replaced whole
+   * each run.
+   */
+  insightPageDecisions: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    part: v.number(),
+    decisions: v.array(decisionValidator),
+    creates: v.optional(v.array(createValidator)),
+    /** Every page decided, the ones not kept included. */
+    pages: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_hold_part", ["companyWebsiteId", "part"]),
 
   /**
    * The reports Hakken writes, frozen as written (§4.1, §4.2, I6): the weekly

@@ -172,6 +172,21 @@ const AI_GROUP = {
   ],
   shared: 196, split: 127, shown: 29478, clicks: 20, enquiries: 40, recent: 7, recentBefore: 10, gainClicks: 34.6, gainEnquiries: 1.7, sure: "LIKELY",
 };
+/** Page decisions (insights-intelligence-plan.md phase 4): a verdict for every page, and the pages to create. */
+const DECISION = (path: string, kind: string, verdict: string, reason: string, figures: Partial<{ into: string; visits: number; enquiries: number; clicks: number; domains: number }> = {}) => ({
+  path, kind, type: "SERVICE", verdict, reason, into: figures.into ?? null, visits: figures.visits ?? 0, enquiries: figures.enquiries ?? 0, views: 10, shown: 100, clicks: figures.clicks ?? 0, domains: figures.domains ?? 0, flags: [],
+});
+const DECISIONS = {
+  siteId: "site_1", host: "ronins.co.uk", decidedAt: Date.parse("2026-10-12T10:00:00Z"), pages: 4,
+  decisions: [
+    DECISION("/ai-agency/", "Service", "IMPROVE", "REBUILD", { visits: 708, enquiries: 34, clicks: 13, domains: 12 }),
+    DECISION("/brand-design-agency/", "Service", "MERGE", "COMPETING_MERGE", { into: "/brand-identity-agency/", visits: 9 }),
+    DECISION("/top-digital-trends-to-watch-in-2023/", "Insights", "REMOVE", "UNUSED"),
+    DECISION("/ux-design-agency/", "Service", "KEEP", "WORKING", { visits: 13, enquiries: 3, clicks: 5 }),
+  ],
+  creates: [{ search: "brand strategy agency", from: "GAP", volume: 390, rivals: 2, best: 4 }],
+};
+
 const CANNIBALISATION = { siteId: "site_1", host: "ronins.co.uk", groups: [{ rank: 1, week: "2026-10-12", from: "2026-07-13", to: "2026-10-10", group: AI_GROUP, findingId: "finding_1" }] };
 
 const WEEK = {
@@ -399,7 +414,7 @@ describe("Insights' looks", () => {
 
   it("32 · Page plan", async () => {
     nav.pathname = "/app/insights/page-plan";
-    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA });
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA, "insightDecisions:insightsPageDecisions": DECISIONS });
     const { container } = render(<InsightsPagePlanPage />);
     await screen.findByText("/chatbot-agency/");
     await expectApprovedLook(container, PLAN, "PagePlan", "Insights → Page plan");

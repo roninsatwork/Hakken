@@ -17893,7 +17893,7 @@
         "cited": "Pages AI cites",
         "reviews": "Google reviews",
         "opportunities": "Opportunities",
-        "pagePlan": "Page plan",
+        "pagePlan": "Page decisions",
         "funnel": "Funnel",
         "pageReviews": "Page reviews",
         "experiments": "Experiments",
@@ -18898,8 +18898,8 @@
       }
     },
     "pagePlan": {
-      "title": "Page plan",
-      "description": "Which page should win which search, and what to do with each: rebuild, restore, strengthen, refresh, keep or retire.",
+      "title": "Page decisions",
+      "description": "What to do with every page of your website — improve, merge, redirect, remove or keep — the pages most at stake first, and the pages to create.",
       "emptyTitle": "No page plan yet",
       "emptyDescription": "{platformName} writes the page plan with each week's findings. It appears after the first.",
       "search": "Search pages",
@@ -19525,6 +19525,87 @@
           "gainHint": "Extra Google clicks a month for the searches the pages split, from how often people search them where it's known.",
           "gainEmpty": "Not known yet: how often people search these is being bought."
         }
+      }
+    },
+    "decisions": {
+      "notSorted": "Not sorted",
+      "everyVerdict": "Every decision",
+      "sees": {
+        "every": "Of your {pages} pages, {improve} to improve, {merge} to merge into another, {redirect} to redirect and {remove} to remove; {keep} are doing their job as they are.",
+        "create": "{count, plural, one {One page} other {# pages}} to create, from searches your rivals win and your buyers' questions; the most searched is “{search}” ({volume} a month)."
+      },
+      "verdicts": {
+        "IMPROVE": "Improve",
+        "MERGE": "Merge",
+        "REDIRECT": "Redirect",
+        "REMOVE": "Remove",
+        "KEEP": "Keep"
+      },
+      "figures": {
+        "of": "of {pages} pages",
+        "IMPROVE": "To improve",
+        "MOVE": "To merge or redirect",
+        "REMOVE": "To remove",
+        "KEEP": "To keep"
+      },
+      "chart": {
+        "title": "What to do with your pages, by kind of page",
+        "hint": "Every page's decision, by your own classifications: the kinds with the most pages first."
+      },
+      "first": {
+        "title": "First: the pages most at stake",
+        "hint": "The pages that lost the most enquiries, or would win the most, and the search each should win."
+      },
+      "every": {
+        "title": "Every page",
+        "hint": "A decision for each page of your website, from its visits and enquiries, Google's clicks, the websites linking to it, the pages competing with it and the monthly site audit.",
+        "search": "Find a page…",
+        "table": "Each page's decision"
+      },
+      "create": {
+        "title": "Pages to create",
+        "hint": "Searches at least two of your rivals win that you have no page for, and your buyers' questions you don't rank for.",
+        "search": "Find a search…",
+        "table": "The pages to create"
+      },
+      "columns": {
+        "page": "Page",
+        "kind": "Kind of page",
+        "verdict": "Decision",
+        "why": "Why",
+        "visits": "Visits, 12 months",
+        "enquiries": "Enquiries, 12 months",
+        "clicks": "Google clicks, 90 days",
+        "domains": "Websites linking",
+        "search": "Search",
+        "from": "From",
+        "volume": "Searched a month",
+        "rivals": "Rivals ranking",
+        "best": "Best rival's place"
+      },
+      "from": {
+        "GAP": "Your rivals win it",
+        "QUESTION": "A buyer's question"
+      },
+      "reasons": {
+        "REBUILD": "Its enquiries fell away: rebuild it around the searches it should win",
+        "RESTORE": "It lost what the page it replaced brought: restore it",
+        "STRENGTHEN": "It converts well where it nearly wins on Google: strengthen it",
+        "REFRESH": "It turns fewer visitors into enquiries than it did: refresh it",
+        "REFRESH_OR_RETIRE": "It stopped bringing work: refresh it, or retire it",
+        "KEEP_ROUTE": "Many read it and few enquire: give its readers a route to enquire",
+        "COMPETING": "It competes with {into} for the same searches: make it clearly different",
+        "DUPLICATE": "The site audit found its content repeated on another page: make it its own",
+        "THIN": "The site audit found it thin: add to it",
+        "ORPHAN": "No page on your website links to it: link to it",
+        "NOT_INDEXABLE": "Google is told not to show it, though people use it: let Google show it",
+        "COMPETING_MERGE": "It lives off the searches {into} should own: merge it into {into}, with a redirect",
+        "BROKEN_LINKED": "It's broken and other pages link to it: redirect it to the nearest working page",
+        "UNUSED_LINKED": "Nobody visits it and Google doesn't show it, but {domains, plural, one {a website links} other {# websites link}} to it: redirect it",
+        "BROKEN": "It's broken and nothing links to it: take it out of your sitemap",
+        "UNUSED": "Nobody visits it, Google doesn't show it and no website links to it: remove it",
+        "WORKING": "It brings visits or enquiries as it is",
+        "QUIET": "Few use it, but a website needs it"
       }
     }
   },
