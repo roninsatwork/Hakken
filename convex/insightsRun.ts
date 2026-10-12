@@ -38,7 +38,7 @@ import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
 import { outcomeOf, type Change } from "./utils/insightTrack";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
-import { measurementBrief, measurementFrom } from "./utils/insightMeasurement";
+import { measurementBrief, measurementFindings, measurementFrom } from "./utils/insightMeasurement";
 import { planBrief } from "./utils/insightPlan";
 import { DRAFT_RULES, draftsFrom, type Drafted } from "./utils/insightDrafts";
 import { PANEL_RULES, panelFrom } from "./utils/insightPanel";
@@ -330,6 +330,8 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
   // Keyword cannibalisation (insights-intelligence-plan.md phase 3): the biggest groups of competing pages written up as findings.
   const competing = await competingForRun(ctx, args.holdId, today, rank);
   saved.push(...competing.findings.values());
+  // The Measurement check's ways to enquire, said by the run itself unless a specialist already wrote the same (phase 6).
+  for (const finding of measurementFindings(measurement.checks, reading.facts, shiftDay(today, 28))) if (!saved.some((held) => held.status === "PUBLISHED" && held.pattern === finding.pattern)) saved.push({ ...finding, status: "PUBLISHED", rank: saved.length + 1 });
   const top = saved.find((finding) => finding.status === "PUBLISHED");
   const verdictText = verdictFrom(verdict, fresh.size > 0 ? fresh : facts) ?? top?.headline ?? (reading.facts.length === 0
     ? "There is nothing to read for this website yet: connect Search Console or Google Analytics."

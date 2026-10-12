@@ -33,9 +33,9 @@ import { SEARCH_VOLUME_OPERATION, volumeSteps } from "./searchVolumes";
 import { localSteps } from "./localPlanning";
 import { reviewSteps } from "./reviewPlanning";
 import { aiDemandSteps } from "./aiDemand";
-import { radarSteps } from "./brandRadar";
+import { chatGptRadarSteps, radarSteps } from "./brandRadar";
 import { mentionSteps } from "./webMentions";
-import { RADAR_OPERATION } from "./dataForSeoRadarOperations";
+import { CHATGPT_RADAR_OPERATION, RADAR_OPERATION } from "./dataForSeoRadarOperations";
 import { AI_DEMAND_OPERATION } from "./dataForSeoAiDemandOperations";
 import { creditCycleLine } from "./creditHooks";
 import {
@@ -389,6 +389,9 @@ async function websiteSteps(
     // What Google's AI answers say of it and its rivals, monthly, when it has Brand radar on (`brandRadar.ts`).
     ...await radarSteps(ctx, cycle, companyWebsite, (params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
       operation: findSeoOperation(RADAR_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
+    })),
+    ...await chatGptRadarSteps(ctx, cycle, companyWebsite, (params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
+      operation: findSeoOperation(CHATGPT_RADAR_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
     })),
     // Pages across the web naming it and its rivals, weekly, when it has Web mentions on (`webMentions.ts`).
     ...await mentionSteps(ctx, cycle, companyWebsite, (operationId, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {

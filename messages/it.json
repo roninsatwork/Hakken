@@ -2007,6 +2007,10 @@
           "label": "Radar del marchio",
           "description": "Quanto spesso le risposte IA di Google nel Regno Unito citano il sito e i suoi concorrenti, ogni mese: circa 0,10 $ a richiesta."
         },
+        "chatGptMentions": {
+          "label": "Menzioni in ChatGPT",
+          "description": "Quanto spesso le risposte di ChatGPT citano il sito e i suoi concorrenti, ogni mese, accanto a quelle di Google del Radar del marchio: circa 0,10 $ a richiesta. Contate solo per i siti negli Stati Uniti, quindi per un sito altrove non si acquista nulla."
+        },
         "webMentions": {
           "label": "Menzioni sul web",
           "description": "Le pagine sul web che citano l'attività, ogni settimana, ciascuna verificata dall'IA come relativa a questa attività: circa 0,02 $ a richiesta."
@@ -5880,6 +5884,7 @@
         "ai_citation_ai_mode": "Chiesto a Google AI Mode",
         "ai_keyword_volume": "Quanto spesso le ricerche sono chieste all'IA",
         "radar_mentions": "Letto il Radar del marchio",
+        "radar_mentions_chatgpt": "Lette le menzioni in ChatGPT",
         "web_mentions": "Cercato il suo nome sul web",
         "link_gap": "Letto chi collega due concorrenti",
         "ai_overview_fan_out": "Cosa hanno cercato le AI Overview di Google",
@@ -17900,7 +17905,8 @@
         "measurement": "Verifica delle misurazioni",
         "sources": "Fonti",
         "enquiries": "Cosa porta richieste",
-        "cannibalisation": "Cannibalizzazione"
+        "cannibalisation": "Cannibalizzazione",
+        "aiSearch": "Ricerca AI"
       }
     },
     "place": {
@@ -18071,7 +18077,8 @@
         "missingMarkup": "Pagine che portano clienti senza i loro dati strutturati",
         "orphanPages": "Pagine a cui nessun'altra pagina rimanda",
         "ownSitesCompete": "I tuoi siti competono tra loro",
-        "COMPETING_PAGES": "Pagine in competizione per le stesse ricerche"
+        "COMPETING_PAGES": "Pagine in competizione per le stesse ricerche",
+        "EVENT_NOT_COUNTED": "Eventi che sembrano richieste, non contati"
       },
       "sources": {
         "searchConsole": "Search Console",
@@ -18690,7 +18697,8 @@
         "googleTiesPages": "Google lega i clic alle pagine",
         "analyticsSteady": "Analytics continua a contare",
         "referralsReal": "I referral sono reali",
-        "onlyThisWebsite": "Si conta solo questo sito"
+        "onlyThisWebsite": "Si conta solo questo sito",
+        "enquiryEventsCounted": "Ogni modo di fare una richiesta è spuntato"
       },
       "found": {
         "enquiryCounted": {
@@ -18744,6 +18752,11 @@
           "noAnalytics": "Serve Google Analytics collegato",
           "strangers": "{a} visite registrate su {names}",
           "only": "Si contano solo le visite di questo sito"
+        },
+        "enquiryEventsCounted": {
+          "noAnalytics": "Serve Google Analytics collegato",
+          "uncounted": "{names} è avvenuto {a} volte in 12 mesi ma {count, plural, one {non è contato} other {non sono contati}} come richiesta",
+          "noneUncounted": "Nessun evento che sembra un modo di fare una richiesta resta non contato"
         }
       },
       "fix": {
@@ -19606,6 +19619,104 @@
         "UNUSED": "Nessuno la visita, Google non la mostra e nessun sito vi rimanda: rimuovila",
         "WORKING": "Porta visite o richieste così com'è",
         "QUIET": "Poco usata, ma un sito ne ha bisogno"
+      }
+    },
+    "aiSearch": {
+      "title": "Ricerca AI",
+      "description": "Stai crescendo nell'AI? Le visite e le richieste che ogni assistente ti manda, come ognuno risponde alle tue domande rispetto ai concorrenti, e le pagine che cita.",
+      "emptyTitle": "Ancora niente da leggere",
+      "emptyDescription": "Collega Google Analytics, o aggiungi domande da porre agli assistenti, per vedere come vai nella ricerca AI.",
+      "others": "Altri assistenti",
+      "notSorted": "Non classificata",
+      "month": "Mese",
+      "download": "Scarica",
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "you": "{host} (tu)",
+      "bestRival": "{host}, al {share}%",
+      "sees": {
+        "growing": "Gli assistenti AI ti hanno mandato {visits} visite e {enquiries} richieste in {period}, rispetto a {before} visite nei tre mesi prima e {yearAgo} un anno prima.",
+        "top": "{name} ne ha mandate di più: {visits} visite, rispetto a {yearAgo} un anno prima.",
+        "named": "{engine} ti nomina più spesso: nel {share}% delle sue risposte alle tue domande questo mese{hasRival, select, yes {, rispetto a {rival} al {rivalShare}%} other {}}.",
+        "since": "Come gli assistenti rispondono alle tue domande è conservato dal {day}: i mesi precedenti non si possono ancora confrontare."
+      },
+      "figures": {
+        "visits": "Visite dall'AI, {period}",
+        "enquiries": "Richieste dall'AI, {period}",
+        "against": "{then} nel periodo {period}",
+        "named": "Risposte che ti nominano",
+        "namedDetail": "{named} su {asked} risposte, questo mese",
+        "cited": "Tue pagine citate",
+        "newestMonth": "volte questo mese"
+      },
+      "growing": {
+        "title": "Stai crescendo nell'AI?",
+        "hint": "Ogni visita e richiesta che un assistente AI ti ha mandato, mese per mese, per assistente e per tipo di pagina di arrivo.",
+        "monthly": "Visite da ogni assistente AI, mese per mese",
+        "monthlyHint": "Da Google Analytics, con gli aggiornamenti di Google.",
+        "against": "Visite da ogni assistente: {now} rispetto a {then}",
+        "againstHint": "Ogni assistente affiancato.",
+        "kinds": "I tipi di pagina su cui arrivano i visitatori dall'AI, {period}",
+        "kindsHint": "Secondo le tue classificazioni: se l'AI manda le persone alle pagine che vendono.",
+        "search": "Trova un assistente…",
+        "table": "Ogni assistente"
+      },
+      "answers": {
+        "title": "Come ogni assistente risponde alle tue domande",
+        "hint": "Le domande dei tuoi clienti, poste a ogni assistente: quanto spesso ti nomina e ti raccomanda, rispetto ai concorrenti. Conservato dal {day}.",
+        "hintNone": "Le domande dei tuoi clienti, poste a ogni assistente: quanto spesso ti nomina e ti raccomanda, rispetto ai concorrenti.",
+        "named": "Risposte che nominano ogni sito, {month}",
+        "namedHint": "La quota di risposte di ogni assistente alle tue domande che nominano il sito.",
+        "recommended": "Risposte che raccomandano ogni sito, {month}",
+        "recommendedHint": "La quota di risposte di ogni assistente che lo raccomandano, non solo lo nominano.",
+        "search": "Trova un assistente…",
+        "table": "Ogni assistente questo mese"
+      },
+      "cited": {
+        "title": "Le tue pagine citate dall'AI",
+        "hint": "Le tue pagine a cui gli assistenti rimandano nelle risposte alle tue domande.",
+        "hintCut": "Le tue pagine a cui gli assistenti rimandano nelle risposte alle tue domande; i mesi più vecchi ne contengono solo una parte.",
+        "monthly": "Volte in cui le tue pagine sono state citate, mese per mese",
+        "monthlyHint": "Per assistente, con gli aggiornamenti di Google.",
+        "search": "Trova una pagina…",
+        "table": "Ogni pagina citata"
+      },
+      "radar": {
+        "title": "Menzioni nell'AI di Google",
+        "hint": "Quante risposte AI di Google nel tuo paese nominano te e ogni concorrente, contate ogni mese.",
+        "monthly": "Risposte AI di Google che nominano ogni sito, mese per mese",
+        "monthlyHint": "Contate una volta al mese, dal mese in cui è stato attivato.",
+        "empty": "Il conteggio del primo mese è in arrivo."
+      },
+      "demand": {
+        "title": "Quanto spesso le tue ricerche vengono chieste all'AI",
+        "hint": "Quante volte al mese le tue ricerche vengono chieste agli strumenti AI, {month}.",
+        "hintNone": "Quante volte al mese le tue ricerche vengono chieste agli strumenti AI.",
+        "search": "Trova una ricerca…",
+        "table": "Le tue ricerche, chieste all'AI"
+      },
+      "columns": {
+        "assistant": "Assistente",
+        "now": "Ultimi 3 mesi",
+        "before": "3 mesi prima",
+        "yearAgo": "Un anno prima",
+        "enquiries": "Richieste",
+        "visits": "Visite",
+        "kind": "Tipo di pagina",
+        "asked": "Risposte",
+        "named": "Ti nominano",
+        "recommended": "Ti raccomandano",
+        "cited": "Tue pagine citate",
+        "bestRival": "Concorrente più nominato",
+        "page": "Pagina",
+        "times": "Volte citata",
+        "assistants": "Assistenti",
+        "search": "Ricerca",
+        "askedOfAi": "Chiesta all'AI al mese"
+      },
+      "chatgpt": {
+        "title": "Menzioni in ChatGPT",
+        "hint": "Quante risposte di ChatGPT nominano te e ogni concorrente, contate ogni mese.",
+        "monthly": "Risposte di ChatGPT che nominano ogni sito, mese per mese"
       }
     }
   },

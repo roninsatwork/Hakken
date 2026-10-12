@@ -2007,6 +2007,10 @@
           "label": "Brand radar",
           "description": "How often Google's AI answers in the United Kingdom name the website and its rivals, monthly: about $0.10 a request."
         },
+        "chatGptMentions": {
+          "label": "ChatGPT mentions",
+          "description": "How often ChatGPT's answers name the website and its rivals, monthly, beside Brand radar's Google ones: about $0.10 a request. Counted for United States websites only, so nothing is bought for a website elsewhere."
+        },
         "webMentions": {
           "label": "Web mentions",
           "description": "Pages across the web that mention the business, weekly, each checked by AI to be about this business: about $0.02 a request."
@@ -5880,6 +5884,7 @@
         "ai_citation_ai_mode": "Asked Google AI Mode",
         "ai_keyword_volume": "How often searches are asked of AI",
         "radar_mentions": "Read Brand radar",
+        "radar_mentions_chatgpt": "Read ChatGPT mentions",
         "web_mentions": "Searched the web for its name",
         "link_gap": "Read who links to two rivals",
         "ai_overview_fan_out": "What Google's AI Overviews searched",
@@ -17900,7 +17905,8 @@
         "measurement": "Measurement check",
         "sources": "Sources",
         "enquiries": "What brings enquiries",
-        "cannibalisation": "Keyword cannibalisation"
+        "cannibalisation": "Keyword cannibalisation",
+        "aiSearch": "AI search"
       }
     },
     "place": {
@@ -18071,7 +18077,8 @@
         "missingMarkup": "Money pages without their structured data",
         "orphanPages": "Pages no other page links to",
         "ownSitesCompete": "Your own websites compete",
-        "COMPETING_PAGES": "Pages competing for the same searches"
+        "COMPETING_PAGES": "Pages competing for the same searches",
+        "EVENT_NOT_COUNTED": "Events that read as enquiries, not counted"
       },
       "sources": {
         "searchConsole": "Search Console",
@@ -18690,7 +18697,8 @@
         "googleTiesPages": "Google ties clicks to pages",
         "analyticsSteady": "Analytics keeps counting",
         "referralsReal": "Referrals are real",
-        "onlyThisWebsite": "Only this website is counted"
+        "onlyThisWebsite": "Only this website is counted",
+        "enquiryEventsCounted": "Every way to enquire is ticked"
       },
       "found": {
         "enquiryCounted": {
@@ -18744,6 +18752,11 @@
           "noAnalytics": "Needs Google Analytics connected",
           "strangers": "{a} visits were recorded on {names}",
           "only": "Only this website's visits are counted"
+        },
+        "enquiryEventsCounted": {
+          "noAnalytics": "Needs Google Analytics connected",
+          "uncounted": "{names} happened {a} times in 12 months but {count, plural, one {isn't} other {aren't}} counted as an enquiry",
+          "noneUncounted": "No event that reads as a way to enquire is left uncounted"
         }
       },
       "fix": {
@@ -19606,6 +19619,104 @@
         "UNUSED": "Nobody visits it, Google doesn't show it and no website links to it: remove it",
         "WORKING": "It brings visits or enquiries as it is",
         "QUIET": "Few use it, but a website needs it"
+      }
+    },
+    "aiSearch": {
+      "title": "AI search",
+      "description": "Are you growing in AI? The visits and enquiries each assistant sends you, how each one answers your questions against your rivals, and the pages it cites.",
+      "emptyTitle": "Nothing to read yet",
+      "emptyDescription": "Connect Google Analytics, or add questions to ask the assistants, to see how you're doing in AI search.",
+      "others": "Other assistants",
+      "notSorted": "Not sorted",
+      "month": "Month",
+      "download": "Download",
+      "noMatch": "Nothing matches that search.",
+      "you": "{host} (you)",
+      "bestRival": "{host}, {share}%",
+      "sees": {
+        "growing": "AI assistants sent you {visits} visits and {enquiries} enquiries in {period}, against {before} visits in the three months before and {yearAgo} a year before.",
+        "top": "{name} sent the most: {visits} visits, against {yearAgo} a year before.",
+        "named": "{engine} names you most often: in {share}% of its answers to your questions this month{hasRival, select, yes {, against {rival} at {rivalShare}%} other {}}.",
+        "since": "How the assistants answer your questions is kept from {day}: the months before can't be compared yet."
+      },
+      "figures": {
+        "visits": "Visits from AI, {period}",
+        "enquiries": "Enquiries from AI, {period}",
+        "against": "{then} in {period}",
+        "named": "Answers naming you",
+        "namedDetail": "{named} of {asked} answers, this month",
+        "cited": "Your pages cited",
+        "newestMonth": "times this month"
+      },
+      "growing": {
+        "title": "Are you growing in AI?",
+        "hint": "Every visit and enquiry an AI assistant sent you, month by month, by assistant and by the kind of page people land on.",
+        "monthly": "Visits from each AI assistant, month by month",
+        "monthlyHint": "From Google Analytics, with Google's updates.",
+        "against": "Visits from each assistant: {now} against {then}",
+        "againstHint": "Each assistant side by side.",
+        "kinds": "The kinds of page AI visitors land on, {period}",
+        "kindsHint": "By your own classifications: whether AI sends people to the pages that sell.",
+        "search": "Find an assistant…",
+        "table": "Each assistant"
+      },
+      "answers": {
+        "title": "How each assistant answers your questions",
+        "hint": "The questions your buyers ask, put to each assistant: how often it names you and recommends you, against your rivals. Kept from {day}.",
+        "hintNone": "The questions your buyers ask, put to each assistant: how often it names you and recommends you, against your rivals.",
+        "named": "Answers naming each website, {month}",
+        "namedHint": "The share of each assistant's answers to your questions that name the website.",
+        "recommended": "Answers recommending each website, {month}",
+        "recommendedHint": "The share of each assistant's answers that recommend it, not only name it.",
+        "search": "Find an assistant…",
+        "table": "Each assistant this month"
+      },
+      "cited": {
+        "title": "Your pages AI cites",
+        "hint": "The pages of yours the assistants link to in their answers to your questions.",
+        "hintCut": "The pages of yours the assistants link to in their answers to your questions; the oldest months hold only part of them.",
+        "monthly": "Times your pages were cited, month by month",
+        "monthlyHint": "By assistant, with Google's updates.",
+        "search": "Find a page…",
+        "table": "Each page cited"
+      },
+      "radar": {
+        "title": "Mentions in Google's AI",
+        "hint": "How many of Google's AI answers in your country name you and each rival, counted each month.",
+        "monthly": "Google's AI answers naming each website, month by month",
+        "monthlyHint": "Counted once a month, from the month this was switched on.",
+        "empty": "The first month's count is on its way."
+      },
+      "demand": {
+        "title": "How often your searches are asked of AI",
+        "hint": "How many times a month your searches are asked of AI tools, {month}.",
+        "hintNone": "How many times a month your searches are asked of AI tools.",
+        "search": "Find a search…",
+        "table": "Your searches, asked of AI"
+      },
+      "columns": {
+        "assistant": "Assistant",
+        "now": "Last 3 months",
+        "before": "3 months before",
+        "yearAgo": "A year before",
+        "enquiries": "Enquiries",
+        "visits": "Visits",
+        "kind": "Kind of page",
+        "asked": "Answers",
+        "named": "Naming you",
+        "recommended": "Recommending you",
+        "cited": "Your pages cited",
+        "bestRival": "Rival named most",
+        "page": "Page",
+        "times": "Times cited",
+        "assistants": "Assistants",
+        "search": "Search",
+        "askedOfAi": "Asked of AI a month"
+      },
+      "chatgpt": {
+        "title": "Mentions in ChatGPT",
+        "hint": "How many of ChatGPT's answers name you and each rival, counted each month.",
+        "monthly": "ChatGPT's answers naming each website, month by month"
       }
     }
   },

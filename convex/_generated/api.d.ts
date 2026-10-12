@@ -264,6 +264,7 @@ import type * as holdProfileSchema from "../holdProfileSchema.js";
 import type * as holdProfiles from "../holdProfiles.js";
 import type * as http from "../http.js";
 import type * as httpConnectorPolicy from "../httpConnectorPolicy.js";
+import type * as insightAiSearch from "../insightAiSearch.js";
 import type * as insightCompeting from "../insightCompeting.js";
 import type * as insightDecisions from "../insightDecisions.js";
 import type * as insightHistory from "../insightHistory.js";
@@ -1109,6 +1110,7 @@ declare const fullApi: ApiFromModules<{
   holdProfiles: typeof holdProfiles;
   http: typeof http;
   httpConnectorPolicy: typeof httpConnectorPolicy;
+  insightAiSearch: typeof insightAiSearch;
   insightCompeting: typeof insightCompeting;
   insightDecisions: typeof insightDecisions;
   insightHistory: typeof insightHistory;

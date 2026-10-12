@@ -1,6 +1,6 @@
 import { readsAsShown } from "./seoAiEngines";
 import { isAiDemandOperation } from "./dataForSeoAiDemandOperations";
-import { isRadarOperation } from "./dataForSeoRadarOperations";
+import { CHATGPT_RADAR_OPERATION, isRadarOperation } from "./dataForSeoRadarOperations";
 import { isMentionOperation } from "./dataForSeoMentionOperations";
 import type { CollectionPart } from "./collectionParts";
 import { isLocalOperation } from "./dataForSeoLocalOperations";
@@ -18,6 +18,7 @@ export function discoveryPartOf(operationId: string): CollectionPart | null {
   // The two apps read as shown and Google AI Mode (D5, D17).
   if (readsAsShown(operationId)) return "aiApps";
   if (isAiDemandOperation(operationId)) return "aiDemand";
+  if (operationId === CHATGPT_RADAR_OPERATION) return "chatGptMentions";
   if (isRadarOperation(operationId)) return "brandRadar";
   if (isMentionOperation(operationId)) return "webMentions";
   return null;

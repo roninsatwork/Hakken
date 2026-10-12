@@ -1,0 +1,36 @@
+# Insights → AI search — the approved look (board "AiSearch" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: AI search
+settings-card: What Hakken sees
+figures
+  figure: Visits from AI, Q# #
+  figure: Enquiries from AI, Q# #
+  figure: Answers naming you
+  figure: Your pages cited
+chart-card: Visits from each AI assistant, month by month
+chart-card: Visits from each assistant: Q# # against Q# #
+chart-card: The kinds of page AI visitors land on, Q# #
+search: Find an assistant…
+table: Assistant | Last # months | # months before | A year before | Enquiries
+  table-bar: Each assistant
+    download: Download
+  table-footer
+chart-card: Answers naming each website, October #
+chart-card: Answers recommending each website, October #
+search: Find an assistant…
+table: Assistant | Answers | Naming you | Recommending you | Your pages cited | Rival named most
+  table-bar: Each assistant this month
+    download: Download
+  table-footer
+chart-card: Times your pages were cited, month by month
+search: Find a page…
+table: Page | Times cited | Assistants
+  table-bar: Each page cited
+    download: Download
+  table-footer
+search: Find a search…
+table: Search | Asked of AI a month
+  table-bar: Your searches, asked of AI
+    download: Download
+  table-footer

@@ -29,6 +29,7 @@ import InsightsEnquiriesPage from "./enquiries/page";
 import InsightsEnquirySourcePage from "./enquiries/source/page";
 import InsightsCannibalisationPage from "./cannibalisation/page";
 import InsightsCompetingGroupPage from "./cannibalisation/group/page";
+import InsightsAiSearchPage from "./ai-search/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -68,6 +69,7 @@ function facts(): Fact[] {
     add(`ai.${host}.mentions.now`, [222, 113, 481, 764, 237][index], "ai");
     add(`ai.cited.${host}`, [9, 1, 3, 2, 0][index], "ai");
     add(`ai.answers.chatgpt.${host}.named`, [0, 3, 3, 0, 0][index], "ai");
+    add(`ai.answers.chatgpt.${host}.recommended`, [0, 3, 3, 0, 0][index], "ai");
   });
   add("ai.answers.chatgpt.asked", 40, "ai");
   add("local.own.Ronins Group.reviews", 16, "local");
@@ -185,6 +187,25 @@ const DECISIONS = {
     DECISION("/ux-design-agency/", "Service", "KEEP", "WORKING", { visits: 13, enquiries: 3, clicks: 5 }),
   ],
   creates: [{ search: "brand strategy agency", from: "GAP", volume: 390, rivals: 2, best: 4 }],
+};
+
+/** AI search over time (insights-intelligence-plan.md phase 5): Ronins' assistants, answers and cited pages. */
+const AI_MONTH = (month: string, chatgpt: number, perplexity: number) => ({ month, assistants: [{ name: "ChatGPT", visits: chatgpt, enquiries: 0 }, { name: "Perplexity", visits: perplexity, enquiries: 1 }] });
+const AI_SEARCH = {
+  siteId: "site_1", host: "ronins.co.uk", since: "2026-09-23",
+  months: [AI_MONTH("2025-07", 20, 2), AI_MONTH("2025-08", 14, 1), AI_MONTH("2025-09", 12, 0), AI_MONTH("2026-04", 18, 1), AI_MONTH("2026-05", 17, 1), AI_MONTH("2026-06", 18, 0), AI_MONTH("2026-07", 17, 1), AI_MONTH("2026-08", 1, 0), AI_MONTH("2026-09", 5, 2)],
+  windows: { now: { months: ["2026-07", "2026-08", "2026-09"], visits: 26, enquiries: 3 }, before: { months: ["2026-04", "2026-05", "2026-06"], visits: 55, enquiries: 2 }, yearAgo: { months: ["2025-07", "2025-08", "2025-09"], visits: 49, enquiries: 3 } },
+  assistants: [{ name: "ChatGPT", now: 23, before: 53, yearAgo: 46, enquiries: 0 }, { name: "Perplexity", now: 3, before: 2, yearAgo: 3, enquiries: 2 }],
+  kinds: [{ key: "service", name: "Service", type: "SERVICE", visits: 18, enquiries: 2 }, { key: "brand", name: "Brand", type: "OTHER", visits: 5, enquiries: 1 }],
+  sites: [
+    { websiteId: "web_1", host: "ronins.co.uk", own: true, months: [{ month: "2026-10", engine: "perplexity", asked: 20, named: 9, recommended: 9, cited: 9 }, { month: "2026-10", engine: "chatgpt", asked: 30, named: 1, recommended: 1, cited: 1 }] },
+    { websiteId: "web_2", host: "pixelfield.co.uk", own: false, months: [{ month: "2026-10", engine: "perplexity", asked: 0, named: 4, recommended: 4, cited: 2 }] },
+  ],
+  citedCut: false,
+  citedPages: [{ path: "/chatbot-agency/", times: 11, engines: ["claude", "chatgpt", "perplexity"] }],
+  radar: null,
+  chatgpt: null,
+  demand: { month: "2026-09", rows: [{ search: "web app", ai: 1640, google: null }] },
 };
 
 const CANNIBALISATION = { siteId: "site_1", host: "ronins.co.uk", groups: [{ rank: 1, week: "2026-10-12", from: "2026-07-13", to: "2026-10-10", group: AI_GROUP, findingId: "finding_1" }] };
@@ -498,6 +519,14 @@ describe("Insights' looks", () => {
     await screen.findAllByText(/Merge \/ai-software-development-company\/ into \/ai-agency\//);
     await expectApprovedLook(container, PLAN, "CompetingGroup", "Insights → A group of competing pages");
     nav.search = "";
+  });
+
+  it("41 · AI search", async () => {
+    nav.pathname = "/app/insights/ai-search";
+    answer({ "insightsReads:insightsHome": HOME, "insightAiSearch:insightsAiSearch": AI_SEARCH });
+    const { container } = render(<InsightsAiSearchPage />);
+    await screen.findByText("/chatbot-agency/");
+    await expectApprovedLook(container, PLAN, "AiSearch", "Insights → AI search");
   });
 
   it("36 · Experiments", async () => {

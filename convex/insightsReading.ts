@@ -280,6 +280,10 @@ function pathOf(address: string): string {
 // ---------------------------------------------------------------------------
 // The market: the website and its rivals (DataForSEO), AI mentions and answers, reviews, the site audit
 
+/** Days of AI answer lines read for a website's month; citations read for its pages cited a year before. */
+const AI_DAYS_READ = 60;
+const CITED_YEAR_READ = 900;
+
 export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Promise<Fact[]> {
   const facts = new Facts();
   const site = await loadSite(ctx, hold._id);
@@ -306,8 +310,10 @@ export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
     if (bands?.p01_03 !== undefined) facts.add({ ...base, key: factKey("seo", host, "top3", "now"), value: bands.p01_03, unit: "count", label: `searches where ${host} is in Google's top three` });
     if (metrics?.aiOverviewRefs !== undefined && metrics.aiOverviewRefs !== null) facts.add({ ...base, key: factKey("seo", host, "aiOverviews", "now"), value: metrics.aiOverviewRefs, unit: "count", label: `searches where Google's AI Overview cites ${host}` });
     // A year before, from the month a year back (§5): what the leagues' moves are measured against.
+    // The same month a year before as the newest figure, or none: a neighbouring month is not a year apart (phase 6).
     const past = await seriesFor(ctx, website._id, site.place, yearAgo.from, yearAgo.to, "month");
-    const then = past.at(-1);
+    const sameMonth = `${Number(day.slice(0, 4)) - 1}${day.slice(4, 7)}`;
+    const then = past.filter((point) => point.lastDay.slice(0, 7) === sameMonth).at(-1);
     if (then) {
       const pastBase = { source: "market" as const, from: then.lastDay, to: then.lastDay };
       if (typeof then.estimatedTraffic === "number") facts.add({ ...pastBase, key: factKey("seo", host, "traffic", "year"), value: Math.round(then.estimatedTraffic), unit: "count", label: `${host}'s estimated visitors from Google a month` });
@@ -348,6 +354,27 @@ export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
       const named = engine.named.find((entry) => hosts.get(entry.websiteId) === host)?.times ?? 0;
       facts.add({ key: factKey("ai", "answers", engine.engine, host, "named"), value: named, unit: "count", source: "ai", label: `answers from ${engine.engine} naming ${host}`, to: engine.lastDay });
     }
+  }
+  // Answers recommending each website, not only naming it, the last 30 days (insights-intelligence-plan.md phase 6:
+  // the Recommended-by-AI league counted any mention), and its pages cited a year before, where answers were kept then.
+  const month = { from: shiftDay(today, -29), to: today };
+  for (const website of websites) {
+    const host = website.displayHost ?? website.host;
+    const lines = listed ? await ctx.db.query("siteListAiDays")
+      .withIndex("by_hold_site_day", (q) => q.eq("companyWebsiteId", listed).eq("locationCode", site.place).eq("websiteId", website._id).gte("day", month.from).lte("day", month.to))
+      .take(AI_DAYS_READ) : [];
+    const recommended = new Map<string, number>();
+    for (const line of lines) for (const entry of line.ai) recommended.set(entry.engine, (recommended.get(entry.engine) ?? 0) + entry.recommended);
+    for (const [engine, times] of recommended) {
+      facts.add({ key: factKey("ai", "answers", engine, host, "recommended"), value: times, unit: "count", source: "ai", label: `answers from ${engine} recommending ${host}`, ...month });
+    }
+    const before = listed ? await ctx.db.query("siteListAiDays")
+      .withIndex("by_hold_site_day", (q) => q.eq("companyWebsiteId", listed).eq("locationCode", site.place).eq("websiteId", site.website._id).gte("day", yearAgo.from).lte("day", yearAgo.to))
+      .first() : null;
+    if (!before) continue;
+    const cited = await ctx.db.query("aiCitations").withIndex("by_website_day", (q) => q.eq("mentionedWebsiteId", website._id).gte("day", yearAgo.from).lte("day", yearAgo.to)).take(CITED_YEAR_READ);
+    const pages = new Set(cited.filter((row) => row.kind === "SOURCE" && row.url).map((row) => row.url));
+    facts.add({ key: `${factKey("ai", "cited", host)}.year`, value: pages.size, unit: "count", source: "ai", label: `${host}'s pages AI assistants cited as a source`, ...yearAgo });
   }
   // Reviews: the website's own Business Profiles and its rivals'.
   const held = await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(40);

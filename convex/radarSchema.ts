@@ -44,6 +44,20 @@ export const radarTables = {
   }).index("by_website_place", ["websiteId", "locationCode"]),
 
   /**
+   * A website's month by month in ChatGPT's answers in the United States
+   * (insights-intelligence-plan.md phase 5): answers naming it and the asks
+   * behind them, while its company has ChatGPT mentions on. Kept for good.
+   */
+  chatGptRadarMonths: defineTable({
+    websiteId: v.id("websites"),
+    /** "2026-10", oldest first. */
+    months: v.array(v.string()),
+    mentions: packedColumnValidator,
+    asks: packedColumnValidator,
+    updatedAt: v.number(),
+  }).index("by_website", ["websiteId"]),
+
+  /**
    * A website's questions this month, newest reading only: each question once
    * with how often it is asked a month, where in the answer the website is
    * first named (null where it is only cited), and the pages the answer

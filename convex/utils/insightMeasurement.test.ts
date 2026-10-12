@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { enquiryCheck } from "./insightEnquiryCheck";
 import type { Fact } from "./insightFacts";
-import { measurementBrief, measurementFrom, type AnalyticsHealth } from "./insightMeasurement";
+import { measurementBrief, measurementFindings, measurementFrom, type AnalyticsHealth } from "./insightMeasurement";
 
 /**
  * The Measurement check (insights-analyst-plan.md §4.1, phase 13): whether the
@@ -23,6 +23,7 @@ describe("the Measurement check", () => {
     expect(checks.map((check) => [check.check, check.status, check.found])).toEqual([
       ["enquiryCounted", "PASSING", "countsOnce"],
       ["everyWayCounted", "PASSING", "allFired"],
+      ["enquiryEventsCounted", "PASSING", "noneUncounted"],
       ["enquiriesValued", "PASSING", "valued"],
       ["visitsHavePage", "PASSING", "havePage"],
       ["googleAgrees", "PASSING", "agree"],
@@ -64,5 +65,30 @@ describe("the Measurement check", () => {
   test("a handful of enquiries is too few to call either way", () => {
     const facts = [count("ga.counted.form_submission.times.365.now", 8), count("ga.event.form_submission.people.365.now", 8)];
     expect(measurementFrom(facts, enquiryCheck(facts), HEALTHY)[0]).toMatchObject({ status: "UNKNOWN", found: "tooFew", a: 8 });
+  });
+});
+
+describe("the ways to enquire, said by the run itself (insights-intelligence-plan.md phase 6)", () => {
+  const facts = [
+    count("ga.counted.form_submission.times.365.now", 169), count("ga.event.form_submission.times.365.now", 169),
+    count("ga.counted.phone_click.times.365.now", 0), count("ga.counted.live_chat.times.365.now", 0),
+    // Ronins' "contact": 67 times, unticked; Google's own form_start never reads as an enquiry.
+    count("ga.event.contact.times.365.now", 67), count("ga.event.form_start.times.365.now", 400), count("ga.event.scroll.times.365.now", 900),
+  ];
+
+  test("an event that reads as an enquiry, happens often and isn't counted is one to look at", () => {
+    const check = measurementFrom(facts, enquiryCheck(facts), HEALTHY).find((row) => row.check === "enquiryEventsCounted");
+    expect(check).toMatchObject({ status: "LOOK", found: "uncounted", names: ["contact"], a: 67, b: 1 });
+  });
+
+  test("both written up as findings, every number the check's own", () => {
+    const checks = measurementFrom(facts, enquiryCheck(facts), HEALTHY);
+    const findings = measurementFindings(checks, facts, "2026-11-09");
+    expect(findings.map((finding) => [finding.pattern, finding.headline])).toEqual([
+      ["conversionsNeverFire", "\"phone_click\" and \"live_chat\" are counted as ways to enquire, but Google Analytics hasn't recorded them once in 12 months."],
+      ["EVENT_NOT_COUNTED", "\"contact\" happened 67 times in 12 months, but it isn't counted as an enquiry."],
+    ]);
+    expect(findings[1].facts.map((fact) => fact.key)).toEqual(["ga.event.contact.times.365.now"]);
+    expect(measurementFindings(measurementFrom([], enquiryCheck([]), HEALTHY), [], "2026-11-09")).toEqual([]);
   });
 });

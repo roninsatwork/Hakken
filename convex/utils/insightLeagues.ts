@@ -91,10 +91,11 @@ export function leaguesFrom(facts: readonly Fact[], own: string): League[] {
   for (const id of LEAGUE_IDS) {
     let rows: Array<Omit<LeagueRow, "place" | "placeBefore" | "share">> = [];
     if (id === "recommended") {
-      // Answers naming each website, across every assistant Hakken asks.
+      // Answers recommending each website, not only naming it, across every assistant asked
+      // (insights-intelligence-plan.md phase 6: the league counted any mention).
       const engines = [...new Set(facts.map((fact) => /^ai\.answers\.([^.]+)\.asked$/.exec(fact.key)?.[1]).filter((engine): engine is string => Boolean(engine)))];
-      if (engines.length > 0) {
-        rows = hosts.map((host) => ({ name: host, you: host === own, value: engines.reduce((sum, engine) => sum + (byKey.get(`ai.answers.${engine}.${host}.named`) ?? 0), 0), before: null }));
+      if (engines.length > 0 && facts.some((fact) => fact.key.startsWith("ai.answers.") && fact.key.endsWith(".recommended"))) {
+        rows = hosts.map((host) => ({ name: host, you: host === own, value: engines.reduce((sum, engine) => sum + (byKey.get(`ai.answers.${engine}.${host}.recommended`) ?? 0), 0), before: null }));
       }
     } else if (id === "reviews") {
       // Each Business Profile, the business's own and its rivals'.

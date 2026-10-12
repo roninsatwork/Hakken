@@ -242,6 +242,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   aiSearchVolumes: LATEST,
   brandRadarMonths: forever("A website's month by month on Google's AI answers: a few hundred bytes a year, the only history of it."),
   brandRadarQuestionParts: LATEST,
+  chatGptRadarMonths: forever("A website's month by month in ChatGPT's answers: a few hundred bytes a year, the only history of it."),
   siteBacklinks: LATEST,
   siteReferringDomainParts: LATEST,
   siteAnchorParts: LATEST,

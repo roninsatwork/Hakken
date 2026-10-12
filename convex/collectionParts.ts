@@ -13,7 +13,7 @@ import { appError } from "./utils/appError";
  * it (Find, on Your listings) says so rather than buying.
  */
 
-export const COLLECTION_PARTS = ["local", "reviews", "aiApps", "aiDemand", "brandRadar", "webMentions", "buyerPanel"] as const;
+export const COLLECTION_PARTS = ["local", "reviews", "aiApps", "aiDemand", "brandRadar", "chatGptMentions", "webMentions", "buyerPanel"] as const;
 export type CollectionPart = (typeof COLLECTION_PARTS)[number];
 export type CollectionParts = Record<CollectionPart, boolean>;
 
@@ -23,6 +23,8 @@ const partsShape = v.object({
   aiApps: v.boolean(),
   aiDemand: v.boolean(),
   brandRadar: v.boolean(),
+  /** ChatGPT's answers naming the website, monthly, beside Brand radar's Google ones: United States websites only (insights-intelligence-plan.md phase 5). */
+  chatGptMentions: v.boolean(),
   webMentions: v.boolean(),
   /** Insights' buyer-question panel (insights-analyst-plan.md I28): its questions asked of every assistant each week. */
   buyerPanel: v.boolean(),

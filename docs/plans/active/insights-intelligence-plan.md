@@ -377,6 +377,35 @@ question is left out.
   no indexing state for every page, so Google not showing a page in 90 days
   stands in for it. Ronins: 181 pages — 28 to improve, 3 to merge, 5 to
   remove, 125 to keep — and 20 pages to create.
+- **Phase 5**: AI search under Growth. "Are you growing in AI?" first: each
+  assistant's visits and enquiries month by month from the 16 months held,
+  the newest three months against the three before and the same three a year
+  before, and the kinds of page AI visitors land on; then each assistant's
+  answers to the company's questions naming and recommending it against each
+  rival (kept from 23 September 2026, said on the screen), the pages each
+  cites month by month, and — where bought — Google's AI mentions and how
+  often the searches are asked of AI. Ronins, Q3 2026: 29 visits from AI
+  assistants against 61 the quarter before and 81 a year before; ChatGPT 23
+  against 46. Every answer naming Ronins also recommends it: its questions
+  ask the assistants to recommend an agency.
+- **ChatGPT mentions**: DataForSEO counts ChatGPT's answers for the United
+  States only, in English (its documentation, read 12 October 2026). So, by
+  Anthony's "yes if they match the home country", they are bought only for a
+  United States website, behind a new per-company switch "ChatGPT mentions"
+  on the Collection schedule screen (about $0.10 a request, a website and its
+  rivals once a month), kept in their own series beside Google's. Nothing is
+  bought for Ronins.
+- **Phase 6**: the faults fixed. "Recommended by AI" counts the answers
+  recommending each website over the last 30 days, and is left out rather
+  than counting mentions when none are held; the cited league's year-before
+  figure is written once a year of answers is held. A search checked twice
+  in a day keeps the page that holds its better place. A year-before market
+  figure is the same month a year back or none, and the Editor sends back any
+  comparison claiming a year apart that isn't. The Measurement check gains
+  "Every way to enquire is ticked" (an event that reads as an enquiry,
+  happens ten times or more in 12 months and isn't counted: Ronins'
+  "contact"), and the run writes both that and the ways ticked but never
+  recorded as findings itself, unless a specialist already wrote the same.
 
 ## Decisions for Anthony
 

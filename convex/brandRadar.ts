@@ -6,7 +6,7 @@ import type { PlannedCheck } from "./fanOutFirstCheckSteps";
 import { partIsOn } from "./collectionParts";
 import { readFanOutLimits } from "./fanOutLimits";
 import { localPeriodStart } from "./dataForSeoLocalOperations";
-import { RADAR_DAYS, radarHostAskedFor, radarParams } from "./dataForSeoRadarOperations";
+import { CHATGPT_RADAR_OPERATION, RADAR_DAYS, chatGptCovers, radarHostAskedFor, radarParams } from "./dataForSeoRadarOperations";
 import type { PullForParse } from "./seoCollectionParse";
 import { findBrandMentions, type BrandName } from "./utils/websiteBrands";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -61,6 +61,62 @@ export async function radarSteps(
     return outcome.reused ? { planned: 0, reused: 1 } : { planned: 1, reused: 0 };
   });
 }
+
+/**
+ * ChatGPT's reading this month for the website and its rivals, while the
+ * company has ChatGPT mentions on — and only where DataForSEO counts
+ * ChatGPT's answers for the website's home country (the United States).
+ */
+export async function chatGptRadarSteps(
+  ctx: MutationCtx,
+  cycle: Pick<Doc<"seoCollectionCycles">, "companyId" | "startedAt">,
+  hold: Doc<"companyWebsites">,
+  plan: (params: Record<string, unknown>, keyStartedAt: number, sendIndex: number) => Promise<PlannedCheck>,
+) {
+  if (isTrackedHold(hold) || !chatGptCovers(hold.locationCode) || !(await partIsOn(ctx, cycle.companyId, "chatGptMentions"))) return [];
+  const limits = await readFanOutLimits(ctx, hold.companyId, hold._id);
+  const own = await ctx.db.get(hold.websiteId);
+  if (!own) return [];
+  const websites = [own, ...await radarRivals(ctx, hold, limits.radarRivals)];
+  const month = localPeriodStart(cycle.startedAt, RADAR_DAYS);
+  return websites.map((website) => async (sendIndex: number, room: number) => {
+    if (room < 1) return { planned: 0, reused: 0, capped: true };
+    const outcome = await plan(radarParams(website.host, hold.locationCode, limits.radarQuestions, "chat_gpt"), month, sendIndex);
+    return outcome.reused ? { planned: 0, reused: 1 } : { planned: 1, reused: 0 };
+  });
+}
+
+/** A month of ChatGPT's answers kept in a website's series: answers naming it and the asks behind them. */
+export const writeChatGptRadar = internalMutation({
+  args: { websiteId: v.id("websites"), month: v.string(), mentions: v.number(), asks: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const series = await ctx.db.query("chatGptRadarMonths").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).unique();
+    const months = series?.months ?? [];
+    const mentions = series ? unpackColumn(series.mentions) : [];
+    const asks = series ? unpackColumn(series.asks) : [];
+    const at = months.indexOf(args.month);
+    if (at >= 0 && mentions[at] === args.mentions && asks[at] === args.asks) return null;
+    if (at >= 0) {
+      mentions[at] = args.mentions;
+      asks[at] = args.asks;
+    } else {
+      months.push(args.month);
+      mentions.push(args.mentions);
+      asks.push(args.asks);
+    }
+    const order = months.map((month, index) => ({ month, index })).sort((left, right) => left.month.localeCompare(right.month)).slice(-MONTHS_KEPT);
+    const kept = {
+      months: order.map((entry) => entry.month),
+      mentions: packColumn(order.map((entry) => mentions[entry.index] ?? undefined)),
+      asks: packColumn(order.map((entry) => asks[entry.index] ?? undefined)),
+      updatedAt: Date.now(),
+    };
+    if (series) await ctx.db.patch(series._id, kept);
+    else await ctx.db.insert("chatGptRadarMonths", { websiteId: args.websiteId, ...kept });
+    return null;
+  },
+});
 
 type Item = Record<string, unknown>;
 const asItem = (value: unknown): Item | null => (value && typeof value === "object" && !Array.isArray(value) ? (value as Item) : null);
@@ -195,6 +251,11 @@ export async function fileRadarPull(ctx: ActionCtx, pullId: Id<"seoDataPulls">, 
     const { total, items } = parseRadar(JSON.parse(pull.resultJson ?? "null"), names);
     const locationCode = typeof sent.location_code === "number" ? sent.location_code : DEFAULT_LOCATION_CODE;
     const month = pull.runDay.slice(0, 7);
+    // ChatGPT's answers keep their own series: the same country's Google answers are counted apart.
+    if (pull.operationId === CHATGPT_RADAR_OPERATION) {
+      await ctx.runMutation(internal.brandRadar.writeChatGptRadar, { websiteId: resolved.websiteId, month, mentions: total, asks: items.reduce((sum, item) => sum + item.volume, 0) });
+      return null;
+    }
     await ctx.runMutation(internal.brandRadar.writeRadar, { websiteId: resolved.websiteId, locationCode, month, total, items, pullId });
   } catch (error) {
     await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, { pullId, error: getErrorMessage(error) });

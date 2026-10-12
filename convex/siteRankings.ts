@@ -144,7 +144,9 @@ export async function fileKeywordRank(
     ? previousDay !== undefined && (!sameCounting || (existing?.status === "SAME" && existing.previousPosition === undefined))
     : !sameCounting;
   const previousPage = sameDay ? existing?.previousPage : existing?.page || undefined;
-  const url = entry.url ?? (existing ? addressOf(existing, entry.host) : undefined);
+  // The page comes with the place it holds: the better place kept from the day's first check keeps that check's page,
+  // never the worse check's (insights-intelligence-plan.md phase 6: the two came from two pages).
+  const url = better && existing ? addressOf(existing, entry.host) : entry.url ?? (existing ? addressOf(existing, entry.host) : undefined);
   const page = pagePath(url);
   const extras = packedFacts(mergeExtras(existing, entry.extras ?? {}, page === (existing?.page ?? page)));
   const volumeKnown = entry.volume !== undefined || Boolean(existing?.volumeKnown);

@@ -299,6 +299,7 @@ export const localTables = {
     aiApps: v.optional(v.boolean()),
     aiDemand: v.optional(v.boolean()),
     brandRadar: v.optional(v.boolean()),
+    chatGptMentions: v.optional(v.boolean()),
     webMentions: v.optional(v.boolean()),
     buyerPanel: v.optional(v.boolean()),
     updatedAt: v.number(),

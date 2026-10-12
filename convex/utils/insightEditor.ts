@@ -61,6 +61,11 @@ export function unlike(a: Fact, b: Fact): string | null {
     const one = spanDays(a.from, a.to), two = spanDays(b.from, b.to);
     if (Math.abs(one - two) > Math.max(one, two) * 0.1) return `${a.label} covers ${one} days and ${b.label} ${two}`;
   }
+  // A figure a year before is the same month a year back: one rival's November set against its October is not a year apart.
+  const [now, then] = b.key.endsWith(".year") && !a.key.endsWith(".year") ? [a, b] : a.key.endsWith(".year") && !b.key.endsWith(".year") ? [b, a] : [null, null];
+  if (now?.to && then?.to && !(now.to.slice(5, 7) === then.to.slice(5, 7) && Number(now.to.slice(0, 4)) - Number(then.to.slice(0, 4)) === 1)) {
+    return `${then.label} is from ${then.to.slice(0, 7)}, not the same month a year before ${now.to.slice(0, 7)}`;
+  }
   return null;
 }
 

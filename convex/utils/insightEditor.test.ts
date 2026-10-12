@@ -58,6 +58,14 @@ describe("the Editor", () => {
     expect(editFinding(draft({ story: "[[ga.nothing.held]] visits." }), facts)).toMatchObject({ ok: false, note: expect.stringContaining("ga.nothing.held") });
   });
 
+  test("a figure a year before must be the same month a year back (insights-intelligence-plan.md phase 6)", () => {
+    const month = (key: string, to: string) => ({ key, value: 10, unit: "count" as const, source: "market" as const, label: key, from: to, to });
+    expect(unlike(month("seo.rival.test.traffic.now", "2026-11-30"), month("seo.rival.test.traffic.year", "2025-10-31"))).toMatch(/not the same month a year before/);
+    expect(unlike(month("seo.rival.test.traffic.now", "2026-11-30"), month("seo.rival.test.traffic.year", "2025-11-30"))).toBeNull();
+    // A month against the month before is no year-on-year claim.
+    expect(unlike(month("ai.rival.test.mentions.now", "2026-11-28"), month("ai.rival.test.mentions.before", "2026-10-28"))).toBeNull();
+  });
+
   test("unlike comparisons are sent back: one country against every country, an estimate against a count", () => {
     expect(unlike(facts.get("sc.clicks.90.now")!, facts.get("sc.clicksWorld.90.now")!)).toMatch(/different countries/);
     expect(unlike(facts.get("seo.ronins.co.uk.traffic.now")!, facts.get("sc.clicks.90.now")!)).toMatch(/estimate/);

@@ -9,7 +9,7 @@ import { SettingSwitch, SettingsCard } from "@/src/ui/components/screens/Setting
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 
-const PARTS = ["local", "reviews", "aiApps", "aiDemand", "brandRadar", "webMentions", "buyerPanel"] as const;
+const PARTS = ["local", "reviews", "aiApps", "aiDemand", "brandRadar", "chatGptMentions", "webMentions", "buyerPanel"] as const;
 type Part = (typeof PARTS)[number];
 type Parts = Record<Part, boolean>;
 

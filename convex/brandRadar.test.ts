@@ -1,10 +1,12 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
-import { parseRadar } from "./brandRadar";
-import { radarHostAskedFor, radarParams } from "./dataForSeoRadarOperations";
+import { chatGptRadarSteps, parseRadar } from "./brandRadar";
+import { CHATGPT_RADAR_OPERATION, chatGptCovers, radarHostAskedFor, radarParams } from "./dataForSeoRadarOperations";
+import { discoveryPartOf } from "./discoveryParts";
 import { siteKindOf } from "./utils/siteKinds";
 import { unpackColumn } from "./utils/packedColumns";
 
@@ -74,5 +76,45 @@ describe("keeping", () => {
     const [seriesAgain] = await t.run(async (ctx) => await ctx.db.query("brandRadarMonths").collect());
     expect(again.updatedAt).toBe(part.updatedAt);
     expect(seriesAgain.updatedAt).toBe(series.updatedAt);
+  });
+});
+
+describe("ChatGPT mentions (insights-intelligence-plan.md phase 5)", () => {
+  test("asked of ChatGPT's answers in the United States only, the home country it must match", () => {
+    expect(radarParams("ronins.co.uk", 2826, 200, "chat_gpt")).toMatchObject({ platform: "chat_gpt", location_code: 2840, language_code: "en" });
+    expect(radarParams("ronins.co.uk", 2826, 200)).toMatchObject({ platform: "google", location_code: 2826 });
+    expect(chatGptCovers(2826)).toBe(false);
+    expect(chatGptCovers(2840)).toBe(true);
+    expect(discoveryPartOf(CHATGPT_RADAR_OPERATION)).toBe("chatGptMentions");
+    expect(discoveryPartOf("radar_mentions")).toBe("brandRadar");
+  });
+
+  test("planned only with its switch on, and never for a website outside the United States", async () => {
+    const t = harness();
+    // Planning only counts the steps: no purchase is made here.
+    const plan = async () => ({ reused: false, pullId: "pull_1" as Id<"seoDataPulls">, pull: null });
+    const steps = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+      const ukSite = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
+      const usSite = await ctx.db.insert("websites", { host: "acme-shop-us.test", displayHost: "acme-shop-us.test", firstSeenAt: 1 });
+      const uk = (await ctx.db.get(await ctx.db.insert("companyWebsites", { companyId, websiteId: ukSite, relationship: "OWNED", locationCode: 2826, createdAt: 1 })))!;
+      const us = (await ctx.db.get(await ctx.db.insert("companyWebsites", { companyId, websiteId: usSite, relationship: "OWNED", locationCode: 2840, createdAt: 1 })))!;
+      const cycle = { companyId, startedAt: Date.now() };
+      const off = await chatGptRadarSteps(ctx, cycle, us, plan);
+      await ctx.db.insert("collectionParts", { companyId, chatGptMentions: true, updatedAt: 1 });
+      return { off: off.length, uk: (await chatGptRadarSteps(ctx, cycle, uk, plan)).length, us: (await chatGptRadarSteps(ctx, cycle, us, plan)).length };
+    });
+    expect(steps).toEqual({ off: 0, uk: 0, us: 1 });
+  });
+
+  test("a month of ChatGPT's answers kept in its own series, Google's apart", async () => {
+    const t = harness();
+    const websiteId = await t.run(async (ctx) => await ctx.db.insert("websites", { host: "ronins.co.uk", displayHost: "ronins.co.uk", firstSeenAt: Date.now() }));
+    await t.mutation(internal.brandRadar.writeChatGptRadar, { websiteId, month: "2026-10", mentions: 40, asks: 9_000 });
+    await t.mutation(internal.brandRadar.writeChatGptRadar, { websiteId, month: "2026-09", mentions: 31, asks: 8_000 });
+    const [series] = await t.run(async (ctx) => await ctx.db.query("chatGptRadarMonths").take(5));
+    expect(series.months).toEqual(["2026-09", "2026-10"]);
+    expect(unpackColumn(series.mentions)).toEqual([31, 40]);
+    expect(await t.run(async (ctx) => await ctx.db.query("brandRadarMonths").take(5))).toEqual([]);
   });
 });

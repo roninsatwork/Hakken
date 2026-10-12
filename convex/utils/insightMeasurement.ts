@@ -16,7 +16,7 @@ import type { EnquiryCheck } from "./insightEnquiryCheck";
  */
 
 export const MEASUREMENT_CHECKS = [
-  "enquiryCounted", "everyWayCounted", "enquiriesValued", "visitsHavePage", "googleAgrees", "googleTiesPages",
+  "enquiryCounted", "everyWayCounted", "enquiryEventsCounted", "enquiriesValued", "visitsHavePage", "googleAgrees", "googleTiesPages",
   "analyticsSteady", "referralsReal", "onlyThisWebsite",
 ] as const;
 export type MeasurementCheckId = (typeof MEASUREMENT_CHECKS)[number];
@@ -54,6 +54,11 @@ const AGREE_WITHIN = 0.2;
 const TIED_WHOLE = 0.9;
 /** Fewer enquiries than this in 12 months, and the count says nothing either way. */
 const FEW = 20;
+/** An event whose name reads as a way to enquire; Google's own automatic events never do. */
+const ENQUIRY_WORDS = /contact|enquir|inquir|lead|quote|submit|form_submission|call|phone|tel|email|mailto|book|appointment|chat|whatsapp/i;
+const NOT_ENQUIRY = /^(form_start|page_view|session_start|first_visit|user_engagement|scroll|click|file_download|view_search_results|video_)/i;
+/** An uncounted event happening this often in 12 months is worth asking about. */
+const UNCOUNTED_FLOOR = 10;
 
 const row = (check: MeasurementCheckId, status: MeasurementStatus, found: string, extra: Partial<Pick<MeasurementCheck, "names" | "a" | "b">> = {}): MeasurementCheck => ({
   check, status, found, names: extra.names ?? [], a: extra.a ?? null, b: extra.b ?? null,
@@ -85,6 +90,17 @@ export function measurementFrom(facts: readonly Fact[], enquiries: EnquiryCheck,
   else if (counted.length === 0) checks.push(row("everyWayCounted", "LOOK", "nothingCounted"));
   else if (never.length > 0) checks.push(row("everyWayCounted", "LOOK", "neverFired", { names: never, a: never.length, b: counted.length }));
   else checks.push(row("everyWayCounted", "PASSING", "allFired", { a: counted.length }));
+
+  // An event that reads as a way to enquire and happens often, but isn't counted (insights-intelligence-plan.md
+  // phase 6: Ronins' "contact", 67 times in 12 months, unticked).
+  const countedNames = new Set(counted.map((event) => event.event));
+  const uncounted = facts
+    .map((fact) => ({ event: /^ga\.event\.(.+)\.times\.365\.now$/.exec(fact.key)?.[1], times: fact.value }))
+    .filter((entry): entry is { event: string; times: number } => Boolean(entry.event) && !countedNames.has(entry.event!) && ENQUIRY_WORDS.test(entry.event!) && !NOT_ENQUIRY.test(entry.event!) && entry.times >= UNCOUNTED_FLOOR)
+    .sort((a, b) => b.times - a.times);
+  if (!analytics) checks.push(row("enquiryEventsCounted", "UNKNOWN", "noAnalytics"));
+  else if (uncounted.length > 0) checks.push(row("enquiryEventsCounted", "LOOK", "uncounted", { names: uncounted.map((entry) => entry.event), a: uncounted[0].times, b: uncounted.length }));
+  else checks.push(row("enquiryEventsCounted", "PASSING", "noneUncounted"));
 
   // Enquiries valued, every visit on a page: Analytics' own checks, as they are.
   const value = result("NO_VALUE");
@@ -134,4 +150,56 @@ export function measurementBrief(checks: readonly MeasurementCheck[]): string | 
   const look = checks.filter((check) => check.status === "LOOK");
   if (look.length === 0) return null;
   return `The Measurement check found ${look.length} thing${look.length === 1 ? "" : "s"} to look at: ${look.map((check) => `${check.check} (${check.found}${check.names.length > 0 ? `: ${check.names.join(", ")}` : ""})`).join("; ")}. Say what each means for the figures, and what to fix first.`;
+}
+
+const listOf = (items: readonly string[]) => (items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
+const quoted = (names: readonly string[]) => listOf(names.map((name) => `"${name}"`));
+
+/**
+ * The Measurement check's two findings about the ways to enquire, written by
+ * the run itself (insights-intelligence-plan.md phase 6): ways ticked as
+ * enquiries that Analytics hasn't recorded in 12 months, and events that read
+ * as enquiries, happen often and aren't counted. Built from the check's own
+ * figures, every number held; none when the check found nothing to look at.
+ */
+export function measurementFindings(checks: readonly MeasurementCheck[], facts: readonly Fact[], checkOn: string) {
+  const byKey = new Map(facts.map((fact) => [fact.key, fact]));
+  const out = [];
+  const never = checks.find((check) => check.check === "everyWayCounted" && check.found === "neverFired");
+  if (never && never.names.length > 0) {
+    const one = never.names.length === 1;
+    out.push({
+      specialist: "measurement" as const,
+      pattern: "conversionsNeverFire",
+      headline: `${quoted(never.names)} ${one ? "is" : "are"} counted as ${one ? "a way" : "ways"} to enquire, but Google Analytics hasn't recorded ${one ? "it" : "them"} once in 12 months.`,
+      story: `${one ? "It is" : "Each is"} ticked as an enquiry on your Google Analytics connection, but none has arrived in the last 12 months: either nobody enquires that way, or the website isn't sending ${one ? "it" : "them"}, and any enquiry made that way is invisible in your figures.`,
+      action: `Make a test enquiry each way — ${quoted(never.names)} — and check it arrives in Google Analytics; fix the website's tracking for any that doesn't.`,
+      howWeKnow: "From the events counted as enquiries on your Google Analytics connection, and Google Analytics' events over the last 12 months.",
+      ruledOut: [],
+      sure: "HIGH" as const,
+      sources: ["analytics"],
+      facts: never.names.map((name) => byKey.get(`ga.counted.${name}.times.365.now`)).filter((fact): fact is Fact => Boolean(fact)),
+      comparisons: [],
+      checkOn,
+    });
+  }
+  const uncounted = checks.find((check) => check.check === "enquiryEventsCounted" && check.found === "uncounted");
+  if (uncounted && uncounted.names.length > 0) {
+    const first = uncounted.names[0];
+    out.push({
+      specialist: "measurement" as const,
+      pattern: "EVENT_NOT_COUNTED",
+      headline: `"${first}" happened ${uncounted.a ?? 0} times in 12 months, but it isn't counted as an enquiry.`,
+      story: `Its name reads as a way to enquire, and it happens often, but it isn't ticked as an enquiry on your Google Analytics connection, so none of these is in your enquiry figures.${uncounted.names.length > 1 ? ` The same goes for ${quoted(uncounted.names.slice(1))}.` : ""}`,
+      action: `If "${first}" is an enquiry, tick it among the enquiries on the Google Analytics connection, so every figure counts it from then on.`,
+      howWeKnow: "From Google Analytics' events over the last 12 months, against the events counted as enquiries on your Google Analytics connection.",
+      ruledOut: [],
+      sure: "MEDIUM" as const,
+      sources: ["analytics"],
+      facts: uncounted.names.map((name) => byKey.get(`ga.event.${name}.times.365.now`)).filter((fact): fact is Fact => Boolean(fact)),
+      comparisons: [],
+      checkOn,
+    });
+  }
+  return out;
 }
