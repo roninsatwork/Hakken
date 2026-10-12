@@ -29,6 +29,9 @@ import { ReportDownloadAction } from "../_components/ReportDownload";
 import { EnquiryCheckNotice } from "../_components/EnquiryCheckNotice";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
 
+/** Taken off a month's last share so the stack never tops 100% by a rounding and the scale ends at 100%. */
+const FULL_BAR_SLACK = 1e-6;
+
 /** Rivals' colours on the split share chart: none near your orange, so you never need telling apart by hue (he is colour blind). */
 const RIVAL_COLOURS = [CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL, CHART_SERIES_SLATE];
 
@@ -80,8 +83,9 @@ export default function InsightsSummaryPage() {
   const shareOf = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 1000) / 10 : 0);
   const shareBars = shareMonths.map((month) => {
     const shares = rivalHosts.map((host) => shareOf(month.rivals?.find((rival) => rival.host === host)?.value ?? 0, month.total));
-    // The last rival takes what rounding leaves, so a month adds up to 100% and the scale stops there.
-    if (shares.length > 0) shares[shares.length - 1] = Math.max(0, Math.round((100 - shareOf(month.you, month.total) - shares.slice(0, -1).reduce((sum, share) => sum + share, 0)) * 10) / 10);
+    // The last rival takes what rounding leaves, a hair under, so a month adds up to 100% and the scale stops
+    // at 100% rather than 120% (Anthony, 2026-10-12: "all the bars only got to about 90%").
+    if (shares.length > 0) shares[shares.length - 1] = Math.max(0, Math.round((100 - shareOf(month.you, month.total) - shares.slice(0, -1).reduce((sum, share) => sum + share, 0)) * 10) / 10 - FULL_BAR_SLACK);
     return monthRow(month.month, { you: shareOf(month.you, month.total), ...Object.fromEntries(shares.map((share, index) => [`rival${index}`, share])) });
   });
   const shareSeries = [
@@ -117,7 +121,7 @@ export default function InsightsSummaryPage() {
           series={shareSeries}
           stacked={rivalHosts.length > 0}
           formatScale={(value) => `${value}%`}
-          formatValue={(value) => `${value}%`}
+          formatValue={(value) => `${Math.round(value * 10) / 10}%`}
           labels={(value, key) => (key === "you" ? `${value}%` : null)}
         />
       </ChartCard>
