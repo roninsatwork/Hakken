@@ -247,12 +247,14 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
 
   // 4. The Head of Strategy connects them, ranks them and writes the week's verdict (§2.4).
   let verdict = "";
+  let written: unknown = null;
   let ordered: Draft[] = [...drafts].sort((a, b) => b.stake - a.stake);
   if (drafts.length > 0) {
     try {
       const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead);
       ordered = strategy.ordered;
       verdict = strategy.verdict;
+      written = strategy.summary;
     } catch (error) {
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Head of Strategy", detail: failureSummary(error), failed: true });
     }
@@ -290,9 +292,25 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
     ? "There is nothing to read for this website yet: connect Search Console or Google Analytics."
     : "Nothing this week moved enough to call: the figures are steady.");
   // The executive summary's scorecard and charts, kept with the week (§8).
-  const monthly = await ctx.runQuery(internal.insightsReading.monthlyInternal, { holdId: args.holdId });
+  const read = await ctx.runQuery(internal.insightsReading.monthlyInternal, { holdId: args.holdId });
+  // People each month, Google's count of each month whole, beside the enquiries counted from the days.
+  const people = await peopleByMonth(ctx, args.holdId).catch(() => new Map<string, number>());
+  const monthly = { ...read, enquiriesByMonth: read.enquiriesByMonth.map((month) => (people.has(month.month) ? { ...month, people: people.get(month.month)! } : month)) };
   const services = await ctx.runQuery(internal.insightsReading.strategyInternal, { holdId: args.holdId }).catch(() => []);
+  // The Head of Strategy's paragraphs, each kept only when every figure it names is held and none is typed;
+  // a list or one block of text alike, and the run's log says what was kept and why any wasn't.
+  const offered = (typeof written === "string" ? written.split(/\n\s*\n|\n/) : Array.isArray(written) ? written : []).filter((text): text is string => typeof text === "string" && text.trim().length > 0);
+  const paragraphs = lines(offered, fresh.size > 0 ? fresh : facts, 3);
+  if (offered.length !== paragraphs.length || offered.length === 0) {
+    const why = offered.map((text) => whyNotFilled(text, fresh.size > 0 ? fresh : facts)).filter(Boolean);
+    await ctx.runMutation(internal.roleRuns.logRunLine, {
+      runId: args.runId, companyId: args.companyId, heading: "Head of Strategy's note",
+      detail: `Kept ${paragraphs.length} of ${offered.length} paragraphs.${why.length > 0 ? ` ${why.join(" ")}` : ""}`.slice(0, 900),
+      failed: paragraphs.length === 0,
+    });
+  }
   const summary = {
+    ...(paragraphs.length > 0 ? { paragraphs } : {}),
     scorecard: scorecardFrom(reading.facts, args.host),
     enquiryCheck: check,
     services,
@@ -424,6 +442,30 @@ async function buildPanel(ctx: ActionCtx, args: RunArgs, member: TeamMember | un
   }
 }
 
+/**
+ * People each month over the last year, as Analytics counts each month whole
+ * (`yearMonth` by `totalUsers`): one report, the website's own addresses in
+ * its home country, as every figure in the run.
+ */
+async function peopleByMonth(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const target = await ctx.runQuery(internal.insightsReading.analyticsTargetInternal, { holdId });
+  if (!target) return out;
+  const opened = await openSession(ctx, target.connectionId);
+  if (!opened.ok) return out;
+  const answer = await askAnalytics(opened.session, target.property, {
+    startDate: `${shiftDay(target.newestDay, -395).slice(0, 7)}-01`, endDate: target.newestDay,
+    dimensions: ["yearMonth"], metrics: ["totalUsers"],
+    hostNames: target.addresses, countries: [target.country],
+  });
+  if (!answer.ok) return out;
+  for (const row of answer.rows) {
+    const key = row.keys[0] ?? "";
+    if (/^\d{6}$/.test(key)) out.set(`${key.slice(0, 4)}-${key.slice(4)}`, row.values[0] ?? 0);
+  }
+  return out;
+}
+
 /** Where each page's visitors were just before, kept at most a page. */
 const BEFORE_KEPT = 5;
 
@@ -531,6 +573,14 @@ function filled(text: unknown, facts: ReadonlyMap<string, Fact>): string | null 
   if (typedNumbers(text).length > 0) return null;
   const answer = fillFacts(text.trim(), facts);
   return answer.missing.length > 0 ? null : answer.text;
+}
+
+/** Why a written line was left out, for the run's log: a number typed, or a figure Hakken doesn't hold. */
+function whyNotFilled(text: string, facts: ReadonlyMap<string, Fact>): string | null {
+  const typed = typedNumbers(text);
+  if (typed.length > 0) return `Typed ${typed.join(", ")}.`;
+  const missing = fillFacts(text.trim(), facts).missing;
+  return missing.length > 0 ? `Named figures not held: ${missing.join(", ")}.` : null;
 }
 
 function lines(value: unknown, facts: ReadonlyMap<string, Fact>, most: number): string[] {
@@ -833,7 +883,7 @@ async function askStrategy(
   drafts: readonly Draft[],
   all: readonly Fact[],
   lead: TeamMember | undefined,
-): Promise<{ ordered: Draft[]; verdict: string }> {
+): Promise<{ ordered: Draft[]; verdict: string; summary: unknown }> {
   const system = [rulesFor(args), `You are the Head of Strategy: ${DISCIPLINE.strategy}. Connect findings that share one cause across specialists into one story, rank everything by what is at stake for the business — enquiries or sales won or lost first (each finding's "atStake" is the checklist's measure of it); a measurement problem ranks first only when it makes the other findings untrustworthy — and keep one voice. The week's biggest story must be a finding of its own, not only the verdict.`, lead?.instructions ?? "", FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
   const used = new Set(drafts.flatMap((draft) => [...draft.comparisons.flat(), ...[draft.headline, draft.story].flatMap((text) => [...text.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1]))]));
   const headline = ["ga.visits.365.now", "ga.visits.365.before", "ga.conversions.365.now", "ga.conversions.365.before", "sc.clicks.90.now", "sc.clicks.30.now", "sc.clicks.30.before"];
@@ -842,7 +892,7 @@ async function askStrategy(
     findings: drafts.map((draft, number) => ({ number, specialist: draft.specialist, pattern: draft.pattern, atStake: Math.round(draft.stake * 10) / 10, headline: draft.headline, story: draft.story, action: draft.action, sure: draft.sure })),
     facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key))),
   });
-  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt) as { verdict?: unknown; order?: unknown; joined?: unknown } | null;
+  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown } | null;
   const order = Array.isArray(answer?.order) ? answer.order.filter((number): number is number => Number.isInteger(number) && number >= 0 && number < drafts.length) : [];
   const joined = (Array.isArray(answer?.joined) ? answer.joined : []).flatMap((raw) => {
     const listed: unknown[] = Array.isArray((raw as { from?: unknown })?.from) ? (raw as { from: unknown[] }).from : [];
@@ -865,5 +915,5 @@ async function askStrategy(
     if (story && !ordered.includes(story)) ordered.push(story);
     if (!replaced.has(number) && (order.length === 0 || order.includes(number))) ordered.push(drafts[number]);
   }
-  return { ordered, verdict: words(answer?.verdict, 300) };
+  return { ordered, verdict: words(answer?.verdict, 300), summary: answer?.summary };
 }

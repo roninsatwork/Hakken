@@ -32,7 +32,17 @@ export const scoreValidator = v.object({
 });
 export type Score = Infer<typeof scoreValidator>;
 
-export const monthValidator = v.object({ month: v.string(), visits: v.number(), conversions: v.number() });
+export const monthValidator = v.object({
+  month: v.string(),
+  visits: v.number(),
+  conversions: v.number(),
+  /**
+   * People that month, as Google counts a month whole: people can't be added
+   * up across days, so this is asked of Analytics by month (Anthony,
+   * 2026-10-12: why 18, 19 and 39 differ). Absent on weeks before it.
+   */
+  people: v.optional(v.number()),
+});
 export const shareMonthValidator = v.object({
   month: v.string(),
   you: v.number(),
@@ -49,6 +59,12 @@ export const weekSummaryValidator = v.object({
   services: v.optional(v.array(serviceValidator)),
   enquiriesByMonth: v.array(monthValidator),
   shareByMonth: v.array(shareMonthValidator),
+  /**
+   * The Head of Strategy's summary for the managing director: two or three
+   * short paragraphs, every figure filled from the facts the Editor checked
+   * (Executive summary, approved 12 Oct 2026); absent on weeks before it.
+   */
+  paragraphs: v.optional(v.array(v.string())),
   /** How many facts the team read, and explanations its specialists ruled out. */
   checked: v.number(),
   ruledOut: v.number(),

@@ -14,6 +14,8 @@ import { DRAFT_AREAS } from "./utils/insightDrafts";
 import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
 import { EVERY_DEVICE, slotKey, splitChannelKey } from "./googleAnalyticsLists";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
+import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
+import { DEFAULT_CLIENT_SCHEDULE } from "./utils/insightTeam";
 
 /**
  * What the Insights screens read (docs/plans/active/insights-analyst-plan.md
@@ -187,7 +189,38 @@ const weekView = v.object({
   ruledOut: v.number(),
   sources: v.array(v.object({ source: v.string(), facts: v.number() })),
   summary: v.union(weekSummaryValidator, v.null()),
+  /** What Hakken does next, for the Executive summary: the changes it has logged, when it reads again, and its next checks. */
+  changes: v.number(),
+  nextRead: v.union(v.string(), v.null()),
+  checks: v.array(v.object({ day: v.string(), count: v.number() })),
 });
+
+/** Checks to come shown at most: the next two days a finding is checked on. */
+const CHECKS_SHOWN = 2;
+/** Changes counted at most for "keeps the log of N changes". */
+const CHANGES_COUNTED = 100;
+/** Findings read at most for them: the next few due, never the whole history. */
+const CHECKS_READ = 15;
+
+/** When Hakken reads a website again, by its company's own Insights schedule; null when switched off. */
+async function nextReadOf(ctx: SiteReader, week: Doc<"insightWeeks">): Promise<string | null> {
+  const schedule = (await ctx.db.get(week.companyId))?.insightsSchedule;
+  if (schedule && !schedule.isActive) return null;
+  const next = getNextWorkflowScheduleRunAt({ intervalStr: schedule?.intervalStr ?? DEFAULT_CLIENT_SCHEDULE, now: new Date(week.createdAt) });
+  return next ? new Date(next).toISOString().slice(0, 10) : null;
+}
+
+/** The next days Hakken checks whether findings proved right, with how many it checks on each. */
+async function checksOf(ctx: SiteReader, holdId: Id<"companyWebsites">): Promise<Array<{ day: string; count: number }>> {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = await ctx.db.query("insightFindings").withIndex("by_hold_check", (q) => q.eq("companyWebsiteId", holdId).eq("status", "PUBLISHED").gte("checkOn", today)).take(CHECKS_READ);
+  const days = new Map<string, number>();
+  for (const row of rows) {
+    if (row.outcome || !row.checkOn) continue;
+    days.set(row.checkOn, (days.get(row.checkOn) ?? 0) + 1);
+  }
+  return [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(0, CHECKS_SHOWN).map(([day, count]) => ({ day, count }));
+}
 
 /** This week: each website's newest week and its published findings, most at stake first (§4.1). */
 export const insightsThisWeek = tenantQuery({
@@ -207,8 +240,16 @@ export const insightsThisWeek = tenantQuery({
       open += (await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", site.hold._id)).order("desc").take(MOST_WEEKS_KEPT))
         .reduce((sum, week) => sum + week.published, 0);
     }
+    const extras: Array<{ changes: number; nextRead: string | null; checks: Array<{ day: string; count: number }> }> = [];
+    for (const { week } of weeks) {
+      extras.push({
+        changes: (await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", week.companyWebsiteId)).take(CHANGES_COUNTED)).length,
+        nextRead: await nextReadOf(ctx, week),
+        checks: await checksOf(ctx, week.companyWebsiteId),
+      });
+    }
     return {
-      weeks: weeks.map(({ week, host }) => ({
+      weeks: weeks.map(({ week, host }, index) => ({
         siteId: week.companyWebsiteId,
         host,
         week: week.week,
@@ -218,6 +259,7 @@ export const insightsThisWeek = tenantQuery({
         ruledOut: week.summary?.ruledOut ?? 0,
         sources: week.sources,
         summary: week.summary ?? null,
+        ...extras[index],
       })),
       findings: findings.sort((a, b) => a.rank - b.rank || a.host.localeCompare(b.host)),
       open,

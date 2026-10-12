@@ -75,7 +75,9 @@ export const insightsTables = {
     createdAt: v.number(),
   })
     .index("by_hold_week", ["companyWebsiteId", "week"])
-    .index("by_check", ["status", "checkOn"]),
+    .index("by_check", ["status", "checkOn"])
+    // A website's next checks, for the Executive summary's "what Hakken does next".
+    .index("by_hold_check", ["companyWebsiteId", "status", "checkOn"]),
 
   /**
    * A website's week: the run's verdict in one sentence, what was read and

@@ -18171,13 +18171,13 @@
     },
     "summary": {
       "title": "Sintesi per la direzione",
-      "description": "{company} in breve: gli ultimi 90 giorni rispetto alle stesse settimane dell'anno scorso e ai concorrenti.",
+      "description": "{company} in sintesi: gli ultimi 90 giorni rispetto agli stessi 90 giorni di un anno fa, e rispetto ai tuoi concorrenti.",
       "noWeek": "{platformName} non ha ancora letto le tue fonti: la sintesi si riempie dopo la prima esecuzione del team.",
       "seeFinding": "Vedi il risultato",
-      "noYear": "Ancora nessun dato per l'anno scorso",
-      "changeOn": "{percent}% rispetto a {before} l'anno scorso",
-      "changeFromNone": "Da zero l'anno scorso",
-      "changePoints": "{points} punti rispetto al {before}% dell'anno scorso",
+      "noYear": "Ancora nessun dato di un anno fa",
+      "changeOn": "{percent}% su {before}, stessi 90 giorni di un anno fa",
+      "changeFromNone": "Da nessuno un anno fa",
+      "changePoints": "{points} punti su {before}%, stesso mese di un anno fa",
       "place": "La tua posizione nel mercato",
       "placeMoved": "{count, plural, one {Un posto} other {# posti}} in un anno",
       "placeDetail": "per i visitatori da Google",
@@ -18193,7 +18193,11 @@
         "title": "Visite per ogni richiesta, mese per mese",
         "hint": "Quante visite servono per ottenere una richiesta. Meno è meglio. Tutti i canali, da Google Analytics.",
         "figure": "Visite per ogni richiesta",
-        "empty": "Si riempie quando Google Analytics ha contato richieste per qualche mese."
+        "empty": "Si riempie quando Google Analytics ha contato richieste per qualche mese.",
+        "titlePeople": "Visitatori per ogni richiesta, mese per mese",
+        "hintPeople": "Quante persone servono per ottenere una richiesta, lo stesso conteggio del dato qui sopra. Più basso è meglio. Il mese in corso è più chiaro: non è ancora finito. Da Google Analytics.",
+        "figurePeople": "Visitatori per ogni richiesta",
+        "soFar": "{month}, finora"
       },
       "measures": {
         "enquiries": "Richieste",
@@ -18213,21 +18217,59 @@
         "WATCH": "Da tenere d'occhio",
         "BEHIND": "Indietro"
       },
-      "table": {
-        "title": "Quadro di valutazione",
-        "search": "Cerca misure...",
-        "status": "Stato",
-        "everyStatus": "Tutti gli stati",
-        "download": "Scarica CSV",
-        "measure": "Misura",
-        "now": "Ultimi 90 giorni",
-        "year": "L'anno scorso",
-        "change": "Variazione",
-        "rivals": "Rispetto ai concorrenti",
-        "noMatch": "Nessuna misura corrisponde alla ricerca."
+      "downloadBoard": "Scarica il report per il consiglio",
+      "strategy": {
+        "title": "Questa settimana, dal tuo Head of Strategy",
+        "byline": "Scritto da {platformName} il {day}.",
+        "points": "I punti importanti",
+        "seeFinding": "Vedi la scoperta"
       },
-      "did": "Nella sua ultima lettura {platformName} ha controllato {checked} dati tra le tue fonti e i concorrenti, ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e ha scritto {findings, plural, one {un risultato} other {# risultati}}.",
-      "downloadBoard": "Scarica il report per il consiglio"
+      "work": {
+        "did": "Cosa ha fatto {platformName} questa settimana",
+        "next": "Cosa fa {platformName} adesso",
+        "read": "Ha letto {figures} dati da {sources, plural, one {una fonte} other {# fonti}}, per te e i tuoi {rivals, plural, one {concorrente} other {# concorrenti}}",
+        "found": "Ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e scritto {findings, plural, one {una scoperta} other {# scoperte}}",
+        "pages": "Ha esaminato {pages, plural, one {la tua pagina chiave} other {le tue # pagine chiave}}: {fix, plural, =0 {tutte reggono} one {una va migliorata} other {# vanno migliorate}}",
+        "cited": "Ha controllato quali pagine citano gli assistenti AI per le domande dei tuoi clienti: {count} tue, {place}",
+        "changes": "Tiene il registro di {changes, plural, one {una modifica} other {# modifiche}} al tuo sito, ognuna con cosa è seguito",
+        "nextRead": "Rilegge tutte le fonti il {day}",
+        "watch": "Controlla le tue pagine chiave ogni settimana e registra ogni modifica con le richieste dei 30 giorni prima e dopo",
+        "monthly": "Scrive il tuo report mensile il {day}",
+        "check": "Il {day}, verifica se {count, plural, one {una scoperta si è rivelata giusta} other {# scoperte si sono rivelate giuste}}"
+      },
+      "rank": {
+        "title": "La tua posizione rispetto ai tuoi {rivals, plural, one {concorrente} other {# concorrenti}}",
+        "hint": "Ogni classifica, dal primo all'ultimo, da sinistra a destra. Tu in arancione.",
+        "seeAll": "Vedi le classifiche",
+        "league": "Classifica",
+        "place": "La tua posizione",
+        "of": "Su"
+      },
+      "scorecard": {
+        "title": "La tua pagella",
+        "hint": "Le {count} misure che {platformName} segue per te ogni settimana, la peggiore prima. Ognuna confronta gli ultimi 90 giorni con gli stessi 90 giorni di un anno fa, mai con l’anno intero, così le stagioni coincidono: grigio è un anno fa, arancione è adesso.",
+        "groups": {
+          "BEHIND": "Peggio di un anno fa di un decimo o più, o ultimo tra i tuoi concorrenti.",
+          "WATCH": "Poco cambiato, o ancora nessun anno da confrontare.",
+          "ON_TRACK": "Meglio di un anno fa di un decimo o più, o primo o secondo tra i tuoi concorrenti."
+        },
+        "groupCount": "{count} su {total}",
+        "yearAgo": "Un anno fa",
+        "now": "Adesso",
+        "noYear": "Ancora nessun anno da confrontare",
+        "sentence": "{now} negli ultimi 90 giorni, contro {before} negli stessi 90 giorni di un anno fa: {change}.",
+        "sentenceShare": "{now} questo mese, contro {before} nello stesso mese di un anno fa: {change}.",
+        "sentenceNoYear": "{now} negli ultimi 90 giorni. {platformName} non ha ancora un dato di un anno fa.",
+        "lower": "Più basso è meglio.",
+        "more": "{percent}% in più",
+        "fewer": "{percent}% in meno",
+        "pointsMore": "{points} punti in più",
+        "pointsFewer": "{points} punti in meno",
+        "same": "nessun cambiamento",
+        "measure": "Misura",
+        "status": "Stato",
+        "download": "Scarica CSV"
+      }
     },
     "pdf": {
       "boardReport": "Report per il consiglio",

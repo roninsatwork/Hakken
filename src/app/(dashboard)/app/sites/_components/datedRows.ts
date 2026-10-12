@@ -39,10 +39,11 @@ export function datedRow(
  * over dates; its `month` lets a bar chart word its axis to the room each
  * bar has (`MonthTick`).
  */
-export function monthRow(month: string, values: Record<string, unknown>): DatedRow {
+export function monthRow(month: string, values: Record<string, unknown>, options: { part?: boolean; readout?: string } = {}): DatedRow {
   const [year, number] = month.split("-").map(Number);
   const lastDay = new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10);
-  return { ...datedRow({ day: `${month}-01`, lastDay, readout: formatMonth(month) }, values, formatShortMonth(month)), month };
+  // A month still in progress is drawn lighter and says so in its readout, so a part month never reads as a jump.
+  return { ...datedRow({ day: `${month}-01`, lastDay, readout: options.readout ?? formatMonth(month), part: options.part }, values, formatShortMonth(month)), month };
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

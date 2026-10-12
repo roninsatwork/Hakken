@@ -90,9 +90,11 @@ const WEEK = {
     checked: 2062, ruledOut: 15, sources: [{ source: "analytics", facts: 1790 }, { source: "searchConsole", facts: 162 }],
     summary: {
       scorecard: SCORE, checked: 2062, ruledOut: 15,
+      paragraphs: ["Ronins is holding its place on Google while its enquiries fall.", "AI assistants are where you lead."],
       enquiriesByMonth: [{ month: "2026-09", visits: 600, conversions: 20 }, { month: "2026-10", visits: 400, conversions: 10 }],
       shareByMonth: [{ month: "2026-09", you: 900, total: 6000 }, { month: "2026-10", you: 1054, total: 6645 }],
     },
+    changes: 3, nextRead: "2026-10-19", checks: [{ day: "2026-11-10", count: 5 }],
   }],
   findings: [FINDING_ROW],
   open: 1,
@@ -158,6 +160,8 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME, "insightsReads:insightsThisWeek": WEEK });
     const { container } = render(<InsightsSummaryPage />);
     await screen.findByText(/Enquiries fell to 169 from 241 while visitors held/);
+    await screen.findByText("AI assistants are where you lead.");
+    await screen.findByText(/Reads every source again on/);
     await expectApprovedLook(container, PLAN, "Main", "Insights → Executive summary");
   });
 

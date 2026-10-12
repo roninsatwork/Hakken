@@ -18171,13 +18171,13 @@
     },
     "summary": {
       "title": "Executive summary",
-      "description": "{company} at a glance: the last 90 days against the same weeks last year, and against your rivals.",
+      "description": "{company} at a glance: the last 90 days against the same 90 days a year ago, and against your rivals.",
       "noWeek": "{platformName} hasn't read your sources yet: the summary fills in after the team's first run.",
       "seeFinding": "See the finding",
-      "noYear": "No figure for last year yet",
-      "changeOn": "{percent}% on {before} last year",
-      "changeFromNone": "From none last year",
-      "changePoints": "{points} points on {before}% last year",
+      "noYear": "No figure from a year ago yet",
+      "changeOn": "{percent}% on {before}, same 90 days a year ago",
+      "changeFromNone": "From none a year ago",
+      "changePoints": "{points} points on {before}%, same month a year ago",
       "place": "Your place in your market",
       "placeMoved": "{count, plural, one {One place} other {# places}} in a year",
       "placeDetail": "for visitors from Google",
@@ -18193,7 +18193,11 @@
         "title": "Visits for each enquiry, month by month",
         "hint": "How many visits it takes to win one enquiry. Lower is better. Every channel, from Google Analytics.",
         "figure": "Visits for each enquiry",
-        "empty": "This fills in once Google Analytics has counted enquiries for a few months."
+        "empty": "This fills in once Google Analytics has counted enquiries for a few months.",
+        "titlePeople": "Visitors for each enquiry, month by month",
+        "hintPeople": "How many people it takes to win one enquiry, the same count as the figure above. Lower is better. The month in progress is lighter: it isn't over yet. From Google Analytics.",
+        "figurePeople": "Visitors for each enquiry",
+        "soFar": "{month}, so far"
       },
       "measures": {
         "enquiries": "Enquiries",
@@ -18213,21 +18217,59 @@
         "WATCH": "Watch",
         "BEHIND": "Behind"
       },
-      "table": {
-        "title": "Scorecard",
-        "search": "Search measures...",
-        "status": "Status",
-        "everyStatus": "Every status",
-        "download": "Download CSV",
-        "measure": "Measure",
-        "now": "Last 90 days",
-        "year": "Last year",
-        "change": "Change",
-        "rivals": "Against your rivals",
-        "noMatch": "No measure matches that search."
+      "downloadBoard": "Download the board report",
+      "strategy": {
+        "title": "This week, from your Head of Strategy",
+        "byline": "Written by {platformName} on {day}.",
+        "points": "The important points",
+        "seeFinding": "See the finding"
       },
-      "did": "In its newest read {platformName} checked {checked} figures across your sources and rivals, ruled out {ruledOut, plural, one {one explanation} other {# explanations}}, and wrote {findings, plural, one {one finding} other {# findings}}.",
-      "downloadBoard": "Download the board report"
+      "work": {
+        "did": "What {platformName} did this week",
+        "next": "What {platformName} does next",
+        "read": "Read {figures} figures from {sources, plural, one {one source} other {# sources}}, for you and your {rivals, plural, one {rival} other {# rivals}}",
+        "found": "Ruled out {ruledOut, plural, one {one explanation} other {# explanations}} and wrote {findings, plural, one {one finding} other {# findings}}",
+        "pages": "Reviewed your {pages, plural, one {money page} other {# money pages}}: {fix, plural, =0 {each holds up} one {one needs work} other {# need work}}",
+        "cited": "Checked which pages AI assistants cite for your buyers' questions: {count} of yours, {place}",
+        "changes": "Keeps the log of {changes, plural, one {one change} other {# changes}} to your website, each with what followed",
+        "nextRead": "Reads every source again on {day}",
+        "watch": "Checks your money pages each week, and logs any change with the enquiries 30 days either side",
+        "monthly": "Writes your monthly report on {day}",
+        "check": "On {day}, checks whether {count, plural, one {a finding} other {# findings}} proved right"
+      },
+      "rank": {
+        "title": "Where you rank against your {rivals, plural, one {rival} other {# rivals}}",
+        "hint": "Each league, first to last, left to right. You in orange.",
+        "seeAll": "See the leaderboards",
+        "league": "League",
+        "place": "Your place",
+        "of": "Of"
+      },
+      "scorecard": {
+        "title": "Your scorecard",
+        "hint": "The {count} measures {platformName} watches for you every week, worst first. Each compares the last 90 days with the same 90 days a year ago, never the whole year, so the seasons match: grey is a year ago, orange is now.",
+        "groups": {
+          "BEHIND": "Worse than a year ago by a tenth or more, or last among your rivals.",
+          "WATCH": "Not much changed, or no year to compare yet.",
+          "ON_TRACK": "Better than a year ago by a tenth or more, or first or second among your rivals."
+        },
+        "groupCount": "{count} of {total}",
+        "yearAgo": "A year ago",
+        "now": "Now",
+        "noYear": "No year to compare yet",
+        "sentence": "{now} in the last 90 days, against {before} in the same 90 days a year ago: {change}.",
+        "sentenceShare": "{now} this month, against {before} in the same month a year ago: {change}.",
+        "sentenceNoYear": "{now} in the last 90 days. {platformName} has no figure from a year ago yet.",
+        "lower": "Lower is better.",
+        "more": "{percent}% more",
+        "fewer": "{percent}% fewer",
+        "pointsMore": "{points} points more",
+        "pointsFewer": "{points} points fewer",
+        "same": "no change",
+        "measure": "Measure",
+        "status": "Status",
+        "download": "Download CSV"
+      }
     },
     "pdf": {
       "boardReport": "Board report",

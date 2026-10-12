@@ -2,7 +2,9 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Executive summary
-settings-card: What Hakken sees
+strategy-note: This week, from your Head of Strategy
+work-log: What Hakken did this week
+work-log: What Hakken does next
 figures
   figure: Enquiries
   figure: Visitors
@@ -10,19 +12,6 @@ figures
   figure: Your place in your market
 chart-card: Your share of your market's Google visitors
 chart-card: Visits for each enquiry, month by month
-chart-card: Domain authority league
-chart-card: Organic traffic league
-chart-card: AI mindshare league
-chart-card: Share of voice league
-chart-card: Links league
-chart-card: Shown in Google's AI Overviews league
-chart-card: Recommended for your buyers' questions league
-chart-card: Pages AI assistants cite league
-chart-card: Google reviews league
-search: Search measures...
-filter: Status
-table: Measure | Last # days | Last year | Change | Against your rivals | Status
-  table-bar: Scorecard
-    download: Download CSV
-  table-footer
-notice (info)
+chart-card: Where you rank against your # rivals
+scorecard: Your scorecard
+  download: Download CSV
