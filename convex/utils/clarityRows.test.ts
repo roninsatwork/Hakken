@@ -25,6 +25,14 @@ describe("Clarity's figures", () => {
     expect(clarityRowsFrom({ error: "unauthorised" }, "URL")).toEqual([]);
   });
 
+  test("by page and device together, each row keyed by its path and its device", () => {
+    const answer = [
+      { metricName: "Traffic", information: [{ totalSessionCount: "80", URL: "https://www.example.co.uk/", Device: "Mobile" }, { totalSessionCount: "40", URL: "https://www.example.co.uk/", Device: "PC" }] },
+      { metricName: "ScrollDepth", information: [{ averageScrollDepth: 35, URL: "https://www.example.co.uk/", Device: "Mobile" }] },
+    ];
+    expect(clarityRowsFrom(answer, "URL,Device").map((row) => [row.key, row.sessions, row.scroll])).toEqual([["/|Mobile", 80, 35], ["/|PC", 40, null]]);
+  });
+
   test("days added up: visits summed, shares weighted by each day's visits", () => {
     const [home] = addUpClarity([
       [{ key: "/", sessions: 100, scroll: 40, activeSeconds: 60, dead: 10, rage: null, quickBack: 5, excessiveScroll: null }],

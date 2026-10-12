@@ -36,7 +36,8 @@ export const clarityTables = {
   clarityDays: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
     day: v.string(),
-    by: v.union(v.literal("PAGE"), v.literal("DEVICE")),
+    /** By page, by device, or by page and device together ("/path|Mobile"). */
+    by: v.union(v.literal("PAGE"), v.literal("DEVICE"), v.literal("PAGE_DEVICE")),
     rows: v.array(clarityRowValidator),
     createdAt: v.number(),
   })

@@ -13,9 +13,9 @@ import { shiftDay } from "./utils/insightFacts";
 /**
  * Microsoft Clarity, connected and read (docs/plans/active/insights-analyst-plan.md
  * §7b, I24, I27, phase 15). A company admin pastes the project's Data Export
- * token; Hakken tests it with one ask, keeps it as ciphertext, and each
- * morning asks for the last day twice — by page and by device, two of the
- * project's ten asks a day — keeping each day, since Clarity keeps three.
+ * token; it is tested with one ask, kept as ciphertext, and each morning the
+ * last day is asked three times — by page, by device, and by both — three of
+ * the project's ten asks a day, each day kept, since Clarity keeps three.
  */
 
 const EXPORT_URL = "https://www.clarity.ms/export-data/api/v1/project-live-insights";
@@ -29,10 +29,11 @@ const DAYS_READ = 400;
 type Reader = { db: QueryCtx["db"] };
 
 /** One ask of Clarity's export: the last day, by one dimension. */
-async function askClarity(token: string, dimension: "URL" | "Device"): Promise<{ ok: true; rows: ClarityRow[] } | { ok: false; status: number; problem: string }> {
+async function askClarity(token: string, dimension: "URL" | "Device" | "URL,Device"): Promise<{ ok: true; rows: ClarityRow[] } | { ok: false; status: number; problem: string }> {
   let response: Response;
   try {
-    response = await fetch(`${EXPORT_URL}?numOfDays=1&dimension1=${dimension}`, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, signal: AbortSignal.timeout(30_000) });
+    const dimensions = dimension.split(",").map((name, at) => `&dimension${at + 1}=${name}`).join("");
+    response = await fetch(`${EXPORT_URL}?numOfDays=1${dimensions}`, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, signal: AbortSignal.timeout(30_000) });
   } catch {
     return { ok: false, status: 0, problem: "Clarity could not be reached." };
   }
@@ -86,7 +87,7 @@ export const claritySites = tenantQuery({
   },
 });
 
-async function daysOf(ctx: Reader, holdId: Id<"companyWebsites">, by: "PAGE" | "DEVICE", from: string, to: string) {
+async function daysOf(ctx: Reader, holdId: Id<"companyWebsites">, by: "PAGE" | "DEVICE" | "PAGE_DEVICE", from: string, to: string) {
   return await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", holdId).eq("by", by).gte("day", from).lte("day", to)).take(DAYS_READ);
 }
 
@@ -96,7 +97,7 @@ async function daysOf(ctx: Reader, holdId: Id<"companyWebsites">, by: "PAGE" | "
  * caller's own hold.
  */
 export const clarityFigures = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), by: v.union(v.literal("PAGE"), v.literal("DEVICE")), days: v.number() },
+  args: { siteId: v.id("companyWebsites"), by: v.union(v.literal("PAGE"), v.literal("DEVICE"), v.literal("PAGE_DEVICE")), days: v.number() },
   returns: v.object({
     from: v.union(v.string(), v.null()),
     to: v.union(v.string(), v.null()),
@@ -194,13 +195,13 @@ export const tokenOf = internalQuery({
 });
 
 export const saveDay = internalMutation({
-  args: { holdId: v.id("companyWebsites"), day: v.string(), pages: v.union(v.array(clarityRowValidator), v.null()), devices: v.union(v.array(clarityRowValidator), v.null()), problem: v.union(v.string(), v.null()), refused: v.boolean() },
+  args: { holdId: v.id("companyWebsites"), day: v.string(), pages: v.union(v.array(clarityRowValidator), v.null()), devices: v.union(v.array(clarityRowValidator), v.null()), pageDevices: v.optional(v.union(v.array(clarityRowValidator), v.null())), problem: v.union(v.string(), v.null()), refused: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now();
     const connection = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     if (!connection) return null;
-    for (const [by, rows] of [["PAGE", args.pages], ["DEVICE", args.devices]] as const) {
+    for (const [by, rows] of [["PAGE", args.pages], ["DEVICE", args.devices], ["PAGE_DEVICE", args.pageDevices ?? null]] as const) {
       if (!rows) continue;
       const held = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", args.holdId).eq("by", by).eq("day", args.day)).first();
       const record = { companyWebsiteId: args.holdId, day: args.day, by, rows: rows.slice(0, PAGES_KEPT), createdAt: now };
@@ -215,7 +216,7 @@ export const saveDay = internalMutation({
       updatedAt: now,
     });
     // Two years kept: the oldest go as each day comes.
-    for (const by of ["PAGE", "DEVICE"] as const) {
+    for (const by of ["PAGE", "DEVICE", "PAGE_DEVICE"] as const) {
       const old = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", args.holdId).eq("by", by).lt("day", shiftDay(args.day, -KEPT_DAYS))).take(10);
       for (const row of old) await ctx.db.delete(row._id);
     }
@@ -235,12 +236,15 @@ export const collectWebsite = internalAction({
     const day = shiftDay(new Date().toISOString().slice(0, 10), -1);
     const pages = await askClarity(token, "URL");
     const devices = pages.ok ? await askClarity(token, "Device") : pages;
+    // Each page by device, for Pages' device filter: the third of the project's ten asks a day.
+    const pageDevices = devices.ok ? await askClarity(token, "URL,Device") : null;
     const failed = !pages.ok ? pages : !devices.ok ? devices : null;
     await ctx.runMutation(internal.clarity.saveDay, {
       holdId: args.holdId,
       day,
       pages: pages.ok ? pages.rows : null,
       devices: devices.ok ? devices.rows : null,
+      pageDevices: pageDevices?.ok ? pageDevices.rows : null,
       problem: failed ? failed.problem : null,
       refused: Boolean(failed && (failed.status === 401 || failed.status === 403)),
     });

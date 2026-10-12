@@ -19056,7 +19056,8 @@
       "pages": "Pagine",
       "devices": "Dispositivi",
       "settings": "Impostazioni",
-      "connection": "Collegamento"
+      "connection": "Collegamento",
+      "frustration": "Frustrazione"
     },
     "overview": {
       "title": "Panoramica",
@@ -19113,7 +19114,9 @@
         "dead": "Clic a vuoto",
         "quickBack": "Uscite rapide",
         "heatmap": "Mappa di calore"
-      }
+      },
+      "device": "Dispositivo",
+      "everyDevice": "Ogni dispositivo"
     },
     "devices": {
       "title": "Dispositivi",
@@ -19155,6 +19158,37 @@
       "connectedFirst": "Collegato: i primi dati di Clarity arrivano domattina.",
       "disconnect": "Scollega",
       "limits": "Clarity consente 10 richieste al giorno per progetto e dà solo gli ultimi tre giorni. Gli si chiede due volte ogni mattina e lo storico è conservato qui."
+    },
+    "frustration": {
+      "title": "Frustrazione",
+      "description": "Dove i visitatori si bloccano: clic su cose che non fanno nulla, clic ripetuti per rabbia, scorrimento su e giù a cercare, e uscite in pochi secondi. Pagina per pagina, prima le più frustranti.",
+      "search": "Trova una pagina",
+      "download": "Scarica CSV",
+      "noMatch": "Nessuna pagina corrisponde",
+      "empty": "Nessuna pagina con abbastanza visite: i dati di Clarity arrivano ogni mattina una volta collegato.",
+      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Ultimi {days} giorni, prima le più frustranti",
+      "sees": {
+        "worst": "Su {page}, il {share}% delle visite clicca qualcosa che non fa nulla o clicca per rabbia: il massimo tra le pagine.",
+        "calm": "Nessuna pagina con abbastanza visite frustra molto i suoi visitatori.",
+        "none": "Nessuna pagina ancora letta."
+      },
+      "do": "Sistema la pagina dove i visitatori si bloccano di più.",
+      "seeReviews": "Vedi le revisioni delle pagine",
+      "chart": {
+        "title": "Visite con una frustrazione, giorno per giorno",
+        "hint": "Clic a vuoto e clic ripetuti, come quota delle visite.",
+        "dead": "Clic a vuoto",
+        "rage": "Clic ripetuti"
+      },
+      "columns": {
+        "page": "Pagina",
+        "visits": "Visite",
+        "frustrated": "Frustrate",
+        "dead": "Clic a vuoto",
+        "rage": "Clic ripetuti",
+        "excessive": "Scorrimento eccessivo",
+        "quickBack": "Uscite rapide"
+      }
     }
   }
 }

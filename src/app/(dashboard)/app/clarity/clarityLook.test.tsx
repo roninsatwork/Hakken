@@ -58,7 +58,7 @@ describe("Microsoft Clarity's approved looks", () => {
     nav.pathname = "/app/clarity/site_1/pages";
     answer({ "clarity:clarityStatus": CONNECTED, "clarity:clarityFigures": PAGES });
     const { container } = render(<ClarityPagesPage />);
-    await screen.findByText("/chatbot-agency/");
+    await screen.findAllByText("/chatbot-agency/");
     await expectApprovedLook(container, PLAN, "ClarityPages", "Microsoft Clarity → Pages");
   });
 

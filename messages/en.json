@@ -19056,7 +19056,8 @@
       "pages": "Pages",
       "devices": "Devices",
       "settings": "Settings",
-      "connection": "Connection"
+      "connection": "Connection",
+      "frustration": "Frustration"
     },
     "overview": {
       "title": "Overview",
@@ -19113,7 +19114,9 @@
         "dead": "Dead clicks",
         "quickBack": "Quick backs",
         "heatmap": "Heatmap"
-      }
+      },
+      "device": "Device",
+      "everyDevice": "Every device"
     },
     "devices": {
       "title": "Devices",
@@ -19155,6 +19158,37 @@
       "connectedFirst": "Connected: Clarity's first figures arrive tomorrow morning.",
       "disconnect": "Disconnect",
       "limits": "Clarity allows 10 requests a project a day and gives out the last three days only. It's asked twice each morning and the history is kept here."
+    },
+    "frustration": {
+      "title": "Frustration",
+      "description": "Where visitors get stuck: clicks on things that do nothing, clicks in anger, scrolling up and down hunting, and leaving within seconds. Page by page, the most frustrated first.",
+      "search": "Find a page",
+      "download": "Download CSV",
+      "noMatch": "No page matches",
+      "empty": "No pages with enough visits yet: Clarity's figures arrive each morning once it is connected.",
+      "tableTitle": "{count, plural, one {# page} other {# pages}} · Last {days} days, the most frustrated first",
+      "sees": {
+        "worst": "On {page}, {share}% of visits click something that does nothing or click in anger: the most of any page.",
+        "calm": "No page with enough visits frustrates its visitors much.",
+        "none": "No pages read yet."
+      },
+      "do": "Fix the page whose visitors get stuck most.",
+      "seeReviews": "See the page reviews",
+      "chart": {
+        "title": "Visits with a frustration, day by day",
+        "hint": "Dead clicks and rage clicks, as a share of visits.",
+        "dead": "Dead clicks",
+        "rage": "Rage clicks"
+      },
+      "columns": {
+        "page": "Page",
+        "visits": "Visits",
+        "frustrated": "Frustrated",
+        "dead": "Dead clicks",
+        "rage": "Rage clicks",
+        "excessive": "Excessive scrolling",
+        "quickBack": "Quick backs"
+      }
     }
   }
 }

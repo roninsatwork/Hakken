@@ -39,13 +39,17 @@ function pathOf(address: string): string {
   }
 }
 
-/** Clarity's answer, as rows by the dimension asked: "URL" by page path, "Device" by device. */
-export function clarityRowsFrom(json: unknown, dimension: "URL" | "Device"): ClarityRow[] {
+/** The separator between a page and its device in a page-and-device row's key. */
+export const DEVICE_JOIN = "|";
+
+/** Clarity's answer, as rows by the dimension asked: "URL" by page path, "Device" by device, "URL,Device" by both ("/path|Mobile"). */
+export function clarityRowsFrom(json: unknown, dimension: "URL" | "Device" | "URL,Device"): ClarityRow[] {
   const metrics = Array.isArray(json) ? (json as Array<{ metricName?: string; information?: Info[] }>) : [];
   const rows = new Map<string, ClarityRow>();
   const keyOf = (info: Info) => {
-    const raw = typeof info[dimension] === "string" ? (info[dimension] as string) : "";
-    return dimension === "URL" ? pathOf(raw) : raw || "Other";
+    const text = (name: string) => (typeof info[name] === "string" ? (info[name] as string) : "");
+    if (dimension === "URL,Device") return `${pathOf(text("URL"))}${DEVICE_JOIN}${text("Device") || "Other"}`;
+    return dimension === "URL" ? pathOf(text("URL")) : text("Device") || "Other";
   };
   const row = (key: string) => {
     const held = rows.get(key) ?? { key, sessions: 0, scroll: null, activeSeconds: null, dead: null, rage: null, quickBack: null, excessiveScroll: null };

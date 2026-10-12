@@ -15,6 +15,7 @@ export const CLARITY_PAGES = [
   { id: "overview", segment: "" },
   { id: "pages", segment: "pages" },
   { id: "devices", segment: "devices" },
+  { id: "frustration", segment: "frustration" },
   { id: "connection", segment: "connection" },
 ] as const;
 export type ClarityPageId = (typeof CLARITY_PAGES)[number]["id"];
