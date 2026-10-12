@@ -17,6 +17,15 @@ import type { WhyInput } from "./utils/insightWhy";
 
 export type HistoryRecord = { kind: HistoryKind; month: string; from: string; to: string; rows: HistoryRow[]; cut?: boolean };
 
+/** History records a website keeps at most (insightHistory.ts). */
+const RECORDS_MOST = 200;
+
+/** A website's whole history, in one bounded read. */
+export async function historyOf(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">): Promise<HistoryRecord[]> {
+  const rows = await ctx.db.query("insightHistory").withIndex("by_hold_kind_month", (q) => q.eq("companyWebsiteId", holdId)).take(RECORDS_MOST);
+  return rows.map(({ kind, month, from, to, rows: lines }) => ({ kind, month, from, to, rows: lines }));
+}
+
 /** A page's kind: one of the company's classifications, Not sorted, or Analytics keeping no landing page for the visit. */
 export type PageKind = { key: string; name: string | null; type: ClassificationType | "NOT_SORTED" | "NOT_RECORDED" };
 

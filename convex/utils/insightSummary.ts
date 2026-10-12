@@ -73,6 +73,15 @@ export const weekSummaryValidator = v.object({
   rankings: v.optional(v.object({ day: v.string(), pageOne: v.number(), pageOneBefore: v.number(), aiWith: v.number(), aiOf: v.number() })),
   /** The Analyst's words on why the enquiries moved, for the period it read; absent on weeks before it. */
   why: v.optional(v.object({ period: v.string(), compare: v.union(v.literal("YEAR_AGO"), v.literal("BEFORE")), paragraph: v.string() })),
+  /**
+   * Keyword cannibalisation summed up (insights-intelligence-plan.md phase 3):
+   * the groups of the website's pages splitting Google's searches over Search
+   * Console's last 90 days, and the biggest; absent on weeks before it.
+   */
+  competing: v.optional(v.object({
+    groups: v.number(), pages: v.number(), shared: v.number(), shown: v.number(), clicks: v.number(),
+    biggest: v.object({ key: v.string(), name: v.string(), pages: v.number(), shared: v.number(), shown: v.number(), clicks: v.number() }),
+  })),
   /** How many facts the team read, and explanations its specialists ruled out. */
   checked: v.number(),
   ruledOut: v.number(),

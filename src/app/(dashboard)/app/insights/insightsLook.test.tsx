@@ -27,6 +27,8 @@ import InsightsPageReviewPage from "./page-reviews/page/page";
 import InsightsExperimentsPage from "./experiments/page";
 import InsightsEnquiriesPage from "./enquiries/page";
 import InsightsEnquirySourcePage from "./enquiries/source/page";
+import InsightsCannibalisationPage from "./cannibalisation/page";
+import InsightsCompetingGroupPage from "./cannibalisation/group/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -156,12 +158,29 @@ const ENQUIRY_SOURCE = {
   pages: [{ path: "/ai-agency", kind: "Service", visits: 2, enquiries: 0 }, { path: "/venture-studio", kind: "Service", visits: 2, enquiries: 0 }],
 };
 
+/** Keyword cannibalisation (insights-intelligence-plan.md phase 3): Ronins' AI pages, as the weekly read kept them. */
+const AI_GROUP = {
+  key: "/ai-agency/", name: "ai agency london", owner: "/ai-agency/",
+  pages: [
+    { path: "/ai-agency/", kind: "Service", type: "SERVICE", visits: 708, enquiries: 34, recent: 6, recentBefore: 10, shownAll: 42482, clicks: 13, shown: 7824, searches: 150, decision: "OWNER" },
+    { path: "/ai-consultancy/", kind: "Service", type: "SERVICE", visits: 85, enquiries: 6, recent: 1, recentBefore: 0, shownAll: 71556, clicks: 4, shown: 17923, searches: 120, decision: "DIFFERENTIATE" },
+    { path: "/ai-software-development-company/", kind: "Service", type: "SERVICE", visits: 35, enquiries: 0, recent: 0, recentBefore: 0, shownAll: 4000, clicks: 3, shown: 2122, searches: 40, decision: "MERGE" },
+  ],
+  searches: [
+    { search: "ai agency london", shown: 3000, clicks: 9, split: true, position: 8.2, volume: 480, top: "/ai-agency/", pages: [{ path: "/ai-agency/", shown: 1800, clicks: 9 }, { path: "/ai-consultancy/", shown: 1200, clicks: 0 }], gain: 2.4 },
+    { search: "ai consultancy london", shown: 2200, clicks: 2, split: true, position: 11.4, volume: null, top: "/ai-consultancy/", pages: [{ path: "/ai-consultancy/", shown: 1500, clicks: 2 }, { path: "/ai-agency/", shown: 700, clicks: 0 }], gain: 1.1 },
+  ],
+  shared: 196, split: 127, shown: 29478, clicks: 20, enquiries: 40, recent: 7, recentBefore: 10, gainClicks: 34.6, gainEnquiries: 1.7, sure: "LIKELY",
+};
+const CANNIBALISATION = { siteId: "site_1", host: "ronins.co.uk", groups: [{ rank: 1, week: "2026-10-12", from: "2026-07-13", to: "2026-10-10", group: AI_GROUP, findingId: "finding_1" }] };
+
 const WEEK = {
   weeks: [{
     siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05", verdict: "Enquiries fell to 169 from 241 while visitors held.", createdAt: Date.parse("2026-10-11T07:00:00Z"),
     checked: 2062, ruledOut: 15, sources: [{ source: "analytics", facts: 1790 }, { source: "searchConsole", facts: 162 }],
     summary: {
       scorecard: SCORE, checked: 2062, ruledOut: 15,
+      competing: { groups: 6, pages: 29, shared: 1368, shown: 221590, clicks: 50, biggest: { key: "/app-developers-london/", name: "app developers", pages: 6, shared: 643, shown: 115254, clicks: 12 } },
       paragraphs: ["Ronins is holding its place on Google while its enquiries fall.", "AI assistants are where you lead."],
       enquiriesByMonth: [{ month: "2026-09", visits: 600, conversions: 20 }, { month: "2026-10", visits: 400, conversions: 10 }],
       shareByMonth: [{ month: "2026-09", you: 900, total: 6000 }, { month: "2026-10", you: 1054, total: 6645 }],
@@ -445,6 +464,24 @@ describe("Insights' looks", () => {
     await screen.findByText("Enquiries from ChatGPT");
     await screen.findByText("/venture-studio");
     await expectApprovedLook(container, PLAN, "EnquirySource", "Insights → One source's enquiries");
+    nav.search = "";
+  });
+
+  it("39 · Keyword cannibalisation", async () => {
+    nav.pathname = "/app/insights/cannibalisation";
+    answer({ "insightsReads:insightsHome": HOME, "insightCompeting:insightsCannibalisation": CANNIBALISATION });
+    const { container } = render(<InsightsCannibalisationPage />);
+    await screen.findAllByText("ai agency london");
+    await expectApprovedLook(container, PLAN, "Cannibalisation", "Insights → Keyword cannibalisation");
+  });
+
+  it("40 · A group of competing pages", async () => {
+    nav.pathname = "/app/insights/cannibalisation/group";
+    nav.search = "key=%2Fai-agency%2F";
+    answer({ "insightsReads:insightsHome": HOME, "insightCompeting:insightsCompetingGroup": { siteId: "site_1", host: "ronins.co.uk", kept: CANNIBALISATION.groups[0], finding: { headline: "3 of your pages split Google's searches.", action: "Make /ai-agency/ the page.", checkOn: "2026-12-07" } } });
+    const { container } = render(<InsightsCompetingGroupPage />);
+    await screen.findAllByText(/Merge \/ai-software-development-company\/ into \/ai-agency\//);
+    await expectApprovedLook(container, PLAN, "CompetingGroup", "Insights → A group of competing pages");
     nav.search = "";
   });
 

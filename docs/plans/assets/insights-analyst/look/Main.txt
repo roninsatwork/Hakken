@@ -25,6 +25,7 @@ why-moved: Why your enquiries fell: September # against September #
     chart-card: Visits by where people came from, month by month
   why-test
     chart-card: Visits that enquired, month by month
+competing: Keyword cannibalisation
 chart-card: Your share of your market's Google visitors
 chart-card: Visits for each enquiry, month by month
 chart-card: Where you rank against your # rivals

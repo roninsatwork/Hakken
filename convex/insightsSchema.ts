@@ -10,6 +10,7 @@ import { panelQuestionValidator } from "./utils/insightPanel";
 import { conversionValidator } from "./utils/insightConversion";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
 import { historyKindValidator, historyRowValidator } from "./utils/insightHistory";
+import { competingGroupValidator } from "./utils/insightCompeting";
 
 /**
  * What the Insights team keeps (docs/plans/active/insights-analyst-plan.md
@@ -289,6 +290,25 @@ export const insightsTables = {
     cut: v.optional(v.boolean()),
     fetchedAt: v.number(),
   }).index("by_hold_kind_month", ["companyWebsiteId", "kind", "month"]),
+
+  /**
+   * Keyword cannibalisation (docs/plans/active/insights-intelligence-plan.md
+   * phase 3): each group of the website's pages Google shows for the same
+   * searches, as the newest weekly run found them over Search Console's last
+   * 90 days. Replaced whole each run; the screens read it as it stands.
+   */
+  insightCompetingGroups: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    week: v.string(),
+    rank: v.number(),
+    from: v.string(),
+    to: v.string(),
+    group: competingGroupValidator,
+    /** The finding the run wrote for the group, when it wrote one. */
+    findingId: v.optional(v.id("insightFindings")),
+    createdAt: v.number(),
+  }).index("by_hold_rank", ["companyWebsiteId", "rank"]),
 
   /**
    * The reports Hakken writes, frozen as written (§4.1, §4.2, I6): the weekly

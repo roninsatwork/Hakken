@@ -1,0 +1,25 @@
+# Insights → A group of competing pages — the approved look (board "CompetingGroup" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword cannibalisation
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Searches split
+  figure: Times shown
+  figure: Google clicks
+  figure: Enquiries, # months
+chart-card: How Google splits the clicks between the pages
+chart-card: How often Google showed each page for them
+chart-card: The searches that would bring most in the top three
+search: Find a page…
+table: Page | Kind of page | What to do | Times shown | Google clicks | Searches | Visits, # months | Enquiries, # months
+  table-bar: The pages, and what to do with each
+    download: Download
+  table-footer
+search: Find a search…
+table: Search | Searched a month | Your place | Times shown | Google clicks | Pages shown | Google sends most to | Extra clicks a month in the top three
+  table-bar: The searches they share
+    download: Download
+  table-footer

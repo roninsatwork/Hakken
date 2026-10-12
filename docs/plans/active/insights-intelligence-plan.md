@@ -346,6 +346,21 @@ question is left out.
   which the keep-less-history plan stopped. A page's estimate is shared over
   all of its Google clicks, the private searches included, and says how sure
   it is.
+- **Phase 3**: Keyword cannibalisation under Findings, a page for each group,
+  the biggest five written up as findings each week (built from the group's
+  own figures), the Executive summary's summing up, and the groups' searches'
+  monthly volumes bought from DataForSEO (Google Ads' figures, one request a
+  week at most). A group is pages that split at least three searches between
+  them (each taking a tenth of the showings or more); a group bigger than six
+  is split on its stronger links and no page is dropped. The owner is the page
+  bringing the most enquiries; a page is merged into it only when it brings no
+  enquiries and a third or more of its showings are the group's searches
+  (Ronins' /brand-design-agency/: 39%); an article is kept and links to the
+  owner; any other page is made clearly different. What a top-three place
+  would bring uses the website's own click rate at the top three and its
+  enquiry rate (a page's own from 100 visits), each close variant counted
+  once. Ronins, 13 July to 10 October: six groups, 29 pages, 221,590 times
+  shown for 50 clicks.
 
 ## Decisions for Anthony
 

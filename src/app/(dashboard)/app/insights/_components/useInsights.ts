@@ -26,6 +26,7 @@ export const INSIGHTS_PAGES: readonly InsightsPage[] = [
   { id: "strategy", segment: "strategy", group: "overview", built: true },
   { id: "reports", segment: "reports", group: "overview", built: true },
   { id: "findings", segment: "findings", group: "findings", built: true },
+  { id: "cannibalisation", segment: "cannibalisation", group: "findings", built: true },
   { id: "track", segment: "track-record", group: "findings", built: true },
   { id: "leagues", segment: "leaderboards", group: "leaderboards", built: true },
   ...LEAGUE_IDS.map((league) => ({ id: league, segment: `leaderboards/${league}`, group: "leaderboards" as const, built: true })),

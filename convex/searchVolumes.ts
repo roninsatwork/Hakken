@@ -6,6 +6,8 @@ import type { PlannedCheck } from "./fanOutFirstCheckSteps";
 import { holdQuestions } from "./holdLists";
 import { readFanOutLimits } from "./fanOutLimits";
 import { normaliseKeyword } from "./seoJudgments";
+import { findSeoOperation } from "./dataForSeoRegistry";
+import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import type { PullForParse } from "./seoCollectionParse";
 import { isTrackedHold } from "./utils/websitePairing";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
@@ -55,6 +57,44 @@ export async function searchVolumeOf(ctx: Reader, keyword: string, locationCode:
     .query("searchVolumes")
     .withIndex("by_keyword_place", (q) => q.eq("keyword", keyword).eq("locationCode", locationCode))
     .unique();
+}
+
+/**
+ * Figures for a website's own searches, asked off the collection's schedule
+ * (insights-intelligence-plan.md phase 3: a keyword cannibalisation group's
+ * searches, weighed by how often people search them): those Google Ads will
+ * take, less those with figures younger than a month, queued from the
+ * website's place up to `SEARCHES_PER_VOLUME_REQUEST` a request and sent now.
+ * The same search asked twice in a day is the one request. Returns how many
+ * searches were asked for.
+ */
+export async function askVolumesFor(ctx: MutationCtx, hold: Doc<"companyWebsites">, searches: readonly string[], at: number): Promise<number> {
+  if (isTrackedHold(hold)) return 0;
+  const website = await ctx.db.get(hold.websiteId);
+  if (!website) return 0;
+  const locationCode = hold.locationCode ?? DEFAULT_LOCATION_CODE;
+  const stale = at - SEARCH_VOLUME_MAX_AGE_DAYS * DAY_MS;
+  const due: string[] = [];
+  for (const keyword of new Set(searches.map(normaliseKeyword))) {
+    if (!askable(keyword)) continue;
+    const held = await searchVolumeOf(ctx, keyword, locationCode);
+    if (held && held.updatedAt >= stale) continue;
+    due.push(keyword);
+  }
+  const operation = findSeoOperation(SEARCH_VOLUME_OPERATION)!;
+  for (let start = 0; start < due.length; start += SEARCHES_PER_VOLUME_REQUEST) {
+    const params = { keywords: due.slice(start, start + SEARCHES_PER_VOLUME_REQUEST).sort(), location_code: locationCode, language_code: "en" };
+    const idempotencyKey = buildSeoIdempotencyKey({ operationId: operation.id, websiteId: hold.websiteId, params, cycleStartedAt: at });
+    const asked = await ctx.db.query("seoDataPulls").withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey)).first();
+    if (asked) continue;
+    await ctx.db.insert("seoDataPulls", {
+      operationId: operation.id, family: operation.family, mode: operation.mode, target: website.host, websiteId: hold.websiteId, companyId: hold.companyId,
+      taskArgsJson: JSON.stringify(params), status: "PENDING", tag: idempotencyKey, idempotencyKey, dueAt: at, attempts: 0, costUsd: 0, sandbox: false, submittedAt: at,
+    });
+  }
+  // Queued, and sent now: a Collector sending takes it in; with none going, one starts.
+  if (due.length > 0) await ctx.scheduler.runAfter(0, internal.seoAgentRuns.sendIfWaiting, {});
+  return due.length;
 }
 
 /**

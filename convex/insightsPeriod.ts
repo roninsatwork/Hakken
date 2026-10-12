@@ -14,13 +14,13 @@ import {
   bestServiceMonth,
   byGroup,
   countingBreak,
-  monthsOf,
+  historyOf,
   listsOf,
+  monthsOf,
   pageKindsOf,
   sourceOf,
   spanFigures,
   whyInputOf,
-  type HistoryRecord,
   type MonthFigures,
   type PageKind,
   type SourceGroup,
@@ -37,8 +37,6 @@ import {
  * Analyst's words come from the newest week. Only the caller's own company.
  */
 
-/** History records a website keeps at most (insightHistory.ts). */
-const RECORDS_MOST = 200;
 /** Rankings read a band, for the week's snapshot. */
 const RANKS_READ = 2_000;
 
@@ -97,11 +95,6 @@ type Trio = { now: number; before: number | null; yearAgo: number | null };
 const trioOf = (now: number, before: number | null | undefined, yearAgo: number | null | undefined): Trio => ({ now, before: before ?? null, yearAgo: yearAgo ?? null });
 const rateOf = (span: SpanFigures | null) => (span && span.visits > 0 ? Math.round((span.enquiries * 1000) / span.visits) / 10 : null);
 const placeOf = (positionSum: number | null, shown: number | null) => (positionSum !== null && shown ? Math.round((positionSum / shown) * 10) / 10 : null);
-
-async function historyOf(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">): Promise<HistoryRecord[]> {
-  const rows = await ctx.db.query("insightHistory").withIndex("by_hold_kind_month", (q) => q.eq("companyWebsiteId", holdId)).take(RECORDS_MOST);
-  return rows.map(({ kind, month, from, to, rows: lines }) => ({ kind, month, from, to, rows: lines }));
-}
 
 /** The rivals' estimated Google visitors a month, from the newest week's market share (DataForSEO). */
 function rivalsByMonth(week: Doc<"insightWeeks"> | null): Map<string, number> {

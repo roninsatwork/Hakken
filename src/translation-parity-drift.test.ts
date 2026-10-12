@@ -54,6 +54,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['insights.summary.periodFigure', 'placeholders and a comma, the same in every language'],
     ['insights.why.numbered', 'placeholders and a full stop, the same in every language'],
     ['insights.enquiries.figures.against', 'placeholders and «in», the same in Italian'],
+    ['insights.cannibalisation.figures.span', 'two dates and a dash, the same in every language'],
     ['insights.enquiries.figures.perEnquiryDetail', 'placeholders and «in», the same in Italian'],
     ['googleAnalytics.list.title', "Google's product name"],
     ['googleAnalytics.connection.setIn.ANALYTICS', "Google's product name"],

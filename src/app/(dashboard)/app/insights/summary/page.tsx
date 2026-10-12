@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { LayoutDashboard } from "lucide-react";
@@ -18,7 +19,7 @@ import { formatDay, formatMonth, formatNumber, toCsv } from "../../sites/_compon
 import { ReportDownloadAction } from "../_components/ReportDownload";
 import { RankDots } from "../_components/RankDots";
 import { ScorecardRows } from "../_components/ScorecardRows";
-import { StrategyNote, WorkLog, type WorkLine } from "../_components/StrategyNote";
+import { LABEL, StrategyNote, WorkLog, type WorkLine } from "../_components/StrategyNote";
 import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
 import { WhyTheyMoved } from "../_components/WhyTheyMoved";
 import { WhatMoved } from "../_components/PeriodCharts";
@@ -59,6 +60,7 @@ export default function InsightsSummaryPage() {
   const board = useQuery(api.insightsReads.insightsLatestReport, site ? { kind: "BOARD", siteId: site } : { kind: "BOARD" });
   const conversion = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
   const newest = week?.weeks.find((entry) => !site || entry.siteId === site) ?? week?.weeks[0] ?? null;
+  const competing = newest?.summary?.competing ?? null;
   const scorecard = newest?.summary?.scorecard ?? [];
 
   const score = (measure: Score["measure"]) => scorecard.find((row) => row.measure === measure) ?? null;
@@ -177,6 +179,19 @@ export default function InsightsSummaryPage() {
       </FigureRow>
       {view ? <WhatMoved view={view} /> : null}
       {view ? <WhyTheyMoved view={view} /> : null}
+      {competing ? (
+        // Keyword cannibalisation summed up (insights-intelligence-plan.md phase 3), its own section linked.
+        <section data-part="competing" className="flex flex-col gap-2">
+          <h2 data-part-title="true" className={LABEL}>{t("competing.title")}</h2>
+          <p className="max-w-[75ch] text-[14px] leading-[1.6] text-foreground">
+            {t("competing.line", {
+              groups: competing.groups, pages: competing.pages, shown: formatNumber(competing.shown), clicks: formatNumber(competing.clicks),
+              name: competing.biggest.name, count: competing.biggest.pages, biggestShown: formatNumber(competing.biggest.shown), biggestClicks: formatNumber(competing.biggest.clicks),
+            })}
+          </p>
+          <Link href={href("cannibalisation")} className="text-[13px] font-medium text-info hover:underline">{t("competing.link")}</Link>
+        </section>
+      ) : null}
       <ChartCard title={t("share.title")} hint={t(rivalHosts.length > 0 ? "share.hintRivals" : "share.hint")} exportName="insights-market-share" csv={() => toCsv([t("share.month"), ...shareSeries.map((entry) => entry.name)], shareBars.map((row) => [String(row.day).slice(0, 7), ...shareSeries.map((entry) => Number(row[entry.key] ?? 0))]))} enoughData={shareBars.length > 1} emptyText={t("share.empty")}>
         <SiteBarChart
           data={shareBars}

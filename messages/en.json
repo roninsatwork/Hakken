@@ -17899,7 +17899,8 @@
         "experiments": "Experiments",
         "measurement": "Measurement check",
         "sources": "Sources",
-        "enquiries": "What brings enquiries"
+        "enquiries": "What brings enquiries",
+        "cannibalisation": "Keyword cannibalisation"
       }
     },
     "place": {
@@ -18069,7 +18070,8 @@
         "slowMoneyPages": "Money pages slow for real visitors",
         "missingMarkup": "Money pages without their structured data",
         "orphanPages": "Pages no other page links to",
-        "ownSitesCompete": "Your own websites compete"
+        "ownSitesCompete": "Your own websites compete",
+        "COMPETING_PAGES": "Pages competing for the same searches"
       },
       "sources": {
         "searchConsole": "Search Console",
@@ -18186,7 +18188,8 @@
       "download": "Download CSV",
       "howWeKnow": "How we'll know: {platformName} checks again on {day}. {how} The result goes on your Track record either way.",
       "taskAsk": "Set up {platformName} tasks for {host}: {action} Then keep an eye on it: {how} Tell me how it went by {day}.",
-      "toTasks": "Add the steps to {platformName} tasks"
+      "toTasks": "Add the steps to {platformName} tasks",
+      "seeGroup": "See the group's pages and searches"
     },
     "summary": {
       "title": "Executive summary",
@@ -18295,7 +18298,12 @@
       "whoEnquired": "Visits that enquired",
       "againstCount": "{count} on {period}'s {before}",
       "againstPoints": "{points} points on {period}'s {before}%",
-      "descriptionPeriod": "{company} at a glance: {period} against the period before and the same period a year ago, and against your rivals."
+      "descriptionPeriod": "{company} at a glance: {period} against the period before and the same period a year ago, and against your rivals.",
+      "competing": {
+        "title": "Keyword cannibalisation",
+        "line": "{groups, plural, one {One group} other {# groups}} of your pages split Google's searches between them: {pages} pages, shown {shown} times in 90 days for {clicks} clicks. The biggest is \"{name}\": {count} pages, {biggestShown} times shown, {biggestClicks} clicks.",
+        "link": "See keyword cannibalisation"
+      }
     },
     "pdf": {
       "boardReport": "Board report",
@@ -19413,6 +19421,111 @@
       "kindsHint": "Your own classifications of your pages, the five with the most visits.",
       "sources": "Enquiries by where people came from: {now} against {then}",
       "sourcesHint": "Google, AI assistants, typed in and other websites, each added up."
+    },
+    "cannibalisation": {
+      "title": "Keyword cannibalisation",
+      "description": "Groups of your pages that Google shows for the same searches, so they split the clicks and none holds a high place.",
+      "emptyTitle": "No groups yet",
+      "emptyDescription": "Search Console's last 90 days are read each week: groups of your pages competing for the same searches show here after the next weekly read.",
+      "back": "Keyword cannibalisation",
+      "search": "Find a group or a page…",
+      "noMatch": "Nothing matches that search.",
+      "download": "Download",
+      "tableTitle": "Each group",
+      "pagesCount": "{count, plural, one {# page} other {# pages}}",
+      "notSorted": "Not sorted",
+      "seeGroup": "See the group",
+      "do": "Make {owner} the page for \"{name}\" and the searches it shares.",
+      "sees": {
+        "groups": "{groups, plural, one {One group} other {# groups}} of your pages ({pages} pages) split Google's searches between them: shown {shown} times from {from} to {to} for {clicks} clicks.",
+        "biggest": "The biggest is \"{name}\": {pages} pages share {shared} searches, shown {shown} times for {clicks} clicks."
+      },
+      "figures": {
+        "groups": "Groups",
+        "pages": "{count} pages in them",
+        "split": "Searches split",
+        "shared": "of {count} shared",
+        "shown": "Times shown",
+        "clicks": "Google clicks",
+        "span": "{from} – {to}",
+        "enquiries": "Enquiries, 12 months",
+        "recent": "{count} in the last 3 months",
+        "recentAgainst": "{count} in the last 3 months, {before} a year before"
+      },
+      "charts": {
+        "shown": "Times Google showed each group's pages for the searches they share",
+        "shownHint": "From {from} to {to}: how much Google is weighing up between your own pages.",
+        "clicks": "Google clicks each group's pages had for them",
+        "clicksHint": "From {from} to {to}: shown often, clicked rarely, as none of the pages holds a high place."
+      },
+      "columns": {
+        "group": "Group",
+        "pages": "Pages",
+        "shared": "Searches shared",
+        "split": "Split",
+        "shown": "Times shown",
+        "clicks": "Google clicks",
+        "enquiries": "Enquiries, 12 months",
+        "recent": "Last 3 months",
+        "owner": "Should own them",
+        "sure": "How sure",
+        "page": "Page",
+        "kind": "Kind of page",
+        "decision": "What to do",
+        "searches": "Searches",
+        "visits": "Visits, 12 months",
+        "search": "Search",
+        "volume": "Searched a month",
+        "place": "Your place",
+        "pagesShown": "Pages shown",
+        "top": "Google sends most to",
+        "gain": "Extra clicks a month in the top three"
+      },
+      "sure": {
+        "LIKELY": "Likely",
+        "ROUGH": "A rough read"
+      },
+      "decisions": {
+        "OWNER": "Owns these searches",
+        "MERGE": "Merge into the owner, with a redirect",
+        "DIFFERENTIATE": "Make it clearly different",
+        "LINK": "Keep it, and link to the owner"
+      },
+      "group": {
+        "description": "{count} of your pages Google shows for the same searches, from {from} to {to}.",
+        "emptyTitle": "This group isn't held any more",
+        "emptyDescription": "The weekly read no longer finds these pages competing: they may have been fixed.",
+        "sees": {
+          "split": "Google showed these {pages} pages for {shared} of the same searches and split {split} of them between two or more: {shown} times shown from {from} to {to}, for {clicks} clicks.",
+          "owner": "{owner} brings the most enquiries of them ({enquiries} in the last 12 months), so it should own these searches.",
+          "ownerClicks": "{owner} has the most clicks of them, so it should own these searches.",
+          "gain": "Held in the top three for the searches they split, it would have about {clicks} more Google clicks a month, and about {enquiries} more enquiries.",
+          "gainClicks": "Held in the top three for the searches they split, it would have about {clicks} more Google clicks a month."
+        },
+        "do": {
+          "MERGE": "Merge {page} into {owner}, with a redirect.",
+          "DIFFERENTIATE": "Make {page} clearly about something different from {owner}.",
+          "LINK": "Keep {page}, and link from it to {owner}.",
+          "OWNER": "{page} owns these searches."
+        },
+        "seePage": "See the page",
+        "finding": "The finding this group is written up as.",
+        "checked": "Checked again on {day}: Google should split fewer of these searches.",
+        "seeFinding": "See the finding",
+        "pageSearch": "Find a page…",
+        "searchSearch": "Find a search…",
+        "pagesTitle": "The pages, and what to do with each",
+        "searchesTitle": "The searches they share",
+        "charts": {
+          "clicks": "How Google splits the clicks between the pages",
+          "clicksHint": "Google clicks each page had for the searches they share, from {from} to {to}.",
+          "shown": "How often Google showed each page for them",
+          "shownHint": "Times shown, from {from} to {to}.",
+          "gain": "The searches that would bring most in the top three",
+          "gainHint": "Extra Google clicks a month for the searches the pages split, from how often people search them where it's known.",
+          "gainEmpty": "Not known yet: how often people search these is being bought."
+        }
+      }
     }
   },
   "clarity": {

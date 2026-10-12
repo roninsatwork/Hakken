@@ -10,6 +10,7 @@ import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
 import { readWebsiteFacts } from "./insightsReading";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
+import { competingForRun, keepCompeting } from "./insightCompeting";
 import type { Score } from "./utils/insightSummary";
 
 type SavedScorecard = Score[];
@@ -325,6 +326,9 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
       checkOn: shiftDay(today, Math.min(120, Math.max(14, Math.round(draft.checkInDays ?? 56)))),
     });
   }
+  // Keyword cannibalisation (insights-intelligence-plan.md phase 3): the biggest groups of competing pages written up as findings.
+  const competing = await competingForRun(ctx, args.holdId, today, rank);
+  saved.push(...competing.findings.values());
   const top = saved.find((finding) => finding.status === "PUBLISHED");
   const verdictText = verdictFrom(verdict, fresh.size > 0 ? fresh : facts) ?? top?.headline ?? (reading.facts.length === 0
     ? "There is nothing to read for this website yet: connect Search Console or Google Analytics."
@@ -354,6 +358,7 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
     services,
     ...(rankings ? { rankings } : {}),
     ...(whyWords ? { why: whyWords } : {}),
+    ...(competing.summary ? { competing: competing.summary } : {}),
     ...monthly,
     checked: reading.facts.length,
     ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),
@@ -373,6 +378,7 @@ async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
     measurement,
     ...(plan ? { plan } : {}),
   });
+  await keepCompeting(ctx, args, weekOf(now), competing, saved, publishedIds);
   // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
   const reports: string[] = [];
   try {

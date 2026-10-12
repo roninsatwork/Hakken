@@ -285,7 +285,7 @@ const savedFindingValidator = v.object({
 const KEPT_MS = 2 * 365 * 24 * 60 * 60 * 1000;
 
 /** The week's findings beside each other, at most this many kept a week: the ones sent back with them, for Admin. */
-const MOST_A_WEEK = 30;
+export const MOST_A_WEEK = 30;
 
 /**
  * A website's week, saved: its findings — the week's earlier ones replaced, so

@@ -95,6 +95,10 @@ export default function InsightsFindingPage() {
   // The story's sentences, each its own line, as the box says them.
   const says = finding.story.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean);
 
+  // A group of competing pages opens its own page, where every page and search is (insights-intelligence-plan.md phase 3).
+  const groupKey = finding.pattern === "COMPETING_PAGES" ? /^competing\.(.+)\.shown$/.exec(finding.facts.find((fact) => fact.key.startsWith("competing.") && fact.key.endsWith(".shown"))?.key ?? "")?.[1] : undefined;
+  const groupBase = href("cannibalisation/group");
+  const group = groupKey ? `${groupBase}${groupBase.includes("?") ? "&" : "?"}key=${encodeURIComponent(groupKey)}` : null;
   return (
     <>
       <DetailHeader
@@ -112,7 +116,7 @@ export default function InsightsFindingPage() {
         }
         action={<PagePrimaryAction variant="brand" onClick={toTasks}>{t("toTasks")}</PagePrimaryAction>}
       />
-      <HakkenSees says={says} steps={[{ words: finding.action, link: t("seeAll"), href: href("this-week") }]} />
+      <HakkenSees says={says} steps={[{ words: finding.action, ...(group ? { link: t("seeGroup"), href: group } : { link: t("seeAll"), href: href("this-week") }) }]} />
       {pairs.length > 0 ? (
         <FigureRow>
           {pairs.slice(0, 4).map((pair) => (

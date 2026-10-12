@@ -17899,7 +17899,8 @@
         "experiments": "Esperimenti",
         "measurement": "Verifica delle misurazioni",
         "sources": "Fonti",
-        "enquiries": "Cosa porta richieste"
+        "enquiries": "Cosa porta richieste",
+        "cannibalisation": "Cannibalizzazione"
       }
     },
     "place": {
@@ -18069,7 +18070,8 @@
         "slowMoneyPages": "Pagine che portano clienti lente per i visitatori reali",
         "missingMarkup": "Pagine che portano clienti senza i loro dati strutturati",
         "orphanPages": "Pagine a cui nessun'altra pagina rimanda",
-        "ownSitesCompete": "I tuoi siti competono tra loro"
+        "ownSitesCompete": "I tuoi siti competono tra loro",
+        "COMPETING_PAGES": "Pagine in competizione per le stesse ricerche"
       },
       "sources": {
         "searchConsole": "Search Console",
@@ -18186,7 +18188,8 @@
       "download": "Scarica CSV",
       "howWeKnow": "Come lo sapremo: {platformName} ricontrolla il {day}. {how} Il risultato va nel tuo storico in ogni caso.",
       "taskAsk": "Imposta delle attività {platformName} per {host}: {action} Poi tienilo d'occhio: {how} Dimmi com'è andata entro il {day}.",
-      "toTasks": "Aggiungi i passi alle attività {platformName}"
+      "toTasks": "Aggiungi i passi alle attività {platformName}",
+      "seeGroup": "Vedi le pagine e le ricerche del gruppo"
     },
     "summary": {
       "title": "Sintesi per la direzione",
@@ -18295,7 +18298,12 @@
       "whoEnquired": "Visite con richiesta",
       "againstCount": "{count} rispetto ai {before} di {period}",
       "againstPoints": "{points} punti rispetto al {before}% di {period}",
-      "descriptionPeriod": "{company} in breve: {period} rispetto al periodo prima e allo stesso periodo di un anno fa, e rispetto ai concorrenti."
+      "descriptionPeriod": "{company} in breve: {period} rispetto al periodo prima e allo stesso periodo di un anno fa, e rispetto ai concorrenti.",
+      "competing": {
+        "title": "Cannibalizzazione delle parole chiave",
+        "line": "{groups, plural, one {Un gruppo} other {# gruppi}} di tue pagine si dividono le ricerche di Google: {pages} pagine, mostrate {shown} volte in 90 giorni per {clicks} clic. Il più grande è \"{name}\": {count} pagine, {biggestShown} visualizzazioni, {biggestClicks} clic.",
+        "link": "Vedi la cannibalizzazione delle parole chiave"
+      }
     },
     "pdf": {
       "boardReport": "Report per il consiglio",
@@ -19413,6 +19421,111 @@
       "kindsHint": "Le tue classificazioni delle pagine, le cinque con più visite.",
       "sources": "Richieste per provenienza: {now} rispetto a {then}",
       "sourcesHint": "Google, assistenti AI, accessi diretti e altri siti, ciascuno sommato."
+    },
+    "cannibalisation": {
+      "title": "Cannibalizzazione delle parole chiave",
+      "description": "Gruppi di tue pagine che Google mostra per le stesse ricerche, così si dividono i clic e nessuna ottiene una posizione alta.",
+      "emptyTitle": "Ancora nessun gruppo",
+      "emptyDescription": "Gli ultimi 90 giorni di Search Console vengono letti ogni settimana: i gruppi di pagine in competizione per le stesse ricerche compariranno qui dopo la prossima lettura.",
+      "back": "Cannibalizzazione delle parole chiave",
+      "search": "Trova un gruppo o una pagina…",
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "download": "Scarica",
+      "tableTitle": "Ogni gruppo",
+      "pagesCount": "{count, plural, one {# pagina} other {# pagine}}",
+      "notSorted": "Non classificata",
+      "seeGroup": "Vedi il gruppo",
+      "do": "Rendi {owner} la pagina per \"{name}\" e le ricerche che condivide.",
+      "sees": {
+        "groups": "{groups, plural, one {Un gruppo} other {# gruppi}} di tue pagine ({pages} pagine) si dividono le ricerche di Google: mostrate {shown} volte dal {from} al {to} per {clicks} clic.",
+        "biggest": "Il più grande è \"{name}\": {pages} pagine condividono {shared} ricerche, mostrate {shown} volte per {clicks} clic."
+      },
+      "figures": {
+        "groups": "Gruppi",
+        "pages": "{count} pagine in tutto",
+        "split": "Ricerche divise",
+        "shared": "su {count} condivise",
+        "shown": "Visualizzazioni",
+        "clicks": "Clic da Google",
+        "span": "{from} – {to}",
+        "enquiries": "Richieste, 12 mesi",
+        "recent": "{count} negli ultimi 3 mesi",
+        "recentAgainst": "{count} negli ultimi 3 mesi, {before} un anno prima"
+      },
+      "charts": {
+        "shown": "Quante volte Google ha mostrato le pagine di ogni gruppo per le ricerche condivise",
+        "shownHint": "Dal {from} al {to}: quanto Google sta soppesando tra le tue stesse pagine.",
+        "clicks": "Clic da Google che le pagine di ogni gruppo hanno avuto",
+        "clicksHint": "Dal {from} al {to}: mostrate spesso, cliccate di rado, perché nessuna pagina ha una posizione alta."
+      },
+      "columns": {
+        "group": "Gruppo",
+        "pages": "Pagine",
+        "shared": "Ricerche condivise",
+        "split": "Divise",
+        "shown": "Visualizzazioni",
+        "clicks": "Clic da Google",
+        "enquiries": "Richieste, 12 mesi",
+        "recent": "Ultimi 3 mesi",
+        "owner": "Dovrebbe averle",
+        "sure": "Affidabilità",
+        "page": "Pagina",
+        "kind": "Tipo di pagina",
+        "decision": "Cosa fare",
+        "searches": "Ricerche",
+        "visits": "Visite, 12 mesi",
+        "search": "Ricerca",
+        "volume": "Ricerche al mese",
+        "place": "La tua posizione",
+        "pagesShown": "Pagine mostrate",
+        "top": "Google manda più clic a",
+        "gain": "Clic in più al mese tra i primi tre"
+      },
+      "sure": {
+        "LIKELY": "Probabile",
+        "ROUGH": "Una lettura approssimativa"
+      },
+      "decisions": {
+        "OWNER": "Ha queste ricerche",
+        "MERGE": "Unirla alla principale, con un reindirizzamento",
+        "DIFFERENTIATE": "Renderla chiaramente diversa",
+        "LINK": "Tenerla, con un link alla principale"
+      },
+      "group": {
+        "description": "{count} tue pagine che Google mostra per le stesse ricerche, dal {from} al {to}.",
+        "emptyTitle": "Questo gruppo non c'è più",
+        "emptyDescription": "La lettura settimanale non trova più queste pagine in competizione: potrebbero essere state sistemate.",
+        "sees": {
+          "split": "Google ha mostrato queste {pages} pagine per {shared} delle stesse ricerche e ne ha divise {split} tra due o più: {shown} visualizzazioni dal {from} al {to}, per {clicks} clic.",
+          "owner": "{owner} porta più richieste di tutte ({enquiries} negli ultimi 12 mesi), quindi dovrebbe avere queste ricerche.",
+          "ownerClicks": "{owner} ha più clic di tutte, quindi dovrebbe avere queste ricerche.",
+          "gain": "Tra i primi tre per le ricerche divise, avrebbe circa {clicks} clic in più da Google al mese, e circa {enquiries} richieste in più.",
+          "gainClicks": "Tra i primi tre per le ricerche divise, avrebbe circa {clicks} clic in più da Google al mese."
+        },
+        "do": {
+          "MERGE": "Unisci {page} a {owner}, con un reindirizzamento.",
+          "DIFFERENTIATE": "Rendi {page} chiaramente diversa da {owner}.",
+          "LINK": "Tieni {page}, con un link a {owner}.",
+          "OWNER": "{page} ha queste ricerche."
+        },
+        "seePage": "Vedi la pagina",
+        "finding": "La scoperta in cui è descritto questo gruppo.",
+        "checked": "Ricontrollato il {day}: Google dovrebbe dividere meno di queste ricerche.",
+        "seeFinding": "Vedi la scoperta",
+        "pageSearch": "Trova una pagina…",
+        "searchSearch": "Trova una ricerca…",
+        "pagesTitle": "Le pagine, e cosa fare con ciascuna",
+        "searchesTitle": "Le ricerche che condividono",
+        "charts": {
+          "clicks": "Come Google divide i clic tra le pagine",
+          "clicksHint": "Clic da Google di ogni pagina per le ricerche condivise, dal {from} al {to}.",
+          "shown": "Quante volte Google ha mostrato ogni pagina",
+          "shownHint": "Visualizzazioni, dal {from} al {to}.",
+          "gain": "Le ricerche che porterebbero di più tra i primi tre",
+          "gainHint": "Clic in più da Google al mese per le ricerche divise, da quante volte vengono cercate quando è noto.",
+          "gainEmpty": "Non ancora noto: stiamo acquistando quante volte vengono cercate."
+        }
+      }
     }
   },
   "clarity": {
