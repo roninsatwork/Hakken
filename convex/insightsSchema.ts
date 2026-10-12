@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
+import { boxScreenValidator } from "./utils/insightBoxes";
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
 import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./utils/insightDrafts";
@@ -291,6 +292,25 @@ export const insightsTables = {
     cut: v.optional(v.boolean()),
     fetchedAt: v.number(),
   }).index("by_hold_kind_month", ["companyWebsiteId", "kind", "month"]),
+
+  /**
+   * Each Insights screen's "What Hakken sees" box as its specialist wrote it
+   * (insights-one-voice-plan.md phase 4): the newest week's, one a screen,
+   * replaced each run; the screen and Ask Hakken read the same words.
+   */
+  insightScreenBoxes: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    week: v.string(),
+    screen: boxScreenValidator,
+    /** Its sentences, every figure filled in from the run's facts. */
+    says: v.array(v.string()),
+    /** The specialist who wrote it. */
+    role: v.string(),
+    /** The period it was written for, on a screen with a period picker (`view.chosen.id`). */
+    period: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_hold_screen", ["companyWebsiteId", "screen"]),
 
   /**
    * Keyword cannibalisation (docs/plans/active/insights-intelligence-plan.md

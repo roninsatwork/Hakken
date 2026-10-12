@@ -24,7 +24,8 @@ import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
 import { LABEL } from "../_components/StrategyNote";
 import { monthsWords } from "../_components/insightPeriodWords";
-import { useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 
 /** Your own figures in orange; the rivals and assistants away from it, none near your orange (Anthony is colour blind). */
 const COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL, CHART_SERIES_ROSE, CHART_SERIES_SLATE];
@@ -53,6 +54,9 @@ function Section({ title, hint, children }: { title: string; hint: string; child
  */
 export default function InsightsAiSearchPage() {
   const t = usePlatformTranslations("insights.aiSearch");
+  // The box as its specialist wrote it this week (insights-one-voice-plan.md phase 4), else the screen's own sentences.
+  const box = useInsightsBox("AI_SEARCH");
+  const tBox = usePlatformTranslations("insights.box");
   const tPeriod = usePlatformTranslations("insights.period");
   const site = useInsightsSite();
   const engineName = useEngineLabel();
@@ -133,7 +137,7 @@ export default function InsightsAiSearchPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={[]} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={[]} />
       <FigureRow>
         <Figure label={t("figures.visits", { period: nowWords })} value={formatNumber(now?.visits ?? 0)} detail={<ChangeLine by={thenVisits === null ? null : (now?.visits ?? 0) - thenVisits}>{t("figures.against", { then: thenVisits === null ? "–" : formatNumber(thenVisits), period: compareWords })}</ChangeLine>} />
         <Figure label={t("figures.enquiries", { period: nowWords })} value={formatNumber(now?.enquiries ?? 0)} detail={<ChangeLine by={thenEnquiries === null ? null : (now?.enquiries ?? 0) - thenEnquiries}>{t("figures.against", { then: thenEnquiries === null ? "–" : formatNumber(thenEnquiries), period: compareWords })}</ChangeLine>} />

@@ -22,7 +22,8 @@ import { formatPosition } from "../../search-console/_components/searchConsoleFo
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 
 /** The places a search can be filtered to, each "from-to". */
 const PLACES = ["4-30", "4-10", "11-20", "21-30"] as const;
@@ -37,6 +38,9 @@ const PLACES = ["4-30", "4-10", "11-20", "21-30"] as const;
  */
 export default function InsightsOpportunitiesPage() {
   const t = usePlatformTranslations("insights.opportunities");
+  // The box as its specialist wrote it this week (insights-one-voice-plan.md phase 4), else the screen's own sentences.
+  const box = useInsightsBox("OPPORTUNITIES");
+  const tBox = usePlatformTranslations("insights.box");
   const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
@@ -82,7 +86,7 @@ export default function InsightsOpportunitiesPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint", { rate: formatPosition(rate) })} exportName={`${data.host}-opportunities`} csv={csv} enoughData={dots.length > 1}>
         <SiteScatterChart groups={groups} xLabel={t("chart.x")} yLabel={t("chart.y")} readout={{ x: t("columns.place"), y: t("columns.shown") }} />
       </ChartCard>

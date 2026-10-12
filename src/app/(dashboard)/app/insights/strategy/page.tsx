@@ -22,7 +22,8 @@ import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteForm
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 import { percentMoved, useServiceHref, useServiceName } from "../_components/strategyWords";
 
 const TONE: Record<Verdict, "success" | "neutral" | "warning" | "info"> = { GROW: "success", STEADY: "neutral", BUYERS_WORDS: "warning", YOUR_CALL: "warning", READERS: "info" };
@@ -38,6 +39,9 @@ const MONTHS = ["january", "february", "march", "april", "may", "june", "july", 
  */
 export default function InsightsStrategyPage() {
   const t = usePlatformTranslations("insights.strategy");
+  // The box as its specialist wrote it this week (insights-one-voice-plan.md phase 4), else the screen's own sentences.
+  const box = useInsightsBox("STRATEGY");
+  const tBox = usePlatformTranslations("insights.box");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();
@@ -65,9 +69,9 @@ export default function InsightsStrategyPage() {
   const says = [
     t("sees.grow", { count: grow.length, services: grow.slice(0, 3).map(name).join(", ") }),
     change.length > 0 ? t("sees.change", { count: change.length, services: change.slice(0, 3).map(name).join(", ") }) : t("sees.noChange"),
-    // Who made the calls (insights-one-voice-plan.md phase 3): the Head of Strategy, or the rule.
-    t("sees.called", { agent: data.services.filter((service) => service.decidedBy === "AGENT").length }),
   ];
+  // Who made the calls (insights-one-voice-plan.md phase 3): the Head of Strategy, or the rule — said under the box either way.
+  const called = t("sees.called", { agent: data.services.filter((service) => service.decidedBy === "AGENT").length });
   const steps = [...grow.slice(0, 2), ...change.slice(0, 1)].map((service) => ({ words: t(`do.${service.verdict}`, { service: name(service) }), link: t("seeService"), href: serviceHref(service) }));
   const bars = data.services.filter((service) => service.kind !== "GUIDES").slice(0, 8).map((service) => ({ label: name(service), before: service.enquiriesBefore ?? 0, now: service.enquiries }));
   const csv = () => toCsv([t("columns.service"), t("chart.before"), t("chart.now")], bars.map((row) => [row.label, row.before, row.now]));
@@ -75,7 +79,7 @@ export default function InsightsStrategyPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={[...boxedSays(box, says, tBox), called]} steps={steps} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-services`} csv={csv} enoughData={bars.length > 0}>
         <SiteBarChart data={bars} series={[{ key: "before", name: t("chart.before"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>

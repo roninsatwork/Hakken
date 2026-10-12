@@ -9,6 +9,8 @@ import { finishRun } from "./searchConsoleAgentRun";
 import { ask, factLines, filled, insightsStepArgs, lines, rulesFor, type InsightsRunArgs } from "./insightsAsk";
 import { readWebsiteFacts } from "./insightsReading";
 import { decideForRun } from "./insightDecisions";
+import { writeBoxes } from "./insightBoxes";
+import { whyFacts, type WhyView } from "./utils/insightWhyFacts";
 import { PAGE_DECISIONS_ROLE } from "./utils/insightPageAgent";
 import type { TeamMember } from "./insightsTeam";
 import type { WrittenFinding } from "./insightsRunSteps";
@@ -59,6 +61,8 @@ export const afterWeek = internalAction({
       const lead = member(INSIGHTS_LEAD_ROLE);
       const saved = await ctx.runQuery(internal.insightsRunSteps.savedWeek, { holdId: run.holdId, week, runId: run.runId });
       const facts = (await readWebsiteFacts(ctx, run.holdId)).facts;
+      // The newest whole month's tests, for the boxes written for the period a screen opens on.
+      const view: WhyView | null = await ctx.runQuery(internal.insightsPeriod.runView, { holdId: run.holdId }).catch(() => null);
       const [reports, drafted] = await Promise.all([
         // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
         saved?.summary
@@ -72,6 +76,8 @@ export const afterWeek = internalAction({
         // then every page's decision, reading those reviews, the Page decisions specialist handed what the rule doesn't simply keep.
         reviewPages(ctx, runArgs, week, facts, member(SPECIALIST_ROLE.conversion) ?? lead).catch(failed("Page reviews"))
           .then(async () => await decideForRun(ctx, runArgs, week, rulesFor(runArgs), member(PAGE_DECISIONS_ROLE) ?? lead)),
+        // 11. Each screen's "What Hakken sees" box, written by its discipline's specialist (insights-one-voice-plan.md phase 4).
+        writeBoxes(ctx, runArgs, week, rulesFor(runArgs), [...facts, ...(view ? whyFacts(view) : [])], member, view?.chosen?.id ?? null).catch(failed("Screens' boxes")),
       ]);
       const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: run.runId });
       const written = reports ?? [];

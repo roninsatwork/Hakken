@@ -340,6 +340,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   insightHistory: cleared("16 months", "insightHistory/saveHistory"),
   insightCompetingGroups: cleared("the newest week", "insightCompeting/saveGroups"),
   insightPageDecisions: cleared("the newest run", "insightDecisions/saveDecisions"),
+  insightScreenBoxes: cleared("the newest week", "insightBoxes/saveBoxes"),
   insightPlans: LATEST,
   insightQuestionPanels: LATEST,
   insightConversions: LATEST,

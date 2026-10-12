@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LEAGUE_IDS, type LeagueId } from "@/convex/utils/insightLeagues";
+import type { BoxScreen } from "@/convex/utils/insightBoxes";
 
 /**
  * The Insights section's pages and addresses (docs/plans/active/
@@ -105,3 +106,14 @@ export function useInsightsLeagues() {
 export function useInsightsPath(): string {
   return usePathname();
 }
+
+/**
+ * A screen's "What Hakken sees" box as its specialist wrote it this week
+ * (insights-one-voice-plan.md phase 4), for the website chosen: undefined
+ * while loading, null when none was written — the screen then says its own.
+ */
+export function useInsightsBox(screen: BoxScreen) {
+  const site = useInsightsSite();
+  return useQuery(api.insightBoxes.insightsScreenBox, { screen, ...(site ? { siteId: site } : {}) });
+}
+

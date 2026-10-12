@@ -6,6 +6,7 @@ import { PANEL_RULES } from "./insightPanel";
 import { COMPETING_RULE, OWNER_RULE } from "./insightCompeting";
 import { COMPETING_ANSWER } from "./insightCompetingAgent";
 import { PAGE_ANSWER } from "./insightPageAgent";
+import { BOX_FORMAT, screensByRole } from "./insightBoxes";
 
 /**
  * Each Insights agent's job and brief, as Hakken first gives them (Anthony,
@@ -129,10 +130,16 @@ const EDITOR_CHECKS = [
 ].join("\n");
 
 /** Which fixed part each is, for the page's headings. */
-export type FixedPart = "ground" | "shop" | "competing" | "owners" | "competingAnswer" | "pageAnswer" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
+export type FixedPart = "ground" | "shop" | "competing" | "owners" | "competingAnswer" | "pageAnswer" | "boxes" | "findings" | "strategy" | "why" | "review" | "drafts" | "panel" | "month" | "board" | "editor";
 
 /** What Hakken always adds to an agent's brief: shown read-only on its Instructions page, never edited there. */
 export function fixedRulesFor(role: InsightsRole): Array<{ part: FixedPart; text: string }> {
+  // A specialist that writes screens' boxes (insights-one-voice-plan.md phase 4) has their answer's shape too.
+  const parts = rolesOwnRules(role);
+  return screensByRole().has(role) ? [...parts, { part: "boxes", text: BOX_FORMAT }] : parts;
+}
+
+function rolesOwnRules(role: InsightsRole): Array<{ part: FixedPart; text: string }> {
   const ground = [{ part: "ground" as const, text: GROUND_RULES }, { part: "shop" as const, text: SHOP_RULE }];
   // Which page owns a search, as the Keyword cannibalisation screens decide it: for the agents who write about pages competing.
   const competing = { part: "competing" as const, text: COMPETING_RULE };

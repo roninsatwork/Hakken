@@ -26,7 +26,8 @@ import { useSiteSearch } from "../../sites/_components/useSiteParam";
 import { LABEL } from "../_components/StrategyNote";
 import { KindsAgainstChart, KindsRateChart, SourcesAgainstChart, useKindName } from "../_components/PeriodCharts";
 import { monthsWords, periodWords, sourceWords } from "../_components/insightPeriodWords";
-import { useInsightsHref, useInsightsPeriodChoice, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsPeriodChoice, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 
 const KIND_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL, CHART_SERIES_ROSE, CHART_SERIES_SLATE];
 type Trio = { now: number; before: number | null; yearAgo: number | null };
@@ -57,6 +58,9 @@ function Section({ title, hint, children }: { title: string; hint: string; child
  */
 export default function InsightsEnquiriesPage() {
   const t = usePlatformTranslations("insights.enquiries");
+  // The box as its specialist wrote it this week (insights-one-voice-plan.md phase 4), else the screen's own sentences.
+  const box = useInsightsBox("ENQUIRIES");
+  const tBox = usePlatformTranslations("insights.box");
   const tPeriod = usePlatformTranslations("insights.period");
   const tWhy = usePlatformTranslations("insights.why");
   const href = useInsightsHref();
@@ -131,7 +135,7 @@ export default function InsightsEnquiriesPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={[]} />
+      <HakkenSees says={boxedSays(box, says, tBox, view?.chosen?.id)} steps={[]} />
       <FigureRow>
         <Figure label={t("figures.enquiries", { period: nowWords })} value={formatNumber(view.figures.enquiries.now)} detail={<span className="text-secondary">{t("figures.against", { then: formatNumber(then(view.figures.enquiries) ?? 0), period: compareWords })}</span>} />
         <Figure label={t("figures.service", { period: nowWords })} value={formatNumber(sum(service, "enquiries", "now"))} detail={<span className="text-secondary">{t("figures.against", { then: formatNumber(sum(service, "enquiries", side)), period: compareWords })}</span>} />

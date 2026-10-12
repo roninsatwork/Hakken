@@ -3533,6 +3533,7 @@
                 "owners": "How a search's page is chosen",
                 "competingAnswer": "How a group of competing pages is answered",
                 "pageAnswer": "How pages' decisions are answered",
+                "boxes": "How a screen's box is answered",
                 "editor": "The Editor's checks"
               }
             }
@@ -19509,6 +19510,17 @@
       "kindsHint": "Your own classifications of your pages, the five with the most visits.",
       "sources": "Enquiries by where people came from: {now} against {then}",
       "sourcesHint": "Google, AI assistants, typed in and other websites, each added up."
+    },
+    "box": {
+      "by": "{who} wrote this for the week of {day}.",
+      "who": {
+        "INSIGHTS_CONVERSION": "The Conversion specialist",
+        "INSIGHTS_AI_VISIBILITY": "The AI visibility specialist",
+        "INSIGHTS_MARKET": "The Market specialist",
+        "INSIGHTS_MEASUREMENT": "The Measurement specialist",
+        "INSIGHTS_SEARCH": "The Search and content specialist",
+        "INSIGHTS_HEAD_OF_STRATEGY": "The Head of Strategy"
+      }
     },
     "cannibalisation": {
       "title": "Keyword cannibalisation",

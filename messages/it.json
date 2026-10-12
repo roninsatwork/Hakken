@@ -3533,6 +3533,7 @@
                 "owners": "Come si sceglie la pagina di una ricerca",
                 "competingAnswer": "Come si risponde a un gruppo di pagine in concorrenza",
                 "pageAnswer": "Come si risponde con le decisioni sulle pagine",
+                "boxes": "Come si risponde con il riquadro di una schermata",
                 "editor": "I controlli dell’Editor"
               }
             }
@@ -19509,6 +19510,17 @@
       "kindsHint": "Le tue classificazioni delle pagine, le cinque con più visite.",
       "sources": "Richieste per provenienza: {now} rispetto a {then}",
       "sourcesHint": "Google, assistenti AI, accessi diretti e altri siti, ciascuno sommato."
+    },
+    "box": {
+      "by": "{who} l'ha scritto per la settimana del {day}.",
+      "who": {
+        "INSIGHTS_CONVERSION": "Lo specialista della conversione",
+        "INSIGHTS_AI_VISIBILITY": "Lo specialista della visibilità nell'IA",
+        "INSIGHTS_MARKET": "Lo specialista del mercato",
+        "INSIGHTS_MEASUREMENT": "Lo specialista della misurazione",
+        "INSIGHTS_SEARCH": "Lo specialista di ricerca e contenuti",
+        "INSIGHTS_HEAD_OF_STRATEGY": "L'Head of Strategy"
+      }
     },
     "cannibalisation": {
       "title": "Cannibalizzazione delle parole chiave",

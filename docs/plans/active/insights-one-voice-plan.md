@@ -124,6 +124,26 @@ below are answered. Nothing is pushed.
   6's first item went in with it: the Head of Strategy can no longer join a
   Keyword cannibalisation finding into another story.
 
+- **Phase 4, built 2026-10-12 (night).** Six screens' "What Hakken sees"
+  boxes are written each week by their discipline's specialist, after the
+  save, one request a specialist, from the figures of its own discipline
+  (`utils/insightBoxes.ts`, `insightBoxes.ts`):
+  - Enquiries and pages: Conversion, for the newest whole month, and shown
+    only when that month is chosen;
+  - AI search: AI visibility;
+  - Leaderboards: Market;
+  - Measurement: Measurement;
+  - Opportunities: Search and content;
+  - Strategy: the Head of Strategy.
+
+  Every figure is named by its fact and filled in, and a sentence typing a
+  number or naming one not held is left out. A screen shows its box with who
+  wrote it and for which week, else its own sentences. Ask Hakken reads every
+  box. Left with their own sentences: Track record, whose figures aren't in
+  the run's reading; the funnel, Where enquiries come from, Page decisions'
+  summary and the cannibalisation screens. The cannibalisation screens wait
+  on the parked question of the specialist alone writing the page.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

@@ -9,7 +9,8 @@ import { ChangeLine } from "@/src/ui/components/screens/Change";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { MAIN_LEAGUES } from "@/convex/utils/insightLeagues";
 import { LeagueCard, leagueName, type LeagueData } from "../_components/LeagueCard";
-import { useInsightsHref, useInsightsLeagues } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsLeagues } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 import { formatNumber } from "../../sites/_components/siteFormat";
 
 /**
@@ -22,6 +23,9 @@ import { formatNumber } from "../../sites/_components/siteFormat";
  */
 export default function InsightsLeaderboardsPage() {
   const t = usePlatformTranslations("insights.leaderboards");
+  // The box as its specialist wrote it this week (insights-one-voice-plan.md phase 4), else the screen's own sentences.
+  const box = useInsightsBox("LEADERBOARDS");
+  const tBox = usePlatformTranslations("insights.box");
   const tl = usePlatformTranslations("insights.leagues");
   const tPlace = usePlatformTranslations("insights.place");
   const tMenu = usePlatformTranslations("insights.menu.pages");
@@ -65,7 +69,7 @@ export default function InsightsLeaderboardsPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} />
       <FigureRow>
         <Figure label={t("figures.lead")} value={t("figures.leadValue", { count: led.length, total: leagues.length })} detail={<span className="text-secondary">{led.length > 0 ? names(led) : t("figures.leadNone")}</span>} />
         <Figure label={t("figures.best")} value={ord(best)} detail={<span className="text-secondary">{names(bestLeagues)}</span>} />

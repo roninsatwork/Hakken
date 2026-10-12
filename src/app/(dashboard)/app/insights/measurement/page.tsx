@@ -20,7 +20,8 @@ import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteForm
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 
 const TONE: Record<MeasurementStatus, "warning" | "info" | "neutral" | "success"> = { LOOK: "warning", LIMIT: "info", UNKNOWN: "neutral", PASSING: "success" };
 
@@ -41,6 +42,9 @@ const FIX_AT: Partial<Record<MeasurementCheck["check"], "trackingHealth" | "anal
  */
 export default function InsightsMeasurementPage() {
   const t = usePlatformTranslations("insights.measurement");
+  // The box as its specialist wrote it this week (insights-one-voice-plan.md phase 4), else the screen's own sentences.
+  const box = useInsightsBox("MEASUREMENT");
+  const tBox = usePlatformTranslations("insights.box");
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsMeasurement, site ? { siteId: site } : {});
   const [search, setSearch, term] = useSiteSearch();
@@ -81,7 +85,7 @@ export default function InsightsMeasurementPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} />
       <ChartCard
         title={t("chart.title")}
         hint={days.length > 0 ? t("chart.hint", { from: days[0].label, to: days.at(-1)!.label, share: clicks > 0 ? Math.round((visits / clicks) * 100) : 0 }) : t("chart.none")}
