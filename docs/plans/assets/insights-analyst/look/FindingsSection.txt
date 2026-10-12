@@ -1,0 +1,11 @@
+# Insights → A section of Findings — the approved look (board "FindingsSection" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Search and content
+settings-card: What Hakken sees
+search: Search findings...
+filter: Pattern
+table: Finding | Pattern | At stake | Found | Status
+  table-bar
+    download: Download CSV
+  table-footer

@@ -7,6 +7,8 @@ import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
@@ -63,6 +65,11 @@ export default function InsightsOpportunitiesPage() {
   ];
   const steps: HakkenSeesStep[] = rows.filter((row) => row.page).slice(0, 1).map((row) => ({ words: t("do", { page: row.page!, search: row.search }), link: t("seePlan"), href: href("page-plan") }));
   const services = [...new Set(rows.map((row) => row.service).filter((value): value is string => Boolean(value)))].sort();
+  // Each search's page by the company's own classifications (insights-intelligence-plan.md phase 7).
+  const kindOf = new Map(data.kinds.map((entry) => [entry.page, entry.kind]));
+  const kindName = (page: string | null) => (page ? kindOf.get(page) ?? t("notSorted") : t("noPage"));
+  const kindBars = [...rows.reduce((map, row) => map.set(kindName(row.page), (map.get(kindName(row.page)) ?? 0) + 1), new Map<string, number>())]
+    .map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 10);
   const rate = data.plan.siteRate;
   const dots = rows.filter((row) => row.shown !== null && row.shown > 0);
   const point = (row: Opportunity) => ({ x: row.place, y: row.shown!, label: row.search });
@@ -78,6 +85,9 @@ export default function InsightsOpportunitiesPage() {
       <HakkenSees says={says} steps={steps} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint", { rate: formatPosition(rate) })} exportName={`${data.host}-opportunities`} csv={csv} enoughData={dots.length > 1}>
         <SiteScatterChart groups={groups} xLabel={t("chart.x")} yLabel={t("chart.y")} readout={{ x: t("columns.place"), y: t("columns.shown") }} />
+      </ChartCard>
+      <ChartCard title={t("kinds.title")} hint={t("kinds.hint")} exportName={`${data.host}-opportunities-by-kind`} csv={() => toCsv([t("columns.kind"), t("kinds.count")], kindBars.map((row) => [row.label, row.count]))} enoughData={kindBars.length > 0}>
+        <SiteBarChart horizontal data={kindBars} series={[{ key: "count", name: t("kinds.count"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
       </ChartCard>
       <DataTable
         rows={pages.pageRows}
@@ -104,6 +114,7 @@ export default function InsightsOpportunitiesPage() {
           { key: "shown", header: t("columns.shown"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.shown === null ? "–" : formatNumber(row.shown)}</span> },
           // A page by its title over its address (I41).
           { key: "page", header: t("columns.page"), cell: (row) => <span className="flex min-w-0 flex-col">{row.title ? <span className="truncate text-[12px] text-foreground">{row.title.split("|")[0].trim()}</span> : null}<span className="truncate text-[12px] text-secondary">{row.page ?? "–"}</span></span> },
+          { key: "kind", header: t("columns.kind"), cell: (row) => <TagLabel>{kindName(row.page)}</TagLabel> },
           { key: "converts", header: t("columns.converts"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.rate === null ? "–" : `${formatPosition(row.rate)}%`}</span> },
         ]}
       />

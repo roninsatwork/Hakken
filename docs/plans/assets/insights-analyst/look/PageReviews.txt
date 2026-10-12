@@ -6,7 +6,7 @@ settings-card: What Hakken sees
 chart-card: Visitors for each enquiry, page by page
 search: Find a page
 filter: Verdict
-table: Page | Visitors | Visitors for one enquiry | Last year | Verdict
+table: Page | Kind of page | Visitors | Visitors for one enquiry | Last year | Verdict
   table-bar: # pages · Visitors and enquiries over # months
     download: Download CSV
   table-footer

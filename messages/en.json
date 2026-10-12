@@ -17885,7 +17885,7 @@
         "month": "Your month",
         "strategy": "Strategy",
         "reports": "Reports",
-        "findings": "All findings",
+        "findings": "Overview",
         "track": "Track record",
         "leagues": "All leagues",
         "strength": "Domain authority",
@@ -17906,7 +17906,12 @@
         "sources": "Sources",
         "enquiries": "What brings enquiries",
         "cannibalisation": "Keyword cannibalisation",
-        "aiSearch": "AI search"
+        "aiSearch": "AI search",
+        "findingsEnquiries": "Enquiries and pages",
+        "findingsSearch": "Search and content",
+        "findingsAi": "AI answers",
+        "findingsRivals": "Rivals, links and reviews",
+        "findingsTechnical": "Technical and measurement"
       }
     },
     "place": {
@@ -18112,7 +18117,7 @@
       }
     },
     "findings": {
-      "title": "All findings",
+      "title": "Findings",
       "description": "Every finding {platformName} has written for you. Each is a story across your sources, with what to do and how we'll know.",
       "table": {
         "search": "Search findings...",
@@ -18130,6 +18135,50 @@
         "status": "Status",
         "noMatch": "No finding matches that search.",
         "empty": "No findings yet: the team writes them on its next run."
+      },
+      "overview": {
+        "sees": {
+          "weeks": "{count, plural, one {One finding} other {# findings}} the week of {week}{hasBefore, select, yes {, and {before} the week of {beforeWeek}} other {}}.",
+          "due": "{count, plural, one {One check is} other {# checks are}} due from {from} to {to}: each finding is checked again on the day it names, and its result goes on the Track record."
+        },
+        "biggest": "{section}: {headline}",
+        "see": "See the finding",
+        "weekly": "Findings each week, by section",
+        "weeklyHint": "The newest twelve weeks, each finding in the section of the menu it's filed under.",
+        "week": "Week",
+        "due": "Checks due, by month",
+        "dueHint": "Each finding is checked again on the day it names.",
+        "dueEmpty": "No check is due.",
+        "month": "Month"
+      },
+      "sections": {
+        "cannibalisation": {
+          "title": "Keyword cannibalisation",
+          "description": "Groups of your pages that Google shows for the same searches."
+        },
+        "enquiries": {
+          "title": "Enquiries and pages",
+          "description": "Findings about the enquiries your pages bring, and the pages that should bring more."
+        },
+        "search": {
+          "title": "Search and content",
+          "description": "Findings about your places on Google, the searches within reach and the pages that should win them."
+        },
+        "ai": {
+          "title": "AI answers",
+          "description": "Findings about how the AI assistants name, recommend and cite you."
+        },
+        "rivals": {
+          "title": "Rivals, links and reviews",
+          "description": "Findings about your rivals, the websites linking to you and your reviews."
+        },
+        "technical": {
+          "title": "Technical and measurement",
+          "description": "Findings about your website's health and whether its figures can be trusted."
+        },
+        "emptyTitle": "No findings here yet",
+        "emptyDescription": "The team writes findings each week; those about this show here.",
+        "sees": "{count, plural, one {One finding} other {# findings}} in this section. The biggest:"
       }
     },
     "week": {
@@ -18892,7 +18941,8 @@
         "volume": "Searches a month",
         "shown": "Shown, 90 days",
         "page": "Page",
-        "converts": "Page converts"
+        "converts": "Page converts",
+        "kind": "Kind of page"
       },
       "sees": {
         "best": "Your best opportunity is ‘{search}’: searched {volume} times a month{known, select, yes {, and the page it lands on turns {rate}% of visitors into enquiries} other {}}. You're {place} on Google.",
@@ -18908,6 +18958,13 @@
         "y": "Times shown, 90 days",
         "better": "Page converts well",
         "rest": "Other searches"
+      },
+      "notSorted": "Not sorted",
+      "noPage": "No page yet",
+      "kinds": {
+        "title": "Searches within reach, by kind of page",
+        "hint": "The kind of page each search lands on, by your own classifications: whether the searches you nearly win reach the pages that sell.",
+        "count": "Searches"
       }
     },
     "pagePlan": {
@@ -19027,7 +19084,11 @@
         "rate": "Enquiry rate",
         "rateBefore": "The year before"
       },
-      "searchSteps": "Find a step"
+      "searchSteps": "Find a step",
+      "kinds": {
+        "title": "Visits that enquired, by kind of page",
+        "hint": "The period chosen at the top, against the period it's compared with: the step from visiting to enquiring, for each kind of page."
+      }
     },
     "pageReviews": {
       "title": "Page reviews",
@@ -19058,8 +19119,10 @@
         "visits": "Visitors",
         "perEnquiry": "Visitors for one enquiry",
         "before": "Last year",
-        "verdict": "Verdict"
-      }
+        "verdict": "Verdict",
+        "kind": "Kind of page"
+      },
+      "notSorted": "Not sorted"
     },
     "pageReview": {
       "back": "Page reviews",

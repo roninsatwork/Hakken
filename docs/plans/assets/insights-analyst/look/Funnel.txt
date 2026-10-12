@@ -4,6 +4,7 @@
 page-header: Funnel
 settings-card: What Hakken sees
 chart-card: Each step's share, last # days
+chart-card: Visits that enquired, by kind of page
 search: Find a step
 table: Step | Last # days | Last year | Change | Source
   table-bar: Visitors from Google, the last # days

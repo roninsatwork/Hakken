@@ -20,7 +20,8 @@ import { formatPosition } from "../../search-console/_components/searchConsoleFo
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHref, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { KindsRateChart } from "../_components/PeriodCharts";
 
 const rate = (top: number | null, bottom: number | null) => (top !== null && bottom ? Math.round((top / bottom) * 1000) / 10 : null);
 const moved = (now: number | null, before: number | null) => (now !== null && before ? Math.round(((now - before) / before) * 100) : null);
@@ -36,6 +37,7 @@ export default function InsightsFunnelPage() {
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
+  const view = useInsightsPeriodView();
   const [search, setSearch, term] = useSiteSearch("q", "sources");
   const [stepSearch, setStepSearch, stepTerm] = useSiteSearch("sq", "steps");
   const matches = wordStartMatcher(term.toLowerCase());
@@ -74,6 +76,7 @@ export default function InsightsFunnelPage() {
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-funnel`} csv={csv} enoughData={bars.length > 0}>
         <SiteBarChart data={bars} series={[{ key: "year", name: t("chart.year"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>
+      {view ? <KindsRateChart view={view} text={{ title: t("kinds.title"), hint: t("kinds.hint"), exportName: `${data.host}-funnel-by-kind` }} /> : null}
       <DataTable
         rows={steps.pageRows}
         rowKey={(row) => row.step}

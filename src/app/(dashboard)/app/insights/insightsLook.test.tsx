@@ -30,6 +30,7 @@ import InsightsEnquirySourcePage from "./enquiries/source/page";
 import InsightsCannibalisationPage from "./cannibalisation/page";
 import InsightsCompetingGroupPage from "./cannibalisation/group/page";
 import InsightsAiSearchPage from "./ai-search/page";
+import InsightsFindingsSectionPage from "./findings/sections/[section]/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -39,14 +40,14 @@ import InsightsAiSearchPage from "./ai-search/page";
  * docs/plans/assets/insights-analyst/look/.
  */
 
-const nav = vi.hoisted(() => ({ pathname: "/app/insights/leaderboards", search: "", league: "" }));
+const nav = vi.hoisted(() => ({ pathname: "/app/insights/leaderboards", search: "", league: "", section: "" }));
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
   useSearchParams: () => new URLSearchParams(nav.search),
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
-  useParams: () => ({ league: nav.league, findingId: "finding_1" }),
+  useParams: () => ({ league: nav.league, findingId: "finding_1", section: nav.section }),
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
@@ -83,8 +84,14 @@ const YEAR_BEFORE = { from: "2024-10-11", to: "2025-10-10" };
 const FINDING_ROW = {
   findingId: "finding_1", siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05", rank: 1, specialist: "strategy", pattern: "sameVisitorsFewerResults",
   headline: "Search sent the same visitors but 101 enquiries, down from 171.", action: "Give the guides people read a way to an enquiry.",
-  sure: "HIGH", sources: ["analytics", "searchConsole"], atStake: 70, ruledOut: 2, isNew: true, outcome: null, createdAt: Date.parse("2026-10-11T07:00:00Z"),
+  sure: "HIGH", sources: ["analytics", "searchConsole"], atStake: 70, ruledOut: 2, isNew: true, outcome: null, checkOn: "2026-12-07", createdAt: Date.parse("2026-10-11T07:00:00Z"),
 };
+/** Findings in sections (insights-intelligence-plan.md phase 7): one each from search, AI answers and the strategist. */
+const ALL_FINDINGS = [
+  FINDING_ROW,
+  { ...FINDING_ROW, findingId: "finding_2", specialist: "search", pattern: "almostOnPageOne", headline: "Twelve searches are a place from page one.", atStake: 20, rank: 2 },
+  { ...FINDING_ROW, findingId: "finding_3", specialist: "aiVisibility", pattern: "missingFromAnAssistant", headline: "Perplexity never names you for branding.", atStake: null, rank: 3, checkOn: "2027-01-04" },
+];
 const SCORE = [
   { measure: "enquiries", now: 26, before: 74, unit: "count", lowerIsBetter: false, place: null, places: null, status: "BEHIND" },
   { measure: "visitorsPerEnquiry", now: 19, before: 10, unit: "count", lowerIsBetter: true, place: null, places: null, status: "BEHIND" },
@@ -303,7 +310,7 @@ describe("Insights' looks", () => {
 
   it("22 · All findings", async () => {
     nav.pathname = "/app/insights/findings";
-    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsAllFindings": [FINDING_ROW] });
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsAllFindings": ALL_FINDINGS });
     const { container } = render(<InsightsAllFindingsPage />);
     await screen.findByText(FINDING_ROW.headline);
     await expectApprovedLook(container, PLAN, "Findings", "Insights → All findings");
@@ -411,6 +418,7 @@ describe("Insights' looks", () => {
 
   const PLAN_DATA = {
     siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05",
+    kinds: [{ page: "/wordpress-agency/", kind: "Service", type: "SERVICE" }, { page: "/chatbot-agency/", kind: "Service", type: "SERVICE" }],
     plan: {
       siteRate: 3.7,
       opportunities: [
@@ -453,11 +461,12 @@ describe("Insights' looks", () => {
       { page: "/ai-agency/", title: "AI Agency | Automation", kind: "SERVICE", visits: 1089, enquiries: 46, visitsBefore: 561, enquiriesBefore: 32, verdict: "ADD_PROOF", reason: "It asks without showing results.", steps: ["Add one case study with its result before the form."], before: [{ kind: "site", label: "Google", share: 61.2 }, { kind: "page", label: "/", share: 24.5 }, { kind: "none", label: "", share: 14.3 }] },
     ],
     experiments: [{ experimentId: "experiment_1", page: "/", verdict: "REWRITE_TOP", why: "The opening speaks to brand work.", status: "READY", startedAt: null, baseline: null, result: null, visits: 2052 }],
+    kinds: [{ page: "/", kind: "Brand", type: "OTHER" }, { page: "/ai-agency/", kind: "Service", type: "SERVICE" }],
   };
 
   it("33 · Funnel", async () => {
     nav.pathname = "/app/insights/funnel";
-    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION });
+    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION, "insightsPeriod:insightsPeriodView": ENQUIRY_VIEW });
     const { container } = render(<InsightsFunnelPage />);
     await screen.findByText("Shown on Google");
     await expectApprovedLook(container, PLAN, "Funnel", "Insights → Funnel");
@@ -527,6 +536,16 @@ describe("Insights' looks", () => {
     const { container } = render(<InsightsAiSearchPage />);
     await screen.findByText("/chatbot-agency/");
     await expectApprovedLook(container, PLAN, "AiSearch", "Insights → AI search");
+  });
+
+  it("42 · A section of Findings", async () => {
+    nav.pathname = "/app/insights/findings/sections/search";
+    nav.section = "search";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsAllFindings": ALL_FINDINGS });
+    const { container } = render(<InsightsFindingsSectionPage />);
+    await screen.findByText("Search and content");
+    await expectApprovedLook(container, PLAN, "FindingsSection", "Insights → A section of Findings");
+    nav.section = "";
   });
 
   it("36 · Experiments", async () => {

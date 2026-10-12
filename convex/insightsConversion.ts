@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { pageKindsOf } from "./insightsPeriodData";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
@@ -162,6 +163,8 @@ export const insightsConversion = tenantQuery({
     sources: v.array(sourceRowValidator),
     pages: v.array(pageReviewValidator),
     experiments: v.array(experimentRow),
+    /** Each page's kind, by the company's own classifications (insights-intelligence-plan.md phase 7). */
+    kinds: v.array(v.object({ page: v.string(), kind: v.union(v.string(), v.null()), type: v.string() })),
   })),
   handler: async (ctx, args) => {
     const hold = await chosenHold(ctx, args.siteId);
@@ -173,6 +176,7 @@ export const insightsConversion = tenantQuery({
       experiments.push(...await ctx.db.query("insightExperiments").withIndex("by_hold_status", (q) => q.eq("companyWebsiteId", hold._id).eq("status", status)).take(50));
     }
     const visitsOf = new Map((row?.pages ?? []).map((page) => [page.page, page.visits]));
+    const kindOf = await pageKindsOf(ctx, hold._id);
     return {
       siteId: hold._id,
       host: website?.displayHost ?? website?.host ?? "",
@@ -184,6 +188,7 @@ export const insightsConversion = tenantQuery({
         experimentId: experiment._id, page: experiment.page, verdict: experiment.verdict, why: experiment.why, status: experiment.status,
         startedAt: experiment.startedAt ?? null, baseline: experiment.baseline ?? null, result: experiment.result ?? null, visits: visitsOf.get(experiment.page) ?? 0,
       })),
+      kinds: (row?.pages ?? []).map((page) => ({ page: page.page, kind: kindOf(page.page).name, type: kindOf(page.page).type })),
     };
   },
 });

@@ -49,6 +49,8 @@ export default function InsightsPageReviewsPage() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (!data || data.pages.length === 0) return <>{header}<HakkenEmptyState icon={ScanSearch} title={t("emptyTitle")} description={t("emptyDescription")} /></>;
 
+  // Each page by the company's own classifications (insights-intelligence-plan.md phase 7).
+  const kindOf = new Map(data.kinds.map((entry) => [entry.page, entry.kind ?? t("notSorted")]));
   const reviewed = data.pages.map((row) => ({ ...row, now: perEnquiry(row.visits, row.enquiries), before: row.visitsBefore !== null ? perEnquiry(row.visitsBefore, row.enquiriesBefore) : null }));
   const harder = reviewed.filter((row) => row.now !== null && row.before !== null && row.now > row.before);
   const best = reviewed.filter((row) => row.now !== null && row.enquiries >= 3).sort((a, b) => a.now! - b.now!)[0];
@@ -85,6 +87,7 @@ export default function InsightsPageReviewsPage() {
         footer={pages.footer}
         columns={[
           { key: "page", header: t("columns.page"), cell: (row) => <span className="flex min-w-0 flex-col"><span className="truncate text-[13px] text-foreground">{row.page}</span>{row.title ? <span className="truncate text-[12px] text-secondary">{row.title.split("|")[0].trim()}</span> : null}</span> },
+          { key: "kind", header: t("columns.kind"), cell: (row) => <TagLabel>{kindOf.get(row.page) ?? t("notSorted")}</TagLabel> },
           { key: "visits", header: t("columns.visits"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.visits)}</span> },
           { key: "perEnquiry", header: t("columns.perEnquiry"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(perEnquiry(row.visits, row.enquiries))}</span> },
           { key: "before", header: t("columns.before"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.visitsBefore === null ? "–" : formatNumber(perEnquiry(row.visitsBefore, row.enquiriesBefore))}</span> },

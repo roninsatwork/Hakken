@@ -673,6 +673,7 @@ import type * as utils_insightOwnSites from "../utils/insightOwnSites.js";
 import type * as utils_insightPanel from "../utils/insightPanel.js";
 import type * as utils_insightPeriods from "../utils/insightPeriods.js";
 import type * as utils_insightPlan from "../utils/insightPlan.js";
+import type * as utils_insightSections from "../utils/insightSections.js";
 import type * as utils_insightStrategy from "../utils/insightStrategy.js";
 import type * as utils_insightSummary from "../utils/insightSummary.js";
 import type * as utils_insightTeam from "../utils/insightTeam.js";
@@ -1519,6 +1520,7 @@ declare const fullApi: ApiFromModules<{
   "utils/insightPanel": typeof utils_insightPanel;
   "utils/insightPeriods": typeof utils_insightPeriods;
   "utils/insightPlan": typeof utils_insightPlan;
+  "utils/insightSections": typeof utils_insightSections;
   "utils/insightStrategy": typeof utils_insightStrategy;
   "utils/insightSummary": typeof utils_insightSummary;
   "utils/insightTeam": typeof utils_insightTeam;

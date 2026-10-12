@@ -17885,7 +17885,7 @@
         "month": "Il tuo mese",
         "strategy": "Strategia",
         "reports": "Report",
-        "findings": "Tutti i risultati",
+        "findings": "Panoramica",
         "track": "Storico",
         "leagues": "Tutte le classifiche",
         "strength": "Autorità del dominio",
@@ -17906,7 +17906,12 @@
         "sources": "Fonti",
         "enquiries": "Cosa porta richieste",
         "cannibalisation": "Cannibalizzazione",
-        "aiSearch": "Ricerca AI"
+        "aiSearch": "Ricerca AI",
+        "findingsEnquiries": "Richieste e pagine",
+        "findingsSearch": "Ricerca e contenuti",
+        "findingsAi": "Risposte AI",
+        "findingsRivals": "Concorrenti, link e recensioni",
+        "findingsTechnical": "Tecnica e misurazione"
       }
     },
     "place": {
@@ -18112,7 +18117,7 @@
       }
     },
     "findings": {
-      "title": "Tutti i risultati",
+      "title": "Scoperte",
       "description": "Ogni risultato che {platformName} ha scritto per te. Ognuno è una storia tra le tue fonti, con cosa fare e come sapremo se ha funzionato.",
       "table": {
         "search": "Cerca risultati...",
@@ -18130,6 +18135,50 @@
         "status": "Stato",
         "noMatch": "Nessun risultato corrisponde alla ricerca.",
         "empty": "Ancora nessun risultato: il team li scrive alla prossima esecuzione."
+      },
+      "overview": {
+        "sees": {
+          "weeks": "{count, plural, one {Una scoperta} other {# scoperte}} la settimana del {week}{hasBefore, select, yes {, e {before} la settimana del {beforeWeek}} other {}}.",
+          "due": "{count, plural, one {Un controllo è previsto} other {# controlli sono previsti}} dal {from} al {to}: ogni scoperta viene ricontrollata nel giorno indicato, e il risultato va nello storico dei risultati."
+        },
+        "biggest": "{section}: {headline}",
+        "see": "Vedi la scoperta",
+        "weekly": "Scoperte ogni settimana, per sezione",
+        "weeklyHint": "Le ultime dodici settimane, ogni scoperta nella sezione del menu in cui è archiviata.",
+        "week": "Settimana",
+        "due": "Controlli previsti, per mese",
+        "dueHint": "Ogni scoperta viene ricontrollata nel giorno indicato.",
+        "dueEmpty": "Nessun controllo previsto.",
+        "month": "Mese"
+      },
+      "sections": {
+        "cannibalisation": {
+          "title": "Cannibalizzazione delle parole chiave",
+          "description": "Gruppi di tue pagine che Google mostra per le stesse ricerche."
+        },
+        "enquiries": {
+          "title": "Richieste e pagine",
+          "description": "Scoperte sulle richieste che portano le tue pagine, e sulle pagine che dovrebbero portarne di più."
+        },
+        "search": {
+          "title": "Ricerca e contenuti",
+          "description": "Scoperte sulle tue posizioni su Google, le ricerche a portata di mano e le pagine che dovrebbero vincerle."
+        },
+        "ai": {
+          "title": "Risposte AI",
+          "description": "Scoperte su come gli assistenti AI ti nominano, ti raccomandano e ti citano."
+        },
+        "rivals": {
+          "title": "Concorrenti, link e recensioni",
+          "description": "Scoperte sui tuoi concorrenti, sui siti che rimandano a te e sulle tue recensioni."
+        },
+        "technical": {
+          "title": "Tecnica e misurazione",
+          "description": "Scoperte sulla salute del tuo sito e sull'affidabilità dei suoi dati."
+        },
+        "emptyTitle": "Ancora nessuna scoperta qui",
+        "emptyDescription": "Il team scrive scoperte ogni settimana; quelle su questo argomento compaiono qui.",
+        "sees": "{count, plural, one {Una scoperta} other {# scoperte}} in questa sezione. La più importante:"
       }
     },
     "week": {
@@ -18892,7 +18941,8 @@
         "volume": "Ricerche al mese",
         "shown": "Mostrato, 90 giorni",
         "page": "Pagina",
-        "converts": "La pagina converte"
+        "converts": "La pagina converte",
+        "kind": "Tipo di pagina"
       },
       "sees": {
         "best": "La tua migliore opportunità è ‘{search}’: cercata {volume} volte al mese{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
@@ -18908,6 +18958,13 @@
         "y": "Volte mostrato, 90 giorni",
         "better": "La pagina converte bene",
         "rest": "Altre ricerche"
+      },
+      "notSorted": "Non classificata",
+      "noPage": "Ancora nessuna pagina",
+      "kinds": {
+        "title": "Ricerche a portata di mano, per tipo di pagina",
+        "hint": "Il tipo di pagina su cui arriva ogni ricerca, secondo le tue classificazioni: se le ricerche che quasi vinci portano alle pagine che vendono.",
+        "count": "Ricerche"
       }
     },
     "pagePlan": {
@@ -19027,7 +19084,11 @@
         "rate": "Tasso di richiesta",
         "rateBefore": "L'anno prima"
       },
-      "searchSteps": "Trova un passaggio"
+      "searchSteps": "Trova un passaggio",
+      "kinds": {
+        "title": "Visite con richiesta, per tipo di pagina",
+        "hint": "Il periodo scelto in alto, rispetto al periodo di confronto: il passaggio dalla visita alla richiesta, per ogni tipo di pagina."
+      }
     },
     "pageReviews": {
       "title": "Revisioni delle pagine",
@@ -19058,8 +19119,10 @@
         "visits": "Visitatori",
         "perEnquiry": "Visitatori per una richiesta",
         "before": "Anno scorso",
-        "verdict": "Verdetto"
-      }
+        "verdict": "Verdetto",
+        "kind": "Tipo di pagina"
+      },
+      "notSorted": "Non classificata"
     },
     "pageReview": {
       "back": "Revisioni delle pagine",

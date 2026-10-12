@@ -406,6 +406,20 @@ question is left out.
   happens ten times or more in 12 months and isn't counted: Ronins'
   "contact"), and the run writes both that and the ways ticked but never
   recorded as findings itself, unless a specialist already wrote the same.
+- **Phase 7**: Findings in sections. The menu's Findings group is Overview,
+  Keyword cannibalisation, Enquiries and pages, Search and content, AI
+  answers, Rivals, links and reviews, Technical and measurement, and Track
+  record; a finding's section is decided by its pattern (pages competing for
+  one search) or the specialist who wrote it, one rule shared by every list.
+  The overview: each section's biggest finding in one line, findings each
+  week by section and the checks due by month, then every finding (Ronins: 11
+  findings the week of 12 October, 13 the week before; 24 checks due from 18
+  November to 18 January). Every figure by classification: Opportunities and
+  Page reviews name each page's kind, Opportunities charts the searches within
+  reach by kind of page, and the Funnel shows visits that enquired by kind of
+  page; the Executive summary, What brings enquiries, AI search, Page
+  decisions and Keyword cannibalisation already split by kind. One source's
+  page was built in phase 2.
 
 ## Decisions for Anthony
 

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { pageKindsOf } from "./insightsPeriodData";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
@@ -137,6 +138,8 @@ const findingRow = v.object({
   ruledOut: v.number(),
   isNew: v.boolean(),
   outcome: v.union(v.string(), v.null()),
+  /** The day the finding is checked again, for the Findings overview (insights-intelligence-plan.md phase 7). */
+  checkOn: v.union(v.string(), v.null()),
   createdAt: v.number(),
 });
 
@@ -175,6 +178,7 @@ function rowOf(finding: Doc<"insightFindings">, host: string, newest: string | n
     ruledOut: finding.ruledOut.length,
     isNew: finding.week === newest,
     outcome: finding.outcome ?? null,
+    checkOn: finding.checkOn ?? null,
     createdAt: finding.createdAt,
   };
 }
@@ -645,12 +649,17 @@ export const insightsPlan = tenantQuery({
     host: v.string(),
     week: v.union(v.string(), v.null()),
     plan: v.union(planValidator, v.null()),
+    /** Each page's kind, by the company's own classifications (insights-intelligence-plan.md phase 7). */
+    kinds: v.array(v.object({ page: v.string(), kind: v.union(v.string(), v.null()), type: v.string() })),
   })),
   handler: async (ctx, args) => {
     const [site] = await sitesFor(ctx, args.siteId);
     if (!site) return null;
     const held = await ctx.db.query("insightPlans").withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id)).first();
-    return { siteId: site.hold._id, host: site.host, week: held?.week ?? null, plan: held ? { opportunities: held.opportunities, pages: held.pages, siteRate: held.siteRate } : null };
+    const kindOf = await pageKindsOf(ctx, site.hold._id);
+    const pages = [...new Set([...(held?.opportunities ?? []).map((row) => row.page), ...(held?.pages ?? []).map((row) => row.page)].filter((page): page is string => Boolean(page)))];
+    const kinds = pages.map((page) => ({ page, kind: kindOf(page).name, type: kindOf(page).type }));
+    return { siteId: site.hold._id, host: site.host, week: held?.week ?? null, plan: held ? { opportunities: held.opportunities, pages: held.pages, siteRate: held.siteRate } : null, kinds };
   },
 });
 
