@@ -99,6 +99,15 @@ completed work.
   reading all of it — eleven phases, about twenty-seven days with "people who
   converted after it". All eleven built 2026-10-11 in local commits on dev,
   not pushed, each checked on Ronins in Chrome; the full gate passed.**
+- [Bing Webmaster — for your own websites](./active/bing-webmaster-plan.md)
+  — a new "Bing Webmaster" item in the main menu, after Search Console:
+  each owned website's real clicks, impressions, keywords, pages and
+  crawling from Bing, every figure beside Google's from Hakken's own Search
+  Console, and a Bing against Google screen. Read-only, free, collected by
+  its own Bing Webmaster: Collector Agent, and stored once with Search
+  Console's pages and keywords. Six phases, about fourteen and a half days.
+  **Drawn 2026-10-12 (nine boards in `docs/plans/assets/bing-webmaster/`)
+  and planned the same day; nothing built. Six questions open (§10).**
 - [Core data — each keyword and page once](./active/core-data-normalisation-plan.md)
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a

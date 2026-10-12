@@ -1,0 +1,125 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-12T15:30:00Z"
+ },
+ "title": "Hakken — Bing Webmaster",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "1 · Bing Webmaster: your websites",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Performance.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 2350,
+   "title": "2 · Performance: Bing's clicks and impressions, beside Google's",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Keywords.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 2150,
+   "title": "3 · Keywords: every search Bing showed you for, with Google's position beside it",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Keyword.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 1750,
+   "title": "4 · A keyword's own screen: Bing and Google side by side",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Pages.dc.html": {
+   "x": 6080,
+   "y": 0,
+   "w": 1440,
+   "h": 2250,
+   "title": "5 · Pages: Bing's clicks to each page, with Google's beside them",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AgainstGoogle.dc.html": {
+   "x": 7600,
+   "y": 0,
+   "w": 1440,
+   "h": 1900,
+   "title": "6 · Bing against Google: share of clicks, and who ranks you higher",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Crawling.dc.html": {
+   "x": 9120,
+   "y": 0,
+   "w": 1440,
+   "h": 2150,
+   "title": "7 · Crawling and indexing: your money pages on Bing, beside Google",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Connection.dc.html": {
+   "x": 10640,
+   "y": 0,
+   "w": 1440,
+   "h": 1150,
+   "title": "8 · Connection: connected",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "NotConnected.dc.html": {
+   "x": 12160,
+   "y": 0,
+   "w": 1440,
+   "h": 1000,
+   "title": "9 · Connection: not connected yet",
+   "expand": "fill",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Performance.dc.html",
+  "Keywords.dc.html",
+  "Keyword.dc.html",
+  "Pages.dc.html",
+  "AgainstGoogle.dc.html",
+  "Crawling.dc.html",
+  "Connection.dc.html",
+  "NotConnected.dc.html"
+ ],
+ "notes": {
+  "title": {
+   "x": 0,
+   "y": -300,
+   "text": "Bing Webmaster — a new section after Search Console",
+   "kind": "title1",
+   "maxW": 4480
+  },
+  "about": {
+   "x": 0,
+   "y": -980,
+   "w": 1440,
+   "maxH": 560,
+   "size": "m",
+   "fill": "gray",
+   "text": "Drawn 12 Oct 2026 on the drawing kit (stylesheet bab6c21cec60, look 149d9f4fb243). Nothing is built.\n\nReal figures: Bing's totals and keyword rows are from Bing's own screen for ronins.co.uk, 12 Jul to 11 Oct 2026. Every Google figure is from Hakken's Search Console for the same 90 days.\n\nExamples until Bing is connected: the day-by-day and week-by-week shapes, the page rows on Bing, the keyword and page counts (142, 58, 61), and everything on Crawling and indexing except Google's dates.\n\nLeft out on purpose: countries and devices, which Bing does not give outside its own screen, and Copilot citations (AI Performance), which Bing has not opened to other tools yet."
+  }
+ },
+ "designSystems": []
+}
