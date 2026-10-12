@@ -668,7 +668,7 @@ export function spendCategoryOf(operationId: string) {
   // Google's AI Overviews' searches (FA8) are bought about AI answers too.
   if (operationId.startsWith("ai_citation_") || operationId.startsWith("ai_app_") || operationId === "ai_overview_fan_out") return "AI_ANSWERS" as const;
   // A search on Google Maps from an office is a tracked search checked from there (Visibility's Map rankings).
-  if (operationId === "serp_google_organic" || operationId === "keyword_search_volume" || operationId === "google_maps_check") return "SEARCHES" as const;
+  if (["serp_google_organic", "keyword_search_volume", "keyword_difficulty", "google_maps_check"].includes(operationId)) return "SEARCHES" as const;
   if (["backlinks_summary", "domain_ranked_keywords", "domain_competitors", "ranking_history"].includes(operationId)) return "SUMMARIES" as const;
   if (operationId.startsWith("backlinks_") || operationId.startsWith("referring_") || operationId === "anchors_list") return "BACKLINKS" as const;
   return "OTHER" as const;

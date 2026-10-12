@@ -199,7 +199,16 @@ export const writeSearchVolumes = internalMutation({
   },
 });
 
-/** File a search-volume purchase (`seoCollectionParse.ts` hands it here). Failures are recorded on the pull. */
+/** File a purchase of figures about searches, its volumes or its difficulty (`seoCollectionParse.ts` hands it here). */
+export async function fileSearchFiguresPull(
+  ctx: ActionCtx,
+  pullId: Id<"seoDataPulls">,
+  pull: Pick<PullForParse, "operationId" | "resultJson" | "taskArgsJson">,
+): Promise<null> {
+  return pull.operationId === DIFFICULTY_OPERATION ? await fileDifficultyPull(ctx, pullId, pull) : await fileSearchVolumePull(ctx, pullId, pull);
+}
+
+/** File a search-volume purchase. Failures are recorded on the pull. */
 export async function fileSearchVolumePull(
   ctx: ActionCtx,
   pullId: Id<"seoDataPulls">,
@@ -210,6 +219,118 @@ export async function fileSearchVolumePull(
     const locationCode = typeof sent.location_code === "number" ? sent.location_code : DEFAULT_LOCATION_CODE;
     const rows = parseSearchVolumes(JSON.parse(pull.resultJson ?? "[]"));
     await ctx.runMutation(internal.searchVolumes.writeSearchVolumes, { pullId, locationCode, rows });
+  } catch (error) {
+    await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, { pullId, error: getErrorMessage(error) });
+  }
+  return null;
+}
+
+// ── How hard a search is ──────────────────────────────────────────────────
+
+/** The purchase: DataForSEO Labs' keyword difficulty, live, up to `SEARCHES_PER_VOLUME_REQUEST` searches a request. */
+export const DIFFICULTY_OPERATION = "keyword_difficulty";
+/** A difficulty is asked for again after this long: it moves slowly. */
+export const DIFFICULTY_MAX_AGE_DAYS = 30;
+
+/** A search's bought difficulty from one place, or null when none was ever bought. */
+export async function searchDifficultyOf(ctx: Reader, keyword: string, locationCode: number): Promise<Doc<"searchDifficulties"> | null> {
+  return await ctx.db.query("searchDifficulties").withIndex("by_keyword_place", (q) => q.eq("keyword", keyword).eq("locationCode", locationCode)).unique();
+}
+
+/**
+ * How hard each search is, for a website's own (insights-one-voice-plan.md,
+ * Anthony's fourth answer: "use what we have and the handful of keywords we
+ * need to get"): the monthly ranking collection's where it holds one, else the
+ * one bought — null where neither is held.
+ */
+export async function difficultiesOf(ctx: Reader, websiteId: Id<"websites">, locationCode: number, searches: readonly string[]): Promise<Map<string, number | null>> {
+  const out = new Map<string, number | null>();
+  for (const search of searches) {
+    const keyword = normaliseKeyword(search);
+    const ranked = await ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", locationCode).eq("keyword", keyword)).first();
+    if (typeof ranked?.difficulty === "number") {
+      out.set(search, ranked.difficulty);
+      continue;
+    }
+    const bought = await searchDifficultyOf(ctx, keyword, locationCode);
+    out.set(search, bought?.difficulty ?? null);
+  }
+  return out;
+}
+
+/**
+ * The difficulties a website's searches still lack, bought in one request a
+ * week: those the monthly collection doesn't hold and none bought in the last
+ * `DIFFICULTY_MAX_AGE_DAYS`, queued from the website's place and sent now.
+ * The same searches asked twice in a day are the one request. Returns how
+ * many were asked for.
+ */
+export async function askDifficultyFor(ctx: MutationCtx, hold: Doc<"companyWebsites">, searches: readonly string[], at: number): Promise<number> {
+  if (isTrackedHold(hold)) return 0;
+  const website = await ctx.db.get(hold.websiteId);
+  if (!website) return 0;
+  const locationCode = hold.locationCode ?? DEFAULT_LOCATION_CODE;
+  const stale = at - DIFFICULTY_MAX_AGE_DAYS * DAY_MS;
+  const held = await difficultiesOf(ctx, hold.websiteId, locationCode, searches);
+  const due: string[] = [];
+  for (const keyword of new Set(searches.map(normaliseKeyword))) {
+    if (!askable(keyword) || typeof held.get(keyword) === "number") continue;
+    const bought = await searchDifficultyOf(ctx, keyword, locationCode);
+    if (bought && bought.updatedAt >= stale) continue;
+    due.push(keyword);
+  }
+  const operation = findSeoOperation(DIFFICULTY_OPERATION)!;
+  for (let start = 0; start < due.length; start += SEARCHES_PER_VOLUME_REQUEST) {
+    const params = { keywords: due.slice(start, start + SEARCHES_PER_VOLUME_REQUEST).sort(), location_code: locationCode, language_code: "en" };
+    const idempotencyKey = buildSeoIdempotencyKey({ operationId: operation.id, websiteId: hold.websiteId, params, cycleStartedAt: at });
+    if (await ctx.db.query("seoDataPulls").withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey)).first()) continue;
+    await ctx.db.insert("seoDataPulls", {
+      operationId: operation.id, family: operation.family, mode: operation.mode, target: website.host, websiteId: hold.websiteId, companyId: hold.companyId,
+      taskArgsJson: JSON.stringify(params), status: "PENDING", tag: idempotencyKey, idempotencyKey, dueAt: at, attempts: 0, costUsd: 0, sandbox: false, submittedAt: at,
+    });
+  }
+  if (due.length > 0) await ctx.scheduler.runAfter(0, internal.seoAgentRuns.sendIfWaiting, {});
+  return due.length;
+}
+
+const difficultyRow = v.object({ keyword: v.string(), difficulty: v.union(v.number(), v.null()) });
+
+/** DataForSEO Labs' answer, one row per search: its difficulty, 0–100, or none where it has none. */
+export function parseKeywordDifficulty(result: unknown): Array<typeof difficultyRow.type> {
+  const records = (Array.isArray(result) ? result : []).flatMap((entry) => {
+    const record = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : null;
+    // A live answer lists its searches under `items`; an answer already flattened is the rows themselves.
+    return Array.isArray(record?.items) ? record.items : record ? [record] : [];
+  });
+  return records.flatMap((item) => {
+    const row = item && typeof item === "object" ? (item as Record<string, unknown>) : null;
+    const keyword = typeof row?.keyword === "string" ? normaliseKeyword(row.keyword) : "";
+    return keyword ? [{ keyword, difficulty: numberOrNull(row?.keyword_difficulty) }] : [];
+  });
+}
+
+/** Keep each search's difficulty from one purchase, replacing what was held. */
+export const writeDifficulties = internalMutation({
+  args: { pullId: v.id("seoDataPulls"), locationCode: v.number(), rows: v.array(difficultyRow) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    for (const row of args.rows) {
+      const held = await searchDifficultyOf(ctx, row.keyword, args.locationCode);
+      const figures = { ...row, locationCode: args.locationCode, checkedDay: dayOf(now), pullId: args.pullId, updatedAt: now };
+      if (held) await ctx.db.patch(held._id, figures);
+      else await ctx.db.insert("searchDifficulties", figures);
+    }
+    return null;
+  },
+});
+
+/** File a difficulty purchase. Failures are recorded on the pull. */
+async function fileDifficultyPull(ctx: ActionCtx, pullId: Id<"seoDataPulls">, pull: Pick<PullForParse, "resultJson" | "taskArgsJson">): Promise<null> {
+  try {
+    const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
+    const locationCode = typeof sent.location_code === "number" ? sent.location_code : DEFAULT_LOCATION_CODE;
+    await ctx.runMutation(internal.searchVolumes.writeDifficulties, { pullId, locationCode, rows: parseKeywordDifficulty(JSON.parse(pull.resultJson ?? "[]")) });
   } catch (error) {
     await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, { pullId, error: getErrorMessage(error) });
   }

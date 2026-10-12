@@ -96,6 +96,8 @@ export type GroupSearch = {
   place?: string | null;
   /** Why the Keyword cannibalisation specialist gave it a page other than the rule's, in a sentence a client reads. */
   reason?: string;
+  /** How hard it is to reach Google's first page for, 0–100: for the group's most searched (`DIFFICULTY_SEARCHES`), when held. */
+  difficulty?: number | null;
   pages: Array<{ path: string; shown: number; clicks: number }>;
   /** Extra Google clicks a month at a top-three place, from how often it is searched when known, else from times shown. */
   gain: number | null;
@@ -541,6 +543,7 @@ export const competingGroupValidator = v.object({
     search: v.string(), shown: v.number(), clicks: v.number(), split: v.boolean(), position: nullable, volume: nullable, top: v.string(),
     pages: v.array(v.object({ path: v.string(), shown: v.number(), clicks: v.number() })), gain: nullable,
     owner: v.optional(v.string()), why: v.optional(v.array(whyValidator)), place: v.optional(nullableText), reason: v.optional(v.string()),
+    difficulty: v.optional(nullable),
   })),
   shared: v.number(),
   split: v.number(),
@@ -649,6 +652,14 @@ const WHY_WORDS: Record<OwnerWhy, string> = {
   NEAR: "near me: the page for where the business has an office", NO_PLACE: "names no one place", WORDS: "its words fit the search best", GOOGLE: "Google already shows it most",
   ENQUIRIES: "more enquiries from Google", AGENT: "the Keyword cannibalisation specialist's choice",
 };
+/** Searches of a group whose difficulty is read, and bought where the monthly collection holds none: its most searched. */
+export const DIFFICULTY_SEARCHES = 10;
+
+/** A group's most searched searches, the ones whose difficulty counts. */
+export function mostSearched(group: CompetingGroup | KeptGroup, most = DIFFICULTY_SEARCHES): string[] {
+  return [...group.searches].filter((search) => search.volume !== null).sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0) || b.shown - a.shown).slice(0, most).map((search) => search.search);
+}
+
 /** Searches of a group Ask Hakken reads, the most searched first. */
 const SEARCHES_FOR_ASSISTANT = 25;
 
@@ -676,6 +687,7 @@ export function competingForAssistant(groups: readonly KeptGroup[]) {
       searches: [...group.searches].sort((a, b) => (b.volume ?? -1) - (a.volume ?? -1) || b.shown - a.shown).slice(0, SEARCHES_FOR_ASSISTANT).map((search) => ({
         search: search.search,
         searched_a_month: search.volume,
+        ...(typeof search.difficulty === "number" ? { difficulty: search.difficulty } : {}),
         should_own: search.owner ?? search.top,
         why: search.reason || (search.why ?? []).map((why) => WHY_WORDS[why].replace("{place}", search.place ? placeName(search.place) : "a place")).join("; "),
       })),

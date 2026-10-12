@@ -12,7 +12,7 @@ import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { BookNames } from "./searchConsolePeriodBooks";
-import { askVolumesFor, searchVolumeOf } from "./searchVolumes";
+import { askDifficultyFor, askVolumesFor, difficultiesOf, searchVolumeOf } from "./searchVolumes";
 import { normaliseKeyword } from "./seoJudgments";
 import { historyOf, monthsOf, pageKindsOf } from "./insightsPeriodData";
 import { clickRatesOf } from "./utils/heroes";
@@ -20,7 +20,7 @@ import { SOURCE_JOIN, fromGoogleSearch, shiftMonth } from "./utils/insightHistor
 import { DEFAULT_LOCATION_CODE, findSeoLocation, resolveLocationCode } from "./utils/seoLocations";
 import { namedIn } from "./utils/placeNames";
 import {
-  OWNER_RULE, brandWordsOf, competingDraft, competingFacts, competingGroupValidator, competingGroups, competingSummary, nameGroups, pathOfPage,
+  OWNER_RULE, brandWordsOf, competingDraft, competingFacts, competingGroupValidator, competingGroups, competingSummary, mostSearched, nameGroups, pathOfPage,
   type CompetingPair, type KeptGroup, type PageFigures, type Places, type SearchFigures,
 } from "./utils/insightCompeting";
 
@@ -140,7 +140,7 @@ export async function keepCompeting(
   });
   await ctx.runMutation(internal.roleRuns.logRunLine, {
     runId: run.runId, companyId: run.companyId, heading: "Keyword cannibalisation",
-    detail: `${kept.saved} groups of competing pages kept, ${ids.size} written up as findings; ${kept.volumesAsked} searches' monthly volumes asked for.`,
+    detail: `${kept.saved} groups of competing pages kept, ${ids.size} written up as findings; ${kept.volumesAsked} searches' monthly volumes and ${kept.difficultiesAsked} searches' difficulty asked for.`,
     failed: false,
   });
 }
@@ -275,6 +275,11 @@ export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"company
   const groups = competingGroups({ ...input, searchOf: (search) => bySearch.get(search) ?? { position: null, volume: null } });
   // The rule's reading of each, so a group read just the same next week keeps the specialist's decision.
   for (const group of groups) Object.assign(group, { decidedBy: "RULE", signature: signatureOf(group) });
+  // How hard each group's most searched searches are: the monthly ranking collection's, else bought (insights-one-voice-plan.md).
+  for (const group of groups) {
+    const held = await difficultiesOf(ctx, hold.websiteId, locationCode, mostSearched(group));
+    for (const search of group.searches) if (held.has(search.search)) search.difficulty = held.get(search.search) ?? null;
+  }
   return { from: competing.from, to: competing.to, groups, websiteRate };
 }
 
@@ -328,10 +333,10 @@ export const saveGroups = internalMutation({
     to: v.string(),
     groups: v.array(v.object({ group: competingGroupValidator, findingId: v.optional(v.id("insightFindings")) })),
   },
-  returns: v.object({ saved: v.number(), volumesAsked: v.number() }),
+  returns: v.object({ saved: v.number(), volumesAsked: v.number(), difficultiesAsked: v.number() }),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.holdId);
-    if (!hold) return { saved: 0, volumesAsked: 0 };
+    if (!hold) return { saved: 0, volumesAsked: 0, difficultiesAsked: 0 };
     const old = await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOST_KEPT);
     for (const row of old) await ctx.db.delete(row._id);
     const now = Date.now();
@@ -343,7 +348,10 @@ export const saveGroups = internalMutation({
     }
     const unknown = args.groups.flatMap((entry) => entry.group.searches.filter((search) => search.volume === null).map((search) => search.search));
     const volumesAsked = await askVolumesFor(ctx, hold, unknown, now);
-    return { saved: Math.min(args.groups.length, MOST_KEPT), volumesAsked };
+    // The most searched searches' difficulty where neither the monthly collection nor a purchase holds it.
+    const hard = args.groups.flatMap((entry) => mostSearched(entry.group).filter((search) => typeof entry.group.searches.find((held) => held.search === search)?.difficulty !== "number"));
+    const difficultiesAsked = await askDifficultyFor(ctx, hold, hard, now);
+    return { saved: Math.min(args.groups.length, MOST_KEPT), volumesAsked, difficultiesAsked };
   },
 });
 

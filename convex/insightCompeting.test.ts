@@ -52,9 +52,9 @@ describe("keyword cannibalisation kept", () => {
     const { holdId, userId } = await seeded(t);
     const kept = group();
     const args = { holdId, week: "2026-10-12", from: "2026-07-13", to: "2026-10-10", groups: [{ group: kept }] };
-    expect(await t.mutation(internal.insightCompeting.saveGroups, args)).toEqual({ saved: 1, volumesAsked: 5 });
+    expect(await t.mutation(internal.insightCompeting.saveGroups, args)).toEqual({ saved: 1, volumesAsked: 5, difficultiesAsked: 0 });
     // Asked again the same day: the groups are written over, the volumes not bought twice.
-    expect(await t.mutation(internal.insightCompeting.saveGroups, args)).toEqual({ saved: 1, volumesAsked: 5 });
+    expect(await t.mutation(internal.insightCompeting.saveGroups, args)).toEqual({ saved: 1, volumesAsked: 5, difficultiesAsked: 0 });
     const pulls = await t.run(async (ctx) => await ctx.db.query("seoDataPulls").take(10));
     expect(pulls).toHaveLength(1);
     expect(JSON.parse(pulls[0].taskArgsJson)).toMatchObject({ keywords: ["brand agency", "brand design agency", "brand identity agency", "branding agency", "branding company"], language_code: "en" });

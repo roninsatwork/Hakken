@@ -337,6 +337,22 @@ export const siteTables = {
     .index("by_pull", ["pullId"]),
 
   /**
+   * How hard a phrase is to reach Google's first page for, from one place
+   * (DataForSEO Labs' keyword difficulty, 0–100), bought only for the searches
+   * the monthly ranking collection doesn't hold it for (Keyword cannibalisation's
+   * most searched, insights-one-voice-plan.md): shared like `searchVolumes`.
+   */
+  searchDifficulties: defineTable({
+    keyword: v.string(),
+    locationCode: v.number(),
+    difficulty: v.union(v.number(), v.null()),
+    checkedDay: v.string(),
+    pullId: v.id("seoDataPulls"),
+    updatedAt: v.number(),
+  })
+    .index("by_keyword_place", ["keyword", "locationCode"]),
+
+  /**
    * How many people search for a phrase each month from one place, what
    * advertisers pay for it and how hard they compete — Google Ads' figures,
    * bought from DataForSEO for the searches no website's keyword list holds:

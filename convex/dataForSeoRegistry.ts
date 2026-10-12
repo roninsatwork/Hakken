@@ -251,6 +251,36 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     },
   },
   {
+    // How hard each search is (0–100), for Keyword cannibalisation's most searched where the monthly
+    // ranking collection holds none (`searchVolumes.askDifficultyFor`; insights-one-voice-plan.md).
+    id: "keyword_difficulty",
+    question: "How hard is each of these searches to reach Google's first page for?",
+    family: "DataForSEO Labs",
+    // Labs publishes no task_post. Live is the only way to ask it.
+    mode: "LIVE",
+    path: "/v3/dataforseo_labs/google/bulk_keyword_difficulty/live",
+    costBand: "low",
+    params: {
+      keywords: {
+        kind: "keywords",
+        required: true,
+        description: "The searches to measure, separated by commas.",
+      },
+      location_code: {
+        kind: "number",
+        required: false,
+        description: "Where the searches are made. Leave unset for the United Kingdom.",
+        default: 2826,
+      },
+      language_code: {
+        kind: "keyword",
+        required: false,
+        description: "The language of the searches. Leave unset for English.",
+        default: "en",
+      },
+    },
+  },
+  {
     id: "keyword_search_volume",
     question: "How many people search for these terms each month, and what do advertisers pay for them?",
     family: "Keywords Data",

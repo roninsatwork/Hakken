@@ -239,6 +239,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   siteSerpPages: cleared("90 days", "seoCollectionSweep/purgeExpiredSerpPages"),
   serpOverviews: cleared("90 days, with its results page", "siteSerp/deleteSerpPage"),
   searchVolumes: LATEST,
+  searchDifficulties: LATEST,
   aiSearchVolumes: LATEST,
   brandRadarMonths: forever("A website's month by month on Google's AI answers: a few hundred bytes a year, the only history of it."),
   brandRadarQuestionParts: LATEST,

@@ -16,7 +16,7 @@ import { fileKeywordListPull, fileRankedPositions } from "./siteKeywordList";
 import { isKeywordListOperation } from "./dataForSeoKeywordListOperations";
 import { AI_OVERVIEW_FAN_OUT_OPERATION } from "./dataForSeoAiOverviewOperations";
 import { fileAiOverviewPull } from "./aiOverviewFanOuts";
-import { SEARCH_VOLUME_OPERATION, fileSearchVolumePull } from "./searchVolumes";
+import { DIFFICULTY_OPERATION, SEARCH_VOLUME_OPERATION, fileSearchFiguresPull } from "./searchVolumes";
 import { isLocalOperation } from "./dataForSeoLocalOperations";
 import { fileLocalPull } from "./localFiling";
 import { isReviewOperation } from "./dataForSeoReviewOperations";
@@ -93,8 +93,8 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (isKeywordListOperation(pull.operationId)) return await fileKeywordListPull(ctx, args.pullId, pull);
   // Google's AI Overviews' searches for a question topic (`aiOverviewFanOuts.ts`, FA8).
   if (pull.operationId === AI_OVERVIEW_FAN_OUT_OPERATION) return await fileAiOverviewPull(ctx, args.pullId, pull);
-  // How many search for the fan-out queries, and what a click costs (`searchVolumes.ts`).
-  if (pull.operationId === SEARCH_VOLUME_OPERATION) return await fileSearchVolumePull(ctx, args.pullId, pull);
+  // How many search for a search and what a click costs, or how hard it is (`searchVolumes.ts`).
+  if (pull.operationId === SEARCH_VOLUME_OPERATION || pull.operationId === DIFFICULTY_OPERATION) return await fileSearchFiguresPull(ctx, args.pullId, pull);
   // Visibility's Local pages: profiles, map checks, markets, posts and found lists (`localFiling.ts`).
   if (isLocalOperation(pull.operationId)) return await fileLocalPull(ctx, args.pullId, pull);
   if (isReviewOperation(pull.operationId)) return await fileReviewPull(ctx, args.pullId, pull);

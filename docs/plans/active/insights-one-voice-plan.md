@@ -164,6 +164,17 @@ below are answered. Nothing is pushed.
     would mean rewriting it for each period, which means many more AI calls.
     That fuller version is Anthony's to ask for.
 
+- **Keyword difficulty, built 2026-10-12 (night).** For each cannibalisation
+  group's ten most searched searches, difficulty (0–100) is read from the
+  monthly ranking collection where held, else from a shared store of bought
+  difficulties (`searchDifficulties`). The missing ones are bought from
+  DataForSEO Labs (`keyword_difficulty`, live) when the week's groups are
+  saved, in one request, never again within 30 days. The specialist reads
+  each search's difficulty as what a top-three place would cost, never as who
+  owns it, and Ask Hakken reads it too. **Not on the screen yet:** the
+  "Difficulty" column changes the approved look of the searches table, so it
+  waits for Anthony to see it drawn.
+
 ## Answered by Anthony, 2026-10-12
 
 1. **Agents:** one new agent, the Page decisions specialist. The Head of

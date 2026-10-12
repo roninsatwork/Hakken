@@ -528,6 +528,7 @@ export async function recordCollectorCall(
 const CALL_NAMES: Record<string, string> = {
   serp_google_organic: "Google",
   keyword_search_volume: "search volumes",
+  keyword_difficulty: "keyword difficulty",
   domain_ranked_keywords: "ranked keywords",
   domain_competitors: "competitors",
   backlinks_summary: "links",

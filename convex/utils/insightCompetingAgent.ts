@@ -52,6 +52,8 @@ export function agentInputOf(group: CompetingGroup | KeptGroup, titles: Readonly
     searches: shownFirst(group).map((search) => ({
       search: search.search,
       searched_a_month: search.volume,
+      // How hard it is to reach Google's first page for, 0–100: what a top-three place would cost, never who owns it.
+      difficulty: search.difficulty ?? null,
       position: search.position === null ? null : Math.round(search.position * 10) / 10,
       shown: Object.fromEntries(search.pages.map((page) => [page.path, page.shown])),
       names_place: search.place ?? null,
