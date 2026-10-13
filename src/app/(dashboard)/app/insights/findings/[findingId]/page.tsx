@@ -24,6 +24,7 @@ import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useInsightsHref } from "../../_components/useInsights";
 import { useInsightWords } from "../../_components/insightWords";
+import { howWeKnowWords, soFarWords } from "../../_components/insightCheck";
 
 type Evidence = { key: string; source: string; shows: string; against: string };
 type RuledOut = { key: string; explanation: string; why: string };
@@ -48,6 +49,7 @@ function spanOf(fact: Fact): string {
 export default function InsightsFindingPage() {
   const params = useParams();
   const t = usePlatformTranslations("insights.finding");
+  const tCheck = usePlatformTranslations("insights.check");
   const words = useInsightWords();
   const href = useInsightsHref();
   const finding = useQuery(api.insightsReads.insightsFinding, { findingId: params.findingId as Id<"insightFindings"> });
@@ -155,7 +157,8 @@ export default function InsightsFindingPage() {
           { key: "why", header: t("ruledOut.why"), cell: (row) => <span className="text-[12px] text-secondary">{row.why}</span> },
         ]}
       />
-      <Notice>{finding.checkOn ? t("howWeKnow", { day: formatDay(finding.checkOn), how: finding.howWeKnow }) : finding.howWeKnow}</Notice>
+      {/* How it will be checked, and its figure so far (utils/insightClock.ts). */}
+      <Notice>{[howWeKnowWords(finding, tCheck, (day) => t("howWeKnow", { day, how: finding.howWeKnow })), soFarWords(finding.progress, finding.clock, tCheck)].filter(Boolean).join(" ")}</Notice>
     </>
   );
 }

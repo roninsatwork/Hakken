@@ -21,6 +21,7 @@ import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useInsightsBox, useInsightsHref, useInsightsSite } from "../_components/useInsights";
 import { boxedSays } from "../_components/insightBoxSays";
+import { soFarRow } from "../_components/insightCheck";
 
 const RESULT_TONE = { RIGHT: "success", WRONG: "warning", TOO_EARLY: "neutral", DUE: "info" } as const;
 const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning", WAITING: "info", TOO_EARLY: "info" } as const;
@@ -36,6 +37,7 @@ const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning", WAITING
 export default function InsightsTrackRecordPage() {
   const t = usePlatformTranslations("insights.track");
   const tBox = usePlatformTranslations("insights.box");
+  const tCheck = usePlatformTranslations("insights.check");
   const box = useInsightsBox("TRACK_RECORD");
   const router = useRouter();
   const href = useInsightsHref();
@@ -134,7 +136,11 @@ export default function InsightsTrackRecordPage() {
           { key: "finding", header: t("columns.finding"), cell: (row) => <span className="flex flex-col"><span className="text-[13px] text-foreground">{row.headline}</span>{row.outcomeNote ? <span className="text-[12px] text-secondary">{row.outcomeNote}</span> : null}</span> },
           { key: "acted", header: t("columns.acted"), cell: (row) => <TagLabel>{row.actedAt ? t("yes") : t("notYet")}</TagLabel> },
           { key: "checkOn", header: t("columns.checkOn"), cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.checkOn ? formatDay(row.checkOn) : "–"}</span> },
-          { key: "result", header: t("columns.result"), cell: (row) => <StatusLabel tone={RESULT_TONE[resultOf(row) as keyof typeof RESULT_TONE]}>{t(`results.${resultOf(row)}`)}</StatusLabel> },
+          // An open finding's figure so far beside its result (utils/insightClock.ts).
+          { key: "result", header: t("columns.result"), cell: (row) => {
+            const soFar = row.outcome ? null : soFarRow(row.progress, tCheck);
+            return <span className="flex flex-col gap-0.5"><StatusLabel tone={RESULT_TONE[resultOf(row) as keyof typeof RESULT_TONE]}>{t(`results.${resultOf(row)}`)}</StatusLabel>{soFar ? <span className="text-[12px] text-secondary">{soFar}</span> : null}</span>;
+          } },
         ]}
       />
     </>

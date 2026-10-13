@@ -18221,6 +18221,23 @@
         "empty": "These fill in once {platformName} holds a year of your figures."
       }
     },
+    "check": {
+      "clock": "How we'll know: {platformName} compares the {days} days after {start} with {than}, on {day}. If the page changes before then, the {days} days start again from the change. {how} The result goes on your Track record either way.",
+      "clockSite": "How we'll know: {platformName} compares the {days} days after {start} with {than}, on {day}. {how} The result goes on your Track record either way.",
+      "written": "this was written",
+      "changed": "the page changed on {day}",
+      "with": {
+        "YEAR": "the same days a year before",
+        "BEFORE": "the days just before them"
+      },
+      "in": {
+        "YEAR": "in the same days a year before",
+        "BEFORE": "in the days just before them"
+      },
+      "soFar": "So far: {now} in the {days} days to {to}, against {against} {than}.",
+      "soFarWritten": "So far: {now} now, against {against} when this was written.",
+      "soFarRow": "So far {now}, against {against}"
+    },
     "finding": {
       "back": "All findings",
       "notFound": "That finding can't be found",

@@ -13,6 +13,8 @@ import { appError } from "./utils/appError";
 import { factValidator } from "./utils/insightFacts";
 import { EARLIER_BRIEFS, INSIGHT_BRIEFS, fixedRulesFor } from "./utils/insightBriefs";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
+import { clockValidator, pageSeenValidator, progressValidator } from "./utils/insightClock";
+import { originOf } from "./utils/moneyPageChecks";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
@@ -278,6 +280,7 @@ export const savedFindingValidator = v.object({
   comparisons: v.array(v.array(v.string())),
   watch: v.optional(v.object({ key: v.string(), direction: v.union(v.literal("UP"), v.literal("DOWN")) })),
   checkOn: v.optional(v.string()),
+  clock: v.optional(clockValidator),
   editorNote: v.optional(v.string()),
 });
 
@@ -455,20 +458,54 @@ export const saveReport = internalMutation({
 // ---------------------------------------------------------------------------
 // Keeping score and the change log (§2.7, I25, I30)
 
-/** A website's findings due to be checked by today, not yet checked. */
-export const dueFindings = internalQuery({
-  args: { holdId: v.id("companyWebsites"), today: v.string() },
-  returns: v.array(v.object({
-    findingId: v.id("insightFindings"),
-    specialist: v.string(),
-    watch: v.object({ key: v.string(), direction: v.union(v.literal("UP"), v.literal("DOWN")) }),
-    then: v.union(v.null(), factValidator),
-  })),
+/** Findings a website's weekly check reads, the newest first. */
+const OPEN_READ = 500;
+/** Changes read for the days the website's pages changed. */
+const CHANGES_READ = 300;
+
+/**
+ * A website's open findings — published, not yet checked, with a figure to
+ * watch — and what their checks need (utils/insightClock.ts): the address
+ * its pages are read at, each finding's page as last read, and the days the
+ * change log saw its pages change.
+ */
+export const openFindings = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.object({
+    origin: v.union(v.string(), v.null()),
+    findings: v.array(v.object({
+      findingId: v.id("insightFindings"),
+      specialist: v.string(),
+      watch: v.object({ key: v.string(), direction: v.union(v.literal("UP"), v.literal("DOWN")) }),
+      then: v.union(v.null(), factValidator),
+      written: v.string(),
+      checkInDays: v.number(),
+      clock: v.union(v.null(), clockValidator),
+      checkOn: v.union(v.string(), v.null()),
+      pageSeen: v.union(v.null(), pageSeenValidator),
+    })),
+    changes: v.array(v.object({ page: v.string(), day: v.string() })),
+  }),
   handler: async (ctx, args) => {
-    const due = await ctx.db.query("insightFindings").withIndex("by_check", (q) => q.eq("status", "PUBLISHED").lte("checkOn", args.today)).take(500);
-    return due
-      .filter((finding) => finding.companyWebsiteId === args.holdId && !finding.outcome && finding.watch)
-      .map((finding) => ({ findingId: finding._id, specialist: finding.specialist, watch: finding.watch!, then: finding.facts.find((fact) => fact.key === finding.watch!.key) ?? null }));
+    const hold = await ctx.db.get(args.holdId);
+    const website = hold ? await ctx.db.get(hold.websiteId) : null;
+    if (!hold || !website) return { origin: null, findings: [], changes: [] };
+    const console = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    const rows = (await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(OPEN_READ))
+      .filter((finding) => finding.status === "PUBLISHED" && !finding.outcome && finding.watch);
+    const changes = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id)).take(CHANGES_READ);
+    return {
+      origin: originOf(website, console),
+      findings: rows.map((finding) => {
+        const written = new Date(finding.createdAt).toISOString().slice(0, 10);
+        return {
+          findingId: finding._id, specialist: finding.specialist, watch: finding.watch!, then: finding.facts.find((fact) => fact.key === finding.watch!.key) ?? null,
+          written, checkInDays: finding.checkOn ? Math.round((Date.parse(finding.checkOn) - Date.parse(written)) / 86_400_000) : 56,
+          clock: finding.clock ?? null, checkOn: finding.checkOn ?? null, pageSeen: finding.pageSeen ?? null,
+        };
+      }),
+      changes: changes.flatMap((change) => (change.from ? [{ page: change.from, day: change.day ?? change.week }] : [])),
+    };
   },
 });
 
@@ -477,10 +514,18 @@ export const scoreFindings = internalMutation({
   args: {
     companyId: v.id("companies"),
     outcomes: v.array(v.object({ findingId: v.id("insightFindings"), specialist: v.string(), outcome: v.union(v.literal("RIGHT"), v.literal("WRONG"), v.literal("TOO_EARLY")), note: v.string() })),
+    /** Each open finding's week: its clock, its day, its figure so far, its page as read (utils/insightClock.ts). */
+    updates: v.optional(v.array(v.object({
+      findingId: v.id("insightFindings"), clock: v.optional(clockValidator), checkOn: v.optional(v.string()), progress: v.optional(progressValidator), pageSeen: v.optional(pageSeenValidator),
+    }))),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now();
+    for (const { findingId, ...fields } of args.updates ?? []) {
+      const finding = await ctx.db.get(findingId);
+      if (finding && !finding.outcome && Object.keys(fields).length > 0) await ctx.db.patch(findingId, fields);
+    }
     for (const scored of args.outcomes) {
       await ctx.db.patch(scored.findingId, { outcome: scored.outcome, outcomeNote: scored.note });
       const tally = await ctx.db.query("insightTally").withIndex("by_company_specialist", (q) => q.eq("companyId", args.companyId).eq("specialist", scored.specialist)).first();

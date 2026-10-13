@@ -16,7 +16,7 @@ import { COMPETING_RULE } from "./utils/insightCompeting";
 import { applyServiceCalls, carryServices, serviceReading, servicesToCall, type Service } from "./utils/insightStrategy";
 import { candidatesFor, type Candidate } from "./utils/insightChecks";
 import { editFinding, type DraftFinding } from "./utils/insightEditor";
-import { factsByKey, fillFacts, formatFact, shiftDay, type Fact } from "./utils/insightFacts";
+import { factsByKey, fillFacts, shiftDay, type Fact } from "./utils/insightFacts";
 import {
   FINDINGS_FORMAT,
   READS,
@@ -29,7 +29,9 @@ import {
 import { whyFacts, type WhyView } from "./utils/insightWhyFacts";
 import { typedNumbers } from "./utils/insightEditor";
 import { scorecardFrom } from "./utils/insightSummary";
-import { outcomeOf, type Change } from "./utils/insightTrack";
+import type { Change } from "./utils/insightTrack";
+import { checkOf } from "./utils/insightClock";
+import { checkOpenFindings } from "./insightFindingChecks";
 import { enquiryCheck, enquiryCheckBrief } from "./utils/insightEnquiryCheck";
 import { measurementBrief, measurementFindings, measurementFrom } from "./utils/insightMeasurement";
 import { planBrief } from "./utils/insightPlan";
@@ -237,22 +239,23 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
     failed: false,
   });
 
-  // Keeping score (§2.7): each finding due today, its watched figure read again against what it was when written.
   try {
-    const due = await ctx.runQuery(internal.insightsTeam.dueFindings, { holdId: args.holdId, today });
-    const outcomes = due.flatMap((finding) => {
-      const then = finding.then, current = facts.get(finding.watch.key);
-      if (!then || !current) return [];
-      const outcome = outcomeOf(then.value, current.value, finding.watch.direction, then.unit);
-      return [{ findingId: finding.findingId, specialist: finding.specialist, outcome, note: `${then.label}: ${formatFact(then)} then, ${formatFact(current)} now.` }];
-    });
-    if (outcomes.length > 0) await ctx.runMutation(internal.insightsTeam.scoreFindings, { companyId: args.companyId, outcomes });
     // The change log (I25): the page changes the website's own figures show, the parts of money pages
     // this week's check saw change, and its own Google profile's changes, each once, with what followed.
     const found = await ctx.runQuery(internal.insightsReading.pageChangesInternal, { holdId: args.holdId });
     const { notRemoved } = found;
     const changes = [...found.changes, ...await ctx.runQuery(internal.insightsReading.newChangesInternal, { holdId: args.holdId, today, seen: pagesChanged })];
     if (changes.length > 0 || notRemoved.length > 0) await ctx.runMutation(internal.insightsTeam.saveChanges, { holdId: args.holdId, companyId: args.companyId, week: weekOf(now), changes, notRemoved });
+    // Keeping score (§2.7; utils/insightClock.ts), after the change log so this week's page changes count:
+    // each open finding's days started again when its page changed, its figure so far kept, each one due judged.
+    const checked = await checkOpenFindings(ctx, args, facts, today);
+    if (checked.judged > 0 || checked.restarted > 0) {
+      await ctx.runMutation(internal.roleRuns.logRunLine, {
+        runId: args.runId, companyId: args.companyId, heading: "Track record",
+        detail: `${checked.judged} findings checked${checked.restarted > 0 ? `; ${checked.restarted} started counting again because their page changed` : ""}.`,
+        failed: false,
+      });
+    }
   } catch (error) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Track record", detail: failureSummary(error), failed: true });
   }
@@ -362,7 +365,8 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
       facts: used,
       comparisons: draft.comparisons,
       ...(draft.watch && facts.has(draft.watch.key) ? { watch: draft.watch } : {}),
-      checkOn: shiftDay(today, Math.min(120, Math.max(14, Math.round(draft.checkInDays ?? 56)))),
+      // Its days start today, and again whenever its page changes; a figure held for no span is read on its day (utils/insightClock.ts).
+      ...checkOf(draft, facts, today),
     });
   }
   // The Measurement check's ways to enquire, said by the run itself unless a specialist already wrote the same (phase 6).

@@ -6,6 +6,7 @@ import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { marketFacts } from "./insightsReading";
 import { LEAGUE_IDS, leaguesFrom } from "./utils/insightLeagues";
 import { factValidator } from "./utils/insightFacts";
+import { clockValidator, progressValidator } from "./utils/insightClock";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
 import { serviceValidator } from "./utils/insightStrategy";
 import { measurementValidator } from "./utils/insightMeasurement";
@@ -307,6 +308,9 @@ export const insightsFinding = tenantQuery({
     facts: v.array(factValidator),
     comparisons: v.array(v.array(v.string())),
     checkOn: v.union(v.string(), v.null()),
+    /** When its days started and what it is judged on, and its figure so far (utils/insightClock.ts). */
+    clock: v.union(v.null(), clockValidator),
+    progress: v.union(v.null(), progressValidator),
     atStake: v.union(v.number(), v.null()),
     outcome: v.union(v.string(), v.null()),
     createdAt: v.number(),
@@ -333,6 +337,8 @@ export const insightsFinding = tenantQuery({
       facts: finding.facts,
       comparisons: finding.comparisons,
       checkOn: finding.checkOn ?? null,
+      clock: finding.clock ?? null,
+      progress: finding.progress ?? null,
       atStake: finding.atStake ?? null,
       outcome: finding.outcome ?? null,
       createdAt: finding.createdAt,
@@ -534,7 +540,10 @@ const LIKE_YOURS = 5;
 export const insightsTrackRecord = tenantQuery({
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.object({
-    findings: v.array(v.object({ findingId: v.id("insightFindings"), host: v.string(), headline: v.string(), week: v.string(), checkOn: v.union(v.string(), v.null()), actedAt: v.union(v.number(), v.null()), outcome: v.union(v.string(), v.null()), outcomeNote: v.union(v.string(), v.null()) })),
+    findings: v.array(v.object({
+      findingId: v.id("insightFindings"), host: v.string(), headline: v.string(), week: v.string(), checkOn: v.union(v.string(), v.null()), actedAt: v.union(v.number(), v.null()), outcome: v.union(v.string(), v.null()), outcomeNote: v.union(v.string(), v.null()),
+      clock: v.union(v.null(), clockValidator), progress: v.union(v.null(), progressValidator),
+    })),
     tally: v.object({ right: v.number(), wrong: v.number(), unclear: v.number() }),
     changes: v.array(v.object({ changeId: v.id("insightChanges"), host: v.string(), kind: v.string(), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), seenIn: v.string(), before: v.number(), after: v.number(), result: v.string(), week: v.string(), day: v.union(v.string(), v.null()) })),
     learnings: v.array(v.object({ kind: v.string(), own: v.object({ lost: v.number(), held: v.number(), grew: v.number() }), across: v.union(v.null(), v.object({ companies: v.number(), lost: v.number(), held: v.number(), grew: v.number() })) })),
@@ -549,6 +558,7 @@ export const insightsTrackRecord = tenantQuery({
       const rows = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", site.hold._id)).order("desc").take(500);
       findings.push(...rows.filter((row) => row.status === "PUBLISHED").map((row) => ({
         findingId: row._id, host: site.host, headline: row.headline, week: row.week, checkOn: row.checkOn ?? null, actedAt: row.actedAt ?? null, outcome: row.outcome ?? null, outcomeNote: row.outcomeNote ?? null,
+        clock: row.clock ?? null, progress: row.progress ?? null,
       })));
     }
     const tallies = ctx.companyId ? await ctx.db.query("insightTally").withIndex("by_company_specialist", (q) => q.eq("companyId", ctx.companyId!)).take(20) : [];

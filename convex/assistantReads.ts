@@ -12,6 +12,7 @@ import { readWebsiteHost } from "./websiteIdentity";
 import { isTrackedHold } from "./utils/websitePairing";
 import { competingForAssistant } from "./utils/insightCompeting";
 import { summaryOf } from "./utils/insightCompetingAgent";
+import { checkForAssistant } from "./utils/insightClock";
 import { pageDecisionsForAssistant } from "./utils/insightPageAgent";
 import { servicesForAssistant } from "./utils/insightStrategy";
 import { boxesForAssistant } from "./utils/insightBoxes";
@@ -129,11 +130,13 @@ export const insightsInternal = internalQuery({
         do_first: finding.action,
         how_we_will_know: finding.howWeKnow,
         check_on: finding.checkOn ?? null,
+        how_it_is_checked: checkForAssistant(finding.clock, finding.progress, finding.checkOn),
         sure: finding.sure,
         link: `/app/insights/findings/${finding._id}`,
       })),
       earlierStillOpen: earlier.map((finding) => ({
         week: finding.week, headline: finding.headline, do_first: finding.action, check_on: finding.checkOn ?? null,
+        how_it_is_checked: checkForAssistant(finding.clock, finding.progress, finding.checkOn),
         ...(finding.actedAt ? { acted_on: new Date(finding.actedAt).toISOString().slice(0, 10) } : {}),
         link: `/app/insights/findings/${finding._id}`,
       })),

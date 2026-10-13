@@ -99,9 +99,9 @@ export const FINDINGS_FORMAT = [
   " \"ruledOut\": each an explanation you checked, written as \"The explanation: why it doesn't hold\" — a few words, a colon, then one sentence naming its facts,",
   " \"sure\": \"HIGH\", \"MEDIUM\" or \"LOW\",",
   " \"action\": one sentence, what to do first,",
-  " \"howWeKnow\": one sentence naming the figure to watch in words (not its value) and when to look again,",
+  " \"howWeKnow\": one sentence naming the figure to watch in words (not its value) and which way it should move — never a date or a number of days, which the check sets,",
   " \"watch\": {\"key\": the fact to read again, \"direction\": \"UP\" or \"DOWN\"},",
-  " \"checkInDays\": whole days until it can be judged, 14 to 120,",
+  " \"checkInDays\": how long its figure needs once the change is made, 14 to 120 — under 75 for a quick one such as Google clicks, judged on 30 days and on 90 when those show no clear change; 90 for a slow one such as a page's enquiries; its days start again whenever its page changes,",
   " \"comparisons\": [[\"one fact key\", \"the fact key it is compared with\"], ...] for every comparison the words make}.",
 ].join("\n");
 

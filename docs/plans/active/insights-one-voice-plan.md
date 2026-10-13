@@ -233,6 +233,32 @@ below are answered. Nothing is pushed.
     have one, up from 9.
   - **5, the summary note:** left as it is.
 
+- **Checks counted from the change, built 2026-10-13.** Anthony, on a
+  finding due on 9 January 2027: "why is this so far in the future", then
+  "go". A finding was read again on a day its specialist chose (14 to 120
+  days), on its figure as written. The Kapferer article's was a 12-month
+  total, so on 9 January only a quarter of it would have been new, and its
+  days counted from when it was written, not from the change.
+  Now (`utils/insightClock.ts`, `insightFindingChecks.ts`):
+  - A finding's clock starts when it is written, and again whenever Hakken
+    sees its page change. Each week the finding's own page is read again
+    with the money pages' reader, and the change log counts too.
+  - It is judged on its figure's 30 or 90 days once every one of those
+    days is after the clock started, against the same days a year before
+    (the days just before where a year before isn't held).
+  - A short check (under 75 days) starts on 30 days, and goes on to 90
+    when 30 show no clear change.
+  - A figure held for no span (links, mentions, reviews) is read again on
+    its day, as before.
+  - Its figure so far is kept each week and shown on the finding's page
+    and on Track record, and Ask Hakken reads the same words.
+  - The specialists now give no date in "How we'll know"; the check sets
+    it.
+
+  A dry run on ronins.co.uk's 24 open findings moved none later than 3 days
+  (the figures' lag) and the 60-day ones earlier: 11 December to 14
+  November. Kapferer's is 12 January unless its page changes first.
+
 ## Morning list (2026-10-13, answered "Go" — see the follow-up above)
 
 1. **The "Difficulty" column** on a cannibalisation group's searches table:

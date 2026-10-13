@@ -18221,6 +18221,23 @@
         "empty": "Si riempie quando {platformName} ha un anno dei tuoi dati."
       }
     },
+    "check": {
+      "clock": "Come lo sapremo: {platformName} confronta i {days} giorni dopo che {start} con {than}, il {day}. Se la pagina cambia prima, i {days} giorni ripartono dal cambiamento. {how} Il risultato va nel tuo storico in ogni caso.",
+      "clockSite": "Come lo sapremo: {platformName} confronta i {days} giorni dopo che {start} con {than}, il {day}. {how} Il risultato va nel tuo storico in ogni caso.",
+      "written": "questo è stato scritto",
+      "changed": "la pagina è cambiata il {day}",
+      "with": {
+        "YEAR": "gli stessi giorni di un anno prima",
+        "BEFORE": "i giorni appena prima"
+      },
+      "in": {
+        "YEAR": "negli stessi giorni di un anno prima",
+        "BEFORE": "nei giorni appena prima"
+      },
+      "soFar": "Finora: {now} nei {days} giorni fino al {to}, contro {against} {than}.",
+      "soFarWritten": "Finora: {now} adesso, contro {against} quando è stato scritto.",
+      "soFarRow": "Finora {now}, contro {against}"
+    },
     "finding": {
       "back": "Tutti i risultati",
       "notFound": "Risultato non trovato",

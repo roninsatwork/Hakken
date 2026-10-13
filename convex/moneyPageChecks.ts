@@ -8,7 +8,7 @@ import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
 import { changeKindValidator, fingerprintChanges } from "./utils/insightTrack";
-import { PAGE_READER_AGENT, indexedFrom, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
+import { PAGE_READER_AGENT, indexedFrom, originOf, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
 
 /**
  * The weekly checks on a website's money pages (docs/plans/active/
@@ -50,13 +50,8 @@ export const checkTargets = internalQuery({
       .slice(0, MOST_MONEY_PAGES)
       .map((page) => ({ page: page.page, kind: page.page === "/" ? "HOME" : page.pageType ?? null, clicks: page.clicks }));
     const last = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", hold._id)).first();
-    const host = (website.displayHost ?? website.host).replace(/^https?:\/\//, "");
-    // A page's address as Search Console's property names it: a web-address property is that address
-    // (the www address, not the bare one, else Google refuses the inspection); a domain property takes any.
-    const property = console?.status === "CONNECTED" ? console.property ?? null : null;
-    const origin = property && /^https?:\/\//.test(property) ? property.replace(/\/$/, "") : `https://${host}`;
     return {
-      origin,
+      origin: originOf(website, console),
       consoleId: console?.status === "CONNECTED" ? console._id : null,
       property: console?.status === "CONNECTED" ? console.property ?? null : null,
       pages,
@@ -116,24 +111,32 @@ async function checkPage(origin: string, page: string, inspect: ((address: strin
       if (!response.ok) problems.add(`PageSpeed: ${response.status}`);
       return response.ok ? speedFrom(await response.json()) : null;
     })().catch(() => null),
-    (async () => {
-      const response = await fetch(address, { headers: { "User-Agent": PAGE_READER_AGENT, Accept: "text/html" } });
-      if (!response.ok) return null;
-      const html = await response.text();
-      let facts = pageFactsOf(html);
-      // A page drawn by its scripts shows almost no words to a plain read: Firecrawl renders it (plan §9).
-      if (facts.words < THIN_PAGE && process.env.FIRECRAWL_API_KEY) {
-        const rendered = await fetch("https://api.firecrawl.dev/v1/scrape", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false }),
-        }).then((answer) => (answer.ok ? answer.json() : null)).catch(() => null) as { data?: { markdown?: string } } | null;
-        if (rendered?.data?.markdown) facts = pageFactsOf(html, rendered.data.markdown);
-      }
-      return { structured: structuredDataOf(html), facts };
-    })().catch(() => null),
+    readPage(address).catch(() => null),
   ]);
   return { indexed, speed, structured: read?.structured ?? null, facts: read?.facts ?? null };
+}
+
+/**
+ * What a page of the website says, as the weekly checks read it: its words
+ * and asks, and its structured data. Null when it can't be read. Also read
+ * for a finding's own page, so a change to it restarts the finding's check
+ * (utils/insightClock.ts).
+ */
+export async function readPage(address: string): Promise<{ structured: string[]; facts: PageFacts } | null> {
+  const response = await fetch(address, { headers: { "User-Agent": PAGE_READER_AGENT, Accept: "text/html" } });
+  if (!response.ok) return null;
+  const html = await response.text();
+  let facts = pageFactsOf(html);
+  // A page drawn by its scripts shows almost no words to a plain read: Firecrawl renders it (plan §9).
+  if (facts.words < THIN_PAGE && process.env.FIRECRAWL_API_KEY) {
+    const rendered = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false }),
+    }).then((answer) => (answer.ok ? answer.json() : null)).catch(() => null) as { data?: { markdown?: string } } | null;
+    if (rendered?.data?.markdown) facts = pageFactsOf(html, rendered.data.markdown);
+  }
+  return { structured: structuredDataOf(html), facts };
 }
 
 /** A website's money pages, checked: started by the team's run, or by hand for a first check. */

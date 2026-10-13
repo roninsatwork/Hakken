@@ -324,6 +324,31 @@ describe("Insights' looks", () => {
     await expectApprovedLook(container, PLAN, "Finding", "Insights → A finding");
   });
 
+  // When a finding is checked (utils/insightClock.ts; Anthony, 13 October 2026: "go" on counting from the change).
+  const CLOCK = { from: "2026-11-03", why: "PAGE_CHANGED", days: 90, key: "ga.landing./hub/kapferer-brand-identity-prism/.conversions.90", page: "/hub/kapferer-brand-identity-prism/" };
+  const PROGRESS = { day: "2026-11-09", now: 3, against: 1, than: "YEAR", unit: "count", from: "2026-08-09", to: "2026-11-07" };
+
+  it("23b · A finding says its days start again when its page changes, and its figure so far", async () => {
+    nav.pathname = "/app/insights/findings/finding_1";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsFinding": { ...FINDING, checkOn: "2027-02-04", clock: CLOCK, progress: PROGRESS } });
+    render(<InsightsFindingPage />);
+    await screen.findByText(/compares the 90 days after the page changed on 3 Nov 2026 with the same days a year before, on 4 Feb 2027\. If the page changes before then, the 90 days start again from the change\./);
+    expect(screen.getByText(/So far: 3 in the 90 days to 7 Nov 2026, against 1 in the same days a year before\./)).toBeTruthy();
+  });
+
+  it("24c · Track record says each open finding's figure so far", async () => {
+    nav.pathname = "/app/insights/track-record";
+    answer({
+      "insightsReads:insightsHome": HOME,
+      "insightsReads:insightsTrackRecord": {
+        findings: [{ findingId: "finding_1", host: "ronins.co.uk", headline: FINDING_ROW.headline, week: "2026-10-05", checkOn: "2027-02-04", actedAt: null, outcome: null, outcomeNote: null, clock: CLOCK, progress: PROGRESS }],
+        tally: { right: 0, wrong: 0, unclear: 0 }, changes: [], learnings: [], fixes: [],
+      },
+    });
+    render(<InsightsTrackRecordPage />);
+    await screen.findByText("So far 3, against 1");
+  });
+
   it("3 · Your month", async () => {
     nav.pathname = "/app/insights/your-month";
     answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsLatestReport": MONTH_REPORT });

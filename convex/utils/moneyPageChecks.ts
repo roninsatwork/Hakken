@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import type { Doc } from "../_generated/dataModel";
 
 /**
  * The weekly checks on a website's money pages (docs/plans/active/
@@ -175,4 +176,15 @@ export function pageFactsOf(html: string, markdown: string | null = null): PageF
     firstAsk,
     opening: after.split(" ").slice(0, 120).join(" "),
   };
+}
+
+/**
+ * A website's address as its pages are read at: as Search Console's property
+ * names it — a web-address property is that address (the www address, not the
+ * bare one, else Google refuses the inspection); a domain property takes any.
+ */
+export function originOf(website: Doc<"websites">, console: Doc<"searchConsoleConnections"> | null): string {
+  const host = (website.displayHost ?? website.host).replace(/^https?:\/\//, "");
+  const property = console?.status === "CONNECTED" ? console.property ?? null : null;
+  return property && /^https?:\/\//.test(property) ? property.replace(/\/$/, "") : `https://${host}`;
 }

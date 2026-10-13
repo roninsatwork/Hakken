@@ -10,6 +10,7 @@ import { draftAreaValidator, draftKindValidator, draftStatusValidator } from "./
 import { panelQuestionValidator } from "./utils/insightPanel";
 import { conversionValidator } from "./utils/insightConversion";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
+import { clockValidator, pageSeenValidator, progressValidator } from "./utils/insightClock";
 import { historyKindValidator, historyRowValidator } from "./utils/insightHistory";
 import { competingGroupValidator } from "./utils/insightCompeting";
 import { createValidator, decisionValidator } from "./utils/insightDecisions";
@@ -70,6 +71,10 @@ export const insightsTables = {
     /** The figure to read again on `checkOn`, and which way it should move. */
     watch: v.optional(v.object({ key: v.string(), direction: v.union(v.literal("UP"), v.literal("DOWN")) })),
     checkOn: v.optional(v.string()),
+    /** When its days start and what it is judged on; its page as last read; its figure so far (utils/insightClock.ts). */
+    clock: v.optional(clockValidator),
+    pageSeen: v.optional(pageSeenValidator),
+    progress: v.optional(progressValidator),
     outcome: v.optional(insightOutcomeValidator),
     outcomeNote: v.optional(v.string()),
     /** When someone at the company took its steps on (Add the steps to Hakken tasks): the Track record's "acted on". */
@@ -79,7 +84,6 @@ export const insightsTables = {
     createdAt: v.number(),
   })
     .index("by_hold_week", ["companyWebsiteId", "week"])
-    .index("by_check", ["status", "checkOn"])
     // A website's next checks, for the Executive summary's "what Hakken does next".
     .index("by_hold_check", ["companyWebsiteId", "status", "checkOn"]),
 
