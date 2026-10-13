@@ -227,10 +227,10 @@ below are answered. Nothing is pushed.
     what is saved (`utils/insightBoxFacts.ts`). The Funnel box covers "where
     visitors came from", its sources table.
   - **1, the Difficulty column:** drawn on ronins.co.uk's app group and sent
-    as a picture. It reads difficulty free for every search wherever it is
-    already held, and still buys only each group's ten most searched: 45 of
-    the group's 200 searches have one, up from 9. Built and set aside, not
-    committed, until Anthony approves the look.
+    as a picture; Anthony approved it ("yes") and it is built. It reads
+    difficulty free for every search wherever it is already held, and still
+    buys only each group's ten most searched: 45 of the group's 200 searches
+    have one, up from 9.
   - **5, the summary note:** left as it is.
 
 ## Morning list (2026-10-13, answered "Go" — see the follow-up above)
@@ -256,13 +256,12 @@ below are answered. Nothing is pushed.
 
 ## Waiting on Anthony (2026-10-13, after the follow-up)
 
-1. **The Difficulty column's look:** the picture is sent; a yes builds it.
-2. **Turning Jev on for Keyword cannibalisation:** Decisions → "Which page
+1. **Turning Jev on for Keyword cannibalisation:** Decisions → "Which page
    answers this search?". It is the same switch as Fan-out's "Your page".
-3. **"Where enquiries come from", if it means the page for one source**
+2. **"Where enquiries come from", if it means the page for one source**
    (for example "Enquiries from ChatGPT"): that page has no box today, and
    giving it one changes its look.
-4. **A ronins.co.uk run to prove the follow-up:** about $0.50. Until one
+3. **A ronins.co.uk run to prove the follow-up:** about $0.50. Until one
    runs, the cannibalisation pages show the rule's sentences and the three
    new boxes show the screens' own.
 
