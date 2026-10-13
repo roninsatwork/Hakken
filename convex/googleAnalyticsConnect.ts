@@ -22,6 +22,7 @@ import {
 import { lastThirtyDays, listKeyEvents, propertyDetails, runReport, siteAddresses, yesterdayUtc } from "./googleAnalyticsApi";
 import { countryIdOf, newestWholeDayIn } from "./googleAnalyticsCollect";
 import {
+  COUNTED_WITH,
   analyticsAttemptValidator,
   analyticsProblemValidator,
   analyticsStatusValidator,
@@ -29,7 +30,8 @@ import {
   healthResultValidator,
   propertyChoiceValidator,
 } from "./googleAnalyticsSchema";
-import { tickedAtFirst } from "./utils/analyticsEvents";
+import { readsAsEnquiry, tickedAtFirst } from "./utils/analyticsEvents";
+import { forgetCountedHistory } from "./insightHistoryForget";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { tellSuperAdmins } from "./googleAnalyticsHealth";
 import { shiftDay } from "./searchConsoleDays";
@@ -293,17 +295,23 @@ export const countingTarget = internalQuery({
   },
 });
 
+/** Events that read as enquiries listed beside the key events, the most seen first (conversions-back-in-time-plan.md BT2). */
+export const MOST_ENQUIRY_EVENTS = 20;
+
 /**
  * Read from Google what the admin chooses from (§3, steps 4 and 5): the
  * property's name, time zone and currency, the website's own addresses when
- * they are not known yet, and the property's key events with how many of each
- * the website had in the last 30 days and the value Analytics gives each.
+ * they are not known yet, the property's key events, and the events that read
+ * as enquiries seen in the last 12 months (BT2) — each with how many the
+ * website had in the last 30 days and the value Analytics gives each.
+ * `thenCollect`: read before the website is collected again, whole (BT4),
+ * which then starts.
  */
 export const readWhatCounts = internalAction({
-  args: { connectionId: v.id("googleAnalyticsConnections") },
+  args: { connectionId: v.id("googleAnalyticsConnections"), thenCollect: v.optional(v.boolean()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const target = await ctx.runQuery(internal.googleAnalyticsConnect.countingTarget, args);
+    const target = await ctx.runQuery(internal.googleAnalyticsConnect.countingTarget, { connectionId: args.connectionId });
     if (!target) return null;
     const token = await accessTokenFor(ctx, args.connectionId);
     if (!token.ok) return null;
@@ -322,7 +330,27 @@ export const readWhatCounts = internalAction({
       });
       return null;
     }
-    const names = keyEvents.events.map((event) => event.eventName);
+    // The events that read as enquiries, seen in the last 12 months, beside the key events: Hakken counts them from
+    // Google's own counts, marked as key events or not (BT2).
+    const keyNames = new Set(keyEvents.events.map((event) => event.eventName));
+    const year = await runReport(token.accessToken, target.property, {
+      startDate: shiftDay(newest, -364),
+      endDate: newest,
+      dimensions: ["eventName"],
+      metrics: ["eventCount"],
+      hostNames: addresses.found.addresses,
+      countries: [target.country],
+    });
+    if (!year.ok) {
+      await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: year.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY" });
+      return null;
+    }
+    const enquiries = year.rows
+      .filter((row) => !keyNames.has(row.keys[0]) && readsAsEnquiry(row.keys[0]) && row.values[0] > 0)
+      .sort((left, right) => right.values[0] - left.values[0])
+      .slice(0, MOST_ENQUIRY_EVENTS)
+      .map((row) => row.keys[0]);
+    const names = [...keyNames, ...enquiries];
     const counts = new Map<string, { count: number; value: number }>();
     if (names.length > 0) {
       const report = await runReport(token.accessToken, target.property, {
@@ -346,12 +374,16 @@ export const readWhatCounts = internalAction({
       currency: details.details.currencyCode,
       addresses: addresses.found.addresses,
       ...(addresses.found.others ? { otherAddresses: addresses.found.others } : {}),
-      events: keyEvents.events.map((event) => {
+      events: [
+        ...keyEvents.events.map((event) => ({ eventName: event.eventName, defaultValue: event.defaultValue, keyEvent: true, perVisit: event.perVisit })),
+        ...enquiries.map((eventName) => ({ eventName, defaultValue: null, keyEvent: false, perVisit: false })),
+      ].map(({ defaultValue, ...event }) => {
         const seen = counts.get(event.eventName);
         // Analytics' own value: the event's default, or the average of the values sent with it.
         const sent = seen && seen.count > 0 && seen.value > 0 ? Math.round((seen.value / seen.count) * 100) / 100 : null;
-        return { eventName: event.eventName, analyticsValue: event.defaultValue ?? sent, lastThirtyDays: seen?.count ?? 0 };
+        return { ...event, analyticsValue: defaultValue ?? sent, lastThirtyDays: seen?.count ?? 0 };
       }),
+      ...(args.thenCollect ? { thenCollect: true } : {}),
     });
     return null;
   },
@@ -360,7 +392,14 @@ export const readWhatCounts = internalAction({
 /**
  * What was read, kept for the admin's choice. An event already ticked keeps
  * its tick and its Hakken value; a new one is ticked only when it is nearly
- * always a conversion (`tickedAtFirst`).
+ * always a conversion (`tickedAtFirst`) — and one that is not a key event only
+ * when no key event is ticked, so a key event built from it is never counted
+ * beside it (conversions-back-in-time-plan.md BT5).
+ *
+ * The events are listed as Hakken now counts them (`listedWith`). An event
+ * listed for the first time on a connected website has no history kept yet:
+ * the website is collected again, whole (BT3, BT4), at once when `thenCollect`
+ * asks or no run is under way, else on its next run.
  */
 export const writeWhatCounts = internalMutation({
   args: {
@@ -371,7 +410,14 @@ export const writeWhatCounts = internalMutation({
     currency: v.string(),
     addresses: v.array(v.string()),
     otherAddresses: v.optional(v.array(v.string())),
-    events: v.array(v.object({ eventName: v.string(), analyticsValue: v.union(v.number(), v.null()), lastThirtyDays: v.number() })),
+    events: v.array(v.object({
+      eventName: v.string(),
+      analyticsValue: v.union(v.number(), v.null()),
+      lastThirtyDays: v.number(),
+      keyEvent: v.boolean(),
+      perVisit: v.boolean(),
+    })),
+    thenCollect: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -380,6 +426,9 @@ export const writeWhatCounts = internalMutation({
     if (!connection || connection.property !== args.property) return null;
     const before = new Map((connection.events ?? []).map((event) => [event.eventName, event]));
     const firstTime = connection.events === undefined;
+    const keyTicked = args.events.some((event) => event.keyEvent && tickedAtFirst(event.eventName));
+    const grew = !firstTime && args.events.some((event) => !before.has(event.eventName));
+    const connected = connection.status === "CONNECTED";
     await ctx.db.patch(connection._id, {
       propertyName: args.propertyName,
       timeZone: args.timeZone,
@@ -390,15 +439,20 @@ export const writeWhatCounts = internalMutation({
         const held = before.get(event.eventName);
         return {
           eventName: event.eventName,
-          counted: held ? held.counted : firstTime && tickedAtFirst(event.eventName),
+          counted: held ? held.counted : firstTime && tickedAtFirst(event.eventName) && (event.keyEvent || !keyTicked),
           analyticsValue: event.analyticsValue,
           hakkenValue: held?.hakkenValue ?? null,
           lastThirtyDays: event.lastThirtyDays,
+          keyEvent: event.keyEvent,
+          perVisit: event.perVisit,
         };
       }),
       eventsReadAt: Date.now(),
+      listedWith: COUNTED_WITH,
+      ...(grew && connected ? { countedWith: undefined } : {}),
       updatedAt: Date.now(),
     });
+    if (connected && (args.thenCollect || (grew && !connection.collecting))) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
     return null;
   },
 });
@@ -424,7 +478,7 @@ export const saveWhatCounts = adminMutation({
     const chosen = new Map(args.events.map((event) => [event.eventName, event]));
     for (const event of args.events) {
       if (!connection.events.some((held) => held.eventName === event.eventName)) {
-        throw appError("NOT_FOUND", `${event.eventName} is not a key event of this property.`);
+        throw appError("NOT_FOUND", `${event.eventName} is not one of the events this property's connection lists.`);
       }
       if (event.hakkenValue !== null && (!Number.isFinite(event.hakkenValue) || event.hakkenValue < 0 || event.hakkenValue > MOST_VALUE)) {
         throw appError("INVALID_INPUT", `A value must be between 0 and ${MOST_VALUE.toLocaleString("en-GB")}.`);
@@ -433,6 +487,12 @@ export const saveWhatCounts = adminMutation({
     const now = Date.now();
     const first = connection.status === "COUNTING";
     const another = first && connection.dataProperty !== undefined && connection.dataProperty !== connection.property;
+    // What counts changed: Insights' months counted the old way are asked again on its next run (BT3, BT6).
+    const countedBefore = new Set(connection.events.filter((event) => event.counted).map((event) => event.eventName));
+    const countedNow = new Set(connection.events.filter((held) => chosen.get(held.eventName)?.counted ?? held.counted).map((held) => held.eventName));
+    if (!first && (countedBefore.size !== countedNow.size || [...countedNow].some((name) => !countedBefore.has(name)))) {
+      await forgetCountedHistory(ctx, connection.companyWebsiteId);
+    }
     await ctx.db.patch(connection._id, {
       events: connection.events.map((held) => {
         const event = chosen.get(held.eventName);
@@ -668,6 +728,8 @@ export const statusConnectionValidator = v.object({
   currency: orNull(v.string()),
   /** Null while the key events are read from Google. */
   events: v.union(v.array(countedEventValidator), v.null()),
+  /** Listed events that count the same day for day: one is very likely a copy of the other (BT5). */
+  copies: v.array(v.object({ eventName: v.string(), of: v.string() })),
   connectedAt: v.union(v.number(), v.null()),
   disconnectedAt: v.union(v.number(), v.null()),
   newestDay: orNull(v.string()),
@@ -760,6 +822,7 @@ async function asStatus(
     timeZone: connection.timeZone ?? null,
     currency: connection.currency ?? null,
     events: connection.eventsReadAt !== undefined ? connection.events ?? [] : null,
+    copies: connection.copies ?? [],
     connectedAt: connection.connectedAt ?? null,
     disconnectedAt: connection.disconnectedAt ?? null,
     newestDay: connection.newestDay ?? null,

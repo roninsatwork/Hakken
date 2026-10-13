@@ -11,6 +11,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
+import { forgetCountedHistory } from "./insightHistoryForget";
 import { runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type RealtimeAsk, type ReportAsk, type ReportRow, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
@@ -37,6 +38,7 @@ import {
   type PackedPart,
 } from "./googleAnalyticsLists";
 import {
+  COUNTED_WITH,
   analyticsPackedRows,
   type AnalyticsList,
   type AnalyticsPeriod,
@@ -196,7 +198,10 @@ export type CollectTarget = {
   addresses: string[];
   origin: string;
   timeZone: string;
+  /** The events listed on the connection: each row keeps their counts, so changing what counts re-prices every date. */
   events: string[];
+  /** Those Google counts once a visit: counted by the visits they happened in (conversions-back-in-time-plan.md BT1). */
+  perVisit: string[];
   newestDay: string | undefined;
   oldestDay: string | undefined;
   weeklyPeriodsAt: number | undefined;
@@ -225,6 +230,11 @@ export function countryIdOf(code: string): string {
   return ALPHA3_TO_ALPHA2[code.toUpperCase()] ?? "GB";
 }
 
+/** The listed events Google counts once a visit (BT1). */
+export function perVisitOf(connection: Pick<Doc<"googleAnalyticsConnections">, "events">): string[] {
+  return (connection.events ?? []).filter((event) => event.perVisit === true).map((event) => event.eventName);
+}
+
 export const collectTarget = internalQuery({
   args: { connectionId: v.id("googleAnalyticsConnections") },
   handler: async (ctx, args): Promise<CollectTarget | null> => {
@@ -243,6 +253,7 @@ export const collectTarget = internalQuery({
       origin: siteOrigin(addresses, website?.host ?? ""),
       timeZone: connection.timeZone ?? "Europe/London",
       events: (connection.events ?? []).map((event) => event.eventName),
+      perVisit: perVisitOf(connection),
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
@@ -371,7 +382,7 @@ export async function askList(
   }
   return {
     ok: true,
-    groups: joinAsks(list, lead, main.rows, events?.rows ?? []),
+    groups: joinAsks(list, lead, main.rows, events?.rows ?? [], new Set(target.perVisit)),
     flags: {
       folded: main.folded || (events?.folded ?? false),
       thresholded: main.thresholded || (events?.thresholded ?? false),
@@ -751,6 +762,8 @@ export const finishCollection = internalMutation({
     firstDone: v.boolean(),
     /** Every address's visits over the 30 days, asked with the weekly lists: the strangers check. */
     hostVisits: v.optional(v.array(v.object({ host: v.string(), visits: v.number() }))),
+    /** The run collected it again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4). */
+    recount: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -758,8 +771,11 @@ export const finishCollection = internalMutation({
     if (!connection || connection.property !== args.property) return null;
     const now = Date.now();
     const first = args.firstDone && connection.backfilledAt === undefined;
+    // Insights' months counted the old way are asked again on its next run (BT6).
+    if (args.recount) await forgetCountedHistory(ctx, connection.companyWebsiteId);
     await ctx.db.patch(connection._id, {
       ...(args.hostVisits ? { hostVisits: args.hostVisits } : {}),
+      ...(args.recount ? { countedWith: COUNTED_WITH } : {}),
       lastCollectedAt: now,
       dailyPeriodsAt: now,
       ...(args.weekly ? { weeklyPeriodsAt: now } : {}),

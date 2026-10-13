@@ -81,7 +81,7 @@ export type ListCopy = {
  * layout the reader expects, so a copy from before a column was added is
  * rebuilt rather than misread.
  */
-export async function readListCopy(ctx: QueryCtx, kind: AnyCopyKind, key: string, fields: readonly string[]): Promise<ListCopy | null> {
+export async function readListCopy(ctx: { db: QueryCtx["db"] }, kind: AnyCopyKind, key: string, fields: readonly string[]): Promise<ListCopy | null> {
   const header = await ctx.db
     .query("siteListCopies")
     .withIndex("by_kind_key", (q) => q.eq("kind", kind).eq("key", key))

@@ -2,6 +2,7 @@ import { seen, toPage, type Seen, type SeenPhrase, type SeenStep, type SeenTarge
 import { AI_ASSISTANTS_CHANNEL } from "../aiAssistants";
 import { LIKELY_CONVERSIONS, NEVER_TICKED, PURCHASE_EVENT } from "../analyticsEvents";
 import { NOT_SORTED_KIND } from "../pageKinds";
+import { MOVE_VIEWS, moveCounts, type MoveCounts } from "../pageMoves";
 
 /**
  * What Hakken sees on the Google Analytics screens
@@ -136,6 +137,8 @@ export function websitesSees(rows: readonly WebsiteFacts[]): Seen {
 type Figures = { visits: number; engaged: number; conversions: number; value: number };
 
 export type OverviewFacts = {
+  /** The website's hold: Search Console's screens for it share the id. */
+  siteId: string;
   now: Figures | null;
   before: Figures | null;
   /** Whether anything counts as a conversion. */
@@ -158,7 +161,8 @@ export function overviewSees(facts: OverviewFacts): Seen {
   const { now, before } = facts;
   if (!now) return seen([]);
   const google = googleSays(facts.searchConsole);
-  const push: Maybe<SeenStep> = google && google.code === "googleRarely" && { code: "push", link: "pagesToPush", to: toPage("heroes", { tab: "push" }) };
+  // Pages shown but rarely clicked move up from Search Console's Almost there: its searches at positions 4 to 20.
+  const push: Maybe<SeenStep> = google && google.code === "googleRarely" && { code: "push", link: "pagesToPush", to: { url: `/app/search-console/${facts.siteId}/almost-there` } };
   if (!facts.counting) {
     return seen([{ code: "notCounting", a: now.visits }, google], [{ code: "chooseWhatCounts", link: "chooseWhatCounts", to: CHOOSE }, push]);
   }
@@ -205,6 +209,8 @@ export type ListRowFacts = {
   /** Visits against the span before, as a fraction. */
   change: number | null;
   conversionsBefore: number | null;
+  /** Page views in the span before: All pages' rows only. */
+  viewsBefore?: number | null;
   members?: number;
 };
 
@@ -351,24 +357,47 @@ function deviceSees(rows: readonly ListRowFacts[], device: string, every: readon
   ]);
 }
 
-/** All pages: how few pages make the conversions, the one making the most, and the most viewed making none. */
-export function allPagesSees(rows: readonly ListRowFacts[], counting: boolean): Seen {
-  if (rows.length === 0) return seen([{ code: "none" }]);
-  if (!counting) return seen([{ code: "notCounting", a: rows.length }], [{ code: "chooseWhatCounts", link: "chooseWhatCounts", to: CHOOSE }]);
+/**
+ * All pages (docs/plans/active/all-pages-rethink-plan.md AP6), never in money:
+ * how many of the website's pages were viewed and how many had no visits; how
+ * many gained, dropped and stayed static; the page that dropped most, with the
+ * conversions it still made, or else the page that gained most. Its steps:
+ * see why that page dropped, copy the next step of the page making most
+ * conversions onto the most viewed page making none, and the pages nobody
+ * visited that Google sends most clicks. `moves` is the list read whole
+ * (`withQuietPages`); without it the rows are counted as they are.
+ */
+export function allPagesSees(rows: readonly ListRowFacts[], counting: boolean, moves: { counts: MoveCounts; quiet: readonly string[] } | null = null): Seen {
+  const viewed = rows.filter((row) => row.views > 0);
+  if (viewed.length === 0) return seen([{ code: "none" }]);
+  const counts = moves?.counts ?? moveCounts(rows.map((row) => ({ views: row.views, viewsBefore: row.viewsBefore ?? null })));
+  const moved = rows.flatMap((row) => (row.viewsBefore === null || row.viewsBefore === undefined ? [] : [{ row, by: row.views - row.viewsBefore }]));
+  const drop = moved.filter((move) => move.by <= -MOVE_VIEWS).sort((left, right) => left.by - right.by || left.row.label.localeCompare(right.row.label))[0] ?? null;
+  const gain = moved.filter((move) => move.by >= MOVE_VIEWS).sort((left, right) => right.by - left.by || left.row.label.localeCompare(right.row.label))[0] ?? null;
+  const total = sum(rows, (row) => row.conversions);
   const converting = rows.filter((row) => row.conversions > 0);
-  const total = sum(converting, (row) => row.conversions);
-  if (total === 0) return seen([{ code: "noConversions", a: rows.length }]);
-  const best = [...converting].sort((left, right) => right.conversions - left.conversions || right.value - left.value)[0];
-  const viewed = [...rows].sort((left, right) => right.views - left.views);
-  const idle = viewed.find((row) => row.conversions === 0 && row.views > 0) ?? null;
+  const best = [...converting].sort((left, right) => right.conversions - left.conversions || right.views - left.views)[0] ?? null;
+  const idle = [...viewed].sort((left, right) => right.views - left.views).find((row) => row.conversions === 0) ?? null;
   // A page of All pages opens its own screen there (GA29).
-  const idleTo = idle?.key.startsWith("~") ? toPage("all-pages/page", { key: idle.key }) : null;
+  const own = (row: ListRowFacts | null) => (row?.key.startsWith("~") ? toPage("all-pages/page", { key: row.key }) : null);
+  const dropTo = drop ? own(drop.row) : null;
+  const idleTo = own(idle);
+  const quiet = moves?.quiet ?? [];
+  const noVisits = toPage("all-pages", { move: "none" });
   return seen([
-    { code: "madeOn", a: total, b: converting.length },
-    { code: "best", text: best.label, a: best.conversions, b: best.views },
-    idle && { code: idle === viewed[0] ? "idleMostViewed" : "idle", text: idle.label, a: idle.views },
+    // The pages viewed and the pages with no visits add up to every page, as the filters do (`moveOf`).
+    { code: counts.none > 0 ? "viewedOf" : "viewedAll", a: counts.all - counts.none, b: counts.all, c: counts.none },
+    counts.gains + counts.dropped > 0 && { code: "moved", a: counts.gains, b: counts.dropped, c: counts.static },
+    drop
+      ? { code: counting && drop.row.conversions > 0 ? "droppedMostMade" : "droppedMost", text: drop.row.label, a: -drop.by, b: drop.row.conversions, c: total }
+      : gain && { code: "gainedMost", text: gain.row.label, a: gain.by },
   ], [
-    idle && idleTo && { code: "copy", text: best.label, more: idle.label, link: "seePage", to: idleTo },
+    !counting && { code: "chooseWhatCounts", link: "chooseWhatCounts", to: CHOOSE },
+    drop && dropTo && { code: "whyDropped", text: drop.row.label, a: -drop.by, link: "seePage", to: dropTo },
+    counting && best && idle && idleTo && { code: "copy", text: best.label, more: idle.label, link: "seePage", to: idleTo },
+    quiet.length > 1
+      ? { code: "noVisitsTwo", text: quiet[0], more: quiet[1], link: "noVisits", to: noVisits }
+      : quiet.length === 1 && { code: "noVisitsOne", text: quiet[0], link: "noVisits", to: noVisits },
   ]);
 }
 
@@ -512,42 +541,65 @@ export function conversionsSees(facts: ConversionsFacts): Seen {
 // 12 · Not connected yet, 14 · Choose what counts
 // ---------------------------------------------------------------------------
 
-type Check = { check: string; passing: boolean; names?: string[]; count?: number; share?: number };
+type Check = { check: string; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number };
 
-/** The checks, the one that costs most first: no figures at all, then none of them right, then some wrong. */
-const CHECK_ORDER = ["TRACKING_STOPPED", "NOTHING_COUNTED", "TOO_MUCH_UNKNOWN", "SUDDEN_FALL", "NO_VALUE", "PAYMENT_REFERRALS", "SELF_REFERRAL", "STRANGERS"];
+/**
+ * The checks, the one that costs most first: no figures at all, then none of
+ * them right (a conversion that is really something else), then some missing
+ * or wrong.
+ */
+const CHECK_ORDER = [
+  "TRACKING_STOPPED", "NOTHING_COUNTED", "SOMETHING_ELSE", "TOO_MUCH_UNKNOWN", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS", "SUDDEN_FALL",
+  "NO_VALUE", "PAYMENT_REFERRALS", "SELF_REFERRAL", "STRANGERS", "COUNTED_AGAIN",
+];
+
+/** Checks the costliest first, as What Hakken sees names them and the Tracking health page lists them (Anthony, 2026-10-13). */
+export function inCheckOrder<T extends { check: string }>(checks: readonly T[]): T[] {
+  const rank = (check: string) => (CHECK_ORDER.includes(check) ? CHECK_ORDER.indexOf(check) : CHECK_ORDER.length);
+  return [...checks].sort((left, right) => rank(left.check) - rank(right.check));
+}
 
 /** Where each check is fixed. */
 const CHECK_FIX: Record<string, { link: string; to: SeenTarget }> = {
   TRACKING_STOPPED: { link: "overview", to: toPage("") },
   NOTHING_COUNTED: { link: "chooseWhatCounts", to: CHOOSE },
+  SOMETHING_ELSE: { link: "conversions", to: toPage("conversions") },
   TOO_MUCH_UNKNOWN: { link: "landingPages", to: toPage("landing-pages") },
+  ENQUIRY_UNCOUNTED: { link: "chooseWhatCounts", to: CHOOSE },
+  NEVER_HAPPENS: { link: "conversions", to: toPage("conversions") },
   SUDDEN_FALL: { link: "conversions", to: toPage("conversions") },
   NO_VALUE: { link: "changeWhatCounts", to: CHOOSE },
   PAYMENT_REFERRALS: { link: "referrals", to: toPage("channels/channel", { key: "Referral" }) },
   SELF_REFERRAL: { link: "referrals", to: toPage("channels/channel", { key: "Referral" }) },
   STRANGERS: { link: "connection", to: toPage("connection") },
+  COUNTED_AGAIN: { link: "allPages", to: toPage("all-pages") },
 };
+
+/** The checks whose names are conversions or events, named in the reader's words (`{event}`). */
+const NAMES_EVENTS = new Set(["NO_VALUE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
 
 /**
  * One failing check in a sentence: its share (or count) and count, which way
- * a sudden fall went, and the conversions with no value by their own names.
+ * a sudden fall went, and the events it names by their own names — for a
+ * conversion that is really something else, the first and what it really is.
  */
 function checkSays(check: Check): SeenPhrase {
   const fell = check.check === "SUDDEN_FALL" ? `.${check.names?.[0] === "conversions" ? "conversions" : "visits"}` : "";
+  const named = check.check === "SOMETHING_ELSE" && check.names?.length
+    ? { text: [check.names[0], check.others?.[0] ?? ""].filter(Boolean).join(","), c: check.names.length }
+    : NAMES_EVENTS.has(check.check) && check.names?.length ? { text: check.names.join(","), c: check.names.length } : {};
   return {
     code: `check.${check.check}${fell}`,
     a: check.share ?? check.count ?? 0,
     b: check.count ?? 0,
-    ...(check.check === "NO_VALUE" && check.names?.length ? { text: check.names.join(","), c: check.names.length } : {}),
+    ...named,
   };
 }
 
 /** Tracking health: how many checks need a look, the costliest two, and how to fix each. */
 export function trackingHealthSees(health: { checks: readonly Check[] } | null): Seen {
   if (!health || health.checks.length === 0) return seen([]);
-  const failing = health.checks.filter((check) => !check.passing)
-    .sort((left, right) => CHECK_ORDER.indexOf(left.check) - CHECK_ORDER.indexOf(right.check));
+  const failing = inCheckOrder(health.checks.filter((check) => !check.passing));
   if (failing.length === 0) return seen([{ code: "allPassing", a: health.checks.length }]);
   return seen(
     [{ code: "failing", a: failing.length, b: health.checks.length }, ...failing.slice(0, 2).map(checkSays)],

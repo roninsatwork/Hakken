@@ -10,6 +10,8 @@ import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { NEWEST, PROPERTY, dayOf, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 import { shiftDay } from "./searchConsoleDays";
+import { YOUR_PAGES_COPY, YOUR_PAGES_FIELDS } from "./holdPages";
+import { encodeCopyRows } from "./utils/copyColumns";
 
 /**
  * What the Google Analytics screens read (docs/plans/active/google-analytics-plan.md
@@ -35,7 +37,7 @@ async function collected(t: Harness, visits: Visit[]) {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "COUNTING", property: PROPERTY, propertyName: "Acme",
-      stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [], timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1,
+      stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [], timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT",
       events: [
         { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
         { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
@@ -536,7 +538,6 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
 
     expect(await read("visitors")).toMatchObject({ ok: true, figures: { visits: 30 * 33 }, googleSignals: "off" });
     expect(await read("products")).toMatchObject({ ok: false });
-    expect(await read("heroes")).toMatchObject({ ok: true, screen: "heroes" });
 
     // Another company's website, or none at all: never read.
     const stranger = fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "rival.test", screen: "overview", days: 30 }));
@@ -590,7 +591,8 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(overview.searchConsole).toEqual({ clicks: 120, impressions: 24_000 });
     expect(overview.seen.says[0]).toEqual({ code: "lead.up.up", a: (990 - 480) / 480, b: 60, c: 150 });
     expect(overview.seen.says.at(-1)).toEqual({ code: "googleRarely", a: 24_000, b: 0.005 });
-    expect(overview.seen.steps.at(-1)).toMatchObject({ code: "push", to: { segment: "heroes", filters: { tab: "push" } } });
+    // Pages shown but rarely clicked: Search Console's Almost there for the same website.
+    expect(overview.seen.steps.at(-1)).toEqual({ code: "push", link: "pagesToPush", to: { url: `/app/search-console/${siteId}/almost-there` } });
   });
 
   test("each list's box is of the whole list, whatever is searched, its pages named by their paths", async () => {
@@ -608,7 +610,52 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(quoted.length).toBeGreaterThan(0);
     expect(quoted.every((value) => value!.startsWith("/"))).toBe(true);
     const pages = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
-    expect(pages.seen.says[0]).toMatchObject({ code: "madeOn" });
+    expect(pages.seen.says[0]).toMatchObject({ code: "viewedAll", a: 3, b: 3 });
+  });
+
+  test("All pages' Views a day: the ticked pages asked of Google in one go, each held by its number, each adding up to its row", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    const ticked = all.rows.filter((row) => row.key.startsWith("~")).slice(0, 2);
+    const args = { siteId, period: "30" as const, device: "", pages: ticked.map((row) => row.key) };
+    const first = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, args);
+    expect(first.pages.map((page) => page.points)).toEqual([null, null]);
+    expect(first.missing.map((page) => page.ref)).toEqual(args.pages);
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "", plotted: first.missing });
+    const drawn = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, args);
+    expect(drawn.missing).toEqual([]);
+    for (const [index, page] of drawn.pages.entries()) {
+      expect(page.address).toBe(ticked[index].label);
+      expect(page.points).toHaveLength(30);
+      expect(page.points!.reduce((sum, point) => sum + point.views, 0)).toBe(ticked[index].views);
+    }
+    // Five at most, whatever is asked; anything but a page number is not drawn.
+    const many = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, { ...args, pages: [...args.pages, "~x1", "~x2", "~x3", "~x4", "https://www.acme-shop.test/"] });
+    expect(many.pages).toHaveLength(5);
+  });
+
+  test("All pages whole: the website's own pages nobody viewed, each filter counted, sorted by the views gained, downloaded as filtered", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    // Sites → Your pages: the home page again (one row, not two), and two pages nobody viewed.
+    await t.run(async (ctx) => {
+      // Collecting built one from what Analytics saw: replaced, as a rebuild would.
+      for (const held of await ctx.db.query("siteListCopies").withIndex("by_kind_key", (q) => q.eq("kind", YOUR_PAGES_COPY).eq("key", `${siteId}`)).collect()) await ctx.db.delete(held._id);
+      const rows = [["/", null, 1, 1, 50, 1, "HOME"], ["/pricing/", null, 1, 1, 9, 1, "SERVICE"], ["/about/", null, 1, 0, 2, 0, "BRAND"]];
+      await ctx.db.insert("siteListCopies", { kind: YOUR_PAGES_COPY, key: `${siteId}`, buildId: "b1", fields: [...YOUR_PAGES_FIELDS], rows: rows.length, parts: 1, cut: null, meta: {}, builtAt: 1 });
+      await ctx.db.insert("siteListCopyParts", { kind: YOUR_PAGES_COPY, key: `${siteId}`, buildId: "b1", part: 0, data: encodeCopyRows(rows, YOUR_PAGES_FIELDS.length) });
+    });
+    const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs, move: "all", sort: "viewsChange" });
+    expect(all.moves).toEqual({ all: 5, gains: 3, dropped: 0, static: 0, none: 2 });
+    expect(all.rows.map((row) => [new URL(row.label).pathname, row.views - (row.viewsBefore ?? 0)])).toEqual([["/", 600], ["/ai-agency/", 330], ["/contact/", 90], ["/about/", 0], ["/pricing/", 0]]);
+    expect(all.seen.says[0]).toEqual({ code: "viewedOf", a: 3, b: 5, c: 2 });
+    expect(all.seen.steps.at(-1)).toMatchObject({ code: "noVisitsTwo", text: "/pricing/", more: "/about/", to: { segment: "all-pages", filters: { move: "none" } } });
+    const none = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs, move: "none" });
+    expect(none.rows.map((row) => [new URL(row.label).pathname, row.views, row.key.startsWith("~")])).toEqual([["/about/", 0, false], ["/pricing/", 0, false]]);
+    expect(none.total).toBe(2);
+    const download = await user.query(api.googleAnalyticsReads.analyticsListAll, { siteId, list: "page", period: "30", device: "", move: "gains" });
+    expect(download.rows).toHaveLength(3);
   });
 
   test("a device's box waits for Google's answer, then weighs it against every device", async () => {
@@ -629,7 +676,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
-    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 9 });
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 12 });
     const connected = await user.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
     expect(connected?.searchConsole).toBeNull();
     await t.run(async (ctx) => {
@@ -647,9 +694,14 @@ describe("tracking health", () => {
     const { siteId, connectionId, admin } = await collected(t, history(40));
     const health = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!.health!;
     // The log counts every page twice a visit or more: the ninth check fails too (analytics-page-screen-plan.md, phase 6).
-    expect(health.checks.filter((check) => !check.passing).map((check) => check.check)).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN"]);
+    // And "sign_up" is counted but never happens in 640 visits: a conversion that never happens (conversion-checks-plan.md CC4).
+    expect(health.checks.filter((check) => !check.passing).map((check) => check.check)).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"]);
+    expect(health.checks.find((check) => check.check === "NEVER_HAPPENS")).toMatchObject({ names: ["sign_up"], count: 90 });
     const told = async () => (await t.run(async (ctx) => await ctx.db.query("notifications").collect())).filter((row) => row.kind === "GOOGLE_ANALYTICS_HEALTH");
-    expect((await told()).map((row) => row.title)).toEqual(["acme-shop.test: a conversion has no value", "acme-shop.test: visits on another address", "acme-shop.test: pages counted more than once a visit"]);
+    expect((await told()).map((row) => row.title)).toEqual([
+      "acme-shop.test: a conversion has no value", "acme-shop.test: visits on another address", "acme-shop.test: pages counted more than once a visit",
+      "acme-shop.test: a conversion never happens",
+    ]);
     // System alerts: the platform's super admins, never the company's own admins.
     const rows = await told();
     const roles = await t.run(async (ctx) => await Promise.all(rows.map(async (row) => (await ctx.db.get(row.userId))?.role)));
@@ -657,7 +709,7 @@ describe("tracking health", () => {
     // Saved again with the same gap: no second bell.
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [{ eventName: "click_tel", counted: true, hakkenValue: null }] });
     await finishScheduled(t);
-    expect(await told()).toHaveLength(3);
+    expect(await told()).toHaveLength(4);
     // Given a value: the check passes.
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [{ eventName: "click_tel", counted: true, hakkenValue: 150 }] });
     await finishScheduled(t);

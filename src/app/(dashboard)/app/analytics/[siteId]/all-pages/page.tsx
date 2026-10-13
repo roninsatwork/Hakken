@@ -2,39 +2,62 @@
 
 import { Files } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { PAGE_MOVES, type PageMove } from "@/convex/utils/pageMoves";
+import { SegmentedChoice } from "@/src/ui/components/screens/SettingsCard";
+import { formatNumber } from "../../../sites/_components/siteFormat";
+import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { ListTopBars } from "../../_components/AnalyticsChart";
+import { PagesDailyChart } from "../../_components/AnalyticsChart";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus } from "../../_components/useAnalytics";
 
+const MOVES: readonly (PageMove | "all")[] = ["all", ...PAGE_MOVES];
+
 /**
- * All pages (§5; §11 board 6; §15 screen 8; §18.2 board 20): every page
- * viewed — its views, the people who saw it, the time engaged on it, the
- * conversions made on that page with their value beside them (§10, Q4) and
- * the change — opening on the most viewed: page views before money (GA26).
- * Under What Hakken sees. Each opens its own screen (GA29).
+ * All pages (docs/plans/active/all-pages-rethink-plan.md; drawn on the canvas
+ * "Hakken — All pages, rethought", 2026-10-13), laid out as Google Analytics
+ * lays out Pages and screens: What Hakken sees, a short "Views a day" chart
+ * of the website and the pages ticked in the table (five at most), then the
+ * table — every page on the website, viewed or not, with no money: visits,
+ * views and their change, dwell time, the conversions made there, their rate
+ * and their change. Its filters, beside the search box, say how many pages
+ * gained, dropped, stayed static or had no visits. Each page with views
+ * opens its own screen (GA29).
  */
 export default function AnalyticsAllPagesPage() {
   const t = useTranslations("googleAnalytics.allPages");
+  const tt = useTranslations("googleAnalytics.table");
   const status = useAnalyticsStatus();
   const siteId = useAnalyticsSiteId();
   const hrefFor = useAnalyticsHref(siteId);
   const currency = status?.connection?.currency ?? null;
+  const [move, setMove] = useSiteParam<PageMove | "all">("move", "all", MOVES);
   return (
     <AnalyticsListScreen
       header={{ icon: <Files className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
-      head={(answer) => (
+      head={(answer, plotted) => (
         <>
           <AnalyticsSees screen="allPages" seen={answer?.seen} currency={currency} />
-          <ListTopBars list="page" sort="views" bars="allPages" />
+          <PagesDailyChart pages={plotted} />
         </>
       )}
       list="page"
+      move={move}
+      plot
+      filters={(answer) => (
+        <SegmentedChoice
+          size="compact"
+          label={tt("moves.label")}
+          value={move}
+          options={MOVES.map((one) => ({ value: one, label: tt(`moves.${one}`, { count: answer?.moves ? formatNumber(answer.moves[one]) : "…" }) }))}
+          onChange={setMove}
+        />
+      )}
       noun="pages"
       opening="views"
       searchPlaceholder={t("findPage")}
       rowHref={(row) => (row.key.startsWith("~") ? hrefFor("all-pages/page", { key: row.key }) : null)}
-      emptyLabel={t("empty")}
+      emptyLabel={move === "all" ? t("empty") : t(`emptyMoves.${move}`)}
     />
   );
 }

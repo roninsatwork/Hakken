@@ -12,13 +12,14 @@ import { inBook, termsOf, type PartToWrite } from "./searchConsolePeriods";
 import { journeyOf } from "./googleAnalyticsHeroes";
 
 /**
- * Heroes and attention stays inside Convex's limits on a large website
- * (docs/plans/active/google-analytics-plan.md §4.3, §13): it reads the most of
- * any Analytics screen — Analytics' landing pages and their addresses, Search
- * Console's pages, its searches and its days, each for 30 days and the 30
- * before — so its reading budget is held at five times morehandles.co.uk's
- * size, inside half of a read's limits (16 MiB and 32,000 records), as every
- * Analytics screen's is. Counted, not timed (AGENTS.md, "Test time limits").
+ * A landing page's four stages stay inside Convex's limits on a large website
+ * (docs/plans/active/google-analytics-plan.md §4.3, §13, §15 screen 7): they
+ * read Analytics' landing pages, Search Console's pages, its searches and its
+ * days, each for 30 days and the 30 before, naming only the page asked for
+ * and the pages with value — so the read is held at five times
+ * morehandles.co.uk's size, inside half of a read's limits (16 MiB and 32,000
+ * records), as every Analytics screen's is. Counted, not timed (AGENTS.md,
+ * "Test time limits").
  */
 
 /** morehandles.co.uk's landing pages in 30 days, about 9,000, five times over; as many pages in Search Console. */
@@ -61,7 +62,7 @@ async function bigWebsite() {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "properties/1", addresses: ["www.big.co.uk"],
-      currency: "GBP", newestDay: "2026-10-08", oldestDay: "2026-08-10", eventsReadAt: 1,
+      currency: "GBP", newestDay: "2026-10-08", oldestDay: "2026-08-10", eventsReadAt: 1, listedWith: "EVENT_COUNT",
       events: [{ eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: 100, lastThirtyDays: 0 }],
       createdAt: 1, updatedAt: 1,
     });
@@ -127,27 +128,8 @@ async function bigWebsite() {
   return { t, siteId: siteId as Id<"companyWebsites"> };
 }
 
-describe("a large website's Heroes and attention", () => {
-  test("every page joined, judged and priced, inside its reading budget", async () => {
-    const { t, siteId } = await bigWebsite();
-    const { journey, reads } = await t.run(async (ctx) => {
-      const { db, reads } = metered(ctx.db);
-      const read = await journeyOf({ db }, siteId, "big.co.uk");
-      // What a test run can hand back: plain values, not the read's own maps.
-      return { journey: { state: read.state, pages: read.pages.length, problems: read.pages.filter((page) => page.problems.length > 0).length, clicks: read.consoleTotals?.clicks ?? null }, reads };
-    });
-    expect(journey).toMatchObject({ state: "READY", clicks: 30 * 900 });
-    expect(journey.problems).toBeGreaterThan(1_000);
-    // At most 8 MiB: the first try, naming every page from both sources, read 18.5 MiB.
-    const bytes = reads.reduce((sum, read) => sum + read.bytes, 0);
-    const documents = reads.reduce((sum, read) => sum + read.documents, 0);
-    expect(bytes).toBeLessThan(16 * MIB * 0.5);
-    expect(documents).toBeLessThan(32_000 * 0.5);
-    // Every read by the website's own hold, or one record by its id.
-    expect(reads.every((read) => read.index === null || read.index.startsWith("by_hold")), JSON.stringify(reads.map((read) => read.index))).toBe(true);
-  });
-
-  test("one page's own view reads that page alone, inside the same budget", async () => {
+describe("a large website's landing page, from Google to money", () => {
+  test("one page's own view reads that page alone, inside its reading budget", async () => {
     const { t, siteId } = await bigWebsite();
     const { journey, reads } = await t.run(async (ctx) => {
       const { db, reads } = metered(ctx.db);
@@ -159,5 +141,7 @@ describe("a large website's Heroes and attention", () => {
     expect(journey.found).toBe(true);
     expect(reads.reduce((sum, read) => sum + read.bytes, 0)).toBeLessThan(16 * MIB * 0.5);
     expect(reads.reduce((sum, read) => sum + read.documents, 0)).toBeLessThan(32_000 * 0.5);
+    // Every read by the website's own hold, or one record by its id.
+    expect(reads.every((read) => read.index === null || read.index.startsWith("by_hold")), JSON.stringify(reads.map((read) => read.index))).toBe(true);
   });
 });

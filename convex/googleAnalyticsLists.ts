@@ -8,8 +8,8 @@ import { PART_ROWS, packNumbers, unpackNumbers } from "./utils/searchConsolePack
  * database here: `googleAnalyticsCollect.ts` asks and writes.
  *
  * Every list is two asks of the Data API: its visits, engagement, views and
- * shop sales, and the same rows split by event for the property's key events
- * (`keyEvents`, `eventValue`). The two are joined into one row each, the
+ * shop sales, and the same rows split by event for the events listed on the
+ * connection (`EVENT_METRICS`). The two are joined into one row each, the
  * events as columns of their own (GA23: never a second list of the same
  * pages). A list kept by device is asked once with the device as a split, and
  * every device's figures are the devices' added up — each figure kept is a
@@ -26,8 +26,14 @@ export const MAIN_METRICS = [
   "totalUsers", "newUsers", "averageSessionDuration",
 ] as const;
 
-/** The figures asked for each key event of a row: how many, and the value Analytics gave them. */
-export const EVENT_METRICS = ["keyEvents", "eventValue"] as const;
+/**
+ * The figures asked for each listed event of a row: how many times it
+ * happened, the value Analytics gave them, and the visits it happened in —
+ * Google's own counts, for every date, rather than its key-event count, which
+ * begins only on the day an event is marked (conversions-back-in-time-plan.md
+ * BT1). A key event Google counts once a visit is counted by its visits.
+ */
+export const EVENT_METRICS = ["eventCount", "eventValue", "sessions"] as const;
 
 /**
  * The figures asked for an event list's rows (§18.6.5): how many times it
@@ -216,6 +222,8 @@ export function joinAsks(
   lead: readonly ("date" | "deviceCategory")[],
   main: readonly ReportRow[],
   events: readonly ReportRow[],
+  /** The events counted once a visit: their visits, not their times (`EVENT_METRICS`). */
+  perVisit: ReadonlySet<string> = new Set(),
 ): Map<string, ListRow[]> {
   const width = LIST_DIMENSIONS[list].length;
   const deviceAt = lead.indexOf("deviceCategory");
@@ -272,8 +280,9 @@ export function joinAsks(
   for (const row of events) {
     const eventName = row.keys[lead.length + width] ?? "";
     if (!eventName) continue;
+    const count = perVisit.has(eventName) ? row.values[2] ?? 0 : row.values[0] ?? 0;
     for (const target of targets(row.keys)) {
-      target.counts.set(eventName, (target.counts.get(eventName) ?? 0) + (row.values[0] ?? 0));
+      target.counts.set(eventName, (target.counts.get(eventName) ?? 0) + count);
       target.values.set(eventName, (target.values.get(eventName) ?? 0) + hundredths(row.values[1] ?? 0));
     }
   }

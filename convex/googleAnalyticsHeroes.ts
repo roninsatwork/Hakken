@@ -1,9 +1,8 @@
-import { v, type Infer, type ObjectType } from "convex/values";
+import { v } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { titlesOf } from "./pageTitles";
-import { requireMySite, type SiteReader } from "./siteAccess";
+import { requireMySite } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPeriodUnnamed } from "./searchConsolePeriodReads";
 import { BookNames } from "./searchConsolePeriodBooks";
@@ -13,12 +12,8 @@ import { addUp, shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { connectionOf, conversionsOf, countedOf, readSlot } from "./googleAnalyticsReads";
-import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { normalisePage } from "./utils/pageClassification";
 import { onWebsite } from "./utils/sitemapReading";
-import { wordStartMatcher } from "./utils/wordStarts";
-import { seenValidator } from "./utils/hakkenSees";
-import { heroesSees } from "./utils/sees/analyticsHeroes";
 import {
   CLICK_SHOWN,
   CLICK_TOP,
@@ -32,9 +27,7 @@ import {
   STAGE_OF,
   bandOf,
   heroesOf,
-  mainOf,
   websiteRatesOf,
-  worthOn,
   type GoogleFigures,
   type HeroKind,
   type HeroPage,
@@ -44,12 +37,14 @@ import {
 } from "./utils/heroes";
 
 /**
- * Heroes and attention (docs/plans/active/google-analytics-plan.md §13): each
- * landing page of a company's own website followed from Google's results to
- * the money it makes — Search Console's showings, position and clicks joined
- * to Google Analytics' visits, engagement, conversions and value, page by
- * page, over the last 30 days to each one's newest day — with what to do and
- * what it is worth (`utils/heroes.ts`).
+ * A landing page's own four stages from Google to conversions
+ * (docs/plans/active/google-analytics-plan.md §13, §15 screen 7): Shown in
+ * Google, Clicked, Visits and Conversions — Search Console's showings,
+ * position and clicks joined to Google Analytics' visits, engagement,
+ * conversions and value, over the last 30 days to each one's newest day —
+ * with whether the page is one of the website's heroes, its problems and what
+ * fixing each is worth (`utils/heroes.ts`). Read by a landing page's own
+ * screen.
  *
  * The two are joined by the page's path, cleaned as every page of the hold is
  * (`normalisePage`): Search Console names a page by its whole address,
@@ -101,7 +96,7 @@ type Journey = {
   pages: HeroPage[];
   facts: Map<string, PageFacts>;
   rates: WebsiteRates | null;
-  /** The website's own figures, every visit: what the heroes and the Value figure are a share of. */
+  /** The website's own figures, every visit: what a page's value is a share of. */
   website: VisitFigures;
   /** Visits Google's own search sent, whichever page they started on. */
   google: VisitFigures;
@@ -134,11 +129,12 @@ const asGoogle = (page: { shown: number; clicks: number; positionSum: number } |
 
 /**
  * Which pages a read names. Every page's figures are read, but a page's
- * address only when it is needed: for the list, the pages Heroes' rules could
- * flag — Analytics' pages with visits enough for a rule or any value, Search
- * Console's in the top five or at 8 to 20 with showings enough — and for one
- * page's own view, that page alone, by Analytics' number and Search Console's
- * address. Naming every page of a large website, from Analytics' numbering and
+ * address only when it is needed: for one page's own view, that page alone,
+ * by Analytics' number and Search Console's address, and every page with
+ * value, which the heroes are worked out from; with no page in focus, every
+ * page the rules could flag — Analytics' pages with visits enough for a rule
+ * or any value, Search Console's in the top five or at 8 to 20 with showings
+ * enough. Naming every page of a large website, from Analytics' numbering and
  * Search Console's book alike, read more than a query may (measured at five
  * times morehandles.co.uk, `googleAnalyticsHeroesLoad.test.ts`).
  */
@@ -192,7 +188,7 @@ async function consolePages(
   return { pages, to: period.to };
 }
 
-/** Everything Heroes and attention reads, joined page by page: every page its rules could flag, or the one page in focus. */
+/** Search Console and Analytics joined page by page: the one page in focus, or every page the rules could flag. */
 export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host: string, focus: Focus = { page: null }): Promise<Journey> {
   const connection = await connectionOf(ctx, holdId);
   const empty = (state: Journey["state"]): Journey => ({
@@ -244,7 +240,7 @@ export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host
     : [];
   const tokensOf = async (names: BookNames) => new Set(await Promise.all(focusForms.map((form) => names.tokenOf("page", form))));
   const shownNow = consoleConnected ? await consolePages(ctx, holdId, host, "NOW", focus.page ? { tokensOf } : { all: true }) : null;
-  // The days before only for one page's view: the list shows none of them.
+  // The days before only for one page's view.
   const shownBefore = consoleConnected && focus.page ? await consolePages(ctx, holdId, host, "BEFORE", { tokensOf }) : null;
   const consoleTo = shownNow?.to ?? null;
   const totals = consoleTo ? addUp(await daysOf(ctx, holdId, "web", shiftDay(consoleTo, -(Number(DAYS) - 1)), consoleTo)) : null;
@@ -287,115 +283,10 @@ export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host
 }
 
 // ---------------------------------------------------------------------------
-// The four stages from Google to money
+// A landing page's four stages (§15, screen 7)
 // ---------------------------------------------------------------------------
 
-export const stagesValidator = v.object({
-  shown: v.union(v.number(), v.null()),
-  position: v.union(v.number(), v.null()),
-  clicks: v.union(v.number(), v.null()),
-  clickRate: v.union(v.number(), v.null()),
-  /** Visits Google's own search sent. */
-  visits: v.number(),
-  engaged: v.number(),
-  conversions: v.number(),
-  /** Hundredths of the property's currency. */
-  value: v.number(),
-  websiteValue: v.number(),
-  heroes: v.number(),
-  heroesValue: v.number(),
-  /** What fixing the pages is worth a month at each stage, hundredths: in Google's results, and on the pages. */
-  gainInGoogle: v.number(),
-  gainOnPages: v.number(),
-  /** The stage that loses most: 1 Clicked, 2 Visits; null with nothing to gain. */
-  marked: v.union(v.literal(1), v.literal(2), v.null()),
-});
-
-function stagesOf(journey: Journey): Infer<typeof stagesValidator> {
-  let shown = 0;
-  let clicks = 0;
-  let positionSum = 0;
-  let gainInGoogle = 0;
-  let gainOnPages = 0;
-  let heroes = 0;
-  let heroesValue = 0;
-  for (const page of journey.pages) {
-    if (page.google) {
-      shown += page.google.shown;
-      clicks += page.google.clicks;
-      positionSum += page.google.position * page.google.shown;
-    }
-    for (const problem of page.problems) {
-      if (problem.worth === null) continue;
-      if (problem.kind === "push" || problem.kind === "click") gainInGoogle += problem.worth;
-      else gainOnPages += problem.worth;
-    }
-    if (page.hero) {
-      heroes += 1;
-      heroesValue += page.visits?.value ?? 0;
-    }
-  }
-  const consoled = journey.consoleConnected;
-  // The website's own totals when Search Console holds its days; its pages added up otherwise.
-  const totals = journey.consoleTotals ?? (shown > 0 ? { shown, clicks, position: positionSum / shown } : null);
-  return {
-    shown: consoled ? totals?.shown ?? 0 : null,
-    position: consoled ? totals?.position ?? null : null,
-    clicks: consoled ? totals?.clicks ?? 0 : null,
-    clickRate: consoled && totals && totals.shown > 0 ? totals.clicks / totals.shown : null,
-    visits: journey.google.visits,
-    engaged: journey.google.engaged,
-    conversions: journey.google.conversions,
-    value: journey.google.value,
-    websiteValue: journey.website.value,
-    heroes,
-    heroesValue,
-    gainInGoogle: Math.round(gainInGoogle),
-    gainOnPages: Math.round(gainOnPages),
-    marked: gainInGoogle <= 0 && gainOnPages <= 0 ? null : gainInGoogle >= gainOnPages ? 1 : 2,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Pages to fix
-// ---------------------------------------------------------------------------
-
-export const heroTabValidator = v.union(v.literal("all"), ...HERO_KINDS.map((kind) => v.literal(kind)));
-export type HeroTab = Infer<typeof heroTabValidator>;
 const kindValidator = v.union(...HERO_KINDS.map((kind) => v.literal(kind)));
-
-const heroRowValidator = v.object({
-  /** The page's path: what its own view is opened by. */
-  page: v.string(),
-  /** Its label on this tab: its problem worth most, or Hero. */
-  main: kindValidator,
-  hero: v.boolean(),
-  /** Hundredths a month; null for a hero, or a fix that cannot be priced. */
-  worth: v.union(v.number(), v.null()),
-  /** A Hakken task of the reader's already watches this page. */
-  task: v.boolean(),
-  /** Analytics' number for it and Search Console's address, for its own view to read it alone. */
-  ref: v.union(v.string(), v.null()),
-  console: v.union(v.string(), v.null()),
-  /** Its title, from the website's page list (GA27): only on the rows shown. */
-  title: v.optional(v.string()),
-});
-type HeroRow = Infer<typeof heroRowValidator>;
-
-const SORTS: ListSorts<HeroRow, "worth" | "name" | "what" | "task"> = {
-  worth: { value: (row) => row.worth, first: "desc" },
-  name: { value: (row) => row.page, first: "asc" },
-  what: { value: (row) => HERO_KINDS.indexOf(row.main), first: "asc" },
-  // The pages a Hakken task already watches first.
-  task: { value: (row) => (row.task ? 1 : 0), first: "desc" },
-};
-const heroSortValidator = v.union(v.literal("worth"), v.literal("name"), v.literal("what"), v.literal("task"));
-
-/** What a page's own view is read by: its path, Analytics' number and Search Console's address for it. */
-function linkOf(journey: Journey, path: string): Record<string, string> {
-  const facts = journey.facts.get(path);
-  return { key: path, ...(facts?.landingKey ? { ref: facts.landingKey } : {}), ...(facts?.consoleAddress ? { console: facts.consoleAddress } : {}) };
-}
 
 /** Tasks a person sets are few: the limit's highest choice is 100, and paused ones are kept. */
 const TASKS_READ = 300;
@@ -407,142 +298,6 @@ async function watchedPages(ctx: Reader & { userId?: Id<"users"> }, companyId: I
   const tasks = await ctx.db.query("hakkenTasks").withIndex("by_owner", (q) => q.eq("userId", userId).eq("companyId", companyId)).take(TASKS_READ);
   return new Set(tasks.filter((task) => task.state !== "DELETED" && task.target?.companyWebsiteId === holdId && task.target.page).map((task) => pageKeyOf(task.target!.page!)));
 }
-
-/** The tabs' counts: every page with something to say, then each label. */
-function tabCounts(pages: readonly HeroPage[]) {
-  return [
-    { tab: "all" as const, count: pages.filter((page) => mainOf(page, "all") !== null).length },
-    ...HERO_KINDS.map((kind) => ({ tab: kind, count: pages.filter((page) => mainOf(page, kind) !== null).length })),
-  ];
-}
-
-const analyticsHeroesArgs = {
-    siteId: v.id("companyWebsites"),
-    tab: heroTabValidator,
-    q: v.optional(v.string()),
-    sort: v.optional(heroSortValidator),
-    direction: sortDirectionArg,
-    ...listPageArgs,
-  };
-
-/** Heroes and attention's page: the four stages, the tabs, and one page of Pages to fix. */
-export const analyticsHeroes = tenantQuery({
-  args: analyticsHeroesArgs,
-  returns: v.object({
-    state: v.union(v.literal("NOT_CONNECTED"), v.literal("PREPARING"), v.literal("READY")),
-    currency: v.union(v.string(), v.null()),
-    consoleConnected: v.boolean(),
-    consoleTo: v.union(v.string(), v.null()),
-    analyticsTo: v.union(v.string(), v.null()),
-    stages: stagesValidator,
-    /** Every row's fix on All, added up: what there is to gain a month. */
-    totalGain: v.number(),
-    tabs: v.array(v.object({ tab: heroTabValidator, count: v.number() })),
-    rows: v.array(heroRowValidator),
-    total: v.number(),
-    page: v.number(),
-    pages: v.number(),
-    size: v.number(),
-    /** The table's own: the whole list is counted, and the first 30 days not yet in reads as preparing. */
-    cut: v.null(),
-    preparing: v.boolean(),
-    seen: seenValidator,
-  }),
-  handler: async (ctx, args) => await readHeroes(ctx, args),
-});
-
-/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
-export async function readHeroes(ctx: SiteReader, args: ObjectType<typeof analyticsHeroesArgs>) {
-  const site = await requireMySite(ctx, args.siteId);
-  const journey = await journeyOf(ctx, site.hold._id, site.website.host);
-  const watched = await watchedPages(ctx, site.hold.companyId, site.hold._id);
-  const listed: HeroRow[] = journey.pages.flatMap((page) => {
-    const main = mainOf(page, args.tab);
-    const facts = journey.facts.get(page.page);
-    return main ? [{
-      page: page.page, main, hero: page.hero, worth: worthOn(page, args.tab), task: watched.has(pageKeyOf(page.page)),
-      ref: facts?.landingKey ?? null, console: facts?.consoleAddress ?? null,
-    }] : [];
-  });
-  const matches = wordStartMatcher(args.q);
-  const found = matches ? listed.filter((row) => matches(row.page)) : listed;
-  found.sort(listOrder(SORTS, args.sort ?? "worth", args.direction, (row) => row.page));
-  const shown = pageOfList(found, args.page, args.rows);
-  const titles = await titlesOf(ctx, site.hold._id, shown.rows.map((row) => journey.facts.get(row.page)?.address ?? ""));
-  const titled = shown.rows.map((row) => {
-    const title = titles.get(journey.facts.get(row.page)?.address ?? "");
-    return title ? { ...row, title } : row;
-  });
-  const stages = stagesOf(journey);
-  const totalGain = Math.round(journey.pages.reduce((sum, page) => sum + (worthOn(page, "all") ?? 0), 0));
-  const tabs = tabCounts(journey.pages);
-  return {
-    state: journey.state,
-    currency: journey.currency,
-    consoleConnected: journey.consoleConnected,
-    consoleTo: journey.consoleTo,
-    analyticsTo: journey.analyticsTo,
-    stages,
-    totalGain,
-    tabs,
-    rows: titled,
-    total: shown.total,
-    page: shown.page,
-    pages: shown.pages,
-    size: shown.size,
-    cut: null,
-    preparing: journey.state === "PREPARING",
-    seen: journey.state === "READY" ? heroesSees({ stages, totalGain, pages: journey.pages, consoleConnected: journey.consoleConnected, linkOf: (path) => linkOf(journey, path) }) : { says: [], steps: [] },
-  };
-}
-
-/** Every row of Pages to fix on a tab, in the order on screen: its download. */
-export const analyticsHeroesAll = tenantQuery({
-args: { siteId: v.id("companyWebsites"), tab: heroTabValidator, q: v.optional(v.string()), sort: v.optional(heroSortValidator), direction: sortDirectionArg },
-returns: v.array(v.object({
-  page: v.string(),
-  main: kindValidator,
-  hero: v.boolean(),
-  worth: v.union(v.number(), v.null()),
-  shown: v.union(v.number(), v.null()),
-  position: v.union(v.number(), v.null()),
-  clicks: v.union(v.number(), v.null()),
-  visits: v.union(v.number(), v.null()),
-  conversions: v.union(v.number(), v.null()),
-  value: v.union(v.number(), v.null()),
-})),
-handler: async (ctx, args) => {
-  const site = await requireMySite(ctx, args.siteId);
-  const journey = await journeyOf(ctx, site.hold._id, site.website.host);
-  const rows = journey.pages.flatMap((page) => {
-    const main = mainOf(page, args.tab);
-    return main ? [{ page, main, worth: worthOn(page, args.tab) }] : [];
-  });
-  const matches = wordStartMatcher(args.q);
-  const found = matches ? rows.filter((row) => matches(row.page.page)) : rows;
-  const order = listOrder(SORTS, args.sort ?? "worth", args.direction, (row: HeroRow) => row.page);
-  found.sort((one, two) => order(
-    { page: one.page.page, main: one.main, hero: one.page.hero, worth: one.worth, task: false, ref: null, console: null },
-    { page: two.page.page, main: two.main, hero: two.page.hero, worth: two.worth, task: false, ref: null, console: null },
-  ));
-  return found.map(({ page, main, worth }) => ({
-    page: page.page,
-    main,
-    hero: page.hero,
-    worth,
-    shown: page.google?.shown ?? null,
-    position: page.google?.position ?? null,
-    clicks: page.google?.clicks ?? null,
-    visits: page.visits?.visits ?? null,
-    conversions: page.visits?.conversions ?? null,
-    value: page.visits?.value ?? null,
-  }));
-},
-});
-
-// ---------------------------------------------------------------------------
-// One page: its own view, and a landing page's four stages (§15, screen 7)
-// ---------------------------------------------------------------------------
 
 const figuresValidator = v.union(v.null(), v.object({ shown: v.number(), clicks: v.number(), position: v.number() }));
 const visitsValidator = v.union(v.null(), v.object({ visits: v.number(), engaged: v.number(), conversions: v.number(), value: v.number() }));
@@ -578,10 +333,10 @@ export const heroPageValidator = v.object({
 });
 
 /**
- * One page of Heroes and attention: its four stages and what to do. Asked by
- * its path with Analytics' number and Search Console's address for it (a row
- * of the list), or by Analytics' number alone (a landing page's own screen);
- * read for that page alone.
+ * One page's four stages from Google to money and its problems. A landing
+ * page's own screen asks by Analytics' number alone; a page may also be asked
+ * by its path, with Analytics' number and Search Console's address for it.
+ * Read for that page alone.
  */
 export const analyticsHeroPage = tenantQuery({
   args: { siteId: v.id("companyWebsites"), page: v.string(), ref: v.optional(v.string()), console: v.optional(v.string()) },

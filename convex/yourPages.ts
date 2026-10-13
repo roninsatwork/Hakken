@@ -180,6 +180,19 @@ export async function yourPagesList(ctx: QueryCtx, holdId: Id<"companyWebsites">
   return { rows, summary: summaryOf(copy.meta, copy.builtAt), groupBy: pageKinds ? "CLASSIFICATION" : "KIND", groups };
 }
 
+/**
+ * Every page of a hold's list with the clicks Google gave it, read from the
+ * copy alone: All pages lists the ones nobody viewed (all-pages-rethink-plan.md
+ * AP5). Null before the list is built.
+ */
+export async function yourPagePaths(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">): Promise<Array<{ page: string; clicks: number }> | null> {
+  const copy = await readListCopy(ctx, YOUR_PAGES_COPY, `${holdId}`, YOUR_PAGES_FIELDS);
+  if (!copy) return null;
+  const page = YOUR_PAGES_FIELDS.indexOf("page");
+  const clicks = YOUR_PAGES_FIELDS.indexOf("clicks");
+  return copy.rows.map((row) => ({ page: row[page] as string, clicks: (row[clicks] as number | null) ?? 0 }));
+}
+
 /** The pages of a hold's list for the menu's count beside Your pages, or null before the list is built. Reads the copy's header only. */
 export async function yourPagesCount(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">): Promise<number | null> {
   const header = await ctx.db

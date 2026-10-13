@@ -64,7 +64,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     ? t("withProperty", { name: connection.propertyName, id: connection.property.replace(/^properties\//, "") })
     : t("yourWebsite");
   const firstComing = state === "CONNECTED" && !connection?.historyDone;
-  const ownDates = pageForPath(pathname, siteId) === "heroes" || pageForPath(pathname, siteId) === "live" || /\/landing-pages\/page\/?$/.test(pathname);
+  const ownDates = pageForPath(pathname, siteId) === "live" || /\/landing-pages\/page\/?$/.test(pathname);
 
   return (
     <>
@@ -108,7 +108,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
             <AnalyticsMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            {/* Heroes and attention and a landing page's own screen join Search Console's days to Analytics' and say both themselves (§13, §15). */}
+            {/* A landing page's own screen joins Search Console's days to Analytics' and says both itself (§15); Live is the last 30 minutes. */}
             {connection?.newestDay && state !== "CHOOSING" && state !== "COUNTING" && !ownDates ? (
               <p className="text-[12px] text-muted">{t("figuresTo", { day: formatDay(connection.newestDay) })}</p>
             ) : null}

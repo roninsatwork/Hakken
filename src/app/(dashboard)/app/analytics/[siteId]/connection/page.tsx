@@ -231,6 +231,16 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
   };
   const set = (eventName: string, change: Partial<Draft>) => setDrafts((before) => ({ ...before, [eventName]: { ...draftOf(eventName), ...change } }));
   const counted = events.filter((event) => draftOf(event.eventName).counted).length;
+  // Two ticked events that count the same day for day (conversions-back-in-time-plan.md BT5): said on the second in the
+  // list. A key event matching one that is not is very likely built from it in Google Analytics: a copy of it.
+  const copyNote = (eventName: string): string | null => {
+    const pair = connection.copies.find((copy) => copy.of === eventName && draftOf(copy.eventName).counted && draftOf(eventName).counted);
+    if (!pair) return null;
+    const first = events.find((event) => event.eventName === pair.eventName);
+    const second = events.find((event) => event.eventName === eventName);
+    const words = { other: nameOf(pair.eventName), name: nameOf(eventName) };
+    return first?.keyEvent !== false && second?.keyEvent === false ? t("copyOf", words) : t("sameAs", words);
+  };
   const invalid = events.some((event) => {
     const draft = draftOf(event.eventName);
     return draft.counted && draft.value.trim() !== "" && !(Number(draft.value) >= 0);
@@ -267,6 +277,8 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                   </span>
                 </div>
                 {NEVER_TICKED.has(event.eventName) && !draft.counted ? <p className="pl-7 text-[12px] text-muted">{t("neverTicked")}</p> : null}
+                {event.keyEvent === false ? <p className="pl-7 text-[12px] text-muted">{t("notKeyEvent", { platformName })}</p> : null}
+                {copyNote(event.eventName) ? <p className="pl-7 text-[12px] text-muted">{copyNote(event.eventName)}</p> : null}
                 {draft.counted && event.analyticsValue === null ? (
                   <div className="flex flex-col items-start gap-3 pl-7">
                     <SiteViewSwitch

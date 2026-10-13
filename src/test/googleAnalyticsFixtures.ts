@@ -32,6 +32,7 @@ export const CONNECTION = {
   timeZone: "Europe/London",
   currency: "GBP",
   events: EVENTS as typeof EVENTS | null,
+  copies: [] as Array<{ eventName: string; of: string }>,
   connectedAt: Date.parse("2026-10-08T15:22:00Z"),
   disconnectedAt: null,
   newestDay: "2026-10-08" as string | null,
@@ -54,7 +55,7 @@ export const CONNECTION = {
       { check: "TOO_MUCH_UNKNOWN" as const, passing: true, share: 0.01 },
       { check: "STRANGERS" as const, passing: false, names: ["staging.acme-shop.test"], count: 61 },
     ],
-  } as { checkedAt: number; checks: Array<{ check: string; passing: boolean; names?: string[]; count?: number; share?: number }> } | null,
+  } as { checkedAt: number; checks: Array<{ check: string; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number }> } | null,
 };
 
 export const STATUS = {
@@ -89,6 +90,7 @@ export const ROW = {
   purchases: 0,
   revenue: 0,
   change: 0.31,
+  viewsBefore: 431,
   conversionsBefore: 1,
   valueBefore: 25_000,
 };
@@ -96,11 +98,11 @@ export const ROW = {
 export const CHANNEL = { ...ROW, key: "Organic Search", label: "Organic Search", visits: 1104, conversions: 11, value: 220_000, conversionRate: 11 / 1104 };
 
 /** One server page of a list, with the screen's What Hakken sees (none unless given) and a channel's own figures. */
-export function list(rows: unknown[], extra: { seen?: Seen; figures?: unknown } = {}) {
+export function list(rows: unknown[], extra: { seen?: Seen; figures?: unknown; moves?: unknown } = {}) {
   return {
     rows, total: rows.length, page: 1, pages: 1, size: 25, cut: null,
     live: false, preparing: false, from: "2026-09-09", to: "2026-10-08", folded: false, thresholded: false, longer: false, groups: null,
-    seen: extra.seen ?? NO_BOX, figures: extra.figures ?? null,
+    seen: extra.seen ?? NO_BOX, figures: extra.figures ?? null, untagged: null, moves: extra.moves ?? null,
   };
 }
 
@@ -114,6 +116,7 @@ export function top(rows: unknown[]) {
 export const FIGURES = { visits: 2412, engaged: 1289, conversions: 23, value: 440_000, purchases: 0, revenue: 0, unvalued: 3 };
 
 const OVERVIEW_FIGURES = {
+  siteId: "site_1",
   preparing: false,
   from: "2026-09-09",
   to: "2026-10-08",
@@ -131,7 +134,7 @@ export const OVERVIEW = { ...OVERVIEW_FIGURES, seen: overviewSees(OVERVIEW_FIGUR
 export const CHART = {
   points: Array.from({ length: 30 }, (_, index) => ({
     day: new Date(Date.UTC(2026, 8, 9 + index)).toISOString().slice(0, 10),
-    visits: 80 + (index % 7) * 5, engaged: 40, conversions: index % 3 === 0 ? 1 : 0, value: index % 3 === 0 ? 25_000 : 0, events: [index % 3 === 0 ? 1 : 0, 0, 0],
+    visits: 80 + (index % 7) * 5, engaged: 40, views: 200 + (index % 7) * 9, conversions: index % 3 === 0 ? 1 : 0, value: index % 3 === 0 ? 25_000 : 0, events: [index % 3 === 0 ? 1 : 0, 0, 0],
   })),
   events: ["generate_lead", "click_tel", "click_email"],
 };

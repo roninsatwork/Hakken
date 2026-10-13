@@ -15367,7 +15367,6 @@
       },
       "overview": "Panoramica",
       "live": "In diretta",
-      "heroes": "Eroi e attenzione",
       "channels": "Canali",
       "campaigns": "Campagne",
       "landingPages": "Pagine di destinazione",
@@ -15674,8 +15673,16 @@
         "peopleTitle": "Persone che hanno visto la pagina",
         "time": "Tempo",
         "timeTitle": "Tempo di coinvolgimento per visita",
+        "dwell": "Tempo di permanenza",
         "conversions": "Conversioni",
-        "conversionsHere": "Conversioni fatte qui",
+        "conversionsShort": "Conv.",
+        "conversionsShortTitle": "Conversioni fatte su questa pagina",
+        "rate": "Tasso conv.",
+        "rateTitle": "Conversioni fatte su questa pagina, sulle sue visite",
+        "viewsChange": "Variazione visualizzazioni",
+        "viewsChangeTitle": "Visualizzazioni rispetto alle date precedenti: quante in più o in meno",
+        "conversionsChange": "Variazione conv.",
+        "conversionsChangeTitle": "Conversioni fatte su questa pagina rispetto alle date precedenti: quante in più o in meno",
         "conversionsStarted": "Conversioni dalle visite",
         "conversionsStartedTitle": "Conversioni nelle visite iniziate sulla pagina, fatte ovunque sul sito",
         "value": "Valore",
@@ -15710,11 +15717,28 @@
         "conversions": "Conversioni",
         "value": "Valore ({currency})",
         "change": "Variazione delle visite (%)",
-        "source": "Sorgente / mezzo"
+        "source": "Sorgente / mezzo",
+        "viewsChange": "Variazione visualizzazioni",
+        "rate": "Tasso di conversione (%)",
+        "conversionsChange": "Variazione conversioni"
       },
       "downloadFailed": "Impossibile preparare il download. Riprova.",
       "untagged": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} un contrassegno di campagna",
-      "askingBodyCampaigns": "Gli elenchi delle campagne per dispositivo non sono conservati, quindi {platformName} li chiede a Google quando ne scegli uno. Le campagne sono già elencate; i dati per {device} arrivano in pochi secondi."
+      "askingBodyCampaigns": "Gli elenchi delle campagne per dispositivo non sono conservati, quindi {platformName} li chiede a Google quando ne scegli uno. Le campagne sono già elencate; i dati per {device} arrivano in pochi secondi.",
+      "viewsUp": "In crescita del {rate} sulle date precedenti, da {before} visualizzazioni",
+      "viewsDown": "In calo del {rate} sulle date precedenti, da {before} visualizzazioni",
+      "tick": "Mostra {page} nel grafico",
+      "tickColumn": "Nel grafico",
+      "tickLimit": "Al massimo cinque pagine nel grafico",
+      "moveRule": "una crescita o un calo è di {views} visualizzazioni o più",
+      "moves": {
+        "label": "Quali pagine",
+        "all": "Tutte {count}",
+        "gains": "In crescita {count}",
+        "dropped": "In calo {count}",
+        "static": "Stabili {count}",
+        "none": "Nessuna visita {count}"
+      }
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -15754,11 +15778,6 @@
           "title": "Visite per pagina di destinazione",
           "hint": "{period}: le dieci pagine di destinazione con più visite.",
           "measure": "Visite"
-        },
-        "allPages": {
-          "title": "Pagine più viste",
-          "hint": "{period}: le dieci pagine più viste.",
-          "measure": "Visualizzazioni"
         },
         "conversions": {
           "title": "Conversioni per pagina di destinazione",
@@ -15821,7 +15840,17 @@
         "week": "Visite da link contrassegnati a settimana",
         "month": "Visite da link contrassegnati al mese"
       },
-      "campaignsHint": "{period}."
+      "campaignsHint": "{period}.",
+      "pagesDaily": {
+        "title": {
+          "day": "Visualizzazioni al giorno",
+          "week": "Visualizzazioni alla settimana",
+          "month": "Visualizzazioni al mese"
+        },
+        "hint": "{period}: tutto il tuo sito, tratteggiato, e le pagine spuntate nella tabella, al massimo cinque.",
+        "website": "Il tuo sito",
+        "askFailed": "Google non ha risposto per le pagine spuntate in questo momento; la linea del tuo sito è mostrata da sola."
+      }
     },
     "figures": {
       "nothingBefore": "Ancora niente con cui confrontare",
@@ -15918,89 +15947,10 @@
       "noMatch": "Nessun risultato per questa ricerca."
     },
     "heroes": {
-      "title": "Eroi e attenzione",
-      "description": "Ogni pagina di destinazione seguita dai risultati di Google fino al denaro che porta: cosa fare e quanto vale.",
       "figuresTo": "Dati di Search Console fino al {console} e di Analytics fino al {analytics}; gli ultimi due giorni possono ancora cambiare.",
       "figuresToAnalytics": "Dati di Analytics fino al {analytics}; gli ultimi due giorni possono ancora cambiare.",
-      "preparing": "Eroi e attenzione ha bisogno dei primi 30 giorni di dati. Stanno arrivando adesso.",
-      "website": {
-        "shown": "Mostrate in Google",
-        "position": "In posizione {position} in media",
-        "connectConsole": "Collega Search Console →",
-        "noConsole": "Search Console non è collegato",
-        "clicked": "Clic",
-        "ofShowings": "{rate} delle visualizzazioni",
-        "toGain": "{money} al mese da guadagnare →",
-        "visits": "Visite da Google",
-        "visitsLine": "{engaged} coinvolte, {conversions} convertite",
-        "value": "Valore da Google",
-        "valueLine": "{share} del valore del sito di {total}",
-        "heroes": "{count, plural, one {# pagina eroe porta {money}} other {# pagine eroe portano {money}}} →"
-      },
-      "listTitle": "Pagine da sistemare",
-      "listDescription": "Circa {money} al mese in tutto, le più grandi per prime. Apri una pagina per vederne i dati e il perché.",
-      "listDescriptionNone": "Niente da sistemare questo mese. Apri una pagina per vederne i dati.",
-      "tabsLabel": "Mostra",
-      "tabs": {
-        "all": "Tutte",
-        "hero": "Eroi",
-        "push": "Da portare in prima pagina",
-        "click": "Perde il clic",
-        "convert": "Non converte",
-        "leave": "Le persone se ne vanno",
-        "fall": "In calo"
-      },
       "kinds": {
-        "hero": "Eroe",
-        "push": "Da portare in prima pagina",
-        "click": "Perde il clic",
-        "convert": "Non converte",
-        "leave": "Le persone se ne vanno",
-        "fall": "In calo"
-      },
-      "search": "Trova una pagina…",
-      "bar": "Ultimi 30 giorni · tutti i dispositivi",
-      "columns": {
-        "page": "Pagina",
-        "what": "Cosa fare",
-        "worth": "Valore al mese",
-        "task": "Attività {platformName}"
-      },
-      "taskMake": "Crea un'attività {platformName}",
-      "taskMade": "Un'attività {platformName} controlla questa pagina",
-      "taskAsk": {
-        "push": "Tieni d'occhio {page} su {host} mentre la portiamo in prima pagina: dimmi quando i suoi visitatori da Google aumentano della metà.",
-        "click": "Tieni d'occhio {page} su {host} mentre riscriviamo titolo e descrizione: dimmi quando i suoi visitatori da Google aumentano di un quinto.",
-        "convert": "Tieni d'occhio {page} su {host} mentre le diamo un passo successivo: dimmi se i suoi visitatori da Google calano di un terzo.",
-        "leave": "Tieni d'occhio {page} su {host} mentre la facciamo rispondere a ciò che è stato cercato: dimmi se i suoi visitatori da Google calano di un terzo.",
-        "fall": "Tieni d'occhio {page} su {host}: dimmi se i suoi visitatori da Google calano di nuovo di un terzo.",
-        "hero": "Tieni d'occhio {page} su {host}, una delle sue pagine eroe: dimmi se i suoi visitatori da Google calano di un terzo."
-      },
-      "under": "Meno di {money}",
-      "noMatch": "Nessuna pagina corrisponde a “{q}”.",
-      "empty": {
-        "all": "Niente richiede attenzione.",
-        "hero": "Nessuna pagina porta ancora valore.",
-        "push": "Nessuna pagina è in posizione da 8 a 20 con 500 visualizzazioni o più.",
-        "click": "Ogni pagina tra le prime cinque riceve clic al tasso abituale del sito o meglio.",
-        "convert": "Ogni pagina con 50 visite o più converte almeno la metà del tasso del sito.",
-        "leave": "Nessuna pagina perde i suoi visitatori: ogni pagina con 30 visite o più ne tiene almeno il 40%.",
-        "fall": "Nessuna pagina è calata del 30% o più."
-      },
-      "download": "Scarica CSV",
-      "downloading": "Download in corso…",
-      "downloadFailed": "Il download non è riuscito. Riprova tra un momento.",
-      "csv": {
-        "page": "Pagina",
-        "what": "Cosa fare",
-        "hero": "Eroe",
-        "worth": "Valore al mese ({currency})",
-        "shown": "Mostrata in Google",
-        "position": "Posizione",
-        "clicks": "Clic",
-        "visits": "Visite",
-        "conversions": "Conversioni",
-        "value": "Valore ({currency})"
+        "hero": "Eroe"
       },
       "stages": {
         "shown": "Mostrata in Google",
@@ -16020,37 +15970,6 @@
         "down": "▼ {change} sui 30 giorni precedenti",
         "same": "Come nei 30 giorni precedenti",
         "nothingBefore": "Niente da confrontare con i 30 giorni precedenti"
-      },
-      "page": {
-        "back": "Eroi e attenzione",
-        "description": "Una pagina di destinazione su {host}. I dati di Google riguardano le sue visualizzazioni nei risultati di Google; quelli di Analytics ogni visita iniziata qui.",
-        "openPage": "Apri la pagina",
-        "notFound": "Questa pagina non ha nulla da mostrare negli ultimi 30 giorni.",
-        "todoTitle": "Cosa fare",
-        "todoDescription": "La fase evidenziata sopra è dove questa pagina perde di più.",
-        "nothingToDo": "Niente da sistemare su questa pagina questo mese.",
-        "worth": "Vale circa {money} al mese",
-        "worthUnder": "Vale meno di {money} al mese",
-        "notPriced": "Non ancora valutata: il sito non ha conversioni con cui valutarla",
-        "why": {
-          "push": "Mostrata {shown} volte in posizione {position}. Tra le prime tre riceverebbe circa {gain} clic in più al mese: lavora sulle ricerche per cui compare in seconda pagina.",
-          "click": "Cliccata {clicks} volte su {shown} in posizione {position}; il valore abituale del sito lì è {expected}. Riscrivi titolo e descrizione.",
-          "convert": "{visits} visite, {conversions, plural, =0 {nessuna conversione} one {una conversione} other {# conversioni}}. Dalle un passo successivo verso il servizio che sostiene.",
-          "leave": "Resta solo il {rate} delle sue {visits} visite. Fai in modo che la pagina risponda a ciò che è stato cercato.",
-          "fall": "Le visite sono calate da {before} a {visits}. Controlla la sua posizione in Google e cosa è cambiato sulla pagina.",
-          "hero": "Porta {money} dei {total} al mese del sito. Cambiala solo con un test."
-        },
-        "rule": "Perché è segnalata: {rule}.",
-        "rules": {
-          "hero": "è una delle pagine che insieme portano l'80% del valore del sito",
-          "push": "è in posizione da 8 a 20 ed è stata mostrata 500 volte o più",
-          "click": "è tra le prime cinque, è stata mostrata 100 volte o più e riceve meno clic del tasso del sito in quella posizione",
-          "convert": "ha 50 visite o più e converte meno della metà del tasso del sito del {rate}",
-          "leave": "ha 30 visite o più e meno del 40% è coinvolto",
-          "fall": "le visite sono calate del 30% o più sui 30 giorni precedenti, partendo da almeno 20"
-        },
-        "allFigures": "Tutti i suoi dati",
-        "itsSearches": "Le sue ricerche in Search Console"
       }
     },
     "channels": {
@@ -16115,9 +16034,15 @@
     },
     "allPages": {
       "title": "Tutte le pagine",
-      "description": "Ogni pagina vista: le sue visualizzazioni, il tempo passato su di essa e le conversioni fatte su quella pagina.",
+      "description": "Ogni pagina del tuo sito: visite, visualizzazioni e conversioni, e se è cresciuta o calata rispetto alle date precedenti.",
       "findPage": "Trova una pagina…",
-      "empty": "Nessuna pagina vista in queste date."
+      "empty": "Nessuna pagina vista in queste date.",
+      "emptyMoves": {
+        "gains": "Nessuna pagina è cresciuta in queste date.",
+        "dropped": "Nessuna pagina è calata in queste date.",
+        "static": "Nessuna pagina è rimasta stabile in queste date.",
+        "none": "Ogni pagina del tuo sito è stata vista in queste date."
+      }
     },
     "page": {
       "back": "Tutte le pagine",
@@ -16504,15 +16429,18 @@
       "noChannels": "Nessuna visita in queste date."
     },
     "counts": {
-      "reading": "Lettura degli eventi chiave della proprietà da Google…",
+      "reading": "Lettura degli eventi chiave della proprietà, e degli eventi che sembrano richieste, da Google…",
       "addresses": "La proprietà {property} registra visite su {count} indirizzi. {platformName} legge quello di {host}, {read}, e lascia {others} fuori da ogni dato.",
       "title": "Scegli cosa conta come conversione",
-      "description": "Gli eventi chiave della proprietà {property}. Spunta ognuno che è una conversione — una richiesta, una vendita, una prenotazione; {platformName} ha spuntato quelli probabili. Uno scorrimento o un video avviato non vengono mai spuntati per te.",
-      "noKeyEvents": "La proprietà non ha ancora eventi chiave. Segna come eventi chiave quelli che contano in Google Analytics, poi torna qui.",
+      "description": "Gli eventi chiave della proprietà {property}, e i suoi altri eventi che sembrano una richiesta. Spunta ognuno che è una conversione — una richiesta, una vendita, una prenotazione; {platformName} ha spuntato quelli probabili. Uno scorrimento o un video avviato non vengono mai spuntati per te.",
+      "noKeyEvents": "La proprietà non ha ancora eventi chiave, né eventi che sembrano una richiesta. Segna come eventi chiave quelli che contano in Google Analytics, poi torna qui.",
       "lastThirty": "{count} negli ultimi 30 giorni",
       "inAnalytics": "{value} su Google Analytics",
       "noValueInAnalytics": "Nessun valore in Google Analytics",
       "neverTicked": "Mai spuntato per te: non è una conversione.",
+      "notKeyEvent": "Non è un evento chiave in Google Analytics: {platformName} lo conta dai dati di Google, per tutto l'anno.",
+      "copyOf": "{other} è una copia di {name}: contane uno solo.",
+      "sameAs": "{other} e {name} contano lo stesso, giorno per giorno: contane uno solo.",
       "whereLabel": "Dove si imposta il suo valore",
       "setInHakken": "Impostalo in {platformName}",
       "setInAnalytics": "Impostalo in Google Analytics",
@@ -16526,7 +16454,7 @@
         "three": "Scegli Imposta valore predefinito, e scrivi quanto vale uno.",
         "four": "Salva. Il valore arriva a {platformName} alla prossima raccolta; {platformName} non cambia mai Google Analytics."
       },
-      "appliesToHistory": "Un valore impostato in {platformName} vale per tutto lo storico: i mesi passati lo mostrano subito, e cambiarlo li riprezza. {platformName} non cambia mai Google Analytics.",
+      "appliesToHistory": "Cosa conta, e un valore impostato in {platformName}, valgono per tutto lo storico: i mesi passati cambiano subito. {platformName} non cambia mai Google Analytics.",
       "failed": "Impossibile salvare cosa conta. Riprova.",
       "save": "Salva · {count} contate",
       "back": "Indietro",
@@ -16622,25 +16550,34 @@
           "why": "una pagina contata di nuovo ogni volta che qualcuno clicca un link del suo indice fa sembrare le visite più profonde di quanto siano, e nasconde quante persone se ne vanno dopo una pagina.",
           "fix": "in Google Analytics, apri Amministrazione, Stream di dati, il tuo sito, Misurazione avanzata, Visualizzazioni di pagina, e togli la spunta da “Modifiche alla pagina in base agli eventi della cronologia del browser”; oppure fai in modo che i link dell'indice del sito scorrano la pagina senza cambiarne l'indirizzo.",
           "short": "{count, plural, one {Una pagina è contata} other {# pagine sono contate}} più di una volta a visita, come {names}."
+        },
+        "SOMETHING_ELSE": {
+          "title": "Ogni conversione è ciò che dice",
+          "passing": "Nessuna conversione coincide giorno per giorno con un altro tipo di evento.",
+          "failing": "{names} coincide con {others} in ciascuno degli ultimi {count} giorni in cui uno dei due è avvenuto, quindi conta quello, non le richieste.",
+          "why": "Ogni conversione, e il suo valore, conta qualcosa che non è mai una richiesta, quindi pagine e canali vengono pesati sulla cosa sbagliata.",
+          "fix": "la conversione è costruita sull'evento sbagliato. In Google Analytics, apri Amministrazione, Eventi, Configurazioni personalizzate, Eventi personalizzati, e ricostruiscila sulla richiesta vera; se la invia un tag manager, correggi l'attivatore su cui scatta.",
+          "short": "{names} è in realtà {others}."
+        },
+        "ENQUIRY_UNCOUNTED": {
+          "title": "Ogni richiesta è contata",
+          "passing": "Nessun evento che sembra una richiesta resta escluso dal conteggio.",
+          "failing": "{names} è avvenuto {count} volte negli ultimi 12 mesi, ma niente {kinds, plural, one {lo} other {li}} conta come conversione.",
+          "why": "Le richieste non contate mancano da conversioni e valore, quindi le pagine e i canali che le hanno portate sembrano peggiori di quanto siano.",
+          "fix": "{kinds, plural, one {sceglilo} other {sceglili}} nella pagina Connessione: {platformName} {kinds, plural, one {lo} other {li}} conta dai dati di Google, per tutto l'anno.",
+          "short": "{names} non è contato."
+        },
+        "NEVER_HAPPENS": {
+          "title": "Ogni conversione avviene",
+          "passing": "Ogni conversione contata è avvenuta di recente.",
+          "failing": "{names} non {kinds, plural, one {è avvenuto} other {sono avvenuti}} nemmeno una volta {days, plural, =365 {in 12 mesi} other {negli ultimi # giorni}}.",
+          "why": "Una conversione che non scatta mai nasconde ogni richiesta fatta in quel modo: chi ha chiamato, scritto o chattato manca da ogni dato.",
+          "fix": "provala tu stesso come visitatore, in una finestra privata, e cercala nel rapporto In tempo reale di Google Analytics. Se non arriva, il tag che la invia manca o non funziona.",
+          "short": "{names} non {kinds, plural, one {avviene} other {avvengono}} mai."
         }
       }
     },
     "seen": {
-      "heroes": {
-        "mostInGoogle": "Google mostra le tue pagine {a} volte al mese, ma solo il {bRate} di queste visualizzazioni diventa un clic, quindi la maggior parte dei {cMoney} al mese da guadagnare è nei risultati di Google, non sulle pagine.",
-        "mostOnPages": "La maggior parte dei {aMoney} al mese da guadagnare è sulle pagine stesse, una volta che le persone arrivano: {bMoney}.",
-        "nothingToGain": "Nessuna pagina ha qualcosa da sistemare questo mese: ognuna riceve clic, converte e trattiene le visite come il resto del sito.",
-        "heroes": "{count, plural, one {Una pagina porta} other {# pagine portano}} {bMoney} dei tuoi {cMoney}.",
-        "noConsole": "Collega Search Console per vedere cosa succede nei risultati di Google prima che le persone arrivino.",
-        "pushTwo": "Porta {text} e {more} in prima pagina: circa {aMoney} al mese.",
-        "pushOne": "Porta {text} in prima pagina: circa {aMoney} al mese.",
-        "rewrite": "Riscrivi titolo e descrizione di {text}: circa {aMoney} al mese.",
-        "nextStep": "Dai a {text} un passo successivo: {a} visite e {countB, plural, =0 {nessuna conversione} one {una conversione} other {# conversioni}}.",
-        "answerSearch": "Fai in modo che {text} risponda a ciò che è stato cercato: la maggior parte delle sue {a} visite se ne va.",
-        "whyFell": "Scopri perché {text} è calata, da {a} visite a {b}.",
-        "leaveHeroesTwo": "Lascia {text} e {more} come sono: portano {aMoney} al mese.",
-        "leaveHeroesOne": "Lascia {text} com'è: porta {aMoney} al mese."
-      },
       "landingPage": {
         "makes": "{text} porta {aMoney} al mese, il {bRate} del valore del sito.",
         "makesNothing": "{text} ha portato {a} visite questo mese e ancora nessuna conversione.",
@@ -16794,13 +16731,16 @@
       },
       "allPages": {
         "none": "Nessuna pagina vista in queste date.",
-        "notCounting": "Sono state viste {a} pagine, ma ancora niente conta come conversione, quindi nessuna si può pesare per ciò che porta.",
-        "noConversions": "Nessuna delle {a} pagine viste ha fatto una conversione in queste date.",
-        "madeOn": "{count, plural, =1 {La tua unica conversione è stata fatta} other {Le tue # conversioni sono state fatte}} su {countB, plural, =1 {una sola pagina} other {# pagine}}.",
-        "best": "{text} ne ha fatte {count, plural, =1 {una} other {#}}, da {b} visualizzazioni.",
-        "idleMostViewed": "{text} è la tua pagina più vista, con {a} visualizzazioni, e non ne ha fatta nessuna.",
-        "idle": "{text} ha {a} visualizzazioni e non ne ha fatta nessuna.",
+        "viewedOf": "{a} delle tue {b} pagine sono state viste in queste date; {countC, plural, =1 {una non ha avuto} other {# non hanno avuto}} visite.",
+        "viewedAll": "Tutte le tue {a} pagine sono state viste in queste date.",
+        "moved": "{count, plural, =1 {Una pagina ha guadagnato} other {# pagine hanno guadagnato}} visualizzazioni, {b} sono calate e {c} sono rimaste più o meno uguali.",
+        "droppedMost": "{text} è calata di più: {a} visualizzazioni in meno di prima.",
+        "droppedMostMade": "{text} è calata di più, {a} visualizzazioni in meno di prima, ma ha fatto {countB, plural, =1 {una} other {#}} delle tue {c} conversioni.",
+        "gainedMost": "{text} è cresciuta di più: {a} visualizzazioni in più di prima.",
+        "whyDropped": "Scopri perché {text} ha perso {a} visualizzazioni.",
         "copy": "Copia il passo successivo che funziona su {text} anche su {more}.",
+        "noVisitsTwo": "Guarda le pagine che nessuno ha visitato, come {text} e {more}.",
+        "noVisitsOne": "Guarda {text}, che nessuno ha visitato.",
         "chooseWhatCounts": "Scegli cosa conta come conversione."
       },
       "page": {
@@ -16899,7 +16839,11 @@
           "NO_VALUE": "{event} non {countC, plural, =1 {ha} other {hanno}} un valore, quindi le {countC, plural, =1 {sue} other {loro}} {b} conversioni non aggiungono niente al Valore.",
           "PAYMENT_REFERRALS": "Le pagine di pagamento compaiono come referral, prendendosi il merito delle vendite.",
           "SELF_REFERRAL": "Il sito compare come referral di se stesso, dividendo le visite in due.",
-          "STRANGERS": "{b} visite sono state registrate su altri indirizzi; sono escluse da questi dati."
+          "STRANGERS": "{b} visite sono state registrate su altri indirizzi; sono escluse da questi dati.",
+          "COUNTED_AGAIN": "{countB, plural, =1 {Una pagina è contata} other {# pagine sono contate}} più di una volta a visita, quindi le pagine per visita e la frequenza di rimbalzo sembrano migliori di quanto siano.",
+          "SOMETHING_ELSE": "{event} coincidono in ciascuno degli ultimi {b} giorni in cui sono avvenuti, quindi una conversione conta qualcosa che non è mai una richiesta.",
+          "ENQUIRY_UNCOUNTED": "{event} {countC, plural, =1 {è avvenuto {b} volte in 12 mesi ma non è contato} other {avvengono spesso ma non sono contati}}, quindi quelle richieste mancano da ogni dato.",
+          "NEVER_HAPPENS": "{event} non {countC, plural, =1 {è avvenuto} other {sono avvenuti}} nemmeno una volta {countB, plural, =365 {in 12 mesi} other {negli ultimi # giorni}}, quindi ogni richiesta fatta in quel modo è invisibile."
         },
         "fix": {
           "TRACKING_STOPPED": "Controlla che il tag di tracciamento sia ancora su ogni pagina.",
@@ -16909,7 +16853,11 @@
           "NO_VALUE": "Indica quanto vale ciascuna conversione.",
           "PAYMENT_REFERRALS": "Aggiungi le pagine di pagamento all'elenco dei referral indesiderati di Google Analytics.",
           "SELF_REFERRAL": "Aggiungi l'indirizzo del sito stesso all'elenco dei referral indesiderati di Google Analytics.",
-          "STRANGERS": "Fai smettere gli altri indirizzi di inviare dati a Google Analytics: togli loro il tag, o dai loro una proprietà a sé."
+          "STRANGERS": "Fai smettere gli altri indirizzi di inviare dati a Google Analytics: togli loro il tag, o dai loro una proprietà a sé.",
+          "COUNTED_AGAIN": "Fai smettere Google Analytics di contare di nuovo una pagina quando si cliccano i link del suo indice.",
+          "SOMETHING_ELSE": "Ricostruisci la conversione in Google Analytics sulla richiesta vera.",
+          "ENQUIRY_UNCOUNTED": "Conta come conversioni le richieste rimaste escluse.",
+          "NEVER_HAPPENS": "Prova tu stesso ogni modo di contattarti, in una finestra privata, e verifica che Google Analytics lo registri."
         }
       },
       "connection": {
@@ -16933,10 +16881,10 @@
         "add": "Aggiungi Google Analytics: un solo accesso, visto che Search Console è già collegato."
       },
       "chooseEvents": {
-        "noKeyEvents": "La proprietà non ha ancora eventi chiave, quindi niente può contare come conversione. Prima segna in Google Analytics come evento chiave il modulo inviato, la chiamata cliccata o l'acquisto.",
-        "noneFired": "Nessuno dei {a} eventi chiave della proprietà è successo negli ultimi 30 giorni.",
-        "onlyFired": "Dei {b} eventi chiave della proprietà, negli ultimi 30 giorni è successo solo {event}: {count, plural, =1 {una volta} other {# volte}}.",
-        "fired": "{a} dei {b} eventi chiave della proprietà sono successi negli ultimi 30 giorni, {event} più di tutti: {c} volte.",
+        "noKeyEvents": "La proprietà non ha ancora eventi chiave, né eventi che sembrano una richiesta, quindi niente può contare come conversione. Prima segna in Google Analytics come evento chiave il modulo inviato, la chiamata cliccata o l'acquisto.",
+        "noneFired": "Nessuno dei {a} eventi che possono contare è successo negli ultimi 30 giorni.",
+        "onlyFired": "Dei {b} eventi che possono contare, negli ultimi 30 giorni è successo solo {event}: {count, plural, =1 {una volta} other {# volte}}.",
+        "fired": "{a} dei {b} eventi che possono contare sono successi negli ultimi 30 giorni, {event} più di tutti: {c} volte.",
         "purchaseSilent": "“Acquisto” è spuntato perché sulla maggior parte dei siti è una vendita, ma su {text} non è stato comprato niente negli ultimi 30 giorni.",
         "silent": "{event} non {count, plural, =1 {è mai successo, quindi il suo} other {sono mai successi, quindi il loro}} tracciamento potrebbe non funzionare.",
         "silentToo": "Anche {event} non {count, plural, =1 {è mai successo, quindi il suo} other {sono mai successi, quindi il loro}} tracciamento potrebbe non funzionare.",
@@ -16953,10 +16901,10 @@
         "connection": "Connessione",
         "channels": "Canali",
         "seePage": "Vedi la pagina",
-        "theHeroes": "Le pagine eroe",
+        "noVisits": "Nessuna visita",
         "itsSearches": "Le sue ricerche in Search Console",
         "openPage": "Apri la pagina",
-        "pagesToPush": "Pagine da portare in prima pagina",
+        "pagesToPush": "Quasi in cima",
         "conversions": "Conversioni",
         "landingPages": "Pagine di destinazione",
         "landingPage": "Le sue visite",
@@ -19263,6 +19211,7 @@
           "noAnalytics": "Serve Google Analytics collegato",
           "nothingCounted": "Ancora nulla è contato come richiesta",
           "neverFired": "{names} non {count, plural, one {si è} other {si sono}} mai registrati in 12 mesi, quindi una richiesta fatta così è invisibile",
+          "silentLately": "{names} non {count, plural, one {si è} other {si sono}} mai registrati negli ultimi 90 giorni, quindi una richiesta fatta così è invisibile",
           "allFired": "Tutti i {a} modi di contattarti si sono registrati negli ultimi 12 mesi"
         },
         "enquiriesValued": {

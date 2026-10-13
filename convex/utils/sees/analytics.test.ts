@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { expectAnalyticsWords } from "@/src/test/analyticsSeenWords";
 import { UNKNOWN_SHARE as HEALTH_UNKNOWN_SHARE } from "../../googleAnalyticsHealth";
+import { HEALTH_CHECKS } from "../../googleAnalyticsSchema";
 import type { Seen } from "../hakkenSees";
 import {
   UNKNOWN_SHARE,
@@ -98,9 +99,10 @@ describe("2 · Overview", () => {
     { kind: "landing" as const, key: "~1", label: "https://ronins.co.uk/author/anthony/", conversions: 2, value: 4_000, conversionsNow: 2 },
   ];
   const searchConsole = { clicks: 367, impressions: 264_403 };
+  const SITE = "site_1";
 
   test("conversions fell while visits rose; the channel and the page behind it; Google rarely clicked", () => {
-    const box = overviewSees({ now, before, counting: true, changedMost, searchConsole });
+    const box = overviewSees({ siteId: SITE, now, before, counting: true, changedMost, searchConsole });
     expect(box).toEqual({
       says: [
         { code: "lead.down.up", a: (826 - 744) / 744, b: 17, c: 12 },
@@ -110,7 +112,7 @@ describe("2 · Overview", () => {
       steps: [
         { code: "channel.fell", text: "Direct", a: 5, b: 11, link: "channels", to: { segment: "channels" } },
         { code: "page.fell", text: "/", a: 4, b: 7, link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~0" } } },
-        { code: "push", link: "pagesToPush", to: { segment: "heroes", filters: { tab: "push" } } },
+        { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/almost-there" } },
       ],
     });
     worded("overview", box);
@@ -120,7 +122,7 @@ describe("2 · Overview", () => {
     const boxes: Seen[] = [];
     for (const conversions of [10, 12, 20]) {
       for (const visits of [700, 744, 900]) {
-        boxes.push(overviewSees({ now: { ...now, visits, conversions }, before: { ...before, conversions: 12 }, counting: true, changedMost, searchConsole: null }));
+        boxes.push(overviewSees({ siteId: SITE, now: { ...now, visits, conversions }, before: { ...before, conversions: 12 }, counting: true, changedMost, searchConsole: null }));
       }
     }
     expect(boxes.map((box) => box.says[0].code)).toEqual([
@@ -128,29 +130,29 @@ describe("2 · Overview", () => {
       "lead.same.down", "lead.same.same", "lead.same.up",
       "lead.up.down", "lead.up.same", "lead.up.up",
     ]);
-    const rose = overviewSees({ now: { ...now, conversions: 20 }, before, counting: true, changedMost, searchConsole: { clicks: 900, impressions: 30_000 } });
+    const rose = overviewSees({ siteId: SITE, now: { ...now, conversions: 20 }, before, counting: true, changedMost, searchConsole: { clicks: 900, impressions: 30_000 } });
     expect(rose.says.slice(1)).toEqual([{ code: "cause.rosePage", text: "/author/anthony/", a: 2 }, { code: "google", a: 30_000, b: 0.03 }]);
     expect(rose.steps).toEqual([{ code: "page.rose", text: "/author/anthony/", a: 2, b: 0, link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~1" } } }]);
-    const channelOnly = overviewSees({ now, before, counting: true, changedMost: changedMost.slice(0, 1), searchConsole: null });
+    const channelOnly = overviewSees({ siteId: SITE, now, before, counting: true, changedMost: changedMost.slice(0, 1), searchConsole: null });
     expect(channelOnly.says[1]).toEqual({ code: "cause.fellChannel", text: "Direct", a: 6 });
-    const pageOnly = overviewSees({ now, before, counting: true, changedMost: changedMost.slice(1, 2), searchConsole: null });
+    const pageOnly = overviewSees({ siteId: SITE, now, before, counting: true, changedMost: changedMost.slice(1, 2), searchConsole: null });
     expect(pageOnly.says[1]).toEqual({ code: "cause.fellPage", text: "/", a: 3 });
-    const both = overviewSees({ now: { ...now, conversions: 20 }, before, counting: true, changedMost: [{ ...changedMost[0], conversions: 3, conversionsNow: 8 }, changedMost[2]], searchConsole: null });
+    const both = overviewSees({ siteId: SITE, now: { ...now, conversions: 20 }, before, counting: true, changedMost: [{ ...changedMost[0], conversions: 3, conversionsNow: 8 }, changedMost[2]], searchConsole: null });
     expect(both.says[1]).toMatchObject({ code: "cause.roseBoth" });
     expect(both.steps[0]).toMatchObject({ code: "channel.rose", a: 8, b: 5 });
-    const roseChannel = overviewSees({ now: { ...now, conversions: 20 }, before, counting: true, changedMost: [{ ...changedMost[0], conversions: 3 }], searchConsole: null });
+    const roseChannel = overviewSees({ siteId: SITE, now: { ...now, conversions: 20 }, before, counting: true, changedMost: [{ ...changedMost[0], conversions: 3 }], searchConsole: null });
     expect(roseChannel.says[1]).toMatchObject({ code: "cause.roseChannel" });
-    const notCounting = overviewSees({ now, before, counting: false, changedMost: [], searchConsole });
+    const notCounting = overviewSees({ siteId: SITE, now, before, counting: false, changedMost: [], searchConsole });
     expect(notCounting).toEqual({
       says: [{ code: "notCounting", a: 826 }, { code: "googleRarely", a: 264_403, b: 367 / 264_403 }],
       steps: [
         { code: "chooseWhatCounts", link: "chooseWhatCounts", to: { segment: "connection", filters: { change: "1" } } },
-        { code: "push", link: "pagesToPush", to: { segment: "heroes", filters: { tab: "push" } } },
+        { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/almost-there" } },
       ],
     });
-    const first = overviewSees({ now, before: null, counting: true, changedMost: [], searchConsole: null });
+    const first = overviewSees({ siteId: SITE, now, before: null, counting: true, changedMost: [], searchConsole: null });
     expect(first).toEqual({ says: [{ code: "made", a: 12, b: 24_000 }], steps: [] });
-    expect(overviewSees({ now: null, before: null, counting: true, changedMost: [], searchConsole: null })).toEqual({ says: [], steps: [] });
+    expect(overviewSees({ siteId: SITE, now: null, before: null, counting: true, changedMost: [], searchConsole: null })).toEqual({ says: [], steps: [] });
     worded("overview", ...boxes, rose, channelOnly, pageOnly, both, roseChannel, notCounting, first);
   });
 });
@@ -312,29 +314,41 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
 });
 
 describe("8 · All pages", () => {
+  // all-pages-rethink-plan.md AP6: never money; how pages moved, the biggest drop, the pages nobody visited.
   const pages = [
-    row("~0", { label: "https://ronins.co.uk/", views: 508, conversions: 2, value: 4_000 }),
-    row("~1", { label: "https://ronins.co.uk/ai-agency/", views: 318, conversions: 4, value: 8_000 }),
-    row("~2", { label: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", views: 417 }),
+    row("~0", { label: "https://ronins.co.uk/", views: 508, viewsBefore: 400, conversions: 2, value: 4_000 }),
+    row("~1", { label: "https://ronins.co.uk/ai-agency/", views: 318, viewsBefore: 400, conversions: 4, value: 8_000 }),
+    row("~2", { label: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", views: 417, viewsBefore: 416 }),
+    row("https://ronins.co.uk/web-design-surrey/", { label: "https://ronins.co.uk/web-design-surrey/", views: 0, viewsBefore: 0 }),
   ];
+  const moves = { counts: { all: 4, gains: 1, dropped: 1, static: 1, none: 1 }, quiet: ["https://ronins.co.uk/web-design-surrey/"] };
 
-  test("conversions on few pages; the page making most; the most viewed page making none", () => {
-    const box = allPagesSees(pages, true);
+  test("pages viewed and moved; the biggest drop and what it still made; why, the next step, and the pages nobody visited", () => {
+    const box = allPagesSees(pages, true, moves);
     expect(box).toEqual({
       says: [
-        { code: "madeOn", a: 6, b: 2 },
-        { code: "best", text: "https://ronins.co.uk/ai-agency/", a: 4, b: 318 },
-        { code: "idle", text: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", a: 417 },
+        { code: "viewedOf", a: 3, b: 4, c: 1 },
+        { code: "moved", a: 1, b: 1, c: 1 },
+        { code: "droppedMostMade", text: "https://ronins.co.uk/ai-agency/", a: 82, b: 4, c: 6 },
       ],
-      steps: [{ code: "copy", text: "https://ronins.co.uk/ai-agency/", more: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~2" } } }],
+      steps: [
+        { code: "whyDropped", text: "https://ronins.co.uk/ai-agency/", a: 82, link: "seePage", to: { segment: "all-pages/page", filters: { key: "~1" } } },
+        { code: "copy", text: "https://ronins.co.uk/ai-agency/", more: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~2" } } },
+        { code: "noVisitsOne", text: "https://ronins.co.uk/web-design-surrey/", link: "noVisits", to: { segment: "all-pages", filters: { move: "none" } } },
+      ],
     });
-    const top = allPagesSees([...pages, row("~3", { views: 900 })], true);
-    expect(top.says[2]).toEqual({ code: "idleMostViewed", text: "~3", a: 900 });
-    const none = allPagesSees([row("~0", { views: 3 })], true);
-    expect(none).toEqual({ says: [{ code: "noConversions", a: 1 }], steps: [] });
-    const notCounting = allPagesSees(pages, false);
-    expect(notCounting.steps.map((step) => step.code)).toEqual(["chooseWhatCounts"]);
-    worded("allPages", box, top, none, notCounting, allPagesSees([], true));
+    // No drop: the biggest gain; every page viewed; two pages nobody visited named together.
+    const rising = allPagesSees(pages.slice(0, 1), true, { counts: { all: 1, gains: 1, dropped: 0, static: 0, none: 0 }, quiet: [] });
+    expect(rising.says).toEqual([{ code: "viewedAll", a: 1, b: 1, c: 0 }, { code: "moved", a: 1, b: 0, c: 0 }, { code: "gainedMost", text: "https://ronins.co.uk/", a: 108 }]);
+    const two = allPagesSees(pages, true, { ...moves, quiet: ["https://ronins.co.uk/a/", "https://ronins.co.uk/b/"] });
+    expect(two.steps.at(-1)).toMatchObject({ code: "noVisitsTwo", text: "https://ronins.co.uk/a/", more: "https://ronins.co.uk/b/" });
+    // Nothing counts as a conversion: choosing what counts comes first, and the drop names no conversions.
+    const notCounting = allPagesSees(pages, false, moves);
+    expect(notCounting.steps[0].code).toBe("chooseWhatCounts");
+    expect(notCounting.says[2].code).toBe("droppedMost");
+    // Without the list read whole, the rows are counted as they are.
+    expect(allPagesSees(pages, true).says[0]).toEqual({ code: "viewedOf", a: 3, b: 4, c: 1 });
+    worded("allPages", box, rising, two, notCounting, allPagesSees([], true));
   });
 });
 
@@ -493,9 +507,10 @@ describe("10 · Tracking health", () => {
   });
 
   test("every check has its sentence and its fix; all passing; not checked yet", () => {
-    const every = ["TRACKING_STOPPED", "NOTHING_COUNTED", "TOO_MUCH_UNKNOWN", "SUDDEN_FALL", "NO_VALUE", "PAYMENT_REFERRALS", "SELF_REFERRAL", "STRANGERS"];
-    for (const check of every) {
-      const box = trackingHealthSees({ checks: [{ check, passing: false, names: check === "NO_VALUE" ? ["click_email"] : ["visits"], count: 3, share: 0.2 }] });
+    // Every check Tracking health runs, so one added without its words fails here (check 9 had none until 2026-10-13).
+    const events = new Set(["NO_VALUE", "SOMETHING_ELSE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
+    for (const check of HEALTH_CHECKS) {
+      const box = trackingHealthSees({ checks: [{ check, passing: false, names: events.has(check) ? ["click_email"] : ["visits"], others: ["click"], count: 3, share: 0.2 }] });
       expect(box.says[1].code.startsWith(`check.${check}`)).toBe(true);
       expect(box.steps).toHaveLength(1);
       worded("trackingHealth", box);
@@ -503,6 +518,28 @@ describe("10 · Tracking health", () => {
     expect(trackingHealthSees({ checks: checks.map((check) => ({ ...check, passing: true })) })).toEqual({ says: [{ code: "allPassing", a: 8 }], steps: [] });
     expect(trackingHealthSees(null)).toEqual({ says: [], steps: [] });
     worded("trackingHealth", trackingHealthSees({ checks: [{ check: "NOTHING_COUNTED", passing: true }] }));
+  });
+
+  test("ronins.co.uk before 2026-10-13: Form sent is its link clicks, its forms uncounted, its chat, phone and email silent", () => {
+    const box = trackingHealthSees({ checks: [
+      { check: "SOMETHING_ELSE", passing: false, names: ["form_submission"], others: ["click"], count: 7 },
+      { check: "ENQUIRY_UNCOUNTED", passing: false, names: ["contact"], count: 179 },
+      { check: "NEVER_HAPPENS", passing: false, names: ["live_chat_event", "phone_number_click", "email_link_click"], count: 90 },
+    ] });
+    expect(box).toEqual({
+      says: [
+        { code: "failing", a: 3, b: 3 },
+        // Both named in the reader's words: "“Form sent” and “Clicked a link to another website” match on each of the last 7 days…".
+        { code: "check.SOMETHING_ELSE", a: 7, b: 7, text: "form_submission,click", c: 1 },
+        { code: "check.ENQUIRY_UNCOUNTED", a: 179, b: 179, text: "contact", c: 1 },
+      ],
+      steps: [
+        { code: "fix.SOMETHING_ELSE", link: "conversions", to: { segment: "conversions" } },
+        { code: "fix.ENQUIRY_UNCOUNTED", link: "chooseWhatCounts", to: { segment: "connection", filters: { change: "1" } } },
+        { code: "fix.NEVER_HAPPENS", link: "conversions", to: { segment: "conversions" } },
+      ],
+    });
+    worded("trackingHealth", box);
   });
 });
 

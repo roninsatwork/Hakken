@@ -1,18 +1,19 @@
 /**
- * Heroes and attention (docs/plans/active/google-analytics-plan.md §13): each
- * landing page followed from Google's results to the money it makes, the
- * stage where it loses most, what to do about it, and what fixing it is worth
- * a month. Plain rules over the website's own figures — never an industry
- * average, never an AI model — so the same figures always say the same thing.
+ * A landing page followed from Google's results to the money it makes
+ * (docs/plans/active/google-analytics-plan.md §13, §15 screen 7): whether it
+ * is one of the website's heroes, the stage where it loses most, its problems
+ * and what fixing each is worth a month. Plain rules over the website's own
+ * figures — never an industry average, never an AI model — so the same
+ * figures always say the same thing.
  *
- * A page can have several problems; its row shows the one worth most. The
- * worth of each fix uses the website's own figures: its click rate at each
+ * A page can have several problems, worth most first. The worth of each fix
+ * uses the website's own figures: its click rate at each
  * position, read from Search Console over the same days; the page's own
  * conversion rate when it has 100 visits or more, otherwise the website's;
  * and the website's value per conversion.
  */
 
-/** The labels a page can carry, in the order the tabs show them. */
+/** The labels a page can carry: Hero, then its problems in their order. */
 export const HERO_KINDS = ["hero", "push", "click", "convert", "leave", "fall"] as const;
 export type HeroKind = (typeof HERO_KINDS)[number];
 /** The problems a page can have: every label but Hero. */
@@ -100,7 +101,7 @@ export type Problem = { kind: ProblemKind; worth: number | null; gain: number | 
 
 export type HeroPage = HeroPageInput & {
   hero: boolean;
-  /** Worth most first, then in the tabs' order. */
+  /** Worth most first, then in `PROBLEM_KINDS`' order. */
   problems: Problem[];
 };
 
@@ -233,20 +234,6 @@ export function heroPagesOf(pages: readonly HeroPageInput[], totalValue: number)
 export function heroesOf(pages: readonly HeroPageInput[], rates: WebsiteRates): HeroPage[] {
   const heroes = heroPagesOf(pages, rates.totalValue);
   return pages.map((page) => ({ ...page, hero: heroes.has(page.page), problems: problemsOf(page, rates) }));
-}
-
-/** The label a page's row shows on a tab: its problem worth most on All (Hero when it has none), the tab's own otherwise. */
-export function mainOf(page: HeroPage, tab: HeroKind | "all"): HeroKind | null {
-  if (tab === "all") return page.problems[0]?.kind ?? (page.hero ? "hero" : null);
-  if (tab === "hero") return page.hero ? "hero" : null;
-  return page.problems.some((problem) => problem.kind === tab) ? tab : null;
-}
-
-/** What a row's fix is worth on a tab: its main problem's worth; none for a hero. */
-export function worthOn(page: HeroPage, tab: HeroKind | "all"): number | null {
-  const main = mainOf(page, tab);
-  if (!main || main === "hero") return null;
-  return page.problems.find((problem) => problem.kind === main)?.worth ?? null;
 }
 
 /**

@@ -167,9 +167,9 @@ export type ReadPeriod = { from: string; to: string; builtAt: number; shown: num
 /**
  * A ready-made period's list with its pages left as places in the build's
  * book, for a reader that names only the few rows it needs (`BookNames`):
- * Heroes and attention reads every page's figures but names only those its
- * rules could flag — the whole book of a large website's pages, read whole,
- * was most of what its screen read (google-analytics-plan.md §13).
+ * a landing page's own four stages read every page's figures but name only
+ * the page asked for — the whole book of a large website's pages, read whole,
+ * was most of what such a read cost (google-analytics-plan.md §13).
  */
 export async function readPeriodUnnamed(
   ctx: { db: QueryCtx["db"] },

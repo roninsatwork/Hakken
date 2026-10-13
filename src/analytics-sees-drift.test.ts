@@ -18,17 +18,14 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  * Nothing counted yet (16) on Conversions, a device asked of Google (17) on
  * Landing pages, Needs reconnecting (18) on Overview. Three have nothing to
  * read and carry none: Choose the property (13), The first 90 days coming in
- * (15) and the bell (19).
- *
- * Heroes and attention (3) carries its box on its list; a page of it opens
- * with its four stages and What to do instead, as drawn, so carries none.
+ * (15) and the bell (19). Heroes and attention (3) was removed on
+ * 2026-10-13 (Anthony: "remove the page please we don't need it").
  */
 const ANALYTICS = "src/app/(dashboard)/app/analytics";
 
 const ANALYTICS_SCREENS = [
   `${ANALYTICS}/page.tsx`, // 1 · Your websites
   `${ANALYTICS}/[siteId]/page.tsx`, // 2 · Overview, and 18 · Needs reconnecting
-  `${ANALYTICS}/[siteId]/heroes/page.tsx`, // 3 · Heroes and attention
   `${ANALYTICS}/[siteId]/channels/page.tsx`, // 4 · Channels
   `${ANALYTICS}/[siteId]/channels/channel/page.tsx`, // 5 · A channel's own screen
   `${ANALYTICS}/[siteId]/landing-pages/page.tsx`, // 6 · Landing pages, and 17 · a device asked of Google

@@ -463,6 +463,11 @@ wrong, why it matters and how to fix it, in plain words:
 8. **Strangers in the property**: visits recorded on other addresses — a
    staging site, spam.
 
+Later checks have plans of their own: 9, **Counted again**
+(analytics-page-screen-plan.md, phase 6); 10 to 12, **what each conversion
+really is** ([conversion-checks-plan.md](./conversion-checks-plan.md),
+2026-10-13).
+
 Shown on Overview and on its own Tracking health page, the failing checks
 first and the passing ones folded into one line (GA22). When a check starts
 failing, the platform's super admins get one alert in the bell (GA12, changed
@@ -1660,3 +1665,11 @@ new figures where they matter (bounce beside engagement).
   Analytics screen and figure. What Hakken sees on the seven new screens
   (§18.7, Anthony: "yes add the rulles to teh plan"). Eleven phases, about
   twenty-six and a half days; building in one go.
+- 2026-10-13 — Heroes and attention (§13) removed at Anthony's ask ("remove
+  the page please we don't need it"): its menu item, its list and a page's
+  own view of it, its What Hakken sees, its download and Ask Hakken's
+  `heroes` screen. A landing page's own screen keeps its four stages from
+  Google to conversions and its Hero label (`analyticsHeroPage`); its hero
+  step now opens Landing pages. Overview's push step now opens Search
+  Console's Almost there for the same website. Old addresses under
+  `/app/analytics/<website>/heroes` redirect to Landing pages.

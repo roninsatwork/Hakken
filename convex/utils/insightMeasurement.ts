@@ -1,6 +1,7 @@
 import { v, type Infer } from "convex/values";
 import type { Fact } from "./insightFacts";
 import type { EnquiryCheck } from "./insightEnquiryCheck";
+import { readsAsEnquiry } from "./analyticsEvents";
 
 /**
  * The Measurement check (docs/plans/active/insights-analyst-plan.md §4.1,
@@ -54,10 +55,7 @@ const AGREE_WITHIN = 0.2;
 const TIED_WHOLE = 0.9;
 /** Fewer enquiries than this in 12 months, and the count says nothing either way. */
 const FEW = 20;
-/** An event whose name reads as a way to enquire; Google's own automatic events never do. */
-const ENQUIRY_WORDS = /contact|enquir|inquir|lead|quote|submit|form_submission|call|phone|tel|email|mailto|book|appointment|chat|whatsapp/i;
-const NOT_ENQUIRY = /^(form_start|page_view|session_start|first_visit|user_engagement|scroll|click|file_download|view_search_results|video_)/i;
-/** An uncounted event happening this often in 12 months is worth asking about. */
+/** An uncounted event happening this often in 12 months is worth asking about: Tracking health's own floor (check 11). */
 const UNCOUNTED_FLOOR = 10;
 
 const row = (check: MeasurementCheckId, status: MeasurementStatus, found: string, extra: Partial<Pick<MeasurementCheck, "names" | "a" | "b">> = {}): MeasurementCheck => ({
@@ -84,20 +82,28 @@ export function measurementFrom(facts: readonly Fact[], enquiries: EnquiryCheck,
   else if (times < FEW) checks.push(row("enquiryCounted", "UNKNOWN", "tooFew", { a: times }));
   else checks.push(row("enquiryCounted", "PASSING", "countsOnce", { a: times }));
 
-  // Every way to enquire counted: a counted event that never fired in 12 months.
-  const never = counted.filter((event) => event.times === 0).map((event) => event.event);
+  // Every way to enquire counted: Tracking health's "a conversion never happens", read as it is (conversion-checks-plan.md,
+  // one voice) — none in 90 days on a busy website, none in 12 months on a quieter one. Health kept before that check
+  // existed is worked out here as before, until its next run.
+  const silent = result("NEVER_HAPPENS");
+  const never = silent ? silent.names ?? [] : counted.filter((event) => event.times === 0).map((event) => event.event);
+  const neverFound = silent?.count === 90 ? "silentLately" : "neverFired";
   if (!analytics) checks.push(row("everyWayCounted", "UNKNOWN", "noAnalytics"));
   else if (counted.length === 0) checks.push(row("everyWayCounted", "LOOK", "nothingCounted"));
-  else if (never.length > 0) checks.push(row("everyWayCounted", "LOOK", "neverFired", { names: never, a: never.length, b: counted.length }));
+  else if (never.length > 0) checks.push(row("everyWayCounted", "LOOK", neverFound, { names: never, a: never.length, b: counted.length }));
   else checks.push(row("everyWayCounted", "PASSING", "allFired", { a: counted.length }));
 
   // An event that reads as a way to enquire and happens often, but isn't counted (insights-intelligence-plan.md
-  // phase 6: Ronins' "contact", 67 times in 12 months, unticked).
+  // phase 6: Ronins' "contact", 67 times in 12 months, unticked): Tracking health's "every enquiry is counted", read as
+  // it is; worked out here as before only for health kept before that check existed.
+  const missed = result("ENQUIRY_UNCOUNTED");
   const countedNames = new Set(counted.map((event) => event.event));
-  const uncounted = facts
-    .map((fact) => ({ event: /^ga\.event\.(.+)\.times\.365\.now$/.exec(fact.key)?.[1], times: fact.value }))
-    .filter((entry): entry is { event: string; times: number } => Boolean(entry.event) && !countedNames.has(entry.event!) && ENQUIRY_WORDS.test(entry.event!) && !NOT_ENQUIRY.test(entry.event!) && entry.times >= UNCOUNTED_FLOOR)
-    .sort((a, b) => b.times - a.times);
+  const uncounted = missed
+    ? (missed.names ?? []).map((event, index) => ({ event, times: index === 0 ? missed.count ?? 0 : 0 }))
+    : facts
+      .map((fact) => ({ event: /^ga\.event\.(.+)\.times\.365\.now$/.exec(fact.key)?.[1], times: fact.value }))
+      .filter((entry): entry is { event: string; times: number } => Boolean(entry.event) && !countedNames.has(entry.event!) && readsAsEnquiry(entry.event!) && entry.times >= UNCOUNTED_FLOOR)
+      .sort((a, b) => b.times - a.times);
   if (!analytics) checks.push(row("enquiryEventsCounted", "UNKNOWN", "noAnalytics"));
   else if (uncounted.length > 0) checks.push(row("enquiryEventsCounted", "LOOK", "uncounted", { names: uncounted.map((entry) => entry.event), a: uncounted[0].times, b: uncounted.length }));
   else checks.push(row("enquiryEventsCounted", "PASSING", "noneUncounted"));
@@ -165,16 +171,18 @@ const quoted = (names: readonly string[]) => listOf(names.map((name) => `"${name
 export function measurementFindings(checks: readonly MeasurementCheck[], facts: readonly Fact[], checkOn: string) {
   const byKey = new Map(facts.map((fact) => [fact.key, fact]));
   const out = [];
-  const never = checks.find((check) => check.check === "everyWayCounted" && check.found === "neverFired");
+  const never = checks.find((check) => check.check === "everyWayCounted" && (check.found === "neverFired" || check.found === "silentLately"));
   if (never && never.names.length > 0) {
     const one = never.names.length === 1;
+    // Tracking health judges a busy website on its last 90 days, a quieter one on 12 months (conversion-checks-plan.md CC4).
+    const span = never.found === "silentLately" ? "90 days" : "12 months";
     out.push({
       specialist: "measurement" as const,
       pattern: "conversionsNeverFire",
-      headline: `${quoted(never.names)} ${one ? "is" : "are"} counted as ${one ? "a way" : "ways"} to enquire, but Google Analytics hasn't recorded ${one ? "it" : "them"} once in 12 months.`,
-      story: `${one ? "It is" : "Each is"} ticked as an enquiry on your Google Analytics connection, but none has arrived in the last 12 months: either nobody enquires that way, or the website isn't sending ${one ? "it" : "them"}, and any enquiry made that way is invisible in your figures.`,
+      headline: `${quoted(never.names)} ${one ? "is" : "are"} counted as ${one ? "a way" : "ways"} to enquire, but Google Analytics hasn't recorded ${one ? "it" : "them"} once in ${span === "90 days" ? "the last 90 days" : "12 months"}.`,
+      story: `${one ? "It is" : "Each is"} ticked as an enquiry on your Google Analytics connection, but none has arrived in the last ${span}: either nobody enquires that way, or the website isn't sending ${one ? "it" : "them"}, and any enquiry made that way is invisible in your figures.`,
       action: `Make a test enquiry each way — ${quoted(never.names)} — and check it arrives in Google Analytics; fix the website's tracking for any that doesn't.`,
-      howWeKnow: "From the events counted as enquiries on your Google Analytics connection, and Google Analytics' events over the last 12 months.",
+      howWeKnow: `From the events counted as enquiries on your Google Analytics connection, and Google Analytics' events over the last ${span}.`,
       ruledOut: [],
       sure: "HIGH" as const,
       sources: ["analytics"],

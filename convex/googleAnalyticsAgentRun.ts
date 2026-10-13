@@ -20,6 +20,7 @@ import {
   type PeriodJob,
   type StepResult,
 } from "./googleAnalyticsCollect";
+import { COUNTED_WITH } from "./googleAnalyticsSchema";
 
 /**
  * The Google Analytics: Collector Agent's job (docs/plans/active/google-analytics-plan.md
@@ -132,7 +133,9 @@ export const runGoogleAnalyticsCollectorNow = internalAction({
           heading: site.host,
           detail: started === "CLEARING"
             ? "Not started yet: its figures are being cleared for its main home country, and it is collected again once they are gone."
-            : started ? `Its own run started: ${days(started.from, started.top)}.` : "Not started: it was disconnected meanwhile.",
+            : started === "LISTING"
+              ? "Not started yet: its events are read again first, with those that read as enquiries, and then it is collected again, whole."
+              : started ? `Its own run started: ${days(started.from, started.top)}.` : "Not started: it was disconnected meanwhile.",
           failed: false,
         });
       }
@@ -156,17 +159,27 @@ async function beginSiteRun(
   agentId: Id<"agents">,
   site: Site,
   delayMs: number,
-): Promise<{ runId: Id<"agentRuns">; from: string; top: string } | "CLEARING" | null> {
+): Promise<{ runId: Id<"agentRuns">; from: string; top: string } | "CLEARING" | "LISTING" | null> {
   const connection = await ctx.db.get(site.connectionId);
   if (!connection || connection.status !== "CONNECTED" || connection.property !== site.property) return null;
   // Its figures must be its main home country's: when not, they are cleared and this run waits for the clearing's (§18.6.1).
   if (connection.clearing || (await prepareAnalyticsCountry(ctx, connection)) === "SWITCHING") return "CLEARING";
+  // Figures counted another way are collected again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4):
+  // its events listed afresh first, with those that read as enquiries, which then starts this run again.
+  const recount = connection.countedWith !== COUNTED_WITH;
+  if (recount && connection.listedWith !== COUNTED_WITH) {
+    await ctx.scheduler.runAfter(0, internal.googleAnalyticsConnect.readWhatCounts, { connectionId: connection._id, thenCollect: true });
+    return "LISTING";
+  }
   const now = Date.now();
-  const window = analyticsWindow(connection.newestDay, connection.oldestDay, newestWholeDayIn(now, connection.timeZone ?? "Europe/London"));
+  const top = newestWholeDayIn(now, connection.timeZone ?? "Europe/London");
+  const window = recount ? analyticsWindow(undefined, undefined, top) : analyticsWindow(connection.newestDay, connection.oldestDay, top);
   const runId = await ctx.db.insert("agentRuns", {
     agentId,
     triggerType: "EVENT",
-    objective: `Collect ${site.host}'s Google Analytics (${site.property}): its days ${days(window.from, window.top)}, then its ready-made lists. ${NOT_HISTORY}`,
+    objective: recount
+      ? `Collect ${site.host}'s Google Analytics (${site.property}) again, whole, its conversions counted by Google's own counts: its days ${days(window.from, window.top)}, then every ready-made list. ${NOT_HISTORY}`
+      : `Collect ${site.host}'s Google Analytics (${site.property}): its days ${days(window.from, window.top)}, then its ready-made lists. ${NOT_HISTORY}`,
     title: `Google Analytics: ${site.host}`,
     status: "QUEUED",
     companyId: site.companyId,
@@ -193,6 +206,7 @@ async function beginSiteRun(
     jobAt: 0,
     rows: 0,
     requests: 0,
+    recount,
   });
   return { runId, from: window.from, top: window.top };
 }
@@ -206,7 +220,7 @@ export const startSiteRun = internalMutation({
     property: v.string(),
     delayMs: v.number(),
   },
-  returns: v.union(v.null(), v.literal("CLEARING"), v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
+  returns: v.union(v.null(), v.literal("CLEARING"), v.literal("LISTING"), v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
   handler: async (ctx, args) => {
     const parent = await ctx.db.get(args.parentRunId);
     if (!parent) return null;
@@ -276,6 +290,8 @@ export const collectSiteStep = internalAction({
     jobAt: v.number(),
     rows: v.number(),
     requests: v.number(),
+    /** Collected again, whole, by Google's own counts (BT4): every list, and the connection marked so when done. */
+    recount: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -311,7 +327,8 @@ export const collectSiteStep = internalAction({
           await finish("FAILED", `The Google account connected for ${args.host} can no longer read ${args.property} in Google Analytics. Connect it again from its Google Analytics page.`);
         } else if (result.busy) {
           await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "GOOGLE_BUSY" });
-          await finish("FAILED", `Google was too busy to answer for ${args.host}. Nothing is lost: the next run asks again.`);
+          // Google's own words go with it, so a limit reached reads as which one (conversions-back-in-time-plan.md, phase 5).
+          await finish("FAILED", `Google was too busy to answer for ${args.host}. Nothing is lost: the next run asks again. Google said: ${result.reason}`);
         } else {
           await finish("FAILED", stoppedBecause(result.reason, args.host));
         }
@@ -335,7 +352,8 @@ export const collectSiteStep = internalAction({
           });
           to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
           if (to === null) {
-            weekly = target.untitled || target.eventless || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
+            weekly = args.recount === true || target.untitled || target.eventless
+              || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
             jobs = jobsFor(weekly, target.others, target.shop);
           }
           continue;
@@ -361,6 +379,7 @@ export const collectSiteStep = internalAction({
             property: args.property,
             weekly,
             firstDone: true,
+            recount: args.recount === true,
             ...(hosts?.ok ? { hostVisits: hosts.found.visits.slice(0, 50) } : {}),
           });
           await ctx.runMutation(internal.roleRuns.logRunLine, {

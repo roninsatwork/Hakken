@@ -106,6 +106,20 @@ export function tickedAtFirst(eventName: string): boolean {
   return LIKELY_CONVERSIONS.has(eventName) && !NEVER_TICKED.has(eventName);
 }
 
+/** Words in an event's name that read as a way to enquire, the website's own names too (`ronins_enquiry_sent`). */
+const ENQUIRY_WORDS = /contact|enquir|inquir|lead|quote|submit|form_submission|call|phone|tel|email|mailto|book|appointment|chat|whatsapp/i;
+/** Google's own events, which never do, however they are named. */
+const NOT_ENQUIRY = /^(form_start|page_view|session_start|first_visit|user_engagement|scroll|click|file_download|view_search_results|video_)/i;
+
+/**
+ * Whether an event's name reads as a way to enquire: Tracking health's
+ * "every enquiry is counted" (conversion-checks-plan.md CC3), which Insights'
+ * Measurement check reads as it is.
+ */
+export function readsAsEnquiry(eventName: string): boolean {
+  return ENQUIRY_WORDS.test(eventName) && !NOT_ENQUIRY.test(eventName);
+}
+
 /** The event that is a shop's sale: its purchases and revenue come from Analytics' own figures (GA7). */
 export const PURCHASE_EVENT = "purchase";
 

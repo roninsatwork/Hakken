@@ -1,7 +1,8 @@
 import { v, type Infer, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
-import { decodePages } from "./holdPageRefs";
+import { decodePages, isPageRef } from "./holdPageRefs";
+import { MOST_PLOTTED } from "./utils/pageMoves";
 import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
@@ -275,3 +276,48 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
       : { says: [], steps: [] },
   };
 }
+
+/**
+ * All pages' "Views a day" (docs/plans/active/all-pages-rethink-plan.md AP3):
+ * each page ticked in its table, five at most, by its page number — its views
+ * a day over the dates chosen, asked of Google when first drawn and held
+ * until the next collection (`googleAnalyticsLive.askGoogleAnalyticsLive`,
+ * `plotted`). The pages not asked yet come back as `missing`, with the path
+ * Google names them by. The website's own line is Overview's (`analyticsChart`).
+ */
+export const analyticsPagesDaily = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()), pages: v.array(v.string()) },
+  returns: v.object({
+    pages: v.array(v.object({
+      ref: v.string(),
+      address: v.string(),
+      /** Its views a day, the days with none left out; null until Google has answered. */
+      points: v.union(v.null(), v.array(v.object({ day: v.string(), views: v.number() }))),
+    })),
+    missing: v.array(v.object({ ref: v.string(), path: v.string() })),
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const refs = [...new Set(args.pages.filter(isPageRef))].slice(0, MOST_PLOTTED);
+    const connection = await connectionOf(ctx, holdId);
+    if (!connection?.newestDay || refs.length === 0) return { pages: [], missing: [] };
+    const country = await keptCountry(ctx, site.hold, args.country);
+    // The dates the live ask is named by: the ready-made period's (`googleAnalyticsLive.liveTarget`).
+    const slot = await ctx.db
+      .query("googleAnalyticsPeriodSlots")
+      .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", slotKey("total", args.period, "NOW", "", country)))
+      .first();
+    if (!slot) return { pages: [], missing: [] };
+    const addresses = await decodePages(ctx, holdId, refs);
+    const pages = [];
+    const missing = [];
+    for (const [index, ref] of refs.entries()) {
+      const address = addresses[index];
+      const held = await readLive(ctx, holdId, pageAsk("daily", ref, args.period, slot.from, slot.to, args.device, country));
+      pages.push({ ref, address, points: held ? held.rows.map((row) => ({ day: row.key, views: row.views })) : null });
+      if (!held) missing.push({ ref, path: address.replace(/^https?:\/\/[^/]+/i, "") || "/" });
+    }
+    return { pages, missing };
+  },
+});

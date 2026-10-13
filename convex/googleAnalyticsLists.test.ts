@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { beforeKey, journeysOf, siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
+import { beforeKey, joinAsks, journeysOf, siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
 import { assistantOf } from "./utils/aiAssistants";
 
 /**
@@ -60,5 +60,24 @@ describe("a money page's journeys (insights-analyst-plan.md I36)", () => {
     const journeys = journeysOf([...rows, { keys: ["/services/", "https://acme-shop.test/services"], values: [3] }], asked, ADDRESSES, assistantOf, 2);
     expect(journeys.get("/services/")?.map((journey) => journey.label)).toEqual(["d.example.org", "c.example.org"]);
     expect(journeysOf([{ keys: ["/services/", "https://www.google.com/"], values: [0] }], asked, ADDRESSES, assistantOf, 5).size).toBe(0);
+  });
+});
+
+describe("each counted event on a row, by Google's own counts (conversions-back-in-time-plan.md BT1)", () => {
+  // A row's events as asked (`EVENT_METRICS`): times, value, visits.
+  const events = [
+    { keys: ["/contact/", "contact"], values: [3, 0, 3] },
+    { keys: ["/contact/", "generate_lead"], values: [5, 100, 2] },
+  ];
+  const main = [{ keys: ["/contact/"], values: [10, 6, 300, 20, 0, 0, 8, 5, 30] }];
+
+  test("an event counts the times it happened, with its value", () => {
+    const [row] = [...joinAsks("landing", [], main, events).values()].flat();
+    expect([row.counts.get("contact"), row.counts.get("generate_lead"), row.values.get("generate_lead")]).toEqual([3, 5, 10_000]);
+  });
+
+  test("a key event Google counts once a visit counts the visits it happened in", () => {
+    const [row] = [...joinAsks("landing", [], main, events, new Set(["generate_lead"])).values()].flat();
+    expect([row.counts.get("contact"), row.counts.get("generate_lead")]).toEqual([3, 2]);
   });
 });

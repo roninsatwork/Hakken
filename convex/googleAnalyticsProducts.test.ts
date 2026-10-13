@@ -32,7 +32,7 @@ async function connected(t: Harness) {
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "COUNTING", property: PROPERTY, propertyName: "Acme",
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [],
-      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1,
+      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT",
       events: [{ eventName: "purchase", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 30 }],
       createdAt: 1, updatedAt: 1,
     });

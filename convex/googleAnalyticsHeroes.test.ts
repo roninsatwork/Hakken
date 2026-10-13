@@ -7,11 +7,11 @@ import { channelKey, packList, type ListRow } from "./googleAnalyticsLists";
 import { slotKey } from "./googleAnalyticsCollect";
 
 /**
- * Heroes and attention, end to end (docs/plans/active/google-analytics-plan.md
- * §13): Search Console's pages and searches joined to Analytics' landing
- * pages page by page, the website's own figures from Search Console's totals,
- * each page's problems and worth, the tabs, and one page's own view — read by
- * the caller's own hold.
+ * A landing page's four stages, end to end (docs/plans/active/
+ * google-analytics-plan.md §13, §15 screen 7): Search Console's pages and
+ * searches joined to Analytics' landing pages page by page, each page's
+ * problems and worth, and whether it is a hero — read by the caller's own
+ * hold.
  */
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -54,7 +54,7 @@ async function connected(t: Harness, withConsole = true) {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "properties/1", addresses: ["www.acme.test"],
-      currency: "GBP", newestDay: "2026-10-09", oldestDay: "2026-08-11", eventsReadAt: 1,
+      currency: "GBP", newestDay: "2026-10-09", oldestDay: "2026-08-11", eventsReadAt: 1, listedWith: "EVENT_COUNT",
       events: [{ eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: 20, lastThirtyDays: 7 }],
       createdAt: 1, updatedAt: 1,
     });
@@ -81,54 +81,12 @@ async function connected(t: Harness, withConsole = true) {
   return { ...ids, user: t.withIdentity({ subject: ids.userId }) };
 }
 
-const LIST = { tab: "all" as const, page: 1, rows: 25 };
-
-describe("Heroes and attention", () => {
-  test("joins each page from Google's results to its money, folding /guide and /guide/ into one page", async () => {
-    const t = harness();
-    const { siteId, user } = await connected(t);
-    const heroes = await user.query(api.googleAnalyticsHeroes.analyticsHeroes, { siteId, ...LIST });
-    expect(heroes.state).toBe("READY");
-    expect(heroes.rows[1]).toMatchObject({ ref: "~1", console: "https://www.acme.test/guide/" });
-    expect(heroes.rows.map((one) => [one.page, one.main, one.hero])).toEqual([
-      ["/service/", "push", false],
-      ["/guide/", "convert", false],
-      ["/", "hero", true],
-    ]);
-    // Not converting: 188 visits × the website's 1% × £20, in hundredths.
-    expect(heroes.rows[1].worth).toBeCloseTo(188 * 0.01 * 2_000);
-    // Push to page one: 60,000 showings × (0.7% − 0.05%) × 1% × £20.
-    expect(heroes.rows[0].worth).toBeCloseTo(60_000 * (0.007 - 0.0005) * 0.01 * 2_000);
-    expect(heroes.tabs).toEqual([
-      { tab: "all", count: 3 }, { tab: "hero", count: 1 }, { tab: "push", count: 1 }, { tab: "click", count: 0 },
-      { tab: "convert", count: 1 }, { tab: "leave", count: 0 }, { tab: "fall", count: 0 },
-    ]);
-  });
-
-  test("the website's figures come from Search Console's own totals and Google's own visits", async () => {
-    const t = harness();
-    const { siteId, user } = await connected(t);
-    const { stages, totalGain, seen } = await user.query(api.googleAnalyticsHeroes.analyticsHeroes, { siteId, ...LIST });
-    expect(stages).toMatchObject({ shown: 300_000, clicks: 400, position: 18, visits: 600, conversions: 4, value: 8_000, websiteValue: 20_000, heroes: 1, heroesValue: 12_000 });
-    expect(stages.gainInGoogle + stages.gainOnPages).toBe(totalGain);
-    expect(stages.marked).toBe(1);
-    expect(seen.says[0]).toMatchObject({ code: "mostInGoogle", a: 300_000, c: totalGain });
-    expect(seen.steps.map((step) => step.code)).toEqual(["pushOne", "nextStep", "leaveHeroesOne"]);
-  });
-
-  test("a tab lists its own pages, searched from the start of a word", async () => {
-    const t = harness();
-    const { siteId, user } = await connected(t);
-    const heroes = await user.query(api.googleAnalyticsHeroes.analyticsHeroes, { siteId, ...LIST, tab: "hero" });
-    expect(heroes.rows).toMatchObject([{ page: "/", main: "hero", worth: null }]);
-    const searched = await user.query(api.googleAnalyticsHeroes.analyticsHeroes, { siteId, ...LIST, q: "guide" });
-    expect(searched.rows.map((one) => one.page)).toEqual(["/guide/"]);
-  });
-
+describe("a landing page's four stages", () => {
   test("one page's own view: its four stages, its problems, and where its other screens are", async () => {
     const t = harness();
     const { siteId, user } = await connected(t);
-    // A landing page's own screen names it by Analytics' number; a row of Heroes by its path, with both of its sources' names.
+    // A landing page's own screen names it by Analytics' number; it can also be asked by its path, with both of its sources' names.
+    // The guide is /guide/ to Search Console and /guide to Analytics: one page.
     for (const ask of [{ page: "~1" }, { page: "/guide/", ref: "~1", console: "https://www.acme.test/guide/" }]) {
       const { found } = await user.query(api.googleAnalyticsHeroes.analyticsHeroPage, { siteId, ...ask });
       expect(found).toMatchObject({
@@ -141,17 +99,31 @@ describe("Heroes and attention", () => {
         marked: 3,
       });
       expect(found?.problems.map((problem) => problem.kind)).toEqual(["convert"]);
+      // Not converting: 188 visits × the website's 1% × £20, in hundredths.
+      expect(found?.problems[0].worth).toBeCloseTo(188 * 0.01 * 2_000, 0);
     }
   });
 
-  test("without Search Console, only what happens on the pages is judged", async () => {
+  test("a page to push is priced from the website's own click rates, and a hero is marked at its money", async () => {
+    const t = harness();
+    const { siteId, user } = await connected(t);
+    const pushed = await user.query(api.googleAnalyticsHeroes.analyticsHeroPage, { siteId, page: "~2" });
+    expect(pushed.state).toBe("READY");
+    expect(pushed.found).toMatchObject({ page: "/service/", hero: false, marked: 0, google: { shown: 60_000 }, googleBefore: { shown: 18_000 } });
+    expect(pushed.found?.problems.map((problem) => problem.kind)).toEqual(["push"]);
+    // Push to page one: 60,000 showings × (0.7% − 0.05%) × 1% × £20.
+    expect(pushed.found?.problems[0].worth).toBeCloseTo(60_000 * (0.007 - 0.0005) * 0.01 * 2_000, 0);
+    const hero = await user.query(api.googleAnalyticsHeroes.analyticsHeroPage, { siteId, page: "~0" });
+    expect(hero.found).toMatchObject({ page: "/", hero: true, problems: [], marked: 3 });
+    expect(hero.found?.website.value).toBe(20_000);
+  });
+
+  test("without Search Console, only what happens on the page is judged", async () => {
     const t = harness();
     const { siteId, user } = await connected(t, false);
-    const heroes = await user.query(api.googleAnalyticsHeroes.analyticsHeroes, { siteId, ...LIST });
-    expect(heroes.consoleConnected).toBe(false);
-    expect(heroes.stages).toMatchObject({ shown: null, clicks: null });
-    expect(heroes.rows.map((one) => one.main)).toEqual(["convert", "hero"]);
-    expect(heroes.seen.says.map((phrase) => phrase.code)).toContain("noConsole");
+    const { consoleConnected, found } = await user.query(api.googleAnalyticsHeroes.analyticsHeroPage, { siteId, page: "~1" });
+    expect(consoleConnected).toBe(false);
+    expect(found).toMatchObject({ google: null, consoleAddress: null, problems: [{ kind: "convert" }] });
   });
 
   test("another company's website answers as a missing one", async () => {
@@ -161,6 +133,6 @@ describe("Heroes and attention", () => {
       const companyId = await ctx.db.insert("companies", { name: "Other", createdAt: 1 });
       return await ctx.db.insert("users", { name: "Other", email: "other@other.test", role: "ADMIN", companyId, createdAt: 1 });
     });
-    await expect(t.withIdentity({ subject: stranger }).query(api.googleAnalyticsHeroes.analyticsHeroes, { siteId, ...LIST })).rejects.toThrow(/not one your company holds/);
+    await expect(t.withIdentity({ subject: stranger }).query(api.googleAnalyticsHeroes.analyticsHeroPage, { siteId, page: "~1" })).rejects.toThrow(/not one your company holds/);
   });
 });

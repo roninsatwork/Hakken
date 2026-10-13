@@ -6,6 +6,6 @@
  */
 export const ANALYTICS_SCREENS = [
   "overview", "channels", "channel", "campaigns", "adKeywords", "landingPages", "landingPage", "allPages", "page",
-  "events", "event", "conversions", "visitors", "products", "heroes",
+  "events", "event", "conversions", "visitors", "products",
 ] as const;
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];

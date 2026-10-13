@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { weekStart } from "@/convex/utils/searchConsolePacks";
-import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
 import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
@@ -288,7 +288,7 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
 export function ListTopBars({ list, sort, bars, nameOf }: {
   list: "channel" | "landing" | "page" | "campaign" | VisitorList;
   sort: "visits" | "views" | "conversions";
-  bars: "channels" | "channelsList" | "landing" | "allPages" | "conversions" | "campaigns" | `visitors.${VisitorList}`;
+  bars: "channels" | "channelsList" | "landing" | "conversions" | "campaigns" | `visitors.${VisitorList}`;
   /** A bar's name in the reader's words, where Google's is a code (Visitors'). */
   nameOf?: (label: string) => string;
 }) {
@@ -353,5 +353,73 @@ export function CampaignsDailyChart() {
       exportName="google-analytics-campaigns-daily"
       title={{ ...t.raw("campaignsTitle") as { day: string; week: string; month: string }, hint: t("campaignsHint", { period: tf(`periods.${args.period}`) }) }}
     />
+  );
+}
+
+/** Lines of views a day added up into the step chosen, one value a line, dated by each bucket's first day. */
+function viewsByStep(step: Step, series: readonly SiteSeries[], lines: ReadonlyArray<ReadonlyArray<{ day: string; views: number }>>): Array<Record<string, unknown>> {
+  const buckets = new Map<string, { first: string; last: string; views: number[] }>();
+  lines.forEach((points, line) => {
+    for (const point of points) {
+      const key = step === "day" ? point.day : step === "week" ? weekStart(point.day) : point.day.slice(0, 7);
+      const bucket = buckets.get(key) ?? { first: point.day, last: point.day, views: series.map(() => 0) };
+      if (point.day < bucket.first) bucket.first = point.day;
+      if (point.day > bucket.last) bucket.last = point.day;
+      bucket.views[line] += point.views;
+      buckets.set(key, bucket);
+    }
+  });
+  return [...buckets.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, bucket]) => datedRow(
+    { day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last },
+    Object.fromEntries(series.map((entry, index) => [entry.key, bucket.views[index] ?? 0])),
+    step === "month" ? formatMonth(key) : formatShortDay(bucket.first),
+  ));
+}
+
+/** Each ticked page's line, in the order ticked; the website's is grey and dashed. */
+const PLOTTED_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_AMBER, CHART_SERIES_TEAL];
+
+/**
+ * All pages' "Views a day" (docs/plans/active/all-pages-rethink-plan.md AP2,
+ * AP3): short and wide over the table, as Google Analytics draws Pages and
+ * screens — the whole website dashed, from Overview's days, and each page
+ * ticked in the table a line of its own, five at most, asked of Google when
+ * first drawn. Stepped by day, week or month as chosen at the top.
+ */
+export function PagesDailyChart({ pages }: { pages: readonly string[] }) {
+  const t = useTranslations("googleAnalytics.chart.pagesDaily");
+  const tc = useTranslations("googleAnalytics.chart");
+  const tf = useTranslations("googleAnalytics.filters");
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const [step] = useStep();
+  const [period] = usePeriod();
+  const ready = Boolean(status?.connection?.newestDay);
+  const website = useQuery(api.googleAnalyticsChartReads.analyticsChart, ready ? args : "skip");
+  const daily = useQuery(api.googleAnalyticsPageReads.analyticsPagesDaily, ready && pages.length > 0 ? { ...args, pages: [...pages] } : "skip");
+  const asking = useLiveAsk(daily && daily.missing.length > 0 ? { ...args, plotted: daily.missing } : null);
+  const drawn = pages.flatMap((ref, index) => {
+    const page = daily?.pages.find((one) => one.ref === ref);
+    return page?.points ? [{ ...page, points: page.points, colour: PLOTTED_COLOURS[index] ?? CHART_SERIES_SLATE }] : [];
+  });
+  const series: SiteSeries[] = [
+    { key: "website", name: t("website"), colour: CHART_SERIES_SLATE, dashed: true },
+    ...drawn.map((page, index) => ({ key: `page${index}`, name: pathOf(page.address), colour: page.colour })),
+  ];
+  const data = viewsByStep(step, series, [website?.points ?? [], ...drawn.map((page) => page.points)]);
+  const hint = t("hint", { period: tf(`periods.${period}`) });
+  return (
+    <SearchConsoleChartCard
+      title={t(`title.${step}`)}
+      hint={asking === "FAILED" ? `${hint} ${t("askFailed")}` : hint}
+      exportName="google-analytics-pages-daily"
+      csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
+      host={status?.host ?? ""}
+      from={null}
+      to={null}
+      step={step}
+    >
+      {data.length > 0 ? <SiteLineChart data={data} series={series} height={200} sharedScale /> : <p className="py-10 text-center text-[12px] text-muted">{tc("empty")}</p>}
+    </SearchConsoleChartCard>
   );
 }

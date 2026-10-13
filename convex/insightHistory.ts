@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { countedOf } from "./googleAnalyticsRows";
-import { ask as askAnalytics, countryIdOf, openSession } from "./googleAnalyticsCollect";
+import { ask as askAnalytics, countryIdOf, openSession, perVisitOf } from "./googleAnalyticsCollect";
 import type { ReportRow } from "./googleAnalyticsApi";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { askLive } from "./searchConsoleReads";
@@ -61,6 +61,8 @@ export const historyTarget = internalQuery({
       addresses: v.array(v.string()),
       country: v.string(),
       counted: v.array(v.string()),
+      /** Of them, those Google counts once a visit: counted by their visits (conversions-back-in-time-plan.md BT1). */
+      perVisit: v.array(v.string()),
       newestDay: v.string(),
     })),
     held: v.array(v.object({ kind: historyKindValidator, month: v.string(), from: v.string(), to: v.string() })),
@@ -80,6 +82,7 @@ export const historyTarget = internalQuery({
           addresses: ga.addresses ?? [],
           country: countryIdOf(ga.mainCountry ?? mainConsoleCountry(hold)),
           counted: countedOf(ga).map((event) => event.eventName),
+          perVisit: perVisitOf(ga),
           newestDay: ga.newestDay,
         }
         : null,
@@ -210,6 +213,9 @@ export const fetchHistory = internalAction({
       } else {
         const months = historyMonths(analytics.newestDay);
         const base = { endDate: analytics.newestDay, hostNames: analytics.addresses, countries: [analytics.country] };
+        const perVisit = new Set(analytics.perVisit);
+        /** An event's enquiries from its times and visits (`eventCount`, `sessions`), as the collection counts them (BT1). */
+        const countOf = (eventName: string, values: readonly number[]) => (perVisit.has(eventName) ? values[1] : values[0]) ?? 0;
         const withEvents = async (from: string, dimensions: string[], metrics: string[]) => {
           asks += 1;
           const main = await askAnalytics(opened.session, analytics.property, { ...base, startDate: from, dimensions, metrics });
@@ -217,9 +223,11 @@ export const fetchHistory = internalAction({
           if (analytics.counted.length === 0) return { main: main.rows, events: [] as ReportRow[], cut: main.cut };
           asks += 1;
           const events = await askAnalytics(opened.session, analytics.property, {
-            ...base, startDate: from, dimensions: [...dimensions, "eventName"], metrics: ["keyEvents"], eventNames: analytics.counted,
+            ...base, startDate: from, dimensions: [...dimensions, "eventName"], metrics: ["eventCount", "sessions"], eventNames: analytics.counted,
           });
-          return events.ok ? { main: main.rows, events: events.rows, cut: main.cut || events.cut } : null;
+          // Each row's enquiries as one figure, as every reader below takes it: Google's own count, or visits for one counted once a visit.
+          const asOne = (row: ReportRow): ReportRow => ({ ...row, values: [countOf(row.keys[dimensions.length] ?? "", row.values)] });
+          return events.ok ? { main: main.rows, events: events.rows.map(asOne), cut: main.cut || events.cut } : null;
         };
         const joinKey = (keys: readonly string[], width: number) => keys.slice(0, width).join(SOURCE_JOIN);
 
@@ -277,7 +285,7 @@ export const fetchHistory = internalAction({
         // Each event a month, counted as an enquiry or not (phase 2, "each kind of enquiry"): its times, and its enquiries
         // when it is one Hakken counts.
         asks += 1;
-        const events = await askAnalytics(opened.session, analytics.property, { ...base, startDate: months[0].from, dimensions: ["yearMonth", "eventName"], metrics: ["eventCount", "keyEvents"] });
+        const events = await askAnalytics(opened.session, analytics.property, { ...base, startDate: months[0].from, dimensions: ["yearMonth", "eventName"], metrics: ["eventCount", "sessions"] });
         if (events.ok) {
           const counted = new Set(analytics.counted);
           const byMonth = new Map<string, HistoryRow[]>();
@@ -285,7 +293,7 @@ export const fetchHistory = internalAction({
             const month = monthOfGoogle(row.keys[0] ?? "");
             const name = row.keys[1] ?? "";
             const rows = byMonth.get(month) ?? [];
-            rows.push({ key: name, times: row.values[0] ?? 0, enquiries: counted.has(name) ? row.values[1] ?? 0 : 0 });
+            rows.push({ key: name, times: row.values[0] ?? 0, enquiries: counted.has(name) ? countOf(name, row.values) : 0 });
             byMonth.set(month, rows);
           }
           for (const [month, rows] of byMonth) {
@@ -297,18 +305,21 @@ export const fetchHistory = internalAction({
         }
 
         // The pages read in visits that ended in an enquiry, the last 90 days (phase 2, "pages read on the way"): each
-        // page's visits, and of them the visits with an enquiry, from each counted event's share of visits.
+        // page's visits, and of them the visits each counted event happened in, added up and never more than the page's
+        // visits. Asked by event, not by Google's share of visits with a key event, which only a marked key event has (BT6).
         if (analytics.counted.length > 0) {
-          asks += 1;
+          asks += 2;
           const from = shiftDay(analytics.newestDay, -89);
-          const read = await askAnalytics(opened.session, analytics.property, {
-            ...base, startDate: from, dimensions: ["pagePath"], metrics: ["sessions", ...analytics.counted.slice(0, 9).map((event) => `sessionKeyEventRate:${event}`)],
+          const read = await askAnalytics(opened.session, analytics.property, { ...base, startDate: from, dimensions: ["pagePath"], metrics: ["sessions"] });
+          const enquired = await askAnalytics(opened.session, analytics.property, {
+            ...base, startDate: from, dimensions: ["pagePath", "eventName"], metrics: ["sessions"], eventNames: analytics.counted,
           });
-          if (read.ok) {
+          if (read.ok && enquired.ok) {
+            const withEnquiry = new Map<string, number>();
+            for (const row of enquired.rows) withEnquiry.set(row.keys[0] ?? "", (withEnquiry.get(row.keys[0] ?? "") ?? 0) + (row.values[0] ?? 0));
             const rows = read.rows.map((row) => {
               const sessions = row.values[0] ?? 0;
-              const rate = Math.min(1, row.values.slice(1).reduce((sum, value) => sum + (value ?? 0), 0));
-              return { key: pathOf(row.keys[0] ?? ""), visits: sessions, enquiries: Math.round(sessions * rate) };
+              return { key: pathOf(row.keys[0] ?? ""), visits: sessions, enquiries: Math.min(sessions, withEnquiry.get(row.keys[0] ?? "") ?? 0) };
             });
             records.push({ kind: "GA_JOURNEY", month: "", from, to: analytics.newestDay, rows: keepMost(addUp(rows)) });
           } else {

@@ -66,7 +66,24 @@ export const countedEventValidator = v.object({
   hakkenValue: v.union(v.number(), v.null()),
   /** How many in the last 30 days, when the events were read: shown beside each. */
   lastThirtyDays: v.number(),
+  /**
+   * Whether Google Analytics marks it as a key event. Absent on events read
+   * before 2026-10-13, which were all key events; false for an event listed
+   * because it reads as an enquiry (conversions-back-in-time-plan.md BT2).
+   */
+  keyEvent: v.optional(v.boolean()),
+  /** A key event Google counts once a visit: Hakken counts the visits it happened in (BT1). */
+  perVisit: v.optional(v.boolean()),
 });
+
+/**
+ * How a website's conversions are counted (conversions-back-in-time-plan.md
+ * BT1): Google's own count of each event, for every date kept, rather than its
+ * key-event count, which begins only when an event is marked. A connection's
+ * figures not yet collected this way are collected again, whole, on its next
+ * run (BT4); one whose events were not yet listed this way has them read first.
+ */
+export const COUNTED_WITH = "EVENT_COUNT";
 
 /**
  * What a kept list is of (§4.2, GA20, GA23): the website's totals and its
@@ -186,6 +203,11 @@ export const HEALTH_CHECKS = [
   "STRANGERS",
   // A page Google counts again and again in one visit, its contents links taken as new views (analytics-page-screen-plan.md, phase 6).
   "COUNTED_AGAIN",
+  // What each conversion really is (conversion-checks-plan.md): one matching an event that is never an enquiry, day for day;
+  // an enquiry happening but not counted; a conversion that never happens.
+  "SOMETHING_ELSE",
+  "ENQUIRY_UNCOUNTED",
+  "NEVER_HAPPENS",
 ] as const;
 export type HealthCheck = (typeof HEALTH_CHECKS)[number];
 export const healthCheckValidator = v.union(...HEALTH_CHECKS.map((check) => v.literal(check)));
@@ -195,6 +217,8 @@ export const healthResultValidator = v.object({
   check: healthCheckValidator,
   passing: v.boolean(),
   names: v.optional(v.array(v.string())),
+  /** For each of `names`, the event it really is: "a conversion is really something else" alone. */
+  others: v.optional(v.array(v.string())),
   count: v.optional(v.number()),
   share: v.optional(v.number()),
 });
@@ -224,10 +248,16 @@ export const googleAnalyticsTables = {
     otherAddresses: v.optional(v.array(v.string())),
     timeZone: v.optional(v.string()),
     currency: v.optional(v.string()),
-    /** The property's key events, which count, and what each is worth. */
+    /** The property's key events and the events that read as enquiries, which count, and what each is worth. */
     events: v.optional(v.array(countedEventValidator)),
     /** When the key events were last read from Google: absent while they are read. */
     eventsReadAt: v.optional(v.number()),
+    /** How the events were last listed (`COUNTED_WITH`): with the events that read as enquiries beside the key events. */
+    listedWith: v.optional(v.string()),
+    /** How the figures held were counted (`COUNTED_WITH`); otherwise the next run collects them again, whole (BT4). */
+    countedWith: v.optional(v.string()),
+    /** Listed events that count the same day for day (BT5): one is very likely a copy of the other, kept with each health check. */
+    copies: v.optional(v.array(v.object({ eventName: v.string(), of: v.string() }))),
     /** The property the figures held came from: choosing another clears them. */
     dataProperty: v.optional(v.string()),
     /**

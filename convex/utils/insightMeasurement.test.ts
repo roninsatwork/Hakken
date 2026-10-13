@@ -92,3 +92,38 @@ describe("the ways to enquire, said by the run itself (insights-intelligence-pla
     expect(measurementFindings(measurementFrom([], enquiryCheck([]), HEALTHY), [], "2026-11-09")).toEqual([]);
   });
 });
+
+describe("one voice with Tracking health (conversion-checks-plan.md)", () => {
+  const facts = [
+    count("ga.counted.form_submission.times.365.now", 169), count("ga.event.form_submission.times.365.now", 169),
+    count("ga.counted.live_chat_event.times.365.now", 2), count("ga.counted.phone_number_click.times.365.now", 0),
+    count("ga.event.contact.times.365.now", 67),
+  ];
+  const withHealth = (...checks: AnalyticsHealth[]) => [...HEALTHY, ...checks];
+
+  test("its two checks read Tracking health's answers, never their own", () => {
+    // Tracking health judged a busy website on 90 days: the chat that fired twice this year is silent there too.
+    const health = withHealth(
+      { check: "NEVER_HAPPENS", passing: false, names: ["live_chat_event", "phone_number_click"], count: 90 },
+      { check: "ENQUIRY_UNCOUNTED", passing: false, names: ["contact", "ronins_enquiry_sent"], count: 179 },
+    );
+    const checks = measurementFrom(facts, enquiryCheck(facts), health);
+    expect(checks.find((check) => check.check === "everyWayCounted"))
+      .toMatchObject({ status: "LOOK", found: "silentLately", names: ["live_chat_event", "phone_number_click"], a: 2, b: 3 });
+    expect(checks.find((check) => check.check === "enquiryEventsCounted"))
+      .toMatchObject({ status: "LOOK", found: "uncounted", names: ["contact", "ronins_enquiry_sent"], a: 179, b: 2 });
+    expect(measurementFindings(checks, facts, "2026-11-09")[0].headline)
+      .toBe("\"live_chat_event\" and \"phone_number_click\" are counted as ways to enquire, but Google Analytics hasn't recorded them once in the last 90 days.");
+    // Both passing there: both passing here, whatever the facts would have said.
+    const passingHealth = withHealth({ check: "NEVER_HAPPENS", passing: true, names: [], count: 90 }, { check: "ENQUIRY_UNCOUNTED", passing: true, names: [] });
+    const quiet = measurementFrom(facts, enquiryCheck(facts), passingHealth);
+    expect(quiet.find((check) => check.check === "everyWayCounted")).toMatchObject({ status: "PASSING", found: "allFired" });
+    expect(quiet.find((check) => check.check === "enquiryEventsCounted")).toMatchObject({ status: "PASSING", found: "noneUncounted" });
+  });
+
+  test("health kept before those checks existed is worked out from the facts, as before", () => {
+    const checks = measurementFrom(facts, enquiryCheck(facts), HEALTHY);
+    expect(checks.find((check) => check.check === "everyWayCounted")).toMatchObject({ found: "neverFired", names: ["phone_number_click"] });
+    expect(checks.find((check) => check.check === "enquiryEventsCounted")).toMatchObject({ found: "uncounted", names: ["contact"], a: 67 });
+  });
+});

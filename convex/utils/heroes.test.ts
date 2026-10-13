@@ -1,10 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { bandOf, clickRatesOf, heroesOf, heroPagesOf, mainOf, problemsOf, rateFor, websiteRatesOf, worthOn, type HeroPageInput, type WebsiteRates } from "./heroes";
+import { bandOf, clickRatesOf, heroesOf, heroPagesOf, problemsOf, rateFor, websiteRatesOf, type HeroPageInput, type WebsiteRates } from "./heroes";
 
 /**
- * Heroes and attention's rules (docs/plans/active/google-analytics-plan.md
- * §13), on Ronins' own figures for the 30 days to 9 October 2026: 826 visits,
- * 12 conversions, £240 — 1.45% converting at £20 each.
+ * A landing page's rules from Google to money
+ * (docs/plans/active/google-analytics-plan.md §13), on Ronins' own figures
+ * for the 30 days to 9 October 2026: 826 visits, 12 conversions, £240 —
+ * 1.45% converting at £20 each.
  */
 
 const RONINS = { visits: 826, engaged: 438, conversions: 12, value: 24_000 };
@@ -104,7 +105,7 @@ describe("each problem, by its rule", () => {
   });
 });
 
-describe("heroes, and what a row shows", () => {
+describe("heroes, and each page's problems", () => {
   // Ronins' pages that made money: the home page £80, /ai-agency/ £60, the author page £40, two at £20.
   const pages = [
     page("/", { visits: visits(141, 4, 8_000) }),
@@ -121,16 +122,14 @@ describe("heroes, and what a row shows", () => {
     expect(heroPagesOf(pages, 0).size).toBe(0);
   });
 
-  test("on All a row shows its problem worth most, a hero with none shows Hero, and a page with nothing is left out", () => {
+  test("each page carries whether it is a hero and its problems, worth most first", () => {
     const shown = heroesOf(pages, rates());
     const of = (path: string) => shown.find((one) => one.page === path)!;
-    expect(mainOf(of("/"), "all")).toBe("hero");
-    expect(worthOn(of("/"), "all")).toBeNull();
-    expect(mainOf(of("/ai-agency/"), "all")).toBe("push");
+    expect(of("/")).toMatchObject({ hero: true, problems: [] });
     expect(of("/ai-agency/").hero).toBe(true);
-    expect(mainOf(of("/hub/kapferer-brand-identity-prism/"), "all")).toBe("convert");
-    expect(mainOf(of("/quiet/"), "all")).toBeNull();
-    expect(mainOf(of("/ai-agency/"), "hero")).toBe("hero");
-    expect(mainOf(of("/ai-agency/"), "convert")).toBeNull();
+    expect(of("/ai-agency/").problems.map((one) => one.kind)).toEqual(["push"]);
+    expect(of("/hub/kapferer-brand-identity-prism/").hero).toBe(false);
+    expect(of("/hub/kapferer-brand-identity-prism/").problems.map((one) => one.kind)).toEqual(["convert"]);
+    expect(of("/quiet/")).toMatchObject({ hero: false, problems: [] });
   });
 });

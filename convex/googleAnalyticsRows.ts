@@ -213,6 +213,8 @@ export const shownRowValidator = v.object({
   revenue: v.number(),
   /** Visits against the span before, as a fraction; null when there is none to compare. */
   change: v.union(v.number(), v.null()),
+  /** Page views in the span before (All pages' Views change and filters); null when there is none to compare. */
+  viewsBefore: v.union(v.number(), v.null()),
   /** Conversions and value against the span before, for "What changed most". */
   conversionsBefore: v.union(v.number(), v.null()),
   valueBefore: v.union(v.number(), v.null()),
@@ -247,6 +249,7 @@ export function shown(row: ListRow, before: ListRow | null | undefined, counted:
     purchases: row.purchases,
     revenue: row.revenue,
     change: hadBefore ? (before && before.visits > 0 ? (row.visits - before.visits) / before.visits : null) : null,
+    viewsBefore: hadBefore ? (before?.views ?? 0) : null,
     conversionsBefore: hadBefore ? (was?.conversions ?? 0) : null,
     valueBefore: hadBefore ? (was?.value ?? 0) : null,
   };

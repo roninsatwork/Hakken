@@ -7,7 +7,7 @@ import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { appError } from "./utils/appError";
-import { ask, askFunnel, askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { ask, askFunnel, askList, numberPages, openSession, perVisitOf, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
 import { LIVE_PARTS, beforeKey, emptyRow, packList, pageAddress, type ListRow } from "./googleAnalyticsLists";
 import { encodePagesFromAction } from "./holdPageRefs";
 import { shiftDay } from "./searchConsoleDays";
@@ -18,6 +18,8 @@ import { DAY_JOIN, channelSeriesAsk } from "./googleAnalyticsChartReads";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { countryIdOf } from "./googleAnalyticsCollect";
 import { askPageStory, type StoryList } from "./googleAnalyticsPageStoryAsk";
+import { addInto } from "./googleAnalyticsRows";
+import { MOST_PLOTTED } from "./utils/pageMoves";
 
 /**
  * Lists a screen asks Google for when it needs them (docs/plans/active/google-analytics-plan.md
@@ -58,6 +60,7 @@ export const liveTarget = internalQuery({
       origin: siteOrigin(addresses, website?.host ?? ""),
       timeZone: connection.timeZone ?? "Europe/London",
       events: (connection.events ?? []).map((event) => event.eventName),
+      perVisit: perVisitOf(connection),
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
@@ -107,10 +110,10 @@ export const putLive = internalMutation({
 /**
  * The name a page's own list is held under: a landing page's chart (`series`)
  * or channels, or — a page of All pages (GA29) — its views a day (`viewed`)
- * and the page before each view (`before`); another home country's ends with
- * its code.
+ * and the page before each view (`before`), or its views a day drawn on All
+ * pages' chart (`daily`); another home country's ends with its code.
  */
-export function pageAsk(kind: "series" | "channel" | "viewed" | "before" | StoryList, page: string, period: string, from: string, to: string, device: string, country = ""): string {
+export function pageAsk(kind: "series" | "channel" | "viewed" | "before" | "daily" | StoryList, page: string, period: string, from: string, to: string, device: string, country = ""): string {
   return `${kind}:${page}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
@@ -156,6 +159,8 @@ export const askGoogleAnalyticsLive = tenantAction({
      * they saw, where its views went next, and who its readers are.
      */
     story: v.optional(v.object({ ref: v.string(), path: v.string() })),
+    /** All pages' "Views a day" (all-pages-rethink-plan.md AP3): the pages ticked in its table, each one's views a day, five at most. */
+    plotted: v.optional(v.array(v.object({ ref: v.string(), path: v.string() }))),
   },
   returns: v.object({ ok: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
   handler: async (ctx, args): Promise<{ ok: boolean; problem: null | "NOT_CONNECTED" | "GOOGLE_BUSY" | "GOOGLE_REFUSED" }> => {
@@ -284,6 +289,26 @@ export const askGoogleAnalyticsLive = tenantAction({
         await write(eventAsk("funnel", "NOW", event, args.period, range.from, range.to, args.device, found.country), "event",
           funnel.ok ? [{ ...emptyRow("did"), people: funnel.did }, { ...emptyRow("then"), people: funnel.then }] : [emptyRow("refused")],
           { folded: false, thresholded: false, cut: false });
+      }
+      return { ok: true, problem: null };
+    }
+    if (args.plotted) {
+      const pages = args.plotted.slice(0, MOST_PLOTTED);
+      // Analytics names a page as it was viewed, slash or not: asked both ways, in one ask for every page.
+      const bare = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
+      const paths = [...new Set(pages.flatMap((page) => [page.path, bare(page.path)]))];
+      const asked = await askList(opened.session, found.target, "page", ["date"], range, { pagePath: paths, ...(device ? { device } : {}) });
+      if (!asked.ok) return failed(asked);
+      for (const page of pages) {
+        const days: ListRow[] = [];
+        for (const [day, rows] of asked.groups) {
+          const own = rows.filter((row) => bare(row.key) === bare(page.path));
+          if (own.length === 0) continue;
+          const total = emptyRow(day);
+          for (const row of own) addInto(total, row);
+          days.push(total);
+        }
+        await write(pageAsk("daily", page.ref, args.period, range.from, range.to, args.device, found.country), "series", days, asked.flags);
       }
       return { ok: true, problem: null };
     }

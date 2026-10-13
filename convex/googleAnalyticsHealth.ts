@@ -6,22 +6,23 @@ import type { Doc } from "./_generated/dataModel";
 import { shiftDay } from "./searchConsoleDays";
 import { bareHost } from "./googleAnalyticsApi";
 import { slotKey } from "./googleAnalyticsCollect";
-import { splitChannelKey, unpackPart, type PackedPart } from "./googleAnalyticsLists";
+import { DAY_JOIN, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { HEALTH_CHECKS, type HealthCheck } from "./googleAnalyticsSchema";
 import { decodePages } from "./holdPageRefs";
+import { NEVER_TICKED, readsAsEnquiry } from "./utils/analyticsEvents";
 import { COUNTED_AGAIN } from "./utils/sees/analytics";
 
 /**
  * Whether Google Analytics is counting a website properly
- * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): eight checks,
+ * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): twelve checks,
  * run when the first collection finishes and with every weekly one, each
  * saying what is wrong, why it matters and how to fix it on the Tracking
  * health page. When a check starts failing the platform's super admins get
  * one alert in the bell — once, never every week it stays failing.
  *
  * Read from what the collection already keeps: the days, the 30 days' channels
- * and landing pages, the addresses' visits asked weekly. Nothing is asked of
- * Google here.
+ * and landing pages, the addresses' visits asked weekly, and each event's
+ * times. Nothing is asked of Google here.
  */
 
 /** A week's visits this far under the four weeks before is a sudden fall (§10, Q5). */
@@ -38,6 +39,12 @@ const STEADY_DAYS = 14;
 export const COUNTED_AGAIN_FLOOR = 100;
 /** Pages named by check 9, the most counted first. */
 const COUNTED_AGAIN_NAMED = 3;
+/** Days in a row a conversion matches an event that is never an enquiry before it reads as that event (check 10). */
+export const SOMETHING_ELSE_DAYS = 5;
+/** Times in 12 months an event that reads as an enquiry must happen, uncounted, before it is named (check 11). */
+export const UNCOUNTED_FLOOR = 10;
+/** Visits in 90 days that make a conversion's 90 silent days mean something (check 12); fewer, and 12 months are read. */
+export const SILENT_VISITS = 300;
 
 /** Payment pages that take the credit for sales when they come back as referrals (§6, check 6). */
 export const PAYMENT_SOURCES: readonly string[] = [
@@ -46,7 +53,7 @@ export const PAYMENT_SOURCES: readonly string[] = [
   "3dsecure", "secure5.arcot.com", "pay.google.com", "apple.com",
 ];
 
-type Result = { check: HealthCheck; passing: boolean; names?: string[]; count?: number; share?: number };
+type Result = { check: HealthCheck; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number };
 
 async function slotRows(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">, key: string) {
   const slot = await ctx.db
@@ -61,7 +68,118 @@ async function slotRows(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnec
   return parts.flatMap((part) => unpackPart(part as PackedPart));
 }
 
-/** The eight checks, worked out from what is kept. */
+// ---------------------------------------------------------------------------
+// What each conversion really is (conversion-checks-plan.md): checks 10 to 12
+// ---------------------------------------------------------------------------
+
+type Days = ReadonlyMap<string, number>;
+const NO_DAYS: Days = new Map();
+
+/** Each event's times a day, from a list of each event a day. */
+export function timesByDay(rows: readonly ListRow[]): Map<string, Map<string, number>> {
+  const byEvent = new Map<string, Map<string, number>>();
+  for (const row of rows) {
+    const at = row.key.indexOf(DAY_JOIN);
+    if (at < 0) continue;
+    const eventName = row.key.slice(at + DAY_JOIN.length);
+    const days = byEvent.get(eventName) ?? new Map<string, number>();
+    days.set(row.key.slice(0, at), (days.get(row.key.slice(0, at)) ?? 0) + (row.times ?? 0));
+    byEvent.set(eventName, days);
+  }
+  return byEvent;
+}
+
+/**
+ * The days in a row, newest first, on which two events happened the same
+ * number of times, back to the last day they differed; days neither happened
+ * are passed over. A conversion built from another event matches it on every
+ * day; once it is rebuilt, the first day they differ ends the run.
+ */
+export function daysAlike(first: Days, second: Days): number {
+  const days = [...new Set([...first.keys(), ...second.keys()])]
+    .filter((day) => (first.get(day) ?? 0) > 0 || (second.get(day) ?? 0) > 0)
+    .sort()
+    .reverse();
+  let alike = 0;
+  for (const day of days) {
+    if ((first.get(day) ?? 0) !== (second.get(day) ?? 0)) break;
+    alike += 1;
+  }
+  return alike;
+}
+
+/**
+ * Check 10: each counted conversion that matches, on each of at least
+ * `SOMETHING_ELSE_DAYS` days in a row, an event that is never an enquiry — a
+ * click on a link away, a scroll, a page view (Ronins' "Form sent" was its
+ * link clicks, 2026-10-13). One conversion copying another real enquiry passes.
+ */
+export function somethingElse(counted: readonly string[], series: ReadonlyMap<string, Days>): Array<{ eventName: string; other: string; days: number }> {
+  return counted.flatMap((eventName) => {
+    if (NEVER_TICKED.has(eventName)) return [];
+    const own = series.get(eventName) ?? NO_DAYS;
+    const closest = [...NEVER_TICKED]
+      .map((other) => ({ other, days: daysAlike(own, series.get(other) ?? NO_DAYS) }))
+      .sort((left, right) => right.days - left.days)[0];
+    return closest && closest.days >= SOMETHING_ELSE_DAYS ? [{ eventName, ...closest }] : [];
+  });
+}
+
+/**
+ * Check 11: events that read as a way to enquire, happening `UNCOUNTED_FLOOR`
+ * times or more in 12 months, that nothing counts — neither ticked, nor
+ * copied by a counted conversion on the newest days either happened (Ronins'
+ * "Form sent" rebuilt from "contact"). The most first.
+ */
+export function enquiriesUncounted(
+  counted: readonly string[],
+  year: ReadonlyArray<{ eventName: string; times: number }>,
+  series: ReadonlyMap<string, Days>,
+): Array<{ eventName: string; times: number }> {
+  const countedNames = new Set(counted);
+  return year
+    .filter((row) => !countedNames.has(row.eventName) && readsAsEnquiry(row.eventName) && row.times >= UNCOUNTED_FLOOR)
+    .filter((row) => !counted.some((eventName) => daysAlike(series.get(eventName) ?? NO_DAYS, series.get(row.eventName) ?? NO_DAYS) > 0))
+    .sort((left, right) => right.times - left.times);
+}
+
+/**
+ * Check 12: counted conversions that never happen — none in 90 days on a
+ * website with `SILENT_VISITS` visits in them, or none in 12 months on a
+ * quieter one, where 90 silent days mean little. The days judged go with them.
+ */
+export function neverHappening(
+  counted: readonly string[],
+  quarter: { visits: number; times: ReadonlyMap<string, number> } | null,
+  year: ReadonlyMap<string, number> | null,
+): { names: string[]; days: 90 | 365 } {
+  if (quarter && quarter.visits >= SILENT_VISITS) return { names: counted.filter((eventName) => (quarter.times.get(eventName) ?? 0) === 0), days: 90 };
+  return { names: year ? counted.filter((eventName) => (year.get(eventName) ?? 0) === 0) : [], days: 365 };
+}
+
+/** An event list's times by event: its rows' own names. */
+const timesOf = (rows: readonly ListRow[]) => new Map(rows.map((row) => [row.key, row.times ?? 0]));
+
+/** Days in a row two listed events must count the same before Connection says one is very likely a copy of the other. */
+export const COPY_DAYS = 3;
+
+/**
+ * Listed events that count the same, day for day, on each of at least
+ * `COPY_DAYS` days in a row back from the newest either happened — the first
+ * in the list's order named with the one it matches — for Choose what counts
+ * to say so when both are ticked (conversions-back-in-time-plan.md BT5).
+ */
+export function copiesAmong(listed: readonly string[], series: ReadonlyMap<string, Days>): Array<{ eventName: string; of: string }> {
+  const copies: Array<{ eventName: string; of: string }> = [];
+  for (const [at, eventName] of listed.entries()) {
+    for (const of of listed.slice(at + 1)) {
+      if (daysAlike(series.get(eventName) ?? NO_DAYS, series.get(of) ?? NO_DAYS) >= COPY_DAYS) copies.push({ eventName, of });
+    }
+  }
+  return copies;
+}
+
+/** The twelve checks, worked out from what is kept. */
 export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">): Promise<Result[]> {
   const website = await ctx.db.get(connection.websiteId);
   const site = bareHost(website?.host ?? "");
@@ -147,11 +265,43 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     count: again.length,
   });
 
+  // 10 to 12: what each conversion really is, from each event's times — a day for 30 days, and in 90 days and 12 months.
+  // A list not kept yet (a website's first days; the long periods come weekly) passes rather than guesses.
+  const countedNames = counted.map((event) => event.eventName);
+  const seriesRows = await slotRows(ctx, connection, slotKey("eventSeries", "30", "NOW", ""));
+  const series = timesByDay(seriesRows ?? []);
+  const copies = seriesRows ? somethingElse(countedNames, series) : [];
+  results.push({
+    check: "SOMETHING_ELSE",
+    passing: copies.length === 0,
+    names: copies.map((copy) => copy.eventName),
+    others: copies.map((copy) => copy.other),
+    ...(copies.length > 0 ? { count: copies[0].days } : {}),
+  });
+  const yearRows = await slotRows(ctx, connection, slotKey("event", "365", "NOW", ""));
+  const uncounted = yearRows && seriesRows
+    ? enquiriesUncounted(countedNames, yearRows.map((row) => ({ eventName: row.key, times: row.times ?? 0 })), series)
+    : [];
+  results.push({
+    check: "ENQUIRY_UNCOUNTED",
+    passing: uncounted.length === 0,
+    names: uncounted.map((row) => row.eventName),
+    ...(uncounted.length > 0 ? { count: uncounted[0].times } : {}),
+  });
+  const quarterRows = await slotRows(ctx, connection, slotKey("event", "90", "NOW", ""));
+  const quarterTotal = await slotRows(ctx, connection, slotKey("total", "90", "NOW", ""));
+  const silent = neverHappening(
+    countedNames,
+    quarterRows && quarterTotal ? { visits: quarterTotal.reduce((sum, row) => sum + row.visits, 0), times: timesOf(quarterRows) } : null,
+    yearRows ? timesOf(yearRows) : null,
+  );
+  results.push({ check: "NEVER_HAPPENS", passing: silent.names.length === 0, names: silent.names, count: silent.days });
+
   return HEALTH_CHECKS.map((check) => results.find((result) => result.check === check)!);
 }
 
 const BELL: Partial<Record<HealthCheck, (result: Result, host: string) => { title: string; body: string }>> = {
-  NOTHING_COUNTED: (_, host) => ({ title: `${host}: nothing counts as a conversion`, body: "Tick the events that are a conversion on its Google Analytics Connection page, and they are counted for the past 90 days too." }),
+  NOTHING_COUNTED: (_, host) => ({ title: `${host}: nothing counts as a conversion`, body: "Tick the events that are a conversion on its Google Analytics Connection page, and their whole history is counted too." }),
   NO_VALUE: (result, host) => ({ title: `${host}: a conversion has no value`, body: `${(result.names ?? []).join(", ")} has no value in Google Analytics or here, so it adds nothing to Value. Set one from Tracking health.` }),
   TRACKING_STOPPED: (_, host) => ({ title: `${host}: Google Analytics stopped counting`, body: "A day went by with no visits after weeks of steady ones: the tracking tag may have come off the website. Tracking health says how to check." }),
   SUDDEN_FALL: (result, host) => ({ title: `${host}: a sudden fall`, body: `The last week's ${(result.names ?? ["visits"])[0]} were ${Math.round((result.share ?? 0) * 100)}% under the four weeks before. Tracking health says what to check.` }),
@@ -160,6 +310,18 @@ const BELL: Partial<Record<HealthCheck, (result: Result, host: string) => { titl
   TOO_MUCH_UNKNOWN: (result, host) => ({ title: `${host}: too many visits of unknown origin`, body: `${Math.round((result.share ?? 0) * 100)}% of visits have no channel or no landing page. Tracking health says what to check.` }),
   STRANGERS: (result, host) => ({ title: `${host}: visits on another address`, body: `${result.count ?? 0} visits were recorded on ${(result.names ?? []).join(", ")}. They're left out of the figures; Tracking health says how to stop them.` }),
   COUNTED_AGAIN: (result, host) => ({ title: `${host}: pages counted more than once a visit`, body: `Google Analytics counts ${(result.names ?? []).join(", ")} again and again in one visit, so pages a visit and bounce rate read better than they are. Tracking health says how to fix it.` }),
+  SOMETHING_ELSE: (result, host) => ({
+    title: `${host}: a conversion is really something else`,
+    body: `${result.names?.[0] ?? ""} matches ${result.others?.[0] ?? ""} on each of the last ${result.count ?? 0} days either happened, so it isn't counting enquiries. Tracking health says how to fix it.`,
+  }),
+  ENQUIRY_UNCOUNTED: (result, host) => ({
+    title: `${host}: an enquiry isn't counted`,
+    body: `${(result.names ?? []).join(", ")} happened ${result.count ?? 0} times in 12 months, but nothing counts it as a conversion. Tracking health says how to fix it.`,
+  }),
+  NEVER_HAPPENS: (result, host) => ({
+    title: `${host}: a conversion never happens`,
+    body: `${(result.names ?? []).join(", ")} hasn't happened once in ${result.count === 90 ? "the last 90 days" : "12 months"}: the tag that sends it may be missing or broken. Tracking health says how to check.`,
+  }),
 };
 
 /**
@@ -174,7 +336,10 @@ export const runHealthChecks = internalMutation({
     if (!connection || connection.status !== "CONNECTED") return null;
     const results = await checksOf(ctx, connection);
     const wasFailing = new Set((connection.health?.checks ?? []).filter((check) => !check.passing).map((check) => check.check));
-    await ctx.db.patch(connection._id, { health: { checkedAt: Date.now(), checks: results }, updatedAt: Date.now() });
+    // Which listed events count the same day for day, for Choose what counts (BT5), from the same 30 days a day.
+    const series = await slotRows(ctx, connection, slotKey("eventSeries", "30", "NOW", ""));
+    const copies = series ? copiesAmong((connection.events ?? []).map((event) => event.eventName), timesByDay(series)) : [];
+    await ctx.db.patch(connection._id, { health: { checkedAt: Date.now(), checks: results }, copies, updatedAt: Date.now() });
     const website = await ctx.db.get(connection.websiteId);
     const host = website?.displayHost ?? website?.host ?? "";
     for (const result of results) {

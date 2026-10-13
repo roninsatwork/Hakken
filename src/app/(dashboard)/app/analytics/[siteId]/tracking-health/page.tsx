@@ -10,10 +10,10 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { trackingHealthSees } from "@/convex/utils/sees/analytics";
+import { inCheckOrder, trackingHealthSees } from "@/convex/utils/sees/analytics";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { useHealthWords } from "../../_components/useHealthWords";
+import { choosableHere, useHealthWords } from "../../_components/useHealthWords";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../_components/useAnalytics";
 
 /**
@@ -54,9 +54,11 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
   const [showPassing, setShowPassing] = useState(false);
   const checks = status.connection?.health?.checks;
   if (!checks) return <Notice>{t("notYet")}</Notice>;
-  const failing = checks.filter((check) => !check.passing);
-  const passing = checks.filter((check) => check.passing);
-  const fixable = new Set(["NOTHING_COUNTED", "NO_VALUE"]);
+  // The costliest first, as What Hakken sees above names them.
+  const failing = inCheckOrder(checks.filter((check) => !check.passing));
+  const passing = inCheckOrder(checks.filter((check) => check.passing));
+  // Fixed on the Connection page: what counts, a value, and an uncounted enquiry listed there.
+  const fixable = (check: (typeof checks)[number]) => check.check === "NOTHING_COUNTED" || check.check === "NO_VALUE" || choosableHere(check, status);
   return (
     <div className="flex flex-col gap-4">
       <AnalyticsSees screen="trackingHealth" seen={trackingHealthSees({ checks })} currency={status.connection?.currency} />
@@ -82,7 +84,7 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
                 <>
                   <p className="text-[13px] text-secondary"><span className="text-foreground">{t("why")}</span> {said.why}</p>
                   <p className="text-[13px] text-secondary"><span className="text-foreground">{t("fix")}</span> {said.fix}</p>
-                  {fixable.has(check.check) && status.canManage ? (
+                  {fixable(check) && status.canManage ? (
                     <div>
                       <Button variant="quiet" className="px-3 py-2 text-[12px]" onClick={() => router.push(hrefFor("connection", { change: "1" }))}>
                         {check.check === "NO_VALUE" ? t("setValue") : t("chooseWhatCounts")}

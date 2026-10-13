@@ -171,10 +171,13 @@ export async function askPageStory(
             await write(converted, "event", [], { folded: false, thresholded: false, cut: false });
             return { ok: true };
           }
-          // Split by event too, as every ask of key events is (`askList`), and added up.
-          const answer = await ask(session, property, { ...base, dimensions: [dimension, "eventName"], metrics: ["keyEvents"], eventNames: [...counted], only: landed });
+          // Split by event too, as every ask of the counted events is (`askList`), and added up: Google's own count of each,
+          // or its visits for one counted once a visit (conversions-back-in-time-plan.md BT1, BT6).
+          const answer = await ask(session, property, { ...base, dimensions: [dimension, "eventName"], metrics: ["eventCount", "sessions"], eventNames: [...counted], only: landed });
           if (!answer.ok) return answer;
-          await write(converted, "event", rowsOf(answer.rows, (row, one) => { row.times = (row.times ?? 0) + (one.values[0] ?? 0); }, (one) => (one.keys[0] ?? "").toLowerCase()), flagsOf(answer));
+          const perVisit = new Set(target.perVisit);
+          const countOf = (one: ReportRow) => (perVisit.has(one.keys[1] ?? "") ? one.values[1] : one.values[0]) ?? 0;
+          await write(converted, "event", rowsOf(answer.rows, (row, one) => { row.times = (row.times ?? 0) + countOf(one); }, (one) => (one.keys[0] ?? "").toLowerCase()), flagsOf(answer));
           return { ok: true };
         },
       ];

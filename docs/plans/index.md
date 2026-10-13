@@ -7,6 +7,23 @@ completed work.
 
 ## Active Plans
 
+- [Google Analytics — conversions counted back in time](./active/conversions-back-in-time-plan.md)
+  — conversions counted with Google's own count of each event instead of its
+  key-event count, so any enquiry can count and choosing what counts corrects
+  the whole year on every screen (ronins.co.uk's enquiry of 12 Oct included).
+  One fresh collection per website (about 0.8 MB for Ronins). **Built on dev
+  2026-10-13 (Anthony chose option A, approved the drawing) and checked on
+  ronins.co.uk: Contact's 68 enquiries in 12 months held on every row; not
+  committed.**
+- [Google Analytics — Tracking health checks what each conversion really is](./active/conversion-checks-plan.md)
+  — three new checks: a conversion that is really something else (ronins.co.uk's
+  "Form sent" was link clicks), an enquiry happening but not counted (its real
+  forms, `contact`), and a conversion that never happens (its chat, phone and
+  email). Read from what Hakken already keeps; nothing new asked of Google.
+  Insights' Measurement check reads the two it already had, so the two never
+  disagree. **Built on dev 2026-10-13 and checked on ronins.co.uk (6 of 12
+  checks failing, as found by hand); not committed. Backfilling past
+  enquiries is a separate plan, to discuss.**
 - [Insights — Hakken as the SEO and CRO agency](./active/insights-analyst-plan.md)
   — the new Insights item under Ask Hakken: where the data sources combine.
   A team of specialist agents under a Head of Strategy reads every source for
@@ -99,6 +116,9 @@ completed work.
   reading all of it — eleven phases, about twenty-seven days with "people who
   converted after it". All eleven built 2026-10-11 in local commits on dev,
   not pushed, each checked on Ronins in Chrome; the full gate passed.**
+  Heroes and attention removed 2026-10-13 at Anthony's ask; a landing
+  page's own screen keeps its four stages, and the removed screen's old
+  addresses open Landing pages.
 - [Insights to one standard — every judgement decided once, by its agent](./active/insights-one-voice-plan.md)
   — started 2026-10-12: every Insights screen to the standard Keyword
   cannibalisation reached that day. Code gathers the evidence; a rule makes the
@@ -120,6 +140,12 @@ completed work.
   questions are open (the specialist alone writing the page; Jev picking each
   search's page; keyword difficulty from the monthly collection; "Your place"
   elsewhere).
+- [Google Analytics — All pages, rethought](./active/all-pages-rethink-plan.md)
+  — no money on the screen; a short "Views a day" chart (the website plus up
+  to five ticked pages) over the table; Visits, Views, Views change, Dwell
+  time, Conv., Conv. rate and Conv. change; filters Gains, Dropped, Static and
+  No visits beside the search box. Drawn, agreed and built on dev
+  2026-10-13 (about 9 man-days); two questions after building.
 - [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
   — the All pages screen of one page gains the visits that started on it and
   their conversions, named apart from those made on it; different pages a

@@ -86,7 +86,7 @@ export default function InsightsFindingPage() {
   if (finding === null) return <HakkenEmptyState icon={Lightbulb} title={t("notFound")} description={t("notFoundDescription")} />;
 
   const sources = finding.sources.map(words.source).join(t("and"));
-  // The steps to Hakken tasks, as Heroes hands its own (google-analytics-plan.md §13): Ask Hakken proposes the task to approve.
+  // The steps to Hakken tasks (google-analytics-plan.md §13): Ask Hakken proposes the task to approve.
   const toTasks = async () => {
     await markActed({ findingId: finding.findingId });
     const ask = t("taskAsk", { host: finding.host, action: finding.action, how: finding.howWeKnow, day: finding.checkOn ? formatDay(finding.checkOn) : "" });

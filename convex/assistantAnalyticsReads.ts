@@ -10,9 +10,9 @@ import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitors } from "./googleAnalyticsVisitorReads";
 import { productList, readProducts } from "./googleAnalyticsProductReads";
 import { readLandingPage, readPage } from "./googleAnalyticsPageReads";
-import { readHeroes } from "./googleAnalyticsHeroes";
 import { LIVE_LISTS, askLiveFigures } from "./googleAnalyticsRealtime";
 import { pathOfAddress } from "./utils/sees/analytics";
+import { MOVE_VIEWS } from "./utils/pageMoves";
 import { ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
 
 /**
@@ -43,6 +43,20 @@ const money = (hundredths: number | null | undefined) => (hundredths === null ||
 const percent = (share: number | null | undefined) => (share === null || share === undefined ? null : Math.round(share * 1000) / 10);
 
 /** A list's row as the Assistant reads it: plain names and units, the screen's own figures. */
+/** A page of All pages as its screen shows it: no money, its views and conversions against the span before. */
+function pageRowOf(row: ShownRow) {
+  return {
+    name: row.title ? `${row.title} — ${pathOfAddress(row.label)}` : pathOfAddress(row.label),
+    visits: row.visits,
+    pageViews: row.views,
+    pageViewsBefore: row.viewsBefore,
+    secondsEngagedPerVisit: row.timePerVisit === null ? null : Math.round(row.timePerVisit),
+    conversionsMadeHere: row.conversions,
+    conversionRatePercent: percent(row.conversionRate),
+    conversionsMadeHereBefore: row.conversionsBefore,
+  };
+}
+
 function rowOf(row: ShownRow) {
   return {
     name: row.title ? `${row.title} — ${pathOfAddress(row.label)}` : pathOfAddress(row.label),
@@ -134,7 +148,9 @@ export const googleAnalyticsInternal = internalQuery({
       return {
         ...base,
         listed: answer.total,
-        rows: answer.rows.map(rowOf),
+        // All pages has no money and counts each page's moves (all-pages-rethink-plan.md AP1, AP5), as its screen does.
+        rows: list.list === "page" ? answer.rows.map(pageRowOf) : answer.rows.map(rowOf),
+        ...(answer.moves ? { pagesByMove: { ...answer.moves, rule: `A gain or a drop is ${MOVE_VIEWS} views or more against the span before; no visits means nobody viewed the page.` } } : {}),
         ...(answer.untagged !== null ? { visitsFromNoTaggedLink: answer.untagged } : {}),
         ...(answer.figures ? { channelTotals: { visits: answer.figures.visits, visitsBefore: answer.figures.visitsBefore, conversions: answer.figures.conversions, value: money(answer.figures.value) } } : {}),
         ...(answer.thresholded ? { note: "Google held back some small groups to protect people's privacy." } : {}),
@@ -256,15 +272,6 @@ export const googleAnalyticsInternal = internalQuery({
           theSpanBefore: answer.before && { ...answer.before, revenue: money(answer.before.revenue) },
           products: products.rows.slice(0, ROWS).map((row) => ({ name: row.name, category: row.category, looks: row.looks, basket: row.basket, bought: row.bought, revenue: money(row.revenue), changeInRevenuePercent: percent(row.change) })),
           link: linkTo("products"),
-        };
-      }
-      case "heroes": {
-        const answer = await readHeroes(site, { siteId, tab: "all", page: 1, rows: ROWS });
-        return {
-          ...base,
-          state: answer.state,
-          pages: answer.rows.map((row) => ({ page: row.title ? `${row.title} — ${row.page}` : row.page, label: row.main, hero: row.hero, worthAMonth: money(row.worth) })),
-          link: linkTo("heroes"),
         };
       }
       default:

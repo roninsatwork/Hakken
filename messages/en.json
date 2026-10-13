@@ -15367,7 +15367,6 @@
       },
       "overview": "Overview",
       "live": "Live",
-      "heroes": "Heroes and attention",
       "channels": "Channels",
       "campaigns": "Campaigns",
       "landingPages": "Landing pages",
@@ -15674,8 +15673,16 @@
         "peopleTitle": "People who saw the page",
         "time": "Time",
         "timeTitle": "Time engaged a visit",
+        "dwell": "Dwell time",
         "conversions": "Conversions",
-        "conversionsHere": "Conversions made here",
+        "conversionsShort": "Conv.",
+        "conversionsShortTitle": "Conversions made on this page",
+        "rate": "Conv. rate",
+        "rateTitle": "Conversions made on this page, out of its visits",
+        "viewsChange": "Views change",
+        "viewsChangeTitle": "Views against the dates before: how many more or fewer",
+        "conversionsChange": "Conv. change",
+        "conversionsChangeTitle": "Conversions made on this page against the dates before: how many more or fewer",
         "conversionsStarted": "Conversions from visits",
         "conversionsStartedTitle": "Conversions in visits that started on the page, made anywhere on the website",
         "value": "Value",
@@ -15710,11 +15717,28 @@
         "conversions": "Conversions",
         "value": "Value ({currency})",
         "change": "Change in visits (%)",
-        "source": "Source / medium"
+        "source": "Source / medium",
+        "viewsChange": "Change in views",
+        "rate": "Conversion rate (%)",
+        "conversionsChange": "Change in conversions"
       },
       "downloadFailed": "Couldn't prepare the download. Try again.",
       "untagged": "{count, plural, =1 {one visit had} other {# visits had}} no campaign tag",
-      "askingBodyCampaigns": "Campaign lists by device are not kept, so {platformName} asks Google when you choose one. The campaigns are listed already; their {device} figures arrive in a few seconds."
+      "askingBodyCampaigns": "Campaign lists by device are not kept, so {platformName} asks Google when you choose one. The campaigns are listed already; their {device} figures arrive in a few seconds.",
+      "viewsUp": "Up {rate} on the dates before, from {before} views",
+      "viewsDown": "Down {rate} on the dates before, from {before} views",
+      "tick": "Draw {page} on the chart",
+      "tickColumn": "On the chart",
+      "tickLimit": "Five pages at most on the chart",
+      "moveRule": "a gain or drop is {views} views or more",
+      "moves": {
+        "label": "Which pages",
+        "all": "All {count}",
+        "gains": "Gains {count}",
+        "dropped": "Dropped {count}",
+        "static": "Static {count}",
+        "none": "No visits {count}"
+      }
     },
     "chart": {
       "title": "Visits and conversions over time",
@@ -15754,11 +15778,6 @@
           "title": "Visits by landing page",
           "hint": "{period}: the ten landing pages with the most visits.",
           "measure": "Visits"
-        },
-        "allPages": {
-          "title": "Most viewed pages",
-          "hint": "{period}: the ten pages viewed most.",
-          "measure": "Views"
         },
         "conversions": {
           "title": "Conversions by landing page",
@@ -15821,7 +15840,17 @@
         "week": "Visits from tagged links a week",
         "month": "Visits from tagged links a month"
       },
-      "campaignsHint": "{period}."
+      "campaignsHint": "{period}.",
+      "pagesDaily": {
+        "title": {
+          "day": "Views a day",
+          "week": "Views a week",
+          "month": "Views a month"
+        },
+        "hint": "{period}: your whole website, dashed, and the pages ticked in the table, five at most.",
+        "website": "Your website",
+        "askFailed": "Google couldn't answer for the ticked pages just now; your website's line is shown alone."
+      }
     },
     "figures": {
       "nothingBefore": "Nothing to compare with yet",
@@ -15918,89 +15947,10 @@
       "noMatch": "Nothing matches that search."
     },
     "heroes": {
-      "title": "Heroes and attention",
-      "description": "Each landing page followed from Google's results to the money it makes: what to do, and what it is worth.",
       "figuresTo": "Search Console's figures to {console} and Analytics' to {analytics}; the last two days can still change.",
       "figuresToAnalytics": "Analytics' figures to {analytics}; the last two days can still change.",
-      "preparing": "Heroes and attention needs the first 30 days of figures. They're coming in now.",
-      "website": {
-        "shown": "Shown in Google",
-        "position": "At position {position} on average",
-        "connectConsole": "Connect Search Console →",
-        "noConsole": "Search Console isn't connected",
-        "clicked": "Clicked",
-        "ofShowings": "{rate} of the showings",
-        "toGain": "{money} a month to gain →",
-        "visits": "Visits from Google",
-        "visitsLine": "{engaged} engaged, {conversions} converted",
-        "value": "Value from Google",
-        "valueLine": "{share} of the website's {total}",
-        "heroes": "{count, plural, one {# hero page makes {money}} other {# hero pages make {money}}} →"
-      },
-      "listTitle": "Pages to fix",
-      "listDescription": "About {money} a month in all, the biggest first. Open a page for its figures and why.",
-      "listDescriptionNone": "Nothing to fix this month. Open a page for its figures.",
-      "tabsLabel": "Show",
-      "tabs": {
-        "all": "All",
-        "hero": "Heroes",
-        "push": "Push to page one",
-        "click": "Losing the click",
-        "convert": "Not converting",
-        "leave": "People leave",
-        "fall": "Falling"
-      },
       "kinds": {
-        "hero": "Hero",
-        "push": "Push to page one",
-        "click": "Losing the click",
-        "convert": "Not converting",
-        "leave": "People leave",
-        "fall": "Falling"
-      },
-      "search": "Find a page…",
-      "bar": "Last 30 days · every device",
-      "columns": {
-        "page": "Page",
-        "what": "What to do",
-        "worth": "Worth a month",
-        "task": "{platformName} task"
-      },
-      "taskMake": "Make it a {platformName} task",
-      "taskMade": "A {platformName} task watches this page",
-      "taskAsk": {
-        "push": "Keep an eye on {page} on {host} while we push it onto page one: tell me when its visitors from Google rise by half.",
-        "click": "Keep an eye on {page} on {host} while we rewrite its title and description: tell me when its visitors from Google rise by a fifth.",
-        "convert": "Keep an eye on {page} on {host} while we give it a next step: tell me if its visitors from Google drop by a third.",
-        "leave": "Keep an eye on {page} on {host} while we make it answer what was searched: tell me if its visitors from Google drop by a third.",
-        "fall": "Keep an eye on {page} on {host}: tell me if its visitors from Google drop by a third again.",
-        "hero": "Keep an eye on {page} on {host}, one of its hero pages: tell me if its visitors from Google drop by a third."
-      },
-      "under": "Under {money}",
-      "noMatch": "No page matches “{q}”.",
-      "empty": {
-        "all": "Nothing needs attention.",
-        "hero": "No page makes any value yet.",
-        "push": "No page sits at position 8 to 20 with 500 showings or more.",
-        "click": "Every page in the top five is clicked at the website's usual rate or better.",
-        "convert": "Every page with 50 visits or more converts at least half the website's rate.",
-        "leave": "No page loses its visitors: every page with 30 visits or more keeps at least 40% of them.",
-        "fall": "No page fell by 30% or more."
-      },
-      "download": "Download CSV",
-      "downloading": "Downloading…",
-      "downloadFailed": "The download didn't work. Try again in a moment.",
-      "csv": {
-        "page": "Page",
-        "what": "What to do",
-        "hero": "Hero",
-        "worth": "Worth a month ({currency})",
-        "shown": "Shown in Google",
-        "position": "Position",
-        "clicks": "Clicks",
-        "visits": "Visits",
-        "conversions": "Conversions",
-        "value": "Value ({currency})"
+        "hero": "Hero"
       },
       "stages": {
         "shown": "Shown in Google",
@@ -16020,37 +15970,6 @@
         "down": "▼ {change} on the 30 days before",
         "same": "The same as the 30 days before",
         "nothingBefore": "Nothing to compare with the 30 days before"
-      },
-      "page": {
-        "back": "Heroes and attention",
-        "description": "A landing page on {host}. Google's figures are for its showings in Google's results; Analytics' are for every visit that started on it.",
-        "openPage": "Open the page",
-        "notFound": "This page has nothing to show for the last 30 days.",
-        "todoTitle": "What to do",
-        "todoDescription": "The stage marked above is where this page loses most.",
-        "nothingToDo": "Nothing to fix on this page this month.",
-        "worth": "Worth about {money} a month",
-        "worthUnder": "Worth under {money} a month",
-        "notPriced": "Not priced yet: the website has no conversions to price it by",
-        "why": {
-          "push": "Shown {shown} times at position {position}. In the top three it would get about {gain} more clicks a month: work on the searches it is shown for on page two.",
-          "click": "Clicked {clicks} times of {shown} at position {position}; the website's usual there is {expected}. Rewrite its title and description.",
-          "convert": "{visits} visits, {conversions, plural, =0 {no conversion} one {one conversion} other {# conversions}}. Give it a next step to the service it supports.",
-          "leave": "Only {rate} of its {visits} visits stay. Make the page answer what was searched.",
-          "fall": "Visits fell from {before} to {visits}. Check its place in Google and what changed on it.",
-          "hero": "Makes {money} of the website's {total} a month. Change it only with a test."
-        },
-        "rule": "Why it is flagged: {rule}.",
-        "rules": {
-          "hero": "one of the pages that together make 80% of the website's value",
-          "push": "at position 8 to 20, and shown 500 times or more",
-          "click": "in the top five, shown 100 times or more, and clicked less than the website's own click rate at that position",
-          "convert": "50 visits or more, converting under half the website's rate of {rate}",
-          "leave": "30 visits or more, and under 40% of them engaged",
-          "fall": "visits down 30% or more on the 30 days before, from at least 20"
-        },
-        "allFigures": "All its figures",
-        "itsSearches": "Its searches in Search Console"
       }
     },
     "channels": {
@@ -16115,9 +16034,15 @@
     },
     "allPages": {
       "title": "All pages",
-      "description": "Every page viewed: its views, the time spent on it, and the conversions made on that page.",
+      "description": "Every page on your website: its visits, views and conversions, and whether it gained or dropped against the dates before.",
       "findPage": "Find a page…",
-      "empty": "No pages viewed in these dates."
+      "empty": "No pages viewed in these dates.",
+      "emptyMoves": {
+        "gains": "No page gained views in these dates.",
+        "dropped": "No page dropped in these dates.",
+        "static": "No page stayed static in these dates.",
+        "none": "Every page on your website was viewed in these dates."
+      }
     },
     "page": {
       "back": "All pages",
@@ -16504,15 +16429,18 @@
       "noChannels": "No visits in these dates."
     },
     "counts": {
-      "reading": "Reading the property's key events from Google…",
+      "reading": "Reading the property's key events, and the events that read as enquiries, from Google…",
       "addresses": "The property {property} records visits on {count} addresses. {platformName} reads {host}'s own, {read}, and leaves {others} out of every figure.",
       "title": "Choose what counts as a conversion",
-      "description": "The key events in the property {property}. Tick each one that is a conversion — an enquiry, a sale, a booking; {platformName} has ticked the likely ones. A scroll or a video play is never ticked for you.",
-      "noKeyEvents": "The property has no key events yet. Mark the events that matter as key events in Google Analytics, then come back here.",
+      "description": "The key events in the property {property}, and its other events that read as an enquiry. Tick each one that is a conversion — an enquiry, a sale, a booking; {platformName} has ticked the likely ones. A scroll or a video play is never ticked for you.",
+      "noKeyEvents": "The property has no key events, and no event that reads as an enquiry, yet. Mark the events that matter as key events in Google Analytics, then come back here.",
       "lastThirty": "{count} in the last 30 days",
       "inAnalytics": "{value} in Google Analytics",
       "noValueInAnalytics": "No value in Google Analytics",
       "neverTicked": "Never ticked for you: this is not a conversion.",
+      "notKeyEvent": "Not a key event in Google Analytics: {platformName} counts it from Google's own figures, for the whole year.",
+      "copyOf": "{other} is a copy of {name}: count one of them.",
+      "sameAs": "{other} and {name} count the same, day for day: count one of them.",
       "whereLabel": "Where its value is set",
       "setInHakken": "Set it in {platformName}",
       "setInAnalytics": "Set it in Google Analytics",
@@ -16526,7 +16454,7 @@
         "three": "Choose Set default value, and type what one is worth.",
         "four": "Save. The value reaches {platformName} at the next collection; {platformName} never changes Google Analytics itself."
       },
-      "appliesToHistory": "A value set in {platformName} applies to all history: past months show it at once, and changing it re-prices them too. {platformName} never changes Google Analytics.",
+      "appliesToHistory": "What counts, and a value set in {platformName}, apply to all history: past months change at once. {platformName} never changes Google Analytics.",
       "failed": "Couldn't save what counts. Try again.",
       "save": "Save · {count} counted",
       "back": "Back",
@@ -16622,25 +16550,34 @@
           "why": "a page counted again each time someone clicks one of its contents links makes visits look deeper than they are, and hides how many people leave after one page.",
           "fix": "in Google Analytics, open Admin, Data streams, your website, Enhanced measurement, Page views, and untick “Page changes based on browser history events”; or have the website's contents links move down the page without changing its address.",
           "short": "{count, plural, one {One page is} other {# pages are}} counted more than once a visit, such as {names}."
+        },
+        "SOMETHING_ELSE": {
+          "title": "Each conversion is what it says",
+          "passing": "No conversion matches another kind of event day for day.",
+          "failing": "{names} matches {others} on each of the last {count} days either happened, so it is counting that, not enquiries.",
+          "why": "Every conversion, and its value, is counting something that is never an enquiry, so pages and channels are weighed by the wrong thing.",
+          "fix": "the conversion is built from the wrong event. In Google Analytics, open Admin, Events, Custom configurations, Customised events, and rebuild it from the real enquiry; if a tag manager sends it, fix the trigger it fires on.",
+          "short": "{names} is really {others}."
+        },
+        "ENQUIRY_UNCOUNTED": {
+          "title": "Every enquiry is counted",
+          "passing": "No event that reads as an enquiry goes uncounted.",
+          "failing": "{names} happened {count} times in the last 12 months, but nothing counts {kinds, plural, one {it} other {them}} as a conversion.",
+          "why": "Enquiries left uncounted are missing from conversions and value, so the pages and channels that brought them look worse than they are.",
+          "fix": "choose {kinds, plural, one {it} other {them}} on the Connection page: {platformName} counts {kinds, plural, one {it} other {them}} from Google's own figures, for the whole year.",
+          "short": "{names} isn't counted."
+        },
+        "NEVER_HAPPENS": {
+          "title": "Every conversion happens",
+          "passing": "Every conversion counted has happened recently.",
+          "failing": "{names} {kinds, plural, one {hasn't} other {haven't}} happened once in {days, plural, =365 {12 months} other {the last # days}}.",
+          "why": "A conversion that never fires hides every enquiry made that way: the people who called, emailed or chatted are missing from every figure.",
+          "fix": "try it yourself as a visitor, in a private window, and look for it in Google Analytics' Realtime report. If it doesn't arrive, the tag that sends it is missing or broken.",
+          "short": "{names} never {kinds, plural, one {happens} other {happen}}."
         }
       }
     },
     "seen": {
-      "heroes": {
-        "mostInGoogle": "Google shows your pages {a} times a month, but only {bRate} of those showings become clicks, so most of the {cMoney} a month to gain is in Google's results, not on the pages.",
-        "mostOnPages": "Most of the {aMoney} a month to gain is on the pages themselves, once people arrive: {bMoney} of it.",
-        "nothingToGain": "No page has anything to fix this month: every one is clicked, converts and holds its visits as well as the website does.",
-        "heroes": "{count, plural, one {One page makes} other {# pages make}} {bMoney} of your {cMoney}.",
-        "noConsole": "Connect Search Console to see what happens in Google's results before people arrive.",
-        "pushTwo": "Push {text} and {more} onto page one: about {aMoney} a month.",
-        "pushOne": "Push {text} onto page one: about {aMoney} a month.",
-        "rewrite": "Rewrite the title and description of {text}: about {aMoney} a month.",
-        "nextStep": "Give {text} a next step: {a} visits and {countB, plural, =0 {no conversion} one {one conversion} other {# conversions}}.",
-        "answerSearch": "Make {text} answer what was searched: most of its {a} visits leave.",
-        "whyFell": "Find out why {text} fell, from {a} visits to {b}.",
-        "leaveHeroesTwo": "Leave {text} and {more} as they are: they make {aMoney} a month.",
-        "leaveHeroesOne": "Leave {text} as it is: it makes {aMoney} a month."
-      },
       "landingPage": {
         "makes": "{text} makes {aMoney} a month, {bRate} of the website's value.",
         "makesNothing": "{text} brought {a} visits this month and no conversion yet.",
@@ -16794,13 +16731,16 @@
       },
       "allPages": {
         "none": "No pages viewed in these dates.",
-        "notCounting": "{a} pages were viewed, but nothing counts as a conversion yet, so none can be weighed by what it brings in.",
-        "noConversions": "None of the {a} pages viewed made a conversion in these dates.",
-        "madeOn": "Your {count, plural, =1 {one conversion was} other {# conversions were}} made on {countB, plural, =1 {just one page} other {# pages}}.",
-        "best": "{text} made {count, plural, =1 {one} other {#}} of them, from {b} views.",
-        "idleMostViewed": "{text} is your most viewed page, with {a} views, and made none.",
-        "idle": "{text} has {a} views and made none.",
+        "viewedOf": "{a} of your {b} pages were viewed in these dates; {countC, plural, =1 {one} other {#}} had no visits.",
+        "viewedAll": "All {a} of your pages were viewed in these dates.",
+        "moved": "{count, plural, =1 {One page} other {# pages}} gained views, {b} dropped and {c} stayed about the same.",
+        "droppedMost": "{text} dropped most: {a} fewer views than before.",
+        "droppedMostMade": "{text} dropped most, {a} fewer views than before, yet made {countB, plural, =1 {one} other {#}} of your {c} conversions.",
+        "gainedMost": "{text} gained most: {a} more views than before.",
+        "whyDropped": "See why {text} dropped {a} views.",
         "copy": "Copy the next step that works on {text} onto {more}.",
+        "noVisitsTwo": "Look at the pages nobody visited, such as {text} and {more}.",
+        "noVisitsOne": "Look at {text}, which nobody visited.",
         "chooseWhatCounts": "Choose what counts as a conversion."
       },
       "page": {
@@ -16899,7 +16839,11 @@
           "NO_VALUE": "{event} {countC, plural, =1 {has} other {have}} no value, so {countC, plural, =1 {its} other {their}} {b} conversions add nothing to Value.",
           "PAYMENT_REFERRALS": "Payment pages show up as referrals, taking the credit for sales.",
           "SELF_REFERRAL": "The website shows up as its own referral, splitting visits in two.",
-          "STRANGERS": "{b} visits were recorded on other addresses; they're left out of these figures."
+          "STRANGERS": "{b} visits were recorded on other addresses; they're left out of these figures.",
+          "COUNTED_AGAIN": "{countB, plural, =1 {One page is} other {# pages are}} counted more than once a visit, so pages a visit and bounce rate read better than they are.",
+          "SOMETHING_ELSE": "{event} match on each of the last {b} days they happened, so a conversion is counting something that's never an enquiry.",
+          "ENQUIRY_UNCOUNTED": "{event} {countC, plural, =1 {happened {b} times in 12 months but isn't counted} other {happen often but aren't counted}}, so those enquiries are missing from every figure.",
+          "NEVER_HAPPENS": "{event} {countC, plural, =1 {hasn't} other {haven't}} happened once in {countB, plural, =365 {12 months} other {the last # days}}, so any enquiry made that way is invisible."
         },
         "fix": {
           "TRACKING_STOPPED": "Check the tracking tag is still on every page.",
@@ -16909,7 +16853,11 @@
           "NO_VALUE": "Say what each conversion is worth.",
           "PAYMENT_REFERRALS": "Add the payment pages to Google Analytics' list of unwanted referrals.",
           "SELF_REFERRAL": "Add the website's own address to Google Analytics' list of unwanted referrals.",
-          "STRANGERS": "Stop the other addresses sending to Google Analytics: take the tag off them, or give them a property of their own."
+          "STRANGERS": "Stop the other addresses sending to Google Analytics: take the tag off them, or give them a property of their own.",
+          "COUNTED_AGAIN": "Stop Google Analytics counting a page again when its contents links are clicked.",
+          "SOMETHING_ELSE": "Rebuild the conversion in Google Analytics from the real enquiry.",
+          "ENQUIRY_UNCOUNTED": "Count the enquiries that are left out as conversions.",
+          "NEVER_HAPPENS": "Try each way to enquire yourself, in a private window, and check Google Analytics records it."
         }
       },
       "connection": {
@@ -16933,10 +16881,10 @@
         "add": "Add Google Analytics: one sign-in, as Search Console is connected already."
       },
       "chooseEvents": {
-        "noKeyEvents": "The property has no key events yet, so nothing can count as a conversion. Mark the form sent, the call clicked or the purchase as a key event in Google Analytics first.",
-        "noneFired": "None of the property's {a} key events happened in the last 30 days.",
-        "onlyFired": "Of the property's {b} key events, only {event} happened in the last 30 days: {count, plural, =1 {once} other {# times}}.",
-        "fired": "{a} of the property's {b} key events happened in the last 30 days, {event} the most: {c} times.",
+        "noKeyEvents": "The property has no key events, and no event that reads as an enquiry, yet, so nothing can count as a conversion. Mark the form sent, the call clicked or the purchase as a key event in Google Analytics first.",
+        "noneFired": "None of the {a} events that can count happened in the last 30 days.",
+        "onlyFired": "Of the {b} events that can count, only {event} happened in the last 30 days: {count, plural, =1 {once} other {# times}}.",
+        "fired": "{a} of the {b} events that can count happened in the last 30 days, {event} the most: {c} times.",
         "purchaseSilent": "“Purchase” is ticked because on most websites it's a sale, but nothing was bought on {text} in the last 30 days.",
         "silent": "{event} never happened, so {count, plural, =1 {its} other {their}} tracking may not work.",
         "silentToo": "{event} never happened either, so {count, plural, =1 {its} other {their}} tracking may not work.",
@@ -16953,10 +16901,10 @@
         "connection": "Connection",
         "channels": "Channels",
         "seePage": "See the page",
-        "theHeroes": "The heroes",
+        "noVisits": "No visits",
         "itsSearches": "Its searches in Search Console",
         "openPage": "Open the page",
-        "pagesToPush": "Pages to push",
+        "pagesToPush": "Almost there",
         "conversions": "Conversions",
         "landingPages": "Landing pages",
         "landingPage": "Its visits",
@@ -19263,6 +19211,7 @@
           "noAnalytics": "Needs Google Analytics connected",
           "nothingCounted": "Nothing is counted as an enquiry yet",
           "neverFired": "{names} {count, plural, one {hasn't} other {haven't}} registered once in 12 months, so any enquiry made that way is invisible",
+          "silentLately": "{names} {count, plural, one {hasn't} other {haven't}} registered once in the last 90 days, so any enquiry made that way is invisible",
           "allFired": "All {a} ways to enquire registered in the last 12 months"
         },
         "enquiriesValued": {

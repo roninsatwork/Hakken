@@ -6,6 +6,7 @@ import { Change } from "@/src/ui/components/screens/Change";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatMoney, formatPercent, pathOf } from "./analyticsFormat";
+import { MOVE_VIEWS } from "@/convex/utils/pageMoves";
 
 /**
  * The cells every Google Analytics table shares (§5, §11): figures in
@@ -71,6 +72,35 @@ export function ConversionsHereCell({ conversions, value, currency }: { conversi
 
 export function ChangeCell({ change }: { change: number | null }) {
   return <Change by={change === null ? null : Math.round(change * 1000) / 10} format={(value) => `${value.toFixed(1)}%`} />;
+}
+
+/** A conversion rate on its own (All pages, all-pages-rethink-plan.md AP4): greyed from fewer than 100 visits, with the reason on hover (GA22). */
+export function RateCell({ rate, fewVisits }: { rate: number | null; fewVisits: boolean }) {
+  const t = useTranslations("googleAnalytics.table");
+  if (rate === null) return <NoFigure />;
+  return <span className={`font-mono text-[12px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>{formatPercent(rate)}</span>;
+}
+
+/**
+ * A page's views against the span before, as a count (AP4): "New" with none
+ * before, "The same" within a gain or drop's few views, a dash with none
+ * either way, a fall to none whatever its size, and the share it moved by on
+ * hover.
+ */
+export function ViewsChangeCell({ views, before }: { views: number; before: number | null }) {
+  const t = useTranslations("googleAnalytics.table");
+  if (before === null || (views === 0 && before === 0)) return <NoFigure />;
+  if (before === 0) return <Change by={null} isNew />;
+  const by = views - before;
+  // A page nobody viewed shows all it fell by, however few: never "The same".
+  if (views > 0 && Math.abs(by) < MOVE_VIEWS) return <Change by={0} same />;
+  const words = t(by > 0 ? "viewsUp" : "viewsDown", { rate: formatPercent(Math.abs(by) / before), before: formatNumber(before) });
+  return <span title={words}><Change by={by} /></span>;
+}
+
+/** The conversions made on a page against the span before, as a count (AP4): a dash when none moved. */
+export function ConversionsChangeCell({ conversions, before }: { conversions: number; before: number | null }) {
+  return <Change by={before === null ? null : conversions - before} />;
 }
 
 /** A page's address as a link to its own screen (GA22): the path, the whole address on hover. */

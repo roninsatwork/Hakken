@@ -35,7 +35,7 @@ type Google = {
   sites: { siteUrl: string; permissionLevel: string }[];
   /** Analytics' properties. */
   properties: Property[];
-  keyEvents: { eventName: string; defaultValue?: { numericValue: number } }[];
+  keyEvents: { eventName: string; defaultValue?: { numericValue: number }; countingMethod?: string }[];
   /** Each key event's count and value sent in the last 30 days. */
   eventFigures: Record<string, [number, number]>;
   calls: { url: string; body: string }[];
@@ -215,6 +215,34 @@ describe("connecting a website's Google Analytics", () => {
     expect(await decryptConnectorToken(held.tokens[0].refreshTokenCiphertext!)).toBe("1//refresh-owner@acme-shop.test");
   });
 
+  test("events that read as enquiries are listed beside the key events, ticked only when no key event is; one counted once a visit is marked", async () => {
+    // conversions-back-in-time-plan.md BT1, BT2, BT5: Ronins' "contact" is no key event, yet its forms count from Google's own figures.
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({
+      keyEvents: [{ eventName: "generate_lead", countingMethod: "ONCE_PER_SESSION" }, { eventName: "scroll" }],
+      eventFigures: { generate_lead: [14, 0], scroll: [1032, 0], contact: [67, 0], page_view: [5000, 0], ronins_enquiry_sent: [12, 0] },
+    });
+    await signIn(t, admin, siteId);
+    await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
+    await finishScheduled(t);
+    const listed = (await analyticsOf(t, siteId))!;
+    expect(listed.listedWith).toBe("EVENT_COUNT");
+    expect(listed.events?.map((event) => [event.eventName, event.keyEvent, event.perVisit, event.counted])).toEqual([
+      ["generate_lead", true, true, true],
+      ["scroll", true, false, false],
+      // The most seen first; a key event is ticked, so neither is: a key event built from one is never counted beside it.
+      ["contact", false, false, false],
+      ["ronins_enquiry_sent", false, false, false],
+    ]);
+    // With no key event a likely conversion, the enquiry is ticked for the client.
+    const quiet = await setup();
+    fakeGoogle({ keyEvents: [{ eventName: "scroll" }], eventFigures: { scroll: [1032, 0], contact: [67, 0] } });
+    await signIn(quiet.t, quiet.admin, quiet.siteId);
+    await quiet.admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId: quiet.siteId, property: "properties/312456789" });
+    await finishScheduled(quiet.t);
+    expect((await analyticsOf(quiet.t, quiet.siteId))!.events?.map((event) => [event.eventName, event.counted])).toEqual([["scroll", false], ["contact", true]]);
+  });
+
   test("choosing the property reads what counts: the likely ones ticked, a scroll never, Analytics' values shown; saving connects", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle();
@@ -234,15 +262,15 @@ describe("connecting a website's Google Analytics", () => {
       timeZone: "Europe/London",
     });
     expect(counting.events).toEqual([
-      { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14 },
-      { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 6 },
-      { eventName: "sign_up", counted: false, analyticsValue: 10, hakkenValue: null, lastThirtyDays: 5 },
-      { eventName: "scroll", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 1032 },
+      { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14, keyEvent: true, perVisit: false },
+      { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 6, keyEvent: true, perVisit: false },
+      { eventName: "sign_up", counted: false, analyticsValue: 10, hakkenValue: null, lastThirtyDays: 5, keyEvent: true, perVisit: false },
+      { eventName: "scroll", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 1032, keyEvent: true, perVisit: false },
     ]);
 
     await expect(admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
       siteId, events: [{ eventName: "page_view", counted: true, hakkenValue: null }],
-    })).rejects.toThrow("not a key event");
+    })).rejects.toThrow("not one of the events");
     await expect(admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
       siteId, events: [{ eventName: "generate_lead", counted: true, hakkenValue: -5 }],
     })).rejects.toThrow("between 0");

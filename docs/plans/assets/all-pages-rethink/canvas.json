@@ -1,0 +1,60 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-13T12:22:00Z"
+  },
+  "title": "Hakken — All pages, rethought",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2943,
+      "title": "Google Analytics → All pages: a short chart, then the table, as Google Analytics lays it out",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html"
+  ],
+  "notes": {
+    "real": {
+      "x": 1520,
+      "y": 0,
+      "w": 420,
+      "fill": "green",
+      "size": "m",
+      "text": "Your real figures\n\nronins.co.uk, United Kingdom, last 30 days to 12 Oct 2026, read from the app on 13 Oct.\n\n• Views a day: your website's line is Overview's (1,035 views); each page's line is its own screen's, and each adds up to its views in the table\n• Every visit, view, conversion and change in the table is real\n• Visits and conversion rate for each page are already collected: today's screen just doesn't show them"
+    },
+    "worked": {
+      "x": 1520,
+      "y": 640,
+      "w": 420,
+      "fill": "orange",
+      "size": "m",
+      "text": "Worked out for this drawing\n\n• The 30 days before: from the change the app shows today\n• Content hub's 185 from 78 in What Hakken sees: kinds from Sites → Your pages; a page without one, by its address\n• No visits 103: Your pages lists 161 pages and 58 of them were viewed\n\nThe built screen counts each of these exactly."
+    },
+    "filters": {
+      "x": 1520,
+      "y": 1280,
+      "w": 420,
+      "fill": "blue",
+      "size": "m",
+      "text": "The filters, for you to agree\n\n• Gains: 3 views or more up on the 30 days before (a new page counts from 0)\n• Dropped: 3 views or more down\n• Static: less than 3 either way\n• No visits: on your website, but nobody viewed it in the period\n\nWhy 3: a page going from 1 view to 2 is \"up 100%\" and means nothing. The rule is written on the table, so nothing is hidden."
+    },
+    "changed": {
+      "x": 1520,
+      "y": 1920,
+      "w": 420,
+      "fill": "purple",
+      "size": "m",
+      "text": "This round (13 Oct, after \"too deep\")\n\n• One short, wide chart at the top, as Google Analytics draws it: your website dashed, the ticked pages as lines\n• A tick box on each row picks what the chart draws, five at most so the lines stay readable; the five viewed most open ticked\n• Filters beside the search box\n• Both bar charts removed at your comments (13 Oct): the page is now the chart, then the table\n• Dwell time added (engaged time a visit); conversion headings shortened to \"Conv.\" and \"Conv. rate\", the full words on hover\n• Still off the table: People (in the download and on each page's own screen)\n• Two change columns: Views change beside Views, Conv. change last. Both are counts against the 30 days before (▲ 59, ▼ 2); the views % is on hover"
+    }
+  },
+  "designSystems": []
+}

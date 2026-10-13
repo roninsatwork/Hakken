@@ -23,8 +23,8 @@ import { AnalyticsChart } from "../../../_components/AnalyticsChart";
  * A landing page's own screen (GA22; §11 board 15, redrawn as §15 screen 7):
  * What Hakken sees, then its four stages from Google to money — Shown in
  * Google, Clicked, Visits and Conversions, Search Console joined to Analytics
- * as Heroes and attention joins them (§13) — and where its visits came from,
- * asked of Google when the screen opens and held until the next collection
+ * page by page (§13, `googleAnalyticsHeroes.ts`) — and where its visits came
+ * from, asked of Google when the screen opens and held until the next collection
  * (GA23). Its chart and what its visits converted into were left off.
  */
 export default function AnalyticsLandingPage() {

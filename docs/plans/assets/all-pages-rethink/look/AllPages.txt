@@ -1,0 +1,12 @@
+# Google Analytics → All pages — the approved look (board "AllPages" of docs/plans/assets/all-pages-rethink/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: All pages
+settings-card: What Hakken sees
+chart-card: Views a day
+search: Find a page…
+choice: Which pages: All # | Gains # | Dropped # | Static # | No visits #
+table: On the chart | Page | Visits | Views | Views change | Dwell time | Conv. | Conv. rate | Conv. change
+  table-bar
+    download: Download CSV
+  table-footer

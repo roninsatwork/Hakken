@@ -103,6 +103,16 @@ const nextConfig: NextConfig = {
         destination: "/app/sites/:siteId",
         permanent: false,
       },
+      // Google Analytics' Heroes and attention was removed on 2026-10-13
+      // (Anthony: "remove the page please we don't need it"). Saved advice and
+      // notes may still link to it or to one of its pages (`:rest*` matches
+      // none or more): both open Landing pages, where each page's own screen
+      // keeps its four stages.
+      {
+        source: "/app/analytics/:siteId/heroes/:rest*",
+        destination: "/app/analytics/:siteId/landing-pages",
+        permanent: true,
+      },
       {
         source: "/admin/companies/:id/users",
         destination: "/admin/companies/:id/directory/users",

@@ -37,7 +37,7 @@ async function connected(t: Harness, withAgent = true) {
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "COUNTING", property: PROPERTY, propertyName: "Acme",
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: ["staging.acme-shop.test"],
-      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1,
+      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT",
       events: [
         { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14 },
         { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 6 },
@@ -227,6 +227,58 @@ describe("collecting a website's Google Analytics", () => {
     expect((await periodRows(t, siteId, "landing|90|NOW|"))!.slot).toEqual(before);
     // The 7 days moved on a day: rebuilt into the other slot.
     expect((await periodRows(t, siteId, "total|7|NOW|"))!.slot.to).toBe("2026-10-09");
+  });
+
+  test("a website counted the old way is collected again, whole, by Google's own counts, once; Insights' old months go", async () => {
+    // conversions-back-in-time-plan.md BT1, BT4, BT6: its first collection marks it, and a website collected before is redone.
+    const t = harness();
+    const { siteId, connectionId, admin, agentId } = await connected(t);
+    const google = fakeGoogle(history(70));
+    await save(admin, siteId);
+    await finishScheduled(t);
+    expect((await connectionOf(t, connectionId))?.countedWith).toBe("EVENT_COUNT");
+    // Every list's counted events are asked by Google's own counts and visits, never by the key-event count.
+    const eventAsks = google.calls.filter((call) => call.url.endsWith(":runReport"))
+      .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; metrics: { name: string }[] })
+      .filter((ask) => ask.dimensions.some((dimension) => dimension.name === "eventName"));
+    expect(eventAsks.length).toBeGreaterThan(0);
+    expect(eventAsks.some((ask) => ask.metrics.some((metric) => metric.name === "keyEvents"))).toBe(false);
+
+    // As every website was before 2026-10-13: counted the old way, with Insights' months held.
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    await t.run(async (ctx) => {
+      await ctx.db.patch(connectionId, { countedWith: undefined });
+      await ctx.db.insert("insightHistory", { companyWebsiteId: siteId, kind: "GA_PAGES", month: "2026-08", from: "2026-08-01", to: "2026-08-31", rows: [], fetchedAt: 1 });
+      await ctx.db.insert("insightHistory", { companyWebsiteId: siteId, kind: "GA_SOURCES", month: "2026-08", from: "2026-08-01", to: "2026-08-31", rows: [], fetchedAt: 1 });
+    });
+    const asked = google.calls.length;
+    const daily = () => t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId: agentId!, triggerType: "SCHEDULE", objective: "Collect", title: "Google Analytics: Data Collection Scheduler",
+      status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+    }));
+    await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId: await daily() });
+    await finishScheduled(t);
+    const dayRanges = (from: number) => google.calls.slice(from)
+      .filter((call) => call.url.endsWith(":runReport"))
+      .map((call) => JSON.parse(call.body) as { dateRanges: { startDate: string; endDate: string }[]; dimensions: { name: string }[] })
+      .filter((ask) => ask.dimensions[0]?.name === "date" && ask.dimensions[1]?.name === "deviceCategory")
+      .map((ask) => ask.dateRanges[0]);
+    // The 60 days kept, all again, a week at a time, and the weekly lists though a week has not passed.
+    const again = dayRanges(asked);
+    expect([again.map((range) => range.startDate).sort()[0], again.map((range) => range.endDate).sort().at(-1)]).toEqual(["2026-08-11", "2026-10-09"]);
+    const redone = (await connectionOf(t, connectionId))!;
+    expect(redone.countedWith).toBe("EVENT_COUNT");
+    expect(redone.weeklyPeriodsAt).toBe(NOW + 24 * 60 * 60 * 1000);
+    // Insights' month kept month by month goes, to be asked again; one asked whole each run stays.
+    const kinds = await t.run(async (ctx) => (await ctx.db.query("insightHistory").collect()).map((record) => record.kind));
+    expect(kinds).toEqual(["GA_SOURCES"]);
+
+    // Once only: the next morning is the usual few days.
+    vi.setSystemTime(NOW + 2 * 24 * 60 * 60 * 1000);
+    const next = google.calls.length;
+    await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId: await daily() });
+    await finishScheduled(t);
+    expect(dayRanges(next)).toEqual(Array(4).fill({ startDate: "2026-10-08", endDate: "2026-10-10" }));
   });
 
   test("an account that lost the property asks for connecting again, and its run says what to do", async () => {

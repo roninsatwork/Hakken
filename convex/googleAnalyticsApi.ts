@@ -155,17 +155,23 @@ export type KeyEvent = {
   eventName: string;
   /** The value each one is worth, when Analytics was given one, in the property's currency. */
   defaultValue: number | null;
+  /** Counted once a visit, however often it happens in one (`ONCE_PER_SESSION`): Hakken counts the visits it happened in. */
+  perVisit: boolean;
 };
 
 /** The property's key events: what may be ticked as a conversion (GA5). */
 export async function listKeyEvents(accessToken: string, property: string): Promise<{ ok: true; events: KeyEvent[] } | GoogleFailure> {
   const answer = await callGoogle(`${ADMIN}/${property}/keyEvents?pageSize=200`, accessToken);
   if (!answer.ok) return answer;
-  const events = (answer.json as { keyEvents?: { eventName?: string; defaultValue?: { numericValue?: number } }[] }).keyEvents ?? [];
+  const events = (answer.json as { keyEvents?: { eventName?: string; defaultValue?: { numericValue?: number }; countingMethod?: string }[] }).keyEvents ?? [];
   return {
     ok: true,
     events: events.flatMap((event) => event.eventName
-      ? [{ eventName: event.eventName, defaultValue: typeof event.defaultValue?.numericValue === "number" ? event.defaultValue.numericValue : null }]
+      ? [{
+        eventName: event.eventName,
+        defaultValue: typeof event.defaultValue?.numericValue === "number" ? event.defaultValue.numericValue : null,
+        perVisit: event.countingMethod === "ONCE_PER_SESSION",
+      }]
       : []),
   };
 }

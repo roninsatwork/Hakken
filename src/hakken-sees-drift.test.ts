@@ -38,8 +38,6 @@ const FORMS = new Set([
   // A keyword's and a page's countries: the record's own tab, under the record's box.
   "src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx",
   "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",
-  // One page of Heroes and attention: its What to do is that page's advice, problem by problem.
-  "src/app/(dashboard)/app/analytics/[siteId]/heroes/page/page.tsx",
 ]);
 
 const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set([".tsx"])))

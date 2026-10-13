@@ -9,8 +9,8 @@ import { requireMySite } from "./siteAccess";
  * A website's page titles, read where they are kept once — the website's one
  * page list (`holdPages.title`, docs/plans/active/google-analytics-plan.md
  * GA27, §18.6.3) — for the pages a screen shows: one indexed read a page,
- * only for the rows on screen. Google Analytics', Search Console's and
- * Heroes' page lists all read them here, so a page has one title everywhere.
+ * only for the rows on screen. Google Analytics' and Search Console's page
+ * lists all read them here, so a page has one title everywhere.
  */
 export async function titlesOf(
   ctx: { db: QueryCtx["db"] },
