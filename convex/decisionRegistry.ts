@@ -267,7 +267,7 @@ export const DECISIONS: readonly DecisionDefinition[] = [
       instructions: {
         task: "Decide which of the business's own pages answers this search, if any does.",
         context:
-          "`business` is the website: its address, and where known what it sells and does. `search.text` is a search an AI assistant ran while answering a customer's question, `search.question`; `search.otherWordings` are the same search in other words. `pages` are the website's pages that share the most words with it, labelled page-a onwards, each with its `address` on the website and, where it ranks on Google, the searches it `ranksFor`.",
+          "`business` is the website: its address, and where known what it sells and does. `search.text` is a search: one an AI assistant ran while answering a customer's question, `search.question`, with `search.otherWordings` the same search in other words; or one people type into Google, `search.searchedAMonth` times a month, that Google shows several of the website's pages for. `pages` are the website's pages that share the most words with it, or that Google showed for it, labelled page-a onwards, each with its `address` on the website, where it ranks on Google the searches it `ranksFor`, and for a Google search how often Google `showedItFor` it.",
         guidance:
           "Pick the page someone who ran this search would be glad to land on: one about what the search asks, judged from its address and the searches it ranks for. A page about something broader, narrower or different does not answer it. Say none when no page listed does, and off-topic when the search is not about anything this business sells, does or writes about.",
       },

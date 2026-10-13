@@ -1,5 +1,5 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";

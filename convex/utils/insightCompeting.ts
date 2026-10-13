@@ -61,7 +61,7 @@ export type Sure = "LIKELY" | "ROUGH";
  * Why a page should own a search, each step that narrowed the pages Google
  * shows for it, in the order they are weighed (`ownerOfSearch`).
  */
-export const OWNER_WHYS = ["ARTICLE", "SELLS", "PLACE", "OTHER_PLACE", "NEAR", "NO_PLACE", "WORDS", "GOOGLE", "ENQUIRIES", "AGENT"] as const;
+export const OWNER_WHYS = ["ARTICLE", "SELLS", "PLACE", "OTHER_PLACE", "NEAR", "NO_PLACE", "WORDS", "GOOGLE", "ENQUIRIES", "AGENT", "JEV"] as const;
 export type OwnerWhy = (typeof OWNER_WHYS)[number];
 
 export type GroupPage = PageFigures & {
@@ -655,6 +655,7 @@ const WHY_WORDS: Record<OwnerWhy, string> = {
   ARTICLE: "a question, which an article answers", SELLS: "a page that sells, not an article", PLACE: "names {place}", OTHER_PLACE: "names {place}, which none of these pages is for",
   NEAR: "near me: the page for where the business has an office", NO_PLACE: "names no one place", WORDS: "its words fit the search best", GOOGLE: "Google already shows it most",
   ENQUIRIES: "more enquiries from Google", AGENT: "the Keyword cannibalisation specialist's choice",
+  JEV: "the decision model's choice, the same question it answers for the Fan-out screen",
 };
 /** Searches of a group whose difficulty is read, and bought where the monthly collection holds none: its most searched. */
 export const DIFFICULTY_SEARCHES = 10;

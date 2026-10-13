@@ -40,7 +40,7 @@ const DECISION = "seo.angle-page";
 const ANGLE_JUDGMENTS_AT_ONCE = 8;
 
 /** The labels the pages offered for one angle wear: at most this many are offered. */
-const PAGE_SLOTS = ["page-a", "page-b", "page-c", "page-d", "page-e", "page-f", "page-g", "page-h", "page-i", "page-j", "page-k", "page-l"] as const;
+export const PAGE_SLOTS = ["page-a", "page-b", "page-c", "page-d", "page-e", "page-f", "page-g", "page-h", "page-i", "page-j", "page-k", "page-l"] as const;
 export const PAGES_OFFERED = PAGE_SLOTS.length;
 
 /** Searches named beside a ranking page. */

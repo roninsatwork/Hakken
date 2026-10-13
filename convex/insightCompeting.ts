@@ -7,6 +7,7 @@ import { ask, factLines, type AskRun } from "./insightsAsk";
 import type { Fact } from "./utils/insightFacts";
 import { briefFor } from "./utils/insightBriefs";
 import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf, summaryOf, usableWords } from "./utils/insightCompetingAgent";
+import { ownerJudge, ownerTallyLine } from "./insightCompetingJudge";
 import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
@@ -66,7 +67,10 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
   const span = { from: competing.from, to: competing.to };
   const titles = new Map(competing.titles.map((entry) => [entry.path, entry.title]));
 
-  // Handed on only when the rule reads a group anew: the same pages and the same page for its most searched searches keep last week's.
+  // Jev picks each search's page while its Decision acts on its own (insightCompetingJudge.ts): turning it on or off reads every group anew.
+  const owners = await ownerJudge(ctx, run, competing.websiteRate).catch(() => null);
+  if (owners) for (const group of competing.groups) group.signature = signatureOf(group, "JEV");
+  // Handed on only when the rule reads a group anew: the same pages and the same page for each of its searches keep last week's.
   const assigned = competing.groups.filter((group) => !last.some((before) => carryOver(group, before, competing.websiteRate)));
   const system = [rules, briefFor(COMPETING_ROLE, member?.instructions), OWNER_RULE, COMPETING_ANSWER].filter(Boolean).join("\n\n");
   const failed: string[] = [];
@@ -74,10 +78,11 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
   for (let at = 0; at < assigned.length; at += AT_ONCE) {
     await Promise.all(assigned.slice(at, at + AT_ONCE).map(async (group) => {
       try {
-        const prompt = JSON.stringify({ website: run.host, ...agentInputOf(group, titles), facts: factLines(competingFacts(group, span)) });
+        if (owners) await owners.judge(group);
+        const prompt = JSON.stringify({ website: run.host, ...agentInputOf(group, titles, Boolean(owners)), facts: factLines(competingFacts(group, span)) });
         const answer = await ask(ctx, run, member, `the Keyword cannibalisation specialist, on "${group.name}"`, system, prompt);
         if (answer === null) throw appError("UPSTREAM_FAILURE", "Its answer wasn't JSON.");
-        const applied = applyAnswer(group, answer, competing.websiteRate, week);
+        const applied = applyAnswer(group, answer, competing.websiteRate, week, { ownersChosen: Boolean(owners) });
         changed += applied.owners + applied.pages;
         // Its words kept on the group — they open its page and its finding — only when every figure they name is the group's own, and none is typed.
         const words = usableWords(group, applied.words, span);
@@ -94,6 +99,7 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
     detail: [
       `Head of Strategy → Keyword cannibalisation specialist: ${assigned.length} of ${competing.groups.length} groups${assigned.length < competing.groups.length ? `, the other ${competing.groups.length - assigned.length} unchanged since last week and kept as decided` : ""}.`,
       assigned.length > 0 ? ` It changed ${changed} of the rule's choices.` : "",
+      owners ? ownerTallyLine(owners.tally) : "",
       failed.length > 0 ? ` Not reached, so the rule decided: ${failed.join("; ")}.` : "",
     ].join("").slice(0, 900),
     failed: failed.length > 0 && failed.length === assigned.length,

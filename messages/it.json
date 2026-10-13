@@ -9764,8 +9764,8 @@
       },
       "seoAnglePage": {
         "name": "Quale pagina risponde a questa ricerca?",
-        "description": "Per ogni ricerca che gli assistenti IA hanno fatto per le domande di un sito, indica la pagina del sito che risponde, oppure nessuna: in quel caso è un argomento mancante nella pagina delle query fan-out e nell'elenco delle cose da fare del sito.",
-        "rule": "Senza questa decisione, La tua pagina appare come non ancora valutata e non viene suggerito alcun argomento mancante.",
+        "description": "Per ogni ricerca che gli assistenti IA hanno fatto per le domande di un sito, indica la pagina del sito che risponde, oppure nessuna: in quel caso è un argomento mancante nella pagina delle query fan-out e nell'elenco delle cose da fare del sito. Per la cannibalizzazione delle parole chiave, sceglie la pagina a cui deve andare ogni ricerca su Google.",
+        "rule": "Senza questa decisione, La tua pagina appare come non ancora valutata e non viene suggerito alcun argomento mancante, e la regola della cannibalizzazione delle parole chiave sceglie la pagina di ogni ricerca.",
         "answers": {
           "page-a": "La pagina A risponde",
           "page-b": "La pagina B risponde",
@@ -19612,7 +19612,8 @@
         "WORDS": "Le sue parole corrispondono meglio alla ricerca",
         "GOOGLE": "Google la mostra già di più",
         "ENQUIRIES": "Più richieste da Google",
-        "AGENT": "La scelta dello specialista di cannibalizzazione delle parole chiave"
+        "AGENT": "La scelta dello specialista di cannibalizzazione delle parole chiave",
+        "JEV": "Scelta dal modello decisionale"
       },
       "group": {
         "description": "{count} tue pagine che Google mostra per le stesse ricerche, dal {from} al {to}.",
@@ -19623,6 +19624,7 @@
           "owner": "{owner} porta più richieste di tutte ({enquiries} negli ultimi 12 mesi), quindi dovrebbe avere queste ricerche.",
           "ownerClicks": "{owner} ha più clic di tutte, quindi dovrebbe avere queste ricerche.",
           "agent": "Lo specialista di cannibalizzazione delle parole chiave le ha decise il {day}, affidategli dall'Head of Strategy; le sue ragioni sono accanto a ogni ricerca e pagina che ha cambiato.",
+          "jev": "{count, plural, one {La pagina di una ricerca è stata scelta} other {Le pagine di # ricerche sono state scelte}} dal modello decisionale, che risponde alla stessa domanda per la schermata Fan-out; dove non era sicuro, resta la pagina della regola.",
           "ruleOnly": "Le ha decise la regola di {platformName}: lo specialista di cannibalizzazione delle parole chiave non ha ancora esaminato questo gruppo.",
           "rule": "Ogni ricerca dovrebbe avere una sola pagina. Una ricerca che nomina un luogo va alla pagina di quel luogo, una che non ne nomina alcuno a una pagina non legata a un luogo; poi alla pagina le cui parole le corrispondono meglio, e a quella che Google mostra già di più. Quante volte una ricerca viene fatta non lo decide mai.",
           "lead": "{owner} dovrebbe averne di più: {count, plural, one {# ricerca} other {# ricerche}}.",

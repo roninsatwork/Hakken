@@ -26,13 +26,18 @@ export const COMPETING_ANSWER = [
   "You are given one group of the website's pages that Google shows for the same searches: its pages — each one's path, title, kind, the place it is for, its visits and enquiries, and what the rule says to do with it — and every one of its searches, the most searched first, each with how often it is searched a month, the website's position, how often Google showed each page for it, and the page the rule chose and why. The group's figures are its facts, by key.",
   "Answer in JSON only: {\"owners\": [{\"search\": \"…\", \"page\": \"/…/\", \"why\": \"…\"}], \"pages\": [{\"path\": \"/…/\", \"do\": \"KEEP\" | \"MERGE\" | \"DIFFERENT\" | \"LINK\", \"into\": \"/…/\" or null, \"why\": \"…\"}], \"headline\": \"…\", \"story\": \"…\"}.",
   "owners: you decide every search; list only those you give a different page from the rule's, each with one sentence why — the rest keep the rule's page as your decision. A search's page must be one Google shows for it.",
+  "When the group says owners_chosen: true, each search's page is already chosen — by the decision model where it was sure (its rule.why is [\"JEV\"]), else by the rule — and is final: in owners, give only a sentence why for a search the decision model chose, with its page as given, never another page.",
   "pages: every page of the group, what to do with it and one sentence why. KEEP is for a page that owns searches. A page that owns none is merged into the page owning most of what it is shown for, with a redirect (MERGE: its enquiries go with it), made clearly different from it (DIFFERENT), or, an article, kept with a link to it (LINK); into names that page.",
   "headline and story open the group's page and its finding. headline: one sentence a business owner reads first. story: two to four sentences on what is happening, why it matters and what to do. Name every figure by its key in double square brackets, never type a number.",
 ].join("\n");
 
-/** A short, stable reading of the rule's decision for a group: its pages and the page each of its most searched searches went to. */
-export function signatureOf(group: CompetingGroup | KeptGroup): string {
-  return readingOf([...[...group.pages.map((page) => page.path)].sort(), ...shownFirst(group).map((search) => `${search.search}>${search.owner ?? ""}`)]);
+/**
+ * A short, stable reading of the rule's decision for a group: its pages and
+ * the page each of its searches went to — and who picks the pages, so turning
+ * the decision model on or off reads every group anew (`picker`).
+ */
+export function signatureOf(group: CompetingGroup | KeptGroup, picker?: "JEV"): string {
+  return readingOf([...[...group.pages.map((page) => page.path)].sort(), ...shownFirst(group).map((search) => `${search.search}>${search.owner ?? ""}`), ...(picker ? [picker] : [])]);
 }
 
 /** A group's searches the specialist is shown: the most searched first, then the most shown. */
@@ -40,10 +45,11 @@ function shownFirst(group: CompetingGroup | KeptGroup) {
   return [...group.searches].sort((a, b) => (b.volume ?? -1) - (a.volume ?? -1) || b.shown - a.shown || a.search.localeCompare(b.search)).slice(0, SEARCHES_SHOWN);
 }
 
-/** What the specialist reads of one group: its pages with their titles, its searches with the rule's choice. */
-export function agentInputOf(group: CompetingGroup | KeptGroup, titles: ReadonlyMap<string, string>) {
+/** What the specialist reads of one group: its pages with their titles, its searches with the rule's choice — or the decision model's, final (`ownersChosen`). */
+export function agentInputOf(group: CompetingGroup | KeptGroup, titles: ReadonlyMap<string, string>, ownersChosen = false) {
   return {
     group: group.name,
+    ...(ownersChosen ? { owners_chosen: true } : {}),
     pages: group.pages.map((page) => ({
       path: page.path,
       title: titles.get(page.path) ?? null,
@@ -80,7 +86,7 @@ const text = (value: unknown, most: number) => (typeof value === "string" ? valu
  * it is an article — and the pages settled again from the owners
  * it gave (`settleGroup`). What it couldn't use is counted, never guessed.
  */
-export function applyAnswer<Group extends CompetingGroup | KeptGroup>(group: Group, answer: unknown, websiteRate: number | null, week: string) {
+export function applyAnswer<Group extends CompetingGroup | KeptGroup>(group: Group, answer: unknown, websiteRate: number | null, week: string, options: { ownersChosen?: boolean } = {}) {
   const raw = (answer && typeof answer === "object" ? answer : {}) as { owners?: unknown; pages?: unknown; headline?: unknown; story?: unknown };
   let owners = 0, refused = 0;
   for (const entry of Array.isArray(raw.owners) ? raw.owners : []) {
@@ -88,6 +94,13 @@ export function applyAnswer<Group extends CompetingGroup | KeptGroup>(group: Gro
     const search = group.searches.find((held) => held.search === name);
     if (!search || typeof page !== "string" || !search.pages.some((shown) => shown.path === page)) {
       refused += 1;
+      continue;
+    }
+    // With the decision model picking the pages, the specialist only says why it chose each; it never picks one.
+    if (options.ownersChosen) {
+      const reason = whyText(why);
+      if (page !== search.owner || !search.why?.includes("JEV") || !reason) refused += 1;
+      else search.reason = reason;
       continue;
     }
     if (search.owner === page) continue;
@@ -143,7 +156,7 @@ function applyPages(group: CompetingGroup | KeptGroup, raw: unknown) {
 export function carryOver<Group extends CompetingGroup | KeptGroup>(group: Group, last: KeptGroup, websiteRate: number | null): boolean {
   if (last.decidedBy !== "AGENT" || !group.signature || last.signature !== group.signature) return false;
   for (const before of last.searches) {
-    if (!before.why?.includes("AGENT") || !before.owner) continue;
+    if (!(before.why?.includes("AGENT") || before.why?.includes("JEV")) || !before.owner) continue;
     const search = group.searches.find((held) => held.search === before.search);
     if (search && search.pages.some((page) => page.path === before.owner)) Object.assign(search, { owner: before.owner, why: before.why, reason: before.reason ?? "" });
   }

@@ -9764,8 +9764,8 @@
       },
       "seoAnglePage": {
         "name": "Which page answers this search?",
-        "description": "For each search the AI assistants ran for a site's questions, names the site's own page that answers it — or none, which makes it a missing topic on the Fan-out queries page and the site's to-do list.",
-        "rule": "Without it, Your page shows as not judged yet and no missing topics are suggested.",
+        "description": "For each search the AI assistants ran for a site's questions, names the site's own page that answers it — or none, which makes it a missing topic on the Fan-out queries page and the site's to-do list. For Keyword cannibalisation, it picks the page each Google search should go to.",
+        "rule": "Without it, Your page shows as not judged yet and no missing topics are suggested, and Keyword cannibalisation's own rule picks each search's page.",
         "answers": {
           "page-a": "Page A answers it",
           "page-b": "Page B answers it",
@@ -19612,7 +19612,8 @@
         "WORDS": "Its words fit the search best",
         "GOOGLE": "Google already shows it most",
         "ENQUIRIES": "More enquiries from Google",
-        "AGENT": "The Keyword cannibalisation specialist's choice"
+        "AGENT": "The Keyword cannibalisation specialist's choice",
+        "JEV": "Chosen by the decision model"
       },
       "group": {
         "description": "{count} of your pages Google shows for the same searches, from {from} to {to}.",
@@ -19623,6 +19624,7 @@
           "owner": "{owner} brings the most enquiries of them ({enquiries} in the last 12 months), so it should own these searches.",
           "ownerClicks": "{owner} has the most clicks of them, so it should own these searches.",
           "agent": "The Keyword cannibalisation specialist decided these on {day}, handed them by the Head of Strategy; its reasons are beside each search and page it changed.",
+          "jev": "{count, plural, one {One search's page was} other {# searches' pages were}} chosen by the decision model, which answers the same question for the Fan-out screen; where it wasn't sure, the rule's page stands.",
           "ruleOnly": "{platformName}'s rule decided these: the Keyword cannibalisation specialist hasn't looked at this group yet.",
           "rule": "Each search should have one page. A search that names a place goes to that place's page, and one that names no place to a page for no one place; then to the page whose words fit it best, and the one Google already shows most. How often a search is searched never decides it.",
           "lead": "{owner} should own the most of them: {count, plural, one {# search} other {# searches}}.",
