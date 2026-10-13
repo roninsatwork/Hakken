@@ -1,5 +1,7 @@
-import { settleGroup, type CompetingGroup, type Decision, type KeptGroup } from "./insightCompeting";
+import { MOST_SEARCHES, competingFacts, settleGroup, type CompetingGroup, type Decision, type KeptGroup } from "./insightCompeting";
 import { readingOf, whyText } from "./insightDecided";
+import { factsByKey, fillFacts } from "./insightFacts";
+import { typedNumbers } from "./insightEditor";
 
 /**
  * The Keyword cannibalisation specialist (Anthony, 12 October 2026: "it
@@ -10,18 +12,22 @@ import { readingOf, whyText } from "./insightDecided";
  * again. The run's side is `insightCompeting.competingForRun`.
  */
 
-/** Searches of a group the specialist is shown, the most searched first: the rest keep the rule's page. */
-export const SEARCHES_SHOWN = 60;
+/**
+ * Searches of a group the specialist is shown, the most searched first: every
+ * one a group keeps, so it decides them all (Anthony, 13 October 2026, on "the
+ * specialist alone writes the page": "Go").
+ */
+export const SEARCHES_SHOWN = MOST_SEARCHES;
 /** Words a write-up may run to. */
 const MOST_WORDS = 900;
 
 /** The shape of the specialist's answer, fixed in code so the run can read it (shown read-only on its Instructions page). */
 export const COMPETING_ANSWER = [
-  "You are given one group of the website's pages that Google shows for the same searches: its pages — each one's path, title, kind, the place it is for, its visits and enquiries, and what the rule says to do with it — and its searches, the most searched first, each with how often it is searched a month, the website's position, how often Google showed each page for it, and the page the rule chose and why. The group's figures are its facts, by key.",
+  "You are given one group of the website's pages that Google shows for the same searches: its pages — each one's path, title, kind, the place it is for, its visits and enquiries, and what the rule says to do with it — and every one of its searches, the most searched first, each with how often it is searched a month, the website's position, how often Google showed each page for it, and the page the rule chose and why. The group's figures are its facts, by key.",
   "Answer in JSON only: {\"owners\": [{\"search\": \"…\", \"page\": \"/…/\", \"why\": \"…\"}], \"pages\": [{\"path\": \"/…/\", \"do\": \"KEEP\" | \"MERGE\" | \"DIFFERENT\" | \"LINK\", \"into\": \"/…/\" or null, \"why\": \"…\"}], \"headline\": \"…\", \"story\": \"…\"}.",
-  "owners: only the searches you give a different page from the rule's, each with one sentence why. A search's page must be one Google shows for it.",
+  "owners: you decide every search; list only those you give a different page from the rule's, each with one sentence why — the rest keep the rule's page as your decision. A search's page must be one Google shows for it.",
   "pages: every page of the group, what to do with it and one sentence why. KEEP is for a page that owns searches. A page that owns none is merged into the page owning most of what it is shown for, with a redirect (MERGE: its enquiries go with it), made clearly different from it (DIFFERENT), or, an article, kept with a link to it (LINK); into names that page.",
-  "headline: one sentence a business owner reads first. story: two to four sentences on what is happening and why it matters. Name every figure by its key in double square brackets, never type a number.",
+  "headline and story open the group's page and its finding. headline: one sentence a business owner reads first. story: two to four sentences on what is happening, why it matters and what to do. Name every figure by its key in double square brackets, never type a number.",
 ].join("\n");
 
 /** A short, stable reading of the rule's decision for a group: its pages and the page each of its most searched searches went to. */
@@ -145,5 +151,25 @@ export function carryOver<Group extends CompetingGroup | KeptGroup>(group: Group
   applyPages(group, last.pages.map((page) => ({ path: page.path, do: wordOf(page.decision), into: page.into ?? null, why: page.reason ?? "" })));
   group.decidedBy = "AGENT";
   group.decidedWeek = last.decidedWeek;
+  if (last.words) group.words = last.words;
   return true;
+}
+
+/** The specialist's words, kept only when every figure they name is the group's own and none is typed. */
+export function usableWords(group: CompetingGroup | KeptGroup, words: { headline: string; story: string } | null, span: { from: string; to: string }) {
+  if (!words) return null;
+  const held = factsByKey(competingFacts(group, span));
+  return [words.headline, words.story].every((text) => typedNumbers(text).length === 0 && fillFacts(text, held).missing.length === 0) ? words : null;
+}
+
+/**
+ * What opens a group's page, as the specialist wrote it: its headline and
+ * story, filled from the group's own figures as they are now. Null for a
+ * group it hasn't decided, which shows the rule's sentences, said to be the
+ * rule's — never a blank page.
+ */
+export function summaryOf(group: KeptGroup, span: { from: string; to: string }): string[] | null {
+  if (group.decidedBy !== "AGENT" || !usableWords(group, group.words ?? null, span)) return null;
+  const held = factsByKey(competingFacts(group, span));
+  return [fillFacts(group.words!.headline, held).text, fillFacts(group.words!.story, held).text];
 }

@@ -11,6 +11,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { readWebsiteHost } from "./websiteIdentity";
 import { isTrackedHold } from "./utils/websitePairing";
 import { competingForAssistant } from "./utils/insightCompeting";
+import { summaryOf } from "./utils/insightCompetingAgent";
 import { pageDecisionsForAssistant } from "./utils/insightPageAgent";
 import { servicesForAssistant } from "./utils/insightStrategy";
 import { boxesForAssistant } from "./utils/insightBoxes";
@@ -138,7 +139,7 @@ export const insightsInternal = internalQuery({
       })),
       ...(report?.body ? { month: { title: report.title, headline: report.body.headline, link: `/app/insights/reports/${report._id}` } } : {}),
       // Every group of competing pages as the Keyword cannibalisation specialist decided it, not only the ones written up (12 Oct 2026).
-      cannibalisation: competingForAssistant((await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", holdId)).take(COMPETING_READ)).map((row) => row.group)),
+      cannibalisation: competingForAssistant((await ctx.db.query("insightCompetingGroups").withIndex("by_hold_rank", (q) => q.eq("companyWebsiteId", holdId)).take(COMPETING_READ)).map((row) => ({ ...row.group, summary: summaryOf(row.group, row) }))),
       // What each screen's box says, as its specialist wrote it (insights-one-voice-plan.md phase 4).
       screens: boxesForAssistant(await boxesOf(ctx, holdId)),
       // Strategy's call for each service, as the week keeps it (insights-one-voice-plan.md phase 3).

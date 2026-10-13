@@ -530,6 +530,18 @@ describe("Insights' looks", () => {
     nav.search = "";
   });
 
+  it("40b · A group the specialist decided opens with its own words", async () => {
+    nav.pathname = "/app/insights/cannibalisation/group";
+    nav.search = "key=%2Fai-agency%2F";
+    const decided = { ...CANNIBALISATION.groups[0], group: { ...AI_GROUP, decidedBy: "AGENT", decidedWeek: "2026-10-12" }, summary: ["Three AI pages split 120 of your searches.", "Give each search one page, and merge the software page into /ai-agency/."] };
+    answer({ "insightsReads:insightsHome": HOME, "insightCompeting:insightsCompetingGroup": { siteId: "site_1", host: "ronins.co.uk", kept: decided, finding: null } });
+    render(<InsightsCompetingGroupPage />);
+    await screen.findByText(/Three AI pages split 120 of your searches\./);
+    expect(screen.getByText(/The Keyword cannibalisation specialist decided these on/)).toBeTruthy();
+    expect(screen.queryByText(/hasn't looked at this group yet/)).toBeNull();
+    nav.search = "";
+  });
+
   it("41 · AI search", async () => {
     nav.pathname = "/app/insights/ai-search";
     answer({ "insightsReads:insightsHome": HOME, "insightAiSearch:insightsAiSearch": AI_SEARCH });

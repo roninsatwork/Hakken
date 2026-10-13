@@ -130,6 +130,8 @@ export type CompetingGroup = {
   decidedBy?: "AGENT" | "RULE";
   decidedWeek?: string;
   signature?: string;
+  /** The specialist's headline and story, its figures named by key. */
+  words?: { headline: string; story: string };
 };
 
 /** The home page brings enquiries for everything, so it is never counted in a group. */
@@ -558,6 +560,8 @@ export const competingGroupValidator = v.object({
   decidedBy: v.optional(v.union(v.literal("AGENT"), v.literal("RULE"))),
   decidedWeek: v.optional(v.string()),
   signature: v.optional(v.string()),
+  // The specialist's words for the group, its figures named by key (insightCompetingAgent.summaryOf): they open its page and its finding.
+  words: v.optional(v.object({ headline: v.string(), story: v.string() })),
 });
 export type KeptGroup = Infer<typeof competingGroupValidator>;
 
@@ -670,7 +674,7 @@ const SEARCHES_FOR_ASSISTANT = 25;
  * each of its most searched searches — in the words the screens use, so Ask
  * Hakken repeats the decision and never makes its own.
  */
-export function competingForAssistant(groups: readonly KeptGroup[]) {
+export function competingForAssistant(groups: ReadonlyArray<KeptGroup & { summary?: string[] | null }>) {
   return {
     rule: "Keyword cannibalisation as the Keyword cannibalisation specialist decided it, handed the groups by the Head of Strategy (or the rule where it says so). Give it as written: which page should own a search, and what to do with each page. For a page or a search not here, say the team hasn't looked at it yet — never your own advice.",
     link: "/app/insights/cannibalisation",
@@ -678,6 +682,7 @@ export function competingForAssistant(groups: readonly KeptGroup[]) {
       name: group.name,
       link: `/app/insights/cannibalisation/group?key=${encodeURIComponent(group.key)}`,
       decided_by: group.decidedBy === "AGENT" ? `the Keyword cannibalisation specialist${group.decidedWeek ? `, on ${group.decidedWeek}` : ""}` : "the rule: the specialist hasn't looked at this group yet",
+      ...(group.summary ? { summary: group.summary.join(" ") } : {}),
       main_page: group.owner,
       pages: group.pages.map((page) => ({
         page: page.path,

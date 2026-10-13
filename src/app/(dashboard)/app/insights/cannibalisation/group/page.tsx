@@ -68,7 +68,8 @@ export default function InsightsCompetingGroupPage() {
       t("group.sees.rule"),
       owner?.ownsVolume ? t("group.sees.leadVolume", { owner: group.owner, count: owner.owns ?? 0, volume: formatNumber(owner.ownsVolume) }) : t("group.sees.lead", { owner: group.owner, count: owner?.owns ?? 0 }),
     ];
-  const says = [
+  // The specialist's own words open the page when it decided the group; else the rule's sentences, said to be the rule's.
+  const says = kept.summary ? [...kept.summary, t("group.sees.agent", { day: formatDay(group.decidedWeek ?? kept.week) })] : [
     t("group.sees.split", { pages: group.pages.length, shared: formatNumber(group.shared), split: formatNumber(group.split), shown: formatNumber(group.shown), clicks: formatNumber(group.clicks), ...span }),
     ...ownerSays,
     ...(group.gainClicks !== null && group.gainClicks >= 1 ? [t(group.gainEnquiries !== null && group.gainEnquiries >= 0.5 ? "group.sees.gain" : "group.sees.gainClicks", { clicks: formatNumber(Math.round(group.gainClicks)), enquiries: formatNumber(Math.round(group.gainEnquiries ?? 0)) })] : []),

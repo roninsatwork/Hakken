@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { competingGroups, type CompetingPair, type KeptGroup, type PageFigures } from "./insightCompeting";
-import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf } from "./insightCompetingAgent";
+import { MOST_SEARCHES, competingForAssistant, competingGroups, type CompetingPair, type KeptGroup, type PageFigures } from "./insightCompeting";
+import { COMPETING_ANSWER, SEARCHES_SHOWN, agentInputOf, applyAnswer, carryOver, signatureOf, summaryOf, usableWords } from "./insightCompetingAgent";
 
 /**
  * The Keyword cannibalisation specialist (insightCompetingAgent.ts): what it
@@ -80,5 +80,28 @@ describe("the Keyword cannibalisation specialist", () => {
     const changed = { ...group(), signature: "other" };
     expect(carryOver(changed, last, 0.04)).toBe(false);
     expect(changed.decidedBy).toBe("RULE");
+  });
+
+  test("it decides every search a group keeps, not only the most searched", () => {
+    expect(SEARCHES_SHOWN).toBe(MOST_SEARCHES);
+    expect(agentInputOf(group(), new Map()).searches).toHaveLength(group().searches.length);
+    expect(COMPETING_ANSWER).toMatch(/you decide every search/);
+  });
+
+  test("its words open the group's page, filled from the group's own figures; a group the rule decided has none, and they carry with the decision", () => {
+    const span = { from: "2026-07-13", to: "2026-10-10" };
+    const words = { headline: "Three app pages split [[competing./mobile-app-developers/.split]] of your searches.", story: "Give each search one page." };
+    const held = group();
+    expect(summaryOf(held, span)).toBeNull();
+    applyAnswer(held, { owners: [], pages: [] }, 0.04, "2026-10-12");
+    held.words = usableWords(held, words, span) ?? undefined;
+    expect(summaryOf(held, span)).toEqual([`Three app pages split ${held.split} of your searches.`, "Give each search one page."]);
+    // A figure typed, or one the group doesn't hold, and its words aren't kept.
+    expect(usableWords(held, { headline: "Three pages split 5 searches.", story: "…" }, span)).toBeNull();
+    expect(usableWords(held, { headline: "[[competing./elsewhere/.split]] searches.", story: "…" }, span)).toBeNull();
+    const now = group();
+    expect(carryOver(now, held, 0.04)).toBe(true);
+    expect(summaryOf(now, span)).toEqual(summaryOf(held, span));
+    expect(competingForAssistant([{ ...now, summary: summaryOf(now, span) }]).groups[0]).toMatchObject({ summary: `Three app pages split ${held.split} of your searches. Give each search one page.` });
   });
 });

@@ -4,10 +4,9 @@ import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { MOST_A_WEEK, type SavedFinding, type TeamMember } from "./insightsTeam";
 import { ask, factLines, type AskRun } from "./insightsAsk";
-import { factsByKey, fillFacts, type Fact } from "./utils/insightFacts";
-import { typedNumbers } from "./utils/insightEditor";
+import type { Fact } from "./utils/insightFacts";
 import { briefFor } from "./utils/insightBriefs";
-import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf } from "./utils/insightCompetingAgent";
+import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf, summaryOf, usableWords } from "./utils/insightCompetingAgent";
 import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
@@ -70,7 +69,6 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
   // Handed on only when the rule reads a group anew: the same pages and the same page for its most searched searches keep last week's.
   const assigned = competing.groups.filter((group) => !last.some((before) => carryOver(group, before, competing.websiteRate)));
   const system = [rules, briefFor(COMPETING_ROLE, member?.instructions), OWNER_RULE, COMPETING_ANSWER].filter(Boolean).join("\n\n");
-  const words = new Map<KeptGroup, { headline: string; story: string }>();
   const failed: string[] = [];
   let changed = 0;
   for (let at = 0; at < assigned.length; at += AT_ONCE) {
@@ -81,10 +79,10 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
         if (answer === null) throw appError("UPSTREAM_FAILURE", "Its answer wasn't JSON.");
         const applied = applyAnswer(group, answer, competing.websiteRate, week);
         changed += applied.owners + applied.pages;
-        // Its words kept only when every figure they name is the group's own, and none is typed.
-        const held = factsByKey(competingFacts(group, span));
-        const usable = applied.words && [applied.words.headline, applied.words.story].every((text) => typedNumbers(text).length === 0 && fillFacts(text, held).missing.length === 0);
-        if (applied.words && usable) words.set(group, applied.words);
+        // Its words kept on the group — they open its page and its finding — only when every figure they name is the group's own, and none is typed.
+        const words = usableWords(group, applied.words, span);
+        if (words) group.words = words;
+        else delete group.words;
       } catch (error) {
         failed.push(`"${group.name}": ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -104,7 +102,7 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
   const written = competing.groups.filter((group) => group.sure === "LIKELY").slice(0, GROUP_FINDINGS);
   return {
     competing,
-    drafts: written.map((group) => competingDraft(group, words.get(group) ?? null)),
+    drafts: written.map((group) => competingDraft(group, group.words ?? null)),
     facts: written.flatMap((group) => competingFacts(group, span)),
     summary: competingSummary(competing.groups),
   };
@@ -366,6 +364,8 @@ const keptValidator = v.object({
   months: v.number(),
   group: competingGroupValidator,
   findingId: v.union(v.id("insightFindings"), v.null()),
+  /** The specialist's headline and story, filled from the group's figures; null where the rule decided it. */
+  summary: v.union(v.array(v.string()), v.null()),
 });
 
 /** The website a company-wide read shows: the one chosen, or its first owned website holding groups. */
@@ -380,7 +380,9 @@ async function siteFor(ctx: SiteReader, siteId: Id<"companyWebsites"> | undefine
   return owned[0] ? { hold: owned[0].hold, host: owned[0].summary.host } : null;
 }
 
-const keptOf = (row: Doc<"insightCompetingGroups">) => ({ rank: row.rank, week: row.week, from: row.from, to: row.to, months: monthsIn(row.from, row.to), group: row.group, findingId: row.findingId ?? null });
+const keptOf = (row: Doc<"insightCompetingGroups">) => ({
+  rank: row.rank, week: row.week, from: row.from, to: row.to, months: monthsIn(row.from, row.to), group: row.group, findingId: row.findingId ?? null, summary: summaryOf(row.group, row),
+});
 
 /** Keyword cannibalisation: every group of competing pages, biggest first. */
 export const insightsCannibalisation = tenantQuery({
