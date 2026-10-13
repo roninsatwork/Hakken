@@ -9,6 +9,7 @@ figures
   figure: Views
   figure: Conversions
 chart-card: People each minute
+chart-card: Countries
 chart-card: Where they are
 search: Find a page…
 choice: Showing: Pages | Places | Devices | Events

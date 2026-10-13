@@ -1,5 +1,5 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
@@ -18,6 +18,7 @@ import AnalyticsVisitorsPage from "./[siteId]/visitors/page";
 import AnalyticsProductsPage from "./[siteId]/products/page";
 import AnalyticsPageScreen from "./[siteId]/all-pages/page/page";
 import AnalyticsLivePage from "./[siteId]/live/page";
+import { AnalyticsFilters } from "./_components/AnalyticsFilters";
 
 /**
  * The second round's screens hold to the looks drawn and agreed on
@@ -73,6 +74,7 @@ describe("Google Analytics' second-round looks", () => {
       conversions: { count: 1, eventName: "form_submission", minutesAgo: 12 },
       minutes: Array.from({ length: 30 }, (_, at) => at % 5),
       places: [{ name: "London", people: 5, views: 0, times: 0 }, { name: "Guildford", people: 2, views: 0, times: 0 }],
+      countries: [{ name: "GB", people: 9, views: 0, times: 0 }, { name: "DE", people: 2, views: 0, times: 0 }],
       rows: [{ name: "AI Agency | Agent Automation Company", people: 3, views: 9, times: 0 }],
       seen: liveSees({ now: 4, people: 11, topPage: { title: "AI Agency | Agent Automation Company", people: 3 }, conversion: { eventName: "form_submission", minutesAgo: 12 } }),
     };
@@ -80,7 +82,20 @@ describe("Google Analytics' second-round looks", () => {
     const { container } = render(<AnalyticsLivePage />);
     await screen.findByText("AI Agency | Agent Automation Company");
     await screen.findByText(/4 people are on the website now/);
+    // Every country counts: no country named on the figures (Anthony, 2026-10-13).
+    await screen.findByText("In the last 5 minutes");
     await expectApprovedLook(container, PLAN, "Live", "Google Analytics → Live");
+  });
+
+  it("14 · Live offers no country: it counts every country, as Google's own Realtime does", () => {
+    answer({});
+    at("/app/analytics/site_1/live");
+    const { unmount } = render(<AnalyticsFilters />);
+    expect(screen.queryByLabelText("Country")).toBeNull();
+    unmount();
+    at("/app/analytics/site_1");
+    render(<AnalyticsFilters />);
+    expect(screen.getByLabelText("Country")).toBeTruthy();
   });
 
   it("17 · Campaigns", async () => {

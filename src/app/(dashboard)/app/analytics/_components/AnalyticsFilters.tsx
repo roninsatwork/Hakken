@@ -28,7 +28,8 @@ import {
  * Console's own choice, opening on the main one — every device or one, the
  * ready-made periods (§4.3), and how the charts step. Each is kept in the
  * address, so it travels with the menu. Heroes and attention reads the main
- * home country on both its sides, so it offers no country (§18).
+ * home country on both its sides, and Live counts every country, as Google's
+ * own Realtime does (Anthony, 2026-10-13), so neither offers a country (§18).
  */
 export function AnalyticsFilters() {
   const t = useTranslations("googleAnalytics.filters");
@@ -41,9 +42,10 @@ export function AnalyticsFilters() {
   const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId });
   const language = readerLanguage();
   const name = (code: string) => countryName(code, language) ?? code.toUpperCase();
-  const countries = pageForPath(pathname, siteId) !== "heroes";
+  const page = pageForPath(pathname, siteId);
+  const countries = page !== "heroes" && page !== "live";
   // Live is the last 30 minutes, minute by minute (GA34): no dates, no chart step.
-  const dated = pageForPath(pathname, siteId) !== "live";
+  const dated = page !== "live";
   return (
     <div className="flex flex-wrap items-end gap-3">
       {countries ? (

@@ -9,9 +9,18 @@ import { ALPHA3_TO_ALPHA2 } from "@/convex/utils/countryCodes";
  */
 export function countryName(code: string, locale: string): string | null {
   const alpha2 = ALPHA3_TO_ALPHA2[code.toUpperCase()];
-  if (!alpha2) return null;
+  return alpha2 ? regionName(alpha2, locale) : null;
+}
+
+/**
+ * A two-letter country code (`GB`, as Google Analytics' `countryId` gives it)
+ * in the reader's language. Null for a code nobody can name, "(not set)"
+ * among them.
+ */
+export function regionName(alpha2: string, locale: string): string | null {
+  if (!/^[a-z]{2}$/i.test(alpha2)) return null;
   try {
-    return new Intl.DisplayNames([locale], { type: "region" }).of(alpha2) ?? null;
+    return new Intl.DisplayNames([locale], { type: "region" }).of(alpha2.toUpperCase()) ?? null;
   } catch {
     return null;
   }

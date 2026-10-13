@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAction } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { Radio } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
@@ -23,6 +23,7 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { SearchConsoleChartCard } from "../../../search-console/_components/SearchConsoleChartCard";
+import { regionName } from "../../../search-console/_components/countries";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
@@ -53,9 +54,10 @@ const TOUCHES = ["pointermove", "pointerdown", "keydown", "scroll", "touchstart"
 /**
  * Live (GA34; §18.2 board 14): who is on the website right now, and what
  * they've done in the last 30 minutes — What Hakken sees, on the website now,
- * people, views and conversions, people each minute, where they are as bars,
- * and one table switching between pages (by title), places, devices and
- * events. Asked of Google once a minute, only while this page is open and in
+ * people, views and conversions, people each minute, their countries and
+ * towns as bars, and one table switching between pages (by title), places,
+ * devices and events. Every country counts, as in Google's own Realtime, so
+ * the page offers no home country (Anthony, 2026-10-13). Asked of Google once a minute, only while this page is open and in
  * front (`liveTiming.ts`), paused after 30 minutes untouched; nothing kept.
  */
 export default function AnalyticsLivePage() {
@@ -79,7 +81,7 @@ export default function AnalyticsLivePage() {
  * at once when what is asked changes; never while hidden; pauses after 30
  * minutes untouched until `carryOn`.
  */
-function useLiveFigures(ask: { siteId: string; device: string; country?: string; list: LiveList }) {
+function useLiveFigures(ask: { siteId: string; device: string; list: LiveList }) {
   const askLive = useAction(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime);
   const { run } = useAdminAction({ scope: "google-analytics-realtime" });
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -142,11 +144,12 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.live");
   const tf = useTranslations("googleAnalytics.filters");
   const tn = useTranslations("googleAnalytics.visitors.names");
+  const locale = useLocale();
   const args = useAnalyticsArgs();
   const [device] = useDevice();
   const nameOfEvent = useEventName();
   const [list, setList] = useSiteParam<LiveList>("view", "pages", LISTS);
-  const { answer, problem, paused, carryOn, inFront } = useLiveFigures({ siteId: args.siteId, device: args.device, ...(args.country ? { country: args.country } : {}), list });
+  const { answer, problem, paused, carryOn, inFront } = useLiveFigures({ siteId: args.siteId, device: args.device, list });
   const [search, setSearch, term] = useSiteSearch();
   const nameOf = (name: string) => (isUnknownValue(name) ? tn("unknown")
     : list === "devices" ? (tf.has(`devices.${name}`) ? tf(`devices.${name}`) : name)
@@ -155,6 +158,7 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
   const matching = named?.filter((row) => !term || row.label.toLowerCase().includes(term.toLowerCase()));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: list === "events" ? "times" : "people", name: labelOf });
   const pager = useSitePager(sorted, { isLoading: answer === null && !problem });
+  const countryOf = (code: string) => (isUnknownValue(code) ? tn("unknown") : regionName(code, locale) ?? code);
   const conversions = answer?.conversions ?? null;
   const chart = (answer?.minutes ?? []).map((people, at, all) => ({ label: t("minutesAgo", { count: all.length - 1 - at }), people }));
   const bar = [t("lastThirty"), tf(`devices.${device}`).toLowerCase(), list === "pages" ? t("byTitle") : null].filter(Boolean).join(" · ");
@@ -205,9 +209,21 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
           : <p className="py-10 text-center text-[12px] text-muted">{t("asking")}</p>}
       </SearchConsoleChartCard>
       <TopBars
+        title={t("countriesTitle")}
+        hint={t("countriesHint")}
+        rows={answer?.countries.slice(0, 10).map((row) => ({ label: countryOf(row.name), value: row.people }))}
+        labels={formatNumber}
+        measure={t("people")}
+        exportName="google-analytics-live-countries"
+        host={status.host}
+        from={null}
+        to={null}
+      />
+      <TopBars
         title={t("placesTitle")}
         hint={t("placesHint")}
         rows={answer?.places.slice(0, 10).map((row) => ({ label: isUnknownValue(row.name) ? tn("unknown") : row.name, value: row.people }))}
+        labels={formatNumber}
         measure={t("people")}
         exportName="google-analytics-live-places"
         host={status.host}

@@ -8,7 +8,7 @@ import { seen, toPage, type Seen } from "../hakkenSees";
  */
 
 export type LiveFacts = {
-  /** People on the website in the last 5 minutes, and in the last 30. */
+  /** People on the website in the last 5 minutes, and in the last 30, from every country. */
   now: number;
   people: number;
   /** The page most of them are on, by its title, and how many; null without one. */

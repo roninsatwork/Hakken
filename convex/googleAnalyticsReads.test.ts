@@ -469,25 +469,26 @@ describe("Live (GA34)", () => {
       { minutesAgo: 2, city: "London", page: "AI Agency", device: "mobile", views: 2, events: { generate_lead: 1 } },
       { minutesAgo: 3, city: "Guildford", page: "Home", device: "desktop", views: 1 },
       { minutesAgo: 20, city: "Leeds", page: "Home", device: "mobile", views: 4 },
-      // Another country's visitor: never counted.
+      // Another country's visitor: counted like any other, as Google's own Realtime does (Anthony, 2026-10-13).
       { minutesAgo: 1, city: "Paris", page: "Home", device: "desktop", views: 9, country: "FR" },
     ];
     const kept = async () => await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).length);
     const before = await kept();
     const answer = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "", list: "pages" });
-    expect(answer).toMatchObject({ ok: true, now: 3, people: 4, views: 10, conversions: { count: 1, eventName: "generate_lead", minutesAgo: 2 } });
+    expect(answer).toMatchObject({ ok: true, now: 4, people: 5, views: 19, conversions: { count: 1, eventName: "generate_lead", minutesAgo: 2 } });
     if (!answer.ok) throw new Error("unreachable");
     expect(answer.minutes).toHaveLength(30);
-    expect(answer.minutes.slice(-4)).toEqual([1, 1, 1, 0]);
-    expect(answer.rows.map((row) => [row.name, row.people, row.views])).toEqual([["AI Agency", 2, 5], ["Home", 2, 5]]);
-    expect(answer.places.map((row) => [row.name, row.people])).toEqual([["London", 2], ["Guildford", 1], ["Leeds", 1]]);
+    expect(answer.minutes.slice(-4)).toEqual([1, 1, 2, 0]);
+    expect(answer.rows.map((row) => [row.name, row.people, row.views])).toEqual([["Home", 3, 14], ["AI Agency", 2, 5]]);
+    expect(answer.places.map((row) => [row.name, row.people])).toEqual([["London", 2], ["Guildford", 1], ["Leeds", 1], ["Paris", 1]]);
+    expect(answer.countries.map((row) => [row.name, row.people])).toEqual([["GB", 4], ["FR", 1]]);
     expect(answer.seen).toEqual({
-      says: [{ code: "onNow", a: 3, b: 2, text: "AI Agency" }, { code: "converted", text: "generate_lead", a: 2 }],
+      says: [{ code: "onNow", a: 4, b: 3, text: "Home" }, { code: "converted", text: "generate_lead", a: 2 }],
       steps: [{ code: "seeConversions", link: "conversions", to: { segment: "conversions" } }],
     });
     // One device, and the events list.
     const phones = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "mobile", list: "events" });
-    expect(phones).toMatchObject({ ok: true, now: 1, people: 2, rows: [{ name: "generate_lead", people: 1, times: 1 }] });
+    expect(phones).toMatchObject({ ok: true, now: 1, people: 2, rows: [{ name: "generate_lead", people: 1, times: 1 }], countries: [{ name: "GB", people: 2 }] });
     // Nothing is kept: no held list, no row of any kind.
     expect(await kept()).toBe(before);
   });
@@ -550,10 +551,12 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     google.live = [
       { minutesAgo: 1, city: "London", page: "AI Agency", device: "desktop", views: 3 },
       { minutesAgo: 12, city: "Leeds", page: "Home", device: "mobile", views: 1, events: { generate_lead: 1 } },
+      { minutesAgo: 3, city: "Berlin", page: "Home", device: "desktop", views: 1, country: "DE" },
     ];
     const answer = fields(await t.action(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, { companyId, website: "acme-shop.test" }));
     expect(answer).toMatchObject({
-      ok: true, website: "acme-shop.test", onTheWebsiteNow: 1, peopleInTheLast30Minutes: 2, pageViewsInTheLast30Minutes: 4,
+      ok: true, website: "acme-shop.test", onTheWebsiteNow: 2, peopleInTheLast30Minutes: 3, pageViewsInTheLast30Minutes: 5,
+      countries: [{ country: "GB", people: 2 }, { country: "DE", people: 1 }],
       conversionsInTheLast30Minutes: { count: 1, eventName: "generate_lead", minutesAgo: 12 },
       link: `/app/analytics/${siteId}/live`,
     });

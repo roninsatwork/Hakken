@@ -15,10 +15,11 @@ import { liveSees } from "./utils/sees/analyticsLive";
  * §18.6.7): who is on the website right now and what they did in the last 30
  * minutes, from Google's live figures. The Live page asks once a minute, and
  * only while it is open and in front (`useLiveFigures`); this answers each ask
- * and **stores nothing** — no table, no log, no held list. Filtered to the
- * home country chosen and, when chosen, one device; Google keeps no website
- * address live, so the figures are the whole property's. Only the caller's
- * own website.
+ * and **stores nothing** — no table, no log, no held list. Every country
+ * counts, as in Google's own Realtime (Anthony, 2026-10-13: it said nobody
+ * while Google's said 4, all abroad), split by country among the rest; one
+ * device when chosen. Google keeps no website address live, so the figures are
+ * the whole property's. Only the caller's own website.
  */
 
 /** The lists the table switches between. */
@@ -47,6 +48,8 @@ const answerValidator = v.union(
     /** People each minute, the oldest first and now last. */
     minutes: v.array(v.number()),
     places: v.array(rowValidator),
+    /** People in the last 30 minutes by country, by Google's two-letter `countryId`. */
+    countries: v.array(rowValidator),
     /** The list chosen; pages by title, as Google's live figures name them. */
     rows: v.array(rowValidator),
     seen: seenValidator,
@@ -59,7 +62,6 @@ export const askGoogleAnalyticsRealtime = tenantAction({
   args: {
     siteId: v.id("companyWebsites"),
     device: v.string(),
-    country: v.optional(v.string()),
     list: v.union(...LIVE_LISTS.map((list) => v.literal(list))),
   },
   returns: answerValidator,
@@ -77,13 +79,14 @@ export const askGoogleAnalyticsRealtime = tenantAction({
 export async function askLiveFigures(
   ctx: ActionCtx,
   companyId: Id<"companies">,
-  args: { siteId: Id<"companyWebsites">; device: string; country?: string; list: (typeof LIVE_LISTS)[number] },
+  args: { siteId: Id<"companyWebsites">; device: string; list: (typeof LIVE_LISTS)[number] },
 ): Promise<LiveAnswer> {
-  const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId, siteId: args.siteId, period: "30", country: args.country });
+  const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId, siteId: args.siteId, period: "30" });
   if (!found) return { ok: false as const, problem: "NOT_CONNECTED" as const };
   const opened = await openSession(ctx, found.connectionId);
   if (!opened.ok) return { ok: false as const, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" as const : "NOT_CONNECTED" as const };
-  const base = { countries: [found.target.country], ...(args.device ? { device: args.device } : {}) };
+  // Every country: no home country here, unlike every other screen.
+  const base = args.device ? { device: args.device } : {};
   const chosen: RealtimeAsk | null = args.list === "devices" ? { ...base, dimensions: ["deviceCategory"], metrics: ["activeUsers"] }
     : args.list === "events" ? { ...base, dimensions: ["eventName"], metrics: ["activeUsers", "eventCount"] } : null;
   const asks: Record<string, RealtimeAsk> = {
@@ -91,6 +94,7 @@ export async function askLiveFigures(
     last: { ...base, dimensions: [], metrics: ["activeUsers", "screenPageViews"] },
     minutes: { ...base, dimensions: ["minutesAgo"], metrics: ["activeUsers"] },
     places: { ...base, dimensions: ["city"], metrics: ["activeUsers"] },
+    countries: { ...base, dimensions: ["countryId"], metrics: ["activeUsers"] },
     pages: { ...base, dimensions: ["unifiedScreenName"], metrics: ["activeUsers", "screenPageViews"] },
     ...(chosen ? { chosen } : {}),
     ...(found.counted.length > 0 ? { conversions: { ...base, dimensions: ["eventName", "minutesAgo"], metrics: ["eventCount"], eventNames: found.counted } } : {}),
@@ -123,6 +127,7 @@ export async function askLiveFigures(
   }
   const pages = listed("pages", 0, 1, null);
   const places = listed("places", 0, null, null);
+  const countries = listed("countries", 0, null, null);
   const rows = args.list === "pages" ? pages : args.list === "places" ? places : listed("chosen", 0, null, args.list === "events" ? 1 : null);
   const now = total("now");
   const people = total("last");
@@ -135,6 +140,7 @@ export async function askLiveFigures(
     conversions: { count, eventName: newest?.eventName ?? null, minutesAgo: newest?.minutesAgo ?? null },
     minutes,
     places,
+    countries,
     rows,
     seen: liveSees({ now, people, topPage: pages[0] ? { title: pages[0].name, people: pages[0].people } : null, conversion: newest }),
   };

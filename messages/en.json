@@ -15865,7 +15865,7 @@
     },
     "live": {
       "title": "Live",
-      "description": "Who is on the website right now, and what they've done in the last 30 minutes. Google's live figures name pages by their title, count the whole Google Analytics property, and can't say where visitors came from.",
+      "description": "Who is on the website right now, from every country, and what they've done in the last 30 minutes. Google's live figures name pages by their title, count the whole Google Analytics property, and can't say where visitors came from.",
       "askedAt": "Asked of Google once a minute, only while this page is open and in front; it stops when you leave or switch tab, and nothing is kept. Last asked {time}.",
       "behind": "Waiting: this page asks Google only while it is open and in front. Bring it to the front to see who is on the website now.",
       "asking": "Asking Google…",
@@ -15889,6 +15889,8 @@
       "placesTitle": "Where they are",
       "placesHint": "People in the last 30 minutes, by town.",
       "showing": "Showing",
+      "countriesTitle": "Countries",
+      "countriesHint": "People in the last 30 minutes, by country.",
       "lists": {
         "pages": "Pages",
         "places": "Places",
@@ -16715,7 +16717,7 @@
       },
       "live": {
         "nobody": "Nobody is on the website right now.",
-        "quietNow": "Nobody is on the website this minute; {a} people visited in the last 30 minutes.",
+        "quietNow": "Nobody is on the website this minute; {count, plural, =1 {one person} other {# people}} visited in the last 30 minutes.",
         "onNow": "{count, plural, =1 {One person is} other {# people are}} on the website now, {countB, plural, =1 {one} other {#}} of them reading “{text}”.",
         "onNowOnly": "{count, plural, =1 {One person is} other {# people are}} on the website now.",
         "converted": "Someone made a conversion — {event} — {count, plural, =0 {just now} =1 {a minute ago} other {# minutes ago}}.",

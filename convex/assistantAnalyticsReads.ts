@@ -311,8 +311,9 @@ export const googleAnalyticsLiveInternal = internalAction({
       pageViewsInTheLast30Minutes: answer.views,
       conversionsInTheLast30Minutes: answer.conversions,
       places: answer.places.slice(0, 10).map((row) => ({ town: row.name, people: row.people })),
+      countries: answer.countries.slice(0, 10).map((row) => ({ country: row.name, people: row.people })),
       [args.list ?? "pages"]: answer.rows.slice(0, ROWS),
-      rule: "Live figures are Google's, asked just now and never kept; pages are named by title. Say they are live.",
+      rule: "Live figures are Google's, asked just now and never kept; pages are named by title. Every country counts; `countries` splits the people by two-letter country code. Say they are live.",
       link: `/app/analytics/${hold.siteId}/live`,
     };
   },
