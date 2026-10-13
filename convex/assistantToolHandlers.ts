@@ -1,6 +1,7 @@
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
+import { BING_SCREENS } from "./utils/bingScreens";
 
 /**
  * The Assistant's company-figure reads, as tool handlers
@@ -119,6 +120,24 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(key ? { key } : {}),
       ...(search ? { search } : {}),
       ...(list === "visitorType" || list === "browser" || list === "system" || list === "age" || list === "gender" || list === "interest" ? { list } : {}),
+    });
+  },
+  /** Every Bing Webmaster screen (bing-webmaster-plan.md BW13), through the screens' own reads (`assistantBingReads.ts`). */
+  "assistant.bingWebmaster": async (input) => {
+    if (!input.companyId) return NO_COMPANY_FIGURES;
+    const screen = stringArg(input.args, "screen");
+    if (!(BING_SCREENS as readonly string[]).includes(screen)) {
+      return { ok: false, problem: `screen must be one of: ${BING_SCREENS.join(", ")}.` };
+    }
+    const asked = numberArg(input.args, "days") ?? 90;
+    const days = ([7, 30, 90, 182, 365] as const).reduce((best, option) => (Math.abs(option - asked) < Math.abs(best - asked) ? option : best), 90 as 7 | 30 | 90 | 182 | 365);
+    const search = optionalStringArg(input.args, "search");
+    return await input.ctx.runQuery(internal.assistantBingReads.bingWebmasterInternal, {
+      companyId: input.companyId,
+      website: stringArg(input.args, "website"),
+      screen: screen as (typeof BING_SCREENS)[number],
+      days,
+      ...(search ? { search } : {}),
     });
   },
   "assistant.googleAnalytics.live": async (input) => {

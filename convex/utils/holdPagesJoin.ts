@@ -39,6 +39,8 @@ export type PageSources = {
   visited: ReadonlyArray<{ key: string; visits: number }> | null;
   /** Each page's title as Google Analytics saw it most (GA27), by address; null when the company has not connected it. */
   titled?: ReadonlyArray<{ key: string; title: string }> | null;
+  /** Bing's page list for its last 90 days, by address, or null when the company has not connected Bing Webmaster (bing-webmaster-plan.md §4.3). */
+  bingClicked?: ReadonlyArray<{ key: string; clicks: number }> | null;
   /** Kinds judged for the website's pages (`sitePageTypes`). */
   judged: ReadonlyArray<{ page: string; pageType: string }>;
 };
@@ -54,6 +56,8 @@ export type JoinedPage = {
   visits: number;
   /** Its title, as Google Analytics saw it most; null without one. */
   title: string | null;
+  /** Its clicks from Bing in Bing's last 90 days. */
+  bingClicks: number;
   ranks: boolean;
   /** Hakken's own kind of page: by its address, else as judged, else "UNJUDGED". */
   pageType: string;
@@ -150,7 +154,7 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
   const entry = (page: string): JoinedPage => {
     let held = byPage.get(page);
     if (!held) {
-      held = { page, sitemapFile: null, crawled: false, shown: false, clicks: 0, visited: false, visits: 0, title: null, ranks: false, pageType: "UNJUDGED" };
+      held = { page, sitemapFile: null, crawled: false, shown: false, clicks: 0, visited: false, visits: 0, title: null, bingClicks: 0, ranks: false, pageType: "UNJUDGED" };
       byPage.set(page, held);
     }
     return held;
@@ -197,6 +201,12 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
     held.visited = true;
     held.visits += row.visits;
   }
+  // Bing's clicks go beside Google's, on the pages the other sources found, as Analytics' visits do.
+  for (const row of sources.bingClicked ?? []) {
+    if (!onWebsite(row.key, sources.host) || !isWebPage(row.key)) continue;
+    const held = byPage.get(normalisePage(row.key));
+    if (held) held.bingClicks += row.clicks;
+  }
   // A title names a page the other sources found; it adds none of its own.
   for (const row of sources.titled ?? []) {
     if (!onWebsite(row.key, sources.host) || !isWebPage(row.key)) continue;
@@ -210,6 +220,7 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
     row.pageType = pageTypeByAddress(row.page) ?? judged.get(row.page) ?? rankedKinds.get(row.page) ?? "UNJUDGED";
     row.clicks = Math.round(row.clicks);
     row.visits = Math.round(row.visits);
+    row.bingClicks = Math.round(row.bingClicks);
   }
   return { pages, counts: countPages(pages), heldCut };
 }

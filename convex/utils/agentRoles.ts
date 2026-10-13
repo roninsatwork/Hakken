@@ -41,6 +41,13 @@ export const SEARCH_CONSOLE_ROLES = ["SEARCH_CONSOLE_COLLECTOR"] as const;
 export const GOOGLE_ANALYTICS_ROLES = ["GOOGLE_ANALYTICS_COLLECTOR"] as const;
 
 /**
+ * The Bing Webmaster Collector (docs/plans/active/bing-webmaster-plan.md
+ * §4.1, BW8): each run starts a run of its own for every website connected
+ * to Bing Webmaster Tools, which collects its days, keywords and pages.
+ */
+export const BING_WEBMASTER_ROLES = ["BING_WEBMASTER_COLLECTOR"] as const;
+
+/**
  * The Keyword research agent (docs/plans/active/keyword-research-plan.md):
  * buys a company's lookups from DataForSEO when someone presses Look up, and
  * only those (Anthony, 2026-10-04: "A new Keyword research agent"). Its own
@@ -78,22 +85,24 @@ export const INSIGHTS_ROLES = [
   "INSIGHTS_REPORT_WRITER",
 ] as const;
 
-export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES, ...GOOGLE_ANALYTICS_ROLES, ...INSIGHTS_ROLES] as const;
+export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES, ...GOOGLE_ANALYTICS_ROLES, ...BING_WEBMASTER_ROLES, ...INSIGHTS_ROLES] as const;
 
 export type DataForSeoRole = (typeof DATAFORSEO_ROLES)[number];
 export type NewsRole = (typeof NEWS_ROLES)[number];
 export type SearchConsoleRole = (typeof SEARCH_CONSOLE_ROLES)[number];
 export type GoogleAnalyticsRole = (typeof GOOGLE_ANALYTICS_ROLES)[number];
+export type BingWebmasterRole = (typeof BING_WEBMASTER_ROLES)[number];
 export type ResearchRole = (typeof RESEARCH_ROLES)[number];
 export type InsightsRole = (typeof INSIGHTS_ROLES)[number];
 export type AssignableAgentRole = (typeof ASSIGNABLE_AGENT_ROLES)[number];
 
 /** The roles in the groups the Role dropdown shows them under. */
-export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole" | "googleAnalytics" | "insights"; roles: readonly AssignableAgentRole[] }> = [
+export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole" | "googleAnalytics" | "bingWebmaster" | "insights"; roles: readonly AssignableAgentRole[] }> = [
   { group: "dataforseo", roles: [...DATAFORSEO_ROLES, ...RESEARCH_ROLES] },
   { group: "news", roles: NEWS_ROLES },
   { group: "searchConsole", roles: SEARCH_CONSOLE_ROLES },
   { group: "googleAnalytics", roles: GOOGLE_ANALYTICS_ROLES },
+  { group: "bingWebmaster", roles: BING_WEBMASTER_ROLES },
   { group: "insights", roles: INSIGHTS_ROLES },
 ];
 
@@ -111,6 +120,7 @@ export const agentRoleChoiceValidator = v.union(
   v.literal("WEEKLY_DIGEST"),
   v.literal("SEARCH_CONSOLE_COLLECTOR"),
   v.literal("GOOGLE_ANALYTICS_COLLECTOR"),
+  v.literal("BING_WEBMASTER_COLLECTOR"),
   v.literal("KEYWORD_RESEARCH"),
   ...INSIGHTS_ROLES.map((role) => v.literal(role)),
 );
@@ -139,6 +149,10 @@ export function isSearchConsoleRole(key: string | undefined): key is SearchConso
 
 export function isGoogleAnalyticsRole(key: string | undefined): key is GoogleAnalyticsRole {
   return key !== undefined && (GOOGLE_ANALYTICS_ROLES as readonly string[]).includes(key);
+}
+
+export function isBingWebmasterRole(key: string | undefined): key is BingWebmasterRole {
+  return key !== undefined && (BING_WEBMASTER_ROLES as readonly string[]).includes(key);
 }
 
 export function isInsightsRole(key: string | undefined): key is InsightsRole {

@@ -136,11 +136,15 @@ completed work.
   — a new "Bing Webmaster" item in the main menu, after Search Console:
   each owned website's real clicks, impressions, keywords, pages and
   crawling from Bing, every figure beside Google's from Hakken's own Search
-  Console, and a Bing against Google screen. Read-only, free, collected by
+  Console, a Bing against Google screen and each page's own screen; Ask
+  Hakken reads it and the Executive summary counts it. Free, collected by
   its own Bing Webmaster: Collector Agent, and stored once with Search
-  Console's pages and keywords. Six phases, about fourteen and a half days.
-  **Drawn 2026-10-12 (nine boards in `docs/plans/assets/bing-webmaster/`)
-  and planned the same day; nothing built. Six questions open (§10).**
+  Console's pages and keywords. Seven phases, about seventeen and a half
+  days. **Drawn 2026-10-12 (nine boards in
+  `docs/plans/assets/bing-webmaster/`) and planned the same day; Anthony
+  answered the six questions the same day. Nothing built ("Update the plan
+  only don't start"). Open: whether asking Bing to read a page again is
+  built in this plan (§10).**
 - [Core data — each keyword and page once](./active/core-data-normalisation-plan.md)
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a

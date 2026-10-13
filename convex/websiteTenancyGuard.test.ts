@@ -288,6 +288,46 @@ describe("Google Analytics and the Google sign-in are read only through the comp
 });
 
 /**
+ * Bing Webmaster Tools, as Search Console and Analytics (docs/plans/active/
+ * bing-webmaster-plan.md §3): every table names the owned hold it belongs to
+ * and is read through it. The connection is also found by its sign-in's state
+ * and by its status (the daily run), and its keys by the connection — lookups
+ * in the modules that sign in and collect, which show nothing to anybody.
+ */
+describe("Bing Webmaster is read only through the company's own hold", () => {
+  const source = readFileSync(join(CONVEX, "bingWebmasterSchema.ts"), "utf8");
+  const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+  const TABLES = ["bingConnections", "bingTokens", "bingDays", "bingWeeks", "bingKeywordBooks", "bingPeriods", "bingPageChecks", "bingLive"];
+
+  test.each(TABLES)("%s names the hold it belongs to", (table) => {
+    const start = source.indexOf(`${table}: defineTable({`);
+    expect(start, `${table} is not in bingWebmasterSchema.ts. If it was renamed, rename it here too.`).toBeGreaterThan(-1);
+    expect(source.slice(start, source.indexOf(".index(", start))).toMatch(/\bcompanyWebsiteId: /);
+  });
+
+  const LOOKUPS: Record<string, ReadonlySet<string>> = {
+    "bingWebmasterConnect.ts": new Set(["by_pending_state", "by_connection"]),
+    "bingWebmasterAgentRun.ts": new Set(["by_status"]),
+  };
+  const READS = new RegExp(`\\.query\\(\\s*["'](${TABLES.join("|")})["']\\s*\\)([\\s\\S]{0,200})`, "g");
+
+  test("every read goes through a hold, but the sign-in's and the collection's own lookups", () => {
+    const offenders = files.flatMap((file) => Array.from(readFileSync(join(CONVEX, file), "utf8").matchAll(READS)).flatMap((match) => {
+      const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[2])?.[1] ?? "(no index)";
+      if (index.startsWith("by_hold") || LOOKUPS[file]?.has(index)) return [];
+      return [`${file}: ${match[1]} read by ${index}`];
+    }));
+    expect(offenders, "A Bing Webmaster read that is not through the company's hold. Find the site with requireMySite and read by its hold.").toEqual([]);
+  });
+
+  test("the keys are read by the Bing sign-in and its clearing alone", () => {
+    const readers = files.filter((file) => /\.query\(\s*["']bingTokens["']\s*\)/.test(readFileSync(join(CONVEX, file), "utf8")));
+    expect(readers.sort()).toEqual(["bingWebmasterCollect.ts", "bingWebmasterConnect.ts"]);
+  });
+});
+
+/**
  * The fourth rule: what a company calls a website, and what it says its own
  * business is, are its own (docs/plans/active/company-level-website-facts-plan.md).
  * Anthony, 2026-09-28: *"i think these need to be set at the company level"* —

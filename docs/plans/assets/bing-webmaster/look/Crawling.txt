@@ -1,0 +1,17 @@
+# Bing Webmaster → Crawling and indexing — the approved look (board "Crawling" of docs/plans/assets/bing-webmaster/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Crawling and indexing
+settings-card: What Hakken sees
+figures
+  figure: Money pages in Bing's index
+  figure: Pages Bing read
+  figure: Errors reading your website
+  figure: Blocked by robots.txt
+chart-card: Pages Bing read each day, and its errors
+search: Find a page…
+filter: In Bing's index
+table: Page | On Bing | Last read by Bing | Last read by Google
+  table-bar
+    download: Download CSV
+  table-footer

@@ -23,6 +23,8 @@ const ROOTS = [
   "src/app/(dashboard)/app/keyword-research",
   "src/app/(dashboard)/app/search-console",
   "src/app/(dashboard)/app/analytics",
+  // Bing Webmaster (bing-webmaster-plan.md §6): every screen but its connection.
+  "src/app/(dashboard)/app/bing-webmaster",
 ];
 
 /** Screens with no box, and why: a form has nothing to say about a field; the rest say it another way. */
@@ -31,6 +33,8 @@ const FORMS = new Set([
   "src/app/(dashboard)/app/keyword-research/lists/new/page.tsx",
   // Search Console's connection: a setting, with nothing in its figures to advise on.
   "src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx",
+  // Bing Webmaster's connection, the same.
+  "src/app/(dashboard)/app/bing-webmaster/[siteId]/connection/page.tsx",
   // A keyword's and a page's countries: the record's own tab, under the record's box.
   "src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx",
   "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",
@@ -42,8 +46,8 @@ const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root
   .map(relativePath)
   .filter((file) => file.endsWith("/page.tsx") && !FORMS.has(file));
 
-// A record's screen draws its box itself (`SearchConsoleRecordScreen`).
-const carriesBox = (file: string) => /<(SiteSees|HakkenSees|ResearchSees|SearchConsoleSees|AnalyticsSees|SearchConsoleRecordScreen)\b/.test(readRepoFile(file));
+// A record's screen draws its box itself (`SearchConsoleRecordScreen`, `BingRecordScreen`).
+const carriesBox = (file: string) => /<(SiteSees|HakkenSees|ResearchSees|SearchConsoleSees|AnalyticsSees|SearchConsoleRecordScreen|BingSees|BingRecordScreen)\b/.test(readRepoFile(file));
 
 describe("What Hakken sees on every Visibility screen", () => {
   test("every screen opens with the box", () => {

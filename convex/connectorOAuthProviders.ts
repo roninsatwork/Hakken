@@ -137,10 +137,32 @@ const X_OAUTH_PROVIDER: ConnectorOAuthProviderConfig = {
   },
 };
 
+/**
+ * Bing Webmaster Tools (docs/plans/active/bing-webmaster-plan.md §2.2): its
+ * own OAuth 2.0, the app registered in Bing Webmaster Tools → Settings → API
+ * Access → OAuth Client, its pair `BING_WEBMASTER_CLIENT_ID` and
+ * `BING_WEBMASTER_CLIENT_SECRET`. Bing documents no revocation address and no
+ * way to ask which account signed in, so nothing is revoked there — a person
+ * takes the access back in Bing Webmaster Tools — and the account stays unnamed.
+ */
+export const BING_WEBMASTER_PROVIDER = "bing-webmaster";
+
+const BING_WEBMASTER_OAUTH_PROVIDER: ConnectorOAuthProviderConfig = {
+  provider: BING_WEBMASTER_PROVIDER,
+  authorizationEndpoint: "https://www.bing.com/webmasters/oauth/authorize",
+  tokenEndpoint: "https://www.bing.com/webmasters/oauth/token",
+  revocationEndpoint: "",
+  clientIdEnv: "BING_WEBMASTER_CLIENT_ID",
+  clientSecretEnv: "BING_WEBMASTER_CLIENT_SECRET",
+  extraAuthorizationParams: {},
+  resolveAccountEmail: async () => null,
+};
+
 const PROVIDERS: Record<string, ConnectorOAuthProviderConfig> = {
   google: GOOGLE_PROVIDER,
   [SEARCH_CONSOLE_PROVIDER]: GOOGLE_SEARCH_CONSOLE_PROVIDER,
   [X_PROVIDER]: X_OAUTH_PROVIDER,
+  [BING_WEBMASTER_PROVIDER]: BING_WEBMASTER_OAUTH_PROVIDER,
 };
 
 export function getConnectorOAuthProvider(provider: string): ConnectorOAuthProviderConfig | null {

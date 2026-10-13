@@ -88,6 +88,43 @@ describe("visits", () => {
 });
 
 /**
+ * Bing's clicks (bing-webmaster-plan.md §4.3): beside Google's on the page they
+ * belong to, folded as every source is, adding no page of their own.
+ */
+describe("Bing's clicks", () => {
+  const base = {
+    host: "ronins.co.uk",
+    sitemap: [{ page: "/ai-agency/", file: "page-sitemap.xml" }, { page: "/hub/brand-audit/", file: "content-hub-sitemap.xml" }],
+    sitemapLimit: 100,
+    crawled: [],
+    ranked: [],
+    shown: [{ key: "https://www.ronins.co.uk/ai-agency/", clicks: 205 }],
+    visited: null,
+    judged: [],
+  };
+
+  test("land beside Google's on the page they belong to, and add none of their own", () => {
+    const { pages } = joinHoldPages({
+      ...base,
+      bingClicked: [
+        { key: "https://www.ronins.co.uk/ai-agency/", clicks: 6 },
+        { key: "https://ronins.co.uk/hub/Brand-Audit/", clicks: 5 },
+        { key: "https://www.ronins.co.uk/only-on-bing/", clicks: 2 },
+      ],
+    });
+    expect(pages.map((row) => [row.page, row.clicks, row.bingClicks])).toEqual([
+      ["/ai-agency/", 205, 6],
+      ["/hub/brand-audit/", 0, 5],
+    ]);
+  });
+
+  test("without Bing connected, no page has a click from Bing", () => {
+    const { pages } = joinHoldPages({ ...base, bingClicked: null });
+    expect(pages.every((row) => row.bingClicks === 0)).toBe(true);
+  });
+});
+
+/**
  * Each page's title, as Google Analytics saw it most (google-analytics-plan.md
  * GA27, §18.6.3): kept once on the page's row, folded to its page as every
  * source is, naming the pages the other sources found and adding none.

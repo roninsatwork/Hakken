@@ -186,6 +186,8 @@ describe("the Assistant's company figures", () => {
       // What Hakken sees on a website's screens, from its own connector (search-console-volatility-plan.md §8, HS7).
       "assistant.advice.read",
       "assistant.ai.mentions",
+      // Every Bing Webmaster screen, through the screens' own reads (bing-webmaster-plan.md BW13).
+      "assistant.bingWebmaster",
       // Its chart (hakken-tasks-plan.md, item 2.1).
       "assistant.chart",
       // Every Google Analytics screen, and Live, from their own connector (google-analytics-plan.md §18.6.8).

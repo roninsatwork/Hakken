@@ -75,6 +75,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   // Every Google Analytics screen and Live, as a member can already open them (google-analytics-plan.md §18.6.8).
   "assistant.googleAnalytics",
   "assistant.googleAnalytics.live",
+  // Every Bing Webmaster screen, as a member can already open them (bing-webmaster-plan.md BW13).
+  "assistant.bingWebmaster",
   // A person's own Hakken tasks (hakken-tasks-plan.md, item 1.2): anyone in the
   // company may set one (Anthony, 2026-10-07). Each only proposes — the change
   // waits on the reply for their tap — and only ever for the run's own person.

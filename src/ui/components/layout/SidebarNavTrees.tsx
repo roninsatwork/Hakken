@@ -3,7 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, FileText, Gauge, Globe, GraduationCap, SearchCheck, ChartColumn, Bot, Workflow, ShieldCheck, Settings, CreditCard, Wrench, ListChecks, ListTodo, MonitorSpeaker, Phone, Gamepad2, Lightbulb, MousePointerClick } from 'lucide-react';
+import { LayoutDashboard, Building2, FileText, Gauge, Globe, GraduationCap, SearchCheck, ChartColumn, Bot, Workflow, ShieldCheck, Settings, CreditCard, Wrench, ListChecks, ListTodo, MonitorSpeaker, Phone, Gamepad2, Lightbulb, MousePointerClick, ScanSearch } from 'lucide-react';
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { CORE_MODULES } from "@/convex/utils/coreModules";
@@ -391,6 +391,15 @@ export function UserNavTree({
     href="/app/search-console"
     isActive={activeItem === 'Search Console' || pathname.startsWith('/app/search-console')}
     onClick={() => setActiveItem('Search Console')}
+  />
+
+  {/* Each own website's real clicks from Bing, beside Google's (docs/plans/active/bing-webmaster-plan.md, BW4): straight after Search Console. */}
+  <NavItem
+    icon={ScanSearch}
+    label={t('bingWebmaster')}
+    href="/app/bing-webmaster"
+    isActive={activeItem === 'BingWebmaster' || pathname.startsWith('/app/bing-webmaster')}
+    onClick={() => setActiveItem('BingWebmaster')}
   />
 
   {/*

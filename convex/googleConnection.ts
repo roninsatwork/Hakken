@@ -520,7 +520,9 @@ export const forgetHold = internalAction({
     await ctx.runAction(internal.googleConnection.releaseUnused, { companyWebsiteId: args.companyWebsiteId, all: true });
     await ctx.runMutation(internal.searchConsoleSync.purgeHold, { companyWebsiteId: args.companyWebsiteId });
     await ctx.runMutation(internal.googleAnalyticsConnect.purgeHold, { companyWebsiteId: args.companyWebsiteId });
-    // The website's page numbers last, once neither section's lists point to them.
+    // Bing Webmaster's too: its weeks name pages by the same numbers (bing-webmaster-plan.md §4.3).
+    await ctx.runMutation(internal.bingWebmasterCollect.purgeHold, { companyWebsiteId: args.companyWebsiteId });
+    // The website's page numbers last, once no section's lists point to them.
     await ctx.runMutation(internal.holdPageRefs.purgeHold, { companyWebsiteId: args.companyWebsiteId });
     return null;
   },

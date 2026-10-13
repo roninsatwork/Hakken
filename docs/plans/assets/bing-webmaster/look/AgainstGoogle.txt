@@ -1,0 +1,18 @@
+# Bing Webmaster → Bing against Google — the approved look (board "AgainstGoogle" of docs/plans/assets/bing-webmaster/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Bing against Google
+settings-card: What Hakken sees
+figures
+  figure: Bing's share of your search clicks
+  figure: Keywords Bing ranks higher
+  figure: Keywords Google ranks higher
+  figure: Keywords only on Bing
+chart-card: Bing's share of your search clicks, week by week
+search: Find a keyword…
+filter: Who ranks you higher
+table: Keyword | Bing position | Google position | Bing clicks | Google clicks | Who ranks you higher
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

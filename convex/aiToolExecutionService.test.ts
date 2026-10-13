@@ -403,6 +403,8 @@ describe("ai tool execution service", () => {
       // The Assistant's company figures (assistant-foundation-plan.md, item 7):
       // each read through its screen's own function, for the run's company.
       "assistant.ai.mentions",
+      // Every Bing Webmaster screen, through the screens' own reads (bing-webmaster-plan.md BW13).
+      "assistant.bingWebmaster",
       // A chart under an answer, from Search Console's own days (hakken-tasks-plan.md, item 2.1).
       "assistant.chart",
       // Every Google Analytics screen, and Live, through the screens' own reads (google-analytics-plan.md §18.6.8).

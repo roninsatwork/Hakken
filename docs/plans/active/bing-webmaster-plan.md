@@ -1,12 +1,15 @@
 # Bing Webmaster — for your own websites
 
-**Started 2026-10-12. Status: drawn, planned, not built.** The screens are
-drawn on the canvas [Hakken — Bing Webmaster](https://claude.ai/artifact/2sjxHy3g6qswmxvtsRyk9c)
-(nine boards, copies in [docs/plans/assets/bing-webmaster/](../assets/bing-webmaster/)).
-Anthony asked for this plan the same day: "yes write this up in a plan
-please". Nothing is built until he says go. The questions in §10 need his
-answers first. Change a decision here, with a date, before building anything
-that disagrees with it. Progress: §8.
+**Started 2026-10-12. Status: Phases 1 to 6 built on dev the same evening,
+uncommitted; waits on Anthony for Phase 0 (§7) and three answers (§11.4).**
+The screens are drawn on the canvas [Hakken — Bing Webmaster](https://claude.ai/artifact/2sjxHy3g6qswmxvtsRyk9c)
+(eleven boards, copies in [docs/plans/assets/bing-webmaster/](../assets/bing-webmaster/)).
+Anthony asked for this plan the same day ("yes write this up in a plan
+please"), answered §10's six questions (BW4, BW11–BW15), then said build:
+"On the other agent has finished let's build this pls". What was built,
+where it differs from the words below and why, and what waits on him: §11.
+Change a decision here, with a date, before building anything that
+disagrees with it. Progress: §8.
 
 Anthony, 2026-10-12, looking at ronins.co.uk in Bing Webmaster Tools: "do you
 think like we have with search console we need a bing webmaster tools
@@ -40,13 +43,18 @@ Copilot citations wait for Microsoft (§2.4).
 | BW1 | Add Bing at all | Yes, for every owned website, whatever its clicks today. | Agreed, 2026-10-12: "some sites have clicks so we need to add it just because one site does not we can't exclude it" |
 | BW2 | How it is stored | As Search Console and Google Analytics are now: each page and keyword stored once per website and named by number, figures packed, ready-made periods, only what changed written, keep rules, and a reading-budget test at five times morehandles.co.uk (§4). | Agreed, 2026-10-12: "presume this will be data normalised like search console and analytics and optimised for speed and storage" |
 | BW3 | The screens | The nine boards on the canvas (§5). | Drawn 2026-10-12. Anthony asked for this plan the same day. Locked once he agrees the canvas, with any comments he leaves on it |
-| BW4 | Where it lives | Its own item in the main menu, "Bing Webmaster", straight after Search Console, listing the company's own websites; each opens its own pages with a side menu laid out as Search Console's. | Drawn 2026-10-12, matching Search Console, Google Analytics and Microsoft Clarity, which each have their own item. The name is §10, Q1 |
+| BW4 | Where it lives | Its own item in the main menu, "Bing Webmaster", straight after Search Console, listing the company's own websites; each opens its own pages with a side menu laid out as Search Console's. | Drawn 2026-10-12, matching Search Console, Google Analytics and Microsoft Clarity, which each have their own item. The name agreed 2026-10-12 (§10, Q1): "bing webmaster" |
 | BW5 | Read only | Hakken signs in with Bing's read-only permission (`Webmaster.read`) and never changes anything in Bing Webmaster Tools. | Proposed, as Search Console's. A write would need §10, Q2 |
 | BW6 | Credits | Free in every plan: Bing charges nothing for the data. | Proposed, as Search Console (GA14) |
 | BW7 | Conventions | Search Console's for everything not asked: owned websites only, a company admin connects, everyone in the company reads, disconnecting keeps what was collected, numbered tables of 25 to 100 rows sorted by their headings, What Hakken sees on every screen, English and Italian together. | Proposed, as Google Analytics took them (GA16) |
 | BW8 | The agent that collects | "Bing Webmaster: Collector Agent" in Admin → Agents, with a new role, "Bing Webmaster Collector", and a schedule, "Bing Webmaster: Data Collection Scheduler", daily at 04:00 local, the same time as Search Console's and Analytics' (§4.1). | Proposed, as GA21 |
 | BW9 | What is left out | Countries and devices: Bing does not give them to other tools (§2.4). Copilot citations: no API yet (§2.4). Neither is drawn. | Drawn 2026-10-12. Copilot citations come in when Microsoft opens them (§10, Q3) |
 | BW10 | Every figure compared | Each figure on a Bing screen sits beside Google's for the same days, from Hakken's own Search Console, or beside Bing's own past. | Drawn 2026-10-12, as agreed for every screen on 2026-10-11 ("we know a stat is powerful when it has comparisons") |
+| BW11 | Asking Bing to read a page again | Yes: when a money page drops out of Bing's index or changes, Hakken asks Bing to read it again. When it is built is open (§10, Q2). | Agreed, 2026-10-12 (§10, Q2): "yes" |
+| BW12 | Copilot citations | A screen of its own as soon as Microsoft opens them to other tools; nothing before, since Hakken never asks a client to upload a file. | Agreed, 2026-10-12 (§10, Q3): "oh yes please" |
+| BW13 | Bing in Ask Hakken and Insights | Ask Hakken reads Bing's figures (Phase 3). The Executive summary counts Bing's clicks with Google's, drawn and agreed first (Phase 7). | Agreed, 2026-10-12 (§10, Q4): "yes" |
+| BW14 | Tiny numbers | A click-through rate or position from fewer than 10 impressions is greyed, with "Under 10 impressions: too few to trust" on hover, as Analytics greys a rate from fewer than 100 visits. | Agreed, 2026-10-12 (§10, Q5): "yes" |
+| BW15 | A page's own screen | Every page in Pages opens its own screen, as each keyword does: its Bing figures beside Google's, its clicks each week on both engines, and the keywords Bing showed it for. Drawn and agreed first (Phase 3). | Agreed, 2026-10-12 (§10, Q6): "yes" |
 
 ## 2. How Bing's API works
 
@@ -306,8 +314,8 @@ and numbered pages.
 The dates offered are the last 30 and 90 days, 6 months, a year and a chosen
 range. Keywords and pages snap to whole weeks, and the screens say so.
 
-**Not drawn yet:** a page's own screen. Every page in Pages would open one,
-as each keyword does (§10, Q6).
+**Not drawn yet:** a page's own screen (BW15). Every page in Pages opens
+one, as each keyword does. It is drawn and agreed before Phase 3 builds it.
 
 ## 6. What Hakken sees on each screen (Phase 3)
 
@@ -358,19 +366,25 @@ Then, on Ronins' real account, Phase 0 confirms:
 | 0 | Anthony's Bing setup and the checks on Ronins' account (§7) | Half an hour of his time; half a day of checks |
 | 1 | Connecting: the two tables, the sign-in and its return, choosing the site, the two Connection screens (§3) | Two days |
 | 2 | Collecting and storing: the role, agent and schedule; daily totals and crawl figures; weekly keywords and pages; the shared page numbering, keyword books and packing; money pages; keep rules, storage measure and tenancy guard; measured on Ronins (§4.1–§4.3) | Four days |
-| 3 | The section: the websites list, Performance, Keywords, a keyword's screen, Pages, What Hakken sees (§5, §6) | Four days |
+| 3 | The section: the websites list, Performance, Keywords, a keyword's screen, Pages, What Hakken sees (§5, §6); a page's own screen, drawn first (BW15); tiny numbers greyed (BW14); Ask Hakken reading Bing's figures (BW13) | Five and a half days |
 | 4 | Bing against Google: the weekly ready-made comparison and its screen (§4.4) | One and a half days |
 | 5 | Crawling and indexing (§5, board 7) | One and a half days |
 | 6 | Proof: reading-budget tests at five times morehandles.co.uk, the cost record, the full gate and GitHub's steps (§4.5) | One day |
+| 7 | The Executive summary counts Bing's clicks with Google's, drawn and agreed first (BW13) | One and a half days |
 
-About fourteen and a half days of building after Phase 0, plus whatever §10
-adds. Every phase ends with its tests, with Bing faked as Google is for
+About seventeen and a half days of building after Phase 0. Asking Bing to
+read a page again (BW11) adds about a day and a half if it is built in this
+plan (§10, Q2). Every phase ends with its tests, with Bing faked as Google is for
 Search Console: sign-in, refusal, renewal, access taken back, an unverified
 site, two sites matching, an empty week, tenant isolation, and the screens.
 Phase 3 ends in the browser on Ronins' own connected website.
 
-**Progress, 2026-10-12: drawn and planned, nothing built. About one of
-fifteen and a half days, about 6%.**
+**Progress, 2026-10-12 (evening): Phases 1 to 6 built on dev, uncommitted,
+with the page's own screen (BW15) and Ask Hakken reading Bing (BW13) —
+about 15 of the 18½ days, about 80%. Left: Phase 0 with Anthony and a real
+collection on ronins.co.uk (§7), Phase 7, the Executive summary, once its
+drawing is agreed, and asking Bing to read a page again if §10's open point
+says so (§11.4).**
 
 ## 9. Risks
 
@@ -391,14 +405,98 @@ fifteen and a half days, about 6%.**
 
 ## 10. Questions — for Anthony
 
-| # | Question | Recommendation |
-|---|---|---|
-| Q1 | The menu item's name: "Bing Webmaster" (as drawn) or "Bing Webmaster Tools" (Microsoft's full name)? | "Bing Webmaster": shorter, and it sits beside "Search Console" |
-| Q2 | When a money page drops out of Bing's index or changes, should Hakken ask Bing to read it again? That needs Bing's read-and-change permission (`Webmaster.manage`) and is a write. | Later, in its own plan. It is the agency's job, so Hakken should do it, but connect read-only first |
-| Q3 | Copilot citations: add a screen when Microsoft opens an API? | Yes, when it exists; nothing before, since Hakken never asks a client to upload a file |
-| Q4 | Bing in Insights and Ask Hakken: should the Executive summary's search figures count Bing, and should Ask Hakken read Bing's figures? | Ask Hakken reads them from Phase 3, which is small. Insights in its own change, drawn first |
-| Q5 | Grey a click-through rate or position from fewer than 10 impressions? | Yes |
-| Q6 | A page's own screen, opened from Pages, as a keyword's is? | Yes, drawn first, about half a day more |
+| # | Question | Recommendation | Answer |
+|---|---|---|---|
+| Q1 | The menu item's name: "Bing Webmaster" (as drawn) or "Bing Webmaster Tools" (Microsoft's full name)? | "Bing Webmaster": shorter, and it sits beside "Search Console" | 2026-10-12: "bing webmaster" (BW4) |
+| Q2 | When a money page drops out of Bing's index or changes, should Hakken ask Bing to read it again? That needs Bing's read-and-change permission (`Webmaster.manage`) and is a write. | Later, in its own plan. It is the agency's job, so Hakken should do it, but connect read-only first | 2026-10-12: "yes" (BW11). Open: in this plan or later (below) |
+| Q3 | Copilot citations: add a screen when Microsoft opens an API? | Yes, when it exists; nothing before, since Hakken never asks a client to upload a file | 2026-10-12: "oh yes please" (BW12) |
+| Q4 | Bing in Insights and Ask Hakken: should the Executive summary's search figures count Bing, and should Ask Hakken read Bing's figures? | Ask Hakken reads them from Phase 3, which is small. Insights in its own change, drawn first | 2026-10-12: "yes" (BW13): both, Ask Hakken in Phase 3, the Executive summary drawn first in Phase 7 |
+| Q5 | Grey a click-through rate or position from fewer than 10 impressions? | Yes | 2026-10-12: "yes" (BW14) |
+| Q6 | A page's own screen, opened from Pages, as a keyword's is? | Yes, drawn first, about half a day more | 2026-10-12: "yes" (BW15) |
+
+**Open from Q2: when Hakken asks Bing to read a page again is built.**
+Bing gives one permission per sign-in. If the connection asks only to read
+(BW5) and this comes later, every website connected by then must sign in
+again to add the change permission. Built in this plan, Hakken asks for
+read-and-change (`Webmaster.manage`) from the first connection, and BW5
+changes: Hakken still reads everything, and changes nothing but asking Bing
+to read a page again. About a day and a half more. Recommended: in this
+plan, so no client has to sign in twice.
+
+## 11. Built — 2026-10-12
+
+### 11.1 Where it is
+
+| Part | Files |
+|---|---|
+| Bing's API, read as Google's is (§2) | `convex/bingWebmasterApi.ts` (dates, the account's sites matched to the website with Search Console's own rule `propertyFit`, keywords, pages, days, crawling, one page in the index) |
+| The sign-in (Phase 1, §3) | `convex/bingWebmasterConnect.ts`, the provider in `convex/connectorOAuthProviders.ts` (`BING_WEBMASTER_CLIENT_ID`, `BING_WEBMASTER_CLIENT_SECRET`), the two routes in `convex/http.ts` (`/api/bing-webmaster/oauth/authorize`, `/callback`) |
+| The tables (§4.2) | `convex/bingWebmasterSchema.ts`: `bingConnections`, `bingTokens`, `bingDays`, `bingWeeks`, `bingKeywordBooks`, `bingPeriods`, `bingPageChecks`, `bingLive`; each in `keepRules.ts` and the tenancy guard (`websiteTenancyGuard.test.ts`) |
+| Collecting (Phase 2, §4.1) | `convex/bingWebmasterAgentRun.ts` (the Bing Webmaster Collector role, a run per website, the first collection on connecting), `convex/bingWebmasterCollect.ts` (days, weeks, the ready-made lists with Google's columns, money pages, clearing, the website's purge), `convex/bingWebmasterBook.ts`, `convex/utils/bingWebmasterWeeks.ts`; the role in `convex/utils/agentRoles.ts` and `agentRunStartService.ts` |
+| The website's page list (§4.3) | `holdPages.bingClicks`, joined in `convex/utils/holdPagesJoin.ts` and `convex/holdPages.ts`, beside Google's clicks and Analytics' visits |
+| The screens (Phase 3, §5) | `src/app/(dashboard)/app/bing-webmaster/`: the websites list, Performance, Keywords, a keyword, Pages, a page, Bing against Google, Crawling and indexing, Connection; reads in `convex/bingWebmasterReads.ts`; the menu item and top bar in `SidebarNavTrees.tsx` and `Header.tsx`; words in English and Italian under `bingWebmaster` |
+| Ask Hakken (BW13) | `read_bing_webmaster`, its own connector `assistant-bing`, read through the screens' own functions (`convex/assistantBingReads.ts`) |
+| Tests | `bingWebmasterApi`, `bingWebmasterConnect`, `bingWebmasterCollect`, `bingWebmasterReads` and `bingWebmasterScale` tests; `bingWebmasterWeeks.test.ts`; the Bing join in `holdPagesJoin.test.ts`; the ten screens' look tests (`bingWebmasterLook.test.tsx`, outlines in `docs/plans/assets/bing-webmaster/look/`); What Hakken sees required on every Bing screen but Connection (`hakken-sees-drift.test.ts`) |
+
+### 11.2 Proved (§4.5)
+
+At five times morehandles.co.uk, allowing Bing as many keywords as Google
+has there (200,025 — Bing has a fraction of Google's, so this errs long):
+
+| Screen | Read | Budget | Held in memory | Budget |
+|---|---|---|---|---|
+| Keywords, 90 days | 3.6 MiB | 8 | 23.4 MiB | 32 |
+| Keywords, searched | 8.8 MiB | 12 | 15.9 MiB | 48 |
+| Bing against Google | 3.6 MiB | 8 | 23.4 MiB | 32 |
+
+The first build read 9.3 MiB, every keyword's words on every page view.
+Now each row's place in A to Z order is worked out at the build
+(`bingPeriods.nameRanks`), the list sorts and settles ties by it, and only
+the rows on screen are named — as Search Console's lists name only what they
+show. A search still reads every word, inside its larger budget.
+
+### 11.3 Built differently from the words above
+
+- **Keywords have a book of their own, not Search Console's** (§4.3). Search
+  Console's books are monthly and dropped with its 60 days of lines, and
+  cleared whole when another property is chosen; Bing's weeks are kept 13
+  months. Sharing the book would have dropped words Bing's weeks still name.
+  So `bingKeywordBooks` keeps each keyword once for the website, the same way,
+  and Bing against Google matches the two engines by the keyword's words
+  (lower case, single spaces) when the lists are built, never on a screen.
+- **The history rule** (§4.3): Search Console no longer rolls days into weeks
+  and months — it keeps 60 days of lines and its day totals for good (since
+  2026-10-07; its Connection page's "90 days, then as weeks" is out of date).
+  Bing keeps every day's totals, as Search Console's day totals are kept, and
+  its weeks of keywords and pages for 13 months, then drops them.
+- **Money pages on Bing have a small table of their own** (`bingPageChecks`),
+  not a column on `moneyPageChecks`: that table is replaced weekly by the
+  Insights team's checks, which would wipe Bing's answers, and the two are
+  asked by different agents. A row names the page by the same path.
+- **Bing does not say which account signed in**, and documents no way to give
+  a grant back. The Connection page shows the site, not an account, and
+  disconnecting forgets Hakken's keys; the confirmation says how to take the
+  access back in Bing Webmaster Tools too.
+- **Google's figures are the main home country's web results**, as Search
+  Console's screens open; Bing's cover every country, since Bing does not
+  split them. Every screen says so in its note.
+- **A keyword's own page column**: Bing's keyword list does not say which
+  page each keyword brought people to, so the Keywords table has no "Top
+  page" column as drawn; a keyword's own screen asks Bing for its pages when
+  it opens. The tables on a keyword's and a page's own screens show Bing's
+  figures without Google's columns, for the same reason.
+
+### 11.4 Waiting on Anthony
+
+1. **Phase 0** (§7): registering Hakken in Bing Webmaster Tools, the two
+   secrets in the dev deployment, and connecting ronins.co.uk. Until then
+   every page says "Bing Webmaster isn't set up yet", and the agent and its
+   schedule are created in Admin (as Search Console's and Analytics' were).
+2. **§10's open point**: asking Bing to read a page again (BW11) in this plan
+   or later.
+3. **The two boards drawn after the plan** — a page's own screen (built, as
+   BW15 said) and the Executive summary's new chart (not built: Phase 7 waits
+   for his yes).
 
 ## Change log
 
@@ -406,3 +504,15 @@ fifteen and a half days, about 6%.**
   plan please"), after the nine boards were drawn on the canvas the same day.
   Bing's sign-in and method list read from Microsoft's documentation. Nothing
   built.
+- **2026-10-12** — Anthony answered §10's six questions: the name "Bing
+  Webmaster" (BW4), asking Bing to read a page again (BW11), Copilot
+  citations when Microsoft opens them (BW12), Bing in Ask Hakken and the
+  Executive summary (BW13), tiny numbers greyed (BW14), a page's own screen
+  (BW15). Phase 3 grows by a day and a half and Phase 7 is added: about
+  seventeen and a half days of building. When BW11 is built is still open.
+- **2026-10-12 (evening)** — Built Phases 1 to 6 on dev, uncommitted (§11):
+  the sign-in, the collector and its role, the eight tables, the ten
+  screens, Bing's clicks in the website's page list, Ask Hakken's
+  `read_bing_webmaster`, and the size test at five times morehandles.co.uk.
+  Four things built differently from §4 and §5, each with its reason
+  (§11.3). Phase 0 and Phase 7 wait on Anthony (§11.4).

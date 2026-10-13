@@ -643,6 +643,42 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    // Every Bing Webmaster screen, for the Assistant (docs/plans/active/
+    // bing-webmaster-plan.md BW13). Its own connector, as Google Analytics'
+    // is, so it reaches an Assistant already installed.
+    key: "assistant-bing",
+    name: "Assistant Bing Webmaster",
+    description:
+      "Lets the Assistant read every Bing Webmaster screen of the company's own websites, through the same reads the screens use.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Read Bing Webmaster",
+        description:
+          "One Bing Webmaster screen of one of the company's own websites, over its last 7, 30, 90 or 182 days or 12 months (365), with the figures the screen shows and its link. Every figure sits beside Google's for the same days or keyword, from Search Console. Screens: performance (Bing's clicks, impressions and click-through rate against Google's, and Bing's share of the website's search clicks week by week); keywords (each keyword with Bing's and Google's positions); pages (each page with Bing's clicks and Google's); versus (Bing against Google over 90 days: how many keywords each engine ranks higher, and each keyword with both positions); crawling (pages Bing read, its errors, and each money page in Bing's index against Google's). Rows from under 10 impressions are marked fewImpressions: too few to trust. Give the figures with the link returned.",
+        handlerMapping: "assistant.bingWebmaster",
+        modelName: "read_bing_webmaster",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "screen", "days"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
+            screen: { type: "string", enum: ["performance", "keywords", "pages", "versus", "crawling"] },
+            days: { type: "number", description: "7, 30, 90, 182 or 365." },
+            search: { type: "string", description: "Words to find in a list's keywords or pages. Optional." },
+          },
+        }),
+      },
+    ],
+  },
+  {
     // What Hakken sees on a website's screens, for the Assistant
     // (docs/plans/active/search-console-volatility-plan.md §8, HS7). Its own
     // connector, as the charts are, so it reaches an Assistant already installed.

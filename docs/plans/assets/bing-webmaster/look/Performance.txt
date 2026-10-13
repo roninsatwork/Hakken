@@ -1,0 +1,16 @@
+# Bing Webmaster → Performance — the approved look (board "Performance" of docs/plans/assets/bing-webmaster/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Performance
+settings-card: What Hakken sees
+figures
+  figure: Clicks
+  figure: Impressions
+  figure: Click-through rate
+  figure: Bing's share of your search clicks
+chart-card: Clicks and impressions over time
+  checkbox: Clicks
+  checkbox: Impressions
+  checkbox: Click-through rate (%)
+chart-card: Bing's share of your search clicks, week by week
+chart-card: Clicks each week, Bing against Google

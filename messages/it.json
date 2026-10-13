@@ -609,6 +609,7 @@
     "sites": "Visibilità",
     "searchConsole": "Search Console",
     "googleAnalytics": "Google Analytics",
+    "bingWebmaster": "Bing Webmaster",
     "yourSites": "Siti web",
     "keywordResearch": "Ricerca parole chiave",
     "knowledge": "Conoscenza",
@@ -3423,6 +3424,7 @@
                 "news": "Notizie ed email",
                 "searchConsole": "Search Console",
                 "googleAnalytics": "Google Analytics",
+                "bingWebmaster": "Bing Webmaster",
                 "insights": "Insights"
               },
               "takenBy": "{role} — assegnato a {name}",
@@ -3434,6 +3436,7 @@
                 "EMAIL_SENDER": "Invio email",
                 "SEARCH_CONSOLE_COLLECTOR": "Raccoglitore Search Console",
                 "GOOGLE_ANALYTICS_COLLECTOR": "Raccoglitore Google Analytics",
+                "BING_WEBMASTER_COLLECTOR": "Raccoglitore Bing Webmaster",
                 "KEYWORD_RESEARCH": "Ricerca parole chiave",
                 "INSIGHTS_HEAD_OF_STRATEGY": "Insights: responsabile della strategia",
                 "INSIGHTS_MARKET": "Insights: specialista del mercato",
@@ -15886,11 +15889,11 @@
       "chartHint": "Gli ultimi 30 minuti, i più recenti a destra.",
       "minute": "Minuto",
       "minutesAgo": "{count, plural, =0 {Ora} =1 {1 min fa} other {# min fa}}",
+      "countriesTitle": "Paesi",
+      "countriesHint": "Persone negli ultimi 30 minuti, per paese.",
       "placesTitle": "Dove sono",
       "placesHint": "Persone negli ultimi 30 minuti, per città.",
       "showing": "Mostra",
-      "countriesTitle": "Paesi",
-      "countriesHint": "Persone negli ultimi 30 minuti, per paese.",
       "lists": {
         "pages": "Pagine",
         "places": "Luoghi",
@@ -16967,6 +16970,366 @@
         "allPages": "Tutte le pagine",
         "events": "Eventi",
         "checkoutEvent": "Pagamento iniziato"
+      }
+    }
+  },
+  "bingWebmaster": {
+    "menu": {
+      "label": "Bing Webmaster",
+      "jumpLabel": "Vai a una pagina",
+      "jumpPlaceholder": "Vai a una pagina…",
+      "groups": {
+        "figures": "I dati di Bing",
+        "google": "Contro Google",
+        "settings": "Impostazioni"
+      },
+      "performance": "Rendimento",
+      "keywords": "Parole chiave",
+      "pages": "Pagine",
+      "crawling": "Scansione e indicizzazione",
+      "versus": "Bing contro Google",
+      "connection": "Collegamento"
+    },
+    "status": {
+      "NOT_CONNECTED": "Non collegato",
+      "CONNECTING": "Non collegato",
+      "CHOOSING": "Scelta del sito",
+      "CONNECTED": "Collegato",
+      "NEEDS_RECONNECT": "Da ricollegare",
+      "DISCONNECTED": "Scollegato"
+    },
+    "list": {
+      "title": "Bing Webmaster",
+      "description": "Quello che Bing stesso ha contato per i tuoi siti: clic e impressioni reali da Bing, accanto a quelli di Google. Aprine uno per vederli.",
+      "searchPlaceholder": "Trova un sito…",
+      "caption": "Gli ultimi 90 giorni fino al giorno più recente di Bing",
+      "columns": {
+        "website": "Sito",
+        "status": "Stato",
+        "clicks": "Clic da Bing",
+        "impressions": "Impressioni",
+        "ctr": "Percentuale di clic",
+        "share": "Quota di ricerca",
+        "updated": "Aggiornato"
+      },
+      "empty": "Nessuno dei siti della tua azienda è stato ancora aggiunto.",
+      "noMatch": "Nessun sito corrisponde alla ricerca.",
+      "csv": {
+        "website": "Sito",
+        "status": "Stato",
+        "clicks": "Clic da Bing",
+        "impressions": "Impressioni su Bing",
+        "ctr": "Percentuale di clic (%)",
+        "share": "Quota di Bing dei clic dalla ricerca (%)",
+        "googleClicks": "Clic da Google",
+        "updated": "Aggiornato"
+      }
+    },
+    "site": {
+      "back": "Bing Webmaster",
+      "notFoundTitle": "Sito non trovato",
+      "notFoundDescription": "Non è uno dei siti della tua azienda, oppure è stato rimosso.",
+      "notOwnedTitle": "Bing Webmaster è per i tuoi siti",
+      "notOwnedDescription": "Questo è un sito che la tua azienda segue, non uno dei suoi, quindi non ci sono dati di Bing Webmaster Tools da leggere.",
+      "yourWebsite": "Il tuo sito",
+      "withSite": "Il tuo sito · sito di Bing Webmaster Tools {site}",
+      "updated": "Aggiornato {when}",
+      "collectingFirst": "Raccolta dei primi dati da Bing",
+      "switch": "Un altro dei tuoi siti",
+      "clearing": "È stato scelto un altro sito, quindi i dati del precedente vengono cancellati. Quelli del nuovo sito arrivano appena finito.",
+      "figuresTo": "Dati di Bing fino al {day}. Parole chiave e pagine arrivano una settimana alla volta."
+    },
+    "filters": {
+      "period": "Date",
+      "periods": {
+        "7": "Ultima settimana",
+        "30": "Ultimi 30 giorni",
+        "90": "Ultimi 90 giorni",
+        "182": "Ultimi 6 mesi",
+        "365": "Ultimo anno"
+      },
+      "step": "Passo",
+      "steps": {
+        "day": "Giornaliero",
+        "week": "Settimanale",
+        "month": "Mensile"
+      }
+    },
+    "connect": {
+      "title": "Collega Bing Webmaster Tools",
+      "body": "Guarda quello che Bing stesso ha contato per {host}: i clic e le impressioni di ogni ricerca e di ogni pagina, settimana per settimana, e come Bing legge il tuo sito. Solo lettura: in Bing Webmaster Tools non viene mai cambiato nulla.",
+      "button": "Collega Bing Webmaster Tools",
+      "hint": "Accederai con l'account Microsoft che vede {host} in Bing Webmaster Tools.",
+      "askAdmin": "Chiedi a uno degli amministratori della tua azienda di collegarlo. Solo loro possono farlo.",
+      "notSetUpTitle": "Bing Webmaster non è ancora configurato",
+      "notSetUpBody": "Prima va configurata l'app di Bing con cui si accede. Fino ad allora qui non c'è nulla da fare.",
+      "failed": "Non è stato possibile avviare il collegamento. Riprova.",
+      "importTip": "Non sei ancora su Bing Webmaster Tools? Bing può importare il tuo sito da Google Search Console in un minuto, senza aggiungere nulla al sito."
+    },
+    "connection": {
+      "title": "Collegamento",
+      "description": "Come {host} è collegato a Bing Webmaster Tools.",
+      "chooseTitle": "Scegli il sito",
+      "chooseDescription": "L'account che ha effettuato l'accesso può leggere questi siti in Bing Webmaster Tools per {host}. Scegli quello che copre tutto il sito.",
+      "use": "Usa questo sito",
+      "another": "Accedi con un altro account",
+      "site": "Sito",
+      "connected": "Collegato",
+      "lastUpdated": "Ultimo aggiornamento",
+      "updatedDetail": "{when} · dati di Bing fino al {day}",
+      "notYet": "Non ancora",
+      "history": "Storico",
+      "historyKept": "Dal {day}: Bing fornisce circa sei mesi quando un sito si collega. Ogni giorno viene conservato; le settimane di parole chiave e pagine per 13 mesi.",
+      "collected": "Raccolto",
+      "collectedDetail": "Dall'agente Bing Webmaster Collector, con la sua pianificazione in Admin → Pianificazioni",
+      "disconnect": "Scollega",
+      "disconnectTitle": "Scollegare Bing Webmaster Tools?",
+      "confirm": "Scollegando si interrompe la raccolta e si dimentica l'accesso salvato. I dati raccolti finora restano, segnati con il giorno dello scollegamento. Per revocare l'accesso anche in Bing, rimuovi l'app in Bing Webmaster Tools, in Impostazioni, Accesso API.",
+      "confirmDisconnect": "Scollega",
+      "keep": "Lascialo collegato",
+      "failed": "Non ha funzionato. Riprova.",
+      "disconnectedOn": "Scollegato il {day}",
+      "reconnect": "Collega di nuovo",
+      "attemptTitle": "Non collegato",
+      "attempt": {
+        "DECLINED": "L'accesso è stato rifiutato su Bing, quindi non è stato collegato nulla.",
+        "NO_SITE": "L'account che ha effettuato l'accesso non ha nessun sito in Bing Webmaster Tools per {host}.",
+        "UNVERIFIED": "L'account ha {host} in Bing Webmaster Tools ma non l'ha ancora verificato. Verificalo lì, poi collega di nuovo.",
+        "FAILED": "Bing non ha completato l'accesso. Riprova."
+      },
+      "problem": {
+        "REVOKED": "Bing non ci permette più di leggere {host}. Collega di nuovo per continuare.",
+        "NO_ACCESS": "L'account collegato non può più leggere {host} in Bing Webmaster Tools. Collega di nuovo con uno che può farlo.",
+        "UNREADABLE": "L'accesso a Bing salvato non si può più leggere. Collega di nuovo per continuare.",
+        "NOT_CONFIGURED": "Bing Webmaster non è più configurato su questa piattaforma, quindi non arriva nulla di nuovo.",
+        "BING_BUSY": "L'ultima volta Bing era troppo occupato per rispondere. Non si perde nulla: la prossima raccolta chiede di nuovo.",
+        "NOT_OWNED": "{host} non è più uno dei siti della tua azienda, quindi non viene raccolto."
+      }
+    },
+    "gate": {
+      "chooseTitle": "Prima scegli il sito",
+      "chooseBody": "L'account che ha effettuato l'accesso ha più di un sito in Bing Webmaster Tools per {host}. Scegli quello che copre tutto il sito.",
+      "toConnection": "Vai a Collegamento",
+      "collectingTitle": "Raccolta dei primi dati",
+      "collectingBody": "Stiamo chiedendo a Bing gli ultimi sei mesi di {host}. Di solito arrivano in pochi minuti."
+    },
+    "banner": {
+      "reconnectTitle": "Bing Webmaster va collegato di nuovo",
+      "reconnect": "Collega di nuovo"
+    },
+    "figures": {
+      "clicks": "Clic",
+      "impressions": "Impressioni",
+      "ctr": "Percentuale di clic",
+      "share": "Quota di Bing dei tuoi clic dalla ricerca",
+      "position": "Posizione",
+      "google": "Google: {value} negli stessi giorni",
+      "googlePlain": "Google: {value}",
+      "ctrAbove": "▲ {points} punti sopra il {google} di Google",
+      "ctrBelow": "▼ {points} punti sotto il {google} di Google",
+      "shareOf": "{bing} su {total} da Bing e Google",
+      "positionHigher": "▲ {places} posizioni sopra il {google} di Google",
+      "positionLower": "▼ {places} posizioni sotto il {google} di Google",
+      "noGoogle": "Non su Google"
+    },
+    "performance": {
+      "title": "Rendimento",
+      "description": "Quello che Bing stesso ha contato per questo sito: clic e impressioni reali, dove Visibilità mostra stime.",
+      "note": "Bing conta in questi totali le risposte web, immagini, video e Copilot; i suoi elenchi di parole chiave e pagine contengono solo le ricerche web, quindi sommano a meno. I dati di Google sono i risultati web del tuo paese principale, come li mostra Search Console; quelli di Bing sono di tutti i paesi."
+    },
+    "chart": {
+      "title": "Clic e impressioni nel tempo",
+      "hint": "Spunta le misure da disegnare. Ogni linea ha la sua scala, così si leggono insieme numeri piccoli e grandi.",
+      "clicks": "Clic",
+      "impressions": "Impressioni",
+      "ctr": "Percentuale di clic (%)",
+      "empty": "Ancora nulla da disegnare per queste date.",
+      "shareTitle": "Quota di Bing dei tuoi clic dalla ricerca, settimana per settimana",
+      "shareHint": "I clic di Bing come quota dei clic di Bing e Google insieme. Ogni barra è una settimana, da lunedì a domenica.",
+      "share": "Quota di Bing",
+      "versusTitle": "Clic ogni settimana, Bing contro Google",
+      "versusHint": "Ogni linea ha la sua scala: Bing a sinistra, Google a destra.",
+      "bing": "Bing",
+      "google": "Google",
+      "weeklyTitle": "Clic e impressioni ogni settimana",
+      "weeklyHint": "Tutto il sito su Bing, settimana per settimana. Ogni linea ha la sua scala.",
+      "positionTitle": "Posizione ogni settimana su Bing",
+      "positionHint": "Più in alto nel grafico è più in alto nei risultati. Bing fornisce una parola chiave una settimana alla volta.",
+      "pageClicksTitle": "Clic ogni settimana su Bing",
+      "pageClicksHint": "Bing fornisce una pagina una settimana alla volta."
+    },
+    "keywords": {
+      "title": "Parole chiave",
+      "description": "Ogni parola chiave per cui Bing ha mostrato il tuo sito in queste date, una settimana alla volta. Fai clic su una per vederla accanto a Google, e le pagine che Bing ha mostrato.",
+      "searchPlaceholder": "Trova una parola chiave…"
+    },
+    "pages": {
+      "title": "Pagine",
+      "description": "Ogni pagina che Bing ha mostrato nei risultati in queste date, una settimana alla volta, con accanto i clic di Google alla stessa pagina.",
+      "searchPlaceholder": "Trova una pagina…"
+    },
+    "table": {
+      "columns": {
+        "keyword": "Parola chiave",
+        "page": "Pagina",
+        "clicks": "Clic",
+        "impressions": "Impressioni",
+        "ctr": "CTR",
+        "position": "Posizione",
+        "googlePosition": "Posizione su Google",
+        "googleClicks": "Clic da Google",
+        "bingPosition": "Posizione su Bing",
+        "bingClicks": "Clic da Bing",
+        "who": "Chi ti posiziona più in alto"
+      },
+      "notOnGoogle": "Non su Google",
+      "noMatch": "Nulla corrisponde alla ricerca.",
+      "empty": "Bing non ha ancora nulla qui per queste date.",
+      "download": "Scarica CSV",
+      "downloading": "Download in corso…",
+      "downloadFailed": "Il download non ha funzionato. Riprova.",
+      "bar": "{period} · tutti i paesi",
+      "fewImpressions": "Meno di 10 impressioni: troppo poche per fidarsi",
+      "filters": {
+        "position": "Posizione",
+        "positions": {
+          "all": "Qualsiasi posizione",
+          "top3": "1–3",
+          "top10": "4–10",
+          "top20": "11–20",
+          "rest": "21 e oltre"
+        },
+        "google": "Su Google",
+        "googles": {
+          "all": "Su Google o no",
+          "both": "Anche su Google",
+          "onlyBing": "Solo su Bing"
+        },
+        "who": "Chi ti posiziona più in alto",
+        "whos": {
+          "all": "Entrambi",
+          "BING": "Bing",
+          "GOOGLE": "Google",
+          "ONLY_BING": "Solo su Bing"
+        },
+        "kind": "Classificazione",
+        "allKinds": "Ogni classificazione",
+        "notSorted": "Non classificata"
+      },
+      "who": {
+        "BING": "Bing {gap} posizioni più in alto",
+        "GOOGLE": "Google {gap} posizioni più in alto",
+        "SAME": "Più o meno uguale",
+        "ONLY_BING": "Solo su Bing"
+      }
+    },
+    "record": {
+      "backKeywords": "Torna a Parole chiave",
+      "backPages": "Torna a Pagine",
+      "keywordDescription": "Una parola chiave per cui Bing ha mostrato il tuo sito, accanto a quello che ha fatto Google per la stessa ricerca.",
+      "pageDescription": "{page} · una pagina che Bing ha mostrato nei risultati, accanto a quello che ha fatto Google per la stessa pagina.",
+      "notFound": "Bing non ha nulla per questo qui.",
+      "pagesTitle": "Pagine che Bing ha mostrato",
+      "keywordsTitle": "Parole chiave per cui Bing l'ha mostrata",
+      "asking": "Richiesta a Bing in corso…",
+      "askFailed": "Bing non ha potuto rispondere ora. Viene chiesto di nuovo la prossima volta che si apre questa pagina.",
+      "noRows": "Bing non ha ancora righe per questo."
+    },
+    "versus": {
+      "title": "Bing contro Google",
+      "description": "Lo stesso sito su entrambi i motori di ricerca: la quota di Bing dei tuoi clic, e le ricerche in cui uno ti posiziona più in alto dell'altro.",
+      "bingHigher": "Parole chiave dove Bing ti posiziona più in alto",
+      "googleHigher": "Parole chiave dove Google ti posiziona più in alto",
+      "onlyBing": "Parole chiave solo su Bing",
+      "ofBoth": "su {count} presenti in entrambi",
+      "ofBing": "su {count} di Bing"
+    },
+    "crawling": {
+      "title": "Scansione e indicizzazione",
+      "description": "Come Bing legge il tuo sito: se le tue pagine che portano richieste sono nel suo indice, le pagine lette ogni giorno e cosa lo ha fermato.",
+      "inIndex": "Pagine che portano richieste nell'indice di Bing",
+      "ofTotal": "{count} su {total}",
+      "googleIndexed": "Google: {count} su {total}",
+      "read": "Pagine lette da Bing",
+      "errors": "Errori nel leggere il tuo sito",
+      "blocked": "Bloccate da robots.txt",
+      "inDays": "in queste date",
+      "none": "nessuna",
+      "chartTitle": "Pagine lette da Bing ogni giorno, e i suoi errori",
+      "chartHint": "Ogni linea ha la sua scala: pagine lette a sinistra, errori a destra.",
+      "pagesRead": "Pagine lette",
+      "errorsLine": "Errori",
+      "columns": {
+        "page": "Pagina",
+        "onBing": "Su Bing",
+        "lastBing": "Ultima lettura di Bing",
+        "lastGoogle": "Ultima lettura di Google"
+      },
+      "yes": "Nell'indice di Bing",
+      "no": "Non nell'indice di Bing",
+      "notAsked": "Non ancora chiesto",
+      "noPages": "Le pagine che portano richieste di questo sito non sono ancora state scelte: arrivano con i controlli settimanali.",
+      "searchPlaceholder": "Trova una pagina…",
+      "filter": "Nell'indice di Bing",
+      "filters": {
+        "all": "Nell'indice o no",
+        "yes": "Nell'indice di Bing",
+        "no": "Non nell'indice di Bing"
+      },
+      "csv": {
+        "page": "Pagina",
+        "title": "Titolo",
+        "onBing": "Nell'indice di Bing",
+        "lastBing": "Ultima lettura di Bing",
+        "lastGoogle": "Ultima lettura di Google"
+      }
+    },
+    "seen": {
+      "websites": {
+        "none": "Collega Bing Webmaster Tools per vedere quello che Bing stesso conta per i tuoi siti.",
+        "top": "{host} ha portato {clicks} clic da Bing negli ultimi 90 giorni: il {share} dei suoi clic dalla ricerca, accanto ai {google} di Google.",
+        "topNoGoogle": "{host} ha portato {clicks} clic da Bing negli ultimi 90 giorni."
+      },
+      "performance": {
+        "says": "Bing ha mostrato il tuo sito {impressions} volte in queste date, e le persone hanno fatto clic {clicks} volte.",
+        "share": "È il {share} dei tuoi clic dalla ricerca: Google ne ha portati {google} negli stessi giorni.",
+        "ctr": "Chi ti trova su Bing fa clic il {bingCtr} delle volte che ti vede, contro il {googleCtr} di Google.",
+        "step": "Guarda dove Bing ti posiziona più in alto o più in basso di Google."
+      },
+      "keywords": {
+        "says": "Bing ha mostrato il tuo sito per {count} parole chiave in queste date.",
+        "top": "{keyword} porta più clic da Bing: {clicks}, in posizione {position}.",
+        "topGoogle": "{keyword} porta più clic da Bing: {clicks}, in posizione {position}, dove Google la mette a {google}.",
+        "onlyBing": "{count} di queste non compaiono mai nell'elenco di Google per te.",
+        "step": "Guarda le parole chiave che Bing posiziona più in alto o più in basso di Google."
+      },
+      "pages": {
+        "says": "Bing ha mostrato {count} delle tue pagine in queste date.",
+        "top": "{page} porta più clic da Bing: {clicks}.",
+        "more": "Bing manda più clic di Google a {count, plural, one {# pagina} other {# pagine}}.",
+        "step": "Guarda le pagine e le parole chiave che Bing posiziona più in alto di Google."
+      },
+      "versus": {
+        "share": "Bing porta il {share} dei tuoi clic dalla ricerca, {bing} su {total}.",
+        "both": "Delle {count} parole chiave per cui entrambi i motori ti mostrano, Bing ne posiziona {higher} più in alto di Google.",
+        "gap": "Il divario più grande nell'altro senso è {keyword}: Google ti mette a {google} e Bing a {bing}.",
+        "step": "Guarda la parola chiave su entrambi i motori."
+      },
+      "crawling": {
+        "says": "Bing ha {count} delle tue {total} pagine che portano richieste nel suo indice.",
+        "missing": "{page} non è nell'indice di Bing.",
+        "errors": "Bing ha trovato {errors} errori nel leggere il tuo sito in queste date.",
+        "noErrors": "Bing ha letto il tuo sito senza errori in queste date."
+      },
+      "record": {
+        "keyword": "Bing ti posiziona a {bing} per questa ricerca; Google a {google}. Su Bing ha avuto {clicks} clic su {impressions}.",
+        "keywordOnlyBing": "Bing ti posiziona a {bing} per questa ricerca, per cui Google non ti mostra. Su Bing ha avuto {clicks} clic su {impressions}.",
+        "page": "Bing ha mandato a questa pagina {clicks} clic da {impressions} impressioni, contro i {googleClicks} da {googleImpressions} di Google."
+      },
+      "links": {
+        "versus": "Guarda Bing contro Google",
+        "keyword": "Guarda la parola chiave",
+        "connect": "Collegalo"
       }
     }
   },

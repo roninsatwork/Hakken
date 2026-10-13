@@ -132,6 +132,8 @@ const headValidator = v.object({
   console: v.object({ connected: v.boolean(), from: nullableString, to: nullableString }),
   /** Whether the company's own Google Analytics is connected with figures: its landing pages' visits are read only then. */
   analytics: v.boolean(),
+  /** Whether Bing Webmaster is connected with its ready-made lists built: its pages' clicks are read only then. */
+  bing: v.boolean(),
 });
 type Head = Infer<typeof headValidator>;
 
@@ -150,6 +152,7 @@ export const rebuildHead = internalQuery({
       ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first(),
       ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first(),
     ]);
+    const bing = await ctx.db.query("bingConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     const connected = connection?.status === "CONNECTED" && !connection.clearing && Boolean(connection.newestDay);
     const period = connected ? await readPeriod(ctx, args.holdId, "web", "page", "90", "NOW") : null;
     return {
@@ -169,6 +172,7 @@ export const rebuildHead = internalQuery({
       crawl: crawl ? { pullId: crawl.pullId, day: crawl.day, cut: crawl.detailCut === true } : null,
       console: { connected, from: period?.from ?? null, to: period?.to ?? null },
       analytics: analytics?.status === "CONNECTED" && !analytics.clearing && Boolean(analytics.newestDay),
+      bing: bing?.status === "CONNECTED" && !bing.clearing && Boolean(bing.periodsAt),
     };
   },
 });
@@ -405,6 +409,7 @@ const holdRowValidator = v.object({
   visited: v.optional(v.boolean()),
   visits: v.optional(v.number()),
   title: v.optional(v.string()),
+  bingClicks: v.optional(v.number()),
   ranks: v.boolean(),
   pageType: v.optional(v.string()),
 });
@@ -429,6 +434,7 @@ export const holdPagesPage = internalQuery({
         ...(row.visited !== undefined ? { visited: row.visited } : {}),
         ...(row.visits !== undefined ? { visits: row.visits } : {}),
         ...(row.title !== undefined ? { title: row.title } : {}),
+        ...(row.bingClicks !== undefined ? { bingClicks: row.bingClicks } : {}),
         ranks: row.ranks,
         ...(row.pageType !== undefined ? { pageType: row.pageType } : {}),
       })),
@@ -448,6 +454,7 @@ const writeRowValidator = v.object({
   visited: v.boolean(),
   visits: v.number(),
   title: v.optional(v.string()),
+  bingClicks: v.optional(v.number()),
   ranks: v.boolean(),
   pageType: v.string(),
 });
@@ -523,6 +530,7 @@ function unchanged(old: HoldRow, row: JoinedPage): boolean {
     && (old.visited ?? false) === row.visited
     && (old.visits ?? 0) === row.visits
     && (old.title ?? null) === row.title
+    && (old.bingClicks ?? 0) === row.bingClicks
     && old.ranks === row.ranks
     && (old.pageType ?? "UNJUDGED") === row.pageType;
 }
@@ -544,6 +552,35 @@ function copyMeta(head: Head, counts: ReturnType<typeof joinHoldPages>["counts"]
     crawlDay: head.crawl?.day ?? null,
     crawlCut: head.crawl?.cut ? 1 : 0,
   };
+}
+
+/** One part of Bing's ready-made 90 days of pages: each page's number and its clicks (bing-webmaster-plan.md §4.3). */
+export const bingPagesPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), part: v.number() },
+  returns: v.union(v.null(), v.object({ numbers: v.array(v.number()), clicks: v.array(v.number()) })),
+  handler: async (ctx, args) => {
+    const parts = await ctx.db
+      .query("bingPeriods")
+      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("list", "page").eq("period", "90").eq("which", "NOW").eq("part", args.part))
+      .take(4);
+    const newest = parts.sort((left, right) => right.builtAt - left.builtAt)[0];
+    return newest ? { numbers: unpackNumbers(newest.keys), clicks: unpackNumbers(newest.clicks) } : null;
+  },
+});
+
+/** Every page Bing clicked to in its last 90 days, by address, read a part at a time (`bingPagesPart`). */
+async function allBingClicks(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Array<{ key: string; clicks: number }>> {
+  const addresses = await addressesOf(ctx, holdId);
+  const rows: Array<{ key: string; clicks: number }> = [];
+  for (let part = 0; ; part += 1) {
+    const read: { numbers: number[]; clicks: number[] } | null = await ctx.runQuery(internal.holdPages.bingPagesPart, { holdId, part });
+    if (!read) break;
+    for (const [at, number] of read.numbers.entries()) {
+      const key = addresses.addresses[number];
+      if (key) rows.push({ key, clicks: read.clicks[at] ?? 0 });
+    }
+  }
+  return rows;
 }
 
 /** What a rebuild changed: pages written (new or changed) and pages removed; null when the hold lists nothing of its own. */
@@ -569,7 +606,8 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
   const shown = head.console.connected ? await allConsolePages(ctx, holdId, head.host) : null;
   const visited = head.analytics ? await allLandingVisits(ctx, holdId) : null;
   const titled = head.analytics ? await allTitles(ctx, holdId) : null;
-  const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, visited, titled, judged });
+  const bingClicked = head.bing ? await allBingClicks(ctx, holdId) : null;
+  const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, visited, titled, bingClicked, judged });
 
   // Only what changed is written: the rest of the rows stay as they are.
   const existing = await readAll((cursor) => ctx.runQuery(internal.holdPages.holdPagesPage, { holdId, cursor }));
@@ -596,6 +634,7 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
       visited: row.visited,
       visits: row.visits,
       ...(row.title !== null ? { title: row.title } : {}),
+      ...(head.bing ? { bingClicks: row.bingClicks } : {}),
       ranks: row.ranks,
       pageType: row.pageType,
     });

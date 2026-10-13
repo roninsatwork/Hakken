@@ -1,0 +1,21 @@
+# Bing Webmaster → Pages — the approved look (board "Pages" of docs/plans/assets/bing-webmaster/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Pages
+settings-card: What Hakken sees
+figures
+  figure: Clicks
+  figure: Impressions
+  figure: Click-through rate
+  figure: Bing's share of your search clicks
+chart-card: Clicks and impressions each week
+  checkbox: Clicks
+  checkbox: Impressions
+  checkbox: Click-through rate (%)
+search: Find a page…
+filter: Classification
+table: Page | Clicks | Impressions | CTR | Position | Google clicks
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

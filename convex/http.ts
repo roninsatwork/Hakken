@@ -18,6 +18,7 @@ import {
   handleConnectorOAuthCallback,
 } from "./connectorOAuth";
 import { handleGoogleAuthorize, handleGoogleCallback } from "./googleConnection";
+import { BING_AUTHORIZE_PATH, BING_CALLBACK_PATH, handleBingAuthorize, handleBingCallback } from "./bingWebmasterConnect";
 import { handleOneClickUnsubscribe, handleResendWebhook } from "./emailHttp";
 import { handleXAuthorize, handleXCallback } from "./xConnect";
 import { handleTelegramWebhook } from "./telegramHttp";
@@ -150,6 +151,22 @@ http.route({
   path: "/api/search-console/oauth/callback",
   method: "GET",
   handler: handleGoogleCallback,
+});
+
+// An owned website's Bing Webmaster Tools sign-in (docs/plans/active/
+// bing-webmaster-plan.md §3): on to Bing's sign-in, and back with a code,
+// exchanged server-side; both legs carry the website's single-use state.
+// The return address is the one registered with Bing (§7, step 1).
+http.route({
+  path: BING_AUTHORIZE_PATH,
+  method: "GET",
+  handler: handleBingAuthorize,
+});
+
+http.route({
+  path: BING_CALLBACK_PATH,
+  method: "GET",
+  handler: handleBingCallback,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

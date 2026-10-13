@@ -101,6 +101,8 @@ export const pagesTables = {
      */
     visited: v.optional(v.boolean()),
     visits: v.optional(v.number()),
+    /** Clicks from Bing in its last 90 days, beside Google's and Analytics' (bing-webmaster-plan.md §4.3); absent with Bing not connected, which reads as none. */
+    bingClicks: v.optional(v.number()),
     /**
      * The page's title, as Google Analytics last saw it most viewed
      * (google-analytics-plan.md GA27, §18.6.3): kept once here, read by every

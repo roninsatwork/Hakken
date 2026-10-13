@@ -10,6 +10,7 @@ import { siteTables } from "./siteSchema";
 import { searchConsoleTables } from "./searchConsoleSchema";
 import { googleTables } from "./googleSchema";
 import { googleAnalyticsTables } from "./googleAnalyticsSchema";
+import { bingWebmasterTables } from "./bingWebmasterSchema";
 import { pagesTables } from "./pagesSchema";
 import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
@@ -49,6 +50,7 @@ export default defineSchema({
   ...searchConsoleTables,
   ...googleTables,
   ...googleAnalyticsTables,
+  ...bingWebmasterTables,
   ...pagesTables,
   ...contentTables,
   ...keywordResearchTables,

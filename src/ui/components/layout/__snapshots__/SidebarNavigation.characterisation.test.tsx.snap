@@ -9,6 +9,7 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
     "auditTrail -> /app/governance/audit-trail",
     "authDiagnostics -> /app/settings/auth-diagnostics",
     "billing -> /app/settings/billing",
+    "bingWebmaster -> /app/bing-webmaster",
     "calls -> /app/calls",
     "clarity -> /app/clarity",
     "dashboard -> /app",
@@ -45,6 +46,7 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
   "links": [
     "Hakken -> /",
     "askPlatform -> /app/assistant",
+    "bingWebmaster -> /app/bing-webmaster",
     "clarity -> /app/clarity",
     "dashboard -> /app",
     "googleAnalytics -> /app/analytics",
@@ -72,6 +74,7 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
   "links": [
     "Hakken -> /",
     "askPlatform -> /app/assistant",
+    "bingWebmaster -> /app/bing-webmaster",
     "calls -> /app/calls",
     "clarity -> /app/clarity",
     "dashboard -> /app",

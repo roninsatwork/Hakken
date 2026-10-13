@@ -314,6 +314,16 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   googleAnalyticsLive: cleared("at the next collection", "googleAnalyticsCollect/dropLive"),
   googleAnalyticsTitles: cleared("a page not seen in the week's ask", "googleAnalyticsTitles/dropOldTitles"),
 
+  // ── Bing Webmaster Tools (bing-webmaster-plan.md §4) ──────────────────────
+  bingConnections: RECORD,
+  bingTokens: RECORD,
+  bingDays: forever("a website's day on Bing, one small row a day, read by the charts and the Executive summary's months, as Search Console's day totals are"),
+  bingWeeks: cleared("13 months", "bingWebmasterCollect/dropOldWeeks"),
+  bingKeywordBooks: RECORD,
+  bingPeriods: LATEST,
+  bingPageChecks: LATEST,
+  bingLive: cleared("at the next collection", "bingWebmasterCollect/dropLive"),
+
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,
   searchConsoleTracked: RECORD,

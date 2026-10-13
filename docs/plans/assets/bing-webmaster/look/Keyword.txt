@@ -1,0 +1,18 @@
+# Bing Webmaster → A keyword — the approved look (board "Keyword" of docs/plans/assets/bing-webmaster/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Keywords
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Clicks
+  figure: Impressions
+  figure: Click-through rate
+  figure: Position
+chart-card: Position each week on Bing
+search: Find a page…
+table: Page | Clicks | Impressions | CTR | Position
+  table-bar: Pages Bing showed for it
+    download: Download CSV
+  table-footer
