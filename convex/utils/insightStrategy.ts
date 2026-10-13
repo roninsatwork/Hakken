@@ -82,9 +82,15 @@ export function carryServices(services: Service[], before: readonly Service[]): 
   return kept;
 }
 
-/** The services the Head of Strategy is asked to call: not guides, which are for readers, and not called already. */
+/**
+ * The services the Head of Strategy is asked to call: those that brought an
+ * enquiry this year — not guides, which are for readers, and not called
+ * already. The rest keep the rule's call, labelled as the rule's, so its
+ * time goes on the services that bring work (Anthony, 13 October 2026: 32
+ * services took it 3m41s of its 4½ minutes).
+ */
 export function servicesToCall(services: readonly Service[]): Service[] {
-  return services.filter((service) => service.kind !== "GUIDES" && service.decidedBy !== "AGENT");
+  return services.filter((service) => service.kind !== "GUIDES" && service.enquiries > 0 && service.decidedBy !== "AGENT");
 }
 
 /**

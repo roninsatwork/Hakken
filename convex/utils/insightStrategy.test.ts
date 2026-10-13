@@ -14,6 +14,7 @@ const ruled = () => rankedServices([
   service("/web-design-london/"),
   service("/app-developers-london/", { enquiries: 2, enquiriesBefore: 12 }),
   service("guides", { kind: "GUIDES", title: null, enquiries: 1, enquiriesBefore: 1 }),
+  service("/seo-agency/", { enquiries: 0, enquiriesBefore: 1, clicks: 3 }),
 ]).map((row) => ({ ...row, signature: serviceReading(row), decidedBy: "RULE" as const }));
 
 describe("Strategy's call for each service", () => {
@@ -21,7 +22,7 @@ describe("Strategy's call for each service", () => {
     expect(Object.keys(serviceValidator.fields)).toEqual(expect.arrayContaining(["decidedBy", "decidedWeek", "why", "signature"]));
   });
 
-  test("the Head of Strategy calls the services, never the guides, within the calls a service can have", () => {
+  test("the Head of Strategy calls the services that brought an enquiry this year, never the guides, within the calls a service can have", () => {
     const rows = ruled();
     const asked = servicesToCall(rows);
     expect(asked.map((row) => row.page)).toEqual(["/web-design-london/", "/app-developers-london/"]);
@@ -35,6 +36,9 @@ describe("Strategy's call for each service", () => {
     expect(applied).toEqual({ changed: 1, kept: 0, refused: 3 });
     expect(rows.find((row) => row.page === "/app-developers-london/")).toMatchObject({ verdict: "GROW", decidedBy: "AGENT", decidedWeek: "2026-10-12" });
     expect(rows.find((row) => row.page === "/web-design-london/")).toMatchObject({ verdict: "GROW", decidedBy: "RULE" });
+    // A service with no enquiry this year keeps the rule's call, said to be the rule's.
+    expect(rows.find((row) => row.page === "/seo-agency/")).toMatchObject({ verdict: "YOUR_CALL", decidedBy: "RULE" });
+    expect(servicesForAssistant(rows).services.find((row) => row.page === "/seo-agency/")).toMatchObject({ called_by: "the rule" });
   });
 
   test("next week, a service the rule calls the same keeps the Head of Strategy's call; Ask Hakken reads them as kept", () => {
