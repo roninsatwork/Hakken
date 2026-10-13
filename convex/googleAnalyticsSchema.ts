@@ -184,6 +184,8 @@ export const HEALTH_CHECKS = [
   "PAYMENT_REFERRALS",
   "TOO_MUCH_UNKNOWN",
   "STRANGERS",
+  // A page Google counts again and again in one visit, its contents links taken as new views (analytics-page-screen-plan.md, phase 6).
+  "COUNTED_AGAIN",
 ] as const;
 export type HealthCheck = (typeof HEALTH_CHECKS)[number];
 export const healthCheckValidator = v.union(...HEALTH_CHECKS.map((check) => v.literal(check)));

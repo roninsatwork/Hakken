@@ -432,12 +432,20 @@ const SEARCH_ENGINES: ReadonlyArray<[string, string]> = [
   ["teams.public.onecdn.static.microsoft", "Microsoft Teams"], ["teams.microsoft.com", "Microsoft Teams"], ["teams.live.com", "Microsoft Teams"],
 ];
 
-/** A website's name as people know it — Google, ChatGPT, LinkedIn — else its own address, `www.` left off. */
+/**
+ * A website's name as people know it — Google, ChatGPT, LinkedIn — else its
+ * own address, `www.` left off. A source Analytics names by its bare word
+ * (`google`, `bing`: a visit from search) is the same website.
+ */
 export function siteNameOf(host: string, assistantOf: (source: string) => string | null): string {
   const bare = host.toLowerCase().replace(/^www\./, "");
   const assistant = assistantOf(bare);
   if (assistant) return assistant;
-  const known = SEARCH_ENGINES.find(([stem]) => (stem.endsWith(".") ? bare.startsWith(stem) || bare.includes(`.${stem}`) : bare === stem || bare.endsWith(`.${stem}`)));
+  const known = SEARCH_ENGINES.find(([stem]) => {
+    const word = stem.split(".")[0];
+    if (word.length > 2 && bare === word) return true;
+    return stem.endsWith(".") ? bare.startsWith(stem) || bare.includes(`.${stem}`) : bare === stem || bare.endsWith(`.${stem}`);
+  });
   return known ? known[1] : bare;
 }
 

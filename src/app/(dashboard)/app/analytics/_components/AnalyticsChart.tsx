@@ -191,10 +191,12 @@ function barLabel(label: string): string {
  * 24): Sites' bar chart, one bar a row, the names on the left. Pages are
  * named by their paths.
  */
-export function TopBars({ title, hint, rows, measure, exportName, host, from, to }: {
+export function TopBars({ title, hint, rows, measure, exportName, host, from, to, labels }: {
   title: string;
   hint: string;
   rows: ReadonlyArray<{ label: string; value: number }> | undefined;
+  /** Each bar's figure written on it, so none needs a hover (a page's own screen, analytics-page-screen-plan.md §2). */
+  labels?: (value: number) => string;
   /** What the bars count: "Visits", "Views", "Conversions". */
   measure: string;
   exportName: string;
@@ -215,7 +217,7 @@ export function TopBars({ title, hint, rows, measure, exportName, host, from, to
       to={to}
     >
       {data.length > 0
-        ? <SiteBarChart horizontal data={data} xKey="label" series={[{ key: "value", name: measure, colour: CHART_SERIES_ORANGE }]} />
+        ? <SiteBarChart horizontal data={data} xKey="label" series={[{ key: "value", name: measure, colour: CHART_SERIES_ORANGE }]} labels={labels} />
         : <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>}
     </SearchConsoleChartCard>
   );

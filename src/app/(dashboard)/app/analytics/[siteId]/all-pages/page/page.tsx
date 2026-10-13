@@ -26,6 +26,7 @@ import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { useLiveAsk } from "../../../_components/AnalyticsListScreen";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "../../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { PageStoryCharts, PageStoryFigures, PageStoryNotices, useStoryClicksTable, useStorySourcesTable } from "../../../_components/PageStory";
 
 type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsPageReads.analyticsPage>>;
 type BeforeRow = Answer["before"][number];
@@ -46,6 +47,13 @@ const SORTS: SiteSortColumns<BeforeRow, "name" | "views" | "share"> = {
  * title and address, other websites by name, and "No page before" — as bars
  * and a table. Its days and the pages before are asked of Google when the
  * screen opens and held until the next collection (GA23).
+ *
+ * Its story, drawn and approved 2026-10-13
+ * (docs/plans/active/analytics-page-screen-plan.md §2): the visits that
+ * started on it and their conversions, named apart from those made here;
+ * different pages a visit and how far it is read; each source on its own
+ * line; where its views went next; who reads it; and its page group beside
+ * it — asked of Google in a second ask, so the kept figures show at once.
  */
 export default function AnalyticsPageScreen() {
   const status = useAnalyticsStatus();
@@ -67,6 +75,9 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   const page = useSearchParams().get("key") ?? "";
   const answer = useQuery(api.googleAnalyticsPageReads.analyticsPage, page ? { ...args, page } : "skip");
   const asking = useLiveAsk(answer?.live ? { ...args, viewed: { ref: page, path: answer.path } } : null);
+  const telling = useLiveAsk(answer?.story.live ? { ...args, story: { ref: page, path: answer.path } } : null);
+  const sourcesTable = useStorySourcesTable(answer?.story, telling, status.host);
+  const clicksTable = useStoryClicksTable(answer?.story, telling, status.host);
   const [search, setSearch, term] = useSiteSearch();
   const currency = status.connection?.currency ?? null;
   const address = answer?.address ?? "";
@@ -112,14 +123,22 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
             detail={(
               <span className="flex flex-col">
                 <span className="text-secondary">{tg("ofValue", { value: formatMoney(row.value, currency) })}</span>
-                <BeforeLine now={row.conversions} before={row.conversionsBefore} />
+                {/* None made here, some from the visits that started here: said where they were made, so 0 and 1 never read as a contradiction. */}
+                {row.conversions === 0 && (answer?.story.started?.conversions ?? 0) > 0
+                  ? <span className="text-secondary">{t("madeElsewhere", { count: answer?.story.started?.conversions ?? 0 })}</span>
+                  : null}
+                {row.conversions === 0 && row.conversionsBefore === 0
+                  ? <span className="text-[12px] text-muted">{t("noneEither", { before: tf(`before.${period}`) })}</span>
+                  : <BeforeLine now={row.conversions} before={row.conversionsBefore} />}
               </span>
             )}
           />
         </FigureRow>
       ) : null}
+      {answer ? <PageStoryFigures story={answer.story} currency={currency} /> : null}
 
       {answer?.live && asking === "FAILED" ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
+      {answer ? <PageStoryNotices story={answer.story} asking={telling} /> : null}
       <VisitsChart days={answer && !answer.live ? answer.points : []} host={status.host} from={null} to={null} exportName="google-analytics-page" viewsOnly />
       <TopBars
         title={t("beforeTitle")}
@@ -130,7 +149,10 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
         host={status.host}
         from={null}
         to={null}
+        labels={(value) => formatNumber(value)}
       />
+      {answer ? <PageStoryCharts story={answer.story} asking={telling} host={status.host} /> : null}
+      {answer ? <DataTable {...sourcesTable} /> : null}
 
       <DataTable
         rows={pager.pageRows}
@@ -149,7 +171,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
                 rows={sorted ?? []}
                 columns={[
                   { header: t("pageBefore"), value: (entry) => nameOf(entry) },
-                  { header: t("address"), value: (entry) => entry.kind === "none" ? "" : entry.label },
+                  { header: t("address"), value: (entry) => entry.kind === "none" ? "" : entry.kind === "site" ? (entry.hosts ?? [entry.key]).join(", ") : entry.label },
                   { header: t("views"), value: (entry) => entry.views },
                   { header: `${t("share")} (%)`, value: (entry) => Math.round(entry.share * 1000) / 10 },
                 ]}
@@ -169,12 +191,13 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
             // The page cell for all three: a page's title over its address, a website's name over its own, none over what it means.
             cell: (entry) => entry.kind === "page"
               ? <PageLink address={entry.label} href={hrefFor("all-pages/page", { key: entry.key })} title={entry.title} />
-              : <PageLink address={entry.kind === "none" ? t("noPageBeforeLine") : entry.key} href={null} title={nameOf(entry)} />,
+              : <PageLink address={entry.kind === "none" ? t("noPageBeforeLine") : (entry.hosts ?? [entry.key]).join(", ")} href={null} title={nameOf(entry)} />,
           },
           { key: "views", header: t("views"), align: "right", sortable: true, cell: (entry) => <span className="font-mono text-[12px] text-foreground">{formatNumber(entry.views)}</span> },
           { key: "share", header: t("share"), align: "right", sortable: true, cell: (entry) => <span className="font-mono text-[12px] text-secondary">{formatPercent(entry.share)}</span> },
         ]}
       />
+      {answer ? <DataTable {...clicksTable} /> : null}
     </div>
   );
 }

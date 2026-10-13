@@ -7,5 +7,5 @@ detail-header
 figures
   figure: Shown in Google
   figure: Clicked
-  figure: Visits
-  figure: Conversions
+  figure: Visits that started here
+  figure: Conversions from these visits

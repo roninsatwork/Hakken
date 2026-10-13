@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { claimAgainstEvidence, couldBeChance, editFinding, typedNumbers, unlike, type DraftFinding } from "./insightEditor";
+import { claimAgainstEvidence, couldBeChance, editFinding, madeOnPageClaim, typedNumbers, unlike, type DraftFinding } from "./insightEditor";
 import { candidatesFor } from "./insightChecks";
 import { enquiryCheck } from "./insightEnquiryCheck";
 import { factsByKey, type Fact } from "./insightFacts";
@@ -82,6 +82,18 @@ describe("the Editor", () => {
 
   test("two counts within a tenth of each other are said to have held, with no test of chance", () => {
     expect(editFinding(draft({ comparisons: [["ga.channel.Organic Search.visits.365.now", "ga.channel.Organic Search.visits.365.before"]] }), facts).ok).toBe(true);
+  });
+
+  test("a page never made, produced or yielded the conversions of visits that started on it (analytics-page-screen-plan.md PS1)", () => {
+    const named = ["ga.landing./hub/kapferer-brand-identity-prism/.visits.365.now", "ga.landing./hub/kapferer-brand-identity-prism/.conversions.365.now"];
+    expect(madeOnPageClaim("The Kapferer prism article drew [[a]] visits but yielded only [[b]] conversion.", named)).toMatch(/visits that started/);
+    expect(madeOnPageClaim("The article generated [[b]] enquiries.", named)).not.toBeNull();
+    // Said as what the figure counts, it passes; and a page's own conversions may be said as made by it.
+    expect(madeOnPageClaim("Of the [[a]] visits that started on the article, [[b]] went on to convert.", named)).toBeNull();
+    expect(madeOnPageClaim("The page yielded [[b]] enquiries.", ["ga.channel.Organic Search.conversions.365.now"])).toBeNull();
+    const landing = factsByKey([...facts.values(), ga(named[0], 593, YEAR), ga(named[1], 1, YEAR)]);
+    const verdict = editFinding(draft({ headline: `The article drew [[${named[0]}]] visits but yielded only [[${named[1]}]] conversion.`, comparisons: [] }), landing);
+    expect(verdict.ok).toBe(false);
   });
 
   test("words a client never reads are sent back", () => {

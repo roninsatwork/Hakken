@@ -1,4 +1,4 @@
-import { v, type ObjectType } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages } from "./holdPageRefs";
@@ -13,7 +13,8 @@ import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
 import { assistantOf } from "./utils/aiAssistants";
 import { seenValidator } from "./utils/hakkenSees";
-import { pageSees, type BeforeFacts } from "./utils/sees/analytics";
+import { pageSees, type BeforeFacts, type PageStoryFacts } from "./utils/sees/analytics";
+import { readPageStory, storyValidator, type PageStory } from "./googleAnalyticsPageStory";
 import {
   blank,
   connectionOf,
@@ -115,6 +116,68 @@ export async function readLandingPage(ctx: SiteReader, args: ObjectType<typeof a
   };
 }
 
+type BeforeRow = Infer<typeof beforeRowValidator>;
+
+/**
+ * Where a page's views were just before, as its screen shows them: the
+ * website's own pages by address and title, another website by the name
+ * people know it by — one row for each, its addresses added up (Google's
+ * google.com, google.es, google.co.uk… are one Google; analytics-page-screen-plan.md
+ * PS2) — and "none". Biggest first.
+ */
+export function beforeRows(
+  split: ReadonlyArray<{ kind: "page" | "site" | "none"; value: string; views: number }>,
+  total: number,
+  addressOf: (ref: string) => string,
+  titleOf: (address: string) => string | undefined,
+): BeforeRow[] {
+  const byName = new Map<string, { kind: BeforeRow["kind"]; key: string; label: string; title?: string; hosts: Array<{ host: string; views: number }>; views: number }>();
+  for (const row of split) {
+    if (row.views <= 0) continue;
+    const label = row.kind === "page" ? addressOf(row.value) : row.kind === "site" ? siteNameOf(row.value, assistantOf) : "";
+    const name = `${row.kind}:${row.kind === "page" ? row.value : label}`;
+    const held = byName.get(name);
+    if (held) {
+      held.views += row.views;
+      held.hosts.push({ host: row.value, views: row.views });
+      continue;
+    }
+    const title = row.kind === "page" ? titleOf(label) : undefined;
+    byName.set(name, { kind: row.kind, key: row.kind === "none" ? "none" : row.value, label, ...(title ? { title } : {}), hosts: [{ host: row.value, views: row.views }], views: row.views });
+  }
+  return [...byName.values()]
+    .map(({ hosts, ...row }) => {
+      const sorted = [...hosts].sort((left, right) => right.views - left.views);
+      // A website keeps the key of its biggest address, so its row reads the same from one collection to the next.
+      return { ...row, key: row.kind === "site" ? sorted[0].host : row.key, ...(row.kind === "site" ? { hosts: sorted.map((entry) => entry.host) } : {}), share: total > 0 ? row.views / total : 0 };
+    })
+    .sort((left, right) => right.views - left.views);
+}
+
+/**
+ * What the page's box says of its story (analytics-page-screen-plan.md §5):
+ * the visits that started on it and their conversions, with those made on
+ * the page itself; its biggest source and the one its conversions came from;
+ * its views a visit; and the busiest page of its group whose visits converted
+ * better, with two conversions at least.
+ */
+export function storyFacts(story: PageStory, madeHere: number): PageStoryFacts {
+  const nameOf = (row: PageStory["sources"][number]) => row.name ?? row.source;
+  const [biggest] = story.sources;
+  const converter = [...story.sources].filter((row) => row.conversions > 0).sort((a, b) => b.conversions - a.conversions)[0] ?? null;
+  const own = story.started;
+  const rate = own && own.visits > 0 ? own.conversions / own.visits : 0;
+  const nearest = story.league.find((row) => !row.isThis && row.conversions >= 2 && row.visits > 0 && row.conversions / row.visits > rate) ?? null;
+  return {
+    started: own ? { visits: own.visits, websiteVisits: own.websiteVisits, conversions: own.conversions, madeHere } : null,
+    biggest: biggest ? { name: nameOf(biggest), visits: biggest.visits, conversions: biggest.conversions } : null,
+    converter: converter ? { name: nameOf(converter), conversions: converter.conversions } : null,
+    viewsPerVisit: story.viewsPerVisit,
+    pages: story.differentPages !== null && own?.countedPages !== null && own?.countedPages !== undefined ? { different: Math.round(story.differentPages * 10) / 10, counted: Math.round(own.countedPages * 10) / 10 } : null,
+    nearest: nearest ? { page: nearest.key, visits: nearest.visits, conversions: nearest.conversions } : null,
+  };
+}
+
 /** A page or website a page's views came from just before (GA29), as its screen shows it. */
 const beforeRowValidator = v.object({
 kind: v.union(v.literal("page"), v.literal("site"), v.literal("none")),
@@ -123,6 +186,8 @@ key: v.string(),
 /** The page's address, or the other website's name as people know it (Google, ChatGPT); empty for none. */
 label: v.string(),
 title: v.optional(v.string()),
+/** Another website's addresses, its biggest first: Google's google.com, google.es and the rest are one row (analytics-page-screen-plan.md PS2). */
+hosts: v.optional(v.array(v.string())),
 views: v.number(),
 /** Its views over the page's, 0–1. */
 share: v.number(),
@@ -151,6 +216,8 @@ export const analyticsPage = tenantQuery({
     live: v.boolean(),
     points: v.array(v.object({ day: v.string(), visits: v.number(), engaged: v.number(), views: v.number(), conversions: v.number(), value: v.number() })),
     before: v.array(beforeRowValidator),
+    /** Its story (analytics-page-screen-plan.md §2): the visits that started on it, where its views went, who reads it. */
+    story: storyValidator,
     seen: seenValidator,
   })),
   handler: async (ctx, args) => await readPage(ctx, args),
@@ -184,15 +251,11 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
   const addressOf = new Map(refs.map((ref, at) => [ref, named[at]]));
   const titles = await titlesOf(ctx, holdId, [address, ...named]);
   const total = split.reduce((sum, row) => sum + row.views, 0);
-  const rows = split
-    .filter((row) => row.views > 0)
-    .map((row) => {
-      const label = row.kind === "page" ? addressOf.get(row.value) ?? row.value : row.kind === "site" ? siteNameOf(row.value, assistantOf) : "";
-      const title = row.kind === "page" ? titles.get(label) : undefined;
-      return { kind: row.kind, key: row.kind === "none" ? "none" : row.value, label, ...(title ? { title } : {}), views: row.views, share: total > 0 ? row.views / total : 0 };
-    })
-    .sort((left, right) => right.views - left.views);
+  const rows = beforeRows(split, total, (ref) => addressOf.get(ref) ?? ref, (label) => titles.get(label));
   const facts: BeforeFacts[] = rows.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views }));
+  const story = await readPageStory(ctx, {
+    holdId, page: args.page, address, period: args.period, device: args.device, country, from, to, counted, pages: now && now !== "LIVE" ? now.rows : [],
+  });
   return {
     address,
     title: titles.get(address) ?? null,
@@ -206,6 +269,9 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
       return { day: row.key, visits: row.visits, engaged: row.engaged, views: row.views, conversions, value };
     }),
     before: rows,
-    seen: viewed && came ? await namedSeen(ctx, holdId, pageSees(facts, args.siteId, (name) => assistantOf(name) !== null, args.page)) : { says: [], steps: [] },
+    story,
+    seen: viewed && came
+      ? await namedSeen(ctx, holdId, pageSees(facts, args.siteId, (name) => assistantOf(name) !== null, args.page, storyFacts(story, own ? conversionsOf(own, counted).conversions : 0)))
+      : { says: [], steps: [] },
   };
 }

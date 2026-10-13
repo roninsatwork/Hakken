@@ -167,6 +167,8 @@ describe("collecting a website's Google Analytics", () => {
     expect(asks.every((ask) => JSON.stringify(ask.dimensionFilter).includes("www.acme-shop.test"))).toBe(true);
     // Tracking health ran on the first collection: the other address is a stranger.
     expect((await connectionOf(t, connectionId))?.health?.checks.find((check) => check.check === "STRANGERS")).toMatchObject({ passing: false, names: ["staging.acme-shop.test"], count: 1500 });
+    // Every page of the log is counted more than once a visit — /ai-agency/ 2.25 times — the most counted named first (phase 6).
+    expect((await connectionOf(t, connectionId))?.health?.checks.find((check) => check.check === "COUNTED_AGAIN")).toMatchObject({ passing: false, names: ["/ai-agency/", "/", "/contact/"], count: 3 });
 
     // The landing pages' ready-made 30 days: numbered as Search Console's pages are, the query left off.
     const landing = (await periodRows(t, siteId, "landing|30|NOW|"))!;

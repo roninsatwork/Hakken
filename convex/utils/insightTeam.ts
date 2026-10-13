@@ -87,6 +87,8 @@ export const GROUND_RULES = [
   "Stay in the lane: no advertising spend, no CRM or won deals, no prices of agencies. Don't write page copy, titles or descriptions: say what a page should do and why.",
   "Only claim what the facts show. An explanation the facts can't test (why people behaved as they did) is said as likely, not as fact, or left out. \"HIGH\" sureness is for a finding two sources agree on, on numbers large enough not to be chance; most findings are \"MEDIUM\".",
   "Only name facts by keys you were given, exactly as written. Never make up a key.",
+  // Anthony, 2026-10-13, after a finding said an article "yielded only 1 conversion" made on another page (analytics-page-screen-plan.md PS1).
+  "A page's conversions are of two kinds: those made on the page, and those \"from visits that started on\" it, made anywhere on the website. Say which, as its fact is named: never say a page made, produced or yielded conversions that came from visits started on it.",
 ].join("\n");
 
 /** What a specialist answers with. */

@@ -243,7 +243,10 @@ function columnOf(
     case "conversions":
       return {
         key: "conversions",
-        header: list === "page" ? t("columns.conversionsHere") : t("columns.conversions"),
+        // A page's own conversions, or those of the visits that started on it, never both called "Conversions" (analytics-page-screen-plan.md PS1).
+        header: list === "page" ? t("columns.conversionsHere")
+          : list === "landing" || list === "groups" ? <span title={t("columns.conversionsStartedTitle")}>{t("columns.conversionsStarted")}</span>
+            : t("columns.conversions"),
         align: "right",
         sortable: true,
         cell: (row) => list === "page"
@@ -262,7 +265,7 @@ function columnOf(
  * first needs it, never again for the same ask. "FAILED" when Google could not
  * answer; the screen keeps what it has.
  */
-export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: LiveList; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
+export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: LiveList; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; story?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
   const t = useTranslations("googleAnalytics.table");
   const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
   const { run } = useAdminAction({ scope: "google-analytics-live" });

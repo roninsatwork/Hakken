@@ -17,6 +17,7 @@ import { liveAsk } from "./googleAnalyticsRows";
 import { DAY_JOIN, channelSeriesAsk } from "./googleAnalyticsChartReads";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { countryIdOf } from "./googleAnalyticsCollect";
+import { askPageStory, type StoryList } from "./googleAnalyticsPageStoryAsk";
 
 /**
  * Lists a screen asks Google for when it needs them (docs/plans/active/google-analytics-plan.md
@@ -109,7 +110,7 @@ export const putLive = internalMutation({
  * and the page before each view (`before`); another home country's ends with
  * its code.
  */
-export function pageAsk(kind: "series" | "channel" | "viewed" | "before", page: string, period: string, from: string, to: string, device: string, country = ""): string {
+export function pageAsk(kind: "series" | "channel" | "viewed" | "before" | StoryList, page: string, period: string, from: string, to: string, device: string, country = ""): string {
   return `${kind}:${page}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
@@ -150,6 +151,11 @@ export const askGoogleAnalyticsLive = tenantAction({
     viewed: v.optional(v.object({ ref: v.string(), path: v.string() })),
     /** An event's own screen (GA30): what it was about, by its kind, and the pages it happened on, against the span before. */
     event: v.optional(v.string()),
+    /**
+     * A page of All pages, its story (analytics-page-screen-plan.md §4): the visits that started on it by source, the pages
+     * they saw, where its views went next, and who its readers are.
+     */
+    story: v.optional(v.object({ ref: v.string(), path: v.string() })),
   },
   returns: v.object({ ok: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
   handler: async (ctx, args): Promise<{ ok: boolean; problem: null | "NOT_CONNECTED" | "GOOGLE_BUSY" | "GOOGLE_REFUSED" }> => {
@@ -229,6 +235,15 @@ export const askGoogleAnalyticsLive = tenantAction({
       }
       await write(name("before"), "page", [...numbered.values()], { folded: before.folded, thresholded: before.thresholded, cut: before.cut });
       return { ok: true, problem: null };
+    }
+    if (args.story) {
+      const story = args.story;
+      // Analytics names a page as it was viewed, slash or not: asked both ways, the path given first.
+      const paths = [...new Set([story.path, story.path.length > 1 ? story.path.replace(/\/+$/, "") : story.path])];
+      const asked = await askPageStory(ctx, opened.session, found.target, range, paths, found.counted, device, async (name, list, rows, flags) => {
+        await write(pageAsk(name, story.ref, args.period, range.from, range.to, args.device, found.country), list, rows, flags);
+      });
+      return asked.ok ? { ok: true, problem: null } : failed(asked);
     }
     if (args.event) {
       const event = args.event;

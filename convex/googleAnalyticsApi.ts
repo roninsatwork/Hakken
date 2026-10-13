@@ -190,8 +190,12 @@ export type ReportAsk = {
   eventNames?: string[];
   /** Only this device (`deviceCategory`), when a page list is asked for one. */
   device?: string;
-  /** Only rows whose dimension is one of these values (a landing page's own screen, slashed or not). */
-  only?: { dimension: string; values: string[] };
+  /**
+   * Only rows whose dimension is one of these values (a landing page's own
+   * screen, slashed or not); several, each held to — visits that started on a
+   * page and viewed it (analytics-page-screen-plan.md §4).
+   */
+  only?: { dimension: string; values: string[] } | ReadonlyArray<{ dimension: string; values: string[] }>;
   /**
    * Only visits from these countries, by Google's two-letter `countryId`: the
    * website's home country being collected (google-analytics-plan.md §18.6.1).
@@ -223,8 +227,8 @@ function filterOf(ask: ReportAsk) {
   if (ask.device) {
     filters.push({ filter: { fieldName: "deviceCategory", stringFilter: { matchType: "EXACT", value: ask.device, caseSensitive: false } } });
   }
-  if (ask.only) {
-    filters.push({ filter: { fieldName: ask.only.dimension, inListFilter: { values: ask.only.values, caseSensitive: true } } });
+  for (const only of ask.only === undefined ? [] : "dimension" in ask.only ? [ask.only] : ask.only) {
+    filters.push({ filter: { fieldName: only.dimension, inListFilter: { values: only.values, caseSensitive: true } } });
   }
   if (ask.countries?.length) {
     filters.push({ filter: { fieldName: "countryId", inListFilter: { values: ask.countries, caseSensitive: false } } });

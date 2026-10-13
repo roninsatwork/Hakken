@@ -25,6 +25,22 @@ export type EditorVerdict =
 /** Words a client never reads (I13, and no supplier is named on a screen). */
 const BANNED = /\b(push|pushing|pushed|DataForSEO|Firecrawl)\b/i;
 
+/** A landing page's conversions: made anywhere in the visits that started on it (analytics-page-screen-plan.md PS1). */
+const STARTED_CONVERSIONS = /^ga\.(landing|landingSearch)\..+\.(conversions|value|conversionRate)\./;
+/** Words that say a page made its conversions itself. */
+const SAYS_MADE_THEM = /\b(yield(s|ed|ing)?|produc(e|es|ed|ing)|generat(e|es|ed|ing))\b/i;
+
+/**
+ * A finding that says a page made, produced or yielded conversions its facts
+ * count from the visits that started on it — made anywhere on the website —
+ * says what the figure doesn't (Anthony, 2026-10-13: an article "yielded only 1
+ * conversion", made on another page). Null when it doesn't.
+ */
+export function madeOnPageClaim(text: string, named: readonly string[]): string | null {
+  if (!named.some((key) => STARTED_CONVERSIONS.test(key)) || !SAYS_MADE_THEM.test(text)) return null;
+  return "Says a page made conversions its facts count from visits that started on it, made anywhere on the website: say they came from visits that started there.";
+}
+
 /**
  * A number typed in words of a finding, its named facts taken out: years,
  * and spans of days, weeks, months or years ("the last 12 months"), are the
@@ -119,6 +135,8 @@ export function editFinding(draft: DraftFinding, facts: ReadonlyMap<string, Fact
   if (typed.length > 0) return { ok: false, note: `Types numbers instead of naming their facts: ${typed.slice(0, 3).join(", ")}.` };
   const named = new Set(words.flatMap(namedFacts));
   if (named.size === 0) return { ok: false, note: "Names no figure: a finding needs its evidence." };
+  const madeOnPage = madeOnPageClaim(all, [...named]);
+  if (madeOnPage) return { ok: false, note: madeOnPage };
   for (const pair of draft.comparisons) {
     if (pair.length !== 2) continue;
     const [a, b] = [facts.get(pair[0]), facts.get(pair[1])];

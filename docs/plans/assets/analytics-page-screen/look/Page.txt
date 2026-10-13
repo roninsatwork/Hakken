@@ -1,0 +1,44 @@
+# Google Analytics → a page's own screen, with its story — the approved look (board "Page" of docs/plans/assets/analytics-page-screen/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: All pages
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Views
+  figure: People
+  figure: Time
+  figure: Conversions made here
+figures
+  figure: Visits that started here
+  figure: Conversions from visits that started here
+  figure: Different pages a visit
+  figure: Read to the end
+notice (info)
+chart-card: Views a day
+chart-card: Where visitors were just before
+chart-card: Visits that started here, by where they came from
+chart-card: Where visitors went next
+chart-card: First visit or back again
+chart-card: Phone or computer
+chart-card: Where its readers are
+chart-card: Their age
+chart-card: Their gender
+chart-card: When they read
+chart-card: Against the other pages in Content hub
+search: Find a source…
+table: Source | Kind | Visits | Pages | Time | Read to end | Back again | Conversions
+  table-bar: Each source's visits
+    download: Download CSV
+  table-footer
+search: Find a page or website…
+table: Page before | Views | Share
+  table-bar: Where visitors were just before
+    download: Download CSV
+  table-footer
+search: Find a link…
+table: Link | Kind | Clicks
+  table-bar: What its readers clicked
+    download: Download CSV
+  table-footer

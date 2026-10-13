@@ -62,6 +62,8 @@ export type Visit = {
 
 const FIELD: Record<string, (visit: Visit) => string> = {
   date: (visit) => visit.date.replaceAll("-", ""),
+  // Google's day of the week: 0 is Sunday.
+  dayOfWeek: (visit) => String(new Date(`${visit.date}T00:00:00Z`).getUTCDay()),
   yearMonth: (visit) => visit.date.slice(0, 7).replace("-", ""),
   deviceCategory: (visit) => visit.device,
   sessionDefaultChannelGroup: (visit) => visit.channel,

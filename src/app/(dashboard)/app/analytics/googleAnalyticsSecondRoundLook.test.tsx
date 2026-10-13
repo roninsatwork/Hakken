@@ -98,13 +98,39 @@ describe("Google Analytics' second-round looks", () => {
     await expectApprovedLook(container, PLAN, "Campaigns", "Google Analytics → Campaigns");
   });
 
-  it("21 · a page's own screen", async () => {
+  it("21 · a page's own screen, with its story (analytics-page-screen-plan.md, approved 2026-10-13)", async () => {
     at("/app/analytics/site_1/all-pages/page", "key=~0");
     const before = [
-      { kind: "site" as const, key: "google.com", label: "Google", views: 118, share: 0.35 },
+      { kind: "site" as const, key: "google.com", label: "Google", hosts: ["google.com", "google.es"], views: 118, share: 0.35 },
       { kind: "page" as const, key: "~1", label: "https://www.acme-shop.test/", title: "Digital Growth Agency", views: 74, share: 0.22 },
       { kind: "none" as const, key: "none", label: "", views: 41, share: 0.12 },
     ];
+    const who = (rows: Array<{ key: string; readers: number; share: number; websiteShare: number; conversions: number }>) => ({ rows, readersPlaced: 38, readers: 457, conversionsPlaced: 0, conversions: 1 });
+    const story = {
+      live: false, thresholded: true,
+      started: { visits: 593, visitsBefore: 480, websiteVisits: 4494, conversions: 1, value: 2000, visitsPerConversion: 593, websiteVisitsPerConversion: 27, countedPages: 3.5, websiteCountedPages: 5.2, fewVisits: false },
+      differentPages: 1.2, viewsPerVisit: 3.4, read: 0.18, groupRead: 0.31, group: "Content hub",
+      sources: [
+        { key: "g", channel: "Organic Search", source: "Google", name: "Google", visits: 452, pages: 1.1, time: 38, read: 0.14, back: 0.05, conversions: 0, value: 0, fewVisits: false },
+        { key: "d", channel: "Direct", source: "(direct)", name: null, visits: 70, pages: 2.4, time: 112, read: 0.41, back: 0.38, conversions: 1, value: 2000, fewVisits: true },
+      ],
+      next: [
+        { kind: "again" as const, key: null, address: "", views: 1262, share: 0.62 },
+        { kind: "left" as const, key: null, address: "", views: 641, share: 0.32 },
+        { kind: "page" as const, key: "~12", address: "https://www.acme-shop.test/web-design-insights/", views: 46, share: 0.02 },
+      ],
+      returning: { first: 444, back: 110, unknown: 39, websiteBack: 0.244 },
+      devices: [{ device: "mobile", share: 0.56, websiteShare: 0.3 }, { device: "desktop", share: 0.41, websiteShare: 0.68 }],
+      countries: [{ code: "GB", people: 457 }, { code: "US", people: 298 }],
+      ages: who([{ key: "18-24", readers: 26, share: 0.68, websiteShare: 0.42, conversions: 0 }, { key: "25-34", readers: 12, share: 0.32, websiteShare: 0.26, conversions: 0 }]),
+      genders: who([{ key: "female", readers: 18, share: 0.46, websiteShare: 0.38, conversions: 0 }, { key: "male", readers: 21, share: 0.54, websiteShare: 0.62, conversions: 0 }]),
+      weekdays: ["1", "2", "3", "4", "5", "6", "0"].map((day, at) => ({ day, views: 100 + at * 10 })),
+      clicks: [{ kind: "click" as const, url: "https://en.wikipedia.org/wiki/Brand", clicks: 14 }],
+      league: [
+        { key: "~0", address: "https://www.acme-shop.test/ai-agency/", title: "AI Agency | Agent Automation Company", visits: 593, conversions: 1, isThis: true },
+        { key: "~31", address: "https://www.acme-shop.test/hub/brand-bible-guidelines/", title: "Brand Bible", visits: 35, conversions: 3, isThis: false },
+      ],
+    };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsPageReads:analyticsPage": {
@@ -112,13 +138,23 @@ describe("Google Analytics' second-round looks", () => {
         row: { ...ROW, people: 241, newPeople: 200, bounceRate: 0.3, pagesPerVisit: 2.1, lengthPerVisit: 95 }, viewsBefore: 320, live: false,
         points: DAYS.map((day) => ({ day, visits: 9, engaged: 5, views: 12, conversions: 0, value: 0 })),
         before,
-        seen: pageSees(before.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views })), "site_1", () => false, "~0"),
+        story,
+        seen: pageSees(before.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views })), "site_1", () => false, "~0", {
+          started: { visits: 593, websiteVisits: 4494, conversions: 1, madeHere: 0 },
+          biggest: { name: "Google", visits: 452, conversions: 0 },
+          converter: { name: "(direct)", conversions: 1 },
+          viewsPerVisit: 2.7,
+          pages: { different: 1.2, counted: 3.5 },
+          nearest: { page: "~31", visits: 35, conversions: 3 },
+        }),
       },
     });
     const { container } = render(<AnalyticsPageScreen />);
     await screen.findByText("Digital Growth Agency");
     await screen.findByText("Typed in, a bookmark or an app");
-    await expectApprovedLook(container, PLAN, "APage", "Google Analytics → a page's own screen");
+    await screen.findByText("Typed in or a bookmark");
+    await screen.findByText(/593 visits started on this page/);
+    await expectApprovedLook(container, "analytics-page-screen", "Page", "Google Analytics → a page's own screen, with its story");
   });
 
   it("22 · Events", async () => {

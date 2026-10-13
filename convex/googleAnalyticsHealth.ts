@@ -8,6 +8,8 @@ import { bareHost } from "./googleAnalyticsApi";
 import { slotKey } from "./googleAnalyticsCollect";
 import { splitChannelKey, unpackPart, type PackedPart } from "./googleAnalyticsLists";
 import { HEALTH_CHECKS, type HealthCheck } from "./googleAnalyticsSchema";
+import { decodePages } from "./holdPageRefs";
+import { COUNTED_AGAIN } from "./utils/sees/analytics";
 
 /**
  * Whether Google Analytics is counting a website properly
@@ -32,6 +34,10 @@ export const UNKNOWN_SHARE = 0.05;
 const DAYS_READ = 100;
 /** Weeks of steady visits before a day with none reads as tracking stopped. */
 const STEADY_DAYS = 14;
+/** Views in 90 days a page needs before its views a visit are judged (check 9): fewer move by chance. */
+export const COUNTED_AGAIN_FLOOR = 100;
+/** Pages named by check 9, the most counted first. */
+const COUNTED_AGAIN_NAMED = 3;
 
 /** Payment pages that take the credit for sales when they come back as referrals (§6, check 6). */
 export const PAYMENT_SOURCES: readonly string[] = [
@@ -127,6 +133,20 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   const strangers = (connection.hostVisits ?? []).filter((entry) => entry.visits > 0 && bareHost(entry.host) !== site && entry.host !== "(not set)");
   results.push({ check: "STRANGERS", passing: strangers.length === 0, names: strangers.map((entry) => entry.host), count: strangers.reduce((sum, entry) => sum + entry.visits, 0) });
 
+  // 9. Counted again: a page Google counts 1.5 times or more a visit that saw it — its contents links taken as new views —
+  // which makes visits look deeper than they are (analytics-page-screen-plan.md, phase 6). The last 90 days' pages.
+  const pages = await slotRows(ctx, connection, slotKey("page", "90", "NOW", "")) ?? [];
+  const again = pages
+    .filter((row) => row.views >= COUNTED_AGAIN_FLOOR && row.visits > 0 && row.views / row.visits >= COUNTED_AGAIN && row.key !== "(not set)")
+    .sort((left, right) => right.views / right.visits - left.views / left.visits);
+  const named = await decodePages(ctx, connection.companyWebsiteId, again.slice(0, COUNTED_AGAIN_NAMED).map((row) => row.key));
+  results.push({
+    check: "COUNTED_AGAIN",
+    passing: again.length === 0,
+    names: named.map((address) => address.replace(/^https?:\/\/[^/]+/, "") || "/"),
+    count: again.length,
+  });
+
   return HEALTH_CHECKS.map((check) => results.find((result) => result.check === check)!);
 }
 
@@ -139,6 +159,7 @@ const BELL: Partial<Record<HealthCheck, (result: Result, host: string) => { titl
   PAYMENT_REFERRALS: (result, host) => ({ title: `${host}: payment pages taking the credit`, body: `${(result.names ?? []).join(", ")} show up as referrals, taking the credit for sales. Tracking health says how to fix it.` }),
   TOO_MUCH_UNKNOWN: (result, host) => ({ title: `${host}: too many visits of unknown origin`, body: `${Math.round((result.share ?? 0) * 100)}% of visits have no channel or no landing page. Tracking health says what to check.` }),
   STRANGERS: (result, host) => ({ title: `${host}: visits on another address`, body: `${result.count ?? 0} visits were recorded on ${(result.names ?? []).join(", ")}. They're left out of the figures; Tracking health says how to stop them.` }),
+  COUNTED_AGAIN: (result, host) => ({ title: `${host}: pages counted more than once a visit`, body: `Google Analytics counts ${(result.names ?? []).join(", ")} again and again in one visit, so pages a visit and bounce rate read better than they are. Tracking health says how to fix it.` }),
 };
 
 /**

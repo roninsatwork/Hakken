@@ -7,7 +7,7 @@ chart-card: Visits by landing page
 search: Find a page…
 filter: Page group
 choice: Show: Pages | Page groups
-table: Page | Visits | Bounce | Pages | Time | Conversions | Change
+table: Page | Visits | Bounce | Pages | Time | Conversions from visits | Change
   table-bar
     download: Download CSV
   table-footer

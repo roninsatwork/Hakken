@@ -8,8 +8,8 @@ settings-card: What Hakken sees
 figures
   figure: Shown in Google
   figure: Clicked
-  figure: Visits
-  figure: Conversions
+  figure: Visits that started here
+  figure: Conversions from these visits
 chart-card: Visits and conversions over time
   checkbox: Visits
   checkbox: Engaged visits

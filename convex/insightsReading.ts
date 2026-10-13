@@ -159,6 +159,36 @@ const GA_SPANS: ReadonlyArray<{ period: AnalyticsPeriod; which: readonly Analyti
  */
 type AnalyticsPart = "totals" | "landing" | "events";
 
+/** How each of a row's facts is named. */
+type LandingWords = { visits: string; engaged: string; people: string; conversions: string; value: string; peoplePerConversion: string; conversionRate: string };
+
+/** A row's facts named as before: "visits from Organic Search", "conversions from Organic Search". */
+function plainWords(label: string): LandingWords {
+  return {
+    visits: `visits${label}`, engaged: `engaged visits${label}`, people: `people${label}`, conversions: `conversions${label}`,
+    value: `value of conversions${label}`, peoplePerConversion: `people for one conversion${label}`, conversionRate: `share of visits that converted${label}`,
+  };
+}
+
+/**
+ * A landing page's facts, named for what they count (analytics-page-screen-plan.md
+ * PS1): visits that started on the page, and the conversions those visits went
+ * on to make anywhere on the website — never conversions made on the page,
+ * which a finding once read them as ("yielded only 1 conversion").
+ */
+export function landingWords(path: string, how = ""): LandingWords {
+  const visits = `visits ${how}that started on ${path}`;
+  return {
+    visits,
+    engaged: `engaged ${visits}`,
+    people: `people whose visits ${how}started on ${path}`,
+    conversions: `conversions from ${visits}, made anywhere on the website`,
+    value: `value of conversions from ${visits}`,
+    peoplePerConversion: `people for one conversion from ${visits}`,
+    conversionRate: `share of ${visits} that went on to convert`,
+  };
+}
+
 async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">, part: AnalyticsPart): Promise<Fact[]> {
   const facts = new Facts();
   const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
@@ -168,20 +198,21 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">, part: A
   const country = connection.mainCountry;
   const slot = (list: AnalyticsList, period: AnalyticsPeriod, which: AnalyticsWhich) => readSlot(ctx, hold._id, slotKey(list, period, which, EVERY_DEVICE));
   const moneyOf = (row: ListRow) => conversionsOf(row, counted);
-  const rowFacts = (prefix: string[], label: string, row: ListRow, span: { from: string; to: string }, period: string, which: FactWhich, withPeople: boolean) => {
+  const rowFacts = (prefix: string[], label: string | LandingWords, row: ListRow, span: { from: string; to: string }, period: string, which: FactWhich, withPeople: boolean) => {
     const base = { source: "analytics" as const, from: span.from, to: span.to, country };
     const money = moneyOf(row);
-    facts.add({ ...base, key: factKey("ga", ...prefix, "visits", period, which), value: row.visits, unit: "count", label: `visits${label}` });
-    facts.add({ ...base, key: factKey("ga", ...prefix, "engaged", period, which), value: row.engaged, unit: "count", label: `engaged visits${label}` });
-    if (withPeople) facts.add({ ...base, key: factKey("ga", ...prefix, "people", period, which), value: row.people, unit: "count", label: `people${label}` });
-    facts.add({ ...base, key: factKey("ga", ...prefix, "conversions", period, which), value: money.conversions, unit: "count", label: `conversions${label}` });
-    if (money.value > 0) facts.add({ ...base, key: factKey("ga", ...prefix, "value", period, which), value: Math.round(money.value / 100), unit: "money", currency, label: `value of conversions${label}` });
+    const words = typeof label === "string" ? plainWords(label) : label;
+    facts.add({ ...base, key: factKey("ga", ...prefix, "visits", period, which), value: row.visits, unit: "count", label: words.visits });
+    facts.add({ ...base, key: factKey("ga", ...prefix, "engaged", period, which), value: row.engaged, unit: "count", label: words.engaged });
+    if (withPeople) facts.add({ ...base, key: factKey("ga", ...prefix, "people", period, which), value: row.people, unit: "count", label: words.people });
+    facts.add({ ...base, key: factKey("ga", ...prefix, "conversions", period, which), value: money.conversions, unit: "count", label: words.conversions });
+    if (money.value > 0) facts.add({ ...base, key: factKey("ga", ...prefix, "value", period, which), value: Math.round(money.value / 100), unit: "money", currency, label: words.value });
     if (withPeople && money.conversions > 0 && row.people > 0) {
-      facts.add({ ...base, key: factKey("ga", ...prefix, "peoplePerConversion", period, which), value: Math.round(row.people / money.conversions), unit: "ratio", label: `people for one conversion${label}` });
+      facts.add({ ...base, key: factKey("ga", ...prefix, "peoplePerConversion", period, which), value: Math.round(row.people / money.conversions), unit: "ratio", label: words.peoplePerConversion });
     }
     if (row.visits > 0) {
       const rate = percentOf(money.conversions, row.visits);
-      if (rate !== null) facts.add({ ...base, key: factKey("ga", ...prefix, "conversionRate", period, which), value: rate, unit: "percent", label: `share of visits that converted${label}` });
+      if (rate !== null) facts.add({ ...base, key: factKey("ga", ...prefix, "conversionRate", period, which), value: rate, unit: "percent", label: words.conversionRate });
     }
   };
   for (const { period, which: spans } of part === "totals" ? GA_SPANS : []) {
@@ -213,13 +244,13 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">, part: A
       if (landing) {
         const top = [...landing.rows].sort((a, b) => b.visits - a.visits).slice(0, TOP_ROWS);
         const addresses = await decodePages(ctx, hold._id, top.map((row) => row.key));
-        top.forEach((row, index) => rowFacts(["landing", pathOf(addresses[index])], ` landing on ${pathOf(addresses[index])}`, row, landing, period, GA_WHICH[which], true));
+        top.forEach((row, index) => rowFacts(["landing", pathOf(addresses[index])], landingWords(pathOf(addresses[index])), row, landing, period, GA_WHICH[which], true));
       }
       const byChannel = await slot("landingChannel", period, which);
       if (byChannel) {
         const search = byChannel.rows.filter((row) => splitChannelKey(row.key).source === "Organic Search").sort((a, b) => b.visits - a.visits).slice(0, TOP_ROWS);
         const addresses = await decodePages(ctx, hold._id, search.map((row) => splitChannelKey(row.key).channel));
-        search.forEach((row, index) => rowFacts(["landingSearch", pathOf(addresses[index])], ` from search landing on ${pathOf(addresses[index])}`, row, byChannel, period, GA_WHICH[which], true));
+        search.forEach((row, index) => rowFacts(["landingSearch", pathOf(addresses[index])], landingWords(pathOf(addresses[index]), "from search "), row, byChannel, period, GA_WHICH[which], true));
       }
     }
   }

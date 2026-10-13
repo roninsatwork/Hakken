@@ -184,9 +184,24 @@ export const googleAnalyticsInternal = internalQuery({
           };
         }
         const answer = await readPage(site, { ...common, page: match.key });
+        const story = answer?.story ?? null;
         return {
           ...base, page: answer?.address ?? match.label, title: answer?.title ?? null, figures: answer?.row ? rowOf(answer.row) : null,
           justBefore: answer && !answer.live ? answer.before.slice(0, ROWS).map((row) => ({ came: row.kind === "none" ? "no page before" : row.title ?? pathOfAddress(row.label), views: row.views, sharePercent: percent(row.share) })) : null,
+          // Its story, as its screen tells it (analytics-page-screen-plan.md §2): conversions made on the page are its figures'
+          // own; those from visits that started on it were made anywhere on the website, and are never said to be the page's.
+          visitsThatStartedHere: story?.started ? {
+            visits: story.started.visits, conversionsFromThoseVisitsMadeAnywhere: story.started.conversions, value: money(story.started.value),
+            visitsForOneConversion: story.started.visitsPerConversion, websiteVisitsForOneConversion: story.started.websiteVisitsPerConversion,
+            pagesAVisitAsCounted: story.started.countedPages,
+          } : null,
+          ...(story && !story.live ? {
+            differentPagesAVisit: story.differentPages,
+            timesCountedAVisit: story.viewsPerVisit,
+            readToEndPercent: story.read === null ? null : percent(story.read),
+            bySource: story.sources.slice(0, ROWS).map((row) => ({ source: row.name ?? (row.source === "(direct)" ? "typed in or a bookmark" : "not known"), channel: row.channel, visits: row.visits, conversions: row.conversions })),
+            wentNext: story.next.slice(0, ROWS).map((row) => ({ went: row.kind === "again" ? "this page again" : row.kind === "left" ? "left the website" : pathOfAddress(row.address), views: row.views, sharePercent: percent(row.share) })),
+          } : story?.live ? { storyNote: "Where its views went next, each source's visits and who reads it are asked of Google when the page's screen opens: open the link." } : {}),
           ...(answer?.live ? { note: "The page or website visitors were on just before is asked of Google when the page's screen opens: open the link." } : {}),
           link: linkTo("all-pages/page", { key: match.key }),
         };

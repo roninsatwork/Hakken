@@ -127,6 +127,7 @@ const EDITOR_CHECKS = [
   "Every comparison is like with like: the same span of days, the same country, the same kind of figure.",
   "A change on small numbers is said as too early to tell, never as news.",
   "Every claim is checked against the evidence the finding names; words a customer shouldn't read (jargon, suppliers' names, \"push\") send it back.",
+  "A finding that says a page made, produced or yielded conversions that came from visits started on it goes back: those were made anywhere on the website.",
 ].join("\n");
 
 /** Which fixed part each is, for the page's headings. */

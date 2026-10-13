@@ -120,6 +120,18 @@ completed work.
   questions are open (the specialist alone writing the page; Jev picking each
   search's page; keyword difficulty from the monthly collection; "Your place"
   elsewhere).
+- [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
+  — the All pages screen of one page gains the visits that started on it and
+  their conversions, named apart from those made on it; different pages a
+  visit, with its repeats; where visitors went next; one line per source
+  (never grouped); first visit or back again, phone or computer, countries,
+  weekdays, age and gender (saying how many Google knows), read to the end
+  and links out; and its page group's busiest pages beside it. Asked of
+  Google when the screen opens. Eight phases, about fourteen days. **Drawn
+  and approved 2026-10-13 (one board in
+  `docs/plans/assets/analytics-page-screen/`), planned the same day, and
+  Anthony's questions answered. Built on dev the same day, every phase,
+  checked on ronins.co.uk's Kapferer article; committed, not pushed.**
 - [Bing Webmaster — for your own websites](./active/bing-webmaster-plan.md)
   — a new "Bing Webmaster" item in the main menu, after Search Console:
   each owned website's real clicks, impressions, keywords, pages and

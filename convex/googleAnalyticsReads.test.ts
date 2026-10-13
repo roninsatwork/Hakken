@@ -253,11 +253,83 @@ describe("a page's own screen from All pages (GA29)", () => {
       { kind: "page", key: home, label: "https://www.acme-shop.test/", views: 540, share: 0.9 },
       { kind: "site", key: "chatgpt.com", label: "ChatGPT", views: 60, share: 0.1 },
     ]);
-    expect(opened.seen.says[0]).toEqual({ code: "twoSources", text: "/", a: 0.9, more: "ChatGPT", b: 0.1 });
+    // Its story first (analytics-page-screen-plan.md §5): the visits that started on it, kept with the landing pages, and their conversions.
+    expect(opened.seen.says.map((phrase) => phrase.code)).toEqual(["startedConverted", "twoSources", "assistant"]);
+    expect(opened.seen.says[1]).toEqual({ code: "twoSources", text: "/", a: 0.9, more: "ChatGPT", b: 0.1 });
     expect(opened.seen.steps).toMatchObject([
       { code: "keepLink", text: "/", to: { segment: "all-pages/page", filters: { key: home } } },
       { code: "checkAssistant", text: "ChatGPT" },
     ]);
+  });
+});
+
+describe("a page's story on its own screen (analytics-page-screen-plan.md §2, §4)", () => {
+  /**
+   * An article over the last 30 days: Google's visits read it, counted three times a visit, and leave a link out; visits typed in
+   * read it and go on to /contact/, where they convert; ChatGPT's come from abroad.
+   */
+  function article(): Visit[] {
+    const page = "/hub/prism/";
+    return Array.from({ length: 30 }, (_, at): Visit[] => {
+      const date = shiftDay(NEWEST, -at);
+      return [
+        { date, device: "mobile", channel: "Organic Search", source: "google", landing: page, page, sessions: 10, engaged: 8, seconds: 400, views: 30, age: "18-24", gender: "female", events: { scroll: [2, 0], click: [1, 0] }, about: { linkUrl: "https://en.wikipedia.org/wiki/Brand" } },
+        { date, device: "desktop", channel: "Direct", source: "(direct)", landing: page, page, sessions: 2, engaged: 2, seconds: 100, views: 2, visitor: "returning", events: { scroll: [1, 0] } },
+        { date, device: "desktop", channel: "Direct", source: "(direct)", landing: page, page: "/contact/", referrer: "https://www.acme-shop.test/hub/prism/", sessions: 1, engaged: 1, seconds: 30, views: 1, visitor: "returning", events: { generate_lead: [1, 0] } },
+        { date, device: "mobile", channel: "Referral", source: "chatgpt.com", landing: page, page, country: "US", sessions: 1, engaged: 1, seconds: 50, views: 1 },
+      ];
+    }).flat();
+  }
+
+  test("the visits that started on it, each source on its own line, where its views went, who reads it, and its box", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, [...growing(), ...article()]);
+    const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    const page = all.rows.find((row) => row.label.endsWith("/hub/prism/"))!.key;
+    const args = { siteId, page, period: "30" as const, device: "" };
+    const first = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
+    // Kept with the landing pages, before Google is asked: the visits that started here and the conversions they made elsewhere.
+    expect(first.story.live).toBe(true);
+    expect(first.story.started).toMatchObject({ visits: 30 * 13, conversions: 30, fewVisits: false });
+    expect(first.row).toMatchObject({ conversions: 0 });
+
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "", viewed: { ref: page, path: first.path } });
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "", story: { ref: page, path: first.path } });
+    const opened = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
+    const story = opened.story;
+    expect(story.live).toBe(false);
+    // One line a source, never a group (PS2): typed in by Google's own word, with the conversion.
+    expect(story.sources.map((row) => [row.channel, row.name ?? row.source, row.visits, row.conversions])).toEqual([
+      ["Organic Search", "Google", 300, 0],
+      ["Direct", "(direct)", 90, 30],
+    ]);
+    expect(story.sources[0]).toMatchObject({ pages: 1, read: 60 / 300, back: 0 });
+    expect(story.sources[1].back).toBe(1);
+    // Its views a visit (the page counted again), how far it is read, and where its views went next.
+    expect(story.viewsPerVisit).toBeCloseTo(960 / 360);
+    expect(story.read).toBeCloseTo(90 / 360);
+    expect(story.next.map((row) => [row.kind, row.address, row.views])).toEqual([
+      ["again", "", 600],
+      ["left", "", 330],
+      ["page", "https://www.acme-shop.test/contact/", 30],
+    ]);
+    // Its readers: devices, every country (PS8), age where Google can tell and the conversions it could place.
+    expect(story.devices.map((row) => row.device)).toEqual(["mobile", "desktop"]);
+    expect(story.countries.map((row) => row.code)).toEqual(["GB", "US"]);
+    expect(story.ages).toMatchObject({ rows: [{ key: "18-24", share: 1, conversions: 0 }], conversionsPlaced: 0, conversions: 30, readers: expect.any(Number) });
+    expect(story.genders.rows.map((row) => row.key)).toEqual(["female"]);
+    expect(story.weekdays).toHaveLength(7);
+    expect(story.weekdays.reduce((sum, row) => sum + row.views, 0)).toBe(960);
+    expect(story.clicks).toEqual([{ kind: "click", url: "https://en.wikipedia.org/wiki/Brand", clicks: 30 }]);
+    expect(story.returning).toMatchObject({ first: expect.any(Number), back: expect.any(Number) });
+    // The box: the visits and the conversion made elsewhere, the biggest source with none, the page counted again.
+    expect(opened.seen.says.map((phrase) => phrase.code)).toEqual(["startedElsewhere", "biggestNoneTyped", "countedAgainPages"]);
+    // The box's figures are the page's own: 1.0 different pages a visit, 2.5 as Google counts them (990 views in 390 visits).
+    expect(opened.seen.says[2]).toEqual({ code: "countedAgainPages", a: 1, b: 2.5 });
+    // First visit or back again by the visits that started here, which add up to them as the figure and the table do.
+    expect(story.returning).toMatchObject({ first: 300, back: 90, unknown: 0 });
+    expect((story.returning?.first ?? 0) + (story.returning?.back ?? 0) + (story.returning?.unknown ?? 0)).toBe(story.started?.visits);
+    expect(opened.seen.steps.map((step) => step.code)).toEqual(["fixCountedAgain"]);
   });
 });
 
@@ -554,7 +626,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
-    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 8 });
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 9 });
     const connected = await user.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
     expect(connected?.searchConsole).toBeNull();
     await t.run(async (ctx) => {
@@ -571,9 +643,10 @@ describe("tracking health", () => {
     const t = harness();
     const { siteId, connectionId, admin } = await collected(t, history(40));
     const health = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!.health!;
-    expect(health.checks.filter((check) => !check.passing).map((check) => check.check)).toEqual(["NO_VALUE", "STRANGERS"]);
+    // The log counts every page twice a visit or more: the ninth check fails too (analytics-page-screen-plan.md, phase 6).
+    expect(health.checks.filter((check) => !check.passing).map((check) => check.check)).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN"]);
     const told = async () => (await t.run(async (ctx) => await ctx.db.query("notifications").collect())).filter((row) => row.kind === "GOOGLE_ANALYTICS_HEALTH");
-    expect((await told()).map((row) => row.title)).toEqual(["acme-shop.test: a conversion has no value", "acme-shop.test: visits on another address"]);
+    expect((await told()).map((row) => row.title)).toEqual(["acme-shop.test: a conversion has no value", "acme-shop.test: visits on another address", "acme-shop.test: pages counted more than once a visit"]);
     // System alerts: the platform's super admins, never the company's own admins.
     const rows = await told();
     const roles = await t.run(async (ctx) => await Promise.all(rows.map(async (row) => (await ctx.db.get(row.userId))?.role)));
@@ -581,7 +654,7 @@ describe("tracking health", () => {
     // Saved again with the same gap: no second bell.
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [{ eventName: "click_tel", counted: true, hakkenValue: null }] });
     await finishScheduled(t);
-    expect(await told()).toHaveLength(2);
+    expect(await told()).toHaveLength(3);
     // Given a value: the check passes.
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [{ eventName: "click_tel", counted: true, hakkenValue: 150 }] });
     await finishScheduled(t);

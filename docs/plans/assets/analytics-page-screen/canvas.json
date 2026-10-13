@@ -1,0 +1,52 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-13T09:05:00Z"
+  },
+  "title": "Hakken — A page's own screen",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 8000,
+      "title": "1 · Google Analytics → All pages → the Kapferer article, with what it could add",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html"
+  ],
+  "notes": {
+    "measured": {
+      "x": 1520,
+      "y": 0,
+      "w": 420,
+      "fill": "green",
+      "size": "m",
+      "text": "Built 13 Oct 2026, and live in the app on every page's own screen in Google Analytics → All pages.\n\nThe Kapferer article, last 12 months, United Kingdom:\n• 593 visits started on it; 1 conversion (£20), from a visit typed in; Google's 446 made none\n• 1.0 different pages a visit, counted as 3.5 with repeats\n• 62.5% of its views are the same page counted again; 35.9% leave\n• Read to the end: 6.1% of visits (Content hub 8.7%)\n• Readers worldwide: UK 457, India 205, South Africa 133, Brazil 99\n• 16 downloads of the prism template PDF"
+    },
+    "examples": {
+      "x": 1520,
+      "y": 620,
+      "w": 420,
+      "fill": "orange",
+      "size": "m",
+      "text": "On this board, some rows are still examples (each source's split, devices, weekdays). The app shows the real figures.\n\nAdded at Anthony's ask: each age and gender chart also says how many of the page's conversions Google could place, and shows them on its bars."
+    },
+    "discuss": {
+      "x": 1520,
+      "y": 1240,
+      "w": 420,
+      "fill": "blue",
+      "size": "m",
+      "text": "Decided 13 Oct 2026:\n\n• Sections in the order drawn\n• Both conversion figures side by side, named apart: made here, and from visits that started here, on the Analytics screens and in Insights\n• Countries: every country on this chart\n• Age and gender added, each saying how many readers Google could place\n• When built and checked: committed to dev, not pushed"
+    }
+  },
+  "designSystems": []
+}

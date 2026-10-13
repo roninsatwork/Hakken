@@ -330,18 +330,22 @@ export function SiteBarChart({
   // Each series' figures, worked out here and drawn the same way between draws: the chart library layers
   // each label list and re-layers it when its drawing changes, which looped on a split chart's rivals
   // (2026-10-12). A series with no figure to write gets no label list at all.
+  //
+  // The chart library draws no bar for a nought, and numbers its labels by the bars it drew, not by the rows: each
+  // series keeps the rows it draws, so the third bar drawn is given the third drawn row's figure, never the row after
+  // a nought's (2026-10-13: an article's "1 from 593 visits" written beside the next article's bar).
   const labelWords = JSON.stringify(labels ? series.map((entry) => [entry.key, data.map((row) => {
     const value = Number(row[entry.key]);
     return Number.isFinite(value) ? labels(value, entry.key, row) : null;
-  })]) : []);
-  const labelContents = useMemo(() => new Map((JSON.parse(labelWords) as Array<[string, Array<string | null>]>).map(([key, words]) => {
+  }), drawnRows(data, entry.key)]) : []);
+  const labelContents = useMemo(() => new Map((JSON.parse(labelWords) as Array<[string, Array<string | null>, number[]]>).map(([key, words, drawn]) => {
     const widest = words.reduce((most, word) => Math.max(most, word?.length ?? 0), 0);
-    return [key, widest > 0 ? barLabel((_value, index) => words[index] ?? null, { horizontal, stacked, widest }) : null] as const;
+    return [key, widest > 0 ? barLabel((_value, index) => words[drawn[index] ?? index] ?? null, { horizontal, stacked, widest }) : null] as const;
   })), [labelWords, horizontal, stacked]);
   // Bars along keep room at their ends for the widest figure written there, so a longer one —
   // "about 207 (204 more)" — is not cut at the chart's edge (2026-10-12); a short one keeps the usual room.
   const labelRoom = useMemo(() => {
-    const widest = (JSON.parse(labelWords) as Array<[string, Array<string | null>]>).reduce((most, [, words]) => Math.max(most, ...words.map((word) => word?.length ?? 0)), 0);
+    const widest = (JSON.parse(labelWords) as Array<[string, Array<string | null>, number[]]>).reduce((most, [, words]) => Math.max(most, ...words.map((word) => word?.length ?? 0)), 0);
     return Math.max(BAR_LABEL_ROOM, Math.ceil(widest * LABEL_LETTER) + 12);
   }, [labelWords]);
   if (line && !horizontal) return <BarLineChart data={data} series={series} line={line} xKey={xKey} height={height} scale={scale} google={google} formatValue={formatValue} seriesLabel={seriesLabel} />;
@@ -503,6 +507,18 @@ function MonthTick({ x, y, payload, index, months, room }: { x?: number; y?: num
 const BAR_LABEL_ROOM = 56;
 /** About how wide a figure's letters are at the labels' size, to leave off one its bar cannot hold. */
 const LABEL_LETTER = 6.7;
+
+/**
+ * The rows a series draws a bar for, in order: those whose figure is a number
+ * other than nought. The chart library leaves out a bar with no width or
+ * height, and numbers the labels of the bars it drew.
+ */
+export function drawnRows(data: ReadonlyArray<Record<string, unknown>>, key: string): number[] {
+  return data.flatMap((row, at) => {
+    const value = Number(row[key]);
+    return Number.isFinite(value) && value !== 0 ? [at] : [];
+  });
+}
 
 type BarLabelProps = { x?: number | string; y?: number | string; width?: number | string; height?: number | string; value?: unknown; index?: number };
 

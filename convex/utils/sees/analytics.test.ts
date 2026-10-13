@@ -376,6 +376,41 @@ describe("21 · A page's own screen", () => {
     expect(empty).toEqual({ says: [{ code: "none" }], steps: [] });
     worded("page", box, typed, nothing, empty, reloaded);
   });
+
+  test("its story first: the visits that started on it and where their conversion was made, Google's with none, counted again, a page that converts better (analytics-page-screen-plan.md §5)", () => {
+    // Ronins' Kapferer article, 13 October 2026.
+    const kapferer = {
+      started: { visits: 593, websiteVisits: 4494, conversions: 1, madeHere: 0 },
+      biggest: { name: "Google", visits: 500, conversions: 0 },
+      converter: { name: "(direct)", conversions: 1 },
+      viewsPerVisit: 2.7,
+      pages: { different: 1, counted: 3.5 },
+      nearest: { page: "~31", visits: 35, conversions: 3 },
+    };
+    const box = pageSees(before, "s1", isAssistant, "~9", kapferer);
+    expect(box.says).toEqual([
+      { code: "startedElsewhere", a: 593, b: 593 / 4494, c: 1 },
+      { code: "biggestNoneTyped", text: "Google", a: 500 },
+      // Said with the figures the page shows: 1.0 different pages a visit, 3.5 as Google counts them.
+      { code: "countedAgainPages", a: 1, b: 3.5 },
+    ]);
+    expect(box.steps.map((step) => step.code)).toEqual(["nextStep", "fixCountedAgain", "keepLink"]);
+    expect(box.steps[0]).toMatchObject({ link: "landingPage", to: { segment: "landing-pages/page", filters: { key: "~9" } } });
+    // Counted once a visit, with its conversion on the page, from a source of its own: the page that converts better is said.
+    const plain = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { ...kapferer.started, madeHere: 1 }, converter: { name: "Bing", conversions: 1 }, viewsPerVisit: 1.1, pages: { different: 1.4, counted: 1.6 } });
+    expect(plain.says.map((phrase) => phrase.code)).toEqual(["startedConverted", "biggestNone", "nearest"]);
+    expect(plain.says[1]).toEqual({ code: "biggestNone", text: "Google", a: 500, more: "Bing" });
+    // A busy page whose visits never convert gets its next step; a quiet one doesn't.
+    const none = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { ...kapferer.started, conversions: 0 }, converter: null, nearest: null, viewsPerVisit: null, pages: null });
+    expect(none.says[0]).toEqual({ code: "startedNone", a: 593, b: 593 / 4494 });
+    expect(none.steps[0]?.code).toBe("nextStep");
+    const quiet = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { visits: 40, websiteVisits: 4494, conversions: 0, madeHere: 0 }, converter: null, nearest: null, viewsPerVisit: null, pages: null });
+    expect(quiet.steps.map((step) => step.code)).not.toContain("nextStep");
+    // A page another page sends under a twentieth of its views is no link worth keeping.
+    const faint = pageSees([{ kind: "site", key: "google.com", name: "Google", views: 1444 }, { kind: "page", key: "~2", name: "https://ronins.co.uk/web-design-insights/", views: 1 }], "s1", isAssistant, "~9");
+    expect(faint.steps.map((step) => step.code)).not.toContain("keepLink");
+    worded("page", box, plain, none, quiet, faint);
+  });
 });
 
 describe("9 · Conversions and 16 · Nothing counted yet", () => {

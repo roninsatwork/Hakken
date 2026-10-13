@@ -378,29 +378,81 @@ export const NO_PAGE_BEFORE_SHARE = 0.2;
 /** Where a page's views came from just before (GA29): a page of the website by its number, another website by its name, or none. */
 export type BeforeFacts = { kind: "page" | "site" | "none"; key: string; name: string; views: number };
 
+/** The least share of a page's views another page of the website must send for the link on it to be worth keeping. */
+export const KEEP_LINK_SHARE = 0.05;
+
+/** Views a visit at which Google is counting a page again and again, its contents links taken as new views (PS4). */
+export const COUNTED_AGAIN = 1.5;
+
 /**
- * A page's own screen from All pages (§18.7): the two biggest sources of its
- * views and their shares, views with no page before when a fifth or more, an
- * AI assistant among its sources; then keep the link on the page that sends
- * most, and check what that assistant says about the page. The page before
- * a view of itself — reloaded, opened again — is never one of its sources.
+ * A page's story (analytics-page-screen-plan.md §5): the visits that started
+ * on it and the conversions they went on to make, where those came from, a
+ * page Google counts more than once a visit, and a page of its group that
+ * converts better. A source is its name, or `(direct)` for visits typed in.
  */
-export function pageSees(rows: readonly BeforeFacts[], siteId: string, isAssistant: (name: string) => boolean, self: string): Seen {
+export type PageStoryFacts = {
+  started: { visits: number; websiteVisits: number; conversions: number; madeHere: number } | null;
+  /** The source that brought the most of those visits, and the one their conversions came from most. */
+  biggest: { name: string; visits: number; conversions: number } | null;
+  converter: { name: string; conversions: number } | null;
+  viewsPerVisit: number | null;
+  /** Different pages a visit, and pages a visit as Google counts them, for visits that started here: as the page shows them. */
+  pages: { different: number; counted: number } | null;
+  /** A page of its group whose visits converted better, by its number. */
+  nearest: { page: string; visits: number; conversions: number } | null;
+};
+
+/**
+ * A page's own screen from All pages (§18.7): first its story, when Google
+ * has answered for it (analytics-page-screen-plan.md §5) — the visits that
+ * started on it and the conversions they made, and where; the biggest source
+ * that brought none; a page counted more than once a visit; a page of its
+ * group that converts better — then the two biggest sources of its views and
+ * their shares, views with no page before when a fifth or more, an AI
+ * assistant among its sources. Its steps: a next step to the service it
+ * supports, the contents links counted as new views, keep the link on the
+ * page that sends most (a twentieth of its views or more), and check what
+ * that assistant says about the page. The page before a view of itself —
+ * reloaded, opened again — is never one of its sources.
+ */
+export function pageSees(rows: readonly BeforeFacts[], siteId: string, isAssistant: (name: string) => boolean, self: string, story: PageStoryFacts | null = null): Seen {
   const total = sum(rows, (row) => row.views);
-  if (total === 0) return seen([{ code: "none" }]);
+  if (total === 0 && !story?.started) return seen([{ code: "none" }]);
   const sources = rows.filter((row) => row.kind !== "none" && row.key !== self && row.views > 0).sort((left, right) => right.views - left.views);
   const none = sum(rows.filter((row) => row.kind === "none"), (row) => row.views);
   const nameOf = (row: BeforeFacts) => (row.kind === "page" ? row.key : row.name);
   const [first, second] = sources;
   const assistant = sources.find((row) => row.kind === "site" && isAssistant(row.name)) ?? null;
-  const sender = sources.find((row) => row.kind === "page") ?? null;
+  const sender = sources.find((row) => row.kind === "page" && row.views / total >= KEEP_LINK_SHARE) ?? null;
+  const started = story?.started && story.started.visits > 0 ? story.started : null;
+  const share = started && started.websiteVisits > 0 ? started.visits / started.websiteVisits : 0;
+  const biggest = story?.biggest;
+  const converter = story?.converter;
+  // Counted again: said with the two figures the page shows — different pages a visit, and Google's count — never a third.
+  const pages = story?.pages && story.pages.different > 0 && story.pages.counted / story.pages.different >= COUNTED_AGAIN ? story.pages : null;
+  const counted = pages ? pages.counted / pages.different : story?.viewsPerVisit !== null && story?.viewsPerVisit !== undefined && story.viewsPerVisit >= COUNTED_AGAIN ? story.viewsPerVisit : null;
   return seen([
-    second
+    started && (started.conversions === 0
+      ? { code: "startedNone", a: started.visits, b: share }
+      : started.madeHere === 0
+        ? { code: "startedElsewhere", a: started.visits, b: share, c: started.conversions }
+        : { code: "startedConverted", a: started.visits, b: share, c: started.conversions }),
+    started && started.conversions > 0 && biggest && biggest.conversions === 0 && converter && converter.name !== biggest.name && (converter.name === "(direct)"
+      ? { code: "biggestNoneTyped", text: biggest.name, a: biggest.visits }
+      : { code: "biggestNone", text: biggest.name, a: biggest.visits, more: converter.name }),
+    pages ? { code: "countedAgainPages", a: pages.different, b: pages.counted } : counted !== null && { code: "countedAgain", a: counted },
+    story?.nearest && { code: "nearest", text: story.nearest.page, a: story.nearest.conversions, b: story.nearest.visits },
+    total > 0 && (second
       ? { code: "twoSources", text: nameOf(first), a: first.views / total, more: nameOf(second), b: second.views / total }
-      : first ? { code: "oneSource", text: nameOf(first), a: first.views / total } : { code: "noSources" },
-    none / total >= NO_PAGE_BEFORE_SHARE && sources.length > 0 && { code: "noneBefore", a: none / total },
+      : first ? { code: "oneSource", text: nameOf(first), a: first.views / total } : { code: "noSources" }),
+    total > 0 && none / total >= NO_PAGE_BEFORE_SHARE && sources.length > 0 && { code: "noneBefore", a: none / total },
     assistant && { code: "assistant", text: assistant.name, a: assistant.views },
   ], [
+    // A busy page whose visits never convert, or one whose group has a page that converts better.
+    started && ((started.visits >= 100 && started.conversions === 0) || story?.nearest)
+      ? { code: "nextStep", link: "landingPage", to: toPage("landing-pages/page", { key: self }) }
+      : null,
+    counted !== null && { code: "fixCountedAgain", link: "trackingHealth", to: toPage("tracking-health") },
     sender && { code: "keepLink", text: sender.key, link: "seePage", to: toPage("all-pages/page", { key: sender.key }) },
     assistant && { code: "checkAssistant", text: assistant.name, link: "aiAnswers", to: { url: `/app/sites/${siteId}/ai/answers` } },
   ]);
