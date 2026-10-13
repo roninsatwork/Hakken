@@ -6,7 +6,7 @@ plan and ask questions … I want to build this overnight". "This standard" is
 the one Keyword cannibalisation reached the same day
 ([keyword-cannibalisation-owners-plan.md](keyword-cannibalisation-owners-plan.md)).
 
-Built overnight 2026-10-12 on local dev, committed phase by phase, not pushed: about 95%. What waits on Anthony is listed under "Waiting on Anthony".
+Built overnight 2026-10-12 on local dev, committed phase by phase, not pushed; the morning list followed on 2026-10-13 ("Go"), also committed, not pushed. What waits on Anthony is listed under "Waiting on Anthony".
 
 ## The standard
 
@@ -197,7 +197,43 @@ below are answered. Nothing is pushed.
 
   Nothing pushed.
 
-## Waiting on Anthony (2026-10-13)
+- **Follow-up, built 2026-10-13.** Anthony's "Go" on the morning list
+  below, item by item, each committed on dev, not pushed:
+  - **7, the stale run:** nothing to do. The platform had already closed it
+    as failed at 19:36 on 12 October.
+  - **6, coverage:** the bar is now one point under where coverage stands:
+    80/77/65/72 (lines, statements, branches, functions), up from
+    72/70/58/66; the next target is 83/80/68/76.
+  - **2, the Head of Strategy's time:** it calls only the services that
+    brought an enquiry this year (24 of 32 on ronins.co.uk). The rest keep
+    the rule's call, said to be the rule's. Every one of the 32 brought
+    clicks, so "enquiries or clicks" would have changed nothing.
+  - **4a, the specialist writes the cannibalisation page:** it is shown and
+    decides every search a group keeps (up to 200, not 60). Its headline and
+    story are kept on the group with their figures named by key, filled from
+    the group's figures each time the page opens, and open the group's page
+    and its finding; Ask Hakken reads them too. A group it hasn't decided
+    keeps the rule's sentences, labelled.
+  - **4b, Jev picks each search's page:** through the "Which page answers
+    this search?" Decision (`seo.angle-page`), the one Fan-out asks
+    (`insightCompetingJudge.ts`). While it acts on its own, a sure answer is
+    the search's page ("Chosen by the decision model"), the rule's stands
+    where it isn't sure, and the specialist explains the picks and decides
+    the pages' actions, never picking a page. Turning it on or off reads
+    every group anew. It is off for Ronins, so nothing has changed yet.
+  - **3, the boxes:** Funnel (Conversion specialist), Track record (Head of
+    Strategy) and Page decisions (Page decisions specialist, written once its
+    pages are decided) now have written boxes, their figures worked out from
+    what is saved (`utils/insightBoxFacts.ts`). The Funnel box covers "where
+    visitors came from", its sources table.
+  - **1, the Difficulty column:** drawn on ronins.co.uk's app group and sent
+    as a picture. It reads difficulty free for every search wherever it is
+    already held, and still buys only each group's ten most searched: 45 of
+    the group's 200 searches have one, up from 9. Built and set aside, not
+    committed, until Anthony approves the look.
+  - **5, the summary note:** left as it is.
+
+## Morning list (2026-10-13, answered "Go" — see the follow-up above)
 
 1. **The "Difficulty" column** on a cannibalisation group's searches table:
    to see it drawn and approve its look.
@@ -217,6 +253,18 @@ below are answered. Nothing is pushed.
 7. **The first run cut off before phase 0** still shows as running in its
    record. The watches only cover runs from now on; a one-off fix can close
    it.
+
+## Waiting on Anthony (2026-10-13, after the follow-up)
+
+1. **The Difficulty column's look:** the picture is sent; a yes builds it.
+2. **Turning Jev on for Keyword cannibalisation:** Decisions → "Which page
+   answers this search?". It is the same switch as Fan-out's "Your page".
+3. **"Where enquiries come from", if it means the page for one source**
+   (for example "Enquiries from ChatGPT"): that page has no box today, and
+   giving it one changes its look.
+4. **A ronins.co.uk run to prove the follow-up:** about $0.50. Until one
+   runs, the cannibalisation pages show the rule's sentences and the three
+   new boxes show the screens' own.
 
 ## Answered by Anthony, 2026-10-12
 

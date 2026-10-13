@@ -139,6 +139,13 @@ About 90% overall.
 
 ## Open questions, waiting on Anthony
 
+Questions 1 and 2 were answered "Go" on 2026-10-13 and built that day
+(insights-one-voice-plan.md, "Follow-up, built 2026-10-13"): the specialist
+decides every search and writes each group's page, the rule's sentences
+labelled where it hasn't; Jev picks each search's page through
+`seo.angle-page`, switched off until Anthony turns it on. Question 3's
+column is drawn and waits on his look.
+
 1. **The specialist alone writes the page** — "we can revisit this later".
    That would mean: it decides every search in a group (up to 200), not only
    the 60 most searched; its words go at the top of every group page; and a
