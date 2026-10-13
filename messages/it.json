@@ -18338,7 +18338,12 @@
       },
       "soFar": "Finora: {now} nei {days} giorni fino al {to}, contro {against} {than}.",
       "soFarWritten": "Finora: {now} adesso, contro {against} quando è stato scritto.",
-      "soFarRow": "Finora {now}, contro {against}"
+      "soFarRow": "Finora {now}, contro {against} {than}",
+      "row": {
+        "YEAR": "un anno prima",
+        "BEFORE": "nei giorni prima",
+        "WRITTEN": "quando è stato scritto"
+      }
     },
     "finding": {
       "back": "Tutti i risultati",

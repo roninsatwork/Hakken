@@ -82,6 +82,17 @@ describe("the Keyword cannibalisation specialist", () => {
     expect(changed.decidedBy).toBe("RULE");
   });
 
+  test("its words are never cut; a write-up kept cut short reads to its last whole sentence and is asked for again", () => {
+    const span = { from: "2026-07-13", to: "2026-10-10" };
+    const long = `${"Each page should own its own searches. ".repeat(40)}Done.`;
+    const held = group();
+    const applied = applyAnswer(held, { headline: "Three app pages compete.", story: long }, 0.04, "2026-10-12");
+    expect(applied.words?.story).toBe(long.trim());
+    held.words = { headline: "Three app pages compete.", story: "Google splits these searches. Merging would help and" };
+    expect(summaryOf(held, span)).toEqual(["Three app pages compete.", "Google splits these searches."]);
+    expect(carryOver(group(), held, 0.04)).toBe(false);
+  });
+
   test("it decides every search a group keeps, not only the most searched", () => {
     expect(SEARCHES_SHOWN).toBe(MOST_SEARCHES);
     expect(agentInputOf(group(), new Map()).searches).toHaveLength(group().searches.length);

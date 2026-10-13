@@ -259,6 +259,63 @@ below are answered. Nothing is pushed.
   (the figures' lag) and the 60-day ones earlier: 11 December to 14
   November. Kapferer's is 12 January unless its page changes first.
 
+## Every limit in the Insights team's code (written down 2026-10-13)
+
+Anthony, 13 October 2026, on a 900-character cap that cut a write-up
+mid-sentence: "who asked for a cap … stop hiding stuff from me". Nobody
+asked for it: the builder added it on 12 October without saying. This is
+every limit in the code built for this plan and the cannibalisation plan,
+so none is hidden. Change one only with Anthony's say, and add any new one
+here when it is made.
+
+**Cut words — removed 2026-10-13.** The cannibalisation specialist's
+headline and story were cut at 900 characters, and every agent's "why"
+sentence at 300. Now nothing is cut. A write-up kept cut short reads to its
+last whole sentence, and is asked for again at the next run.
+
+**Time.** Convex stops any step of the run at ten minutes, and nothing that
+step did is saved.
+- One AI call: 3 minutes. The Head of Strategy: 4½.
+- The cannibalisation specialist's groups: 4 minutes together, all asked at
+  once. One failed is asked once more while a minute is left.
+- Jev's page picks: their own step, 7 minutes a step, handing on to itself,
+  6 steps at most. A pick is asked again when the pages Google shows for
+  the search change, or after 90 days.
+
+**How much each agent is given.** What isn't given keeps the rule's
+decision, and is said to be the rule's.
+- Keyword cannibalisation:
+  - groups found: up to 20; groups kept: up to 40;
+  - per group: up to 6 pages and 200 searches;
+  - a group needs 5 split searches and 250 showings to count;
+  - findings: 5 groups written up a week;
+  - with Jev on, the specialist reads the 60 most searched searches and up
+    to 40 more that Jev moved;
+  - keyword difficulty is bought for each group's 10 most searched (agreed
+    by Anthony).
+- The Page decisions specialist: 40 pages a week.
+- The Head of Strategy: the top 40 services, of which it calls those that
+  brought an enquiry this year (agreed).
+- The screens' boxes:
+  - at most 3 sentences a box;
+  - at most 220 figures given;
+  - the Funnel box: 12 sources;
+  - Track record: told the 5 newest checked findings;
+  - Page decisions: told the 10 most visited pages to act on.
+- Ask Hakken reads 25 searches a group and 60 page decisions.
+
+**A finding's check.**
+- 14 to 120 days, its specialist's choice.
+- 3 days for the figures to come in.
+- A short check is under 75 days: it starts on 30, then goes on to 90.
+- A figure no longer read is closed after 28 days.
+- A page "changed" when a tenth of its words, its title or its opening
+  changed.
+
+**Reads.** Each weekly check reads a website's newest 500 findings and 300
+logged changes. Page decisions keeps 2,000 pages. These only matter for a
+very large website.
+
 ## Morning list (2026-10-13, answered "Go" — see the follow-up above)
 
 1. **The "Difficulty" column** on a cannibalisation group's searches table:

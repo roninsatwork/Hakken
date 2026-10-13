@@ -27,12 +27,13 @@ export const decidedFields = {
 };
 export type Decided = { decidedBy?: Decider; decidedWeek?: string; why?: string; signature?: string };
 
-/** Words an agent's reason may run to. */
-export const MOST_WHY = 300;
-
-/** An agent's reason as kept: trimmed and cut; nothing when it gave none. */
+/**
+ * An agent's reason as kept, whole: trimmed, never cut (Anthony, 13 October
+ * 2026, on a 300-character cap nobody asked for: "who asked for a cap").
+ * Nothing when it gave none.
+ */
 export function whyText(value: unknown): string {
-  return typeof value === "string" ? value.trim().slice(0, MOST_WHY) : "";
+  return typeof value === "string" ? value.trim() : "";
 }
 
 /** A short, stable reading of what the rule saw: the same parts, the same reading. */

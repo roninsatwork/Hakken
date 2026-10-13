@@ -346,7 +346,7 @@ describe("Insights' looks", () => {
       },
     });
     render(<InsightsTrackRecordPage />);
-    await screen.findByText("So far 3, against 1");
+    await screen.findByText("So far 3, against 1 a year before");
   });
 
   it("3 · Your month", async () => {

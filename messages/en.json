@@ -18338,7 +18338,12 @@
       },
       "soFar": "So far: {now} in the {days} days to {to}, against {against} {than}.",
       "soFarWritten": "So far: {now} now, against {against} when this was written.",
-      "soFarRow": "So far {now}, against {against}"
+      "soFarRow": "So far {now}, against {against} {than}",
+      "row": {
+        "YEAR": "a year before",
+        "BEFORE": "the days before",
+        "WRITTEN": "when written"
+      }
     },
     "finding": {
       "back": "All findings",

@@ -42,5 +42,5 @@ export function soFarWords(progress: Progress | null, clock: Clock | null, check
 /** The same, short, for a table's row. */
 export function soFarRow(progress: Progress | null, check: Words): string | null {
   if (!progress || progress.against === null) return null;
-  return check("soFarRow", { now: figure(progress.now, progress.unit), against: figure(progress.against, progress.unit) });
+  return check("soFarRow", { now: figure(progress.now, progress.unit), against: figure(progress.against, progress.unit), than: check(`row.${progress.than}`) });
 }

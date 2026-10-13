@@ -26,8 +26,6 @@ export const SEARCHES_SHOWN = MOST_SEARCHES;
  */
 export const SEARCHES_EXPLAINED = 60;
 const CHANGES_EXPLAINED = 40;
-/** Words a write-up may run to. */
-const MOST_WORDS = 900;
 
 /** The shape of the specialist's answer, fixed in code so the run can read it (shown read-only on its Instructions page). */
 export const COMPETING_ANSWER = [
@@ -92,7 +90,8 @@ function explained(group: CompetingGroup | KeptGroup) {
 const WORD_OF: Record<Decision, string> = { OWNER: "KEEP", MERGE: "MERGE", DIFFERENTIATE: "DIFFERENT", LINK: "LINK" };
 const DECISION_OF: Record<string, Decision> = { KEEP: "OWNER", MERGE: "MERGE", DIFFERENT: "DIFFERENTIATE", LINK: "LINK" };
 const wordOf = (decision: Decision) => WORD_OF[decision];
-const text = (value: unknown, most: number) => (typeof value === "string" ? value.trim().slice(0, most) : "");
+/** The specialist's words as kept, whole: never cut (Anthony, 13 October 2026, on a 900-character cap nobody asked for). */
+const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
 /**
  * The specialist's answer put on a group, each part only where the rule's
@@ -127,7 +126,7 @@ export function applyAnswer<Group extends CompetingGroup | KeptGroup>(group: Gro
   refused += pages.refused;
   group.decidedBy = "AGENT";
   group.decidedWeek = week;
-  const headline = text(raw.headline, MOST_WORDS), story = text(raw.story, MOST_WORDS);
+  const headline = text(raw.headline), story = text(raw.story);
   return { owners, pages: pages.changed, refused, words: headline && story ? { headline, story } : null };
 }
 
@@ -170,6 +169,8 @@ function applyPages(group: CompetingGroup | KeptGroup, raw: unknown) {
  */
 export function carryOver<Group extends CompetingGroup | KeptGroup>(group: Group, last: KeptGroup, websiteRate: number | null): boolean {
   if (last.decidedBy !== "AGENT" || !group.signature || last.signature !== group.signature) return false;
+  // A write-up kept cut short, before nothing was cut (13 October 2026), is asked for again.
+  if (last.words && !endsWhole(last.words.story)) return false;
   for (const before of last.searches) {
     if (!(before.why?.includes("AGENT") || before.why?.includes("JEV")) || !before.owner) continue;
     const search = group.searches.find((held) => held.search === before.search);
@@ -182,6 +183,16 @@ export function carryOver<Group extends CompetingGroup | KeptGroup>(group: Group
   if (last.words) group.words = last.words;
   return true;
 }
+
+/** Whether words end on a whole sentence. */
+const endsWhole = (text: string) => /[.!?]["'’”)]?$/.test(text.trim());
+/** Words up to their last whole sentence: a write-up kept cut short reads to where it was whole. */
+const toWholeSentence = (text: string) => {
+  if (endsWhole(text)) return text;
+  const ends = [...text.matchAll(/[.!?]["'’”)]?(?=\s)/g)];
+  const last = ends.at(-1);
+  return last?.index !== undefined ? text.slice(0, last.index + last[0].length) : text;
+};
 
 /** The specialist's words, kept only when every figure they name is the group's own and none is typed. */
 export function usableWords(group: CompetingGroup | KeptGroup, words: { headline: string; story: string } | null, span: { from: string; to: string }) {
@@ -199,5 +210,5 @@ export function usableWords(group: CompetingGroup | KeptGroup, words: { headline
 export function summaryOf(group: KeptGroup, span: { from: string; to: string }): string[] | null {
   if (group.decidedBy !== "AGENT" || !usableWords(group, group.words ?? null, span)) return null;
   const held = factsByKey(competingFacts(group, span));
-  return [fillFacts(group.words!.headline, held).text, fillFacts(group.words!.story, held).text];
+  return [fillFacts(group.words!.headline, held).text, toWholeSentence(fillFacts(group.words!.story, held).text)];
 }
