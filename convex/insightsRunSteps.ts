@@ -11,17 +11,19 @@ import { weekSummaryValidator } from "./utils/insightSummary";
 import { serviceValidator } from "./utils/insightStrategy";
 
 /**
- * A website's weekly Insights run in three steps, each handing on to the
+ * A website's weekly Insights run in four steps, each handing on to the
  * next (insights-one-voice-plan.md phase 0; AGENTS.md: "work that stops at a
- * time limit hands itself on"): gather (`insightsRun.runWebsite`), read and
- * decide (`insightsRun.decideWebsite`), and what follows the save
- * (`insightsRunAfter.afterWeek`). Each is booked with a watch set past the
+ * time limit hands itself on"): gather (`insightsRun.runWebsite`), each
+ * cannibalisation search's page picked by the decision model
+ * (`insightCompetingJudge.pickWebsite`, handing on to itself until every
+ * search is asked), read and decide (`insightsRun.decideWebsite`), and what
+ * follows the save (`insightsRunAfter.afterWeek`). Each is booked with a watch set past the
  * ten minutes Convex gives an action: a step that neither handed on nor
  * finished was stopped, and the watch finishes the run saying so, rather
  * than leaving it "going" as the run cut off on 12 October 2026 was.
  */
 
-export const INSIGHTS_STEPS = ["GATHER", "DECIDE", "AFTER"] as const;
+export const INSIGHTS_STEPS = ["GATHER", "PICK", "DECIDE", "AFTER"] as const;
 export type InsightsStep = (typeof INSIGHTS_STEPS)[number];
 const stepValidator = v.union(...INSIGHTS_STEPS.map((step) => v.literal(step)));
 
@@ -33,6 +35,7 @@ const STILL_MOVING_MS = 60 * 1000;
 /** What each step is doing, for the run's timeline when the watch finds it stopped. */
 const STEP_WORDS: Record<InsightsStep, string> = {
   GATHER: "checking the money pages and asking Google for the history",
+  PICK: "picking each search's page",
   DECIDE: "reading the sources and deciding the week",
   AFTER: "writing the reports, drafts and page reviews after the week was saved",
 };
@@ -60,8 +63,10 @@ export const bookInsightsWatch = internalMutation({
 export const handOnInsights = internalMutation({
   args: {
     ...insightsStepArgs,
-    step: v.union(v.literal("DECIDE"), v.literal("AFTER")),
+    step: v.union(v.literal("PICK"), v.literal("DECIDE"), v.literal("AFTER")),
     cancelWatchId: v.id("_scheduled_functions"),
+    /** The picking step's turn, when it hands on to itself. */
+    round: v.optional(v.number()),
     pagesChanged: v.optional(v.array(v.object({ kind: v.string(), page: v.string() }))),
     week: v.optional(v.string()),
     today: v.optional(v.string()),
@@ -69,13 +74,15 @@ export const handOnInsights = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { step, cancelWatchId, pagesChanged, week, today, counts, ...run } = args;
+    const { step, cancelWatchId, pagesChanged, week, today, counts, round, ...run } = args;
     await cancelQuietly(ctx, cancelWatchId);
     const current = await ctx.db.get(run.runId);
     if (!current || (current.status !== "RUNNING" && current.status !== "QUEUED")) return null;
     await ctx.db.patch(run.runId, { updatedAt: Date.now() });
     const watchId: Id<"_scheduled_functions"> = await ctx.scheduler.runAfter(INSIGHTS_STEP_WATCH_MS, internal.insightsRunSteps.watchInsightsStep, { ...run, step });
-    if (step === "DECIDE") {
+    if (step === "PICK") {
+      await ctx.scheduler.runAfter(0, internal.insightCompetingJudge.pickWebsite, { ...run, watchId, pagesChanged: pagesChanged ?? [], ...(round ? { round } : {}) });
+    } else if (step === "DECIDE") {
       await ctx.scheduler.runAfter(0, internal.insightsRun.decideWebsite, { ...run, watchId, pagesChanged: pagesChanged ?? [] });
     } else {
       await ctx.scheduler.runAfter(0, internal.insightsRunAfter.afterWeek, {

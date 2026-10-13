@@ -9,7 +9,7 @@ import { ASK_LIMIT_MS, within } from "./insightsAsk";
 import { INSIGHTS_STEP_WATCH_MS } from "./insightsRunSteps";
 
 /**
- * A website's weekly Insights run in three steps (insightsRunSteps.ts,
+ * A website's weekly Insights run in four steps (insightsRunSteps.ts,
  * insights-one-voice-plan.md phase 0): each step's watch finishes a run the
  * platform stopped, saying where, and leaves a moving one alone; the step
  * after the save reads the saved week back; and a model that says nothing is
@@ -86,6 +86,27 @@ describe("a website's week in steps", () => {
       ["insightsRunSteps:watchInsightsStep", INSIGHTS_STEP_WATCH_MS],
       ["insightsRunAfter:afterWeek", 0],
     ]));
+  });
+
+  test("gathering hands on to picking each search's page; with the decision switched off, that hands straight on to deciding", async () => {
+    const t = harness();
+    const run = await seeded(t, "RUNNING", 0);
+    const first = await t.mutation(internal.insightsRunSteps.bookInsightsWatch, { ...run, step: "GATHER" });
+    await t.mutation(internal.insightsRunSteps.handOnInsights, { ...run, step: "PICK", cancelWatchId: first, pagesChanged: [] });
+    const pending = async () => (await t.run(async (ctx) => await ctx.db.system.query("_scheduled_functions").collect())).filter((job) => job.state.kind === "pending");
+    const picking = (await pending()).find((job) => job.name === "insightCompetingJudge:pickWebsite")!;
+    expect(picking).toBeDefined();
+    const watch = (await pending()).find((job) => job.name === "insightsRunSteps:watchInsightsStep")!;
+    await t.action(internal.insightCompetingJudge.pickWebsite, { ...run, watchId: watch._id, pagesChanged: [] });
+    expect((await pending()).map((job) => job.name)).toEqual(expect.arrayContaining(["insightsRun:decideWebsite"]));
+  });
+
+  test("each search's pick is kept, the last replaced", async () => {
+    const t = harness();
+    const { holdId } = await seeded(t);
+    await t.mutation(internal.insightCompetingJudge.savePicks, { holdId, picks: [{ search: "app developers", offered: "a", page: "/app-developers-london/", certainty: "SURE", pickedAt: 1 }] });
+    await t.mutation(internal.insightCompetingJudge.savePicks, { holdId, picks: [{ search: "app developers", offered: "b", page: null, pickedAt: 2 }] });
+    expect(await t.query(internal.insightCompetingJudge.picksFor, { holdId, searches: ["app developers", "app makers"] })).toEqual([{ search: "app developers", offered: "b", page: null, pickedAt: 2 }]);
   });
 
   test("the step after the save reads the run's own week back, its published findings in order", async () => {

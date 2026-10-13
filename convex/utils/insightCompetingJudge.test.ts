@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { competingGroups, type CompetingPair, type KeptGroup, type PageFigures } from "./insightCompeting";
-import { applyAnswer, carryOver, signatureOf } from "./insightCompetingAgent";
-import { applyChosen, ownerQuestions } from "./insightCompetingJudge";
+import { SEARCHES_EXPLAINED, agentInputOf, applyAnswer, carryOver, signatureOf } from "./insightCompetingAgent";
+import { PICK_MAX_AGE_MS, applyChosen, offeredReading, ownerQuestions, pickedPages, picksDue } from "./insightCompetingJudge";
 
 /**
  * Jev picks each search's page (insightCompetingJudge.ts): what the
@@ -64,6 +64,35 @@ describe("the decision model picking each search's page", () => {
     expect(applied).toMatchObject({ owners: 0, refused: 2 });
     expect(searchOf(held, "app makers")).toMatchObject({ owner: "/app-design-agency/", why: ["JEV"], reason: "Its title is about making apps." });
     expect(searchOf(held, "app companies").owner).toBe(rulePage);
+  });
+
+  test("a search is asked once: again only when the pages Google shows for it change, or its pick grows old", () => {
+    const held = group();
+    const questions = ownerQuestions(held, 12);
+    const now = Date.parse("2026-10-13T10:00:00Z");
+    const pick = (search: string, offered: string, page: string | null, pickedAt = now) => ({ search, offered, page, pickedAt });
+    const asked = questions.find((question) => question.search === "app makers")!;
+    const picks = new Map([
+      ["app makers", pick("app makers", offeredReading(asked), "/app-design-agency/")],
+      ["app companies", pick("app companies", "other pages", "/app-design-agency/")],
+      ["mobile app developers", pick("mobile app developers", offeredReading(questions.find((question) => question.search === "mobile app developers")!), null, now - PICK_MAX_AGE_MS - 1)],
+    ]);
+    expect(picksDue(questions, picks, now).map((question) => question.search).sort()).toEqual(["app companies", "app developers", "app developers london", "mobile app developers"]);
+    // Only a sure pick made between today's pages is used; the rest keep the rule's page.
+    const { chosen, unsure } = pickedPages(questions, picks);
+    expect([...chosen]).toEqual([["app makers", "/app-design-agency/"]]);
+    expect(unsure).toBe(questions.length - 1);
+  });
+
+  test("with the pages picked, the specialist reads the most searched and those the decision model moved, each with the rule's page", () => {
+    const held = group();
+    const rule = searchOf(held, "app makers").owner;
+    applyChosen(held, new Map([["app makers", "/app-design-agency/"]]), 0.04);
+    expect(searchOf(held, "app makers").rulePage).toBe(rule);
+    const read = agentInputOf(held, new Map(), true);
+    expect(read).toMatchObject({ owners_chosen: true });
+    expect(read.searches.find((search) => search.search === "app makers")?.rule).toMatchObject({ page: "/app-design-agency/", why: ["JEV"], rule_page: rule });
+    expect(SEARCHES_EXPLAINED).toBe(60);
   });
 
   test("its picks carry to next week with the decision; turning it on or off reads the group anew", () => {

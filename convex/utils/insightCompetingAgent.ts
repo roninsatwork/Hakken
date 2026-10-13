@@ -18,6 +18,14 @@ import { typedNumbers } from "./insightEditor";
  * specialist alone writes the page": "Go").
  */
 export const SEARCHES_SHOWN = MOST_SEARCHES;
+/**
+ * With the decision model picking every search's page, the specialist only
+ * explains and writes, so it reads less (Anthony, 13 October 2026, "go",
+ * after a 196-search group took it past three minutes): the most searched,
+ * and each search whose page the decision model chose over the rule's.
+ */
+export const SEARCHES_EXPLAINED = 60;
+const CHANGES_EXPLAINED = 40;
 /** Words a write-up may run to. */
 const MOST_WORDS = 900;
 
@@ -26,7 +34,7 @@ export const COMPETING_ANSWER = [
   "You are given one group of the website's pages that Google shows for the same searches: its pages — each one's path, title, kind, the place it is for, its visits and enquiries, and what the rule says to do with it — and every one of its searches, the most searched first, each with how often it is searched a month, the website's position, how often Google showed each page for it, and the page the rule chose and why. The group's figures are its facts, by key.",
   "Answer in JSON only: {\"owners\": [{\"search\": \"…\", \"page\": \"/…/\", \"why\": \"…\"}], \"pages\": [{\"path\": \"/…/\", \"do\": \"KEEP\" | \"MERGE\" | \"DIFFERENT\" | \"LINK\", \"into\": \"/…/\" or null, \"why\": \"…\"}], \"headline\": \"…\", \"story\": \"…\"}.",
   "owners: you decide every search; list only those you give a different page from the rule's, each with one sentence why — the rest keep the rule's page as your decision. A search's page must be one Google shows for it.",
-  "When the group says owners_chosen: true, each search's page is already chosen — by the decision model where it was sure (its rule.why is [\"JEV\"]), else by the rule — and is final: in owners, give only a sentence why for a search the decision model chose, with its page as given, never another page.",
+  "When the group says owners_chosen: true, each search's page is already chosen — by the decision model where it was sure (its rule.why is [\"JEV\"], with rule.rule_page the rule's page where it chose another), else by the rule — and is final. You are then given its most searched searches and those the decision model moved, not every one. In owners, give only a sentence why for a search the decision model chose, with its page as given, never another page.",
   "pages: every page of the group, what to do with it and one sentence why. KEEP is for a page that owns searches. A page that owns none is merged into the page owning most of what it is shown for, with a redirect (MERGE: its enquiries go with it), made clearly different from it (DIFFERENT), or, an article, kept with a link to it (LINK); into names that page.",
   "headline and story open the group's page and its finding. headline: one sentence a business owner reads first. story: two to four sentences on what is happening, why it matters and what to do. Name every figure by its key in double square brackets, never type a number.",
 ].join("\n");
@@ -61,7 +69,7 @@ export function agentInputOf(group: CompetingGroup | KeptGroup, titles: Readonly
       enquiries_from_google: page.googleEnquiries ?? 0,
       rule: { do: wordOf(page.decision), into: page.into ?? null, owns: page.owns ?? 0 },
     })),
-    searches: shownFirst(group).map((search) => ({
+    searches: (ownersChosen ? explained(group) : shownFirst(group)).map((search) => ({
       search: search.search,
       searched_a_month: search.volume,
       // How hard it is to reach Google's first page for, 0–100: what a top-three place would cost, never who owns it.
@@ -69,9 +77,16 @@ export function agentInputOf(group: CompetingGroup | KeptGroup, titles: Readonly
       position: search.position === null ? null : Math.round(search.position * 10) / 10,
       shown: Object.fromEntries(search.pages.map((page) => [page.path, page.shown])),
       names_place: search.place ?? null,
-      rule: { page: search.owner ?? search.top, why: search.why ?? [] },
+      rule: { page: search.owner ?? search.top, why: search.why ?? [], ...(search.rulePage ? { rule_page: search.rulePage } : {}) },
     })),
   };
+}
+
+/** The searches the specialist explains when the decision model picked the pages: the most searched, then those it changed. */
+function explained(group: CompetingGroup | KeptGroup) {
+  const most = shownFirst(group).slice(0, SEARCHES_EXPLAINED);
+  const changed = shownFirst(group).filter((search) => search.rulePage && !most.includes(search)).slice(0, CHANGES_EXPLAINED);
+  return [...most, ...changed];
 }
 
 const WORD_OF: Record<Decision, string> = { OWNER: "KEEP", MERGE: "MERGE", DIFFERENTIATE: "DIFFERENT", LINK: "LINK" };
@@ -158,7 +173,7 @@ export function carryOver<Group extends CompetingGroup | KeptGroup>(group: Group
   for (const before of last.searches) {
     if (!(before.why?.includes("AGENT") || before.why?.includes("JEV")) || !before.owner) continue;
     const search = group.searches.find((held) => held.search === before.search);
-    if (search && search.pages.some((page) => page.path === before.owner)) Object.assign(search, { owner: before.owner, why: before.why, reason: before.reason ?? "" });
+    if (search && search.pages.some((page) => page.path === before.owner)) Object.assign(search, { owner: before.owner, why: before.why, reason: before.reason ?? "", ...(before.rulePage ? { rulePage: before.rulePage } : {}) });
   }
   settleGroup(group, websiteRate);
   applyPages(group, last.pages.map((page) => ({ path: page.path, do: wordOf(page.decision), into: page.into ?? null, why: page.reason ?? "" })));

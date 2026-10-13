@@ -3,7 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { MOST_A_WEEK, type SavedFinding, type TeamMember } from "./insightsTeam";
-import { ask, factLines, type AskRun } from "./insightsAsk";
+import { ASK_LIMIT_MS, ask, factLines, type AskRun } from "./insightsAsk";
 import type { Fact } from "./utils/insightFacts";
 import { briefFor } from "./utils/insightBriefs";
 import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf, summaryOf, usableWords } from "./utils/insightCompetingAgent";
@@ -42,8 +42,17 @@ import {
 
 /** Groups written up as findings a week, the most shown first. */
 const GROUP_FINDINGS = 5;
-/** Groups the specialist is asked about at once. */
-const AT_ONCE = 4;
+/** Groups the specialist is asked about at once: every group a week keeps, in practice, so none waits on another. */
+const AT_ONCE = 8;
+/**
+ * How long the specialist's groups may take: about the other specialists'
+ * time, so the Head of Strategy, who waits for both, still has its own.
+ * A group whose answer failed is asked once more while this lasts
+ * (Anthony, 13 October 2026, "go").
+ */
+const COMPETING_FOR_MS = 4 * 60 * 1000;
+/** Time a second ask needs to be worth making. */
+const RETRY_LEAST_MS = 60 * 1000;
 /** The specialist's role: the run asks it as this member, or as the lead while it has none. */
 export const COMPETING_ROLE = "INSIGHTS_CANNIBALISATION";
 
@@ -68,20 +77,31 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
   const titles = new Map(competing.titles.map((entry) => [entry.path, entry.title]));
 
   // Jev picks each search's page while its Decision acts on its own (insightCompetingJudge.ts): turning it on or off reads every group anew.
-  const owners = await ownerJudge(ctx, run, competing.websiteRate).catch(() => null);
+  const owners = await ownerJudge(ctx, run, competing.groups, competing.websiteRate).catch(() => null);
   if (owners) for (const group of competing.groups) group.signature = signatureOf(group, "JEV");
   // Handed on only when the rule reads a group anew: the same pages and the same page for each of its searches keep last week's.
   const assigned = competing.groups.filter((group) => !last.some((before) => carryOver(group, before, competing.websiteRate)));
   const system = [rules, briefFor(COMPETING_ROLE, member?.instructions), OWNER_RULE, COMPETING_ANSWER].filter(Boolean).join("\n\n");
   const failed: string[] = [];
-  let changed = 0;
+  let changed = 0, retried = 0;
+  const started = Date.now();
   for (let at = 0; at < assigned.length; at += AT_ONCE) {
     await Promise.all(assigned.slice(at, at + AT_ONCE).map(async (group) => {
       try {
-        if (owners) await owners.judge(group);
+        owners?.judge(group);
         const prompt = JSON.stringify({ website: run.host, ...agentInputOf(group, titles, Boolean(owners)), facts: factLines(competingFacts(group, span)) });
-        const answer = await ask(ctx, run, member, `the Keyword cannibalisation specialist, on "${group.name}"`, system, prompt);
-        if (answer === null) throw appError("UPSTREAM_FAILURE", "Its answer wasn't JSON.");
+        const asked = async (limitMs: number) => {
+          const answer = await ask(ctx, run, member, `the Keyword cannibalisation specialist, on "${group.name}"`, system, prompt, limitMs);
+          if (answer === null) throw appError("UPSTREAM_FAILURE", "Its answer wasn't JSON.");
+          return answer;
+        };
+        // A failed answer is asked once more while the specialist's time lasts; a run past its spend limit isn't.
+        const answer = await asked(ASK_LIMIT_MS).catch(async (error: unknown) => {
+          const left = COMPETING_FOR_MS - (Date.now() - started);
+          if (left < RETRY_LEAST_MS || /spend limit/.test(String(error))) throw error;
+          retried += 1;
+          return await asked(Math.min(ASK_LIMIT_MS, left));
+        });
         const applied = applyAnswer(group, answer, competing.websiteRate, week, { ownersChosen: Boolean(owners) });
         changed += applied.owners + applied.pages;
         // Its words kept on the group — they open its page and its finding — only when every figure they name is the group's own, and none is typed.
@@ -98,7 +118,7 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
     runId: run.runId, companyId: run.companyId, heading: "Keyword cannibalisation",
     detail: [
       `Head of Strategy → Keyword cannibalisation specialist: ${assigned.length} of ${competing.groups.length} groups${assigned.length < competing.groups.length ? `, the other ${competing.groups.length - assigned.length} unchanged since last week and kept as decided` : ""}.`,
-      assigned.length > 0 ? ` It changed ${changed} of the rule's choices.` : "",
+      assigned.length > 0 ? ` It changed ${changed} of the rule's choices${retried > 0 ? `, asked once more for ${retried} whose first answer failed` : ""}.` : "",
       owners ? ownerTallyLine(owners.tally) : "",
       failed.length > 0 ? ` Not reached, so the rule decided: ${failed.join("; ")}.` : "",
     ].join("").slice(0, 900),

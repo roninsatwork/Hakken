@@ -140,7 +140,8 @@ export const runWebsite = internalAction({
     const watchId: Id<"_scheduled_functions"> = await ctx.runMutation(internal.insightsRunSteps.bookInsightsWatch, { ...args, step: "GATHER" });
     try {
       const pagesChanged = await gather(ctx, args);
-      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...args, step: "DECIDE", cancelWatchId: watchId, pagesChanged });
+      // Next, each cannibalisation search's page picked by the decision model, in a step of its own (insightCompetingJudge.ts).
+      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...args, step: "PICK", cancelWatchId: watchId, pagesChanged });
     } catch (error: unknown) {
       await ctx.runMutation(internal.insightsRunSteps.cancelInsightsWatch, { watchId });
       await finishRun(ctx, args.runId, args.workflowExecutionId, "FAILED", failureSummary(error));

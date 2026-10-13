@@ -98,6 +98,8 @@ export type GroupSearch = {
   reason?: string;
   /** How hard it is to reach Google's first page for, 0–100: for the group's most searched (`DIFFICULTY_SEARCHES`), when held. */
   difficulty?: number | null;
+  /** The rule's page, where the decision model chose another (utils/insightCompetingJudge.ts). */
+  rulePage?: string;
   pages: Array<{ path: string; shown: number; clicks: number }>;
   /** Extra Google clicks a month at a top-three place, from how often it is searched when known, else from times shown. */
   gain: number | null;
@@ -546,6 +548,7 @@ export const competingGroupValidator = v.object({
     pages: v.array(v.object({ path: v.string(), shown: v.number(), clicks: v.number() })), gain: nullable,
     owner: v.optional(v.string()), why: v.optional(v.array(whyValidator)), place: v.optional(nullableText), reason: v.optional(v.string()),
     difficulty: v.optional(nullable),
+    rulePage: v.optional(v.string()),
   })),
   shared: v.number(),
   split: v.number(),

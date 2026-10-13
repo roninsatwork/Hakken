@@ -302,6 +302,23 @@ export const insightsTables = {
    * (insights-one-voice-plan.md phase 4): the newest week's, one a screen,
    * replaced each run; the screen and Ask Hakken read the same words.
    */
+  /**
+   * The decision model's page for each of a website's cannibalisation
+   * searches (insightCompetingJudge.ts): asked in the weekly run's own
+   * picking step, and held while the pages Google shows for the search stay
+   * the same. `page` is null where it wasn't sure, and the rule's page stands.
+   */
+  insightSearchPicks: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    search: v.string(),
+    /** The pages it was asked between, as a reading. */
+    offered: v.string(),
+    page: v.union(v.string(), v.null()),
+    certainty: v.optional(v.string()),
+    pickedAt: v.number(),
+  }).index("by_hold_search", ["companyWebsiteId", "search"]),
+
   insightScreenBoxes: defineTable({
     companyId: v.id("companies"),
     companyWebsiteId: v.id("companyWebsites"),
