@@ -149,6 +149,7 @@ export default function InsightsCompetingGroupPage() {
         cardHeader={<TableBar footer={searchPager.footer} noun="results" title={t("group.searchesTitle")} actions={<ListDownload label={t("download")} fileName={`${data.host}-group-searches`} rows={searches} columns={[
           { header: t("columns.search"), value: (row) => row.search },
           { header: t("columns.volume"), value: (row) => row.volume ?? "" },
+          { header: t("columns.difficulty"), value: (row) => row.difficulty ?? "" },
           { header: t("columns.place"), value: (row) => (row.position === null ? "" : row.position.toFixed(1)) },
           { header: t("columns.shown"), value: (row) => row.shown },
           { header: t("columns.clicks"), value: (row) => row.clicks },
@@ -163,6 +164,7 @@ export default function InsightsCompetingGroupPage() {
         columns={[
           { key: "search", header: t("columns.search"), cell: (row) => <span className="text-[13px] text-foreground">{row.search}</span> },
           { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => mono(row.volume) },
+          { key: "difficulty", header: <span title={t("columns.difficultyHint")}>{t("columns.difficulty")}</span>, align: "right", cell: (row) => mono(row.difficulty ?? null) },
           { key: "place", header: t("columns.place"), align: "right", cell: (row) => mono(row.position, 1) },
           { key: "shown", header: t("columns.shown"), align: "right", cell: (row) => mono(row.shown) },
           { key: "clicks", header: t("columns.clicks"), align: "right", cell: (row) => mono(row.clicks) },

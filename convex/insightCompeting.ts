@@ -280,9 +280,10 @@ export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"company
   const groups = competingGroups({ ...input, searchOf: (search) => bySearch.get(search) ?? { position: null, volume: null } });
   // The rule's reading of each, so a group read just the same next week keeps the specialist's decision.
   for (const group of groups) Object.assign(group, { decidedBy: "RULE", signature: signatureOf(group) });
-  // How hard each group's most searched searches are: the monthly ranking collection's, else bought (insights-one-voice-plan.md).
+  // How hard each search is, wherever it's held — the monthly ranking collection's, else bought — read free for every search;
+  // only each group's most searched are bought where missing (saveGroups; insights-one-voice-plan.md).
   for (const group of groups) {
-    const held = await difficultiesOf(ctx, hold.websiteId, locationCode, mostSearched(group));
+    const held = await difficultiesOf(ctx, hold.websiteId, locationCode, group.searches.map((search) => search.search));
     for (const search of group.searches) if (held.has(search.search)) search.difficulty = held.get(search.search) ?? null;
   }
   return { from: competing.from, to: competing.to, groups, websiteRate };

@@ -19,7 +19,7 @@ table: Page | Kind of page | What to do | Should own | Times shown | Google clic
     download: Download
   table-footer
 search: Find a search…
-table: Search | Searched a month | Position | Times shown | Google clicks | Pages shown | Google sends most to | Should own it | Extra clicks a month in the top three
+table: Search | Searched a month | Difficulty | Position | Times shown | Google clicks | Pages shown | Google sends most to | Should own it | Extra clicks a month in the top three
   table-bar: The searches they share
     download: Download
   table-footer

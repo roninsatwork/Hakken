@@ -19585,6 +19585,8 @@
         "visits": "Visite, 12 mesi",
         "search": "Ricerca",
         "volume": "Ricerche al mese",
+        "difficulty": "Difficoltà",
+        "difficultyHint": "Quanto è difficile arrivare in prima pagina per questa ricerca, da 0 (facile) a 100 (la più difficile)",
         "place": "Posizione",
         "pagesShown": "Pagine mostrate",
         "top": "Google manda più clic a",

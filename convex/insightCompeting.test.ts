@@ -67,6 +67,22 @@ describe("keyword cannibalisation kept", () => {
     expect(one?.finding).toBeNull();
   });
 
+  test("difficulty shows wherever it is held, and is bought only for a group's ten most searched", async () => {
+    const t = harness();
+    const { holdId } = await seeded(t);
+    // Twelve searches: the ten most searched each hold a difficulty, the two least searched hold none.
+    const searches = Array.from({ length: 12 }, (_, at) => `brand search ${at + 1}`);
+    const pairs = searches.flatMap((search) => [pair(search, "/brand-identity-agency/", 500), pair(search, "/brand-design-agency/", 400)]);
+    const [made] = competingGroups({
+      pairs, brandSearches: new Set(), brandWords: [], searchOf: (search) => ({ position: 14, volume: 1_000 - searches.indexOf(search) * 10 }),
+      pageOf: () => ({ kind: "Service", type: "SERVICE", visits: 10, enquiries: 0, recent: 0, recentBefore: null, shownAll: 3_000 }),
+      clickRates: { top3: 0.1 }, websiteRate: 0.04, months: 3,
+    });
+    for (const search of made.searches) if (searches.indexOf(search.search) < 10) search.difficulty = 30;
+    const saved = await t.mutation(internal.insightCompeting.saveGroups, { holdId, week: "2026-10-12", from: "2026-07-13", to: "2026-10-10", groups: [{ group: made }] });
+    expect(saved.difficultiesAsked).toBe(0);
+  });
+
   test("another company reads none of them", async () => {
     const t = harness();
     const { holdId, strangerId } = await seeded(t);
