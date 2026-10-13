@@ -19521,7 +19521,8 @@
         "INSIGHTS_MARKET": "Lo specialista del mercato",
         "INSIGHTS_MEASUREMENT": "Lo specialista della misurazione",
         "INSIGHTS_SEARCH": "Lo specialista di ricerca e contenuti",
-        "INSIGHTS_HEAD_OF_STRATEGY": "L'Head of Strategy"
+        "INSIGHTS_HEAD_OF_STRATEGY": "L'Head of Strategy",
+        "INSIGHTS_PAGE_DECISIONS": "Lo specialista delle decisioni sulle pagine"
       }
     },
     "cannibalisation": {

@@ -75,7 +75,9 @@ export const afterWeek = internalAction({
         // 9. The Conversion specialist's pages (phase 14): the funnel, each source's rate, each money page reviewed, experiments;
         // then every page's decision, reading those reviews, the Page decisions specialist handed what the rule doesn't simply keep.
         reviewPages(ctx, runArgs, week, facts, member(SPECIALIST_ROLE.conversion) ?? lead).catch(failed("Page reviews"))
-          .then(async () => await decideForRun(ctx, runArgs, week, rulesFor(runArgs), member(PAGE_DECISIONS_ROLE) ?? lead)),
+          .then(async () => await decideForRun(ctx, runArgs, week, rulesFor(runArgs), member(PAGE_DECISIONS_ROLE) ?? lead))
+          // and Page decisions' box, written from the decisions just made.
+          .then(async () => await writeBoxes(ctx, runArgs, week, rulesFor(runArgs), facts, member, null, true).catch(failed("Page decisions' box"))),
         // 11. Each screen's "What Hakken sees" box, written by its discipline's specialist (insights-one-voice-plan.md phase 4).
         writeBoxes(ctx, runArgs, week, rulesFor(runArgs), [...facts, ...(view ? whyFacts(view) : [])], member, view?.chosen?.id ?? null).catch(failed("Screens' boxes")),
       ]);

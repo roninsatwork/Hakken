@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { readPeriod } from "./searchConsolePeriodReads";
@@ -349,6 +349,15 @@ async function siteFor(ctx: SiteReader, siteId: Id<"companyWebsites"> | undefine
   return owned[0] ? { hold: owned[0].hold, host: owned[0].summary.host } : null;
 }
 
+/** A website's decisions as kept: every page's verdict in order, the pages to create, and when. */
+export async function savedDecisionsOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">) {
+  const parts = await ctx.db.query("insightPageDecisions").withIndex("by_hold_part", (q) => q.eq("companyWebsiteId", holdId)).take(MOST_PARTS);
+  const first = parts.find((row) => row.part === 0);
+  const decisions: PageDecision[] = [...parts].sort((a, b) => a.part - b.part).flatMap((row) => row.decisions);
+  const creates: PageToCreate[] = first?.creates ?? [];
+  return { decidedAt: first?.createdAt ?? null, pages: first?.pages ?? decisions.length, decisions, creates };
+}
+
 /** Page decisions: every page's verdict, and the pages to create. */
 export const insightsPageDecisions = tenantQuery({
   args: { siteId: v.optional(v.id("companyWebsites")) },
@@ -363,10 +372,6 @@ export const insightsPageDecisions = tenantQuery({
   handler: async (ctx, args) => {
     const site = await siteFor(ctx, args.siteId);
     if (!site) return null;
-    const parts = await ctx.db.query("insightPageDecisions").withIndex("by_hold_part", (q) => q.eq("companyWebsiteId", site.hold._id)).take(MOST_PARTS);
-    const first = parts.find((row) => row.part === 0);
-    const decisions: PageDecision[] = [...parts].sort((a, b) => a.part - b.part).flatMap((row) => row.decisions);
-    const creates: PageToCreate[] = first?.creates ?? [];
-    return { siteId: site.hold._id, host: site.host, decidedAt: first?.createdAt ?? null, pages: first?.pages ?? decisions.length, decisions, creates };
+    return { siteId: site.hold._id, host: site.host, ...await savedDecisionsOf(ctx, site.hold._id) };
   },
 });

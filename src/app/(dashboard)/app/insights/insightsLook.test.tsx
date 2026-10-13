@@ -472,6 +472,37 @@ describe("Insights' looks", () => {
     await expectApprovedLook(container, PLAN, "Funnel", "Insights → Funnel");
   });
 
+  // The Funnel, Track record and Page decisions boxes as their specialists wrote them (insights-one-voice-plan.md; Anthony, 13 October 2026: "Go").
+  const BOX = (says: string[], role: string) => ({ says, role, week: "2026-10-12", period: null });
+
+  it("33b · Funnel's box, as the Conversion specialist wrote it", async () => {
+    nav.pathname = "/app/insights/funnel";
+    answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION, "insightsPeriod:insightsPeriodView": ENQUIRY_VIEW, "insightBoxes:insightsScreenBox": BOX(["The chain is weakest at the click: 1% of times shown."], "INSIGHTS_CONVERSION") });
+    render(<InsightsFunnelPage />);
+    await screen.findByText(/The chain is weakest at the click: 1% of times shown\./);
+    expect(screen.getByText(/The Conversion specialist wrote this for the week of/)).toBeTruthy();
+  });
+
+  it("32b · Page decisions' box, as the Page decisions specialist wrote it, with who decided the pages", async () => {
+    nav.pathname = "/app/insights/page-plan";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA, "insightDecisions:insightsPageDecisions": DECISIONS, "insightBoxes:insightsScreenBox": BOX(["Merge the chatbot pages first."], "INSIGHTS_PAGE_DECISIONS") });
+    render(<InsightsPagePlanPage />);
+    await screen.findByText(/Merge the chatbot pages first\./);
+    expect(screen.getByText(/The Page decisions specialist wrote this for the week of/)).toBeTruthy();
+  });
+
+  it("24b · Track record's box, as the Head of Strategy wrote it", async () => {
+    nav.pathname = "/app/insights/track-record";
+    answer({
+      "insightsReads:insightsHome": HOME,
+      "insightsReads:insightsTrackRecord": { findings: [], tally: { right: 2, wrong: 1, unclear: 0 }, changes: [], learnings: [], fixes: [] },
+      "insightBoxes:insightsScreenBox": BOX(["Two of three findings checked were right."], "INSIGHTS_HEAD_OF_STRATEGY"),
+    });
+    render(<InsightsTrackRecordPage />);
+    await screen.findByText(/Two of three findings checked were right\./);
+    expect(screen.getByText(/The Head of Strategy wrote this for the week of/)).toBeTruthy();
+  });
+
   it("34 · Page reviews", async () => {
     nav.pathname = "/app/insights/page-reviews";
     answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION });

@@ -19521,7 +19521,8 @@
         "INSIGHTS_MARKET": "The Market specialist",
         "INSIGHTS_MEASUREMENT": "The Measurement specialist",
         "INSIGHTS_SEARCH": "The Search and content specialist",
-        "INSIGHTS_HEAD_OF_STRATEGY": "The Head of Strategy"
+        "INSIGHTS_HEAD_OF_STRATEGY": "The Head of Strategy",
+        "INSIGHTS_PAGE_DECISIONS": "The Page decisions specialist"
       }
     },
     "cannibalisation": {

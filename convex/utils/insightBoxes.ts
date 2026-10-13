@@ -10,11 +10,13 @@ import { typedNumbers } from "./insightEditor";
  * standard"): from the figures of its own discipline, every one named by its
  * fact and filled in as the Editor fills a finding's, kept once, and read by
  * the screen and by Ask Hakken alike. A screen with no box this week shows
- * its own sentences, as it did before. Track record's figures aren't in the
- * run's reading, so its box stays the screen's own.
+ * its own sentences, as it did before. The Funnel, Track record and Page
+ * decisions boxes followed (Anthony, 13 October 2026: "Go"), their figures
+ * worked out from what is saved (utils/insightBoxFacts.ts); Page decisions'
+ * is written once its pages are decided.
  */
 
-export const BOX_SCREENS = ["ENQUIRIES", "AI_SEARCH", "LEADERBOARDS", "MEASUREMENT", "OPPORTUNITIES", "STRATEGY"] as const;
+export const BOX_SCREENS = ["ENQUIRIES", "AI_SEARCH", "LEADERBOARDS", "MEASUREMENT", "OPPORTUNITIES", "STRATEGY", "FUNNEL", "TRACK_RECORD", "PAGE_DECISIONS"] as const;
 export type BoxScreen = (typeof BOX_SCREENS)[number];
 export const boxScreenValidator = v.union(...BOX_SCREENS.map((screen) => v.literal(screen)));
 
@@ -33,6 +35,8 @@ type BoxSpec = {
   link: string;
   /** Written for the period the screen opens on, the newest whole month; shown only when that period is chosen. */
   period?: boolean;
+  /** Written after the week's Page decisions are made, from them. */
+  afterDecisions?: boolean;
 };
 
 export const BOXES: Record<BoxScreen, BoxSpec> = {
@@ -73,6 +77,25 @@ export const BOXES: Record<BoxScreen, BoxSpec> = {
     wants: "Strategy for the quarter: where the business's enquiries come from now against a year before, and what that means for which services to grow.",
     link: "/app/insights/strategy",
   },
+  FUNNEL: {
+    role: "INSIGHTS_CONVERSION",
+    facts: ["funnel."],
+    wants: "The funnel: from being shown on Google to making an enquiry, over the last 90 days against the same 90 days a year before — where the chain is weakest — and where enquiries come from: which sources' visitors enquire most over 12 months, against Google's.",
+    link: "/app/insights/funnel",
+  },
+  TRACK_RECORD: {
+    role: "INSIGHTS_HEAD_OF_STRATEGY",
+    facts: ["track."],
+    wants: "Track record: how the team's findings for this website turned out when checked — right, wrong or too early to tell, and whose — how many still wait for their check, and what the changes made since brought.",
+    link: "/app/insights/track-record",
+  },
+  PAGE_DECISIONS: {
+    role: "INSIGHTS_PAGE_DECISIONS",
+    facts: ["decisions."],
+    wants: "Page decisions: what to do with the website's pages — how many to keep, improve, merge, redirect or remove, and the pages to create — the change that matters most first, from `about`.",
+    link: "/app/insights/page-plan",
+    afterDecisions: true,
+  },
 };
 
 /** The shape of a box answer, fixed in code so the run can read it (shown read-only on each writer's Instructions page). */
@@ -80,6 +103,7 @@ export const BOX_FORMAT = [
   "Some of the screens your discipline owns open with a summary box that a business owner reads first. Write it for each screen you are given, from the facts given.",
   "Answer in JSON only: {\"boxes\": [{\"screen\": the screen as given, \"says\": [\"…\", \"…\"]}]} — two or three plain sentences a screen, what matters most first, against the business's own past or its rivals.",
   "Name every figure by its key in double square brackets, like [[ga.conversions.90.now]], never type a number; a sentence naming a figure not given is left out.",
+  "A screen may come with `about`: what it lists, in words, to say what matters most from; its figures are still only the facts given.",
 ].join("\n");
 
 /** The facts a screen's box is written from: its discipline's, at most `MOST_BOX_FACTS`. */
@@ -108,10 +132,15 @@ export function boxesFrom(answer: unknown, screens: readonly BoxScreen[], facts:
   return [...out].map(([screen, says]) => ({ screen, says }));
 }
 
+/** The screens written at one point of the week: after the save, or after Page decisions (`afterDecisions`). */
+export function boxScreensAt(afterDecisions: boolean): BoxScreen[] {
+  return BOX_SCREENS.filter((screen) => Boolean(BOXES[screen].afterDecisions) === afterDecisions);
+}
+
 /** The screens each specialist writes: one request each. */
-export function screensByRole(): Map<InsightsRole, BoxScreen[]> {
+export function screensByRole(screens: readonly BoxScreen[] = BOX_SCREENS): Map<InsightsRole, BoxScreen[]> {
   const out = new Map<InsightsRole, BoxScreen[]>();
-  for (const screen of BOX_SCREENS) out.set(BOXES[screen].role, [...(out.get(BOXES[screen].role) ?? []), screen]);
+  for (const screen of screens) out.set(BOXES[screen].role, [...(out.get(BOXES[screen].role) ?? []), screen]);
   return out;
 }
 
@@ -119,6 +148,7 @@ export function screensByRole(): Map<InsightsRole, BoxScreen[]> {
 const WRITERS: Partial<Record<InsightsRole, string>> = {
   INSIGHTS_CONVERSION: "the Conversion specialist", INSIGHTS_AI_VISIBILITY: "the AI visibility specialist", INSIGHTS_MARKET: "the Market specialist",
   INSIGHTS_MEASUREMENT: "the Measurement specialist", INSIGHTS_SEARCH: "the Search and content specialist", INSIGHTS_HEAD_OF_STRATEGY: "the Head of Strategy",
+  INSIGHTS_PAGE_DECISIONS: "the Page decisions specialist",
 };
 
 /** The boxes for Ask Hakken: what each screen says, as its specialist wrote it this week. */

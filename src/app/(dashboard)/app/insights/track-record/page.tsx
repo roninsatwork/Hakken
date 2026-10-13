@@ -19,7 +19,8 @@ import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 
 const RESULT_TONE = { RIGHT: "success", WRONG: "warning", TOO_EARLY: "neutral", DUE: "info" } as const;
 const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning", WAITING: "info", TOO_EARLY: "info" } as const;
@@ -34,6 +35,8 @@ const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning", WAITING
  */
 export default function InsightsTrackRecordPage() {
   const t = usePlatformTranslations("insights.track");
+  const tBox = usePlatformTranslations("insights.box");
+  const box = useInsightsBox("TRACK_RECORD");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();
@@ -77,6 +80,9 @@ export default function InsightsTrackRecordPage() {
       ? [t("sees.checked", { checked, right: data.tally.right, wrong: data.tally.wrong })]
       : [t("sees.none", { written, day: firstDue ? formatDay(firstDue) : "–" })]
     : [];
+  // The Head of Strategy's box is one website's: shown when the screen is that website's — one chosen, or the company's findings all its.
+  const oneWebsite = Boolean(site) || new Set(data?.findings.map((row) => row.host)).size <= 1;
+  const boxed = oneWebsite ? boxedSays(box, says, tBox) : says;
   const firstUnacted = data?.findings.find((row) => !row.actedAt);
   const steps = firstUnacted ? [{ words: t("sees.act"), link: t("seeFinding"), href: href(`findings/${firstUnacted.findingId}`) }] : [];
   const learning = data?.learnings.map((entry) => {
@@ -87,7 +93,7 @@ export default function InsightsTrackRecordPage() {
   return (
     <>
       <PageHeader icon={<History className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      {data ? <HakkenSees says={says} steps={steps} /> : null}
+      {data ? <HakkenSees says={boxed} steps={steps} /> : null}
       <FigureRow>
         <Figure label={t("figures.written")} value={data ? formatNumber(written) : "…"} detail={<span className="text-secondary">{t("figures.writtenDetail")}</span>} />
         <Figure label={t("figures.acted")} value={data ? formatNumber(acted) : "…"} detail={<span className="text-secondary">{t("figures.of", { all: formatNumber(written) })}</span>} />

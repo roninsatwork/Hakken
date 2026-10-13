@@ -47,4 +47,37 @@ describe("the screens' boxes kept", () => {
     expect(await t.withIdentity({ subject: strangerId }).query(api.insightBoxes.insightsScreenBox, { screen: "AI_SEARCH" })).toBeNull();
     await expect(t.withIdentity({ subject: strangerId }).query(api.insightBoxes.insightsScreenBox, { screen: "AI_SEARCH", siteId: holdId })).rejects.toThrow();
   });
+
+  test("Page decisions' box, written after the rest, replaces only its own", async () => {
+    const t = harness();
+    const { holdId, userId } = await seeded(t);
+    await t.mutation(internal.insightBoxes.saveBoxes, { holdId, week: "2026-10-12", boxes: [{ screen: "FUNNEL", says: ["Weakest at the click."], role: "INSIGHTS_CONVERSION" }], screens: ["FUNNEL", "TRACK_RECORD"] });
+    await t.mutation(internal.insightBoxes.saveBoxes, { holdId, week: "2026-10-12", boxes: [{ screen: "PAGE_DECISIONS", says: ["Merge two pages."], role: "INSIGHTS_PAGE_DECISIONS" }], screens: ["PAGE_DECISIONS"] });
+    const me = t.withIdentity({ subject: userId });
+    expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "FUNNEL" })).toMatchObject({ says: ["Weakest at the click."] });
+    expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "PAGE_DECISIONS" })).toMatchObject({ says: ["Merge two pages."], role: "INSIGHTS_PAGE_DECISIONS" });
+  });
+
+  test("Track record's and Page decisions' figures are read from the website's findings and decisions as kept", async () => {
+    const t = harness();
+    const { holdId } = await seeded(t);
+    await t.run(async (ctx) => {
+      const hold = (await ctx.db.get(holdId))!;
+      const base = { companyId: hold.companyId, companyWebsiteId: holdId };
+      const finding = (outcome?: "RIGHT" | "WRONG") => ({
+        ...base, week: "2026-09-07", createdAt: 1, specialist: "search" as const, pattern: "P", status: "PUBLISHED" as const, rank: 1, headline: `Was ${outcome ?? "open"}`, story: "s", ruledOut: [], action: "a",
+        howWeKnow: "h", sure: "MEDIUM" as const, sources: ["searchConsole"], facts: [], comparisons: [], checkOn: "2026-10-05", ...(outcome ? { outcome } : {}),
+      });
+      for (const outcome of ["RIGHT", "WRONG", undefined] as const) await ctx.db.insert("insightFindings", finding(outcome));
+      await ctx.db.insert("insightPageDecisions", { ...base, part: 0, createdAt: 1, pages: 2, creates: [], decisions: [
+        { path: "/old/", kind: null, type: "NOT_SORTED", verdict: "REDIRECT", reason: "SPECIALIST", into: "/new/", visits: 5, enquiries: 0, views: 0, shown: 0, clicks: 0, domains: 0, flags: [], decidedBy: "AGENT", decidedWeek: "2026-10-12", why: "It repeats /new/." },
+        { path: "/new/", kind: "Service", type: "SERVICE", verdict: "KEEP", reason: "WORKING", into: null, visits: 40, enquiries: 3, views: 0, shown: 0, clicks: 0, domains: 0, flags: [] },
+      ] });
+    });
+    const read = await t.query(internal.insightBoxes.boxFactsInternal, { holdId, screens: ["TRACK_RECORD", "PAGE_DECISIONS"] });
+    const value = (key: string) => read.facts.find((entry) => entry.key === key)?.value;
+    expect([value("track.right"), value("track.wrong"), value("track.waiting"), value("decisions.redirect"), value("decisions.bySpecialist")]).toEqual([1, 1, 1, 1, 1]);
+    expect(read.about.PAGE_DECISIONS).toEqual([{ page: "/old/", do: "redirect", into: "/new/", why: "It repeats /new/." }]);
+    expect(read.about.TRACK_RECORD?.map((entry) => entry.checked)).toEqual(expect.arrayContaining(["RIGHT", "WRONG"]));
+  });
 });

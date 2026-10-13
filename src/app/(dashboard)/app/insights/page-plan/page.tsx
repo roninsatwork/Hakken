@@ -25,7 +25,8 @@ import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { LABEL } from "../_components/StrategyNote";
-import { useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 
 /** Each verdict's colour on the chart by kind of page: improve in orange, the page's own action; keep quiet grey. */
 const VERDICT_COLOURS: Record<string, string> = { IMPROVE: CHART_SERIES_ORANGE, MERGE: CHART_SERIES_VIOLET, REDIRECT: CHART_SERIES_BLUE, REMOVE: CHART_SERIES_ROSE, KEEP: CHART_SERIES_SLATE };
@@ -57,6 +58,9 @@ export default function InsightsPagePlanPage() {
   const t = usePlatformTranslations("insights.pagePlan");
   const tDecide = usePlatformTranslations("insights.decisions");
   const tPlace = usePlatformTranslations("insights.place");
+  const tBox = usePlatformTranslations("insights.box");
+  // The Page decisions specialist's summary of its decisions, when it wrote one this week; else the screen's own sentences.
+  const box = useInsightsBox("PAGE_DECISIONS");
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
   const decided = useQuery(api.insightDecisions.insightsPageDecisions, site ? { siteId: site } : {});
@@ -89,17 +93,21 @@ export default function InsightsPagePlanPage() {
   const lost = planned.filter((row) => row.action === "REBUILD" || row.action === "RESTORE");
   const reach = planned.filter((row) => row.action === "STRENGTHEN");
   const topCreate = decided?.creates[0];
-  const says = [
-    ...(decisions.length > 0 ? [tDecide("sees.every", { pages: decided?.pages ?? decisions.length, improve: count("IMPROVE"), merge: count("MERGE"), redirect: count("REDIRECT"), remove: count("REMOVE"), keep: count("KEEP") })] : []),
-    // Who decided (insights-one-voice-plan.md, the standard): the Page decisions specialist, Keyword cannibalisation's, or the rule.
-    ...(decisions.length > 0 ? [tDecide("sees.decided", {
-      agent: decisions.filter((row) => row.decidedBy === "AGENT" && !COMPETING_REASONS.has(row.reason)).length,
-      competing: decisions.filter((row) => COMPETING_REASONS.has(row.reason)).length,
-    })] : []),
+  const everySays = decisions.length > 0 ? [tDecide("sees.every", { pages: decided?.pages ?? decisions.length, improve: count("IMPROVE"), merge: count("MERGE"), redirect: count("REDIRECT"), remove: count("REMOVE"), keep: count("KEEP") })] : [];
+  // Who decided (insights-one-voice-plan.md, the standard): the Page decisions specialist, Keyword cannibalisation's, or the rule.
+  const decidedSays = decisions.length > 0 ? [tDecide("sees.decided", {
+    agent: decisions.filter((row) => row.decidedBy === "AGENT" && !COMPETING_REASONS.has(row.reason)).length,
+    competing: decisions.filter((row) => COMPETING_REASONS.has(row.reason)).length,
+  })] : [];
+  const planSays = [
     lost.length > 0 ? t("sees.lost", { count: lost.length, page: lost[0].page, a: formatNumber(lost[0].a ?? 0), b: formatNumber(lost[0].b ?? 0) }) : t("sees.noneLost"),
     ...(reach.length > 0 ? [t("sees.reach", { count: reach.length, pages: reach.map((row) => row.page).join(", ") })] : []),
-    ...(topCreate ? [tDecide("sees.create", { count: decided?.creates.length ?? 0, search: topCreate.search, volume: formatNumber(topCreate.volume ?? 0) })] : []),
   ];
+  const createSays = topCreate ? [tDecide("sees.create", { count: decided?.creates.length ?? 0, search: topCreate.search, volume: formatNumber(topCreate.volume ?? 0) })] : [];
+  // The Page decisions specialist's summary takes the counts' place when it wrote one; who decided the pages, and the page plan's, follow.
+  const says = box && decisions.length > 0
+    ? [...boxedSays(box, [...everySays, ...createSays], tBox), ...decidedSays, ...planSays]
+    : [...everySays, ...decidedSays, ...planSays, ...createSays];
   const stepWords = (row: PlanPage) => t(`do.${row.action}`, { page: row.page, search: row.shouldWin[0] ?? "" });
   const steps: HakkenSeesStep[] = planned.slice(0, 3).map((row) => ({ words: stepWords(row), link: t("addTask"), href: `/app/assistant?ask=${encodeURIComponent(stepWords(row))}` }));
   const bars = planned.filter((row) => row.enquiriesBefore !== null).slice(0, 8).map((row) => ({ label: row.page, before: row.enquiriesBefore ?? 0, now: row.enquiries }));

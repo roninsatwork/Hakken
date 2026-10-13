@@ -20,7 +20,8 @@ import { formatPosition } from "../../search-console/_components/searchConsoleFo
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { boxedSays } from "../_components/insightBoxSays";
 import { KindsRateChart } from "../_components/PeriodCharts";
 
 const rate = (top: number | null, bottom: number | null) => (top !== null && bottom ? Math.round((top / bottom) * 1000) / 10 : null);
@@ -34,6 +35,9 @@ const moved = (now: number | null, before: number | null) => (now !== null && be
  */
 export default function InsightsFunnelPage() {
   const t = usePlatformTranslations("insights.funnel");
+  const tBox = usePlatformTranslations("insights.box");
+  // The Conversion specialist's box, when it wrote one this week (insights-one-voice-plan.md); else the screen's own sentences.
+  const box = useInsightsBox("FUNNEL");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
@@ -72,7 +76,7 @@ export default function InsightsFunnelPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={[{ words: t("do"), link: t("seeReviews"), href: href("page-reviews") }]} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={[{ words: t("do"), link: t("seeReviews"), href: href("page-reviews") }]} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-funnel`} csv={csv} enoughData={bars.length > 0}>
         <SiteBarChart data={bars} series={[{ key: "year", name: t("chart.year"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>
