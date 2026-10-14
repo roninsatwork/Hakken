@@ -404,12 +404,15 @@ describe("collecting a website's Google Analytics", () => {
     expect(site.finalOutput).toContain("today");
   });
 
-  test("what Google said is left holds for the hour, and the day's until Google's day turns", () => {
+  test("what Google said is left holds for ten minutes, and the day's until Google's day turns", () => {
     const seen = { at: Date.parse("2026-10-14T10:00:00Z"), tokensPerDay: 5_000, tokensPerHour: 7_000, tokensPerProjectPerHour: 2_000, thresholdedPerHour: 10 };
     expect(quotaStillSeen(null, seen.at)).toBeNull();
-    expect(quotaStillSeen(seen, seen.at + 59 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: 7_000, tokensPerProjectPerHour: 2_000, thresholdedPerHour: 10 });
-    // An hour on, the hour's counts are Google's to say again; the day's still hold (03:00 to 04:00 in California).
-    expect(quotaStillSeen(seen, seen.at + 61 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: null, tokensPerProjectPerHour: null, thresholdedPerHour: null });
+    // One step of a run following another keeps to it.
+    expect(quotaStillSeen(seen, seen.at + 9 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: 7_000, tokensPerProjectPerHour: 2_000, thresholdedPerHour: 10 });
+    // Past ten minutes — a run back from waiting for the hour, above all — the hour's counts are Google's to say again;
+    // the day's still hold (03:00 in California). A count kept for the whole hour cost a run a second hour on 2026-10-14.
+    expect(quotaStillSeen(seen, seen.at + 11 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: null, tokensPerProjectPerHour: null, thresholdedPerHour: null });
+    expect(quotaStillSeen(seen, seen.at + 62 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: null, tokensPerProjectPerHour: null, thresholdedPerHour: null });
     // Google's day turns at midnight Pacific: 07:00 UTC in October.
     expect(googleDay(Date.parse("2026-10-14T06:59:00Z"))).toBe("2026-10-13");
     expect(googleDay(Date.parse("2026-10-14T07:00:00Z"))).toBe("2026-10-14");

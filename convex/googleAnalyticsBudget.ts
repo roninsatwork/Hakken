@@ -46,7 +46,13 @@ export function overBudget(quota: QuotaLeft | null, thresholded: boolean): strin
 /** What Google said is left, and when: kept on the connection between a run's steps, its fills and its hours. */
 export type QuotaSeen = QuotaLeft & { at: number };
 
-const HOUR_MS = 60 * 60 * 1000;
+/**
+ * How long the hour's counts Google last gave are taken as still true: long
+ * enough for one step of a run to follow another, never across a wait for the
+ * hour. On 2026-10-14 a count taken as true for a whole hour kept a run waiting
+ * a second hour it did not need; after a wait, Google's own next answer says.
+ */
+export const SEEN_FOR_MS = 10 * 60 * 1000;
 
 /** The calendar day in Google's own time, Pacific, when its daily allowance starts again. */
 export function googleDay(at: number): string {
@@ -55,13 +61,13 @@ export function googleDay(at: number): string {
 
 /**
  * What a new session may still take as left (AGENTS.md, "Respect Google's
- * quotas"): the hour's counts while they are under an hour old, the day's
+ * quotas"): the hour's counts for ten minutes (`SEEN_FOR_MS`), the day's
  * while Google's day has not turned. Older than that, Google's next answer
  * says again; never seen, null, as before.
  */
 export function quotaStillSeen(seen: QuotaSeen | null | undefined, now: number): QuotaLeft | null {
   if (!seen) return null;
-  const hour = now - seen.at < HOUR_MS;
+  const hour = now - seen.at < SEEN_FOR_MS;
   const day = googleDay(seen.at) === googleDay(now);
   if (!hour && !day) return null;
   return {
