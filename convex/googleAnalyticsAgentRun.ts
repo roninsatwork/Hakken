@@ -274,6 +274,7 @@ async function beginSiteRun(
     recount,
     countryFrom,
     begunAt: now,
+    ...(connection.listsFrom ? { listsFrom: connection.listsFrom } : {}),
   });
   return { runId, from: window.from, top: window.top };
 }
@@ -365,6 +366,8 @@ export const collectSiteStep = internalAction({
     begunAt: v.optional(v.number()),
     /** Waiting for the hour to turn (SF17, SF20): nothing is asked of Google before this time. */
     resumeAt: v.optional(v.number()),
+    /** The ready-made list to start from, where the last run cut short by the night stopped (`jobKey`). */
+    listsFrom: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -402,7 +405,7 @@ export const collectSiteStep = internalAction({
       let jobAt = args.jobAt;
       let rows = args.rows;
       const countryDays = countryDayJobs(args.countryFrom ?? [], args.top);
-      let jobs: Job[] = to === null ? jobsFor(weekly, target.others, target.shop, countryDays) : [];
+      let jobs: Job[] = to === null ? jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom) : [];
       const stop = async (result: Extract<StepResult, { ok: false }>) => {
         if (result.access) {
           await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "NO_ACCESS" });
@@ -411,7 +414,15 @@ export const collectSiteStep = internalAction({
           // The hour's budget spent, or Google refusing for an allowance that refreshes within the hour (SF17, SF20).
           const resumeAt = afterTheHour(Date.now());
           if (resumeAt - (args.begunAt ?? Date.now()) > NIGHT_MS) {
-            await finish("SUCCESS", `Collected ${args.host} as far as the night allowed: ${result.reason}. The rest waits for tomorrow night's run; nothing is lost.`);
+            // What costs Google nothing is finished now — the days rolled on, the screens' lists rebuilt — and the next
+            // night's lists start where this one stopped, so the same last lists are never the ones left out.
+            const next = to === null ? jobs[jobAt] : undefined;
+            await ctx.runMutation(internal.googleAnalyticsCollect.noteNightCut, {
+              connectionId: args.connectionId,
+              property: args.property,
+              ...(next && !("days" in next) ? { listsFrom: jobKey(next) } : {}),
+            });
+            await finish("SUCCESS", `Collected ${args.host} as far as the night allowed: ${result.reason}. The rest waits for tomorrow night's run, which starts where this one stopped; nothing is lost.`);
             return;
           }
           const at = new Date(resumeAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
@@ -461,7 +472,7 @@ export const collectSiteStep = internalAction({
             // Everything, every night (Anthony, 2026-10-14: "I want everything once a day"): the 90 days and 12 months,
             // the page titles and tracking health's weekly checks too — inside Google's allowances (SF17).
             weekly = true;
-            jobs = jobsFor(weekly, target.others, target.shop, countryDays);
+            jobs = jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom);
           }
           continue;
         }
@@ -574,6 +585,18 @@ function countryDayJobs(countryFrom: ReadonlyArray<{ country: string; from: stri
  * then each other's — and the shared page lists (ga-stored-figures-plan.md
  * SF13), each country's: the same every step of the run.
  */
-function jobsFor(weekly: boolean, others: readonly string[], shop: boolean, countryDays: readonly CountryDaysJob[]): Job[] {
-  return [...countryDays, ...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others), ...pageListJobs(weekly, others)];
+function jobsFor(weekly: boolean, others: readonly string[], shop: boolean, countryDays: readonly CountryDaysJob[], listsFrom?: string): Job[] {
+  const lists: Job[] = [...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others), ...pageListJobs(weekly, others)];
+  return [...countryDays, ...startingAt(lists, listsFrom)];
+}
+
+/** A ready-made list's key, the same every night for the same list: its fields in order. */
+export function jobKey(job: Job): string {
+  return JSON.stringify(Object.keys(job).sort().map((key) => [key, (job as Record<string, unknown>)[key]]));
+}
+
+/** The lists from the one a run cut short stopped at, then round to those before it; as they were when it is gone. */
+export function startingAt<T extends Job>(lists: readonly T[], from: string | undefined): T[] {
+  const at = from ? lists.findIndex((job) => jobKey(job) === from) : -1;
+  return at > 0 ? [...lists.slice(at), ...lists.slice(0, at)] : [...lists];
 }

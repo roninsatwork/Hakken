@@ -43,5 +43,34 @@ export function overBudget(quota: QuotaLeft | null, thresholded: boolean): strin
   return null;
 }
 
+/** What Google said is left, and when: kept on the connection between a run's steps, its fills and its hours. */
+export type QuotaSeen = QuotaLeft & { at: number };
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/** The calendar day in Google's own time, Pacific, when its daily allowance starts again. */
+export function googleDay(at: number): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
+}
+
+/**
+ * What a new session may still take as left (AGENTS.md, "Respect Google's
+ * quotas"): the hour's counts while they are under an hour old, the day's
+ * while Google's day has not turned. Older than that, Google's next answer
+ * says again; never seen, null, as before.
+ */
+export function quotaStillSeen(seen: QuotaSeen | null | undefined, now: number): QuotaLeft | null {
+  if (!seen) return null;
+  const hour = now - seen.at < HOUR_MS;
+  const day = googleDay(seen.at) === googleDay(now);
+  if (!hour && !day) return null;
+  return {
+    tokensPerDay: day ? seen.tokensPerDay : null,
+    tokensPerHour: hour ? seen.tokensPerHour : null,
+    tokensPerProjectPerHour: hour ? seen.tokensPerProjectPerHour : null,
+    thresholdedPerHour: hour ? seen.thresholdedPerHour : null,
+  };
+}
+
 /** Google's refusal of an ask for an allowance that refreshes within the hour. */
 export const HOURLY_REFUSAL = /under an hour|per hour|hourly/i;

@@ -10,7 +10,8 @@ import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
 import { KEPT_BACK, analyticsWindow, dueJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
-import { afterTheHour, startGap } from "./googleAnalyticsAgentRun";
+import { afterTheHour, jobKey, startGap, startingAt } from "./googleAnalyticsAgentRun";
+import { googleDay, quotaStillSeen } from "./googleAnalyticsBudget";
 import { shiftDay } from "./searchConsoleDays";
 import { NEWEST, PROPERTY, dayOf, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
 
@@ -368,7 +369,7 @@ describe("collecting a website's Google Analytics", () => {
 
   test("a run the night is too short for stops when it is over, and leaves the rest to the next night", async () => {
     const t = harness();
-    const { siteId, admin } = await connected(t);
+    const { siteId, connectionId, admin } = await connected(t);
     const google = fakeGoogle(history(70));
     // An allowance so small the weekly lists would take many hours.
     google.allowance = { thresholdedPerHour: 25, tokensPerAsk: 1 };
@@ -379,6 +380,53 @@ describe("collecting a website's Google Analytics", () => {
     expect(site.status).toBe("SUCCESS");
     expect(site.finalOutput).toContain("as far as the night allowed");
     expect(google.spent.size).toBeLessThanOrEqual(6);
+    // Cut short, it still ends as collected, free of Google (the audit of 2026-10-14): the run no longer reads as
+    // going, and the next night's lists start where this one stopped, so the last lists are never always left out.
+    const connection = (await connectionOf(t, connectionId))!;
+    expect(connection.lastCollectedAt).toBeDefined();
+    expect(connection.collecting).toBeUndefined();
+    expect(connection.listsFrom).toBeDefined();
+  });
+
+  test("a run starts from what Google last said is left: with the day's allowance used, it asks Google nothing", async () => {
+    const t = harness();
+    const { siteId, connectionId, admin } = await connected(t);
+    const google = fakeGoogle(history(70));
+    // Another tool used the property's day: Google said so a minute ago, on the last answer anyone had.
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, {
+      quotaSeen: { at: Date.now() - 60_000, tokensPerDay: 1_000, tokensPerHour: 30_000, tokensPerProjectPerHour: 10_000, thresholdedPerHour: 100 },
+    }));
+    await save(admin, siteId);
+    await finishScheduled(t);
+    expect(google.calls.filter((call) => call.url.endsWith(":runReport"))).toHaveLength(0);
+    const site = (await runsOf(t)).find((run) => run.title === "Google Analytics: acme-shop.test")!;
+    expect(site.finalOutput).toContain("as far as the night allowed");
+    expect(site.finalOutput).toContain("today");
+  });
+
+  test("what Google said is left holds for the hour, and the day's until Google's day turns", () => {
+    const seen = { at: Date.parse("2026-10-14T10:00:00Z"), tokensPerDay: 5_000, tokensPerHour: 7_000, tokensPerProjectPerHour: 2_000, thresholdedPerHour: 10 };
+    expect(quotaStillSeen(null, seen.at)).toBeNull();
+    expect(quotaStillSeen(seen, seen.at + 59 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: 7_000, tokensPerProjectPerHour: 2_000, thresholdedPerHour: 10 });
+    // An hour on, the hour's counts are Google's to say again; the day's still hold (03:00 to 04:00 in California).
+    expect(quotaStillSeen(seen, seen.at + 61 * 60_000)).toEqual({ tokensPerDay: 5_000, tokensPerHour: null, tokensPerProjectPerHour: null, thresholdedPerHour: null });
+    // Google's day turns at midnight Pacific: 07:00 UTC in October.
+    expect(googleDay(Date.parse("2026-10-14T06:59:00Z"))).toBe("2026-10-13");
+    expect(googleDay(Date.parse("2026-10-14T07:00:00Z"))).toBe("2026-10-14");
+    expect(quotaStillSeen(seen, Date.parse("2026-10-15T07:30:00Z"))).toBeNull();
+  });
+
+  test("the next night's lists start where a run cut short stopped, then come round to the rest", () => {
+    const lists = [
+      { list: "page", period: "7", which: "NOW" },
+      { list: "page", period: "30", which: "NOW" },
+      { pages: true, period: "90", device: "" },
+    ] as Parameters<typeof startingAt>[0];
+    expect(startingAt(lists, undefined)).toEqual(lists);
+    expect(startingAt(lists, jobKey(lists[2]))).toEqual([lists[2], lists[0], lists[1]]);
+    // A list gone since keeps the usual order; the same list's key is the same whatever order its fields were set in.
+    expect(startingAt(lists, "gone")).toEqual(lists);
+    expect(jobKey({ which: "NOW", period: "7", list: "page" } as (typeof lists)[0])).toBe(jobKey(lists[0]));
   });
 
   test("the budget, the hour's turn and the websites' start gaps", () => {
@@ -417,6 +465,7 @@ describe("collecting a website's Google Analytics", () => {
     await save(admin, siteId);
     await finishScheduled(t);
     expect((await dayRows(t, siteId, "total", "", NEWEST))).toHaveLength(1);
+    expect((await connectionOf(t, connectionId))?.historyFilled).toContain("channel");
 
     // Disconnected, signed in again, another property chosen: its figures are cleared, then collected afresh.
     await t.run(async (ctx) => await ctx.db.patch(connectionId, { status: "COUNTING", property: "properties/999" }));
@@ -427,5 +476,9 @@ describe("collecting a website's Google Analytics", () => {
     expect(connection.clearing).toBeUndefined();
     expect(connection.dataProperty).toBe("properties/999");
     expect(await dayRows(t, siteId, "total", "", NEWEST)).toEqual([]);
+    // The old property's fill marks go with its figures, so the new property's two years are filled once its days are in
+    // (the audit of 2026-10-14: a mark left behind kept the fill from ever running again).
+    expect(connection.historyFilled).toBeUndefined();
+    expect(connection.historyFrom).toBeUndefined();
   });
 });

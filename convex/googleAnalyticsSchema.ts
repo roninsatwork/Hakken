@@ -339,6 +339,25 @@ export const googleAnalyticsTables = {
     /** The day lists whose two years are filled (SF12); a website filled before SF12 has the channels alone. */
     historyFilled: v.optional(v.array(dayFactListValidator)),
     /**
+     * The ready-made list a run cut short by the night (`NIGHT_MS`) had not
+     * asked yet, by its key (`jobKey`): the next night's run starts its lists
+     * there, so the last lists are never the ones always left out.
+     */
+    listsFrom: v.optional(v.string()),
+    /**
+     * What Google last said is left of the website's allowances, and when
+     * (ga-stored-figures-plan.md SF18; AGENTS.md, "Respect Google's quotas"):
+     * a run's first ask of a step, a fill's and a run resumed after the hour
+     * keep to it, rather than asking blind.
+     */
+    quotaSeen: v.optional(v.object({
+      at: v.number(),
+      tokensPerDay: v.union(v.number(), v.null()),
+      tokensPerHour: v.union(v.number(), v.null()),
+      tokensPerProjectPerHour: v.union(v.number(), v.null()),
+      thresholdedPerHour: v.union(v.number(), v.null()),
+    })),
+    /**
      * The first day each page is held from, over time (ga-stored-figures-plan.md SF5): set once its two years are
      * filled from Google's history; until then a page's own chart is asked of Google.
      */
