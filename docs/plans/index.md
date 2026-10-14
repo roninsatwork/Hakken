@@ -175,8 +175,8 @@ completed work.
   advice. Every page in the section opens the page's own screen, and back
   returns to where you came from. Follows the section's data standard.
   Every ask reads Google's allowance left and stops above a fifth.
-  Drawn and agreed 2026-10-14; about 12.5 man-days; approved, starting
-  once the stored-figures work is committed.
+  Drawn, agreed and built on dev 2026-10-14 (about 12.5 man-days; local
+  commits); ronins.co.uk's new lists fill at its next collection.
 - [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
   — the All pages screen of one page gains the visits that started on it and
   their conversions, named apart from those made on it; different pages a

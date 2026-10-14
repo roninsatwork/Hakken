@@ -62,7 +62,7 @@ export function ConversionsCell({ conversions, rate, fewVisits, oneLine = false 
 
 /**
  * A count with its share of the row's visits on one line, as Landing pages' funnel draws it
- * (landing-pages-flow-plan.md LF4): "▼ 46 · 28.9%" for the visits that left, "113 · 71.1%" for those that went on.
+ * (landing-pages-flow-plan.md LF4): the visits that left with the kit's down arrow, "46 · 28.9%", and those that went on, "113 · 71.1%".
  * The share greyed from fewer than 100 visits, as every rate here is; nothing kept yet, a dash.
  */
 export function ShareCell({ count, visits, fewVisits, left = false }: { count: number | null | undefined; visits: number; fewVisits: boolean; left?: boolean }) {
@@ -70,7 +70,10 @@ export function ShareCell({ count, visits, fewVisits, left = false }: { count: n
   if (count == null) return <NoFigure />;
   return (
     <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
-      <span className={`font-mono text-[12px] ${left && count > 0 ? "text-destructive" : "text-foreground"}`}>{left && count > 0 ? `▼ ${formatNumber(count)}` : formatNumber(count)}</span>
+      {left && count > 0
+        // The visits that left, as every fall here is drawn: the kit's arrow, down.
+        ? <Change by={-count} arrow="down" format={formatNumber} />
+        : <span className="font-mono text-[12px] text-foreground">{formatNumber(count)}</span>}
       {visits > 0 ? (
         <span className={`font-mono text-[12px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
           · {formatPercent(count / visits)}

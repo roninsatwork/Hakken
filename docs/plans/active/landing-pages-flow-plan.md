@@ -1,8 +1,8 @@
 # Google Analytics — Landing pages, as a flow
 
-**Started 2026-10-14. Status: drawn, agreed and approved to build; not
-started — it begins once the other session has committed its Google
-Analytics work (see "When it starts").** The screen is
+**Started 2026-10-14. Status: built on dev the same day, every phase, local
+commits not pushed (see "Built"). ronins.co.uk's new lists fill at its next
+collection, which waits for Anthony's go.** The screen is
 drawn on the canvas [Landing pages as a funnel](https://claude.ai/artifact/2oBCEpaxfSNAtz3n7MFNbJ)
 (one board; a copy and its picture in
 [docs/plans/assets/landing-pages-flow/](../assets/landing-pages-flow/)).
@@ -288,7 +288,87 @@ shared list, both collected in the run's existing job.
    selected" (LF2).
 2. **Phase 0's websites:** answered — "i just want ronins".
 
+## Built — 2026-10-14
+
+Before it, three faults the audit of the stored-figures commit found in the
+nightly run were fixed (18388e00):
+- **A run cut short by the night now finishes what is free.** It marks the
+  website collected, rolls the past on and rebuilds the screens' lists. The
+  next night's lists start where it stopped (`listsFrom`).
+- **A cleared property fills its two years again.** Clearing figures also
+  clears the fill marks (`historyFilled`).
+- **No first ask is blind.** What Google last said is left is kept on the
+  connection (`quotaSeen`) and every new session starts from it: the hour's
+  counts for an hour, the day's until midnight Pacific.
+
+### Where it is
+
+- **Collected (phase 1)** in the run's shared page lists job
+  (`googleAnalyticsPageLists.ts`), for each date range, device and home
+  country, inside the allowance check. It is two small lists, not the whole
+  route list the plan first named:
+  - **`landingFlow`:** the flow as the chart draws it.
+  - **`landingOnward`:** each landing page's visits that went on, and the
+    page most of them opened next.
+  - **The logic:** `convex/utils/landingFlow.ts` (`buildFlow`, `flowChart`;
+    `FLOW_NODES` = 5).
+  - **The cost:** three more asks a job (the routes, their conversions, the
+    visits that went on), each a few tokens.
+- **Read (phase 2):**
+  - **The chart:** `googleAnalyticsFlowReads.analyticsLandingFlow`.
+  - **The table:** Landing pages' and page groups' rows carry `onward` and
+    `next` (`googleAnalyticsReads.ts`). Left here, Went on and Most went to
+    sort over the whole list, by share.
+  - **Ask Hakken** reads the same list rows.
+- **The part (phase 3):** `src/ui/components/screens/PageFlowChart.tsx`,
+  with its tests. It is in the drawing kit (`page-flow`) and in
+  `screen-kit.md`.
+- **The screen (phase 4):**
+  - **The chart card:** `_components/LandingFlow.tsx`.
+  - **The columns:** `AnalyticsListScreen.tsx` and `AnalyticsCells.tsx`
+    (`ShareCell`, `NextPageCell`).
+  - **The words:** English and Italian, under
+    `googleAnalytics.chart.flow` and `googleAnalytics.table.columns`.
+  - **The look:** recorded at
+    `docs/plans/assets/landing-pages-flow/look/LandingPages.txt`. The old
+    Landing pages look is retired.
+- **Links and back (phase 4b):**
+  - **The link:** `usePageHref` and `useFromHere` in `useAnalytics.ts`.
+  - **The back link:** `analyticsBack.ts`, with its tests.
+  - **The old screen:** `landing-pages/page` forwards. `PageStages` and its
+    look (`PageDetail`) are retired.
+  - **The guard:** `src/analytics-page-links-drift.test.ts`.
+
+### Built differently from the drawing or the plan
+
+- **Two small lists instead of `landingRoutes`.** The screens read only the
+  flow's busiest pages and each landing page's onward figures. So the run
+  keeps those, worked out from Google's routes as they are asked, rather
+  than every route of every landing page, which nothing would read and a
+  big website would make too large to read in one go.
+- **The last column keeps its name, "Conversions from visits".** That is
+  the app's word for conversions from visits that started on a page, not
+  the drawing's "Converted".
+- **A channel's own landing pages keep their approved columns.** The
+  funnel columns are Landing pages' alone.
+- **Hover is the browser's own tooltip** on each box, route and dot, as
+  the drawing had it.
+- **Left in the "Page after" column is close, not exact.** It counts
+  visits that went on from that page anywhere in a visit.
+
+### Checked on ronins.co.uk (dev, in Chrome, 2026-10-14)
+
+- **Landing pages:** What Hakken sees, then the flow card. It says "Still
+  being collected" until the next collection fills it. Then the table: Page,
+  Visits, Left here, Went on, Most went to, Conversions from visits, with
+  dashes until filled.
+- **The click-through:** a row opens `all-pages/page`, whose back link reads
+  "← Landing pages" and returns there with the last 90 days still chosen.
+
 ## Change log
+
+- 2026-10-14 — Built on dev, every phase, in local commits: 18388e00,
+  ba738d05, fedfed23, 8de1d91f, 6e47a03f, 990bdc93.
 
 - 2026-10-14 — Phase 0 run on ronins.co.uk (§3b): conversions carry the
   page before; `landingRoutes` needed; Went on counted in visits. Building.
