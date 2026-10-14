@@ -15370,7 +15370,7 @@
       "live": "In diretta",
       "channels": "Canali",
       "campaigns": "Campagne",
-      "landingPages": "Pagine di destinazione",
+      "landingPages": "Funnel",
       "allPages": "Tutte le pagine",
       "events": "Eventi",
       "conversions": "Conversioni",
@@ -16252,7 +16252,7 @@
       "emptyKeywords": "Nessun link contrassegnato aveva parole in queste date."
     },
     "landing": {
-      "title": "Pagine di destinazione",
+      "title": "Funnel",
       "description": "Dove è iniziata ogni visita e cosa hanno fatto poi quelle visite: sono uscite, sono passate a un'altra pagina o hanno convertito.",
       "groupFilter": "Gruppo di pagine",
       "notSorted": "Non classificate",
@@ -17220,7 +17220,7 @@
         "openPage": "Apri la pagina",
         "pagesToPush": "Quasi in cima",
         "conversions": "Conversioni",
-        "landingPages": "Pagine di destinazione",
+        "landingPages": "Funnel",
         "landingPage": "Le sue visite",
         "aiAssistants": "Assistenti AI",
         "aiAnswers": "Risposte AI in Visibilità",

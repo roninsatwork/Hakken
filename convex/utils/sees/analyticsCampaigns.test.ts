@@ -27,7 +27,7 @@ describe("17 · Campaigns", () => {
     const box = campaignsSees([campaign("spring-sale", 400, 12), campaign("newsletter", 120)], 200);
     expect(box).toEqual({
       says: [{ code: "tagged", a: 520, b: 520 / 720 }, { code: "best", text: "spring-sale", a: 12 }, { code: "quiet", text: "newsletter", a: 120 }],
-      steps: [{ code: "seeLanding", text: "newsletter", link: "landingPages", to: { segment: "landing-pages" } }],
+      steps: [{ code: "seeLanding", text: "newsletter", link: "landingPages", to: { segment: "funnel" } }],
     });
     const none = campaignsSees([], 808);
     expect(none).toEqual({ says: [{ code: "none", a: 808 }], steps: [{ code: "tagLinks", link: "channels", to: { segment: "channels" } }] });

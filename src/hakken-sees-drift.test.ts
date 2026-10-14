@@ -40,6 +40,8 @@ const FORMS = new Set([
   "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",
   // A landing page's own screen retired (landing-pages-flow-plan.md LF8): it only forwards an old link to the page's own screen.
   "src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page/page.tsx",
+  // Landing pages is Funnel now: its old address only forwards there.
+  "src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page.tsx",
 ]);
 
 const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set([".tsx"])))

@@ -175,7 +175,7 @@ describe("4 · Channels", () => {
         { code: "assistants", a: 61, b: 0.279, c: 0 },
       ],
       steps: [
-        { code: "whyFell", text: "Direct", a: 5, b: 11, link: "landingPages", to: { segment: "landing-pages" } },
+        { code: "whyFell", text: "Direct", a: 5, b: 11, link: "landingPages", to: { segment: "funnel" } },
         { code: "assistantsStay", a: 61, b: 0.279, link: "aiAssistants", to: { segment: "channels/channel", filters: { key: "AI assistants" } } },
         { code: "unassigned", a: 12, link: "trackingHealth", to: { segment: "tracking-health" } },
       ],
@@ -212,7 +212,7 @@ describe("5 · A channel's own screen", () => {
         { code: "noneConverted" },
       ],
       steps: [
-        { code: "nextStep", text: "ChatGPT", link: "landingPages", to: { segment: "landing-pages" } },
+        { code: "nextStep", text: "ChatGPT", link: "landingPages", to: { segment: "funnel" } },
         { code: "checkAnswers", text: "ChatGPT", link: "aiAnswers", to: { url: "/app/sites/s1/ai/answers" } },
       ],
     });
@@ -282,7 +282,7 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
     const box = landingSees(groups, { groups: true, device: "", everyDevice: null });
     expect(box).toEqual({
       says: [{ code: "groupLead", text: "Service", a: 10_000, b: 10_000 }, { code: "unsorted", a: 6, b: 91 }],
-      steps: [{ code: "seeUnsorted", a: 6, link: "unsortedPages", to: { segment: "landing-pages", filters: { view: "pages", group: "NOT_SORTED" } } }],
+      steps: [{ code: "seeUnsorted", a: 6, link: "unsortedPages", to: { segment: "funnel", filters: { view: "pages", group: "NOT_SORTED" } } }],
     });
     const none = landingSees([row("service", { label: "Service", visits: 3, members: 2 })], { groups: true, device: "", everyDevice: null });
     expect(none).toEqual({ says: [{ code: "groupsNoValue", a: 1 }], steps: [] });
@@ -498,7 +498,7 @@ describe("10 · Tracking health", () => {
         { code: "check.SUDDEN_FALL.conversions", a: 0.53, b: 0 },
       ],
       steps: [
-        { code: "fix.TOO_MUCH_UNKNOWN", link: "landingPages", to: { segment: "landing-pages" } },
+        { code: "fix.TOO_MUCH_UNKNOWN", link: "landingPages", to: { segment: "funnel" } },
         { code: "fix.SUDDEN_FALL", link: "conversions", to: { segment: "conversions" } },
         { code: "fix.STRANGERS", link: "connection", to: { segment: "connection" } },
       ],

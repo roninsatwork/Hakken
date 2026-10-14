@@ -424,7 +424,7 @@ describe("Campaigns (GA28)", () => {
       says: [{ code: "fewTagged", a: 30, b: 30 * 34, c: 30 * 33 }, { code: "noneConverted" }, { code: "quiet", text: "ai-agents-launch", a: 30 }],
       steps: [
         { code: "tagLinks", link: "channels", to: { segment: "channels" } },
-        { code: "seeLanding", text: "ai-agents-launch", link: "landingPages", to: { segment: "landing-pages" } },
+        { code: "seeLanding", text: "ai-agents-launch", link: "landingPages", to: { segment: "funnel" } },
       ],
     });
     const words = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "adKeyword" });

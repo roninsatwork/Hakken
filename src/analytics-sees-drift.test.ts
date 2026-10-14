@@ -30,7 +30,7 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/page.tsx`, // 2 · Overview, and 18 · Needs reconnecting
   `${ANALYTICS}/[siteId]/channels/page.tsx`, // 4 · Channels
   `${ANALYTICS}/[siteId]/channels/channel/page.tsx`, // 5 · A channel's own screen
-  `${ANALYTICS}/[siteId]/landing-pages/page.tsx`, // 6 · Landing pages, and 17 · a device asked of Google
+  `${ANALYTICS}/[siteId]/funnel/page.tsx`, // 6 · Funnel (was Landing pages), and 17 · a device asked of Google
   `${ANALYTICS}/[siteId]/all-pages/page.tsx`, // 8 · All pages
   `${ANALYTICS}/[siteId]/all-pages/page/page.tsx`, // 21 · A page's own screen (second round, §18.2)
   `${ANALYTICS}/[siteId]/events/page.tsx`, // 22 · Events

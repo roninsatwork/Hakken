@@ -62,7 +62,7 @@ export function landingPageSees(page: PageJourney, channels: readonly Channel[] 
   const steps: Array<Maybe<SeenStep>> = [
     main && fix && (fix.where !== "console" || links.console) ? { code: fix.code, a: main.worth ?? 0, link: fix.link, to: where(fix.where) } : null,
     before !== null && conversions < before && { code: "whatChanged", a: before - conversions, link: "conversions", to: toPage("conversions") },
-    page.hero && { code: "hero", link: "landingPages", to: toPage("landing-pages") },
+    page.hero && { code: "hero", link: "landingPages", to: toPage("funnel") },
   ];
   return seen(says, steps);
 }

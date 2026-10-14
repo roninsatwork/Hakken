@@ -9,6 +9,8 @@ describe("where a page's own screen goes back to", () => {
     });
     expect(backTarget("")).toEqual({ path: "", screen: "overview", name: null });
     expect(backTarget("conversions")).toMatchObject({ screen: "conversions" });
+    // Funnel, at its address now and at the one it had as Landing pages.
+    expect(backTarget("funnel?period=30")).toMatchObject({ path: "funnel?period=30", screen: "landingPages" });
   });
 
   test("a channel's or an event's own screen by its name, and another page's own screen", () => {

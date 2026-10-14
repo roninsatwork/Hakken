@@ -27,7 +27,7 @@ describe("a landing page's own box", () => {
     expect(box.says.map((phrase) => phrase.code)).toEqual(["makes", "noneFromGoogle", "inGoogle"]);
     expect(box.steps.map((step) => step.code)).toEqual(["whatChanged", "hero"]);
     // A hero's step opens Landing pages, where the website's other pages are.
-    expect(box.steps[1]).toEqual({ code: "hero", link: "landingPages", to: { segment: "landing-pages" } });
+    expect(box.steps[1]).toEqual({ code: "hero", link: "landingPages", to: { segment: "funnel" } });
     expectAnalyticsWords("landingPage", box);
   });
 

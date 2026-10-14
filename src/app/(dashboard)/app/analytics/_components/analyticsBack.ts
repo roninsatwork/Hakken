@@ -13,6 +13,8 @@ export const BACK_SCREENS = {
   channels: "channels",
   "channels/channel": "channel",
   campaigns: "campaigns",
+  // Landing pages is Funnel now; an address from before still comes back to it.
+  funnel: "landingPages",
   "landing-pages": "landingPages",
   "all-pages": "allPages",
   "all-pages/page": "page",

@@ -243,7 +243,7 @@ export function channelsSees(rows: readonly ListRowFacts[]): Seen {
     assistants && { code: assistants.conversions > 0 ? "assistantsConverted" : "assistants", a: assistants.visits, b: assistants.engagementRate ?? 0, c: assistants.conversions },
   ];
   const steps: Array<Maybe<SeenStep>> = [
-    fell && { code: "whyFell", text: fell.row.label, a: fell.row.conversions, b: fell.row.conversionsBefore ?? 0, link: "landingPages", to: toPage("landing-pages") },
+    fell && { code: "whyFell", text: fell.row.label, a: fell.row.conversions, b: fell.row.conversionsBefore ?? 0, link: "landingPages", to: toPage("funnel") },
     assistants && (assistants.engagementRate ?? 0) < siteRate - ENGAGEMENT_GAP
       && { code: "assistantsStay", a: assistants.visits, b: assistants.engagementRate ?? 0, link: "aiAssistants", to: toPage("channels/channel", { key: AI_ASSISTANTS_CHANNEL }) },
     unassigned && { code: "unassigned", a: unassigned.visits, link: "trackingHealth", to: toPage("tracking-health") },
@@ -281,7 +281,7 @@ export function channelSees(channel: string, rows: readonly ListRowFacts[], figu
     figures.conversions > 0 ? { code: "converted", a: figures.conversions, b: figures.value } : { code: "noneConverted" },
   ];
   const steps: Array<Maybe<SeenStep>> = [
-    (figures.conversions === 0 || leaves) && { code: "nextStep", text: top.label, link: "landingPages", to: toPage("landing-pages") },
+    (figures.conversions === 0 || leaves) && { code: "nextStep", text: top.label, link: "landingPages", to: toPage("funnel") },
     channel === AI_ASSISTANTS_CHANNEL && { code: "checkAnswers", text: top.label, link: "aiAnswers", to: { url: `/app/sites/${siteId}/ai/answers` } },
   ];
   return seen(says, steps);
@@ -334,7 +334,7 @@ function groupsSees(rows: readonly ListRowFacts[]): Seen {
     lead ? { code: "groupLead", text: lead.label, a: lead.value, b: value } : { code: "groupsNoValue", a: rows.length },
     unsorted && { code: "unsorted", a: unsorted.members ?? 0, b: unsorted.visits },
   ], [
-    unsorted && { code: "seeUnsorted", a: unsorted.members ?? 0, link: "unsortedPages", to: toPage("landing-pages", { view: "pages", group: NOT_SORTED }) },
+    unsorted && { code: "seeUnsorted", a: unsorted.members ?? 0, link: "unsortedPages", to: toPage("funnel", { view: "pages", group: NOT_SORTED }) },
   ]);
 }
 
@@ -568,7 +568,7 @@ const CHECK_FIX: Record<string, { link: string; to: SeenTarget }> = {
   TRACKING_STOPPED: { link: "overview", to: toPage("") },
   NOTHING_COUNTED: { link: "chooseWhatCounts", to: CHOOSE },
   SOMETHING_ELSE: { link: "conversions", to: toPage("conversions") },
-  TOO_MUCH_UNKNOWN: { link: "landingPages", to: toPage("landing-pages") },
+  TOO_MUCH_UNKNOWN: { link: "landingPages", to: toPage("funnel") },
   ENQUIRY_UNCOUNTED: { link: "chooseWhatCounts", to: CHOOSE },
   NEVER_HAPPENS: { link: "conversions", to: toPage("conversions") },
   SUDDEN_FALL: { link: "conversions", to: toPage("conversions") },

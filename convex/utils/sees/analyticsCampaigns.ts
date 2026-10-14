@@ -36,6 +36,6 @@ export function campaignsSees(rows: readonly ListRowFacts[], untagged: number): 
     quiet && { code: "quiet", text: quiet.label, a: quiet.visits },
   ], [
     few && tagLinks,
-    quiet && { code: "seeLanding", text: quiet.label, link: "landingPages", to: toPage("landing-pages") },
+    quiet && { code: "seeLanding", text: quiet.label, link: "landingPages", to: toPage("funnel") },
   ]);
 }

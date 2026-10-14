@@ -136,7 +136,7 @@ const LISTS: Partial<Record<Screen, { list: "channel" | "source" | "campaign" | 
   channel: { list: "source", segment: "channels/channel" },
   campaigns: { list: "campaign", segment: "campaigns" },
   adKeywords: { list: "adKeyword", segment: "campaigns" },
-  landingPages: { list: "landing", segment: "landing-pages" },
+  landingPages: { list: "landing", segment: "funnel" },
   allPages: { list: "page", segment: "all-pages" },
 };
 

@@ -367,6 +367,11 @@ nightly run were fixed (18388e00):
 
 ## Change log
 
+- 2026-10-14 — Landing pages renamed Funnel (Anthony: "can we rename landing
+  pages to funnel please"). The menu, the title and the box's link now say
+  Funnel, at `/funnel`; `/landing-pages` forwards there, its address whole.
+  The landing pages themselves keep their name in the chart and the table.
+
 - 2026-10-14 — Built on dev, every phase, in local commits: 18388e00,
   ba738d05, fedfed23, 8de1d91f, 6e47a03f, 990bdc93.
 

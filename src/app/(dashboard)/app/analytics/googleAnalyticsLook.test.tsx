@@ -8,7 +8,7 @@ import { CHART, CONVERSIONS, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statu
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
-import AnalyticsLandingPagesPage from "./[siteId]/landing-pages/page";
+import AnalyticsLandingPagesPage from "./[siteId]/funnel/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
@@ -86,8 +86,8 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, PLAN, "Overview", "Google Analytics → Overview");
   });
 
-  it("5 · Landing pages: how visits moved, then each landing page's own funnel (landing-pages-flow-plan.md, approved 2026-10-14)", async () => {
-    at("/app/analytics/site_1/landing-pages");
+  it("5 · Funnel (was Landing pages): how visits moved, then each landing page's own funnel (landing-pages-flow-plan.md, approved 2026-10-14)", async () => {
+    at("/app/analytics/site_1/funnel");
     const flowRow = { ...ROW, onward: 46, next: { key: "~1", page: "https://www.acme-shop.test/about-us/", share: 0.93 } };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
@@ -110,7 +110,7 @@ describe("Google Analytics' approved looks", () => {
     const { container } = render(<AnalyticsLandingPagesPage />);
     await screen.findAllByText("/ai-agency/");
     await screen.findByText("155 visits · ▼ 109 left · ● 1");
-    await expectApprovedLook(container, "landing-pages-flow", "LandingPages", "Google Analytics → Landing pages");
+    await expectApprovedLook(container, "landing-pages-flow", "LandingPages", "Google Analytics → Funnel");
   });
 
   it("6 · All pages: a short chart of the ticked pages over the table, its filters by the search box, no money (all-pages-rethink-plan.md)", async () => {

@@ -29,7 +29,7 @@ export const ANALYTICS_PAGES = [
   { id: "channels", segment: "channels", group: "figures" },
   // Visits from tagged links (GA28).
   { id: "campaigns", segment: "campaigns", group: "figures" },
-  { id: "landingPages", segment: "landing-pages", group: "figures" },
+  { id: "landingPages", segment: "funnel", group: "figures" },
   { id: "allPages", segment: "all-pages", group: "figures" },
   // Every event the website recorded (GA30).
   { id: "events", segment: "events", group: "figures" },
