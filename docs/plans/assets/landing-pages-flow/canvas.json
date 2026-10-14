@@ -1,0 +1,28 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-14T08:00:00Z"
+  },
+  "title": "Landing pages as a funnel",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 3100,
+      "title": "Landing pages \u2014 how visits moved",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html"
+  ],
+  "notes": {},
+  "designSystems": []
+}

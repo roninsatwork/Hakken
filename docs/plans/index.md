@@ -166,6 +166,17 @@ completed work.
   time, Conv., Conv. rate and Conv. change; filters Gains, Dropped, Static and
   No visits beside the search box. Drawn, agreed and built on dev
   2026-10-13 (about 9 man-days); two questions after building.
+- [Google Analytics — Landing pages, as a flow](./active/landing-pages-flow-plan.md)
+  — the "Visits by landing page" bars give way to "How visits moved through
+  your website": landing pages, the next page and the page after, red tails
+  for the visits that left, orange dots for conversions on each route, and a
+  click on a page to follow its routes. The table becomes each landing page's
+  own funnel (Visits, Left here, Went on, Most went to, Converted), with no
+  advice. Every page in the section opens the page's own screen, and back
+  returns to where you came from. Follows the section's data standard.
+  Every ask reads Google's allowance left and stops above a fifth.
+  Drawn and agreed 2026-10-14; about 12.5 man-days; approved, starting
+  once the stored-figures work is committed.
 - [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
   — the All pages screen of one page gains the visits that started on it and
   their conversions, named apart from those made on it; different pages a

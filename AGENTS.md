@@ -429,6 +429,16 @@ drifted from the app: "We cannot go through this with every agent").
   `border-b border-border-dim pb-6` — the header components own the title recipe
   and that line, and the build refuses both. Full detail in
   `docs/developer/screen-kit.md` under "Headers".
+- **Respect Google's quotas** (Anthony, 2026-10-14, after an agent used up
+  ronins.co.uk's Google Analytics allowance: "please also respect google
+  quotas"). Google Analytics allows each property 14,000 tokens an hour from
+  Hakken, 40,000 an hour in all, 200,000 a day and 10 asks at once. Before
+  any run, fill or test that asks Google, read the allowance left
+  (`returnPropertyQuota`), work out what the run will cost, and keep a fifth
+  of the hour and the day in hand. Never retry a quota refusal in a loop:
+  stop, and start again when the allowance comes back. A fill or backfill
+  goes in pieces spread over hours, never all at once. Search Console and
+  every other Google API follow the same rule with their own limits.
 - **No queue waits on a person to press a button** (Anthony, 2026-10-05:
   "this is not a SaaS if we have to babysit this each time"). Work that stops
   at a time limit hands itself on — the DataForSEO Collector's run is one
