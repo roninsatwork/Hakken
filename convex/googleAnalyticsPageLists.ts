@@ -8,6 +8,7 @@ import { assistantOf } from "./utils/aiAssistants";
 import { CLICK_EVENTS, READ_EVENTS } from "./utils/analyticsPageStory";
 import { OTHER_ROWS, PAGE_TOP_ROWS } from "./utils/analyticsSharedLists";
 import { EVENT_DETAIL } from "./utils/analyticsEvents";
+import { buildFlow, type Onward, type Route } from "./utils/landingFlow";
 import { PAGE_FACT_LISTS, type AnalyticsPeriod, type AnalyticsWhich, type PageFactList } from "./googleAnalyticsSchema";
 import type { ReportRow } from "./googleAnalyticsApi";
 
@@ -217,6 +218,17 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   }));
   if (!(await write("landingPagesSeen", topPerPage(seenNumbered, (row) => row.visits), seen.flags))) return { ok: true, rows: total, requests: session.requests };
 
+  // The website's flow from its landing pages (landing-pages-flow-plan.md LF5, §3b): the routes inside each landing
+  // page's own visits, with the conversions made on the page each led to, kept as the chart draws them; and each
+  // landing page's visits that went on, counted once a visit, with the page most of them opened next.
+  const routes = await askList(session, asking, "landingFlow", [], range, device ? { device } : {});
+  if (!routes.ok) return failure(routes);
+  const onward = await ask(session, property, { ...base, dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] });
+  if (!onward.ok) return failure(onward);
+  const flow = await flowOf(ctx, target, [...routes.groups.values()].flat(), onward.rows);
+  if (!(await write("landingFlow", flow.flow, routes.flags))) return { ok: true, rows: total, requests: session.requests };
+  if (!(await write("landingOnward", flow.onward, flagsOf(onward), []))) return { ok: true, rows: total, requests: session.requests };
+
   // A page's views by day of the week.
   const weekdays = await askList(session, { ...asking, events: [] }, "pageWeekday", [], range, device ? { device } : {});
   if (!weekdays.ok) return failure(weekdays);
@@ -261,6 +273,43 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
     if (!(await write("eventDetail", topPerPage(about, (row) => row.times ?? 0), flagsOf(answer), [], which))) return { ok: true, rows: total, requests: session.requests };
   }
   return { ok: true, rows: total, requests: session.requests };
+}
+
+/**
+ * Google's routes and onward visits as the kept flow and each landing page's
+ * onward row (`buildFlow`). A page is one number wherever it stands: Google
+ * names a landing page without its slash and the same page, seen next,
+ * with it, so a landing page takes its slashed page's number in the flow.
+ * The onward rows keep the landing page's own number, as Landing pages' list
+ * does, so the table finds them.
+ */
+async function flowOf(ctx: ActionCtx, target: CollectTarget, routeRows: readonly ListRow[], onwardRows: readonly ReportRow[]) {
+  const parts = routeRows.map((row) => {
+    const { channel: landing, source } = splitChannelKey(row.key);
+    const [referrer = "", page = ""] = factParts(source);
+    return { landing, before: beforeKey(referrer, target.addresses), page, row };
+  });
+  const asked = onwardRows.map((row) => ({ landing: row.keys[0] ?? "", before: beforeKey(row.keys[1] ?? "", target.addresses), visits: row.values[0] ?? 0 }));
+  const ownPath = (key: string) => (key.startsWith("page:") ? key.slice(5) : null);
+  const pagePaths = new Set([
+    ...parts.flatMap((one) => [one.page, ...(ownPath(one.before) !== null ? [ownPath(one.before)!] : [])]),
+    ...asked.flatMap((one) => (ownPath(one.before) !== null ? [ownPath(one.before)!] : [])),
+  ]);
+  const landingPaths = [...new Set([...parts.map((one) => one.landing), ...asked.map((one) => one.landing)])];
+  const asPage = (path: string) => (pagePaths.has(path) ? path : pagePaths.has(`${path}/`) ? `${path}/` : path);
+  const pageRefs = await refsOf(ctx, target, [...new Set([...pagePaths, ...landingPaths.map(asPage)])], false);
+  const landingRefs = await refsOf(ctx, target, landingPaths, true);
+  const pageRef = (path: string) => pageRefs.get(path) ?? path;
+  const flowLanding = (path: string) => pageRef(asPage(path));
+  const before = (key: string) => (ownPath(key) !== null ? pageRef(ownPath(key)!) : "");
+  const routes: Route[] = parts.map((one) => ({ landing: flowLanding(one.landing), before: before(one.before), page: pageRef(one.page), visits: one.row.visits, counts: one.row.counts }));
+  const onward: Onward[] = asked.filter((one) => before(one.before) !== "").map((one) => ({ landing: flowLanding(one.landing), before: before(one.before), visits: one.visits }));
+  const built = buildFlow(routes, onward);
+  const flowRows = built.flow.map((row) => ({ ...emptyRow(channelKey(row.parts[0] ?? "", row.parts.slice(1).join(PAGE_FACT_JOIN))), visits: row.visits, times: row.times, counts: row.counts }));
+  // Each landing page's onward row under its Landing pages number.
+  const ownNumber = new Map(landingPaths.map((path) => [flowLanding(path), landingRefs.get(path) ?? path]));
+  const onwardRowsKept = summedRows(built.onward.map((row) => ({ ...emptyRow(channelKey(ownNumber.get(row.landing) ?? row.landing, row.next)), visits: row.visits, times: row.times })));
+  return { flow: flowRows, onward: onwardRowsKept };
 }
 
 /** Rows that share a key once numbered — a page Analytics names with and without its slash — added into one. */

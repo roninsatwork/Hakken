@@ -722,6 +722,7 @@ import type * as utils_keywordCopyLayout from "../utils/keywordCopyLayout.js";
 import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
 import type * as utils_knowledgePageGuard from "../utils/knowledgePageGuard.js";
 import type * as utils_knowledgeShapes from "../utils/knowledgeShapes.js";
+import type * as utils_landingFlow from "../utils/landingFlow.js";
 import type * as utils_lang from "../utils/lang.js";
 import type * as utils_learnLists from "../utils/learnLists.js";
 import type * as utils_libraryPage from "../utils/libraryPage.js";
@@ -1609,6 +1610,7 @@ declare const fullApi: ApiFromModules<{
   "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;
   "utils/knowledgePageGuard": typeof utils_knowledgePageGuard;
   "utils/knowledgeShapes": typeof utils_knowledgeShapes;
+  "utils/landingFlow": typeof utils_landingFlow;
   "utils/lang": typeof utils_lang;
   "utils/learnLists": typeof utils_learnLists;
   "utils/libraryPage": typeof utils_libraryPage;

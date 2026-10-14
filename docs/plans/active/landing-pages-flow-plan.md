@@ -214,6 +214,39 @@ before it (`pageReferrer` on key events, not only on page views), and how many
 rows the routes return. On ronins.co.uk only (Anthony, 2026-10-14: "i just
 want ronins").
 
+## 3b. Phase 0 — what ronins.co.uk showed (2026-10-14)
+
+One read of Google Analytics: United Kingdom, 16 Jul to 13 Oct 2026. It was
+checked against the allowance first (194,511 of the day's 200,000 tokens left)
+and cost about 34 tokens over four runs, with 6 asks a run.
+
+- **Conversions carry the page before.** Google gives `pageReferrer` on key
+  events as on page views. 8 of ronins' 13 conversions had one. But only
+  **1 of 13** came after another of ronins' own pages (/ai-consultancy/ →
+  /about-us/). 12 were made on the page people arrived on, from Google, a
+  chatbot or direct. On ronins the dots will mostly sit inside the landing
+  pages' boxes, and a dot on a route is rare.
+- **The next-page list over every visit (`pageNext`) misleads, so
+  `landingRoutes` is needed.**
+  - **It overstates.** From /, it gives /about-us/ 52 and /case-study/ 51,
+    but the visits that started on / gave 43 and 41.
+  - **It adds pages these visits never opened.** It shows
+    /responsive-web-design-agency/ with 19 views straight after /ai-agency/.
+    In the visits that started on /ai-agency/, it is not in the top routes.
+- **Went on is counted in visits, once each, not in views.** Counting the
+  views after a landing page said 150 of /'s 155 visits went on, because
+  visits go back and forth. Counting each visit once gives 46 of 155 (30%):
+  70% left at once.
+  - /ai-agency/: 32 of 138 went on (23%).
+  - /hub/kapferer-brand-identity-prism/: 2 of 44 (5%).
+  - /venture-studio/: 11 of 29 (38%).
+  - So `landingRoutes` holds visits (`sessions`), and each landing page's
+    Went on comes from one more small ask: `landingPage` × `pageReferrer`,
+    visits, keeping only the rows whose page before is the landing page
+    itself.
+- **Small.** 293 routes over 78 landing pages: a median of 1 a page, 80 at
+  most (/). Nothing was cut, folded or held back by Google.
+
 ## 4. Phases and size
 
 Estimates are man-days, as a developer would take.
@@ -257,6 +290,8 @@ shared list, both collected in the run's existing job.
 
 ## Change log
 
+- 2026-10-14 — Phase 0 run on ronins.co.uk (§3b): conversions carry the
+  page before; `landingRoutes` needed; Went on counted in visits. Building.
 - 2026-10-14 — Approved to build (Anthony: "yes"), starting once the
   stored-figures session has committed its Google Analytics work ("When it
   starts").

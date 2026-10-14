@@ -104,6 +104,10 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   // An event by the pages it happened on, and by what it was about (`EVENT_DETAIL`: one ask a detail).
   eventPage: ["eventName", "pagePath"],
   eventDetail: ["eventName"],
+  // The routes inside each landing page's own visits (landing-pages-flow-plan.md LF5): asked whole, kept as the flow.
+  landingFlow: ["landingPage", "pageReferrer", "pagePath"],
+  // A landing page's visits by each page before a view in them: those that went on from it (§3b).
+  landingOnward: ["landingPage", "pageReferrer"],
 };
 
 /**
@@ -146,6 +150,8 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   pageDevice: false,
   eventPage: true,
   eventDetail: true,
+  landingFlow: true,
+  landingOnward: true,
 };
 
 /** Visitors' lists (§18.6.6), in the order the screen's switch offers them. */

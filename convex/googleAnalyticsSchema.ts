@@ -115,11 +115,13 @@ export const COUNTED_WITH = "EVENT_COUNT";
  * link clicked, by age and gender, by country, by weekday, by device, and a
  * landing page by the pages its visits saw — or by an event: the pages it
  * happened on and what it was about. Every page's and event's screen is
- * worked out from them.
+ * worked out from them. And the website's flow from its landing pages
+ * (landing-pages-flow-plan.md LF5): its busiest routes, two steps on, and
+ * each landing page's visits that went on and where most went.
  */
 export const PAGE_FACT_LISTS = [
   "landingSource", "pageReferrer", "pageNext", "pageClicks", "pageWho", "landingWho", "pageCountry", "landingPagesSeen", "pageWeekday", "pageDevice",
-  "eventPage", "eventDetail",
+  "eventPage", "eventDetail", "landingFlow", "landingOnward",
 ] as const;
 export type PageFactList = (typeof PAGE_FACT_LISTS)[number];
 
@@ -166,6 +168,8 @@ export const analyticsListValidator = v.union(
   v.literal("pageDevice"),
   v.literal("eventPage"),
   v.literal("eventDetail"),
+  v.literal("landingFlow"),
+  v.literal("landingOnward"),
 );
 
 /**
