@@ -4,12 +4,11 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHART, CONVERSIONS, LANDING_PAGE, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
+import { CHART, CONVERSIONS, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
 import AnalyticsLandingPagesPage from "./[siteId]/landing-pages/page";
-import AnalyticsLandingPage from "./[siteId]/landing-pages/page/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
@@ -40,30 +39,6 @@ vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () =>
 vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
 
 const PLAN = "google-analytics";
-
-/** A landing page's four stages from Google to money, as `analyticsHeroPage` answers them: a hero with a page to push. */
-const HERO_PAGE = {
-  state: "READY" as const,
-  currency: "GBP",
-  consoleConnected: true,
-  consoleTo: "2026-10-08",
-  analyticsTo: "2026-10-09",
-  found: {
-    page: "/ai-agency/",
-    address: "https://www.acme-shop.test/ai-agency/",
-    consoleAddress: "https://www.acme-shop.test/ai-agency/",
-    landingKey: "~0",
-    google: { shown: 13_383, clicks: 62, position: 13.9 },
-    googleBefore: { shown: 13_500, clicks: 75, position: 15.1 },
-    visits: { visits: 84, engaged: 58, conversions: 3, value: 6_000 },
-    visitsBefore: { visits: 87, engaged: 60, conversions: 4, value: 8_000 },
-    hero: true,
-    problems: [{ kind: "push" as const, worth: 2_410, gain: 83 }],
-    marked: 0 as const,
-    website: { conversionRate: 0.0145, value: 24_000, clickRateAt: 0.0005 },
-    task: false,
-  },
-};
 
 function answer(queries: Record<string, unknown>) {
   vi.mocked(useQuery).mockImplementation(answerQueries(queries));
@@ -155,18 +130,6 @@ describe("Google Analytics' approved looks", () => {
     await screen.findByText("Gains 33");
     await screen.findByText("▲ 81");
     await expectApprovedLook(container, "all-pages-rethink", "AllPages", "Google Analytics → All pages");
-  });
-
-  it("15 · a landing page's own screen, with Search Console's stages (§15 screen 7)", async () => {
-    at("/app/analytics/site_1/landing-pages/page", "key=~0");
-    answer({
-      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsPageReads:analyticsLandingPage": LANDING_PAGE,
-      "googleAnalyticsHeroes:analyticsHeroPage": HERO_PAGE,
-    });
-    const { container } = render(<AnalyticsLandingPage />);
-    await screen.findByText("13,383");
-    await expectApprovedLook(container, PLAN, "PageDetail", "Google Analytics → a landing page");
   });
 
   it("7 · Conversions", async () => {

@@ -10,7 +10,7 @@ import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { LandingFlowCard } from "../../_components/LandingFlow";
-import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus } from "../../_components/useAnalytics";
+import { useAnalyticsSiteId, useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
 
 const VIEWS = ["pages", "groups"] as const;
 type View = (typeof VIEWS)[number];
@@ -29,7 +29,7 @@ const ANY_GROUP = "all";
 export default function AnalyticsLandingPagesPage() {
   const t = useTranslations("googleAnalytics.landing");
   const siteId = useAnalyticsSiteId();
-  const hrefFor = useAnalyticsHref(siteId);
+  const pageHref = usePageHref();
   const currency = useAnalyticsStatus()?.connection?.currency ?? null;
   const choices = useQuery(api.pageKinds.pageKindChoices, { siteId });
   const [view, setView] = useSiteParam<View>("view", "pages", VIEWS);
@@ -63,7 +63,7 @@ export default function AnalyticsLandingPagesPage() {
       noun={byGroups ? "groups" : "landingPages"}
       opening="visits"
       searchPlaceholder={byGroups ? t("findGroup") : t("findPage")}
-      rowHref={byGroups ? undefined : (row) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null)}
+      rowHref={byGroups ? undefined : (row) => (row.key.startsWith("~") ? pageHref(row.key) : null)}
       filters={filters}
       emptyLabel={t("empty")}
     />

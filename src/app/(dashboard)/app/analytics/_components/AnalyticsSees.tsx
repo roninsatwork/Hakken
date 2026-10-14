@@ -5,7 +5,7 @@ import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/Hak
 import { seenAdvice, type Seen, type SeenPhrase, type SeenTarget } from "@/convex/utils/hakkenSees";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatMoney } from "./analyticsFormat";
-import { useAnalyticsHref, useAnalyticsSiteId } from "./useAnalytics";
+import { useAnalyticsHref, useAnalyticsSiteId, useFromHere } from "./useAnalytics";
 import { useNoteAdvice } from "../../_components/useNoteAdvice";
 import { useEventName } from "./useEventName";
 
@@ -43,6 +43,7 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names }: {
   const t = useTranslations("googleAnalytics.seen");
   const siteId = useAnalyticsSiteId();
   const hrefOf = useAnalyticsHref(siteId);
+  const from = useFromHere();
   const nameOf = useEventName();
   const locale = useLocale();
   const named = <Phrase extends SeenPhrase>(phrase: Phrase): Phrase => (names ? {
@@ -59,7 +60,8 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names }: {
   const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, valuesOf(phrase, currency, events));
   const target = (to: SeenTarget): { href: string; external?: boolean } => {
     if (to.url) return to.url.startsWith("/") ? { href: to.url } : { href: to.url, external: true };
-    return { href: hrefOf(to.segment ?? "", to.filters) };
+    // A page's own screen knows the screen its link was clicked on, to go back to (landing-pages-flow-plan.md LF9).
+    return { href: hrefOf(to.segment ?? "", to.segment === "all-pages/page" ? { ...to.filters, from } : to.filters) };
   };
   const steps: HakkenSeesStep[] = box.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
   return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} />;

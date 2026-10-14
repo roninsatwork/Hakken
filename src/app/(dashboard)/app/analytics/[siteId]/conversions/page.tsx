@@ -19,7 +19,7 @@ import { AnalyticsPanel, TopList } from "../../_components/AnalyticsPanels";
 import { AnalyticsSees, eventList } from "../../_components/AnalyticsSees";
 import { changeOf, formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
 import { ConversionsChart, ListTopBars } from "../../_components/AnalyticsChart";
 
 /** Where the conversions came from: their landing pages, or their channels (§15, screen 9). */
@@ -92,7 +92,8 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   const sales = shop !== null && shop.purchases > 0;
   // "Every one is worth £20, set in Hakken" when every kind carries the same value set here.
   const each = kinds.every((kind) => kind.setIn === "HAKKEN" && kind.each === kinds[0]?.each) && kinds.length > 0 ? kinds[0].each : null;
-  const page = (row: { key: string }) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null);
+  const pageLink = usePageHref();
+  const page = (row: { key: string }) => (row.key.startsWith("~") ? pageLink(row.key) : null);
   const happenedLine = happened.length === 0 ? t("noKind")
     : happened.length === kinds.length && kinds.length > 1 ? t("everyKind")
       : eventList(happened.map((kind) => kind.eventName).join(","), nameOf, locale);

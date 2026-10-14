@@ -19,7 +19,9 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  * Landing pages, Needs reconnecting (18) on Overview. Three have nothing to
  * read and carry none: Choose the property (13), The first 90 days coming in
  * (15) and the bell (19). Heroes and attention (3) was removed on
- * 2026-10-13 (Anthony: "remove the page please we don't need it").
+ * 2026-10-13 (Anthony: "remove the page please we don't need it"), and a
+ * landing page's own screen (7) on 2026-10-14: every page opens the page's
+ * own screen (landing-pages-flow-plan.md LF8).
  */
 const ANALYTICS = "src/app/(dashboard)/app/analytics";
 
@@ -29,7 +31,6 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/channels/page.tsx`, // 4 · Channels
   `${ANALYTICS}/[siteId]/channels/channel/page.tsx`, // 5 · A channel's own screen
   `${ANALYTICS}/[siteId]/landing-pages/page.tsx`, // 6 · Landing pages, and 17 · a device asked of Google
-  `${ANALYTICS}/[siteId]/landing-pages/page/page.tsx`, // 7 · A landing page's own screen
   `${ANALYTICS}/[siteId]/all-pages/page.tsx`, // 8 · All pages
   `${ANALYTICS}/[siteId]/all-pages/page/page.tsx`, // 21 · A page's own screen (second round, §18.2)
   `${ANALYTICS}/[siteId]/events/page.tsx`, // 22 · Events

@@ -18,7 +18,7 @@ import { usePageKinds } from "../../../../_components/usePageKinds";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { formatPercent, formatTime, pathOf } from "../../../_components/analyticsFormat";
 import { coarserThanStep, perStep, shiftDays } from "../../../_components/stepScale";
-import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, useStep, type Step } from "../../../_components/useAnalytics";
+import { useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, useStep, type Step } from "../../../_components/useAnalytics";
 
 /**
  * A channel's own page, above its table (docs/plans/active/ga-channel-pages-plan.md
@@ -252,7 +252,7 @@ export function ChannelMovers({ channel, top }: { channel: string; top: ChannelT
   const tf = useTranslations("googleAnalytics.filters");
   const tk = useTranslations("googleAnalytics.channelPage.kinds");
   const status = useAnalyticsStatus();
-  const hrefFor = useAnalyticsHref(useAnalyticsSiteId());
+  const pageHref = usePageHref();
   const [period] = usePeriod();
   const movers = top?.movers ?? [];
   if (top && movers.length === 0) return null;
@@ -263,7 +263,7 @@ export function ChannelMovers({ channel, top }: { channel: string; top: ChannelT
     detail: `${formatNumber(page.visitsBefore)} → ${formatNumber(page.visits)}`,
     change: page.visits - page.visitsBefore,
     hover: t("hover", { page: nameOf(page.address), before: formatNumber(page.visitsBefore), visits: formatNumber(page.visits), period: tf(`periods.${period}`).toLowerCase(), was: tf(`before.${period}`) }),
-    ...(page.key.startsWith("~") ? { href: hrefFor("landing-pages/page", { key: page.key }) } : {}),
+    ...(page.key.startsWith("~") ? { href: pageHref(page.key) } : {}),
     ...(page.address === NOT_SET ? { muted: true } : {}),
   }));
   return (

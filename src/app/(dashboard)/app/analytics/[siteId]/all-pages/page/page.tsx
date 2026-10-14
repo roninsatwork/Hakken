@@ -24,7 +24,8 @@ import { PageLink } from "../../../_components/AnalyticsCells";
 import { TopBars, VisitsChart } from "../../../_components/AnalyticsChart";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "../../../_components/analyticsFormat";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { backTarget } from "../../../_components/analyticsBack";
 import { PageStoryCharts, PageStoryFigures, PageStoryNotices, useStoryClicksTable, useStorySourcesTable } from "../../../_components/PageStory";
 
 type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsPageReads.analyticsPage>>;
@@ -71,6 +72,14 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   const args = useAnalyticsArgs();
   const [period] = usePeriod();
   const hrefFor = useAnalyticsHref(args.siteId);
+  const pageHref = usePageHref();
+  // Back to the screen this page was opened from, as it was (landing-pages-flow-plan.md LF9); else All pages.
+  const back = backTarget(useSearchParams().get("from"));
+  const tm = useTranslations("googleAnalytics.menu");
+  const backLabel = (to: NonNullable<typeof back>) => to.screen === "page" ? t("backToPage")
+    : to.screen === "channel" ? to.name ?? tm("channels")
+      : to.screen === "event" ? to.name ?? tm("events")
+        : tm(to.screen);
   const page = useSearchParams().get("key") ?? "";
   const answer = useQuery(api.googleAnalyticsPageReads.analyticsPage, page ? { ...args, page } : "skip");
   const sourcesTable = useStorySourcesTable(answer?.story, status.host);
@@ -93,7 +102,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader
-        back={{ label: t("back"), href: hrefFor("all-pages") }}
+        back={back ? { label: backLabel(back), href: `/app/analytics/${args.siteId}/${back.path}` } : { label: t("back"), href: hrefFor("all-pages") }}
         icon={<FileText className="h-5 w-5 text-brand" />}
         title={answer ? pathOf(address) : "…"}
         description={description}
@@ -186,7 +195,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
             className: CUT_COLUMN.first,
             // The page cell for all three: a page's title over its address, a website's name over its own, none over what it means.
             cell: (entry) => entry.kind === "page"
-              ? <PageLink address={entry.label} href={hrefFor("all-pages/page", { key: entry.key })} title={entry.title} />
+              ? <PageLink address={entry.label} href={pageHref(entry.key)} title={entry.title} />
               : <PageLink address={entry.kind === "none" ? t("noPageBeforeLine") : entry.kind === "other" ? t("otherBeforeLine") : (entry.hosts ?? [entry.key]).join(", ")} href={null} title={nameOf(entry)} />,
           },
           { key: "views", header: t("views"), align: "right", sortable: true, cell: (entry) => <span className="font-mono text-[12px] text-foreground">{formatNumber(entry.views)}</span> },

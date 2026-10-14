@@ -16280,6 +16280,7 @@
     },
     "page": {
       "back": "All pages",
+      "backToPage": "The page before",
       "description": "A page on {host}. Every figure here is for views of this page, or for visits that started on it where it says so.",
       "descriptionInGroup": "A page on {host}, in its page group {group}. Every figure here is for views of this page, or for visits that started on it where it says so.",
       "descriptionTitled": "“{title}”, a page on {host}. Every figure here is for views of this page, or for visits that started on it where it says so.",

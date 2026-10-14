@@ -52,7 +52,7 @@ const CHOOSE: SeenTarget = toPage("connection", { change: "1" });
 
 /** A landing page's own screen: only a page Hakken has numbered has one. */
 function pageTarget(key: string): SeenTarget | null {
-  return key.startsWith("~") ? toPage("landing-pages/page", { key }) : null;
+  return key.startsWith("~") ? toPage("all-pages/page", { key }) : null;
 }
 
 export type KindFacts = { kind: string; visits: number; visitsBefore: number; conversions: number; conversionsBefore: number };

@@ -26,7 +26,7 @@ import { useEventName } from "../../../_components/useEventName";
 import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { AnalyticsTable } from "../../../_components/AnalyticsListScreen";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod } from "../../../_components/useAnalytics";
 import { ChannelDayChart, ChannelFigures, ChannelKindBars, ChannelMovers, useKindName, type ChannelDays, type ChannelTop } from "../_components/ChannelParts";
 import { KeyEventsDailyChart, SourcesDailyChart } from "../_components/ChannelTableCharts";
 import { AssistantFiledBars, AssistantsChart } from "../_components/AssistantParts";
@@ -118,7 +118,7 @@ function ChannelTableViews({ channel, top, days, kindName }: {
   kindName: (kind: string) => string;
 }) {
   const t = useTranslations("googleAnalytics.channelPage.table");
-  const hrefFor = useAnalyticsHref(useAnalyticsSiteId());
+  const pageHref = usePageHref();
   const assistants = channel === AI_ASSISTANTS_CHANNEL;
   const manySources = (days?.sources.length ?? 0) > 1 || days?.rest === true || assistants;
   const views = (assistants ? ASSISTANT_VIEWS : VIEWS).filter((view) => view !== "sources" || manySources);
@@ -188,7 +188,7 @@ function ChannelTableViews({ channel, top, days, kindName }: {
       noun="landingPages"
       opening="visits"
       searchPlaceholder={t("findPage")}
-      rowHref={(row) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null)}
+      rowHref={(row) => (row.key.startsWith("~") ? pageHref(row.key) : null)}
       filters={filters(kinds.length > 0 ? (
         <Select aria-label={t("classification")} value={chosenGroup ?? EVERY} onChange={setGroup} chip={{ label: t("classification"), choice: chosenGroup ? kindName(chosenGroup) : null }}>
           <option value={EVERY}>{t("everyClassification")}</option>

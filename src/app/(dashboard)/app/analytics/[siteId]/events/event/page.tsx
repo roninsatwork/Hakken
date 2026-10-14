@@ -29,7 +29,7 @@ import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { useEventFunnel } from "../../../_components/AnalyticsListScreen";
 import { formatPercent, pathOf } from "../../../_components/analyticsFormat";
 import { useEventName } from "../../../_components/useEventName";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
 
 type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsEventReads.analyticsEvent>>;
 /** A row of what it was about, or of its pages: a page carries its title. */
@@ -77,6 +77,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
   const [period] = usePeriod();
   const [device] = useDevice();
   const hrefFor = useAnalyticsHref(args.siteId);
+  const pageHref = usePageHref();
   const nameOf = useEventName();
   const event = useSearchParams().get("key") ?? "";
   const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvent, event ? { ...args, event } : "skip");
@@ -203,7 +204,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
             cell: (row) => row.key === OTHER_ROWS
               ? <span className="block truncate text-[13px] text-secondary">{t("theRest")}</span>
               : showing === "pages"
-              ? <PageLink address={row.label} href={row.key.startsWith("~") ? hrefFor("all-pages/page", { key: row.key }) : null} title={row.title} />
+              ? <PageLink address={row.label} href={row.key.startsWith("~") ? pageHref(row.key) : null} title={row.title} />
               : showing === "linkUrl" && /^https?:\/\//.test(row.key)
                 ? <a href={row.key} target="_blank" rel="noopener noreferrer" title={row.key} className="block truncate text-[13px] text-info hover:underline">{row.label}</a>
                 : <span className="block truncate text-[13px] text-foreground" title={labelOf(row)}>{labelOf(row)}</span>,

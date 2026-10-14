@@ -37,7 +37,7 @@ describe("a channel's own page", () => {
     expect(box.says[0]).toEqual({ code: "lead.up.down", text: "Organic Search", a: 192, b: 150, c: 0, more: "3" });
     expect(box.says[1]).toEqual({ code: "pageFell", text: "~1", a: 49, b: 33, c: 2 });
     expect(box.says[2]).toEqual({ code: "shift", text: "hub", a: 29, b: 53, more: "service", c: 69 });
-    expect(box.steps[0]).toMatchObject({ code: "winBack", text: "~1", link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~1" } } });
+    expect(box.steps[0]).toMatchObject({ code: "winBack", text: "~1", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~1" } } });
     // The Content hub grew to 53 and converts nothing, while Service converted before.
     expect(box.steps[1]).toMatchObject({ code: "routeOn", text: "hub", a: 53, to: { segment: "channels/channel", filters: { key: "Organic Search", view: "groups" } } });
   });

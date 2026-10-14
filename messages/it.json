@@ -16280,6 +16280,7 @@
     },
     "page": {
       "back": "Tutte le pagine",
+      "backToPage": "La pagina precedente",
       "description": "Una pagina di {host}. Ogni dato qui riguarda le visualizzazioni di questa pagina, o le visite iniziate su di essa dove lo dice.",
       "descriptionInGroup": "Una pagina di {host}, nel gruppo di pagine {group}. Ogni dato qui riguarda le visualizzazioni di questa pagina, o le visite iniziate su di essa dove lo dice.",
       "descriptionTitled": "“{title}”, una pagina di {host}. Ogni dato qui riguarda le visualizzazioni di questa pagina, o le visite iniziate su di essa dove lo dice.",

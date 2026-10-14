@@ -54,7 +54,7 @@ export function pathOfAddress(address: string): string {
 
 /** Where a page's own screen is: only a page Hakken has numbered has one. */
 function pageTarget(key: string): SeenTarget | null {
-  return key.startsWith("~") ? toPage("landing-pages/page", { key }) : null;
+  return key.startsWith("~") ? toPage("all-pages/page", { key }) : null;
 }
 
 /** The change in one figure: up, down or the same. */
@@ -483,7 +483,7 @@ export function pageSees(rows: readonly BeforeFacts[], siteId: string, isAssista
   ], [
     // A busy page whose visits never convert, or one whose group has a page that converts better.
     started && ((started.visits >= 100 && started.conversions === 0) || story?.nearest)
-      ? { code: "nextStep", link: "landingPage", to: toPage("landing-pages/page", { key: self }) }
+      ? { code: "nextStep", link: "landingPage", to: toPage("all-pages/page", { key: self }) }
       : null,
     counted !== null && { code: "fixCountedAgain", link: "trackingHealth", to: toPage("tracking-health") },
     sender && { code: "keepLink", text: sender.key, link: "seePage", to: toPage("all-pages/page", { key: sender.key }) },

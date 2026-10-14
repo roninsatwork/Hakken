@@ -9,7 +9,7 @@ import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { PagesDailyChart } from "../../_components/AnalyticsChart";
-import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus } from "../../_components/useAnalytics";
+import { useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
 
 const MOVES: readonly (PageMove | "all")[] = ["all", ...PAGE_MOVES];
 
@@ -28,8 +28,7 @@ export default function AnalyticsAllPagesPage() {
   const t = useTranslations("googleAnalytics.allPages");
   const tt = useTranslations("googleAnalytics.table");
   const status = useAnalyticsStatus();
-  const siteId = useAnalyticsSiteId();
-  const hrefFor = useAnalyticsHref(siteId);
+  const pageHref = usePageHref();
   const currency = status?.connection?.currency ?? null;
   const [move, setMove] = useSiteParam<PageMove | "all">("move", "all", MOVES);
   return (
@@ -56,7 +55,7 @@ export default function AnalyticsAllPagesPage() {
       noun="pages"
       opening="views"
       searchPlaceholder={t("findPage")}
-      rowHref={(row) => (row.key.startsWith("~") ? hrefFor("all-pages/page", { key: row.key }) : null)}
+      rowHref={(row) => (row.key.startsWith("~") ? pageHref(row.key) : null)}
       emptyLabel={move === "all" ? t("empty") : t(`emptyMoves.${move}`)}
     />
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -83,6 +83,32 @@ export function analyticsQuery(params: URLSearchParams): string {
   }
   const text = shared.toString();
   return text ? `?${text}` : "";
+}
+
+/**
+ * Where this screen is, within the website's section, with everything its
+ * address holds: what a page's own screen goes back to (`from`,
+ * landing-pages-flow-plan.md LF9).
+ */
+export function useFromHere(): string {
+  const siteId = useAnalyticsSiteId();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const base = `/app/analytics/${siteId}`;
+  const segment = pathname.startsWith(base) ? pathname.slice(base.length).replace(/^\//, "") : "";
+  const query = params.toString();
+  return query ? `${segment}?${query}` : segment;
+}
+
+/**
+ * A page's own screen, the one every page in the section opens (LF8; Anthony,
+ * 2026-10-14: "this should be the default to all page level click throughs
+ * in this section"), knowing the screen it was opened from.
+ */
+export function usePageHref(): (key: string) => string {
+  const hrefFor = useAnalyticsHref(useAnalyticsSiteId());
+  const from = useFromHere();
+  return (key) => hrefFor("all-pages/page", { key, from });
 }
 
 /** A page of the website's section, with the dates, device and step. */

@@ -111,7 +111,7 @@ describe("2 · Overview", () => {
       ],
       steps: [
         { code: "channel.fell", text: "Direct", a: 5, b: 11, link: "channels", to: { segment: "channels" } },
-        { code: "page.fell", text: "/", a: 4, b: 7, link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~0" } } },
+        { code: "page.fell", text: "/", a: 4, b: 7, link: "seePage", to: { segment: "all-pages/page", filters: { key: "~0" } } },
         { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/almost-there" } },
       ],
     });
@@ -132,7 +132,7 @@ describe("2 · Overview", () => {
     ]);
     const rose = overviewSees({ siteId: SITE, now: { ...now, conversions: 20 }, before, counting: true, changedMost, searchConsole: { clicks: 900, impressions: 30_000 } });
     expect(rose.says.slice(1)).toEqual([{ code: "cause.rosePage", text: "/author/anthony/", a: 2 }, { code: "google", a: 30_000, b: 0.03 }]);
-    expect(rose.steps).toEqual([{ code: "page.rose", text: "/author/anthony/", a: 2, b: 0, link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~1" } } }]);
+    expect(rose.steps).toEqual([{ code: "page.rose", text: "/author/anthony/", a: 2, b: 0, link: "seePage", to: { segment: "all-pages/page", filters: { key: "~1" } } }]);
     const channelOnly = overviewSees({ siteId: SITE, now, before, counting: true, changedMost: changedMost.slice(0, 1), searchConsole: null });
     expect(channelOnly.says[1]).toEqual({ code: "cause.fellChannel", text: "Direct", a: 6 });
     const pageOnly = overviewSees({ siteId: SITE, now, before, counting: true, changedMost: changedMost.slice(1, 2), searchConsole: null });
@@ -258,7 +258,7 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
         { code: "notSet", a: 86, b: 86 / 511 },
       ],
       steps: [
-        { code: "nextStep", text: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~2" } } },
+        { code: "nextStep", text: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~2" } } },
         { code: "fixNotSet", a: 86, link: "trackingHealth", to: { segment: "tracking-health" } },
       ],
     });
@@ -303,7 +303,7 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
         { code: "allFrom", text: "~0", a: 2, b: 4_000 },
         { code: "engagesLess", text: "~2", a: 31, b: 0.32, c: 0.43 },
       ],
-      steps: [{ code: "readOn.mobile", text: "~2", link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~2" } } }],
+      steps: [{ code: "readOn.mobile", text: "~2", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~2" } } }],
     });
     const desktop = landingSees([...phones, row("~3", { visits: 5, conversions: 1, value: 500 })], { groups: false, device: "desktop", everyDevice: every });
     expect(desktop.says[1]).toEqual({ code: "mostFrom", text: "~0", a: 2, b: 4_000 });
@@ -409,7 +409,7 @@ describe("21 · A page's own screen", () => {
       { code: "countedAgainPages", a: 1, b: 3.5 },
     ]);
     expect(box.steps.map((step) => step.code)).toEqual(["nextStep", "fixCountedAgain", "keepLink"]);
-    expect(box.steps[0]).toMatchObject({ link: "landingPage", to: { segment: "landing-pages/page", filters: { key: "~9" } } });
+    expect(box.steps[0]).toMatchObject({ link: "landingPage", to: { segment: "all-pages/page", filters: { key: "~9" } } });
     // Counted once a visit, with its conversion on the page, from a source of its own: the page that converts better is said.
     const plain = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { ...kapferer.started, madeHere: 1 }, converter: { name: "Bing", conversions: 1 }, viewsPerVisit: 1.1, pages: { different: 1.4, counted: 1.6 } });
     expect(plain.says.map((phrase) => phrase.code)).toEqual(["startedConverted", "biggestNone", "nearest"]);

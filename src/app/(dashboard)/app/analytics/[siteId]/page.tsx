@@ -16,7 +16,7 @@ import { AnalyticsPanel } from "../_components/AnalyticsPanels";
 import { AnalyticsSees } from "../_components/AnalyticsSees";
 import { PageLink } from "../_components/AnalyticsCells";
 import { formatMoney } from "../_components/analyticsFormat";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../_components/useAnalytics";
 
 /**
  * Overview (§5; §15 screen 2, signed off 2026-10-10): What Hakken sees; the
@@ -54,7 +54,8 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, args);
   const currency = status.connection?.currency ?? null;
   const counting = countsAnything(status);
-  const pageHref = (row: { key: string }) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null);
+  const pageLink = usePageHref();
+  const pageHref = (row: { key: string }) => (row.key.startsWith("~") ? pageLink(row.key) : null);
 
   if (overview?.preparing) {
     return <Notice>{t("preparing")}</Notice>;
