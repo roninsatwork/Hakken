@@ -67,6 +67,7 @@ export function addInto(target: ListRow, row: ListRow) {
   target.people += row.people;
   target.newPeople += row.newPeople;
   target.length += row.length;
+  if (row.converting !== undefined) target.converting = (target.converting ?? 0) + row.converting;
   for (const [event, count] of row.counts) target.counts.set(event, (target.counts.get(event) ?? 0) + count);
   for (const [event, value] of row.values) target.values.set(event, (target.values.get(event) ?? 0) + value);
 }

@@ -20,6 +20,10 @@ import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/cha
  *
  * The owner is red/green colour blind: a tail is told by its place and the ▼
  * words, a followed route by its outline and the fading of the rest.
+ *
+ * Its last column may hold how visits ended instead of pages
+ * (ga-conversions-visitors-plan.md CV3, Conversions' flow): each box's
+ * `ending` gives its edge, and the key a third line for key events not counted.
  */
 
 export type PageFlowNode = {
@@ -34,6 +38,12 @@ export type PageFlowNode = {
   conversions: number;
   /** The hover's words, whole. */
   hover: string;
+  /**
+   * How a visit ended, for a last column of endings rather than pages (ga-conversions-visitors-plan.md CV3): a counted
+   * conversion (orange edge, its dot inside), a key event not counted (grey edge), a counted kind that never happened
+   * (faded), or left without converting (red edge). Left out for a page.
+   */
+  ending?: "counted" | "uncounted" | "never" | "left";
 };
 
 export type PageFlowBand = {
@@ -64,7 +74,8 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf }: {
   columns: ReadonlyArray<{ title: string; summary: ReactNode }>;
   nodes: readonly PageFlowNode[];
   bands: readonly PageFlowBand[];
-  legend: { conversions: string; left: string };
+  /** `uncounted`: the grey edge's words, for a chart that ends in key events not counted. */
+  legend: { conversions: string; left: string; uncounted?: string };
   /** A box's second line: its visits, and its conversions when it made any. */
   figuresOf: (node: PageFlowNode) => string;
 }) {
@@ -181,7 +192,7 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf }: {
               aria-pressed={picked === node.id}
               aria-label={node.hover}
               className="cursor-pointer focus-visible:outline-none"
-              opacity={pickedNode === null || near.has(node.id) ? 1 : 0.3}
+              opacity={(pickedNode === null || near.has(node.id) ? 1 : 0.3) * (node.ending === "never" ? 0.45 : 1)}
               onClick={() => pick(node.id)}
               onKeyDown={onKey(node.id)}
             >
@@ -200,10 +211,14 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf }: {
                 stroke={picked === node.id ? CHART_SERIES_ORANGE : "none"}
                 strokeWidth={2}
               />
-              <rect x={node.x} y={node.y} width={4} height={node.h} rx={2} fill={CHART_SERIES_ORANGE} />
+              {node.ending === "left" ? (
+                <rect x={node.x} y={node.y} width={4} height={node.h} rx={2} fill="currentColor" className="text-destructive" />
+              ) : (
+                <rect x={node.x} y={node.y} width={4} height={node.h} rx={2} fill={node.ending === "uncounted" ? CHART_SERIES_SLATE : CHART_SERIES_ORANGE} />
+              )}
               <text x={node.x + 12} y={node.y + 13} fontSize={11} fill="currentColor" className="text-foreground">{cut(node.label)}</text>
               <text x={node.x + 12} y={node.y + 25} fontSize={11} fill="currentColor" className="font-mono text-secondary">{figuresOf(node)}</text>
-              {node.column === 0 && node.conversions > 0 ? (
+              {(node.column === 0 || node.ending === "counted") && node.conversions > 0 ? (
                 <circle cx={node.x + NODE_W - 16} cy={node.y + 12} r={dotRadius(node.conversions)} fill={CHART_SERIES_ORANGE} stroke="currentColor" strokeWidth={1.5} className="text-foreground" />
               ) : null}
             </g>
@@ -218,6 +233,12 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf }: {
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill={CHART_SERIES_ORANGE} stroke="currentColor" strokeWidth="1.5" className="text-foreground" /></svg>
           {legend.conversions}
         </span>
+        {legend.uncounted ? (
+          <span className="inline-flex items-center gap-1.5">
+            <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true"><rect x="2" y="1" width="6" height="12" rx="2" fill={CHART_SERIES_SLATE} /></svg>
+            {legend.uncounted}
+          </span>
+        ) : null}
         <span className="inline-flex items-center gap-1.5">
           <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true"><rect x="2" y="1" width="6" height="12" rx="2" fill="currentColor" className="text-destructive" /></svg>
           {legend.left}

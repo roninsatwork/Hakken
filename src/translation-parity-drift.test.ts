@@ -45,6 +45,8 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['googleAnalytics.landing.title', '"Funnel" is the word Italian marketing uses too (Anthony, 2026-10-14: Landing pages renamed Funnel)'],
     ['googleAnalytics.seen.links.landingPages', '"Funnel" is the word Italian marketing uses too (Anthony, 2026-10-14: Landing pages renamed Funnel)'],
     ['googleAnalytics.chart.flow.figuresConverted', 'two figures and the conversion dot, no words: the same in both languages, inside a box of Landing pages\' flow'],
+    ['googleAnalytics.conversionFlow.figuresConverted', 'two figures and the conversion dot, no words: the same in both languages, inside a box of Conversions\' flow'],
+    ['googleAnalytics.visitors.map.conversions', '"conv." is the short form in both languages, under a square of Visitors\' grid, as Channels\' map'],
     ['admin.newsFollows.add.namePlaceholder', "an example person's name, the same in every language"],
     ['sidebar.roninsRun', 'product name'],
     ['sidebar.roninsRun3D', 'the separate 3D game product name'],

@@ -313,7 +313,9 @@ describe("page classifications", () => {
 
     await expect(s.create(siteId, " ", [])).rejects.toThrow(/Give the classification a name/);
     await expect(s.create(siteId, "content HUB", [])).rejects.toMatchObject(said(/already has a classification called "Content hub"/));
-    await expect(s.create(siteId, "Not sorted", [])).rejects.toThrow(/Not sorted/);
+    // What a page with no classification shows, now and before (2026-10-15), is never a classification's name.
+    await expect(s.create(siteId, "Unclassified", [])).rejects.toThrow(/Unclassified/);
+    await expect(s.create(siteId, "Not sorted", [])).rejects.toThrow(/Unclassified/);
     await expect(s.create(siteId, "x".repeat(61), [])).rejects.toThrow(/60 characters/);
     await expect(s.create(siteId, "Everything", [{ kind: "STARTS_WITH", value: "/" }])).rejects.toThrow(/would catch every page/);
     await expect(s.create(siteId, "Dashes", [{ kind: "CONTAINS", value: "--" }])).rejects.toThrow(/word or a number/);

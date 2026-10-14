@@ -1769,7 +1769,7 @@
       },
       "classification": {
         "loading": "Loading…",
-        "description": "What each of {host}'s pages is, in its own words — its service lines, products and content hub. Once it has any, this website's charts and screens use them instead of the page kinds worked out automatically, and a page none catches shows as Not sorted. For this company only.",
+        "description": "What each of {host}'s pages is, in its own words — its service lines, products and content hub. Once it has any, this website's charts and screens use them instead of the page kinds worked out automatically, and a page none catches shows as Unclassified. For this company only.",
         "descriptionCompetitor": "{host} is a competitor. Only the company's own websites have their pages classified.",
         "competitor": "A competitor has no classifications: only the company's own websites have their pages classified.",
         "add": "Add classification",
@@ -1779,7 +1779,7 @@
           "pages": "Pages · {count}",
           "classifications": "Classifications · {count}"
         },
-        "notice": "{sorted} of {pages} pages have a classification; {notSorted} are not sorted. Set a page's classification in its row, or tick several and set them together. The bin removes a page's classification.",
+        "notice": "{sorted} of {pages} pages have a classification; {notSorted} are unclassified. Set a page's classification in its row, or tick several and set them together. The bin removes a page's classification.",
         "noticeEmpty": "No classifications yet. Add one, then set pages to it in their rows, or let its address lines catch them.",
         "suggest": {
           "notice": "Start from {host}'s own folders and sitemap files: one classification for each folder of {folderPages} or more pages and each sitemap file of its own, named from its addresses and caught by its line. Pages at the top level, such as service pages, stay for you to classify.",
@@ -1789,12 +1789,12 @@
           "overLimit": "{count, plural, one {# more was} other {# more were}} left out at this website's limits for classifications and address lines.",
           "failed": "The classifications could not be suggested."
         },
-        "showNotSorted": "Show the {count} not sorted",
+        "showNotSorted": "Show the {count} unclassified",
         "cut": "This website has more than {count} pages. The {count} with the most clicks are shown and counted here.",
         "searchPlaceholder": "Find a page…",
         "filter": "Classification",
         "filterAll": "Every classification",
-        "notSorted": "Not sorted",
+        "notSorted": "Unclassified",
         "clicksNote": "Clicks: Search Console's last 90 days.",
         "columns": {
           "tick": "Tick",
@@ -1806,7 +1806,7 @@
         },
         "tickPage": "Tick {page}",
         "rowSelect": "Classification of {page}",
-        "chooseNotSorted": "Not sorted — choose…",
+        "chooseNotSorted": "Unclassified — choose…",
         "how": {
           "BY_HAND": "Set by hand",
           "BY_LINE": "By the rule: {line}",
@@ -1814,8 +1814,8 @@
           "NONE": "—"
         },
         "removeBackTo": "Remove — goes back to its rule ({name})",
-        "removeNotSorted": "Remove — shows as Not sorted",
-        "removeTakeOut": "Remove — takes this page out of its rule; shows as Not sorted",
+        "removeNotSorted": "Remove — shows as Unclassified",
+        "removeTakeOut": "Remove — takes this page out of its rule; shows as Unclassified",
         "bulk": {
           "ticked": "{count, plural, one {# page ticked} other {# pages ticked}}",
           "label": "Classification for the ticked pages",
@@ -1840,12 +1840,12 @@
           },
           "byHandOnly": "Set by hand only",
           "edit": "Edit {name}",
-          "remove": "Remove {name} — its pages show as Not sorted",
+          "remove": "Remove {name} — its pages show as Unclassified",
           "empty": "No classifications yet. Add one with Add classification."
         },
         "remove": {
           "title": "Remove {name}?",
-          "body": "{lines, plural, =0 {It has no address lines} one {Its address line goes} other {Its # address lines go}}, and {byHand, plural, =0 {no pages are set to it by hand} one {the page set to it by hand loses it} other {the # pages set to it by hand lose it}}. Its pages show as Not sorted, unless another classification's line catches them.",
+          "body": "{lines, plural, =0 {It has no address lines} one {Its address line goes} other {Its # address lines go}}, and {byHand, plural, =0 {no pages are set to it by hand} one {the page set to it by hand loses it} other {the # pages set to it by hand lose it}}. Its pages show as Unclassified, unless another classification's line catches them.",
           "confirm": "Remove",
           "failed": "Could not remove the classification. Try again."
         },
@@ -1922,7 +1922,7 @@
         },
         "all": {
           "classifications": "Classifications",
-          "notSorted": "Not sorted",
+          "notSorted": "Unclassified",
           "notSortedOf": "{notSorted} of {pages}"
         }
       },
@@ -9749,7 +9749,7 @@
       "seoPageType": {
         "name": "What kind of page is this?",
         "description": "Labels each page a site ranks with — service, article, case study, location and so on — so Visibility's Top pages report shows which kinds of page bring the visitors.",
-        "rule": "Without it, only pages whose address says what they are (the home page, /contact, anything under /blog) are labelled; the rest show as not sorted yet.",
+        "rule": "Without it, only pages whose address says what they are (the home page, /contact, anything under /blog) are labelled; the rest show as not classified yet.",
         "answers": {
           "home": "Home page",
           "service": "Service page",
@@ -10592,14 +10592,14 @@
         "CAREERS": "Careers",
         "LEGAL": "Legal",
         "OTHER": "Other",
-        "UNJUDGED": "Not sorted yet"
+        "UNJUDGED": "Not classified yet"
       },
       "usd": "${value}",
       "findWebsite": "Find a website…",
       "noWebsiteMatch": "No website matches that.",
       "classification": "Classification",
       "anyClassification": "Any classification",
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "openOwnSite": "Open {host}"
     },
     "overview": {
@@ -12301,7 +12301,7 @@
       "searchPlaceholder": "Find a page…",
       "empty": "No pages yet: nothing has come in from the sitemap, the crawl, the rankings or Search Console for this website.",
       "noMatch": "No page matches that.",
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "notInSitemap": "Not in the sitemap",
       "no": "No",
       "ofAll": "of {count, plural, =1 {# page} other {# pages}}",
@@ -15308,7 +15308,7 @@
       "empty": "Google hasn't shown your pages in these dates.",
       "guides": "Guides and articles",
       "other": "Everything else",
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "seeInsights": "See the Insights findings about demand",
       "columns": {
         "service": "Service",
@@ -15714,7 +15714,7 @@
         "next": "Most went to",
         "nextTitle": "The page most of those visits opened next, and its share of them"
       },
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
       "noSource": "(not set)",
       "download": "Download CSV",
@@ -16255,7 +16255,7 @@
       "title": "Funnel",
       "description": "Where each visit started, and what those visits did next: left, went on to another page, or converted.",
       "groupFilter": "Page group",
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "everyGroup": "Every page group",
       "viewLabel": "Show",
       "views": {
@@ -16438,10 +16438,12 @@
       "empty": "No events in these dates.",
       "noMatch": "Nothing matches that search.",
       "preparing": "Every event comes in with the next collection, within a day.",
-      "collecting": "Still being collected…"
+      "collecting": "Still being collected…",
+      "notCounted": "Not counted",
+      "bar": "conversions first"
     },
     "eventScreen": {
-      "back": "Events",
+      "back": "Conversions",
       "description": "Google Analytics' {google} event. Every figure here is for this event.",
       "descriptionWhat": "Google Analytics' {google} event: {what}. Every figure here is for this event.",
       "what": {
@@ -16512,7 +16514,7 @@
     },
     "conversions": {
       "title": "Conversions",
-      "description": "Each thing this website counts as a conversion, over time and with its value, and where the visits that made them came from.",
+      "description": "Each thing this website counts as a conversion, the route the visits took to reach it and what it was worth; what people did before converting; and every other event Google Analytics recorded.",
       "revenue": "Shop revenue",
       "purchases": "Purchases",
       "averageOrder": "Average order",
@@ -16609,7 +16611,7 @@
     },
     "visitors": {
       "title": "Visitors",
-      "description": "Who visited: how many people, whether they'd been before, what they used, and their age, gender and interests where Google can tell.",
+      "description": "Who visited: how many people, whether they'd been before, what they used, their age, gender and interests where Google can tell, and what each kind of visitor reads.",
       "showing": "Showing",
       "views": {
         "visitorType": "New or returning",
@@ -16649,6 +16651,23 @@
         "male": "Male",
         "female": "Female",
         "unknown": "Unknown"
+      },
+      "map": {
+        "title": "Where each kind of visitor lands, by page classification",
+        "hint": "{period}. Follows the choice above the table. Each square is the group's visits that started on that kind of page, brighter for a bigger share of the group, with its conversions.",
+        "hintNoConversions": "{period}. Follows the choice above the table. Each square is the group's visits that started on that kind of page, brighter for a bigger share of the group. Interests are kept without their conversions.",
+        "everything": "Everything else",
+        "visits": "{count, plural, =1 {1 visit} other {# visits}}",
+        "conversions": "{count, plural, =1 {1 conv.} other {# conv.}}",
+        "hover": "{group} → {kind}: {visits, plural, =1 {1 visit} other {# visits}}, {conversions, plural, =1 {1 conversion} other {# conversions}}",
+        "hoverPlain": "{group} → {kind}: {visits, plural, =1 {1 visit} other {# visits}}",
+        "legendVisits": "58 · visits that started on that kind of page",
+        "legendConversions": "3 conv. · conversions those visits made",
+        "legendShades": "a smaller to a bigger share of the group",
+        "legendEmpty": "no visits",
+        "collecting": "Still being collected: the next collection keeps where these visitors land.",
+        "empty": "No visits in these dates.",
+        "privacy": "Google held back some small groups to protect people's privacy."
       }
     },
     "landingPage": {
@@ -17117,7 +17136,14 @@
         "rateDown": "The share of visits that convert fell from {aRate} to {bRate}.",
         "rateUp": "The share of visits that convert rose from {aRate} to {bRate}.",
         "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
-        "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
+        "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value.",
+        "cameAll": "{count, plural, =1 {It came} other {All # came}} from {text} visits that landed on {more} pages.",
+        "cameMost": "{text} visits made {a} of the {b}; most conversions started on {more} pages.",
+        "biggestNone": "{text} brought {a} of the {b} visits, and none converted.",
+        "beforeBest": "Over 12 months, {aRate} of the people who did {event} went on to convert, against {bRate} of everyone.",
+        "uncounted": "{event} happened {count, plural, =1 {once} other {# times}} but isn't counted as a conversion.",
+        "openChannel": "See where {text}'s visits land, and why none converted.",
+        "countUncounted": "Decide whether {event} should count as a conversion."
       },
       "products": {
         "none": "No products were looked at or bought in these dates.",
@@ -17133,6 +17159,7 @@
         "none": "No visits in these dates.",
         "people": "{a} people made the {b} visits; {cRate} were new to the website.",
         "returnersConvert": "The {a} visits from people who came back converted at {bRate}, against {cRate} for new visitors.",
+        "returningLand": "People who came back landed most on {text} pages: {aRate} of their visits.",
         "browserLags": "{aRate} of visits were on {text}, and they engaged less: {bRate} against {cRate} for the website.",
         "signalsOff": "Age, gender and interests are empty: Google signals is off in this website's Google Analytics.",
         "hidden": "Google held back some small groups to protect people's privacy.",
@@ -17236,6 +17263,62 @@
         "campaigns": "Campaigns",
         "channel": "See the channel"
       }
+    },
+    "conversionFlow": {
+      "unclassified": "Unclassified",
+      "title": "How visits reached a conversion, by page classification",
+      "hint": "{period}: where the visits came from, the kind of page they landed on, and how they ended. Click a box to follow its routes in and out; click it again to see them all.",
+      "everyDevice": "Every device's, as landing pages are kept.",
+      "came": "Came from",
+      "landed": "Landed on",
+      "ended": "Ended in",
+      "cameSummary": "{visits} visits · {count, plural, =1 {1 channel} other {# channels}}",
+      "landedSummary": "{visits} visits · {count, plural, =1 {1 page classification} other {# page classifications}}",
+      "endedSummary": "● {conversions, plural, =1 {1 conversion} other {# conversions}} · {uncounted} not counted",
+      "moreChannels": "{count, plural, =1 {1 more channel} other {# more channels}}",
+      "moreKinds": "{count, plural, =1 {1 more classification} other {# more classifications}}",
+      "left": "Left without converting",
+      "figures": "{visits}",
+      "figuresConverted": "{visits} · ● {conversions}",
+      "figuresNever": "0 · never happened",
+      "figuresUncounted": "{count} · not counted",
+      "nodeHover": "{name}: {visits, plural, =1 {1 visit} other {# visits}}, {conversions, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}. Click to follow its routes.",
+      "countedHover": "{name}: {count, plural, =1 {once} other {# times}}, counted as a conversion.",
+      "uncountedHover": "{name}: {count, plural, =1 {once} other {# times}}, a key event not counted as a conversion.",
+      "neverHover": "{name}: counted as a conversion, but never happened in these dates.",
+      "leftHover": "{count, plural, =1 {1 visit} other {# visits}} ended with no key event.",
+      "bandHover": "{from} → {to}: {visits, plural, =1 {1 visit} other {# visits}}",
+      "bandHoverConverted": "{from} → {to}: {visits, plural, =1 {1 visit} other {# visits}}, {conversions, plural, =1 {1 conversion} other {# conversions}}",
+      "bandEnded": "{from} → {to}: {count, plural, =1 {once} other {# times}}",
+      "bandLeft": "{from}: {count, plural, =1 {1 visit} other {# visits}} left without converting",
+      "bandRevenue": "{words}, {money} revenue",
+      "legendConversions": "Conversions, on a page or the route that led to them — bigger for more",
+      "legendUncounted": "A key event not counted as a conversion",
+      "legendLeft": "Left without converting",
+      "collecting": "Still being collected: the next collection keeps which visits converted for these dates.",
+      "empty": "No visits in these dates.",
+      "csvFrom": "From",
+      "csvTo": "To",
+      "csvVisits": "Visits",
+      "csvConversions": "Conversions",
+      "byKindTitle": "Conversions by page classification",
+      "byKindHint": "{period}. Each square is the conversions made by visits that started on that kind of page, brighter for a bigger share of that conversion.",
+      "byKindCounted": "{count, plural, =1 {1 conversion} other {# conversions}}",
+      "byKindNotCounted": "{count} · not counted",
+      "byKindNever": "never happened",
+      "byKindHover": "{event} → {kind}: {count, plural, =1 {once} other {# times}}",
+      "byKindLegend": "3 · conversions from visits that started on that kind of page",
+      "byKindShades": "a smaller to a bigger share of the conversion",
+      "byKindEmpty": "none",
+      "byKindNone": "Nothing converted in these dates.",
+      "beforeTitle": "What people did before converting",
+      "beforeHint": "The last 12 months, every device, so the smaller actions have enough people to judge. The bar is the share of the people who did it that went on to convert (hover for the figures). Orange converts better than everyone's {siteRate}, on {few} people or more. Page viewed and Visit started are left off: every visit has them.",
+      "beforeHintWaiting": "The last 12 months, every device: the share of the people who did each action that went on to convert, against everyone's.",
+      "beforeRate": "Went on to convert",
+      "beforeReadout": "{rate} of {people} people went on to convert · everyone {siteRate}",
+      "beforeReadoutFew": "{rate} of {people} people went on to convert · under {few} people: too few to judge",
+      "beforeCollecting": "Still being collected: the next collection asks each action's last 12 months.",
+      "beforeEmpty": "No actions to weigh over the last 12 months yet."
     }
   },
   "bingWebmaster": {
@@ -17479,7 +17562,7 @@
         },
         "kind": "Classification",
         "allKinds": "Every classification",
-        "notSorted": "Not sorted"
+        "notSorted": "Unclassified"
       },
       "who": {
         "BING": "Bing {gap} places higher",
@@ -19726,7 +19809,7 @@
         "better": "Page converts well",
         "rest": "Other searches"
       },
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "noPage": "No page yet",
       "kinds": {
         "title": "Searches within reach, by kind of page",
@@ -19889,7 +19972,7 @@
         "verdict": "Verdict",
         "kind": "Kind of page"
       },
-      "notSorted": "Not sorted"
+      "notSorted": "Unclassified"
     },
     "pageReview": {
       "back": "Page reviews",
@@ -20148,7 +20231,7 @@
         "perEnquiry": "Service visits per enquiry",
         "perEnquiryDetail": "{then} in {period}"
       },
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "notRecorded": "Page not recorded",
       "otherPages": "Other pages",
       "month": "Month",
@@ -20223,7 +20306,7 @@
         "COMPANY": "Company",
         "LEGAL": "Legal",
         "OTHER": "Other",
-        "NOT_SORTED": "Not sorted",
+        "NOT_SORTED": "Unclassified",
         "NOT_RECORDED": "Not recorded"
       },
       "sources": {
@@ -20291,7 +20374,7 @@
       "download": "Download",
       "tableTitle": "Each group",
       "pagesCount": "{count, plural, one {# page} other {# pages}}",
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "seeGroup": "See the group",
       "do": "Give each search in \"{name}\" one page: {owner} should own the most of them.",
       "sees": {
@@ -20416,7 +20499,7 @@
       }
     },
     "decisions": {
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "everyVerdict": "Every decision",
       "sees": {
         "every": "Of your {pages} pages, {improve} to improve, {merge} to merge into another, {redirect} to redirect and {remove} to remove; {keep} are doing their job as they are.",
@@ -20506,7 +20589,7 @@
       "emptyTitle": "Nothing to read yet",
       "emptyDescription": "Connect Google Analytics, or add questions to ask the assistants, to see how you're doing in AI search.",
       "others": "Other assistants",
-      "notSorted": "Not sorted",
+      "notSorted": "Unclassified",
       "month": "Month",
       "download": "Download",
       "noMatch": "Nothing matches that search.",

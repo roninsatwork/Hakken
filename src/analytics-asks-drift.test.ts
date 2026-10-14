@@ -18,8 +18,11 @@ const EXTENSIONS = new Set(['.ts', '.tsx']);
 /** The actions a Google Analytics screen may call: Live's realtime figures and an event's funnel. */
 const ALLOWED_ACTIONS = new Set(['googleAnalyticsRealtime.askGoogleAnalyticsRealtime', 'googleAnalyticsLive.askEventFunnel']);
 
-/** Where a read may take a list asked live: the event funnel's, and the module that reads it. */
-const LIVE_READERS = new Set(['convex/googleAnalyticsEventReads.ts', 'convex/googleAnalyticsRows.ts']);
+/**
+ * Where a read may take a list kept with the live ones: the event funnel's, the module that reads it, and Conversions'
+ * "What people did before converting", which reads each action's funnel the night's run kept (ga-conversions-visitors-plan.md CV4).
+ */
+const LIVE_READERS = new Set(['convex/googleAnalyticsEventReads.ts', 'convex/googleAnalyticsRows.ts', 'convex/googleAnalyticsConversionReads.ts']);
 
 const screenFiles = () => walkFiles(SCREENS, EXTENSIONS).filter((file) => !/\.test\.tsx?$/.test(file));
 
@@ -47,5 +50,8 @@ describe('no Google Analytics screen asks Google (SF1)', () => {
     expect(readers.filter((file) => !LIVE_READERS.has(file))).toEqual([]);
     const eventReads = readRepoFile('convex/googleAnalyticsEventReads.ts');
     expect([...eventReads.matchAll(/readLive\(([^)]*)\)/g)].map((match) => match[1].includes('funnelAsk('))).toEqual([true]);
+    // Conversions reads only funnels, and only those the night's run keeps: 12 months, every device.
+    const conversionReads = readRepoFile('convex/googleAnalyticsConversionReads.ts');
+    expect([...conversionReads.matchAll(/readLive\(([^)]*)\)/g)].map((match) => match[1].includes('funnelAsk(') && match[1].includes('"365"'))).toEqual([true]);
   });
 });

@@ -33,13 +33,13 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/funnel/page.tsx`, // 6 · Funnel (was Landing pages), and 17 · a device asked of Google
   `${ANALYTICS}/[siteId]/all-pages/page.tsx`, // 8 · All pages
   `${ANALYTICS}/[siteId]/all-pages/page/page.tsx`, // 21 · A page's own screen (second round, §18.2)
-  `${ANALYTICS}/[siteId]/events/page.tsx`, // 22 · Events
   `${ANALYTICS}/[siteId]/events/event/page.tsx`, // 23 · An event's own screen
   `${ANALYTICS}/[siteId]/campaigns/page.tsx`, // 17 · Campaigns
   `${ANALYTICS}/[siteId]/visitors/page.tsx`, // 15 · Visitors
   `${ANALYTICS}/[siteId]/products/page.tsx`, // 25 · Products
   `${ANALYTICS}/[siteId]/live/page.tsx`, // 14 · Live
-  `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, and 16 · Nothing counted yet
+  // 22 · Events is part of Conversions (ga-conversions-visitors-plan.md CV1): its old address forwards there.
+  `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, with every event, and 16 · Nothing counted yet
   `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
   `${ANALYTICS}/[siteId]/connection/page.tsx`, // 11 · Connection, and 14 · Choose what counts
   `${ANALYTICS}/_components/AnalyticsNotices.tsx`, // 12 · Not connected yet, on every page until connected

@@ -107,7 +107,8 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader
-        back={{ label: t("back"), href: hrefFor("events") }}
+        // Every event is listed on Conversions (ga-conversions-visitors-plan.md CV1).
+        back={{ label: t("back"), href: hrefFor("conversions") }}
         icon={<MousePointerClick className="h-5 w-5 text-brand" />}
         title={event ? name : "…"}
         description={what ? t("descriptionWhat", { google: event, what }) : t("description", { google: event })}

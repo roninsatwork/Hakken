@@ -26,9 +26,20 @@ describe("15 · Visitors", () => {
       ],
       steps: [
         { code: "reasonToReturn", link: "conversions", to: { segment: "conversions" } },
-        { code: "checkBrowser", text: "Safari", link: "events", to: { segment: "events" } },
+        // Events are part of Conversions (ga-conversions-visitors-plan.md CV1).
+        { code: "checkBrowser", text: "Safari", link: "conversions", to: { segment: "conversions" } },
       ],
     });
+    expectAnalyticsWords("visitors", box);
+  });
+
+  test("where returning visitors land, when enough came back and most landed on one kind of page (CV7)", () => {
+    const facts = { ...ronins, signals: "on" as const, browsers: [], newVisitors: { visits: 700, conversions: 7 }, returning: { visits: 108, conversions: 0 } };
+    const box = visitorsSees({ ...facts, returningLands: { kind: "brand", share: 0.43, visits: 108 } });
+    expect(box.says).toEqual([{ code: "people", a: 671, b: 808, c: 589 / 671 }, { code: "returningLand", text: "brand", a: 0.43 }]);
+    // Too few back, or spread across kinds of page: not said.
+    expect(visitorsSees({ ...facts, returningLands: { kind: "brand", share: 0.43, visits: 20 } }).says.map((one) => one.code)).toEqual(["people"]);
+    expect(visitorsSees({ ...facts, returningLands: { kind: "brand", share: 0.3, visits: 108 } }).says.map((one) => one.code)).toEqual(["people"]);
     expectAnalyticsWords("visitors", box);
   });
 

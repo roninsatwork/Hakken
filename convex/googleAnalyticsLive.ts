@@ -53,6 +53,7 @@ export const liveTarget = internalQuery({
       origin: siteOrigin(addresses, website?.host ?? ""),
       timeZone: connection.timeZone ?? "Europe/London",
       events: (connection.events ?? []).map((event) => event.eventName),
+      counted: (connection.events ?? []).filter((event) => event.counted).map((event) => event.eventName),
       perVisit: perVisitOf(connection),
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,

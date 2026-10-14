@@ -34,8 +34,11 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend }
   rowVisits: (row: ChannelMapRow) => number;
   /** "3 conv." under a square's number. */
   conversionsWord: (count: number) => string;
-  /** The key's words: what a number, a conversions line, the shades and an empty square mean. */
-  legend: { visits: string; conversions: string; shades: string; empty: string };
+  /**
+   * The key's words: what a number, a conversions line, the shades and an empty square mean. Without `conversions`, for
+   * a grid whose squares are conversions themselves (Conversions' by page classification), that line is left out.
+   */
+  legend: { visits: string; conversions?: string; shades: string; empty: string };
 }) {
   const template = { gridTemplateColumns: `140px repeat(${columns.length}, minmax(0, 1fr))` };
   return (
@@ -81,7 +84,7 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend }
       })}
       <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12px] text-secondary">
         <span>{legend.visits}</span>
-        <span>{legend.conversions}</span>
+        {legend.conversions ? <span>{legend.conversions}</span> : null}
         <span className="inline-flex items-center gap-1.5">
           {CHART_ENGAGEMENT_RAMP.map((shade) => <span key={shade} aria-hidden="true" className="inline-block h-3 w-3 rounded-[3px]" style={{ backgroundColor: shade }} />)}
           {legend.shades}

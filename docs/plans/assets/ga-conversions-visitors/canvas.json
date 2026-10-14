@@ -1,0 +1,46 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-14T19:40:00Z"
+  },
+  "title": "GA Conversions (Events merged in) and Visitors",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Conversions.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 3720,
+      "title": "Conversions — with Events merged in",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Visitors.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1910,
+      "title": "Visitors — where each kind of visitor lands",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Conversions.dc.html",
+    "Visitors.dc.html"
+  ],
+  "notes": {
+    "heading": {
+      "x": 0,
+      "y": -300,
+      "text": "Conversions (Events merged in) and Visitors",
+      "kind": "title1",
+      "maxW": 2960
+    }
+  },
+  "designSystems": []
+}

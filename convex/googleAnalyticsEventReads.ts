@@ -33,6 +33,8 @@ const eventRowValidator = v.object({
   eventName: v.string(),
   kind: kindValidator,
   counted: v.boolean(),
+  /** A key event of the property, listed on the connection, whether it counts or not: Conversions' "Not counted" (CV5). */
+  keyEvent: v.boolean(),
   times: v.number(),
   people: v.number(),
   /** Visits it happened in. */
@@ -96,6 +98,7 @@ export async function readEvents(ctx: SiteReader, args: ObjectType<typeof analyt
   const connection = await connectionOf(ctx, holdId);
   if (!connection?.newestDay) return null;
   const counted = new Set(countedOf(connection).map((event) => event.eventName));
+  const keyEvents = new Set((connection.events ?? []).map((event) => event.eventName));
   const nowList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
   const beforeList = await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country);
   const stored = await storedTimes(ctx, connection, args.period, args.device, country, ["scroll", "click"]);
@@ -112,6 +115,7 @@ export async function readEvents(ctx: SiteReader, args: ObjectType<typeof analyt
       eventName,
       kind: eventKind(eventName, counted.has(eventName)),
       counted: counted.has(eventName),
+      keyEvent: keyEvents.has(eventName),
       times: row?.times ?? 0,
       people: row?.people ?? 0,
       visits: row?.visits ?? 0,

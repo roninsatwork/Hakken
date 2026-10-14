@@ -1,5 +1,6 @@
 import { collectPageDays } from "./googleAnalyticsPageSeries";
 import { collectPageLists, pageListJobs, type PageListsJob } from "./googleAnalyticsPageLists";
+import { collectActionFunnels, type FunnelsJob } from "./googleAnalyticsActionFunnels";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
@@ -535,9 +536,11 @@ export const collectSiteStep = internalAction({
           jobAt += 1;
           continue;
         }
-        const result = "pages" in job
-          ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top)
-          : await collectPeriod(ctx, open, args.connectionId, target, job, args.top);
+        const result = "funnels" in job
+          ? await collectActionFunnels(ctx, open, target, args.top)
+          : "pages" in job
+            ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top)
+            : await collectPeriod(ctx, open, args.connectionId, target, job, args.top);
         if (!result.ok) {
           await stop(result);
           return null;
@@ -564,7 +567,7 @@ export const collectSiteStep = internalAction({
 
 /** Another home country's days, a step's worth (ga-stored-figures-plan.md SF7). */
 type CountryDaysJob = { days: true; country: string; from: string; to: string };
-type Job = PeriodJob | PageListsJob | CountryDaysJob;
+type Job = PeriodJob | PageListsJob | CountryDaysJob | FunnelsJob;
 
 /** Each other home country's days, newest first, a week at a time: from the run's start, so the same every step. */
 function countryDayJobs(countryFrom: ReadonlyArray<{ country: string; from: string }>, top: string): CountryDaysJob[] {
@@ -582,11 +585,17 @@ function countryDayJobs(countryFrom: ReadonlyArray<{ country: string; from: stri
 /**
  * What a run asks once the main home country's days are in, in order: each
  * other home country's days, the ready-made lists — the main home country's,
- * then each other's — and the shared page lists (ga-stored-figures-plan.md
- * SF13), each country's: the same every step of the run.
+ * then each other's — the shared page lists (ga-stored-figures-plan.md
+ * SF13), each country's, and each action's funnel
+ * (ga-conversions-visitors-plan.md CV4): the same every step of the run.
  */
 function jobsFor(weekly: boolean, others: readonly string[], shop: boolean, countryDays: readonly CountryDaysJob[], listsFrom?: string): Job[] {
-  const lists: Job[] = [...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others), ...pageListJobs(weekly, others)];
+  const lists: Job[] = [
+    ...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others),
+    ...pageListJobs(weekly, others),
+    // What people did before converting, over 12 months, once the events' 12 months are in (ga-conversions-visitors-plan.md CV4).
+    ...(weekly ? [{ funnels: true } as const] : []),
+  ];
   return [...countryDays, ...startingAt(lists, listsFrom)];
 }
 

@@ -36,7 +36,8 @@ export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "c
 export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
 type Column = "tick" | "name" | "source" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "value" | "change" | "left" | "onward" | "next";
 
-const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change"];
+/** Visitors' columns, each group with the classification it lands on most (ga-conversions-visitors-plan.md CV7). */
+const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change", "landsMost"];
 
 /**
  * Each list's columns, as drawn (§11, §15; the second round, §18.2 boards 18

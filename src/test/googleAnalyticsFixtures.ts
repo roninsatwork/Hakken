@@ -152,13 +152,78 @@ const CONVERSION_KINDS = {
   ],
   shop: null,
   fired: [] as Array<{ eventName: string; count: number }>,
+  /** How visits reached a conversion, by page classification (ga-conversions-visitors-plan.md CV3). */
+  flow: {
+    collecting: false,
+    everyDevice: false,
+    visits: 2412,
+    channels: [
+      { key: "Organic Search", visits: 1800, conversions: 12, more: 0 },
+      { key: "Direct", visits: 400, conversions: 8, more: 0 },
+      { key: "~more", visits: 212, conversions: 3, more: 4 },
+    ],
+    kinds: [
+      { kind: "svc", name: "Services" as string | null, visits: 1400, conversions: 15, more: 0 },
+      { kind: "NOT_SORTED", name: null as string | null, visits: 800, conversions: 8, more: 0 },
+      { kind: "NO_PAGE", name: null as string | null, visits: 212, conversions: 0, more: 0 },
+    ],
+    endings: [
+      { key: "generate_lead", counted: true, count: 14, revenue: 0 },
+      { key: "click_tel", counted: true, count: 6, revenue: 0 },
+      { key: "click_email", counted: true, count: 3, revenue: 0 },
+      { key: "~left", counted: false, count: 2389, revenue: 0 },
+    ],
+    routes: [
+      { from: "c:Organic Search", to: "k:svc", visits: 1200, conversions: 10, revenue: 0, channels: ["c:Organic Search"] },
+      { from: "c:Organic Search", to: "k:NOT_SORTED", visits: 600, conversions: 2, revenue: 0, channels: ["c:Organic Search"] },
+      { from: "c:Direct", to: "k:NOT_SORTED", visits: 200, conversions: 6, revenue: 0, channels: ["c:Direct"] },
+      { from: "c:Direct", to: "k:svc", visits: 200, conversions: 2, revenue: 0, channels: ["c:Direct"] },
+      { from: "c:~more", to: "k:NO_PAGE", visits: 212, conversions: 3, revenue: 0, channels: ["c:~more"] },
+      { from: "k:svc", to: "e:generate_lead", visits: 10, conversions: 10, revenue: 0, channels: ["c:Organic Search", "c:Direct"] },
+      { from: "k:NOT_SORTED", to: "e:click_tel", visits: 6, conversions: 6, revenue: 0, channels: ["c:Direct"] },
+      { from: "k:svc", to: "e:~left", visits: 1385, conversions: 0, revenue: 0, channels: ["c:Organic Search", "c:Direct"] },
+      { from: "k:NOT_SORTED", to: "e:~left", visits: 792, conversions: 0, revenue: 0, channels: ["c:Organic Search", "c:Direct"] },
+      { from: "k:NO_PAGE", to: "e:~left", visits: 212, conversions: 0, revenue: 0, channels: ["c:~more"] },
+    ],
+    grid: {
+      kinds: [{ kind: "svc", name: "Services" as string | null }, { kind: "NOT_SORTED", name: null as string | null }, { kind: "NO_PAGE", name: null as string | null }],
+      rows: [
+        { eventName: "generate_lead", counted: true, count: 14, cells: [10, 4, 0] },
+        { eventName: "click_tel", counted: true, count: 6, cells: [0, 6, 0] },
+        { eventName: "click_email", counted: true, count: 3, cells: [3, 0, 0] },
+      ],
+    },
+  } as {
+    collecting: boolean; everyDevice: boolean; visits: number;
+    channels: Array<{ key: string; visits: number; conversions: number; more: number }>;
+    kinds: Array<{ kind: string; name: string | null; visits: number; conversions: number; more: number }>;
+    endings: Array<{ key: string; counted: boolean; count: number; revenue: number }>;
+    routes: Array<{ from: string; to: string; visits: number; conversions: number; revenue: number; channels: string[] }>;
+    grid: { kinds: Array<{ kind: string; name: string | null }>; rows: Array<{ eventName: string; counted: boolean; count: number; cells: number[] }> };
+  } | null,
+  /** What people did before converting, over 12 months (CV4). */
+  before: {
+    collecting: false,
+    siteRate: 0.012 as number | null,
+    few: 100,
+    rows: [{ eventName: "scroll", did: 900, then: 30 }, { eventName: "file_download", did: 40, then: 3 }],
+  } as { collecting: boolean; siteRate: number | null; few: number; rows: Array<{ eventName: string; did: number; then: number }> } | null,
 };
 
 /** Conversions' answer, its What Hakken sees worked out by its own rules. */
 export const CONVERSIONS = { ...CONVERSION_KINDS, seen: conversionsSees(CONVERSION_KINDS) };
 
 /** Conversions with nothing counted (§15 screen 16): the visits, and the key event the property records. */
-const NOTHING_COUNTED_KINDS = { ...CONVERSION_KINDS, kinds: [], fired: [{ eventName: "sign_up", count: 5 }] };
+const NOTHING_COUNTED_KINDS = { ...CONVERSION_KINDS, kinds: [], fired: [{ eventName: "sign_up", count: 5 }], flow: null, before: null };
+
+/** Every event, as Conversions' table reads it (ga-conversions-visitors-plan.md CV5): the counted ones, a key event not, the rest. */
+const EVENT_ROWS = [
+  { eventName: "page_view", kind: "automatic" as const, counted: false, keyEvent: false, times: 2431, people: 671, visits: 808, timesBefore: 2210 },
+  { eventName: "scroll", kind: "measured" as const, counted: false, keyEvent: false, times: 214, people: 160, visits: 180, timesBefore: 190 },
+  { eventName: "generate_lead", kind: "conversion" as const, counted: true, keyEvent: true, times: 14, people: 14, visits: 14, timesBefore: 11 },
+  { eventName: "sign_up", kind: "own" as const, counted: false, keyEvent: true, times: 5, people: 5, visits: 5, timesBefore: 4 },
+];
+export const EVENT_LIST = { preparing: false, live: false, rows: EVENT_ROWS, points: [], flags: { folded: false, thresholded: false, cut: false }, seen: { says: [], steps: [] } };
 export const NOTHING_COUNTED = { ...NOTHING_COUNTED_KINDS, seen: conversionsSees(NOTHING_COUNTED_KINDS) };
 
 export const LANDING_PAGE = {

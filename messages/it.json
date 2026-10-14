@@ -16438,10 +16438,12 @@
       "empty": "Nessun evento in queste date.",
       "noMatch": "Nessun risultato per questa ricerca.",
       "preparing": "Ogni evento arriva con la prossima raccolta, entro un giorno.",
-      "collecting": "Ancora in raccolta…"
+      "collecting": "Ancora in raccolta…",
+      "notCounted": "Non contato",
+      "bar": "prima le conversioni"
     },
     "eventScreen": {
-      "back": "Eventi",
+      "back": "Conversioni",
       "description": "L'evento {google} di Google Analytics. Ogni dato qui riguarda questo evento.",
       "descriptionWhat": "L'evento {google} di Google Analytics: {what}. Ogni dato qui riguarda questo evento.",
       "what": {
@@ -16512,7 +16514,7 @@
     },
     "conversions": {
       "title": "Conversioni",
-      "description": "Ogni cosa che questo sito conta come conversione, nel tempo e con il suo valore, e da dove sono arrivate le visite che le hanno fatte.",
+      "description": "Ogni cosa che questo sito conta come conversione, il percorso che le visite hanno fatto per arrivarci e quanto valeva; cosa hanno fatto le persone prima di convertire; e ogni altro evento registrato da Google Analytics.",
       "revenue": "Ricavi del negozio",
       "purchases": "Acquisti",
       "averageOrder": "Ordine medio",
@@ -16609,7 +16611,7 @@
     },
     "visitors": {
       "title": "Visitatori",
-      "description": "Chi ha visitato il sito: quante persone, se erano già venute, cosa hanno usato, e la loro età, genere e interessi dove Google può dirlo.",
+      "description": "Chi ha visitato: quante persone, se erano già venute, cosa hanno usato, la loro età, genere e interessi dove Google lo sa, e cosa legge ogni tipo di visitatore.",
       "showing": "Mostra",
       "views": {
         "visitorType": "Nuovi o di ritorno",
@@ -16649,6 +16651,23 @@
         "male": "Uomini",
         "female": "Donne",
         "unknown": "Sconosciuto"
+      },
+      "map": {
+        "title": "Dove atterra ogni tipo di visitatore, per classificazione di pagina",
+        "hint": "{period}. Segue la scelta sopra la tabella. Ogni quadrato è le visite del gruppo iniziate su quel tipo di pagina, più chiaro per una quota maggiore del gruppo, con le sue conversioni.",
+        "hintNoConversions": "{period}. Segue la scelta sopra la tabella. Ogni quadrato è le visite del gruppo iniziate su quel tipo di pagina, più chiaro per una quota maggiore del gruppo. Gli interessi sono conservati senza le loro conversioni.",
+        "everything": "Tutto il resto",
+        "visits": "{count, plural, =1 {1 visita} other {# visite}}",
+        "conversions": "{count, plural, =1 {1 conv.} other {# conv.}}",
+        "hover": "{group} → {kind}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =1 {1 conversione} other {# conversioni}}",
+        "hoverPlain": "{group} → {kind}: {visits, plural, =1 {1 visita} other {# visite}}",
+        "legendVisits": "58 · visite iniziate su quel tipo di pagina",
+        "legendConversions": "3 conv. · conversioni fatte da quelle visite",
+        "legendShades": "da una quota minore a una maggiore del gruppo",
+        "legendEmpty": "nessuna visita",
+        "collecting": "Ancora in raccolta: la prossima raccolta conserva dove atterrano questi visitatori.",
+        "empty": "Nessuna visita in queste date.",
+        "privacy": "Google ha nascosto alcuni gruppi piccoli per proteggere la privacy delle persone."
       }
     },
     "landingPage": {
@@ -17117,7 +17136,14 @@
         "rateDown": "La quota di visite che convertono è scesa dal {aRate} al {bRate}.",
         "rateUp": "La quota di visite che convertono è salita dal {aRate} al {bRate}.",
         "trySilent": "Prova tu stesso {event}, e controlla che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
-        "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore."
+        "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore.",
+        "cameAll": "{count, plural, =1 {È arrivata} other {Tutte e # sono arrivate}} da visite {text} atterrate su pagine {more}.",
+        "cameMost": "Le visite {text} ne hanno fatte {a} su {b}; la maggior parte delle conversioni è partita da pagine {more}.",
+        "biggestNone": "{text} ha portato {a} delle {b} visite, e nessuna ha convertito.",
+        "beforeBest": "In 12 mesi, il {aRate} delle persone che hanno fatto {event} ha poi convertito, contro il {bRate} di tutti.",
+        "uncounted": "{event} è {count, plural, =1 {successo una volta} other {successo # volte}} ma non conta come conversione.",
+        "openChannel": "Guarda dove atterrano le visite di {text}, e perché nessuna ha convertito.",
+        "countUncounted": "Decidi se {event} deve contare come conversione."
       },
       "products": {
         "none": "Nessun prodotto è stato visto o comprato in queste date.",
@@ -17133,6 +17159,7 @@
         "none": "Nessuna visita in queste date.",
         "people": "{a} persone hanno fatto le {b} visite; il {cRate} era nuovo sul sito.",
         "returnersConvert": "Le {a} visite di chi è tornato hanno convertito al {bRate}, contro il {cRate} dei nuovi visitatori.",
+        "returningLand": "Chi è tornato è atterrato soprattutto su pagine {text}: il {aRate} delle sue visite.",
         "browserLags": "Il {aRate} delle visite era su {text}, con meno coinvolgimento: {bRate} contro il {cRate} del sito.",
         "signalsOff": "Età, genere e interessi sono vuoti: Google Signals è spento nel Google Analytics di questo sito.",
         "hidden": "Google ha nascosto alcuni gruppi piccoli per proteggere la privacy delle persone.",
@@ -17236,6 +17263,62 @@
         "campaigns": "Campagne",
         "channel": "Vedi il canale"
       }
+    },
+    "conversionFlow": {
+      "unclassified": "Non classificate",
+      "title": "Come le visite sono arrivate a una conversione, per classificazione di pagina",
+      "hint": "{period}: da dove sono arrivate le visite, il tipo di pagina su cui sono atterrate e come sono finite. Fai clic su un riquadro per seguirne i percorsi in entrata e in uscita; fai di nuovo clic per vederli tutti.",
+      "everyDevice": "Tutti i dispositivi, come sono conservate le pagine di destinazione.",
+      "came": "Arrivate da",
+      "landed": "Atterrate su",
+      "ended": "Finite in",
+      "cameSummary": "{visits} visite · {count, plural, =1 {1 canale} other {# canali}}",
+      "landedSummary": "{visits} visite · {count, plural, =1 {1 classificazione di pagina} other {# classificazioni di pagina}}",
+      "endedSummary": "● {conversions, plural, =1 {1 conversione} other {# conversioni}} · {uncounted} non contate",
+      "moreChannels": "{count, plural, =1 {1 altro canale} other {altri # canali}}",
+      "moreKinds": "{count, plural, =1 {1 altra classificazione} other {altre # classificazioni}}",
+      "left": "Uscite senza convertire",
+      "figures": "{visits}",
+      "figuresConverted": "{visits} · ● {conversions}",
+      "figuresNever": "0 · mai successo",
+      "figuresUncounted": "{count} · non contato",
+      "nodeHover": "{name}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}. Fai clic per seguirne i percorsi.",
+      "countedHover": "{name}: {count, plural, =1 {una volta} other {# volte}}, contato come conversione.",
+      "uncountedHover": "{name}: {count, plural, =1 {una volta} other {# volte}}, un evento chiave non contato come conversione.",
+      "neverHover": "{name}: contato come conversione, ma mai successo in queste date.",
+      "leftHover": "{count, plural, =1 {1 visita è finita} other {# visite sono finite}} senza alcun evento chiave.",
+      "bandHover": "{from} → {to}: {visits, plural, =1 {1 visita} other {# visite}}",
+      "bandHoverConverted": "{from} → {to}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =1 {1 conversione} other {# conversioni}}",
+      "bandEnded": "{from} → {to}: {count, plural, =1 {una volta} other {# volte}}",
+      "bandLeft": "{from}: {count, plural, =1 {1 visita uscita} other {# visite uscite}} senza convertire",
+      "bandRevenue": "{words}, {money} di ricavi",
+      "legendConversions": "Conversioni, su una pagina o sul percorso che vi ha portato — più grandi se di più",
+      "legendUncounted": "Un evento chiave non contato come conversione",
+      "legendLeft": "Uscite senza convertire",
+      "collecting": "Ancora in raccolta: la prossima raccolta conserva quali visite hanno convertito per queste date.",
+      "empty": "Nessuna visita in queste date.",
+      "csvFrom": "Da",
+      "csvTo": "A",
+      "csvVisits": "Visite",
+      "csvConversions": "Conversioni",
+      "byKindTitle": "Conversioni per classificazione di pagina",
+      "byKindHint": "{period}. Ogni quadrato è le conversioni fatte dalle visite iniziate su quel tipo di pagina, più chiaro per una quota maggiore di quella conversione.",
+      "byKindCounted": "{count, plural, =1 {1 conversione} other {# conversioni}}",
+      "byKindNotCounted": "{count} · non contato",
+      "byKindNever": "mai successo",
+      "byKindHover": "{event} → {kind}: {count, plural, =1 {una volta} other {# volte}}",
+      "byKindLegend": "3 · conversioni da visite iniziate su quel tipo di pagina",
+      "byKindShades": "da una quota minore a una maggiore della conversione",
+      "byKindEmpty": "nessuna",
+      "byKindNone": "Nessuna conversione in queste date.",
+      "beforeTitle": "Cosa hanno fatto le persone prima di convertire",
+      "beforeHint": "Gli ultimi 12 mesi, tutti i dispositivi, così le azioni più piccole hanno abbastanza persone da giudicare. La barra è la quota delle persone che l'hanno fatta e poi hanno convertito (passa sopra per i dati). In arancione chi converte meglio del {siteRate} di tutti, su {few} persone o più. Pagina vista e Visita iniziata sono escluse: ogni visita le ha.",
+      "beforeHintWaiting": "Gli ultimi 12 mesi, tutti i dispositivi: la quota delle persone che hanno fatto ogni azione e poi hanno convertito, contro quella di tutti.",
+      "beforeRate": "Hanno poi convertito",
+      "beforeReadout": "Il {rate} di {people} persone ha poi convertito · tutti {siteRate}",
+      "beforeReadoutFew": "Il {rate} di {people} persone ha poi convertito · meno di {few} persone: troppo poche per giudicare",
+      "beforeCollecting": "Ancora in raccolta: la prossima raccolta chiede gli ultimi 12 mesi di ogni azione.",
+      "beforeEmpty": "Nessuna azione da valutare negli ultimi 12 mesi, per ora."
     }
   },
   "bingWebmaster": {

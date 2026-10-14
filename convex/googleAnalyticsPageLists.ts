@@ -1,7 +1,8 @@
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { ask, askList, countryIdOf, failed, numberPages, periodRange, writeList, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import { ask, askList, countryIdOf, failed, periodRange, writeList, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import { numberPages } from "./googleAnalyticsPageNumbers";
 import type { GoogleFailure } from "./googleApi";
 import { EVERY_DEVICE, PAGE_FACT_JOIN, beforeKey, channelKey, emptyRow, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { assistantOf } from "./utils/aiAssistants";
@@ -67,6 +68,7 @@ async function numbered(ctx: ActionCtx, target: CollectTarget, rows: readonly Li
 function add(into: ListRow, row: ListRow) {
   for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) into[field] += row[field];
   if (row.times !== undefined) into.times = (into.times ?? 0) + row.times;
+  if (row.converting !== undefined) into.converting = (into.converting ?? 0) + row.converting;
   for (const [event, count] of row.counts) into.counts.set(event, (into.counts.get(event) ?? 0) + count);
   for (const [event, value] of row.values) into.values.set(event, (into.values.get(event) ?? 0) + value);
 }
@@ -194,6 +196,16 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
     return { ...row, key: channelKey(page, factParts(rest).map((part) => part.toLowerCase()).join(PAGE_FACT_JOIN)) };
   });
   if (!(await write("landingWho", await numbered(ctx, target, landedRows, true), landedWho.flags, target.events))) return { ok: true, rows: total, requests: session.requests };
+
+  // The visits that started on a page by the visitors' browser and operating system, with each key event, and by their
+  // interests without them: Visitors' "where each kind of visitor lands" (ga-conversions-visitors-plan.md CV7, CV8).
+  // Interests are among the 120 asks an hour Google allows of age, gender and interests, so they are asked once, not
+  // twice with the key events: a night's run stays two hours (CV10).
+  for (const [list, events] of [["landingBrowser", target.events], ["landingSystem", target.events], ["landingInterest", []]] as const) {
+    const asked = await askList(session, { ...asking, events: [...events] }, list, [], range, device ? { device } : {});
+    if (!asked.ok) return failure(asked);
+    if (!(await write(list, topPerPage(await numbered(ctx, target, [...asked.groups.values()].flat(), true), (row) => row.visits), asked.flags, events))) return { ok: true, rows: total, requests: session.requests };
+  }
 
   // A page's readers in every country, whatever the home country (PS8): asked with the main home country's lists alone.
   if (!country) {

@@ -348,7 +348,7 @@ export const exportPage = internalQuery({
         const typeOf = (row: Doc<"sitePageRanks">) => {
           if (!pageKinds) return row.pageType;
           const kind = pageKinds.kindOf(row.page);
-          return kind === NOT_SORTED_KIND ? "Not sorted" : pageKinds.nameOf(kind);
+          return kind === NOT_SORTED_KIND ? "Unclassified" : pageKinds.nameOf(kind);
         };
         return done(await ctx.db.query("sitePageRanks")
           .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
@@ -445,7 +445,7 @@ export const exportPage = internalQuery({
           host,
           lines: (list?.rows ?? []).map((row) => ({
             line: line([
-              row.page, list?.groupBy === "CLASSIFICATION" ? (row.group ?? "Not sorted") : row.kind,
+              row.page, list?.groupBy === "CLASSIFICATION" ? (row.group ?? "Unclassified") : row.kind,
               row.file, row.crawled, row.shown, row.ranks, row.clicks,
             ]),
             group: "",

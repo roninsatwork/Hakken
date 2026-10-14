@@ -42,6 +42,8 @@ const FORMS = new Set([
   "src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page/page.tsx",
   // Landing pages is Funnel now: its old address only forwards there.
   "src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page.tsx",
+  // Events is part of Conversions now (ga-conversions-visitors-plan.md CV1): its old address only forwards there.
+  "src/app/(dashboard)/app/analytics/[siteId]/events/page.tsx",
 ]);
 
 const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set([".tsx"])))

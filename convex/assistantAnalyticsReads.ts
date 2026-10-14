@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalQuery, type QueryCtx } from "./_generated/server";
+import { readVisitorMap } from "./googleAnalyticsConversionReads";
 import type { SiteReader } from "./siteAccess";
 import { holdFor } from "./assistantReads";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -81,7 +82,7 @@ function rowOf(row: ShownRow) {
 function kindWords(kind: string, name: string | null): string {
   if (name) return name;
   if (kind === NO_PAGE_KIND) return "no page recorded";
-  if (kind === NOT_SORTED_KIND) return "not sorted";
+  if (kind === NOT_SORTED_KIND) return "unclassified";
   if (kind === OTHER_KIND) return "other kinds of page";
   return kind.toLowerCase().replace(/_/g, " ");
 }
@@ -236,10 +237,30 @@ export const googleAnalyticsInternal = internalQuery({
       }
       case "conversions": {
         const answer = await readConversions(site, common);
+        // A classification by its name, as the screen names it (ga-conversions-visitors-plan.md CV3).
+        const kindName = (kind: { kind: string; name: string | null }) => kind.name ?? (kind.kind === NO_PAGE_KIND ? "no page recorded" : kind.kind === OTHER_KIND ? "other classifications" : "unclassified");
+        const flow = answer.flow && !answer.flow.collecting ? answer.flow : null;
         return {
           ...base,
           visits: answer.visits,
           kinds: answer.kinds.map((kind) => ({ event: kind.eventName, count: kind.count, countBefore: kind.countBefore, value: money(kind.value) })),
+          keyEventsNotCounted: answer.fired.map((event) => ({ event: event.eventName, times: event.count })),
+          // How visits reached a conversion: by channel and by the kind of page they landed on, as the flow draws it.
+          ...(flow ? {
+            byChannel: flow.channels.map((row) => ({ channel: row.key === "~more" ? `${row.more} more channels` : row.key, visits: row.visits, conversions: row.conversions })),
+            byPageClassification: flow.kinds.map((row) => ({ classification: kindName(row), visits: row.visits, conversions: row.conversions })),
+            eachEventByPageClassification: flow.grid.rows.map((row) => ({
+              event: row.eventName, countsAsConversion: row.counted, times: row.count,
+              byClassification: flow.grid.kinds.map((kind, at) => ({ classification: kindName(kind), times: row.cells[at] })).filter((cell) => cell.times > 0),
+            })),
+          } : {}),
+          ...(answer.before && !answer.before.collecting ? {
+            whatPeopleDidBeforeConverting: {
+              over: "the last 12 months, every device",
+              websitePercent: percent(answer.before.siteRate),
+              actions: answer.before.rows.map((row) => ({ event: row.eventName, people: row.did, wentOnToConvert: row.then, percent: percent(row.then / row.did), ...(row.did < answer.before!.few ? { note: "under 100 people: too few to trust" } : {}) })),
+            },
+          } : {}),
           link: linkTo("conversions"),
         };
       }
@@ -285,11 +306,12 @@ export const googleAnalyticsInternal = internalQuery({
       case "events": {
         const answer = await readEvents(site, common);
         if (!answer) return { ok: false, problem: `${host} has no Google Analytics figures yet.` };
-        if (answer.live) return { ...base, ...asked, link: linkTo("events") };
+        // Every event is listed on Conversions (ga-conversions-visitors-plan.md CV1).
+        if (answer.live) return { ...base, ...asked, link: linkTo("conversions") };
         return {
           ...base,
           events: answer.rows.slice(0, 50).map((row) => ({ event: row.eventName, kind: row.kind, countsAsConversion: row.counted, times: row.times, people: row.people, visits: row.visits, timesBefore: row.timesBefore })),
-          link: linkTo("events"),
+          link: linkTo("conversions"),
         };
       }
       case "event": {
@@ -311,13 +333,17 @@ export const googleAnalyticsInternal = internalQuery({
       case "visitors": {
         const answer = await readVisitors(site, common);
         if (!answer) return { ok: false, problem: `${host} has no Google Analytics figures yet.` };
-        const view = args.list ?? "browser";
+        // The screen opens on new or returning (ga-conversions-visitors-plan.md CV7).
+        const view = args.list ?? "visitorType";
         const listed = await readListPage(site, { ...common, list: view, page: 1, rows: ROWS });
+        const map = await readVisitorMap(site, { ...common, list: view });
+        const kindNames = new Map((map?.kinds ?? []).map((kind) => [kind.kind, kind.name ?? (kind.kind === NO_PAGE_KIND ? "no page recorded" : kind.kind === OTHER_KIND ? "other classifications" : "unclassified")]));
+        const landsOf = new Map((map?.rows ?? []).filter((row) => row.lands).map((row) => [row.key, { classification: kindNames.get(row.lands!.kind) ?? row.lands!.kind, sharePercent: percent(row.lands!.share) }]));
         return {
           ...base,
           figures: answer.figures,
           googleSignals: answer.signals,
-          [view]: listed.live ? null : listed.rows.map((row) => ({ name: row.label, people: row.people, visits: row.visits, engagedPercent: percent(row.engagementRate), conversions: row.conversions })),
+          [view]: listed.live ? null : listed.rows.map((row) => ({ name: row.label, people: row.people, visits: row.visits, engagedPercent: percent(row.engagementRate), conversions: row.conversions, landsMostOn: landsOf.get(row.key) ?? null })),
           ...(answer.missing.length > 0 || listed.live ? asked : {}),
           link: linkTo("visitors", { view }),
         };

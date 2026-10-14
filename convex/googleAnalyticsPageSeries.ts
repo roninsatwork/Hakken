@@ -5,7 +5,8 @@ import { internalAction, internalMutation, type ActionCtx, type QueryCtx } from 
 import { analyticsPackedRows } from "./googleAnalyticsSchema";
 import { EVERY_DEVICE, channelKey, groupKeys, packList, splitChannelKey, unpackPart, type Lead, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { addInto, blank } from "./googleAnalyticsRows";
-import { askList, countryIdOf, failed, numberPages, openSession, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import { askList, countryIdOf, failed, openSession, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import { numberPages } from "./googleAnalyticsPageNumbers";
 import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
 import { shiftDay } from "./searchConsoleDays";
 import { HISTORY_REACH_DAYS, dayDevice, historyFloors, homeOf, monthOfWeek, pointsBetween, type Grain } from "./utils/analyticsHistory";

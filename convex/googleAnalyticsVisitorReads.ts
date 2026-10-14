@@ -10,6 +10,7 @@ import { analyticsPeriodValidator, type AnalyticsList } from "./googleAnalyticsS
 import { seenValidator } from "./utils/hakkenSees";
 import { visitorsSees } from "./utils/sees/analyticsVisitors";
 import { connectionOf, conversionsOf, countedOf, readFor, readSlot, type Held } from "./googleAnalyticsRows";
+import { readVisitorMap } from "./googleAnalyticsConversionReads";
 
 /**
  * What Visitors reads above its table (docs/plans/active/google-analytics-plan.md
@@ -44,7 +45,11 @@ export const analyticsVisitors = tenantQuery({
       returningPeople: v.number(),
     })),
     /** A day; past 90 days a week or month to its `lastDay`, its people its days' added up (SF2b, SF14). */
-    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), new: v.number(), returning: v.number() })),
+    points: v.array(v.object({
+      day: v.string(), lastDay: v.optional(v.string()), new: v.number(), returning: v.number(),
+      /** The day's conversions by new and by returning visitors: the chart's dots (ga-conversions-visitors-plan.md CV7). */
+      newConversions: v.number(), returningConversions: v.number(),
+    })),
     signals: v.union(v.null(), v.literal("on"), v.literal("off")),
     thresholded: v.boolean(),
     seen: seenValidator,
@@ -84,11 +89,15 @@ export async function readVisitors(ctx: SiteReader, args: ObjectType<typeof anal
   // people its days' added up).
   const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
   const stored = every ? await readDayPoints(ctx, connection, "visitorType", args.device, every.from, every.to, country) : null;
-  const points: Array<{ day: string; lastDay?: string; new: number; returning: number }> = [];
+  const points: Array<{ day: string; lastDay?: string; new: number; returning: number; newConversions: number; returningConversions: number }> = [];
   if (stored) {
     for (const point of stored) {
       const people = (type: string) => point.rows.filter((row) => row.key === type).reduce((sum, row) => sum + row.people, 0);
-      points.push({ day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), new: people("new"), returning: people("returning") });
+      const converted = (type: string) => point.rows.filter((row) => row.key === type).reduce((sum, row) => sum + conversionsOf(row, counted).conversions, 0);
+      points.push({
+        day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), new: people("new"), returning: people("returning"),
+        newConversions: converted("new"), returningConversions: converted("returning"),
+      });
     }
   }
   const figures = whole ? {
@@ -102,6 +111,9 @@ export async function readVisitors(ctx: SiteReader, args: ObjectType<typeof anal
   const browsers = (held("browser")?.rows ?? []).map((row) => ({ label: row.key, visits: row.visits, engaged: row.engaged }));
   const thresholded = [...lists.values()].some((list) => heldOf(list)?.thresholded === true);
   const ready = missing.length === 0 && types !== null && whole !== null;
+  // Where returning visitors land, from the grid's own read (CV7).
+  const map = ready ? await readVisitorMap(ctx, { ...args, list: "visitorType" }) : null;
+  const back = map?.rows.find((row) => row.key === "returning") ?? null;
   return {
     preparing: lists.get("visitorType") === null,
     missing,
@@ -112,6 +124,7 @@ export async function readVisitors(ctx: SiteReader, args: ObjectType<typeof anal
     seen: ready ? visitorsSees({
       people: whole.people, visits: whole.visits, engaged: whole.engaged, newPeople: newVisitors?.people ?? 0,
       newVisitors, returning, browsers, signals, thresholded,
+      returningLands: back?.lands ? { ...back.lands, visits: back.visits } : null,
     }) : { says: [], steps: [] },
   };
 }

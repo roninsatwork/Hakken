@@ -1,6 +1,7 @@
 import { v, type Infer, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { beforeValidator, flowValidator, readBeforeConverting, readConversionFlow, readVisitorMap, visitorGroupOf, type BeforeConverting, type ConversionFlow } from "./googleAnalyticsConversionReads";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { websiteIconUrl } from "./websiteIcons";
@@ -291,6 +292,10 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (args.list === "channel") {
     rows = grouped(rows, (row) => displayChannel(row.key));
     earlier = earlier ? grouped(earlier, (row) => displayChannel(row.key)) : null;
+  } else if (isVisitorList(args.list)) {
+    // Google's "(not set)" and a blank are one Unknown row (ga-conversions-visitors-plan.md CV7, phase 0).
+    rows = grouped(rows, (row) => visitorGroupOf(row.key));
+    earlier = earlier ? grouped(earlier, (row) => visitorGroupOf(row.key)) : null;
   } else if (ofChannel !== null) {
     rows = landingOf(rows, ofChannel);
     earlier = earlier ? landingOf(earlier, ofChannel) : null;
@@ -577,8 +582,15 @@ export async function readListPage(ctx: SiteReader, args: ObjectType<typeof anal
   const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
   const page = pageOfList(list.rows, args.page, args.rows);
   const named = await nameRows(ctx, site.hold._id, page.rows);
+  // Each visitor group's classification most landed on, from Visitors' grid (ga-conversions-visitors-plan.md CV7).
+  const map = isVisitorList(args.list) && !list.live && !list.preparing
+    ? await readVisitorMap(ctx, { siteId: args.siteId, period: args.period, device: args.device, ...(args.country ? { country: args.country } : {}), list: args.list as VisitorList })
+    : null;
+  const kindNames = new Map((map?.kinds ?? []).map((kind) => [kind.kind, kind.name]));
+  const lands = new Map((map?.rows ?? []).flatMap((row) => (row.lands ? [[row.key, { ...row.lands, name: kindNames.get(row.lands.kind) ?? null }] as const] : [])));
   return {
-    rows: args.list === "landing" && args.channel !== undefined ? await withKinds(ctx, site.hold._id, named) : named,
+    rows: args.list === "landing" && args.channel !== undefined ? await withKinds(ctx, site.hold._id, named)
+      : map ? named.map((row) => ({ ...row, landsMost: lands.get(row.key) ?? null })) : named,
     total: page.total,
     page: page.page,
     pages: page.pages,
@@ -798,6 +810,10 @@ export const analyticsConversions = tenantQuery({
     shop: v.union(v.null(), v.object({ purchases: v.number(), revenue: v.number(), purchasesBefore: v.union(v.number(), v.null()), revenueBefore: v.union(v.number(), v.null()) })),
     /** The property's key events not counted that happened in these dates, most first: what Nothing counted yet offers to tick. */
     fired: v.array(v.object({ eventName: v.string(), count: v.number() })),
+    /** How visits reached a conversion, by page classification (ga-conversions-visitors-plan.md CV3); null before landing pages by channel are kept. */
+    flow: v.union(v.null(), flowValidator),
+    /** What people did before converting, over 12 months (CV4); null with nothing counted. */
+    before: v.union(v.null(), beforeValidator),
     seen: seenValidator,
   }),
   handler: async (ctx, args) => await readConversions(ctx, args),
@@ -818,6 +834,8 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
     kinds: [] as Array<{ eventName: string; count: number; countBefore: number | null; each: number | null; setIn: "ANALYTICS" | "HAKKEN" | "REVENUE" | null; value: number | null; valueBefore: number | null }>,
     shop: null,
     fired: [] as Array<{ eventName: string; count: number }>,
+    flow: null as ConversionFlow | null,
+    before: null as BeforeConverting | null,
   };
   if (!connection?.newestDay) return nothing;
   const now = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
@@ -864,6 +882,8 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
     kinds,
     shop: isShop ? { purchases: total.purchases, revenue: total.revenue, purchasesBefore: was ? was.purchases : null, revenueBefore: was ? was.revenue : null } : null,
     fired,
+    flow: await readConversionFlow(ctx, holdId, connection, args.period, args.device, country),
+    before: await readBeforeConverting(ctx, holdId, connection),
   };
 }, conversionsSees);
 

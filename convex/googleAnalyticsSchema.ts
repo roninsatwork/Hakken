@@ -122,6 +122,10 @@ export const COUNTED_WITH = "EVENT_COUNT";
 export const PAGE_FACT_LISTS = [
   "landingSource", "pageReferrer", "pageNext", "pageClicks", "pageWho", "landingWho", "pageCountry", "landingPagesSeen", "pageWeekday", "pageDevice",
   "eventPage", "eventDetail", "landingFlow", "landingOnward",
+  // Each landing page by the visitors' browser, operating system and interests: Visitors' "where each kind of visitor
+  // lands" (ga-conversions-visitors-plan.md CV7, CV8). Its new or returning, age and gender come from `landingSource`
+  // and `landingWho`.
+  "landingBrowser", "landingSystem", "landingInterest",
 ] as const;
 export type PageFactList = (typeof PAGE_FACT_LISTS)[number];
 
@@ -225,6 +229,11 @@ export const analyticsPackedRows = {
   times: v.optional(v.string()),
   /** A product's adds to the basket (`itemsAddedToCart`): only a product list's parts (§18.6.6). */
   basket: v.optional(v.string()),
+  /**
+   * The visits that made any listed event, each counted once however many it made: only landing pages by channel for
+   * the dates now, for Conversions' "Left without converting" (ga-conversions-visitors-plan.md CV8).
+   */
+  converting: v.optional(v.string()),
   events: v.array(v.string()),
   /** One packed column per event in `events`. */
   counts: v.array(v.string()),

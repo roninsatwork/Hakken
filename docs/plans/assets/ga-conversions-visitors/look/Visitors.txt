@@ -1,4 +1,4 @@
-# Google Analytics → Visitors — the approved look (board "Visitors" of docs/plans/assets/google-analytics/).
+# Google Analytics → Visitors — the approved look (board "Visitors" of docs/plans/assets/ga-conversions-visitors/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Visitors
@@ -9,11 +9,12 @@ figures
   figure: Returning visitors
   figure: Visits a person
 chart-card: New and returning visitors a day
-chart-card: Visits by browser
+chart-card: Where each kind of visitor lands, by page classification
+channel-map
 notice (info)
-search: Find a browser…
+search: Find a group…
 choice: Showing: New or returning | Browsers | Operating systems | Age | Gender | Interests
-table: Browser | People | Visits | Engaged | Conversions | Change
+table: Visitor | People | Visits | Engaged | Conversions | Change | Lands most on
   table-bar
     download: Download CSV
   table-footer

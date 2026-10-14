@@ -572,7 +572,8 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
       conversionsInTheLast30Minutes: { count: 1, eventName: "generate_lead", minutesAgo: 12 },
       link: `/app/analytics/${siteId}/live`,
     });
-    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).length)).toBe(0);
+    // Nothing of Live kept: the only lists held are the night's funnels, kept by the collection (ga-conversions-visitors-plan.md CV4).
+    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).filter((row) => !row.ask.startsWith("funnel:")).length)).toBe(0);
   });
 });
 

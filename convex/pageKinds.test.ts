@@ -197,7 +197,7 @@ describe("Search Console's lists of pages", () => {
     const { page: _page, rows: _rows, ...dates } = week;
     const found = await t.query(internal.searchConsoleLists.exportRows, { siteId: holdId, companyId, ...dates, fields: ["key", "kind"] });
     expect(Object.fromEntries((found?.lines.flat() ?? []).map((line) => line.replace(url(""), "").split(",")))).toEqual({
-      "/hub/boilers/": "Content hub", "/plumbers/": "Plumbing services", "/our-new-van/": "Journal", "/contact/": "Not sorted",
+      "/hub/boilers/": "Content hub", "/plumbers/": "Plumbing services", "/our-new-van/": "Journal", "/contact/": "Unclassified",
     });
   });
 

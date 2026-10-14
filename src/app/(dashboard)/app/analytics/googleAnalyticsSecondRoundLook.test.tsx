@@ -5,13 +5,12 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
 import { ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
-import { eventSees, eventsSees } from "@/convex/utils/sees/analyticsEvents";
+import { eventSees } from "@/convex/utils/sees/analyticsEvents";
 import { campaignsSees } from "@/convex/utils/sees/analyticsCampaigns";
 import { visitorsSees } from "@/convex/utils/sees/analyticsVisitors";
 import { productsSees } from "@/convex/utils/sees/analyticsProducts";
 import { liveSees } from "@/convex/utils/sees/analyticsLive";
 import { pageSees } from "@/convex/utils/sees/analytics";
-import AnalyticsEventsPage from "./[siteId]/events/page";
 import AnalyticsEventScreen from "./[siteId]/events/event/page";
 import AnalyticsCampaignsPage from "./[siteId]/campaigns/page";
 import AnalyticsVisitorsPage from "./[siteId]/visitors/page";
@@ -56,7 +55,6 @@ function at(path: string, search = "") {
   nav.search = search;
 }
 
-const FLAGS = { folded: false, thresholded: false, cut: false };
 const DAYS = ["2026-10-06", "2026-10-07", "2026-10-08"];
 
 beforeEach(() => {
@@ -172,25 +170,6 @@ describe("Google Analytics' second-round looks", () => {
     await expectApprovedLook(container, "analytics-page-screen", "Page", "Google Analytics → a page's own screen, with its story");
   });
 
-  it("22 · Events", async () => {
-    at("/app/analytics/site_1/events");
-    const rows = [
-      { eventName: "page_view", kind: "automatic" as const, counted: false, times: 2431, people: 671, visits: 808, timesBefore: 2232 },
-      { eventName: "scroll", kind: "measured" as const, counted: false, times: 512, people: 318, visits: 300, timesBefore: 482 },
-      { eventName: "form_submission", kind: "conversion" as const, counted: true, times: 12, people: 12, visits: 12, timesBefore: 17 },
-      { eventName: "live_chat_event", kind: "conversion" as const, counted: true, times: 0, people: 0, visits: 0, timesBefore: 0 },
-    ];
-    answer({
-      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsEventReads:analyticsEvents": {
-        preparing: false, live: false, rows, points: DAYS.map((day) => ({ day, scroll: 17, click: 2 })), flags: FLAGS, seen: eventsSees(rows, 808),
-      },
-    });
-    const { container } = render(<AnalyticsEventsPage />);
-    await screen.findByText("Scrolled to the bottom");
-    await screen.findByText(/“Live chat started” counts as a conversion but never happened/);
-    await expectApprovedLook(container, PLAN, "Events", "Google Analytics → Events");
-  });
 
   it("23 · an event's own screen", async () => {
     at("/app/analytics/site_1/events/event", "key=click");
@@ -210,9 +189,10 @@ describe("Google Analytics' second-round looks", () => {
     await expectApprovedLook(container, PLAN, "AnEvent", "Google Analytics → an event's own screen");
   });
 
+  // Redrawn and approved 2026-10-14 (ga-conversions-visitors-plan.md CV7): where each kind of visitor lands.
   it("15 · Visitors", async () => {
     at("/app/analytics/site_1/visitors");
-    const browser = { ...ROW, key: "Chrome", label: "Chrome", visits: 498, people: 412, newPeople: 380, bounceRate: 0.48, pagesPerVisit: 2, lengthPerVisit: 90, conversions: 8 };
+    const group = { ...ROW, key: "new", label: "new", visits: 700, people: 589, newPeople: 589, bounceRate: 0.48, pagesPerVisit: 2, lengthPerVisit: 90, conversions: 7, landsMost: { kind: "svc", name: "Services", share: 0.42 } };
     const facts = {
       people: 671, visits: 808, engaged: 418, newPeople: 589, newVisitors: { visits: 700, conversions: 7 }, returning: { visits: 108, conversions: 5 },
       browsers: [{ label: "Chrome", visits: 498, engaged: 261 }], signals: "off" as const, thresholded: false,
@@ -221,15 +201,23 @@ describe("Google Analytics' second-round looks", () => {
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsVisitorReads:analyticsVisitors": {
         preparing: false, missing: [], figures: { people: 671, peopleBefore: 615, visits: 808, visitsBefore: 744, newPeople: 589, returningPeople: 82 },
-        points: DAYS.map((day) => ({ day, new: 20, returning: 3 })), signals: "off", thresholded: false, seen: visitorsSees(facts),
+        points: DAYS.map((day, at) => ({ day, new: 20, returning: 3, newConversions: at === 1 ? 1 : 0, returningConversions: 0 })), signals: "off", thresholded: false, seen: visitorsSees(facts),
       },
-      "googleAnalyticsReads:analyticsListPage": list([browser]),
-      "googleAnalyticsReads:analyticsTopList": top([browser]),
+      "googleAnalyticsConversionReads:analyticsVisitorMap": {
+        collecting: false, thresholded: false, conversions: true,
+        kinds: [{ kind: "svc", name: "Services" }, { kind: "NOT_SORTED", name: null }],
+        rows: [
+          { key: "new", visits: 700, cells: [{ visits: 294, conversions: 5 }, { visits: 406, conversions: 2 }], lands: { kind: "NOT_SORTED", share: 0.58 } },
+          { key: "returning", visits: 108, cells: [{ visits: 60, conversions: 5 }, { visits: 48, conversions: 0 }], lands: { kind: "svc", share: 0.56 } },
+        ],
+      },
+      "googleAnalyticsReads:analyticsListPage": list([group]),
     });
     const { container } = render(<AnalyticsVisitorsPage />);
-    await screen.findAllByText("Chrome");
+    await screen.findAllByText("New");
+    await screen.findByText("Where each kind of visitor lands, by page classification");
     await screen.findByText(/Google signals is switched on/);
-    await expectApprovedLook(container, PLAN, "Visitors", "Google Analytics → Visitors");
+    await expectApprovedLook(container, "ga-conversions-visitors", "Visitors", "Google Analytics → Visitors");
   });
 
   it("25 · Products, for a shop", async () => {

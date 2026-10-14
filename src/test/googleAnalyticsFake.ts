@@ -129,6 +129,13 @@ const HOUR_MS = 60 * 60 * 1000;
 
 type Filter = { filter?: { fieldName: string; inListFilter?: { values: string[] }; stringFilter?: { value: string } }; andGroup?: { expressions: Filter[] } };
 
+/** The event names a filter keeps (`eventName` in a list), or null when it names none. */
+function eventNamesIn(filter: Filter | undefined): string[] | null {
+  if (!filter) return null;
+  if (filter.andGroup) return filter.andGroup.expressions.map(eventNamesIn).find((names) => names !== null) ?? null;
+  return filter.filter?.fieldName === "eventName" ? filter.filter.inListFilter?.values ?? [filter.filter.stringFilter?.value ?? ""] : null;
+}
+
 function passes(visit: Visit, filter: Filter | undefined, eventName?: string): boolean {
   if (!filter) return true;
   if (filter.andGroup) return filter.andGroup.expressions.every((one) => passes(visit, one, eventName));
@@ -205,6 +212,9 @@ export function fakeGoogle(visits: Visit[]): Google {
       // Every event, as Events asks (§18.6.5): times, people and visits — a line's page views and visit starts among them.
       const everyEvent = metrics.includes("eventCount");
       const byEvent = names.includes("eventName") || everyEvent;
+      // Visits with any of the events named, not split by event (ga-conversions-visitors-plan.md CV8): each line's visits
+      // that made one, once each however many they made — at most the line's visits.
+      const withAny = !byEvent ? eventNamesIn(ask.dimensionFilter) : null;
       const sums = new Map<string, { keys: string[]; values: number[] }>();
       for (const visit of google.visits) {
         if (visit.date < startDate || visit.date > endDate) continue;
@@ -222,7 +232,13 @@ export function fakeGoogle(visits: Visit[]): Google {
           }))
           : byEvent
             ? Object.entries(visit.events ?? {}).map(([eventName, [count, value]]) => ({ eventName, values: [count, value] }))
-            : [{ values: [visit.sessions, visit.engaged, visit.seconds, visit.views, visit.purchases ?? 0, visit.revenue ?? 0] }];
+            : withAny
+              ? (() => {
+                const named = Object.entries(visit.events ?? {}).filter(([eventName, [count]]) => count > 0 && withAny.includes(eventName));
+                const made = Math.min(visit.sessions, named.reduce((sum, [, [count]]) => sum + count, 0));
+                return made > 0 ? [{ eventName: named[0][0], values: [made, 0, 0, 0, 0, 0] }] : [];
+              })()
+              : [{ values: [visit.sessions, visit.engaged, visit.seconds, visit.views, visit.purchases ?? 0, visit.revenue ?? 0] }];
         for (const line of lines) {
           if (!passes(visit, ask.dimensionFilter, line.eventName)) continue;
           const keys = names.map((name) => (name === "eventName" ? line.eventName! : FIELD[name](visit)));
@@ -289,7 +305,9 @@ export function fakeGoogle(visits: Visit[]): Google {
       let after = 0;
       for (const visit of google.visits) {
         if (visit.date < startDate || visit.date > endDate || !passes(visit, ask.dimensionFilter)) continue;
-        const count = first.reduce((sum, name) => sum + (visit.events?.[name]?.[0] ?? 0), 0);
+        // Every visit starts one, and its views are page views: as the events list counts them.
+        const own = (name: string) => (name === "session_start" ? visit.sessions : name === "page_view" ? visit.views : visit.events?.[name]?.[0] ?? 0);
+        const count = first.reduce((sum, name) => sum + own(name), 0);
         if (count === 0) continue;
         did += Math.ceil(count / 2);
         if (then.some((name) => (visit.events?.[name]?.[0] ?? 0) > 0)) after += Math.ceil(count / 2);

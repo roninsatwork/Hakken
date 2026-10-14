@@ -14,6 +14,8 @@ import { afterTheHour, jobKey, startGap, startingAt } from "./googleAnalyticsAge
 import { googleDay, quotaStillSeen } from "./googleAnalyticsBudget";
 import { shiftDay } from "./searchConsoleDays";
 import { NEWEST, PROPERTY, dayOf, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
+import { FUNNEL_ACTIONS, actionsFrom } from "./googleAnalyticsActionFunnels";
+import { funnelAsk } from "./googleAnalyticsLive";
 
 /**
  * Collecting a website's Google Analytics, end to end with Google faked at the
@@ -417,6 +419,65 @@ describe("collecting a website's Google Analytics", () => {
     expect(googleDay(Date.parse("2026-10-14T06:59:00Z"))).toBe("2026-10-13");
     expect(googleDay(Date.parse("2026-10-14T07:00:00Z"))).toBe("2026-10-14");
     expect(quotaStillSeen(seen, Date.parse("2026-10-15T07:30:00Z"))).toBeNull();
+  });
+
+  test("the night's run keeps what Conversions and Visitors draw: visits that converted, visitors by landing page, each action's funnel", async () => {
+    const t = harness();
+    const { siteId, admin } = await connected(t);
+    // On the home page people also scroll, an action that is not a conversion, and come on Safari, a Mac and with an interest.
+    const google = fakeGoogle(history(70).map((visit) => (visit.landing === "/" && !visit.host
+      ? { ...visit, events: { ...visit.events, scroll: [3, 0] }, browser: "Safari", system: "Macintosh", interest: "Technology" }
+      : visit)));
+    await save(admin, siteId);
+    await finishScheduled(t);
+
+    // Landing pages by channel for the dates now: each row's visits that made a listed event, once each (CV8) — the 30
+    // days' one lead a day from search and one call a day from the referral, none from the typed-in visits.
+    const byChannel = (rows: Array<{ key: string; visits: number; converting?: number }>) =>
+      Object.fromEntries(rows.map((row) => [splitChannelKey(row.key).source, [row.visits, row.converting]]));
+    expect(byChannel((await periodRows(t, siteId, "landingChannel|30|NOW|"))!.rows)).toEqual({ "Organic Search": [300, 30], Referral: [120, 30], Direct: [60, 0] });
+    expect(byChannel((await periodRows(t, siteId, "landingChannel|30|NOW|mobile"))!.rows)).toEqual({ "Organic Search": [300, 30] });
+    // The span before is compared by no screen's flow: not asked.
+    expect((await periodRows(t, siteId, "landingChannel|30|BEFORE|"))!.rows.every((row) => row.converting === undefined)).toBe(true);
+
+    // Each landing page by browser and operating system with its key events; by interests without them (CV8, CV10).
+    const browsers = (await periodRows(t, siteId, "landingBrowser|30|NOW|"))!.rows;
+    expect(browsers.find((row) => splitChannelKey(row.key).source === "Safari")).toMatchObject({ visits: 300, counts: { generate_lead: 30, click_tel: 0 } });
+    expect((await periodRows(t, siteId, "landingSystem|30|NOW|mobile"))!.rows.map((row) => [splitChannelKey(row.key).source, row.visits])).toEqual([["Macintosh", 300]]);
+    const interests = (await periodRows(t, siteId, "landingInterest|365|NOW|"))!.rows;
+    expect(interests.find((row) => splitChannelKey(row.key).source === "Technology")).toMatchObject({ visits: 700, counts: {} });
+
+    // Scrolling's funnel over 12 months, every device, kept where an event's own screen reads it (CV4, SF16).
+    const funnel = await t.run(async (ctx) => await ctx.db
+      .query("googleAnalyticsLive")
+      .withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", siteId).eq("ask", funnelAsk("scroll", "365", "")))
+      .collect());
+    expect(plain(funnel.flatMap((part) => unpackPart(part))).map((row) => [row.key, row.people])).toEqual([["did", 140], ["then", 140]]);
+
+    // What the night asks for them: the visits that converted twice a date range now (by device and whole), each new list
+    // once a date range and device — the browser and system with the key events, twice — one funnel an action, and the website's.
+    const asks = google.calls.filter((call) => call.url.endsWith(":runReport")).map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; metrics: { name: string }[] });
+    const named = (ask: (typeof asks)[number]) => ask.dimensions.map((dimension) => dimension.name);
+    expect(asks.filter((ask) => named(ask).includes("sessionDefaultChannelGroup") && named(ask).includes("landingPage") && ask.metrics.length === 1).length).toBe(8);
+    expect(asks.filter((ask) => named(ask).includes("landingPage") && named(ask).includes("browser")).length).toBe(32);
+    expect(asks.filter((ask) => named(ask).includes("landingPage") && named(ask).includes("operatingSystem")).length).toBe(32);
+    expect(asks.filter((ask) => named(ask).includes("landingPage") && named(ask).includes("brandingInterest")).length).toBe(16);
+    // The website's own rate, from everyone who started a visit, beside scrolling's.
+    expect(google.calls.filter((call) => call.url.endsWith(":runFunnelReport")).length).toBe(2);
+  });
+
+  test("the actions asked a funnel: the busiest by people, never a conversion or what every visit has, ten at most", () => {
+    const rows = [
+      { key: "page_view", people: 900 }, { key: "session_start", people: 800 }, { key: "generate_lead", people: 40 },
+      { key: "scroll", people: 300 }, { key: "file_download", people: 30 }, { key: "click", people: 30 }, { key: "video_start", people: 0 },
+      ...Array.from({ length: 12 }, (_, at) => ({ key: `custom_${String(at).padStart(2, "0")}`, people: 10 })),
+    ];
+    const actions = actionsFrom(rows, ["generate_lead"]);
+    expect(actions).toHaveLength(FUNNEL_ACTIONS);
+    expect(actions.slice(0, 4)).toEqual(["scroll", "click", "file_download", "custom_00"]);
+    expect(actions).not.toContain("page_view");
+    expect(actions).not.toContain("generate_lead");
+    expect(actionsFrom(rows, ["generate_lead"]).includes("video_start")).toBe(false);
   });
 
   test("the next night's lists start where a run cut short stopped, then come round to the rest", () => {

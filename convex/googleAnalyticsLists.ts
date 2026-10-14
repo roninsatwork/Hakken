@@ -108,6 +108,10 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   landingFlow: ["landingPage", "pageReferrer", "pagePath"],
   // A landing page's visits by each page before a view in them: those that went on from it (§3b).
   landingOnward: ["landingPage", "pageReferrer"],
+  // A landing page's visits by the visitors' browser, operating system and interests (ga-conversions-visitors-plan.md CV8).
+  landingBrowser: ["landingPage", "browser"],
+  landingSystem: ["landingPage", "operatingSystem"],
+  landingInterest: ["landingPage", "brandingInterest"],
 };
 
 /**
@@ -152,6 +156,9 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   eventDetail: true,
   landingFlow: true,
   landingOnward: true,
+  landingBrowser: true,
+  landingSystem: true,
+  landingInterest: true,
 };
 
 /** Visitors' lists (§18.6.6), in the order the screen's switch offers them. */
@@ -246,6 +253,11 @@ export type ListRow = {
   times?: number;
   /** A product's adds to the basket (`itemsAddedToCart`): only a product list's rows carry it (§18.6.6). */
   basket?: number;
+  /**
+   * The visits that made any listed event, each counted once (`sessions` filtered to the events): only landing pages by
+   * channel for the dates now carry it (ga-conversions-visitors-plan.md CV8).
+   */
+  converting?: number;
   /** Each key event's count and value (in hundredths), by the event's name. */
   counts: Map<string, number>;
   values: Map<string, number>;
@@ -290,6 +302,8 @@ export function joinAsks(
   events: readonly ReportRow[],
   /** The events counted once a visit: their visits, not their times (`EVENT_METRICS`). */
   perVisit: ReadonlySet<string> = new Set(),
+  /** The visits that made any listed event, when asked (`askList`'s `converting`): each row's own, the same split. */
+  converting: readonly ReportRow[] | null = null,
 ): Map<string, ListRow[]> {
   const width = LIST_DIMENSIONS[list].length;
   const deviceAt = lead.indexOf("deviceCategory");
@@ -343,6 +357,11 @@ export function joinAsks(
       target.length += Math.round((row.values[8] ?? 0) * (row.values[0] ?? 0));
     }
   }
+  if (converting) {
+    // Every row gets the figure, nought where no visit made a listed event, so the list says it was asked.
+    for (const group of groups.values()) for (const row of group.values()) row.converting = 0;
+    for (const row of converting) for (const target of targets(row.keys)) target.converting = (target.converting ?? 0) + (row.values[0] ?? 0);
+  }
   for (const row of events) {
     const eventName = row.keys[lead.length + width] ?? "";
     if (!eventName) continue;
@@ -379,6 +398,8 @@ export type PackedPart = {
   times?: string;
   /** A product's adds to the basket: only a product list's parts. */
   basket?: string;
+  /** The visits that made any listed event: only landing pages by channel for the dates now. */
+  converting?: string;
   events: string[];
   counts: string[];
   values: string[];
@@ -401,6 +422,7 @@ export function packList(list: AnalyticsList, rows: readonly ListRow[], events: 
     ) || left.key.localeCompare(right.key));
   const timed = rows.some((row) => row.times !== undefined);
   const carted = rows.some((row) => row.basket !== undefined);
+  const converts = rows.some((row) => row.converting !== undefined);
   const parts: PackedPart[] = [];
   for (let start = 0; start < Math.max(sorted.length, 1); start += PART_ROWS) {
     const slice = sorted.slice(start, start + PART_ROWS);
@@ -417,6 +439,7 @@ export function packList(list: AnalyticsList, rows: readonly ListRow[], events: 
       length: packNumbers(slice.map((row) => row.length)),
       ...(timed ? { times: packNumbers(slice.map((row) => row.times ?? 0)) } : {}),
       ...(carted ? { basket: packNumbers(slice.map((row) => row.basket ?? 0)) } : {}),
+      ...(converts ? { converting: packNumbers(slice.map((row) => row.converting ?? 0)) } : {}),
       events: [...events],
       counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
       values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
@@ -438,6 +461,7 @@ export function unpackPart(part: PackedPart): ListRow[] {
   const length = part.length ? unpackNumbers(part.length) : [];
   const times = part.times ? unpackNumbers(part.times) : null;
   const basket = part.basket ? unpackNumbers(part.basket) : null;
+  const converting = part.converting ? unpackNumbers(part.converting) : null;
   const counts = part.counts.map((column) => unpackNumbers(column));
   const values = part.values.map((column) => unpackNumbers(column));
   return part.keys.map((key, index) => ({
@@ -453,6 +477,7 @@ export function unpackPart(part: PackedPart): ListRow[] {
     length: length[index] ?? 0,
     ...(times ? { times: times[index] ?? 0 } : {}),
     ...(basket ? { basket: basket[index] ?? 0 } : {}),
+    ...(converting ? { converting: converting[index] ?? 0 } : {}),
     counts: new Map(part.events.map((event, at) => [event, counts[at][index] ?? 0])),
     values: new Map(part.events.map((event, at) => [event, values[at][index] ?? 0])),
   }));

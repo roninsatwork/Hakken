@@ -31,8 +31,7 @@ export const ANALYTICS_PAGES = [
   { id: "campaigns", segment: "campaigns", group: "figures" },
   { id: "landingPages", segment: "funnel", group: "figures" },
   { id: "allPages", segment: "all-pages", group: "figures" },
-  // Every event the website recorded (GA30).
-  { id: "events", segment: "events", group: "figures" },
+  // Every event the website recorded (GA30) is part of Conversions (ga-conversions-visitors-plan.md CV1).
   { id: "conversions", segment: "conversions", group: "figures" },
   // A shop's products (GA34): listed only for a website that is a shop.
   { id: "products", segment: "products", group: "figures", shopOnly: true },
@@ -43,9 +42,10 @@ export const ANALYTICS_PAGES = [
 ] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup; shopOnly?: boolean }[];
 export type AnalyticsPageId = (typeof ANALYTICS_PAGES)[number]["id"];
 
-/** The page a path under the website belongs to: a landing page's own screen keeps Landing pages lit. */
+/** The page a path under the website belongs to: a landing page's own screen keeps Landing pages lit, an event's Conversions. */
 export function pageForPath(pathname: string, siteId: string): AnalyticsPageId {
-  const rest = pathname.replace(`/app/analytics/${siteId}`, "").replace(/^\/|\/$/g, "");
+  const own = pathname.replace(`/app/analytics/${siteId}`, "").replace(/^\/|\/$/g, "");
+  const rest = own === "events" || own.startsWith("events/") ? "conversions" : own;
   const under = ANALYTICS_PAGES.filter((page) => page.segment && (rest === page.segment || rest.startsWith(`${page.segment}/`)));
   return under.sort((left, right) => right.segment.length - left.segment.length)[0]?.id ?? "overview";
 }

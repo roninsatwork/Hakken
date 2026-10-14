@@ -1,18 +1,23 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";
-import { formatNumber } from "../../../sites/_components/siteFormat";
+import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
+import { FLOW_MORE } from "@/convex/utils/conversionFlow";
+import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
+import { SearchConsoleChartCard } from "../../../search-console/_components/SearchConsoleChartCard";
 import { AnalyticsListScreen, type VisitorList } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { ChannelsChart, ListTopBars } from "../../_components/AnalyticsChart";
+import { ChannelsChart } from "../../_components/AnalyticsChart";
+import { useFlowKindName } from "../../_components/ConversionParts";
 import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
 import { formatPercent, formatPerVisit } from "../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
@@ -24,21 +29,29 @@ const VIEWS = ["visitorType", "browser", "system", "age", "gender", "interest"] 
 const NOUNS = { visitorType: "groups", browser: "browsers", system: "systems", age: "ageGroups", gender: "groups", interest: "interests" } as const;
 
 /**
- * Visitors (GA24; §18.2 board 15): who visited — how many people, whether
- * they'd been before, what they used, and their age, gender and interests
- * where Google can tell. What Hakken sees, four figures, new and returning
- * people a day, the list chosen as bars, a note when Google signals is off,
- * and one table switching between the six lists. One device's lists are asked
- * of Google when the screen opens.
+ * Visitors (GA24; §18.2 board 15; redrawn and approved 2026-10-14,
+ * docs/plans/active/ga-conversions-visitors-plan.md CV7): who visited — how
+ * many people, whether they'd been before, what they used, their age, gender
+ * and interests where Google can tell, and what each kind of visitor reads.
+ * What Hakken sees, four figures, new and returning people a day with a dot on
+ * each day with a conversion, where each kind of visitor lands by page
+ * classification (the list chosen), a note when Google signals is off, and
+ * one table switching between the six lists, opening on new or returning,
+ * each group with the classification it lands on most. Nothing is asked of
+ * Google.
  */
 export default function AnalyticsVisitorsPage() {
   const t = useTranslations("googleAnalytics.visitors");
-  const [view, setView] = useSiteParam<VisitorList>("view", "browser", VIEWS);
+  const [view, setView] = useSiteParam<VisitorList>("view", "visitorType", VIEWS);
   const nameOf = useVisitorName();
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const map = useQuery(api.googleAnalyticsConversionReads.analyticsVisitorMap, status?.connection?.newestDay ? { ...args, list: view } : "skip");
+  const kindName = useFlowKindName(map?.kinds ?? []);
   return (
     <AnalyticsListScreen
       header={{ icon: <Users className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
-      head={() => <VisitorsHead view={view} />}
+      head={() => <VisitorsHead map={map ?? null} kindName={kindName} />}
       list={view}
       noun={NOUNS[view]}
       searchPlaceholder={t(`find.${view}`)}
@@ -46,9 +59,12 @@ export default function AnalyticsVisitorsPage() {
       opening="visits"
       emptyLabel={t("empty")}
       nameOf={(row) => nameOf(row.label)}
+      kindName={kindName}
     />
   );
 }
+
+type VisitorMap = NonNullable<FunctionReturnType<typeof api.googleAnalyticsConversionReads.analyticsVisitorMap>>;
 
 /** A group's name in the reader's words: "New", "Female", "Unknown"; a browser or a system as Google names it. */
 function useVisitorName(): (label: string) => string {
@@ -61,7 +77,7 @@ function useVisitorName(): (label: string) => string {
   };
 }
 
-function VisitorsHead({ view }: { view: VisitorList }) {
+function VisitorsHead({ map, kindName }: { map: VisitorMap | null; kindName: (kind: string) => string }) {
   const t = useTranslations("googleAnalytics.visitors");
   const tf = useTranslations("googleAnalytics.filters");
   const args = useAnalyticsArgs();
@@ -76,7 +92,7 @@ function VisitorsHead({ view }: { view: VisitorList }) {
   const signalsOff = answer?.signals === "off";
   return (
     <>
-      <AnalyticsSees screen="visitors" seen={answer?.seen} currency={status?.connection?.currency} />
+      <AnalyticsSees screen="visitors" seen={answer?.seen} currency={status?.connection?.currency} names={(value) => (map?.kinds.some((kind) => kind.kind === value) ? kindName(value) : null)} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
       {figures ? (
         <FigureRow columns={4}>
@@ -90,20 +106,77 @@ function VisitorsHead({ view }: { view: VisitorList }) {
           />
         </FigureRow>
       ) : null}
+      {/* A dot on each day with a conversion, bigger for more (CV7), as Channels' chart draws them. */}
       <ChannelsChart
         channels={[t("new"), t("returningLine")]}
         rest={false}
-        points={(answer?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.new, point.returning] }))}
+        marked
+        updateKey={false}
+        points={(answer?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.new, point.returning], conversions: [point.newConversions, point.returningConversions] }))}
         host={status?.host ?? ""}
         from={null}
         to={null}
         exportName="google-analytics-new-and-returning"
         title={{ ...t.raw("chartTitle") as { day: string; week: string; month: string }, hint: t("chartHint", { period: tf(`periods.${period}`) }) }}
       />
-      <ListTopBars list={view} sort="visits" bars={`visitors.${view}`} nameOf={nameOf} />
+      <VisitorMapCard map={map} nameOf={nameOf} kindName={kindName} />
       {signalsOff ? (
         <Notice>{t("signalsOff", { host: status?.host ?? "" })}</Notice>
       ) : null}
     </>
+  );
+}
+
+/**
+ * "Where each kind of visitor lands, by page classification" (CV7, Channels'
+ * map): the list chosen above the table down the side — its eight biggest
+ * groups, then everything else — the website's classifications across, each
+ * square the group's visits that started on that kind of page, brighter for a
+ * bigger share of the group, with its conversions (none for interests, kept
+ * without them: CV10).
+ */
+function VisitorMapCard({ map, nameOf, kindName }: { map: VisitorMap | null; nameOf: (label: string) => string; kindName: (kind: string) => string }) {
+  const t = useTranslations("googleAnalytics.visitors.map");
+  const tf = useTranslations("googleAnalytics.filters");
+  const status = useAnalyticsStatus();
+  const [period] = usePeriod();
+  const columns = (map?.kinds ?? []).map((kind) => kindName(kind.kind));
+  const label = (key: string) => (key === FLOW_MORE ? t("everything") : nameOf(key));
+  const rows: ChannelMapRow[] = (map?.rows ?? []).map((row) => ({
+    key: row.key,
+    label: label(row.key),
+    total: t("visits", { count: row.visits }),
+    cells: row.cells.map((cell, at) => ({
+      visits: cell.visits,
+      conversions: map?.conversions ? cell.conversions : 0,
+      hover: map?.conversions
+        ? t("hover", { group: label(row.key), kind: columns[at] ?? "", visits: cell.visits, conversions: cell.conversions })
+        : t("hoverPlain", { group: label(row.key), kind: columns[at] ?? "", visits: cell.visits }),
+    })),
+  }));
+  const visitsOf = new Map((map?.rows ?? []).map((row) => [row.key, row.visits]));
+  const hint = `${t(map?.conversions === false ? "hintNoConversions" : "hint", { period: tf(`periods.${period}`) })}${map?.thresholded ? ` ${t("privacy")}` : ""}`;
+  return (
+    <SearchConsoleChartCard
+      title={t("title")}
+      hint={hint}
+      exportName="google-analytics-visitor-map"
+      csv={() => toCsv(["group", ...columns], (map?.rows ?? []).map((row) => [label(row.key), ...row.cells.map((cell) => cell.visits)]))}
+      host={status?.host ?? ""}
+      from={null}
+      to={null}
+    >
+      {map === null || map.collecting ? <p className="py-10 text-center text-[12px] text-muted">{t("collecting")}</p>
+        : rows.length === 0 ? <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>
+          : (
+            <ChannelMap
+              columns={columns}
+              rows={rows}
+              rowVisits={(row) => visitsOf.get(row.key) ?? 0}
+              conversionsWord={(count) => t("conversions", { count })}
+              legend={{ visits: t("legendVisits"), ...(map.conversions ? { conversions: t("legendConversions") } : {}), shades: t("legendShades"), empty: t("legendEmpty") }}
+            />
+          )}
+    </SearchConsoleChartCard>
   );
 }

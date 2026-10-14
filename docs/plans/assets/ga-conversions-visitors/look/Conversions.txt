@@ -1,0 +1,26 @@
+# Google Analytics → Conversions — the approved look (board "Conversions" of docs/plans/assets/ga-conversions-visitors/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Conversions
+settings-card: What Hakken sees
+figures
+  figure: Conversions
+  figure: Value
+  figure: Conversion rate
+  figure: Key events not counted
+chart-card: Conversions over time
+  checkbox: Contact form sent
+  checkbox: Phone number clicked
+  checkbox: Email address clicked
+  checkbox: Value (£)
+chart-card: How visits reached a conversion, by page classification
+page-flow
+chart-card: Conversions by page classification
+channel-map
+chart-card: What people did before converting
+search: Find an event…
+filter: Kind
+table: Event | Times | People | Conversion | Change
+  table-bar
+    download: Download CSV
+  table-footer

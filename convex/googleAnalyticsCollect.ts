@@ -10,7 +10,7 @@ import { ANALYTICS_DAYS_KEPT as DAYS_KEPT, countryOfDayDevice, dayDevice } from 
 import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
 import { fillAfterCollection } from "./googleAnalyticsFillAfter";
 import { shiftDay } from "./searchConsoleDays";
-import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
+import { numberPages } from "./googleAnalyticsPageNumbers";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { forgetCountedHistory } from "./insightHistoryForget";
@@ -26,17 +26,14 @@ import {
   ITEM_METRICS,
   SHOP_STEPS,
   VISITOR_LISTS,
-  channelKey,
   fingerprint,
   groupKeys,
   isEventList,
   isItemList,
   joinAsks,
   packList,
-  pageAddress,
   type Lead,
   slotKey,
-  splitChannelKey,
   type ListRow,
   type PackedPart,
 } from "./googleAnalyticsLists";
@@ -204,6 +201,8 @@ export type CollectTarget = {
   timeZone: string;
   /** The events listed on the connection: each row keeps their counts, so changing what counts re-prices every date. */
   events: string[];
+  /** Those counted as conversions: the second step of each action's funnel (ga-conversions-visitors-plan.md CV4). */
+  counted: string[];
   /** Those Google counts once a visit: counted by the visits they happened in (conversions-back-in-time-plan.md BT1). */
   perVisit: string[];
   newestDay: string | undefined;
@@ -261,6 +260,7 @@ export const collectTarget = internalQuery({
       origin: siteOrigin(addresses, website?.host ?? ""),
       timeZone: connection.timeZone ?? "Europe/London",
       events: (connection.events ?? []).map((event) => event.eventName),
+      counted: (connection.events ?? []).filter((event) => event.counted).map((event) => event.eventName),
       perVisit: perVisitOf(connection),
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
@@ -331,9 +331,13 @@ export async function askRealtime(session: Session, property: string, live: Real
   return await retried(session, async (token) => ({ answer: await runRealtimeReport(token, property, live), requests: 1 }));
 }
 
-/** Who did an event and then one of others (§18.6.5), asked as every report is: its sign-in renewed, Google waited for when busy. */
-export async function askFunnel(session: Session, property: string, funnel: FunnelAsk): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
-  return await retried(session, async (token) => ({ answer: await runFunnelReport(token, property, funnel), requests: 1 }));
+/**
+ * Who did an event and then one of others (§18.6.5), asked as every report is: its sign-in renewed, Google waited for
+ * when busy. A collection's funnel (`budgeted`, ga-conversions-visitors-plan.md CV4) keeps to the run's budget; one
+ * asked from an event's screen does not: what is kept back is for it (SF17).
+ */
+export async function askFunnel(session: Session, property: string, funnel: FunnelAsk, budgeted = false): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
+  return await retried(session, async (token) => ({ answer: await runFunnelReport(token, property, funnel), requests: 1 }), { budgeted });
 }
 
 /**
@@ -387,6 +391,11 @@ export async function askList(
   lead: readonly Lead[],
   range: { from: string; to: string },
   only: { device?: string; landingPage?: string[]; pagePath?: string[] } = {},
+  /**
+   * `converting`: a third ask, the visits that made any listed event, each once (`sessions` filtered to the events, no
+   * split by event) — landing pages by channel for the dates now (ga-conversions-visitors-plan.md CV8).
+   */
+  also: { converting?: boolean } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
   const base = {
@@ -415,9 +424,15 @@ export async function askList(
     if (!answer.ok) return answer;
     events = answer;
   }
+  let converting: ({ ok: true } & Report) | null = null;
+  if (also.converting && target.events.length > 0) {
+    const answer = await ask(session, target.property!, { ...base, dimensions, metrics: ["sessions"], eventNames: target.events });
+    if (!answer.ok) return answer;
+    converting = answer;
+  }
   return {
     ok: true,
-    groups: joinAsks(list, lead, main.rows, events?.rows ?? [], new Set(target.perVisit)),
+    groups: joinAsks(list, lead, main.rows, events?.rows ?? [], new Set(target.perVisit), converting?.rows ?? null),
     flags: {
       folded: main.folded || (events?.folded ?? false),
       thresholded: main.thresholded || (events?.thresholded ?? false),
@@ -436,54 +451,6 @@ export function siteOrigin(addresses: readonly string[], host: string): string {
   return `https://${(addresses[0] ?? host).toLowerCase()}`;
 }
 
-/**
- * A page list's addresses as the website's page numbers (`holdPageRefs.ts`),
- * shared with Search Console (§4.6). Analytics names a landing page without
- * its trailing slash (`landingPage`) where All pages and Search Console keep
- * it: a landing page is given the slashed address when the website holds that
- * one and not its own, so one page has one number.
- */
-export async function numberPages(
-  ctx: ActionCtx,
-  target: CollectTarget,
-  rows: ListRow[],
-  list: "landing" | "page" | "landingChannel" | "landingAssistant",
-  /** Each row keyed page then something more, kept beside the page's number: the lists by channel, a page's days (SF5). */
-  keyedRows = list === "landingChannel" || list === "landingAssistant",
-): Promise<ListRow[]> {
-  const known = (await addressesOf(ctx, target.companyWebsiteId)).numbers;
-  const landing = list !== "page";
-  const addressOf = (path: string) => {
-    const address = pageAddress(target.origin, path);
-    if (!landing || address === "(not set)" || address.endsWith("/") || known.has(address)) return address;
-    return known.has(`${address}/`) ? `${address}/` : address;
-  };
-  // A landing page by channel keeps its channel beside the page's number (Insights, §8).
-  const keyed = keyedRows;
-  const parts = rows.map((row) => (keyed ? splitChannelKey(row.key) : { channel: "", source: "" }));
-  const addresses = rows.map((row, index) => addressOf(keyed ? parts[index].channel : row.key));
-  const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => address !== "(not set)"));
-  const refs = new Map<string, string>();
-  let at = 0;
-  for (const address of addresses) if (address !== "(not set)") refs.set(address, numbered[at++]);
-  // Two paths that are one address once cleaned are one row.
-  const merged = new Map<string, ListRow>();
-  rows.forEach((row, index) => {
-    const page = refs.get(addresses[index]) ?? "(not set)";
-    const key = keyed ? channelKey(page, parts[index].source) : page;
-    const held = merged.get(key);
-    if (!held) {
-      merged.set(key, { ...row, key });
-      return;
-    }
-    for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) held[field] += row[field];
-    if (row.times !== undefined) held.times = (held.times ?? 0) + row.times;
-    if (row.basket !== undefined) held.basket = (held.basket ?? 0) + row.basket;
-    for (const [event, count] of row.counts) held.counts.set(event, (held.counts.get(event) ?? 0) + count);
-    for (const [event, value] of row.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
-  });
-  return [...merged.values()];
-}
 
 // ---------------------------------------------------------------------------
 // The days
@@ -768,7 +735,9 @@ export async function collectPeriod(
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).
   const reading = job.list === "page" ? { ...asking, events: [...asking.events, ...READ_EVENTS] } : asking;
-  const asked = await askList(session, reading, job.list, lead, range);
+  // Landing pages by channel for the dates now also count the visits that made any listed event: Conversions' flow (CV8).
+  const also = { converting: job.list === "landingChannel" && job.which === "NOW" };
+  const asked = await askList(session, reading, job.list, lead, range, {}, also);
   if (!asked.ok) return failed(session, asked);
   const devices = new Map<string, ListRow[]>();
   for (const [group, rows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, rows);
@@ -780,7 +749,7 @@ export async function collectPeriod(
   // People cannot be added up across devices (§18.6.2): every device is asked whole, as the website's totals always
   // were — the channels aside, whose people no screen shows for every device.
   if (lead.length > 0 && job.list !== "channel") {
-    const whole = await askList(session, reading, job.list, [], range);
+    const whole = await askList(session, reading, job.list, [], range, {}, also);
     if (!whole.ok) return failed(session, whole);
     devices.set(EVERY_DEVICE, [...whole.groups.values()].flat());
   }

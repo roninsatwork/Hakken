@@ -503,7 +503,21 @@ export type ConversionsFacts = {
   kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null; setIn: string | null }>;
   /** The key events not counted that happened, most first. */
   fired: ReadonlyArray<{ eventName: string; count: number }>;
+  /**
+   * How visits reached a conversion (ga-conversions-visitors-plan.md CV3): each channel's and classification's visits
+   * and conversions, the busiest first; null before landing pages by channel are kept.
+   */
+  flow?: {
+    visits: number;
+    channels: ReadonlyArray<{ key: string; visits: number; conversions: number }>;
+    kinds: ReadonlyArray<{ kind: string; visits: number; conversions: number }>;
+  } | null;
+  /** What people did before converting, over 12 months (CV4); null with nothing counted. */
+  before?: { siteRate: number | null; few: number; rows: ReadonlyArray<{ eventName: string; did: number; then: number }> } | null;
 };
+
+/** The flow's and grid's boxes past the busiest: never named as a channel or a classification. */
+const FOLDED = new Set(["~more", "OTHER_KINDS"]);
 
 const names = (events: ReadonlyArray<{ eventName: string }>) => events.map((event) => event.eventName).join(",");
 
@@ -526,14 +540,40 @@ export function conversionsSees(facts: ConversionsFacts): Seen {
   const before = facts.kinds.every((kind) => kind.countBefore !== null) ? sum(facts.kinds, (kind) => kind.countBefore ?? 0) : null;
   const rate = facts.visits > 0 ? total / facts.visits : null;
   const rateBefore = before !== null && facts.visitsBefore ? before / facts.visitsBefore : null;
+  // Where the conversions came from: the channel and the kind of page that made the most (CV6).
+  const shown = <Row extends { visits: number; conversions: number }>(rows: ReadonlyArray<Row & { key?: string; kind?: string }>) => rows.filter((row) => !FOLDED.has(row.key ?? row.kind ?? ""));
+  const flow = facts.flow ?? null;
+  const fromChannel = flow && total > 0 ? [...shown(flow.channels)].sort((left, right) => right.conversions - left.conversions)[0] ?? null : null;
+  const fromKind = flow && total > 0 ? [...shown(flow.kinds)].sort((left, right) => right.conversions - left.conversions)[0] ?? null : null;
+  const came = fromChannel && fromKind && fromChannel.conversions > 0 && fromKind.conversions > 0
+    ? fromChannel.conversions === total && fromKind.conversions === total
+      ? { code: "cameAll", a: total, text: fromChannel.key, more: fromKind.kind }
+      : { code: "cameMost", a: fromChannel.conversions, b: total, text: fromChannel.key, more: fromKind.kind }
+    : null;
+  // The channel bringing the most visits, when it made none and others did.
+  const biggest = flow && total > 0 ? shown(flow.channels)[0] ?? null : null;
+  const biggestNone = biggest && biggest.conversions === 0 && flow ? { code: "biggestNone", text: biggest.key, a: biggest.visits, b: flow.visits } : null;
+  // The action whose people go on to convert most, above the website's own, on enough people to judge (CV4).
+  const actions = facts.before ?? null;
+  const siteRate = actions?.siteRate ?? null;
+  const best = actions && siteRate !== null
+    ? [...actions.rows].filter((row) => row.did >= actions.few && row.then / row.did > siteRate).sort((left, right) => right.then / right.did - left.then / left.did)[0] ?? null
+    : null;
+  const fired = facts.fired;
   const says: Array<Maybe<SeenPhrase>> = [
     total === 0 ? { code: "noneHappened", a: facts.kinds.length }
       : happened.length === 1 ? { code: "allOne", text: happened[0].eventName, a: total }
         : { code: "topKind", text: happened[0].eventName, a: happened[0].count, b: total },
+    came,
+    biggestNone,
+    best && siteRate !== null && { code: "beforeBest", text: best.eventName, a: best.then / best.did, b: siteRate },
+    fired.length > 0 && { code: "uncounted", text: names(fired), a: sum(fired, (event) => event.count) },
     total > 0 && silent.length > 0 && { code: "silent", text: names(silent), a: silent.length },
-    rate !== null && rateBefore !== null && rate !== rateBefore && { code: rate < rateBefore ? "rateDown" : "rateUp", a: rateBefore, b: rate },
+    !came && rate !== null && rateBefore !== null && rate !== rateBefore && { code: rate < rateBefore ? "rateDown" : "rateUp", a: rateBefore, b: rate },
   ];
   const steps: Array<Maybe<SeenStep>> = [
+    biggestNone && { code: "openChannel", text: biggestNone.text, link: "channel", to: toPage("channels/channel", { key: biggestNone.text }) },
+    fired.length > 0 && { code: "countUncounted", text: names(fired), a: fired.length, link: "changeWhatCounts", to: CHOOSE },
     silent.length > 0 && { code: "trySilent", text: names(silent), a: silent.length, link: "trackingHealth", to: toPage("tracking-health") },
     unvalued.length > 0 && { code: "setValue", text: names(unvalued), a: unvalued.length, link: "changeWhatCounts", to: CHOOSE },
   ];

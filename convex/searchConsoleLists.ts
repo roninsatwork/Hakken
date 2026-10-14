@@ -889,11 +889,11 @@ export const exportRows = internalQuery({
     if (!hold || hold.companyId !== companyId) return null;
     const website = await ctx.db.get(hold.websiteId);
     const list = await readList(ctx, hold._id, ask);
-    // A page's classification by its name in the file, as the screen shows it; Not sorted in words (as Your pages' download).
+    // A page's classification by its name in the file, as the screen shows it; Unclassified in words (as Your pages' download).
     const pageKinds = list.pageKinds;
     const lines = (await namedRows(list, list.rows.slice())).map((named) => {
       const row = pageKinds && named.kind !== null
-        ? { ...named, kind: named.kind === NOT_SORTED_KIND ? "Not sorted" : (pageKinds.nameOf(named.kind) ?? named.kind) }
+        ? { ...named, kind: named.kind === NOT_SORTED_KIND ? "Unclassified" : (pageKinds.nameOf(named.kind) ?? named.kind) }
         : named;
       return fields.map((field) => cell(exportValue(row, field))).join(",");
     });

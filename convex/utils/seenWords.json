@@ -1075,7 +1075,14 @@
         "rateDown": "The share of visits that convert fell from {aRate} to {bRate}.",
         "rateUp": "The share of visits that convert rose from {aRate} to {bRate}.",
         "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
-        "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
+        "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value.",
+        "cameAll": "{count, plural, =1 {It came} other {All # came}} from {text} visits that landed on {more} pages.",
+        "cameMost": "{text} visits made {a} of the {b}; most conversions started on {more} pages.",
+        "biggestNone": "{text} brought {a} of the {b} visits, and none converted.",
+        "beforeBest": "Over 12 months, {aRate} of the people who did {event} went on to convert, against {bRate} of everyone.",
+        "uncounted": "{event} happened {count, plural, =1 {once} other {# times}} but isn't counted as a conversion.",
+        "openChannel": "See where {text}'s visits land, and why none converted.",
+        "countUncounted": "Decide whether {event} should count as a conversion."
       },
       "products": {
         "none": "No products were looked at or bought in these dates.",
@@ -1091,6 +1098,7 @@
         "none": "No visits in these dates.",
         "people": "{a} people made the {b} visits; {cRate} were new to the website.",
         "returnersConvert": "The {a} visits from people who came back converted at {bRate}, against {cRate} for new visitors.",
+        "returningLand": "People who came back landed most on {text} pages: {aRate} of their visits.",
         "browserLags": "{aRate} of visits were on {text}, and they engaged less: {bRate} against {cRate} for the website.",
         "signalsOff": "Age, gender and interests are empty: Google signals is off in this website's Google Analytics.",
         "hidden": "Google held back some small groups to protect people's privacy.",
@@ -2477,7 +2485,14 @@
         "rateDown": "La quota di visite che convertono è scesa dal {aRate} al {bRate}.",
         "rateUp": "La quota di visite che convertono è salita dal {aRate} al {bRate}.",
         "trySilent": "Prova tu stesso {event}, e controlla che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
-        "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore."
+        "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore.",
+        "cameAll": "{count, plural, =1 {È arrivata} other {Tutte e # sono arrivate}} da visite {text} atterrate su pagine {more}.",
+        "cameMost": "Le visite {text} ne hanno fatte {a} su {b}; la maggior parte delle conversioni è partita da pagine {more}.",
+        "biggestNone": "{text} ha portato {a} delle {b} visite, e nessuna ha convertito.",
+        "beforeBest": "In 12 mesi, il {aRate} delle persone che hanno fatto {event} ha poi convertito, contro il {bRate} di tutti.",
+        "uncounted": "{event} è {count, plural, =1 {successo una volta} other {successo # volte}} ma non conta come conversione.",
+        "openChannel": "Guarda dove atterrano le visite di {text}, e perché nessuna ha convertito.",
+        "countUncounted": "Decidi se {event} deve contare come conversione."
       },
       "products": {
         "none": "Nessun prodotto è stato visto o comprato in queste date.",
@@ -2493,6 +2508,7 @@
         "none": "Nessuna visita in queste date.",
         "people": "{a} persone hanno fatto le {b} visite; il {cRate} era nuovo sul sito.",
         "returnersConvert": "Le {a} visite di chi è tornato hanno convertito al {bRate}, contro il {cRate} dei nuovi visitatori.",
+        "returningLand": "Chi è tornato è atterrato soprattutto su pagine {text}: il {aRate} delle sue visite.",
         "browserLags": "Il {aRate} delle visite era su {text}, con meno coinvolgimento: {bRate} contro il {cRate} del sito.",
         "signalsOff": "Età, genere e interessi sono vuoti: Google Signals è spento nel Google Analytics di questo sito.",
         "hidden": "Google ha nascosto alcuni gruppi piccoli per proteggere la privacy delle persone.",

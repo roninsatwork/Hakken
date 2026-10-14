@@ -464,6 +464,42 @@ describe("9 · Conversions and 16 · Nothing counted yet", () => {
     worded("conversions", several, none);
   });
 
+  test("with the flow and the actions (ga-conversions-visitors-plan.md CV6): where they came from, the biggest channel converting nothing, the form not counted", () => {
+    // ronins.co.uk's last 30 days: three Contacts, all typed in to the home page; search converting nothing; forms not counted.
+    const contact = [{ eventName: "contact", count: 3, countBefore: 3, setIn: "HAKKEN" }, ...kinds.slice(1)];
+    const flow = {
+      visits: 249,
+      channels: [{ key: "Organic Search", visits: 192, conversions: 0 }, { key: "Direct", visits: 40, conversions: 3 }, { key: "~more", visits: 17, conversions: 0 }],
+      kinds: [{ kind: "brand", visits: 63, conversions: 3 }, { kind: "service", visits: 79, conversions: 0 }],
+    };
+    const before = { siteRate: 0.015, few: 100, rows: [{ eventName: "scroll", did: 702, then: 19 }, { eventName: "file_download", did: 31, then: 3 }] };
+    const box = conversionsSees({ from: "2026-09-14", visits: 247, visitsBefore: 196, kinds: contact, fired: [{ eventName: "form_submission", count: 7 }], flow, before });
+    expect(box.says).toEqual([
+      { code: "allOne", text: "contact", a: 3 },
+      { code: "cameAll", a: 3, text: "Direct", more: "brand" },
+      { code: "biggestNone", text: "Organic Search", a: 192, b: 249 },
+    ]);
+    expect(box.steps).toEqual([
+      { code: "openChannel", text: "Organic Search", link: "channel", to: { segment: "channels/channel", filters: { key: "Organic Search" } } },
+      { code: "countUncounted", text: "form_submission", a: 1, link: "changeWhatCounts", to: { segment: "connection", filters: { change: "1" } } },
+      { code: "trySilent", text: "live_chat_event,phone_number_click,email_link_click", a: 3, link: "trackingHealth", to: { segment: "tracking-health" } },
+    ]);
+    // Spread across channels: most from one; the action above the website's rate on enough people; the form not counted.
+    const spread = conversionsSees({
+      from: "2026-09-14", visits: 1000, visitsBefore: null, kinds: [{ eventName: "contact", count: 10, countBefore: null, setIn: "HAKKEN" }], fired: [{ eventName: "form_submission", count: 7 }],
+      flow: { visits: 1000, channels: [{ key: "Organic Search", visits: 700, conversions: 6 }, { key: "Direct", visits: 300, conversions: 4 }], kinds: [{ kind: "service", visits: 600, conversions: 7 }, { kind: "brand", visits: 400, conversions: 3 }] },
+      before,
+    });
+    expect(spread.says).toEqual([
+      { code: "allOne", text: "contact", a: 10 },
+      { code: "cameMost", a: 6, b: 10, text: "Organic Search", more: "service" },
+      { code: "beforeBest", text: "scroll", a: 19 / 702, b: 0.015 },
+    ]);
+    const quiet = conversionsSees({ from: "2026-09-14", visits: 1000, visitsBefore: null, kinds: [{ eventName: "contact", count: 10, countBefore: null, setIn: "HAKKEN" }], fired: [{ eventName: "form_submission", count: 7 }] });
+    expect(quiet.says).toEqual([{ code: "allOne", text: "contact", a: 10 }, { code: "uncounted", text: "form_submission", a: 7 }]);
+    worded("conversions", box, spread, quiet);
+  });
+
   test("nothing counted: the visits are here, and the enquiry the property records", () => {
     const fired = [{ eventName: "scroll", count: 4_000 }, { eventName: "sign_up", count: 30 }, { eventName: "form_submission", count: 12 }];
     const box = conversionsSees({ from: "2026-09-10", visits: 826, visitsBefore: 744, kinds: [], fired });

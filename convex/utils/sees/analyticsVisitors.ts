@@ -31,7 +31,15 @@ export type VisitorFacts = {
   signals: "on" | "off" | null;
   /** Google held back small groups (`subjectToThresholding`). */
   thresholded: boolean;
+  /**
+   * The classification most of the returning visitors' visits started on, and its share
+   * (ga-conversions-visitors-plan.md CV7); null before landing pages by new or returning are kept.
+   */
+  returningLands?: { kind: string; share: number; visits: number } | null;
 };
+
+/** A returning visitors' landing worth a sentence: this share of their visits on one kind of page, or more. */
+export const RETURNING_LAND_SHARE = 0.4;
 
 const rateOf = (group: Group | null) => (group && group.visits > 0 ? group.conversions / group.visits : 0);
 
@@ -45,6 +53,8 @@ const rateOf = (group: Group | null) => (group && group.visits > 0 ? group.conve
  */
 export function visitorsSees(facts: VisitorFacts): Seen {
   const { people, visits, engaged, newPeople, newVisitors, returning, browsers, signals, thresholded } = facts;
+  const lands = facts.returningLands ?? null;
+  const landed = lands && lands.visits >= RETURNING_VISITS_FLOOR && lands.share >= RETURNING_LAND_SHARE ? lands : null;
   if (visits === 0) return seen([{ code: "none" }]);
   const returningRate = rateOf(returning);
   const newRate = rateOf(newVisitors);
@@ -58,9 +68,12 @@ export function visitorsSees(facts: VisitorFacts): Seen {
     comeBack && { code: "returnersConvert", a: returning.visits, b: returningRate, c: newRate },
     lagging && { code: "browserLags", text: lagging.label, a: lagging.visits / visits, b: lagging.engaged / lagging.visits, c: site },
     signals === "off" && { code: "signalsOff" },
+    // Where returning visitors land (CV7): after what is wrong or missing, before the groups Google held back.
+    landed && { code: "returningLand", text: landed.kind, a: landed.share },
     thresholded && { code: "hidden" },
   ], [
     comeBack && { code: "reasonToReturn", link: "conversions", to: toPage("conversions") },
-    lagging && { code: "checkBrowser", text: lagging.label, link: "events", to: toPage("events") },
+    // Events are part of Conversions (ga-conversions-visitors-plan.md CV1).
+    lagging && { code: "checkBrowser", text: lagging.label, link: "conversions", to: toPage("conversions") },
   ]);
 }

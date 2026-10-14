@@ -263,8 +263,9 @@ function checkedName(raw: string, setup: ClassificationSetup, self: Classificati
   const name = raw.trim().replace(/\s+/g, " ");
   if (name === "") throw appError("INVALID_INPUT", "Give the classification a name.");
   if (name.length > NAME_LENGTH) throw appError("INVALID_INPUT", `Keep the name to ${NAME_LENGTH} characters.`);
-  if (name.toLowerCase() === "not sorted") {
-    throw appError("INVALID_INPUT", '"Not sorted" is what a page with no classification shows, so it can\'t be a classification\'s name.');
+  // "Unclassified" is what a page with no classification shows (Anthony, 2026-10-15: "I prefer unclassified"); "Not sorted" was, before.
+  if (name.toLowerCase() === "unclassified" || name.toLowerCase() === "not sorted") {
+    throw appError("INVALID_INPUT", '"Unclassified" is what a page with no classification shows, so it can\'t be a classification\'s name.');
   }
   const clash = setup.classifications.find((classification) => classification._id !== self && classification.name.toLowerCase() === name.toLowerCase());
   if (clash) throw appError("INVALID_INPUT", `This website already has a classification called "${clash.name}".`);

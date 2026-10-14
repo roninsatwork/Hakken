@@ -4,7 +4,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHART, CONVERSIONS, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
+import { CHART, CONVERSIONS, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
@@ -132,22 +132,26 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, "all-pages-rethink", "AllPages", "Google Analytics → All pages");
   });
 
-  it("7 · Conversions", async () => {
+  // Conversions with Events merged in (ga-conversions-visitors-plan.md CV2, drawn and approved 2026-10-14).
+  it("7 · Conversions, with every event", async () => {
     at("/app/analytics/site_1/conversions");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
-      "googleAnalyticsReads:analyticsTopList": top([ROW]),
+      // A key event not counted, as the drawing shows: the fourth figure says so.
+      "googleAnalyticsReads:analyticsConversions": { ...CONVERSIONS, fired: [{ eventName: "sign_up", count: 5 }] },
+      "googleAnalyticsChartReads:analyticsChart": CHART,
+      "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST,
     });
     const { container } = render(<AnalyticsConversionsPage />);
     await screen.findAllByText("Contact form sent");
-    await screen.findByText("3 of 3");
-    await expectApprovedLook(container, PLAN, "Enquiries", "Google Analytics → Conversions");
+    await screen.findByText("Key events not counted");
+    await screen.findByText("Not counted");
+    await expectApprovedLook(container, "ga-conversions-visitors", "Conversions", "Google Analytics → Conversions");
   });
 
   it("18 · nothing counted yet", async () => {
     at("/app/analytics/site_1/conversions");
-    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ events: [] }), "googleAnalyticsReads:analyticsConversions": NOTHING_COUNTED });
+    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ events: [] }), "googleAnalyticsReads:analyticsConversions": NOTHING_COUNTED, "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST });
     const { container } = render(<AnalyticsConversionsPage />);
     await screen.findByText("Nothing counts as a conversion yet");
     await screen.findByText(/Your property does record “Newsletter sign-up”/);

@@ -177,6 +177,16 @@ completed work.
   Every ask reads Google's allowance left and stops above a fifth.
   Drawn, agreed and built on dev 2026-10-14 (about 12.5 man-days; local
   commits); ronins.co.uk's new lists fill at its next collection.
+- [Google Analytics — Conversions with Events merged in, and Visitors](./active/ga-conversions-visitors-plan.md)
+  — Events joins Conversions as one page: "How visits reached a conversion,
+  by page classification" (channel → classification → how the visit ended,
+  key events not counted and kinds that never happened shown), "What people
+  did before converting" (12 months, orange above the website's rate), and
+  one table of every event, conversions first. Visitors gains "Where each
+  kind of visitor lands, by page classification" and "Lands most on". Three
+  new shared lists and about 8 nightly funnel asks; no fill. Drawn and
+  approved 2026-10-14 (about 9.5 man-days) and built on dev the same day,
+  not committed; conversions by page classification added on Anthony's word.
 - [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
   — the All pages screen of one page gains the visits that started on it and
   their conversions, named apart from those made on it; different pages a
