@@ -9,28 +9,28 @@ import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { ListTopBars } from "../../_components/AnalyticsChart";
-import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
+import { LandingFlowCard } from "../../_components/LandingFlow";
+import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus } from "../../_components/useAnalytics";
 
 const VIEWS = ["pages", "groups"] as const;
 type View = (typeof VIEWS)[number];
 const ANY_GROUP = "all";
 
 /**
- * Landing pages (§5; §11 board 5; §15 screens 6 and 17): the first page of
- * each visit, and what those visits went on to do — each page, or the
- * website's own page groups (GA15), with a Page group filter — one line a
- * row, the conversion rate beside the count, under What Hakken sees; for one
- * device, once Google has answered, weighed against every device. Every page
- * opens its own screen (GA22). A website with no groups shows pages only.
+ * Landing pages (docs/plans/active/landing-pages-flow-plan.md, drawn and
+ * approved 2026-10-14): What Hakken sees, then "How visits moved through
+ * your website" — landing pages, the next page and the page after, click a
+ * page to follow its routes (LF2) — then each landing page's own funnel:
+ * visits, left here, went on, the page most went to, conversions (LF4) —
+ * each page, or the website's page groups (GA15), with a Page group filter.
+ * Every page opens its own screen (GA22). A website with no groups shows
+ * pages only.
  */
 export default function AnalyticsLandingPagesPage() {
   const t = useTranslations("googleAnalytics.landing");
-  const tf = useTranslations("googleAnalytics.filters");
   const siteId = useAnalyticsSiteId();
   const hrefFor = useAnalyticsHref(siteId);
   const currency = useAnalyticsStatus()?.connection?.currency ?? null;
-  const [period] = usePeriod();
   const choices = useQuery(api.pageKinds.pageKindChoices, { siteId });
   const [view, setView] = useSiteParam<View>("view", "pages", VIEWS);
   const [group, setGroup] = useSiteParam<string>("group", ANY_GROUP);
@@ -51,11 +51,11 @@ export default function AnalyticsLandingPagesPage() {
   return (
     <AnalyticsListScreen
       key={byGroups ? "groups" : "pages"}
-      header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${period}`) }) }}
+      header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
       head={(answer) => (
         <>
           <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} />
-          <ListTopBars list="landing" sort="visits" bars="landing" />
+          <LandingFlowCard />
         </>
       )}
       list={byGroups ? "groups" : "landing"}

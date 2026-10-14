@@ -363,7 +363,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     for (const row of out) {
       const own = byKey.get(row.key);
       row.onward = own ? Math.min(row.visits, own.on) : 0;
-      row.next = own && own.next && own.on > 0 ? { page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
+      row.next = own && own.next && own.on > 0 ? { key: own.next, page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
     }
   }
   if (args.list === "page" && args.quiet && !args.eventName && args.group === undefined) {

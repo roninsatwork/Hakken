@@ -111,17 +111,31 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, PLAN, "Overview", "Google Analytics → Overview");
   });
 
-  it("5 · Landing pages, one line a row", async () => {
+  it("5 · Landing pages: how visits moved, then each landing page's own funnel (landing-pages-flow-plan.md, approved 2026-10-14)", async () => {
     at("/app/analytics/site_1/landing-pages");
+    const flowRow = { ...ROW, onward: 46, next: { key: "~1", page: "https://www.acme-shop.test/about-us/", share: 0.93 } };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsListPage": list([ROW], { seen: landingSees([{ ...ROW, label: "/ai-agency/" }], { groups: false, device: "", everyDevice: null }) }),
+      "googleAnalyticsReads:analyticsListPage": list([flowRow], { seen: landingSees([{ ...ROW, label: "/ai-agency/" }], { groups: false, device: "", everyDevice: null }) }),
+      "googleAnalyticsFlowReads:analyticsLandingFlow": {
+        held: true, from: "2026-09-09", to: "2026-10-08", counting: true,
+        columns: [{ visits: 155, left: 109, conversions: 1 }, { visits: 43, left: 23, conversions: 0 }, { visits: 6, left: 6, conversions: 1 }],
+        nodes: [
+          { id: "0:~0", column: 0, page: "~0", path: "/ai-agency/", more: 0, visits: 155, left: 109, conversions: 1 },
+          { id: "1:~1", column: 1, page: "~1", path: "/about-us/", more: 0, visits: 43, left: 23, conversions: 0 },
+          { id: "2:~2", column: 2, page: "~2", path: "/ai-consultancy/", more: 0, visits: 6, left: 6, conversions: 1 },
+        ],
+        bands: [
+          { from: "0:~0", to: "1:~1", visits: 43, conversions: 0, landings: ["~0"] },
+          { from: "1:~1", to: "2:~2", visits: 6, conversions: 1, landings: ["~0"] },
+        ],
+      },
       "pageKinds:pageKindChoices": [{ id: "group_1", name: "AI services", type: "SERVICE" }],
     });
     const { container } = render(<AnalyticsLandingPagesPage />);
     await screen.findAllByText("/ai-agency/");
-    await screen.findByText("· 1.0%");
-    await expectApprovedLook(container, PLAN, "LandingPages", "Google Analytics → Landing pages");
+    await screen.findByText("155 visits · ▼ 109 left · ● 1");
+    await expectApprovedLook(container, "landing-pages-flow", "LandingPages", "Google Analytics → Landing pages");
   });
 
   it("6 · All pages: a short chart of the ticked pages over the table, its filters by the search box, no money (all-pages-rethink-plan.md)", async () => {

@@ -15706,7 +15706,13 @@
         "started": "Started",
         "startedTitle": "Conversions by people this channel brought first, on any visit",
         "landsMost": "Lands most on",
-        "landsMostTitle": "The page classification most of the channel's visits started on, and its share"
+        "landsMostTitle": "The page classification most of the channel's visits started on, and its share",
+        "left": "Left here",
+        "leftTitle": "Visits that left the website from this page without opening another, and their share of its visits",
+        "onward": "Went on",
+        "onwardTitle": "Visits that opened another page after this one, counted once a visit, and their share of its visits",
+        "next": "Most went to",
+        "nextTitle": "The page most of those visits opened next, and its share of them"
       },
       "notSorted": "Not sorted",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -15730,7 +15736,10 @@
         "rate": "Conversion rate (%)",
         "conversionsChange": "Change in conversions",
         "started": "Conversions started",
-        "landsMost": "Lands most on"
+        "landsMost": "Lands most on",
+        "left": "Left here",
+        "onward": "Went on",
+        "next": "Most went to"
       },
       "downloadFailed": "Couldn't prepare the download. Try again.",
       "untagged": "{count, plural, =1 {one visit had} other {# visits had}} no campaign tag",
@@ -15869,6 +15878,30 @@
       "coarse": {
         "day": "Before the last 90 days, each point is a week's daily average.",
         "week": "Before the last 12 months, each point is a month's weekly average."
+      },
+      "flow": {
+        "title": "How visits moved through your website",
+        "hint": "{period}: where visits landed, the page they opened next, and the one after. Click a page to follow its routes in and out; click it again to see them all.",
+        "landing": "Landing pages",
+        "next": "Next page",
+        "after": "Page after",
+        "summary": "{visits} visits · ▼ {left} left",
+        "summaryConverted": "{visits} visits · ▼ {left} left · ● {conversions}",
+        "more": "({count, plural, one {# more page} other {# more pages}})",
+        "nodeHover": "{page}: {visits} visits, {on} went on, {left} left. Click to follow its routes.",
+        "nodeHoverConverted": "{page}: {visits} visits, {on} went on, {left} left, {conversions, plural, one {# conversion} other {# conversions}}. Click to follow its routes.",
+        "bandHover": "{from} → {to}: {visits} visits",
+        "bandHoverConverted": "{from} → {to}: {visits} visits, {conversions, plural, one {# conversion} other {# conversions}}",
+        "figuresConverted": "{visits} · ● {conversions}",
+        "legendConversions": "Conversions, on a page or the route that led to it — bigger for more",
+        "legendLeft": "Visits that left there",
+        "loading": "Reading the flow…",
+        "collecting": "Still being collected: the next collection keeps how visits moved for these dates.",
+        "empty": "No visits in these dates.",
+        "csvFrom": "From",
+        "csvTo": "To",
+        "csvVisits": "Visits",
+        "csvConversions": "Conversions"
       }
     },
     "figures": {
@@ -16220,7 +16253,7 @@
     },
     "landing": {
       "title": "Landing pages",
-      "description": "The first page of each visit, and what those visits went on to do. Change is the visits against {before}.",
+      "description": "Where each visit started, and what those visits did next: left, went on to another page, or converted.",
       "groupFilter": "Page group",
       "notSorted": "Not sorted",
       "everyGroup": "Every page group",

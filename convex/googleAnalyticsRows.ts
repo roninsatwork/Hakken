@@ -223,8 +223,8 @@ export const shownRowValidator = v.object({
    * has kept them for these dates, device and country.
    */
   onward: v.optional(v.union(v.number(), v.null())),
-  /** The page most of those visits opened next, its address once named, and its share of them. */
-  next: v.optional(v.union(v.null(), v.object({ page: v.string(), share: v.number() }))),
+  /** The page most of those visits opened next: its number, its address once named, and its share of them. */
+  next: v.optional(v.union(v.null(), v.object({ key: v.string(), page: v.string(), share: v.number() }))),
   landsMost: v.optional(v.union(v.null(), v.object({ kind: v.string(), name: v.union(v.string(), v.null()), share: v.number() }))),
 });
 export type ShownRow = Infer<typeof shownRowValidator>;

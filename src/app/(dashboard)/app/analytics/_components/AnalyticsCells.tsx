@@ -60,6 +60,37 @@ export function ConversionsCell({ conversions, rate, fewVisits, oneLine = false 
   );
 }
 
+/**
+ * A count with its share of the row's visits on one line, as Landing pages' funnel draws it
+ * (landing-pages-flow-plan.md LF4): "▼ 46 · 28.9%" for the visits that left, "113 · 71.1%" for those that went on.
+ * The share greyed from fewer than 100 visits, as every rate here is; nothing kept yet, a dash.
+ */
+export function ShareCell({ count, visits, fewVisits, left = false }: { count: number | null | undefined; visits: number; fewVisits: boolean; left?: boolean }) {
+  const t = useTranslations("googleAnalytics.table");
+  if (count == null) return <NoFigure />;
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className={`font-mono text-[12px] ${left && count > 0 ? "text-destructive" : "text-foreground"}`}>{left && count > 0 ? `▼ ${formatNumber(count)}` : formatNumber(count)}</span>
+      {visits > 0 ? (
+        <span className={`font-mono text-[12px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
+          · {formatPercent(count / visits)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** The page most of a row's visits opened next, by its path, and its share of them: "/ai-agency/ · 34%". */
+export function NextPageCell({ next }: { next: { page: string; share: number } | null | undefined }) {
+  if (!next) return <NoFigure />;
+  return (
+    <span className="flex min-w-0 items-baseline gap-1.5 text-[12px]" title={next.page}>
+      <span className="truncate text-secondary">{pathOf(next.page)}</span>
+      <span className="shrink-0 font-mono text-secondary">· {Math.round(next.share * 100)}%</span>
+    </span>
+  );
+}
+
 /** The conversions made on a page, with their value beside them ("4 · £80"; All pages, §15): a page with none is quiet. */
 export function ConversionsHereCell({ conversions, value, currency }: { conversions: number; value: number; currency: string | null }) {
   return (

@@ -1,13 +1,14 @@
-# Google Analytics → Landing pages — the approved look (board "LandingPages" of docs/plans/assets/google-analytics/).
+# Google Analytics → Landing pages — the approved look (board "LandingPages" of docs/plans/assets/landing-pages-flow/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Landing pages
 settings-card: What Hakken sees
-chart-card: Visits by landing page
+chart-card: How visits moved through your website
+page-flow
 search: Find a page…
 filter: Page group
 choice: Show: Pages | Page groups
-table: Page | Visits | Bounce | Pages | Time | Conversions from visits | Change
+table: Page | Visits | Left here | Went on | Most went to | Conversions from visits
   table-bar
     download: Download CSV
   table-footer

@@ -20,7 +20,7 @@ import { useSiteListPage } from "../../sites/_components/useSitePagedTable";
 import { TABLE_PAGE_KEY, useSetSiteParams, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../sites/_components/useSiteSort";
 import { CUT_COLUMN } from "../../sites/_components/SiteCells";
-import { ChangeCell, ConversionsCell, ConversionsChangeCell, ConversionsHereCell, FigureCell, MoneyCell, PageLink, RateCell, TextFigure, ViewsChangeCell } from "./AnalyticsCells";
+import { ChangeCell, ConversionsCell, ConversionsChangeCell, ConversionsHereCell, FigureCell, MoneyCell, NextPageCell, PageLink, RateCell, ShareCell, TextFigure, ViewsChangeCell } from "./AnalyticsCells";
 import { formatPercent, formatPerVisit, formatTime, pathOf } from "./analyticsFormat";
 import { MOST_PLOTTED, MOVE_VIEWS, type PageMove } from "@/convex/utils/pageMoves";
 import { NO_PAGE_KIND } from "@/convex/utils/sees/analyticsChannel";
@@ -34,7 +34,7 @@ export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
 /** Visitors' lists (§18.2 board 15). */
 export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
-type Column = "tick" | "name" | "source" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "value" | "change";
+type Column = "tick" | "name" | "source" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "value" | "change" | "left" | "onward" | "next";
 
 const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change"];
 
@@ -51,8 +51,9 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
   // Channels (ga-channel-pages-plan.md CH9): dwell time, the conversions each started, and the page group most of its visits land on.
   channel: ["name", "visits", "time", "conversions", "started", "change", "landsMost"],
   source: ["name", "visits", "engaged", "conversions", "value", "change"],
-  landing: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
-  groups: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
+  // Each landing page's own funnel (landing-pages-flow-plan.md LF4): what its visits did next, no advice.
+  landing: ["name", "visits", "left", "onward", "next", "conversions"],
+  groups: ["name", "visits", "left", "onward", "next", "conversions"],
   page: ["tick", "name", "visits", "views", "viewsChange", "time", "conversions", "rate", "conversionsChange"],
   // Campaigns (§18.2 board 17): each campaign with where its link was, and the words tagged links carry.
   campaign: ["name", "source", "visits", "engaged", "conversions", "value", "change"],
@@ -69,14 +70,18 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
 /** A channel's classifications (ga-channel-pages-plan.md CH7): each one's share of the channel's visits beside them. */
 const CHANNEL_GROUP_COLUMNS: readonly Column[] = ["name", "share", "visits", "bounce", "time", "conversions", "change"];
 
+/** A channel's own landing pages keep their approved columns (ga-channel-pages-plan.md CH7): the funnel is Landing pages' alone. */
+const CHANNEL_LANDING_COLUMNS: readonly Column[] = ["name", "visits", "bounce", "pages", "time", "conversions", "change"];
+const CHANNEL_LANDING_CSV: readonly Column[] = ["name", "visits", "engaged", "bounce", "pages", "time", "conversions", "value", "change"];
+
 /** AI assistants' own page (CH8): each assistant's visits Google filed outside its AI Assistant channel beside its visits. */
 const ASSISTANT_COLUMNS: readonly Column[] = ["name", "visits", "elsewhere", "engaged", "conversions", "value", "change"];
 
 /** Each list's download: its columns, with the value — and on the page lists engagement too — as columns of their own. */
 const CSV_COLUMNS: Record<ListKind, readonly Column[]> = {
   ...COLUMNS,
-  landing: ["name", "visits", "engaged", "bounce", "pages", "time", "conversions", "value", "change"],
-  groups: ["name", "visits", "engaged", "bounce", "pages", "time", "conversions", "value", "change"],
+  landing: ["name", "visits", "left", "onward", "next", "engaged", "bounce", "pages", "time", "conversions", "value", "change"],
+  groups: ["name", "visits", "left", "onward", "next", "engaged", "bounce", "pages", "time", "conversions", "value", "change"],
   // All pages' download keeps people and leaves out money (AP1, AP4).
   page: ["name", "visits", "views", "viewsChange", "people", "time", "conversions", "rate", "conversionsChange"],
 };
@@ -91,6 +96,8 @@ const FIRSTS = {
   started: "desc",
   name: "asc", visits: "desc", engaged: "desc", bounce: "asc", pages: "desc", people: "desc", time: "desc", views: "desc", conversions: "desc", value: "desc", change: "desc",
   viewsChange: "desc", rate: "desc", conversionsChange: "desc",
+  // Landing pages' funnel (LF4): the fewest leaving first, the most going on first, the strongest next step first.
+  left: "asc", onward: "desc", next: "desc",
 } as const;
 
 /** The pages drawn on All pages' chart, in the address (`plot`): none ticked yet reads as the five at the top of the table. */
@@ -215,7 +222,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, move, pl
   const currency = status?.connection?.currency ?? null;
   const plotted = usePlotted(shown.pageRows ?? [], plot && list === "page");
   const assistants = list === "source" && channel === AI_ASSISTANTS_CHANNEL;
-  const columns = (ofChannel && list === "groups" ? CHANNEL_GROUP_COLUMNS : assistants ? ASSISTANT_COLUMNS : COLUMNS[list])
+  const columns = (ofChannel && list === "groups" ? CHANNEL_GROUP_COLUMNS : ofChannel && list === "landing" ? CHANNEL_LANDING_COLUMNS : assistants ? ASSISTANT_COLUMNS : COLUMNS[list])
     .filter((column) => column !== "tick" || plotted !== null)
     .map((column) => columnOf(column, list, currency, rowHref, t, nameOf, plotted, ofChannel, assistants, kindName ?? ofChannel?.kindName));
   // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
@@ -248,7 +255,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, move, pl
           <TableBar
             footer={shown.footer}
             noun={noun}
-            actions={<AnalyticsDownload args={base} list={list} currency={currency} />}
+            actions={<AnalyticsDownload args={base} list={list} currency={currency} csvColumns={ofChannel && list === "landing" ? CHANNEL_LANDING_CSV : undefined} />}
           >
             <span className="text-[12px] text-secondary">{bar}</span>
           </TableBar>
@@ -382,6 +389,18 @@ function columnOf(
       return { key: "value", header: t("columns.value"), align: "right", sortable: true, cell: (row) => <MoneyCell value={row.value} currency={currency} /> };
     case "change":
       return { key: "change", header: <span title={t("columns.changeTitle")}>{t("columns.change")}</span>, align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> };
+    case "left":
+      return {
+        key: "left",
+        header: <span title={t("columns.leftTitle")}>{t("columns.left")}</span>,
+        align: "right",
+        sortable: true,
+        cell: (row) => <ShareCell count={row.onward == null ? null : Math.max(0, row.visits - row.onward)} visits={row.visits} fewVisits={row.fewVisits} left />,
+      };
+    case "onward":
+      return { key: "onward", header: <span title={t("columns.onwardTitle")}>{t("columns.onward")}</span>, align: "right", sortable: true, cell: (row) => <ShareCell count={row.onward} visits={row.visits} fewVisits={row.fewVisits} /> };
+    case "next":
+      return { key: "next", header: <span title={t("columns.nextTitle")}>{t("columns.next")}</span>, className: CUT_COLUMN.second, sortable: true, cell: (row) => <NextPageCell next={row.next} /> };
   }
 }
 
@@ -413,15 +432,17 @@ export function useEventFunnel(ask: { siteId: string; period: string; device: st
 }
 
 /** The whole list, in the order on screen, as CSV: read when pressed. */
-function AnalyticsDownload({ args, list, currency }: {
+function AnalyticsDownload({ args, list, currency, csvColumns }: {
   args: Record<string, unknown>;
   list: ListKind;
   currency: string | null;
+  /** A channel's own landing pages: their own columns, not Landing pages' funnel. */
+  csvColumns?: readonly Column[];
 }) {
   const t = useTranslations("googleAnalytics.table");
   const convex = useConvex();
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-download" });
-  const columns = CSV_COLUMNS[list];
+  const columns = csvColumns ?? CSV_COLUMNS[list];
   return (
     <DownloadButton
       label={t("download")}
@@ -463,5 +484,8 @@ function csvValue(row: ShownRow, column: Column): string | number | null {
     case "started": return row.started ?? null;
     case "landsMost": return row.landsMost ? row.landsMost.name ?? row.landsMost.kind : null;
     case "tick": return null;
+    case "left": return row.onward == null ? null : Math.max(0, row.visits - row.onward);
+    case "onward": return row.onward ?? null;
+    case "next": return row.next ? pathOf(row.next.page) : null;
   }
 }

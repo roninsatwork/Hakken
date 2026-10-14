@@ -15706,7 +15706,13 @@
         "started": "Avviate",
         "startedTitle": "Conversioni da persone portate per prime da questo canale, in qualsiasi visita",
         "landsMost": "Arriva più spesso su",
-        "landsMostTitle": "La classificazione delle pagine su cui è iniziata la maggior parte delle visite del canale, e la sua quota"
+        "landsMostTitle": "La classificazione delle pagine su cui è iniziata la maggior parte delle visite del canale, e la sua quota",
+        "left": "Uscite qui",
+        "leftTitle": "Visite uscite dal sito da questa pagina senza aprirne un'altra, e la loro quota sulle sue visite",
+        "onward": "Proseguite",
+        "onwardTitle": "Visite che dopo questa hanno aperto un'altra pagina, contate una volta per visita, e la loro quota sulle sue visite",
+        "next": "Andate soprattutto a",
+        "nextTitle": "La pagina che la maggior parte di quelle visite ha aperto subito dopo, e la sua quota"
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -15730,7 +15736,10 @@
         "rate": "Tasso di conversione (%)",
         "conversionsChange": "Variazione conversioni",
         "started": "Conversioni avviate",
-        "landsMost": "Arriva più spesso su"
+        "landsMost": "Arriva più spesso su",
+        "left": "Uscite qui",
+        "onward": "Proseguite",
+        "next": "Andate soprattutto a"
       },
       "downloadFailed": "Impossibile preparare il download. Riprova.",
       "untagged": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} un contrassegno di campagna",
@@ -15869,6 +15878,30 @@
       "coarse": {
         "day": "Prima degli ultimi 90 giorni, ogni punto è la media giornaliera di una settimana.",
         "week": "Prima degli ultimi 12 mesi, ogni punto è la media settimanale di un mese."
+      },
+      "flow": {
+        "title": "Come si sono mosse le visite nel tuo sito",
+        "hint": "{period}: dove sono arrivate le visite, la pagina aperta subito dopo e quella successiva. Fai clic su una pagina per seguirne i percorsi in entrata e in uscita; fai di nuovo clic per vederli tutti.",
+        "landing": "Pagine di destinazione",
+        "next": "Pagina successiva",
+        "after": "Pagina dopo ancora",
+        "summary": "{visits} visite · ▼ {left} uscite",
+        "summaryConverted": "{visits} visite · ▼ {left} uscite · ● {conversions}",
+        "more": "({count, plural, one {# altra pagina} other {altre # pagine}})",
+        "nodeHover": "{page}: {visits} visite, {on} sono proseguite, {left} sono uscite. Fai clic per seguirne i percorsi.",
+        "nodeHoverConverted": "{page}: {visits} visite, {on} sono proseguite, {left} sono uscite, {conversions, plural, one {# conversione} other {# conversioni}}. Fai clic per seguirne i percorsi.",
+        "bandHover": "{from} → {to}: {visits} visite",
+        "bandHoverConverted": "{from} → {to}: {visits} visite, {conversions, plural, one {# conversione} other {# conversioni}}",
+        "figuresConverted": "{visits} · ● {conversions}",
+        "legendConversions": "Conversioni, su una pagina o sul percorso che vi ha portato — più grandi se di più",
+        "legendLeft": "Visite uscite da lì",
+        "loading": "Lettura del flusso…",
+        "collecting": "Ancora in raccolta: la prossima raccolta conserva come si sono mosse le visite in queste date.",
+        "empty": "Nessuna visita in queste date.",
+        "csvFrom": "Da",
+        "csvTo": "A",
+        "csvVisits": "Visite",
+        "csvConversions": "Conversioni"
       }
     },
     "figures": {
@@ -16220,7 +16253,7 @@
     },
     "landing": {
       "title": "Pagine di destinazione",
-      "description": "La prima pagina di ogni visita, e cosa hanno fatto poi quelle visite. La variazione sono le visite rispetto a {before}.",
+      "description": "Dove è iniziata ogni visita e cosa hanno fatto poi quelle visite: sono uscite, sono passate a un'altra pagina o hanno convertito.",
       "groupFilter": "Gruppo di pagine",
       "notSorted": "Non classificate",
       "everyGroup": "Ogni gruppo di pagine",
