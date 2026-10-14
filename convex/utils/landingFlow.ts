@@ -18,6 +18,8 @@
 export const FLOW_NODES = 5;
 /** The box holding a column's other pages. */
 export const MORE = "~more";
+/** Google's name for a landing page it could not record: its visits all count as arrivals, whatever page they show. */
+export const NOT_SET = "(not set)";
 
 type Counts = ReadonlyMap<string, number>;
 
@@ -52,7 +54,8 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[]): 
   const arrivals = new Map<string, { visits: number; counts: Map<string, number> }>();
   const first = new Map<string, Map<string, { visits: number; counts: Map<string, number> }>>();
   for (const route of routes) {
-    if (route.before === "" && route.page === route.landing) {
+    // Arrived from elsewhere: on the landing page itself — or anywhere, for the visits Google recorded no landing page for.
+    if (route.before === "" && (route.page === route.landing || route.landing === NOT_SET)) {
       const held = arrivals.get(route.landing) ?? { visits: 0, counts: new Map() };
       held.visits += route.visits;
       addCounts(held.counts, route.counts);
@@ -101,11 +104,27 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[]): 
     for (const [page, held] of byPage) into(["b", node(0, landing), node(1, page)], held.visits, 0, held.counts);
   }
   for (const route of second) into(["c", node(0, route.landing), node(1, route.next), node(2, route.page)], route.visits, 0, route.counts);
-  // Went on from each page in the next two columns, from the visits that landed anywhere.
+  // Went on from each page in the next two columns, from the visits that landed elsewhere (a visit that landed on the
+  // page itself went on from it as a landing page, the first column's). Google counts a visit going on from a page once,
+  // whichever step it reached the page at, so each column takes the share of that page's visits it reached there.
+  const reached = new Map<string, number>();
+  for (const route of routes) {
+    if (route.before === "" || route.page === route.before) continue;
+    reached.set(`${route.landing}\u0000${route.page}`, (reached.get(`${route.landing}\u0000${route.page}`) ?? 0) + route.visits);
+  }
+  const stepVisits = [
+    new Map<string, number>(),
+    new Map([...first.entries()].flatMap(([landing, byPage]) => [...byPage.entries()].map(([page, held]) => [`${landing}\u0000${page}`, held.visits] as [string, number]))),
+    sum(second.map((route) => [`${route.landing}\u0000${route.page}`, route.visits])),
+  ];
   for (const [column, totals] of [[1, nextTotals], [2, afterTotals]] as const) {
     for (const page of totals.keys()) {
-      const on = [...arrivals.keys()].reduce((all, landing) => all + wentOn(landing, page), 0);
-      if (on > 0) into(["o", String(column), node(column, page)], 0, on);
+      const on = [...arrivals.keys()].filter((landing) => landing !== page).reduce((all, landing) => {
+        const here = stepVisits[column].get(`${landing}\u0000${page}`) ?? 0;
+        const anywhere = reached.get(`${landing}\u0000${page}`) ?? 0;
+        return all + (here > 0 && anywhere > 0 ? wentOn(landing, page) * Math.min(1, here / anywhere) : 0);
+      }, 0);
+      if (on > 0) into(["o", String(column), node(column, page)], 0, Math.round(on));
     }
   }
   [landingTotals, nextTotals, afterTotals].forEach((totals, column) => {

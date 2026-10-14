@@ -56,6 +56,20 @@ describe("the website's flow from its landing pages", () => {
     expect(chart.columns[0]).toEqual({ visits: 293, left: 215, conversions: 5 });
   });
 
+  test("the visits with no landing page recorded all count as landed; went on further along counts only visits that landed elsewhere", () => {
+    const more = [
+      ...routes,
+      // Google recorded no landing page: these visits show their first page as /ai-agency/.
+      route("(not set)", "", "/ai-agency/", 94),
+      // A visit that landed on / and went on from / later, and one that landed on /ai-agency/ and reached / next.
+      route("/ai-agency/", "/ai-agency/", "/", 10),
+    ];
+    const chart = flowChart(keptOf(buildFlow(more, [...onward, { landing: "/ai-agency/", before: "/", visits: 4 }]).flow));
+    expect(chart.nodes.find((one) => one.id === "0:(not set)")).toMatchObject({ visits: 94, left: 94 });
+    // / as the next page: 10 arrived from /ai-agency/, 4 of them went on — /'s own 46 as a landing page are not counted here.
+    expect(chart.nodes.find((one) => one.id === "1:/")).toMatchObject({ visits: 10, left: 6 });
+  });
+
   test("five pages a column by name, the rest one box that says how many it holds", () => {
     const many = Array.from({ length: FLOW_NODES + 3 }, (_, at) => route(`/p${at}/`, "", `/p${at}/`, 100 - at));
     const chart = flowChart(keptOf(buildFlow(many, []).flow));

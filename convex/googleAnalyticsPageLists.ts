@@ -218,16 +218,11 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   }));
   if (!(await write("landingPagesSeen", topPerPage(seenNumbered, (row) => row.visits), seen.flags))) return { ok: true, rows: total, requests: session.requests };
 
-  // The website's flow from its landing pages (landing-pages-flow-plan.md LF5, §3b): the routes inside each landing
-  // page's own visits, with the conversions made on the page each led to, kept as the chart draws them; and each
-  // landing page's visits that went on, counted once a visit, with the page most of them opened next.
-  const routes = await askList(session, asking, "landingFlow", [], range, device ? { device } : {});
-  if (!routes.ok) return failure(routes);
-  const onward = await ask(session, property, { ...base, dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] });
-  if (!onward.ok) return failure(onward);
-  const flow = await flowOf(ctx, target, [...routes.groups.values()].flat(), onward.rows);
-  if (!(await write("landingFlow", flow.flow, routes.flags, target.events))) return { ok: true, rows: total, requests: session.requests };
-  if (!(await write("landingOnward", flow.onward, flagsOf(onward), []))) return { ok: true, rows: total, requests: session.requests };
+  // The website's flow from its landing pages (landing-pages-flow-plan.md LF5, §3b): a step of its own, so it can be filled alone.
+  const flowStep = await collectFlowLists(ctx, session, connectionId, target, job, top);
+  if (!flowStep.result.ok) return flowStep.result;
+  total += flowStep.result.rows;
+  if (flowStep.ended) return { ok: true, rows: total, requests: session.requests };
 
   // A page's views by day of the week.
   const weekdays = await askList(session, { ...asking, events: [] }, "pageWeekday", [], range, device ? { device } : {});
@@ -273,6 +268,37 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
     if (!(await write("eventDetail", topPerPage(about, (row) => row.times ?? 0), flagsOf(answer), [], which))) return { ok: true, rows: total, requests: session.requests };
   }
   return { ok: true, rows: total, requests: session.requests };
+}
+
+/**
+ * The website's flow from its landing pages for one date range and device
+ * (landing-pages-flow-plan.md LF5, §3b): the routes inside each landing page's
+ * own visits, with the conversions made on the page each led to, kept as the
+ * chart draws them; and each landing page's visits that went on, counted once
+ * a visit, with the page most of them opened next. Part of every run's shared
+ * lists, and asked alone when a website's flow is filled by itself. `ended`:
+ * the website changed under it, so nothing more is written.
+ */
+export async function collectFlowLists(ctx: ActionCtx, session: Session, connectionId: Id<"googleAnalyticsConnections">, target: CollectTarget, job: PageListsJob, top: string): Promise<{ result: StepResult; ended: boolean }> {
+  const range = periodRange(job.period, "NOW", top);
+  const device = job.device || undefined;
+  const country = job.country ?? "";
+  const asking = country ? { ...target, country: countryIdOf(country) } : target;
+  const base = { startDate: range.from, endDate: range.to, hostNames: target.addresses, countries: [asking.country], ...(device ? { device } : {}) };
+  const keys = (["landingFlow", "landingOnward"] as const).map((list) => slotKey(list, job.period, "NOW", job.device, country));
+  const slots: Record<string, { slot: number; hash: string; from: string; to: string }> =
+    await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
+  const routes = await askList(session, asking, "landingFlow", [], range, device ? { device } : {});
+  if (!routes.ok) return { result: failed(session, routes), ended: false };
+  const onward = await ask(session, target.property!, { ...base, dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] });
+  if (!onward.ok) return { result: failed(session, onward), ended: false };
+  const flow = await flowOf(ctx, target, [...routes.groups.values()].flat(), onward.rows);
+  const rows = flow.flow.length + flow.onward.length;
+  const done = (ended: boolean) => ({ result: { ok: true as const, rows, requests: session.requests }, ended });
+  if (!(await writeList(ctx, connectionId, target, "landingFlow", keys[0], flow.flow, range, routes.flags, slots[keys[0]], target.events))) return done(true);
+  const flags = { folded: onward.folded, thresholded: onward.thresholded, cut: onward.cut };
+  if (!(await writeList(ctx, connectionId, target, "landingOnward", keys[1], flow.onward, range, flags, slots[keys[1]], []))) return done(true);
+  return done(false);
 }
 
 /**
