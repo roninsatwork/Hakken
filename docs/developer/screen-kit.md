@@ -71,6 +71,7 @@ Added 2026-10-13 for Google Analytics' Channels and a channel's own page
 both):
 
 - `src/ui/components/screens/ChangeBars.tsx`: `ChangeBars` — what gained and what lost, in two columns either side of a centre line: a gain's bar runs right in orange with its words to the left of the line, a loss's runs left in grey with its words to the right, each as long as its move against the biggest, at the app's bar size; the move is `Change`, the figure's words on hover. "The pages behind the change".
+- `src/ui/components/screens/PageFlowChart.tsx`: `PageFlowChart` — how visits moved through a website: landing pages, the next page and the page after, each page a box as tall as its visits, grey bands for the routes, a red tail down a box's edge for the visits that left there, an orange dot for conversions (on a route, or inside a landing page's box), bigger for more. Click a box to follow it: its routes turn orange and the rest fade; it opens with none followed. Landing pages' "How visits moved through your website" (landing-pages-flow-plan.md LF2).
 - `src/ui/components/screens/ChannelMap.tsx`: `ChannelMap` — rows across columns, each square a count shaded by its share of its row on the engagement ramp (brighter for more), its conversions beneath, an empty square grey, and a key underneath saying what the numbers and shades mean. "Where each channel lands, by page classification".
 - FiledBars, the third part named that day, is `SiteBarChart` stacked along — no part of its own.
 

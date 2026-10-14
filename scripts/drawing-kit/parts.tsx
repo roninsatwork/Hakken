@@ -29,6 +29,7 @@ import { Meter } from "@/src/ui/components/screens/Meter";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { DetailHeader, PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
+import { PageFlowChart } from "@/src/ui/components/screens/PageFlowChart";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldHint, FieldLabel, SegmentedChoice, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -294,6 +295,33 @@ const PARTS: Part[] = [
         rowVisits={(row) => (row.key === "o" ? 192 : 40)}
         conversionsWord={(count) => `${count} conv.`}
         legend={{ visits: "69 · visits that started on that kind of page", conversions: "3 conv. · conversions those visits made", shades: "a smaller to a bigger share of the channel", empty: "no visits" }}
+      />
+    ),
+  },
+  {
+    id: "page-flow",
+    name: "PageFlowChart — how visits moved through a website",
+    source: "src/ui/components/screens/PageFlowChart.tsx",
+    use: "Landing pages, the next page, the page after: boxes as tall as their visits, grey bands for the routes, a red tail for the visits that left, orange dots for conversions; click a box to follow its routes (landing-pages-flow-plan.md LF2).",
+    render: () => (
+      <PageFlowChart
+        columns={[{ title: "Landing pages", summary: "709 visits · ▼ 296 left · ● 3" }, { title: "Next page", summary: "413 visits · ▼ 183 left · ● 6" }, { title: "Page after", summary: "230 visits · ▼ 112 left · ● 4" }]}
+        nodes={[
+          { id: "0:/", column: 0, label: "/", visits: 159, left: 46, conversions: 1, hover: "/: 159 visits" },
+          { id: "0:/ai-agency/", column: 0, label: "/ai-agency/", visits: 141, left: 52, conversions: 2, hover: "/ai-agency/: 141 visits" },
+          { id: "0:~more", column: 0, label: "(74 more pages)", visits: 242, left: 58, conversions: 0, hover: "74 more pages" },
+          { id: "1:/ai-agency/", column: 1, label: "/ai-agency/", visits: 96, left: 39, conversions: 4, hover: "/ai-agency/: 96 visits" },
+          { id: "1:/about-us/", column: 1, label: "/about-us/", visits: 58, left: 22, conversions: 1, hover: "/about-us/: 58 visits" },
+          { id: "2:/case-study/", column: 2, label: "/case-study/", visits: 28, left: 15, conversions: 0, hover: "/case-study/: 28 visits" },
+        ]}
+        bands={[
+          { from: "0:/", to: "1:/ai-agency/", visits: 38, conversions: 2, landings: ["0:/"], hover: "/ → /ai-agency/: 38 visits, 2 conversions" },
+          { from: "0:/", to: "1:/about-us/", visits: 22, conversions: 1, landings: ["0:/"], hover: "/ → /about-us/: 22 visits" },
+          { from: "0:~more", to: "1:/ai-agency/", visits: 52, conversions: 1, landings: ["0:~more"], hover: "74 more pages → /ai-agency/: 52 visits" },
+          { from: "1:/ai-agency/", to: "2:/case-study/", visits: 12, conversions: 0, landings: ["0:/"], hover: "/ai-agency/ → /case-study/: 12 visits" },
+        ]}
+        legend={{ conversions: "Conversions, on a page or the route that led to it — bigger for more", left: "Visits that left there" }}
+        figuresOf={(node) => (node.conversions > 0 ? `${node.visits} · ● ${node.conversions}` : `${node.visits}`)}
       />
     ),
   },
