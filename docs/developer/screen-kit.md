@@ -66,6 +66,14 @@ the set but i need to be told"):
 - `SettingsCard` gained `fold`: a card read once and then wanted out of the way folds to one row — its title as the button, a `summary` cut to the line, the chevron Search Console's side menu draws — and its contents are not drawn. What Hakken sees is it. Added 2026-10-10.
 - `SegmentedChoice` (in `SettingsCard.tsx`) gained `size="compact"`: as wide as its choices, for switching between views of one card or table. Sites' `SiteViewSwitch` is it.
 
+Added 2026-10-13 for Google Analytics' Channels and a channel's own page
+(docs/plans/active/ga-channel-pages-plan.md CH11; Anthony named and approved
+both):
+
+- `src/ui/components/screens/ChangeBars.tsx`: `ChangeBars` — what gained and what lost, in two columns either side of a centre line: a gain's bar runs right in orange with its words to the left of the line, a loss's runs left in grey with its words to the right, each as long as its move against the biggest, at the app's bar size; the move is `Change`, the figure's words on hover. "The pages behind the change".
+- `src/ui/components/screens/ChannelMap.tsx`: `ChannelMap` — rows across columns, each square a count shaded by its share of its row on the engagement ramp (brighter for more), its conversions beneath, an empty square grey, and a key underneath saying what the numbers and shades mean. "Where each channel lands, by page classification".
+- FiledBars, the third part named that day, is `SiteBarChart` stacked along — no part of its own.
+
 Parts shared by one area rather than the whole app, in the narrowest folder their callers reach:
 
 - `src/app/(dashboard)/app/_components/KindBars.tsx`: kinds as deep bars on one scale — pages by kind, keywords by intent — each row answering the pointer and opening its records. Sites' Overview and Search Console's Types.

@@ -16,6 +16,8 @@ import { SectionMenu } from "@/src/app/(dashboard)/app/_components/SectionMenu";
 import { IntentLabel, PageLinkCell, PositionCell, RecordLinkCell, TrendCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Change } from "@/src/ui/components/screens/Change";
+import { ChangeBars } from "@/src/ui/components/screens/ChangeBars";
+import { ChannelMap } from "@/src/ui/components/screens/ChannelMap";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
@@ -258,6 +260,41 @@ const PARTS: Part[] = [
         {/* A collection's progress: back, then out and waiting for answers (collection-progress-plan.md). */}
         <Meter value={0.57} then={0.15} />
       </div>
+    ),
+  },
+  {
+    id: "change-bars",
+    name: "ChangeBars — what gained and what lost",
+    source: "src/ui/components/screens/ChangeBars.tsx",
+    use: "Two columns either side of a centre line: gains run right in orange with their words to the left of the line, losses run left in grey with their words to the right. Each bar's figure on hover; the app's bar size (ga-channel-pages-plan.md CH6).",
+    render: () => (
+      <ChangeBars
+        lostLabel="Lost visits"
+        gainedLabel="Gained visits"
+        rows={[
+          { key: "a", label: "/hub/kapferer-brand-identity-prism/", detail: "9 → 17", change: 8, hover: "9 visits in the 30 days before, 17 in the last 30 days", href: "#" },
+          { key: "b", label: "No page recorded", detail: "15 → 32", change: 17, hover: "15 visits in the 30 days before, 32 in the last 30 days", muted: true },
+          { key: "c", label: "/ai-agency/", detail: "49 → 33", change: -16, hover: "49 visits in the 30 days before, 33 in the last 30 days", href: "#" },
+        ]}
+      />
+    ),
+  },
+  {
+    id: "channel-map",
+    name: "ChannelMap — rows across columns, shaded by share",
+    source: "src/ui/components/screens/ChannelMap.tsx",
+    use: "Channels down the side, page groups across; each square a count, brighter for a bigger share of its row, its conversions beneath, figures on hover; a key under it (ga-channel-pages-plan.md CH9).",
+    render: () => (
+      <ChannelMap
+        columns={["Service", "Content hub", "Brand", "No page recorded"]}
+        rows={[
+          { key: "o", label: "Organic Search", total: "192 visits", href: "#", cells: [{ visits: 69, conversions: 0, hover: "69 visits" }, { visits: 53, conversions: 0, hover: "53 visits" }, { visits: 26, conversions: 0, hover: "26 visits" }, { visits: 32, conversions: 0, hover: "32 visits" }] },
+          { key: "d", label: "Direct", total: "40 visits", href: "#", cells: [{ visits: 6, conversions: 0, hover: "6 visits" }, { visits: 0, conversions: 0, hover: "No visits" }, { visits: 26, conversions: 3, hover: "26 visits, 3 conversions" }, { visits: 4, conversions: 0, hover: "4 visits" }] },
+        ]}
+        rowVisits={(row) => (row.key === "o" ? 192 : 40)}
+        conversionsWord={(count) => `${count} conv.`}
+        legend={{ visits: "69 · visits that started on that kind of page", conversions: "3 conv. · conversions those visits made", shades: "a smaller to a bigger share of the channel", empty: "no visits" }}
+      />
     ),
   },
   {

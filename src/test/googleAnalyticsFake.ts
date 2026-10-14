@@ -65,6 +65,14 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   // Google's day of the week: 0 is Sunday.
   dayOfWeek: (visit) => String(new Date(`${visit.date}T00:00:00Z`).getUTCDay()),
   yearMonth: (visit) => visit.date.slice(0, 7).replace("-", ""),
+  // Google's ISO week, `202641`: the week of the year's Thursday, Monday to Sunday.
+  isoYearIsoWeek: (visit) => {
+    const at = Date.parse(`${visit.date}T00:00:00Z`);
+    const thursday = at + (3 - ((new Date(at).getUTCDay() + 6) % 7)) * 86_400_000;
+    const year = new Date(thursday).getUTCFullYear();
+    const week = Math.floor((thursday - Date.UTC(year, 0, 1)) / (7 * 86_400_000)) + 1;
+    return `${year}${String(week).padStart(2, "0")}`;
+  },
   deviceCategory: (visit) => visit.device,
   sessionDefaultChannelGroup: (visit) => visit.channel,
   firstUserDefaultChannelGroup: (visit) => visit.firstChannel ?? visit.channel,
@@ -98,7 +106,26 @@ const BASE_METRICS = ["sessions", "engagedSessions", "userEngagementDuration", "
 /** Someone on the website in the last 30 minutes, for Google's live figures (§18.6.7). */
 export type LivePerson = { minutesAgo: number; city: string; page: string; device: string; views: number; country?: string; events?: Record<string, number> };
 
-export type Google = { visits: Visit[]; live?: LivePerson[]; reportStatus?: number; calls: { url: string; body: string }[] };
+export type Google = {
+  visits: Visit[];
+  live?: LivePerson[];
+  reportStatus?: number;
+  /** Google refusing the next `times` reports whose ask contains `when`, as it words a used-up allowance. */
+  refusing?: { when: string; times: number; status: number; message: string };
+  /**
+   * Google's allowances counted, each clock hour, as the real one counts them
+   * (ga-stored-figures-plan.md §2c): an ask of age, gender or interests past
+   * `thresholdedPerHour` is refused, and every answer says what is left
+   * (`propertyQuota`). Left out, nothing is counted or said.
+   */
+  allowance?: { thresholdedPerHour: number; tokensPerAsk: number };
+  /** Each hour's asks of age, gender or interests and tokens, and the asks refused for the allowance. */
+  spent: Map<number, { thresholded: number; tokens: number }>;
+  refused: number;
+  calls: { url: string; body: string; at: number }[];
+};
+
+const HOUR_MS = 60 * 60 * 1000;
 
 type Filter = { filter?: { fieldName: string; inListFilter?: { values: string[] }; stringFilter?: { value: string } }; andGroup?: { expressions: Filter[] } };
 
@@ -112,14 +139,43 @@ function passes(visit: Visit, filter: Filter | undefined, eventName?: string): b
 }
 
 export function fakeGoogle(visits: Visit[]): Google {
-  const google: Google = { visits, calls: [] };
+  const google: Google = { visits, calls: [], spent: new Map(), refused: 0 };
+  // What is left of each allowance this hour and today, as Google's `propertyQuota` says it.
+  const quotaNow = () => {
+    const hour = Math.floor(Date.now() / HOUR_MS);
+    const spent = google.spent.get(hour) ?? { thresholded: 0, tokens: 0 };
+    const today = [...google.spent.entries()].filter(([at]) => Math.floor(at / 24) === Math.floor(hour / 24)).reduce((sum, [, one]) => sum + one.tokens, 0);
+    const status = (consumed: number, allowance: number) => ({ consumed, remaining: Math.max(0, allowance - consumed) });
+    return {
+      potentiallyThresholdedRequestsPerHour: status(spent.thresholded, google.allowance!.thresholdedPerHour),
+      tokensPerProjectPerHour: status(spent.tokens, 14_000),
+      tokensPerHour: status(spent.tokens, 40_000),
+      tokensPerDay: status(today, 200_000),
+    };
+  };
+  const reportAnswer = (json: Record<string, unknown>) => Response.json({ ...json, ...(google.allowance ? { propertyQuota: quotaNow() } : {}) });
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const body = typeof init?.body === "string" ? init.body : "";
-    google.calls.push({ url, body });
+    google.calls.push({ url, body, at: Date.now() });
     if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "ya29.renewed", expires_in: 3599 });
     if (url === `https://analyticsdata.googleapis.com/v1beta/${PROPERTY}:runReport`) {
       if (google.reportStatus) return new Response("refused", { status: google.reportStatus });
+      if (google.refusing && google.refusing.times > 0 && body.includes(google.refusing.when)) {
+        google.refusing.times -= 1;
+        return Response.json({ error: { code: google.refusing.status, message: google.refusing.message, status: "RESOURCE_EXHAUSTED" } }, { status: google.refusing.status });
+      }
+      if (google.allowance) {
+        const hour = Math.floor(Date.now() / HOUR_MS);
+        const spent = google.spent.get(hour) ?? { thresholded: 0, tokens: 0 };
+        const thresholded = /userAgeBracket|userGender|brandingInterest/.test(body);
+        if (thresholded && spent.thresholded >= google.allowance.thresholdedPerHour) {
+          google.refused += 1;
+          const message = "Exhausted potentially thresholded requests quota. This quota will refresh in under an hour.";
+          return Response.json({ error: { code: 429, message, status: "RESOURCE_EXHAUSTED" } }, { status: 429 });
+        }
+        google.spent.set(hour, { thresholded: spent.thresholded + (thresholded ? 1 : 0), tokens: spent.tokens + google.allowance.tokensPerAsk });
+      }
       const ask = JSON.parse(body) as {
         dateRanges: { startDate: string; endDate: string }[];
         dimensions: { name: string }[];
@@ -127,7 +183,7 @@ export function fakeGoogle(visits: Visit[]): Google {
         dimensionFilter?: Filter;
         offset: number;
       };
-      if (ask.offset > 0) return Response.json({ rows: [], rowCount: 0 });
+      if (ask.offset > 0) return reportAnswer({ rows: [], rowCount: 0 });
       const { startDate, endDate } = ask.dateRanges[0];
       const names = ask.dimensions.map((dimension) => dimension.name);
       const metrics = ask.metrics.map((metric) => metric.name);
@@ -144,7 +200,7 @@ export function fakeGoogle(visits: Visit[]): Google {
           }
         }
         const rows = [...items.values()].map((sum) => ({ dimensionValues: sum.keys.map((value) => ({ value })), metricValues: sum.values.map((value) => ({ value: String(value) })) }));
-        return Response.json({ rows, rowCount: rows.length, metadata: {} });
+        return reportAnswer({ rows, rowCount: rows.length, metadata: {} });
       }
       // Every event, as Events asks (§18.6.5): times, people and visits — a line's page views and visit starts among them.
       const everyEvent = metrics.includes("eventCount");
@@ -188,7 +244,7 @@ export function fakeGoogle(visits: Visit[]): Google {
         dimensionValues: sum.keys.map((value) => ({ value })),
         metricValues: (byEvent ? sum.values : ask.metrics.map((metric) => metricOf(metric.name, sum.values))).map((value) => ({ value: String(value) })),
       }));
-      return Response.json({ rows, rowCount: rows.length, metadata: {} });
+      return reportAnswer({ rows, rowCount: rows.length, metadata: {} });
     }
     // Google's live figures (§18.6.7): each person counted once, their views and events added up.
     if (url === `https://analyticsdata.googleapis.com/v1beta/${PROPERTY}:runRealtimeReport`) {

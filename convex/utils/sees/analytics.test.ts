@@ -616,6 +616,15 @@ describe("14 · Choose what counts", () => {
     worded("chooseEvents", box);
   });
 
+  test("an event Tracking health found copying link clicks is never named as an enquiry, nor offered to tick", () => {
+    // Ronins on 2026-10-13: "Form sent" was still its link clicks, and the box said to tick it.
+    const box = chooseEventsSees("ronins.co.uk", [
+      event("form_submission", 7, false), event("contact", 3, true), event("live_chat_event", 0, true),
+    ], new Set(["form_submission"]));
+    expect(box.says[0]).toEqual({ code: "onlyFired", text: "contact", a: 3, b: 3 });
+    expect(box.steps.map((step) => step.code)).toEqual(["checkSilent"]);
+  });
+
   test("several fired, ticked as Hakken sets them; none fired; Purchase alone; no key events; still reading", () => {
     // A scroll is never a conversion: never named as one, never offered to tick (GA5).
     const several = chooseEventsSees("x.test", [event("generate_lead", 9, true), event("click_tel", 3, false), event("sign_up", 2, false), event("scroll", 900, false)]);

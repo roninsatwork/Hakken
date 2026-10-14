@@ -112,7 +112,9 @@ describe("home countries", () => {
 
     const asks = google.calls.filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
-      .filter((ask) => ask.dimensions[0]?.name !== "hostName");
+      .filter((ask) => ask.dimensions[0]?.name !== "hostName")
+      // A page's readers by country are in every country, whatever the home country (analytics-page-screen-plan.md PS8).
+      .filter((ask) => !ask.dimensions.some((dimension) => dimension.name === "countryId"));
     expect(asks.length).toBeGreaterThan(0);
     expect(asks.every((ask) => JSON.stringify(ask.dimensionFilter).includes('"fieldName":"countryId","inListFilter":{"values":["GB"]'))).toBe(true);
     expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * UK_A_DAY);
@@ -131,14 +133,13 @@ describe("home countries", () => {
     expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * UK_A_DAY);
     expect(await visitsIn(t, siteId, "total|30|NOW||fra")).toBe(30 * 3);
     expect(await visitsIn(t, siteId, "landing|30|NOW||fra")).toBe(30 * 3);
-    expect(await visitsIn(t, siteId, "series|30|NOW||fra")).toBe(30 * 3);
 
     const args = { siteId, period: "30" as const, device: "" };
     expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, args)).now?.visits).toBe(30 * UK_A_DAY);
     expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "fra" })).now?.visits).toBe(30 * 3);
     // A country the website does not keep reads as the main one, as Search Console's do.
     expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "deu" })).now?.visits).toBe(30 * UK_A_DAY);
-    // Its chart is the ready-made one: it keeps no days.
+    // Its chart from its own days, kept beside the main one's (ga-stored-figures-plan.md SF7).
     const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChart, { ...args, country: "fra" });
     expect(chart.points).toHaveLength(30);
     expect(chart.points.every((point) => point.visits === 3)).toBe(true);
@@ -146,12 +147,39 @@ describe("home countries", () => {
     expect(channels.rows.map((row) => [row.label, row.visits])).toEqual([["Organic Search", 90]]);
   });
 
-  test("each other home country is asked for every list, and its short charts too", () => {
+  test("another home country keeps its own days and shared lists (SF7): its charts, a page's and an event's screens ask Google nothing", async () => {
+    const t = harness();
+    const { siteId, connectionId, admin } = await connected(t, ["gbr", "fra"]);
+    fakeGoogle([...history(70), ...fromFrance(70)]);
+    await save(admin, siteId);
+    await finishScheduled(t);
+
+    // Its 90 days a day, by device, as the main one's are: the 70 the fake holds.
+    const connection = await t.run(async (ctx) => await ctx.db.get(connectionId));
+    expect(connection?.countryHistory).toEqual([expect.objectContaining({ country: "fra", newestDay: "2026-10-08" })]);
+    const days = await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsDays").collect()).filter((one) => one.device === "mobile|fra" && one.list === "total"));
+    expect(days).toHaveLength(70);
+
+    const args = { siteId, period: "30" as const, device: "", country: "fra" };
+    const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, args);
+    expect(chart.live).toBe(false);
+    const all = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "page", page: 1, rows: 25 });
+    const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
+    const page = (await admin.query(api.googleAnalyticsPageReads.analyticsPage, { ...args, page: home }))!;
+    // France's own: three visits a day from Google, all landing on the home page.
+    expect(page.story.live).toBe(false);
+    expect(page.story.sources.map((row) => [row.channel, row.visits])).toEqual([["Organic Search", 90]]);
+    const event = (await admin.query(api.googleAnalyticsEventReads.analyticsEvent, { ...args, event: "page_view" }))!;
+    expect(event.live).toBe(false);
+    expect(event.pages.map((row) => [row.label, row.times])).toEqual([["https://www.acme-shop.test/", 150]]);
+  });
+
+  test("each other home country is asked for every list; its charts read its own days (SF7), Insights' year is the main one's", () => {
     const main = dueJobs({ weeklyPeriodsAt: undefined }, NOW);
     const both = dueJobs({ weeklyPeriodsAt: undefined }, NOW, ["fra"]);
     expect(both.filter((job) => !job.country)).toEqual(main);
-    expect(both.filter((job) => job.country === "fra")).toHaveLength(main.length + 2);
-    expect(both.filter((job) => job.country === "fra" && job.list === "series").map((job) => job.period)).toEqual(["7", "30", "90", "365"]);
+    expect(both.filter((job) => job.country === "fra")).toHaveLength(main.length - 1);
+    expect(both.filter((job) => job.list === "series")).toEqual([{ list: "series", period: "365", which: "NOW" }]);
   });
 
   test("the main home country changing clears what is held, and the next run collects the new one's", async () => {
@@ -171,6 +199,23 @@ describe("home countries", () => {
     expect(connection?.clearing).toBeUndefined();
   });
 
+  test("lists no run keeps any more go after the next collection; Insights' 12 months a day stays", async () => {
+    const t = harness();
+    const { siteId, agentId, admin } = await connected(t);
+    fakeGoogle(history(70));
+    await save(admin, siteId);
+    await finishScheduled(t);
+    // As held before the charts read the days, weeks and months kept (ga-stored-figures-plan.md SF12).
+    await t.run(async (ctx) => {
+      for (const key of ["eventSeries|30|NOW|", "visitorSeries|90|NOW|mobile", "series|90|NOW|", "series|365|NOW|mobile"]) {
+        await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: 0, from: "2026-09-09", to: "2026-10-08", hash: "x", builtAt: 1 });
+      }
+    });
+    await dailyRun(t, agentId);
+    const keys = await keysOf(t, siteId);
+    expect(keys.filter((key) => key.includes("Series") || key.startsWith("series|"))).toEqual(["series|365|NOW|"]);
+  });
+
   test("a home country taken off the website's list goes after the next collection", async () => {
     const t = harness();
     const { siteId, agentId, admin } = await connected(t, ["gbr", "fra"]);
@@ -185,5 +230,8 @@ describe("home countries", () => {
     const keys = await keysOf(t, siteId);
     expect(keys.some((key) => key.endsWith("|fra"))).toBe(false);
     expect(keys).toContain("total|30|NOW|");
+    // Its days and its place on the connection go too (SF7).
+    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsDays").collect()).some((one) => one.device.endsWith("|fra")))).toBe(false);
+    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsConnections").collect())[0].countryHistory)).toEqual([]);
   });
 });

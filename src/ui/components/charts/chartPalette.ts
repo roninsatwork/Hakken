@@ -51,6 +51,14 @@ export const CHART_ENGAGEMENT_RAMP = [
   "#cde2fb",
 ] as const;
 
+/**
+ * The words on a ramp's square (ga-channel-pages-plan.md CH9, ChannelMap):
+ * near-black on the light end, white on the dark, in either theme — the
+ * square's own shade decides, not the page's.
+ */
+export const CHART_RAMP_INK_ON_LIGHT = "#111111";
+export const CHART_RAMP_INK_ON_DARK = "#f5f5f5";
+
 /** The dashboard's primary line/area series, and its muted comparator. */
 export const CHART_PRIMARY_BLUE = "#3987e5";
 export const CHART_COMPARATOR_GREY = "#8a8a90";

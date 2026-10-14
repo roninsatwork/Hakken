@@ -3,7 +3,8 @@ import { describe, expect, test } from "vitest";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { metered, type MeteredRead } from "@/src/test/readMeter";
-import { DAY_JOIN, packList, type ListRow } from "./googleAnalyticsLists";
+import { packList, type ListRow } from "./googleAnalyticsLists";
+import { historyFloors, pointsBetween } from "./utils/analyticsHistory";
 import { slotKey } from "./googleAnalyticsCollect";
 import { PAGE_RECORD } from "./holdPageRefs";
 import { readPage } from "./googleAnalyticsPageReads";
@@ -11,7 +12,7 @@ import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { productList, readProducts } from "./googleAnalyticsProductReads";
 import { readListPage } from "./googleAnalyticsReads";
 import { readVisitors } from "./googleAnalyticsVisitorReads";
-import type { AnalyticsList } from "./googleAnalyticsSchema";
+import type { AnalyticsList, DayFactList } from "./googleAnalyticsSchema";
 
 /**
  * The second round's screens stay inside Convex's limits on a large website
@@ -37,10 +38,7 @@ const row = (key: string, size: number, extra: Partial<ListRow> = {}): ListRow =
   counts: new Map(EVENTS.map((event) => [event, 0])), values: new Map(EVENTS.map((event) => [event, 0])), ...extra,
 });
 
-/** Days of a year, each with every event: the 12 months' each-event-a-day list. */
-function days(count: number): string[] {
-  return Array.from({ length: count }, (_, at) => new Date(Date.parse("2026-10-08T00:00:00Z") - at * 86_400_000).toISOString().slice(0, 10));
-}
+const NEWEST = "2026-10-08";
 
 async function bigWebsite() {
   const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -50,7 +48,9 @@ async function bigWebsite() {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "properties/1", addresses: ["www.big.co.uk"],
-      currency: "GBP", newestDay: "2026-10-08", oldestDay: "2026-08-10", eventsReadAt: 1, listedWith: "EVENT_COUNT", shop: true,
+      currency: "GBP", newestDay: NEWEST, oldestDay: historyFloors(NEWEST).day, eventsReadAt: 1, listedWith: "EVENT_COUNT", shop: true,
+      // Its two years filled (ga-stored-figures-plan.md SF9): each event, new and returning, and products a day, week and month.
+      historyFrom: historyFloors(NEWEST).month, historyFilled: ["total", "channel", "event", "campaign", "visitorType", "product"],
       events: EVENTS.map((eventName) => ({ eventName, counted: true, analyticsValue: null, hakkenValue: 100, lastThirtyDays: 0 })),
       createdAt: 1, updatedAt: 1,
     });
@@ -72,10 +72,20 @@ async function bigWebsite() {
       await put("product", which, Array.from({ length: PRODUCTS }, (_, at) => row(`Product ${at}\u001fHandles`, PRODUCTS - at, { basket: 10, purchases: 1, revenue: 4_999 })));
       for (const list of ["visitorType", "browser", "system", "age", "gender", "interest"] as const) await put(list, which, Array.from({ length: 40 }, (_, at) => row(`${list}-${at}`, 100 + at)));
     }
-    const year = days(365);
-    await put("eventSeries", "NOW", year.flatMap((day) => EVENT_NAMES.map((name) => row(`${day}${DAY_JOIN}${name}`, 3, { times: 7 }))));
-    await put("visitorSeries", "NOW", year.flatMap((day) => ["new", "returning"].map((type) => row(`${day}${DAY_JOIN}${type}`, 50))));
-    await put("productSeries", "NOW", year.map((day) => row(day, 1, { purchases: 3 })));
+    // The 12 months as kept (SF12): a day for 90 days, then a week, every event, new and returning, products bought.
+    const kept: Array<[DayFactList, ListRow[]]> = [
+      ["event", EVENT_NAMES.map((name) => row(name, 3, { times: 7 }))],
+      ["visitorType", ["new", "returning"].map((type) => row(type, 50))],
+      ["product", [row("Product 0\u001fHandles", 1, { purchases: 3 })]],
+    ];
+    for (const point of pointsBetween("2025-10-09", NEWEST, NEWEST)) {
+      for (const [list, rows] of kept) {
+        for (const [part, packed] of packList(list, rows, EVENTS).entries()) {
+          if (point.grain === "day") await ctx.db.insert("googleAnalyticsDays", { companyWebsiteId: siteId, list, device: "", day: point.start, part, ...packed, fetchedAt: 1 });
+          else await ctx.db.insert("googleAnalyticsHistory", { companyWebsiteId: siteId, list, device: "", grain: point.grain, start: point.start, part, ...packed, fetchedAt: 1 });
+        }
+      }
+    }
     return { siteId, companyId };
   });
   return { t, siteId: ids.siteId as Id<"companyWebsites">, companyId: ids.companyId as Id<"companies"> };
@@ -106,13 +116,15 @@ describe("a large website's second-round Google Analytics", () => {
     const events = await measured("Events", (ctx) => readEvents(ctx, args));
     expect(events?.rows).toHaveLength(EVENT_NAMES.length + 1);
     const event = await measured("an event's own screen", (ctx) => readEvent(ctx, { ...args, event: "click" }));
-    expect(event?.points).toHaveLength(365);
+    // A day for 90 days, then a week (ga-stored-figures-plan.md SF2b).
+    expect(event?.points.filter((point) => !point.lastDay)).toHaveLength(90);
+    expect(event?.points.some((point) => point.lastDay)).toBe(true);
     const campaigns = await measured("Campaigns", (ctx) => readListPage(ctx, { ...args, list: "campaign", page: 1, rows: 25 }));
     expect(campaigns.total).toBe(CAMPAIGNS);
     const visitors = await measured("Visitors", (ctx) => readVisitors(ctx, args));
-    expect(visitors?.points).toHaveLength(365);
+    expect(visitors?.points.filter((point) => !point.lastDay)).toHaveLength(90);
     const products = await measured("Products", (ctx) => readProducts(ctx, args));
-    expect(products?.points).toHaveLength(365);
+    expect(products?.points.filter((point) => !point.lastDay)).toHaveLength(90);
     const hold = (await t.run(async (ctx) => await ctx.db.get(siteId)))!;
     const list = await measured("Products' list", (ctx) => productList({ db: ctx.db }, hold, { ...args, sort: "looks" }));
     expect(list.rows).toHaveLength(PRODUCTS);

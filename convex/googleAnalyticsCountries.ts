@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { countriesKeptReady, mainConsoleCountry } from "./searchConsoleCountries";
 import { countryOfKey } from "./googleAnalyticsLists";
+import { countryOfDayDevice } from "./utils/analyticsHistory";
 
 /**
  * Google Analytics keeps a website's home countries, and only those
@@ -18,6 +19,10 @@ import { countryOfKey } from "./googleAnalyticsLists";
 const SLOTS_PER_PAGE = 200;
 /** Parts removed a call. */
 const PARTS_PER_DELETE = 64;
+/** Day, week, month and page records looked through a call for a home country no longer kept. */
+const RECORDS_PER_PAGE = 200;
+/** The stores a home country's own records sit in, beside the main one's (ga-stored-figures-plan.md SF7), swept in turn. */
+const COUNTRY_STORES = ["googleAnalyticsDays", "googleAnalyticsHistory", "googleAnalyticsPageSeries"] as const;
 
 /**
  * The home country a read is for, as its lists are named: empty for the main
@@ -56,7 +61,24 @@ export async function prepareAnalyticsCountry(ctx: MutationCtx, connection: Doc<
   return "SWITCHING";
 }
 
-/** The lists of a home country the website no longer keeps, cleared after each collection a page of lists at a time. */
+/**
+ * The lists no run keeps any more (ga-stored-figures-plan.md SF12): each
+ * event, campaign, new and returning people and products a day for every
+ * period, and the website's days a period beside Insights' 12 months, every
+ * device — the charts read the days, weeks and months kept.
+ */
+const RETIRED_LISTS = new Set(["eventSeries", "campaignSeries", "visitorSeries", "productSeries"]);
+const KEPT_SERIES = "series|365|NOW|";
+
+function retired(key: string): boolean {
+  const list = key.split("|")[0];
+  return RETIRED_LISTS.has(list) || (list === "series" && key !== KEPT_SERIES);
+}
+
+/**
+ * The lists of a home country the website no longer keeps, and the lists no
+ * run keeps any more, cleared after each collection a page of lists at a time.
+ */
 export const dropCountriesNotKept = internalMutation({
   args: { companyWebsiteId: v.id("companyWebsites"), cursor: v.optional(v.union(v.string(), v.null())) },
   returns: v.null(),
@@ -70,7 +92,7 @@ export const dropCountriesNotKept = internalMutation({
       .paginate({ cursor: args.cursor ?? null, numItems: SLOTS_PER_PAGE });
     for (const slot of page.page) {
       const country = countryOfKey(slot.key);
-      if (!country || kept.has(country)) continue;
+      if ((!country || kept.has(country)) && !retired(slot.key)) continue;
       const parts = await ctx.db
         .query("googleAnalyticsPeriods")
         .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold._id).eq("key", slot.key))
@@ -85,6 +107,48 @@ export const dropCountriesNotKept = internalMutation({
     }
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountriesNotKept, { companyWebsiteId: args.companyWebsiteId, cursor: page.continueCursor });
+      return null;
+    }
+    // Its days, weeks, months and pages too, once — only when a country taken off still has them (SF7).
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (connection?.countryHistory?.some((one) => !kept.has(one.country))) {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountryRecords, { companyWebsiteId: hold._id, store: 0 });
+    }
+    return null;
+  },
+});
+
+/**
+ * The days, weeks, months and pages of a home country the website no longer
+ * keeps (ga-stored-figures-plan.md SF7), a page of records at a time, store
+ * by store; then its place on the connection goes.
+ */
+export const dropCountryRecords = internalMutation({
+  args: { companyWebsiteId: v.id("companyWebsites"), store: v.number(), cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.companyWebsiteId);
+    if (!hold) return null;
+    const kept = new Set(await countriesKeptReady(ctx, hold));
+    const gone = (device: string) => {
+      const country = countryOfDayDevice(device);
+      return country !== "" && !kept.has(country);
+    };
+    const options = { cursor: args.cursor ?? null, numItems: RECORDS_PER_PAGE };
+    const store = COUNTRY_STORES[args.store];
+    const page = store === "googleAnalyticsDays"
+      ? await ctx.db.query("googleAnalyticsDays").withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", hold._id)).paginate(options)
+      : store === "googleAnalyticsHistory"
+        ? await ctx.db.query("googleAnalyticsHistory").withIndex("by_hold_grain_start", (q) => q.eq("companyWebsiteId", hold._id)).paginate(options)
+        : await ctx.db.query("googleAnalyticsPageSeries").withIndex("by_hold_last", (q) => q.eq("companyWebsiteId", hold._id)).paginate(options);
+    for (const record of page.page) if (gone(record.device)) await ctx.db.delete(record._id);
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountryRecords, { ...args, cursor: page.continueCursor });
+    } else if (args.store + 1 < COUNTRY_STORES.length) {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountryRecords, { companyWebsiteId: args.companyWebsiteId, store: args.store + 1 });
+    } else {
+      const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+      if (connection) await ctx.db.patch(connection._id, { countryHistory: (connection.countryHistory ?? []).filter((one) => kept.has(one.country)), updatedAt: Date.now() });
     }
     return null;
   },

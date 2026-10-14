@@ -1,9 +1,9 @@
+import { readDayPoints } from "./googleAnalyticsHistory";
 import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
-import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { SHOP_STEPS, splitChannelKey } from "./googleAnalyticsLists";
@@ -19,8 +19,8 @@ import { connectionOf, readFor, readSlot, type Held } from "./googleAnalyticsRow
  * §18.2 board 25, §18.6.6): the shop's four steps from the events list and
  * its revenue, against the span before; the products bought a day; and each
  * product's looks, baskets, sales and revenue, searched, filtered by
- * category, sorted and paged on the server. Only for a shop; one device's
- * lists are asked of Google when the screen opens. Only the caller's own
+ * category, sorted and paged on the server. Only for a shop; each device's
+ * lists kept by each collection. Only the caller's own
  * website (`requireMySite`).
  */
 
@@ -28,8 +28,8 @@ type Reader = { db: QueryCtx["db"] };
 
 const heldOf = (list: Held | "LIVE" | null) => (list && list !== "LIVE" ? list : null);
 
-/** The lists Products reads besides the totals, each asked of Google for one device. */
-const NEEDED = ["event", "product", "productSeries"] as const;
+/** The lists Products reads besides the totals, each a device's built by the next run. */
+const NEEDED = ["event", "product"] as const;
 
 const stepsValidator = v.object({ looked: v.number(), basket: v.number(), checkout: v.number(), bought: v.number(), revenue: v.number() });
 
@@ -98,7 +98,7 @@ export const analyticsProducts = tenantQuery({
     missing: v.array(v.union(...NEEDED.map((list) => v.literal(list)))),
     steps: v.union(v.null(), stepsValidator),
     before: v.union(v.null(), stepsValidator),
-    points: v.array(v.object({ day: v.string(), bought: v.number() })),
+    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), bought: v.number() })),
     categories: v.array(v.string()),
     seen: seenValidator,
   })),
@@ -116,20 +116,22 @@ export async function readProducts(ctx: SiteReader, args: ObjectType<typeof anal
   if (!isShop(connection)) return none;
   const eventsList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
   const eventsBefore = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
-  const seriesList = await readFor(ctx, holdId, "productSeries", args.period, "NOW", args.device, undefined, country);
+  // The products bought stored a day, then a week, then a month (SF12).
+  const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+  const stored = every ? await readDayPoints(ctx, connection, "product", args.device, every.from, every.to, country) : null;
   const products = await productsOf(ctx, holdId, args, country);
   const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
   const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
   const missing = [
     ...(eventsList === "LIVE" ? ["event" as const] : []),
     ...(products.live ? ["product" as const] : []),
-    ...(seriesList === "LIVE" ? ["productSeries" as const] : []),
   ];
   const steps = stepsOf(heldOf(eventsList), total);
-  const series = heldOf(seriesList);
-  const byDay = new Map((series?.rows ?? []).map((row) => [row.key, row.purchases]));
-  const points: Array<{ day: string; bought: number }> = [];
-  if (series) for (let day = series.from; day && day <= series.to; day = shiftDay(day, 1)) points.push({ day, bought: byDay.get(day) ?? 0 });
+  const points: Array<{ day: string; lastDay?: string; bought: number }> = (stored ?? []).map((point) => ({
+    day: point.start,
+    ...(point.end !== point.start ? { lastDay: point.end } : {}),
+    bought: point.rows.reduce((sum, row) => sum + row.purchases, 0),
+  }));
   return {
     shop: true,
     preparing: products.preparing,

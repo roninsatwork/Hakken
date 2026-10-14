@@ -5,14 +5,16 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { isTrackedHold } from "./utils/websitePairing";
 import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
-import { countriesKeptReady, mainConsoleCountry } from "./searchConsoleCountries";
-import { DAYS_KEPT } from "./utils/searchConsolePacks";
+import { countriesKeptReady, mainConsoleCountry, stillKeptReady } from "./searchConsoleCountries";
+import { ANALYTICS_DAYS_KEPT as DAYS_KEPT, countryOfDayDevice, dayDevice } from "./utils/analyticsHistory";
+import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
+import { fillAfterCollection } from "./googleAnalyticsFillAfter";
 import { shiftDay } from "./searchConsoleDays";
 import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { forgetCountedHistory } from "./insightHistoryForget";
-import { runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type RealtimeAsk, type ReportAsk, type ReportRow, type Report } from "./googleAnalyticsApi";
+import { THRESHOLDED_DIMENSIONS, runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type QuotaLeft, type RealtimeAsk, type ReportAsk, type ReportRow, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
   EVENT_LIST_METRICS,
@@ -32,6 +34,7 @@ import {
   joinAsks,
   packList,
   pageAddress,
+  type Lead,
   slotKey,
   splitChannelKey,
   type ListRow,
@@ -39,11 +42,17 @@ import {
 } from "./googleAnalyticsLists";
 import {
   COUNTED_WITH,
+  DAY_FACT_LISTS,
+  PAGE_FACT_LISTS,
   analyticsPackedRows,
+  dayFactListValidator,
+  type DayFactList,
   type AnalyticsList,
   type AnalyticsPeriod,
   type AnalyticsWhich,
 } from "./googleAnalyticsSchema";
+import { AI_SOURCE_VALUES } from "./utils/aiAssistants";
+import { READ_EVENTS } from "./utils/analyticsPageStory";
 
 /**
  * Collecting a website's Google Analytics (docs/plans/active/google-analytics-plan.md
@@ -139,20 +148,21 @@ const PAGE_LISTS: readonly AnalyticsList[] = [
   "total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS,
   // Insights' two (insights-analyst-plan.md I35, §8): the channel that first brought each person, and each landing page by channel.
   "firstChannel", "landingChannel",
+  // AI assistants' landing pages, whichever channel Google filed them under (ga-channel-pages-plan.md CH13).
+  "landingAssistant",
 ];
 
-/** The lists kept as each period a day for its chart, every device: each event, each campaign, new and returning people. */
-const DAY_LISTS: readonly AnalyticsList[] = ["eventSeries", "campaignSeries", "visitorSeries"];
-
-/** A shop's own lists (§18.6.6): each product, with the span before, and the products bought a day. */
+/** A shop's own list (§18.6.6): each product, with the span before. */
 const SHOP_LISTS: readonly AnalyticsList[] = ["product"];
-const SHOP_DAY_LISTS: readonly AnalyticsList[] = ["productSeries"];
 
 /**
  * The ready-made lists a run asks for: the 7 and 30 days every run, and the
- * 90 days and 12 months once a week (§4.1) — with their long charts. The
- * same span a year before is asked for the long periods (§10, Q2); for the
- * short ones it waits for the "Compare with" choice to be drawn (§4.1).
+ * 90 days and 12 months once a week (§4.1). The same span a year before is
+ * asked for the long periods (§10, Q2); for the short ones it waits for the
+ * "Compare with" choice to be drawn (§4.1). Every chart reads what is kept a
+ * day, a week and a month (ga-stored-figures-plan.md SF12), each home
+ * country's; the main one's 12 months a day stays a list of its own, every
+ * device, for Insights' months and profile changes.
  */
 export function dueJobs(
   connection: Pick<Doc<"googleAnalyticsConnections">, "weeklyPeriodsAt" | "shop">,
@@ -163,22 +173,16 @@ export function dueJobs(
   const weekly = connection.weeklyPeriodsAt === undefined || now - connection.weeklyPeriodsAt >= WEEK_MS;
   // A shop's products beside the rest (§18.6.6): never asked of a website that sells nothing.
   const lists = connection.shop ? [...PAGE_LISTS, ...SHOP_LISTS] : PAGE_LISTS;
-  const dayLists = connection.shop ? [...DAY_LISTS, ...SHOP_DAY_LISTS] : DAY_LISTS;
   for (const country of [undefined, ...others]) {
     const of = country ? { country } : {};
     for (const period of ["7", "30"] as const) {
       for (const which of ["NOW", "BEFORE"] as const) for (const list of lists) jobs.push({ list, period, which, ...of });
-      // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
-      if (country) jobs.push({ list: "series", period, which: "NOW", ...of });
-      // Each event and each campaign a day keep no days of their own: ready-made for every period's chart (§18.6.5, §18.6.6).
-      for (const list of dayLists) jobs.push({ list, period, which: "NOW", ...of });
     }
     if (weekly) {
       for (const period of ["90", "365"] as const) {
         for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of lists) jobs.push({ list, period, which, ...of });
-        jobs.push({ list: "series", period, which: "NOW", ...of });
-        for (const list of dayLists) jobs.push({ list, period, which: "NOW", ...of });
       }
+      if (!country) jobs.push({ list: "series", period: "365", which: "NOW" });
     }
   }
   return jobs;
@@ -204,11 +208,15 @@ export type CollectTarget = {
   perVisit: string[];
   newestDay: string | undefined;
   oldestDay: string | undefined;
+  /** Each page is held over time (ga-stored-figures-plan.md SF5): the run then adds each new day to it. */
+  pagesHeld: boolean;
   weeklyPeriodsAt: number | undefined;
   /** The home country every ask is filtered to, by Google's two-letter `countryId`: the main one unless a job names another. */
   country: string;
   /** The website's other home countries, kept as ready-made lists (§18.6.1), by Search Console's code (`fra`). */
   others: string[];
+  /** Where each other home country's days and pages stand (ga-stored-figures-plan.md SF7): the run adds its new days too. */
+  countryHistory: Array<{ country: string; newestDay?: string; oldestDay?: string; pagesHeld: boolean }>;
   /**
    * No page title kept yet (§18.6.3): the run asks the weekly lists with the
    * titles whatever the week — every website the first time the second
@@ -256,9 +264,11 @@ export const collectTarget = internalQuery({
       perVisit: perVisitOf(connection),
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
+      pagesHeld: connection.pageHistoryFrom !== undefined,
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
       country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
       others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
+      countryHistory: (connection.countryHistory ?? []).map((one) => ({ country: one.country, newestDay: one.newestDay, oldestDay: one.oldestDay, pagesHeld: one.pageHistoryFrom !== undefined })),
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
       shop: connection.shop === true,
       // A shop's first products are asked at once too, as every new list was.
@@ -283,7 +293,13 @@ export type Session = {
   requests: number;
   /** Set when renewing the token failed; the problem is already noted on the connection. */
   stopped: string | null;
+  /** What is left of the website's allowances, as Google counted them on its last answer (SF18); null before one. */
+  quota: QuotaLeft | null;
 };
+
+// Each run's budget for the hour, and Google's refusals that refresh within it (ga-stored-figures-plan.md SF17, SF20).
+export { HOURLY_REFUSAL, KEPT_BACK, overBudget } from "./googleAnalyticsBudget";
+import { HOURLY_REFUSAL, overBudget } from "./googleAnalyticsBudget";
 
 export async function openSession(
   ctx: ActionCtx,
@@ -291,15 +307,20 @@ export async function openSession(
 ): Promise<{ ok: true; session: Session } | { ok: false; problem: string }> {
   const token = await accessTokenFor(ctx, connectionId);
   if (!token.ok) return { ok: false, problem: token.problem };
-  return { ok: true, session: { ctx, connectionId, accessToken: token.accessToken, requests: 0, stopped: null } };
+  return { ok: true, session: { ctx, connectionId, accessToken: token.accessToken, requests: 0, stopped: null, quota: null } };
 }
 
-/** One report, renewing the token once if it has just expired and waiting a little when Google is busy. */
+/**
+ * One report, renewing the token once if it has just expired and waiting a
+ * little when Google is busy — and not asked at all once the run's budget
+ * for the hour is spent (SF17).
+ */
 export async function ask(session: Session, property: string, report: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
   return await retried(session, async (token) => {
     const answer = await runReport(token, property, report);
+    if (answer.ok && answer.quota) session.quota = answer.quota;
     return { answer, requests: answer.ok ? answer.requests : 1 };
-  });
+  }, { budgeted: true, thresholded: report.dimensions.some((dimension) => THRESHOLDED_DIMENSIONS.has(dimension)) });
 }
 
 /** Google's live figures (§18.6.7), asked as every report is; nothing is kept. */
@@ -312,13 +333,22 @@ export async function askFunnel(session: Session, property: string, funnel: Funn
   return await retried(session, async (token) => ({ answer: await runFunnelReport(token, property, funnel), requests: 1 }));
 }
 
-/** One ask of Google, its sign-in renewed once when it ran out and asked again a little later when Google was busy. */
+/**
+ * One ask of Google, its sign-in renewed once when it ran out and asked again
+ * a little later when Google was busy. A collection's ask (`budgeted`) is not
+ * made once its budget for the hour is spent (`BUDGET`); a refusal for an
+ * allowance that refreshes within the hour is not asked again a few seconds
+ * later — the run waits for the hour (SF20).
+ */
 async function retried<Answer extends { ok: true } | GoogleFailure>(
   session: Session,
   call: (accessToken: string) => Promise<{ answer: Answer; requests: number }>,
+  budget: { budgeted: boolean; thresholded?: boolean } = { budgeted: false },
 ): Promise<Answer> {
   let renewed = false;
   for (let wait = 0; ;) {
+    const spent = budget.budgeted ? overBudget(session.quota, budget.thresholded === true) : null;
+    if (spent) return { ok: false, reason: "BUDGET", status: 0, detail: spent } as Answer;
     const { answer, requests } = await call(session.accessToken);
     session.requests += requests;
     if (answer.ok) return answer;
@@ -332,7 +362,7 @@ async function retried<Answer extends { ok: true } | GoogleFailure>(
       session.accessToken = token.accessToken;
       continue;
     }
-    if ((answer.reason === "BUSY" || answer.reason === "UNREACHABLE") && wait < BUSY_WAITS_MS.length) {
+    if ((answer.reason === "BUSY" || answer.reason === "UNREACHABLE") && wait < BUSY_WAITS_MS.length && !HOURLY_REFUSAL.test(answer.detail)) {
       await new Promise((resolve) => setTimeout(resolve, BUSY_WAITS_MS[wait]));
       wait += 1;
       continue;
@@ -351,7 +381,7 @@ export async function askList(
   session: Session,
   target: CollectTarget,
   list: AnalyticsList,
-  lead: readonly ("date" | "deviceCategory")[],
+  lead: readonly Lead[],
   range: { from: string; to: string },
   only: { device?: string; landingPage?: string[]; pagePath?: string[] } = {},
 ): Promise<Asked> {
@@ -363,7 +393,9 @@ export async function askList(
     countries: [target.country],
     ...(only.device ? { device: only.device } : {}),
     ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } }
-      : only.pagePath !== undefined ? { only: { dimension: "pagePath", values: only.pagePath } } : {}),
+      : only.pagePath !== undefined ? { only: { dimension: "pagePath", values: only.pagePath } }
+        // Only the assistants' visits: a list of every source by every landing page would be a website's longest.
+        : list === "landingAssistant" ? { only: { dimension: "sessionSource", values: [...AI_SOURCE_VALUES] } } : {}),
   };
   const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
   const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...metrics] });
@@ -408,7 +440,14 @@ export function siteOrigin(addresses: readonly string[], host: string): string {
  * it: a landing page is given the slashed address when the website holds that
  * one and not its own, so one page has one number.
  */
-export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[], list: "landing" | "page" | "landingChannel"): Promise<ListRow[]> {
+export async function numberPages(
+  ctx: ActionCtx,
+  target: CollectTarget,
+  rows: ListRow[],
+  list: "landing" | "page" | "landingChannel" | "landingAssistant",
+  /** Each row keyed page then something more, kept beside the page's number: the lists by channel, a page's days (SF5). */
+  keyedRows = list === "landingChannel" || list === "landingAssistant",
+): Promise<ListRow[]> {
   const known = (await addressesOf(ctx, target.companyWebsiteId)).numbers;
   const landing = list !== "page";
   const addressOf = (path: string) => {
@@ -417,8 +456,9 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
     return known.has(`${address}/`) ? `${address}/` : address;
   };
   // A landing page by channel keeps its channel beside the page's number (Insights, §8).
-  const parts = rows.map((row) => (list === "landingChannel" ? splitChannelKey(row.key) : { channel: "", source: "" }));
-  const addresses = rows.map((row, index) => addressOf(list === "landingChannel" ? parts[index].channel : row.key));
+  const keyed = keyedRows;
+  const parts = rows.map((row) => (keyed ? splitChannelKey(row.key) : { channel: "", source: "" }));
+  const addresses = rows.map((row, index) => addressOf(keyed ? parts[index].channel : row.key));
   const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => address !== "(not set)"));
   const refs = new Map<string, string>();
   let at = 0;
@@ -427,7 +467,7 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
   const merged = new Map<string, ListRow>();
   rows.forEach((row, index) => {
     const page = refs.get(addresses[index]) ?? "(not set)";
-    const key = list === "landingChannel" ? channelKey(page, parts[index].source) : page;
+    const key = keyed ? channelKey(page, parts[index].source) : page;
     const held = merged.get(key);
     if (!held) {
       merged.set(key, { ...row, key });
@@ -446,22 +486,38 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
 // The days
 // ---------------------------------------------------------------------------
 
-export type StepResult = { ok: true; rows: number; requests: number } | { ok: false; reason: string; access: boolean; busy: boolean; requests: number };
+/**
+ * A step's outcome. A stop that is only the hour's allowance — the run's own
+ * budget spent, or Google refusing for an allowance that refreshes within the
+ * hour — is `wait`: the run carries on once the hour turns (SF17, SF20).
+ */
+export type StepResult = { ok: true; rows: number; requests: number } | { ok: false; reason: string; access: boolean; busy: boolean; wait: boolean; requests: number };
 
-function failed(session: Session, failure: GoogleFailure | null): StepResult {
+export function failed(session: Session, failure: GoogleFailure | null): StepResult {
+  const wait = failure?.reason === "BUDGET" || (failure?.reason === "BUSY" && HOURLY_REFUSAL.test(failure.detail));
   return {
     ok: false,
-    reason: session.stopped ?? (failure ? `${failure.reason} ${failure.status}: ${failure.detail}` : "No detail given."),
+    reason: session.stopped ?? (failure ? (failure.reason === "BUDGET" ? failure.detail : `${failure.reason} ${failure.status}: ${failure.detail}`) : "No detail given."),
     access: failure?.reason === "ACCESS",
-    busy: session.stopped === "GOOGLE_BUSY" || failure?.reason === "BUSY" || failure?.reason === "UNREACHABLE",
+    busy: !wait && (session.stopped === "GOOGLE_BUSY" || failure?.reason === "BUSY" || failure?.reason === "UNREACHABLE"),
+    wait,
     requests: session.requests,
   };
 }
 
 /**
- * A week of days, newest first: the totals and the channels by day and
- * device, each day written as one record per list and device. A day Google
- * has nothing for is written with its totals at nought, so it reads as held.
+ * The day facts a website keeps (ga-stored-figures-plan.md SF12): its totals
+ * and channels always; each event, each campaign and new and returning
+ * people; a shop's products.
+ */
+export function dayFactsOf(target: Pick<CollectTarget, "shop">): DayFactList[] {
+  return DAY_FACT_LISTS.filter((list) => list !== "product" || target.shop);
+}
+
+/**
+ * A week of days, newest first: each day fact by day and device (SF12), each
+ * day written as one record per list and device. A day Google has nothing
+ * for is written with its figures at nought, so it reads as held.
  */
 export async function collectDays(
   ctx: ActionCtx,
@@ -469,17 +525,23 @@ export async function collectDays(
   connectionId: Id<"googleAnalyticsConnections">,
   target: CollectTarget,
   range: { from: string; to: string },
+  lists: readonly DayFactList[] = dayFactsOf(target),
+  /** Another home country (SF7), by its code (`fra`): asked for it alone, kept beside the main one's (`dayDevice`). */
+  country?: string,
 ): Promise<StepResult> {
-  const totals = await askList(session, target, "total", ["date", "deviceCategory"], range);
-  if (!totals.ok) return failed(session, totals);
-  const channels = await askList(session, target, "channel", ["date", "deviceCategory"], range);
-  if (!channels.ok) return failed(session, channels);
+  const asking = country ? { ...target, country: countryIdOf(country) } : target;
+  const answers: Array<[DayFactList, Extract<Asked, { ok: true }>]> = [];
+  for (const list of lists) {
+    const asked = await askList(session, asking, list, ["date", "deviceCategory"], range);
+    if (!asked.ok) return failed(session, asked);
+    answers.push([list, asked]);
+  }
   let rows = 0;
   const days: string[] = [];
   for (let day = range.to; day >= range.from; day = shiftDay(day, -1)) days.push(day);
   for (const day of days) {
-    const records: { list: "total" | "channel"; device: string; parts: PackedPart[]; folded: boolean; thresholded: boolean; cut: boolean }[] = [];
-    for (const [list, asked] of [["total", totals], ["channel", channels]] as const) {
+    const records: { list: DayFactList; device: string; parts: PackedPart[]; folded: boolean; thresholded: boolean; cut: boolean }[] = [];
+    for (const [list, asked] of answers) {
       const devices = new Map<string, ListRow[]>();
       for (const [group, groupRows] of asked.groups) {
         const [groupDay, device] = groupKeys(group);
@@ -488,7 +550,7 @@ export async function collectDays(
       if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
       for (const [device, groupRows] of devices) {
         rows += groupRows.length;
-        records.push({ list, device, parts: packList(list, groupRows, target.events), ...asked.flags });
+        records.push({ list, device: dayDevice(device, country), parts: packList(list, groupRows, target.events), ...asked.flags });
       }
     }
     await ctx.runMutation(internal.googleAnalyticsCollect.writeDay, {
@@ -497,6 +559,7 @@ export async function collectDays(
       day,
       records,
       fetchedAt: Date.now(),
+      ...(country ? { country } : {}),
     });
   }
   return { ok: true, rows, requests: session.requests };
@@ -511,7 +574,7 @@ export const writeDay = internalMutation({
     property: v.string(),
     day: v.string(),
     records: v.array(v.object({
-      list: v.union(v.literal("total"), v.literal("channel")),
+      list: dayFactListValidator,
       device: v.string(),
       parts: v.array(packedPartValidator),
       folded: v.boolean(),
@@ -519,19 +582,27 @@ export const writeDay = internalMutation({
       cut: v.boolean(),
     })),
     fetchedAt: v.number(),
+    /** Another home country's day (SF7): its records alone are written, and its days noted. */
+    country: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     // Disconnected, or another property chosen, while the step ran: what it fetched is not this connection's.
     if (!connection || connection.status !== "CONNECTED" || connection.property !== args.property || connection.clearing) return null;
+    // A home country taken off while the step ran is not filed again behind its clearing.
+    if (args.country && !(await stillKeptReady(ctx, connection.companyWebsiteId, args.country))) return null;
     const hold = connection.companyWebsiteId;
-    for (const list of ["total", "channel"] as const) {
+    const country = args.country ?? "";
+    // Only the lists fetched: a fill of one list leaves the others' days as they are.
+    for (const list of [...new Set(args.records.map((record) => record.list))]) {
       const fresh = args.records.filter((record) => record.list === list);
-      const held = await ctx.db
+      // Only this home country's records: each country's sit beside the others' (`dayDevice`).
+      const held = (await ctx.db
         .query("googleAnalyticsDays")
         .withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", hold).eq("list", list).eq("day", args.day))
-        .take(DAY_RECORDS_READ);
+        .take(DAY_RECORDS_READ))
+        .filter((row) => countryOfDayDevice(row.device) === country);
       for (const record of fresh) {
         for (const [part, packed] of record.parts.entries()) {
           const before = held.find((row) => row.device === record.device && row.part === part);
@@ -548,9 +619,12 @@ export const writeDay = internalMutation({
         if (!kept || row.part >= kept.parts.length) await ctx.db.delete(row._id);
       }
     }
-    const newestDay = !connection.newestDay || args.day > connection.newestDay ? args.day : connection.newestDay;
-    const oldestDay = !connection.oldestDay || args.day < connection.oldestDay ? args.day : connection.oldestDay;
-    await ctx.db.patch(connection._id, { newestDay, oldestDay, updatedAt: Date.now() });
+    const coverage = coverageOf(connection, country);
+    const newestDay = !coverage.newestDay || args.day > coverage.newestDay ? args.day : coverage.newestDay;
+    const oldestDay = !coverage.oldestDay || args.day < coverage.oldestDay ? args.day : coverage.oldestDay;
+    await ctx.db.patch(connection._id, country
+      ? { countryHistory: withCoverage(connection, country, { newestDay, oldestDay }), updatedAt: Date.now() }
+      : { newestDay, oldestDay, updatedAt: Date.now() });
     return null;
   },
 });
@@ -561,21 +635,6 @@ function samePart(held: PackedPart, fresh: PackedPart): boolean {
     && held.people === fresh.people && held.newPeople === fresh.newPeople && held.length === fresh.length
     && JSON.stringify(held.keys) === JSON.stringify(fresh.keys) && JSON.stringify(held.events) === JSON.stringify(fresh.events)
     && JSON.stringify(held.counts) === JSON.stringify(fresh.counts) && JSON.stringify(held.values) === JSON.stringify(fresh.values);
-}
-
-/** The days older than the 60 kept (§4.3), a few hundred at a time; true when none is left. */
-export async function dropOldDays(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">, newest: string): Promise<boolean> {
-  const first = shiftDay(newest, -(DAYS_KEPT - 1));
-  let left = true;
-  for (const list of ["total", "channel"] as const) {
-    const old = await ctx.db
-      .query("googleAnalyticsDays")
-      .withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("list", list).lt("day", first))
-      .take(200);
-    for (const row of old) await ctx.db.delete(row._id);
-    if (old.length === 200) left = false;
-  }
-  return left;
 }
 
 // ---------------------------------------------------------------------------
@@ -599,6 +658,11 @@ export const slotsOf = internalQuery({
 });
 
 /** A few parts of a build, into the slot screens are not reading. */
+/** Whether a kept list's name is one of the shared page lists, sorted by page (SF13). */
+function sortedByPage(key: string): boolean {
+  return (PAGE_FACT_LISTS as readonly string[]).includes(key.split("|")[0]);
+}
+
 export const putPeriodParts = internalMutation({
   args: {
     connectionId: v.id("googleAnalyticsConnections"),
@@ -619,8 +683,10 @@ export const putPeriodParts = internalMutation({
         .query("googleAnalyticsPeriods")
         .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold).eq("key", args.key).eq("slot", args.slot).eq("part", part))
         .first();
-      if (held) await ctx.db.patch(held._id, packed);
-      else await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: hold, key: args.key, slot: args.slot, part, ...packed });
+      // A list sorted by page keeps its first key, for a page's rows to be read alone (SF13).
+      const firstKey = sortedByPage(args.key) ? packed.keys[0] : undefined;
+      if (held) await ctx.db.patch(held._id, { ...packed, firstKey });
+      else await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: hold, key: args.key, slot: args.slot, part, ...packed, ...(firstKey !== undefined ? { firstKey } : {}) });
     }
     return true;
   },
@@ -697,7 +763,9 @@ export async function collectPeriod(
   const lead = KEPT_BY_DEVICE[job.list] ? (["deviceCategory"] as const) : ([] as const);
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
-  const asked = await askList(session, asking, job.list, lead, range);
+  // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).
+  const reading = job.list === "page" ? { ...asking, events: [...asking.events, ...READ_EVENTS] } : asking;
+  const asked = await askList(session, reading, job.list, lead, range);
   if (!asked.ok) return failed(session, asked);
   const devices = new Map<string, ListRow[]>();
   for (const [group, rows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, rows);
@@ -706,9 +774,10 @@ export async function collectPeriod(
     const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
     if (shop !== target.shop) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
   }
-  // People cannot be added up across devices (§18.6.2): the website's totals for every device are asked whole.
-  if (job.list === "total" && lead.length > 0) {
-    const whole = await askList(session, asking, "total", [], range);
+  // People cannot be added up across devices (§18.6.2): every device is asked whole, as the website's totals always
+  // were — the channels aside, whose people no screen shows for every device.
+  if (lead.length > 0 && job.list !== "channel") {
+    const whole = await askList(session, reading, job.list, [], range);
     if (!whole.ok) return failed(session, whole);
     devices.set(EVERY_DEVICE, [...whole.groups.values()].flat());
   }
@@ -718,27 +787,48 @@ export async function collectPeriod(
     await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
   let rows = 0;
   for (const [device, deviceRows] of devices) {
-    const listRows = job.list === "landing" || job.list === "page" || job.list === "landingChannel"
+    const listRows = job.list === "landing" || job.list === "page" || job.list === "landingChannel" || job.list === "landingAssistant"
       ? await numberPages(ctx, target, deviceRows, job.list)
       : deviceRows;
     rows += listRows.length;
-    const parts = packList(job.list, listRows, target.events);
     const key = slotKey(job.list, job.period, job.which, device, country);
-    const hash = await fingerprint(parts);
-    const held = slots[key];
-    if (held && held.hash === hash && held.from === range.from && held.to === range.to) continue;
-    const slot = held ? 1 - held.slot : 0;
-    for (let first = 0; first < parts.length; first += PARTS_PER_WRITE) {
-      const written: boolean = await ctx.runMutation(internal.googleAnalyticsCollect.putPeriodParts, {
-        connectionId, property: target.property!, key, slot, first, parts: parts.slice(first, first + PARTS_PER_WRITE),
-      });
-      if (!written) return { ok: true, rows, requests: session.requests };
-    }
-    await ctx.runMutation(internal.googleAnalyticsCollect.flipSlot, {
-      connectionId, property: target.property!, key, slot, parts: parts.length, from: range.from, to: range.to, hash, ...asked.flags,
-    });
+    if (!(await writeList(ctx, connectionId, target, job.list, key, listRows, range, asked.flags, slots[key], reading.events))) return { ok: true, rows, requests: session.requests };
   }
   return { ok: true, rows, requests: session.requests };
+}
+
+/**
+ * A ready-made list's rows written into the slot screens are not reading,
+ * then the slot flipped — unless its figures and dates are as held. False
+ * when the connection changed under the write.
+ */
+export async function writeList(
+  ctx: ActionCtx,
+  connectionId: Id<"googleAnalyticsConnections">,
+  target: CollectTarget,
+  list: AnalyticsList,
+  key: string,
+  rows: readonly ListRow[],
+  range: { from: string; to: string },
+  flags: { folded: boolean; thresholded: boolean; cut: boolean },
+  held: { slot: number; hash: string; from: string; to: string } | undefined,
+  /** The events given columns: the key events unless the list asked others. */
+  events: readonly string[] = target.events,
+): Promise<boolean> {
+  const parts = packList(list, rows, events);
+  const hash = await fingerprint(parts);
+  if (held && held.hash === hash && held.from === range.from && held.to === range.to) return true;
+  const slot = held ? 1 - held.slot : 0;
+  for (let first = 0; first < parts.length; first += PARTS_PER_WRITE) {
+    const written: boolean = await ctx.runMutation(internal.googleAnalyticsCollect.putPeriodParts, {
+      connectionId, property: target.property!, key, slot, first, parts: parts.slice(first, first + PARTS_PER_WRITE),
+    });
+    if (!written) return false;
+  }
+  await ctx.runMutation(internal.googleAnalyticsCollect.flipSlot, {
+    connectionId, property: target.property!, key, slot, parts: parts.length, from: range.from, to: range.to, hash, ...flags,
+  });
+  return true;
 }
 
 /** Whether the website is a shop, as its last 90 days' events say (§18.6.6). */
@@ -785,7 +875,10 @@ export const finishCollection = internalMutation({
       problemAt: undefined,
       updatedAt: now,
     });
-    if (connection.newestDay) await dropOldDays(ctx, connection.companyWebsiteId, connection.newestDay);
+    // The past rolled on (ga-stored-figures-plan.md SF2): days past 90 into weeks, weeks past a year into months;
+    // each week, the pages quiet for two years cleared (SF5).
+    if (connection.newestDay) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHistory.rollHistory, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
+    if (connection.newestDay && args.weekly) await ctx.scheduler.runAfter(0, internal.googleAnalyticsPageSeries.dropOldPageSeries, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
     // What screens asked of Google live is held until now (GA23): the ready-made lists are fresher.
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
     // Tracking health when the first collection is in, and every week (GA11).
@@ -795,20 +888,36 @@ export const finishCollection = internalMutation({
     await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
     // A home country taken off the website's list goes (§18.6.1).
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountriesNotKept, { companyWebsiteId: connection.companyWebsiteId });
+    await fillAfterCollection(ctx, connection);
     return null;
   },
 });
 
-/** Lists a screen asked of Google live, held until the next collection (GA23), a few hundred at a time. */
+
+/** How long an event's funnel, asked when its screen opens, is kept (ga-stored-figures-plan.md SF8). */
+export const FUNNEL_KEPT_MS = 7 * 86_400_000;
+
+/** The start of every funnel's name (`googleAnalyticsLive.eventAsk`), and the first name past them. */
+const FUNNEL_ASKS = { from: "funnel:", past: "funnel;" } as const;
+
+/**
+ * Lists a screen asked of Google live, held until the next collection (GA23),
+ * a few hundred at a time — but an event's funnel, kept a week (SF8).
+ */
 export const dropLive = internalMutation({
   args: { companyWebsiteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const held = await ctx.db
-      .query("googleAnalyticsLive")
-      .withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+    const live = () => ctx.db.query("googleAnalyticsLive");
+    const held = [
+      ...await live().withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).lt("ask", FUNNEL_ASKS.from)).take(LIVE_PER_DELETE),
+      ...await live().withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).gte("ask", FUNNEL_ASKS.past)).take(LIVE_PER_DELETE),
+    ].slice(0, LIVE_PER_DELETE);
+    const funnels = await live()
+      .withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).gte("ask", FUNNEL_ASKS.from).lt("ask", FUNNEL_ASKS.past))
       .take(LIVE_PER_DELETE);
-    for (const row of held) await ctx.db.delete(row._id);
+    const old = funnels.filter((row) => row.askedAt < Date.now() - FUNNEL_KEPT_MS);
+    for (const row of [...held, ...old]) await ctx.db.delete(row._id);
     if (held.length === LIVE_PER_DELETE) await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, args);
     return null;
   },
@@ -829,9 +938,12 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
   const slots = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
   const live = await ctx.db.query("googleAnalyticsLive").withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
   const titles = await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
-  for (const row of [...days, ...periods, ...slots, ...live, ...titles]) await ctx.db.delete(row._id);
+  // The channels' weeks and months, and each page over time (ga-stored-figures-plan.md SF2, SF5).
+  const history = await ctx.db.query("googleAnalyticsHistory").withIndex("by_hold_grain_start", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
+  const pageSeries = await ctx.db.query("googleAnalyticsPageSeries").withIndex("by_hold_last", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
+  for (const row of [...days, ...periods, ...slots, ...live, ...titles, ...history, ...pageSeries]) await ctx.db.delete(row._id);
   if (days.length === CLEAR_PER_CALL || periods.length === PARTS_PER_DELETE || slots.length === CLEAR_PER_CALL || live.length === CLEAR_PER_CALL
-    || titles.length === CLEAR_PER_CALL) done = false;
+    || titles.length === CLEAR_PER_CALL || history.length === CLEAR_PER_CALL || pageSeries.length === CLEAR_PER_CALL) done = false;
   return done;
 }
 
@@ -854,7 +966,7 @@ export const clearFigures = internalMutation({
       .first();
     if (connection?.clearing) {
       await ctx.db.patch(connection._id, {
-        clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined,
+        clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyFrom: undefined, pageHistoryFrom: undefined, countryHistory: undefined,
         dailyPeriodsAt: undefined, weeklyPeriodsAt: undefined, updatedAt: Date.now(),
       });
       // The new property's figures start coming in at once (§10, Q15).

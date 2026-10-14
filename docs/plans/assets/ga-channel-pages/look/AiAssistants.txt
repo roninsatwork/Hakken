@@ -1,0 +1,22 @@
+# Google Analytics → AI assistants — the approved look (board "AiAssistants" of docs/plans/assets/ga-channel-pages/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Channels
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Conversions
+  figure: Conversions it started
+  figure: Filed elsewhere
+chart-card: AI assistants a day
+chart-card: Where AI assistants land, by page classification
+chart-card: Each assistant's visits, by how Google Analytics filed them
+search: Find an assistant…
+filter: Filed as
+choice: Show: Assistants | Landing pages | Classifications | Key events
+table: Assistant | Visits | Filed elsewhere | Engaged | Conversions | Value | Change
+  table-bar
+    download: Download CSV
+  table-footer

@@ -23,6 +23,7 @@ import { ConversionsCell, PageLink, TextFigure } from "./AnalyticsCells";
 import { BeforeLine } from "./AnalyticsFigures";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "./analyticsFormat";
 import { usePeriod } from "./useAnalytics";
+import { OTHER_ROWS } from "@/convex/utils/analyticsSharedLists";
 
 /**
  * A page's story on its own All pages screen, as drawn and approved on
@@ -35,7 +36,6 @@ import { usePeriod } from "./useAnalytics";
  * they come.
  */
 
-type Asking = "ASKING" | "FAILED" | "IDLE";
 type Source = PageStory["sources"][number];
 type Click = PageStory["clicks"][number];
 
@@ -47,10 +47,10 @@ function useStoryWords() {
   return { t, tf, period: tf(`periods.${period}`) };
 }
 
-/** A source by the name people know it by, or typed in, or not known. */
+/** A source by the name people know it by, or typed in, or a channel's other sources added up, or not known. */
 function useSourceName() {
   const { t } = useStoryWords();
-  return (row: Source) => row.name ?? (row.source === "(direct)" ? t("typedIn") : t("notKnown"));
+  return (row: Source) => row.name ?? (row.source === "(direct)" ? t("typedIn") : row.source === OTHER_ROWS ? t("otherSources") : t("notKnown"));
 }
 
 /**
@@ -105,20 +105,21 @@ export function PageStoryFigures({ story, currency }: { story: PageStory; curren
 }
 
 /** One chart of the story: its card, the chart, or what it is waiting for. */
-function StoryChart({ title, hint, exportName, csv, host, shown, asking, children }: {
+function StoryChart({ title, hint, exportName, csv, host, shown, collecting, children }: {
   title: string;
   hint: string;
   exportName: string;
   csv: () => string;
   host: string;
   shown: boolean;
-  asking: boolean;
+  /** Its shared lists not built yet: the next collection builds them (ga-stored-figures-plan.md SF15). */
+  collecting: boolean;
   children: ReactNode;
 }) {
   const { t } = useStoryWords();
   return (
     <SearchConsoleChartCard title={title} hint={hint} exportName={exportName} csv={csv} host={host} from={null} to={null}>
-      {shown ? children : <p className="py-10 text-center text-[12px] text-muted">{asking ? t("asking") : t("empty")}</p>}
+      {shown ? children : <p className="py-10 text-center text-[12px] text-muted">{collecting ? t("collecting") : t("empty")}</p>}
     </SearchConsoleChartCard>
   );
 }
@@ -132,12 +133,12 @@ const SOURCE_ROWS = 12;
  * gender with their conversions, the days of the week, and its page group's
  * busiest pages, this one in orange.
  */
-export function PageStoryCharts({ story, asking, host }: { story: PageStory; asking: Asking; host: string }) {
+export function PageStoryCharts({ story, host }: { story: PageStory; host: string }) {
   const { t, period } = useStoryWords();
   const tf = useTranslations("googleAnalytics.filters");
   const locale = useLocale();
   const sourceName = useSourceName();
-  const waiting = story.live && asking !== "FAILED";
+  const waiting = story.live;
   const countries = useMemo(() => {
     try {
       return new Intl.DisplayNames([locale === "en" ? "en-GB" : locale], { type: "region" });
@@ -153,7 +154,7 @@ export function PageStoryCharts({ story, asking, host }: { story: PageStory; ask
 
   const sources = story.sources.slice(0, SOURCE_ROWS).map((row) => ({ label: sourceName(row), value: row.visits, conversions: row.conversions }));
   const next = story.next.map((row) => ({
-    label: row.kind === "again" ? t("thisPageAgain") : row.kind === "left" ? t("leftWebsite") : pathOf(row.address),
+    label: row.kind === "again" ? t("thisPageAgain") : row.kind === "left" ? t("leftWebsite") : row.kind === "others" ? t("otherPages") : pathOf(row.address),
     value: row.views,
     share: row.share,
   }));
@@ -175,51 +176,51 @@ export function PageStoryCharts({ story, asking, host }: { story: PageStory; ask
 
   return (
     <>
-      <StoryChart title={t("sourcesTitle")} hint={t("sourcesHint", { period })} exportName="google-analytics-page-sources" host={host} shown={sources.length > 0} asking={waiting}
+      <StoryChart title={t("sourcesTitle")} hint={t("sourcesHint", { period })} exportName="google-analytics-page-sources" host={host} shown={sources.length > 0} collecting={waiting}
         csv={() => toCsv([t("source"), t("visits"), t("conversions")], sources.map((row) => [row.label, row.value, row.conversions]))}>
         <SiteBarChart horizontal data={sources} series={[{ key: "value", name: t("visits"), colour: CHART_SERIES_ORANGE }]} labels={(value, _key, row) => visitsWords(value, Number(row.conversions))} />
       </StoryChart>
 
-      <StoryChart title={t("nextTitle")} hint={t("nextHint", { period })} exportName="google-analytics-page-next" host={host} shown={next.length > 0} asking={waiting}
+      <StoryChart title={t("nextTitle")} hint={t("nextHint", { period })} exportName="google-analytics-page-next" host={host} shown={next.length > 0} collecting={waiting}
         csv={() => toCsv([t("nextTitle"), t("views")], next.map((row) => [row.label, row.value]))}>
         <SiteBarChart horizontal data={next} series={[{ key: "value", name: t("views"), colour: CHART_SERIES_ORANGE }]} labels={(value, _key, row) => `${formatNumber(value)} · ${formatPercent(Number(row.share))}`} />
       </StoryChart>
 
-      <StoryChart title={t("returningTitle")} exportName="google-analytics-page-returning" host={host} shown={returning.length > 0} asking={waiting}
+      <StoryChart title={t("returningTitle")} exportName="google-analytics-page-returning" host={host} shown={returning.length > 0} collecting={waiting}
         hint={story.returning?.websiteBack !== null && story.returning?.websiteBack !== undefined ? t("returningHint", { period, share: formatPercent(story.returning.websiteBack) }) : t("returningHintAlone", { period })}
         csv={() => toCsv([t("returningTitle"), t("visits")], returning.map((row) => [row.label, row.value]))}>
         <SiteBarChart horizontal data={returning} series={[{ key: "value", name: t("visits"), colour: CHART_SERIES_ORANGE }]} labels={(value) => t("visitsShare", { visits: value, share: formatPercent(returningVisits > 0 ? value / returningVisits : null) })} />
       </StoryChart>
 
-      <StoryChart title={t("devicesTitle")} hint={t("devicesHint", { period })} exportName="google-analytics-page-devices" host={host} shown={devices.length > 0} asking={waiting}
+      <StoryChart title={t("devicesTitle")} hint={t("devicesHint", { period })} exportName="google-analytics-page-devices" host={host} shown={devices.length > 0} collecting={waiting}
         csv={() => toCsv([t("devicesTitle"), t("thisPage"), t("yourWebsite")], devices.map((row) => [row.label, Math.round(row.page), Math.round(row.website)]))}>
         <SiteBarChart horizontal data={devices} series={pairSeries} labels={(value) => percent(value)} formatScale={percent} />
       </StoryChart>
 
-      <StoryChart title={t("countriesTitle")} hint={t("countriesHint", { period })} exportName="google-analytics-page-countries" host={host} shown={countryRows.length > 0} asking={waiting}
+      <StoryChart title={t("countriesTitle")} hint={t("countriesHint", { period })} exportName="google-analytics-page-countries" host={host} shown={countryRows.length > 0} collecting={waiting}
         csv={() => toCsv([t("countriesTitle"), t("people")], countryRows.map((row) => [row.label, row.value]))}>
         <SiteBarChart horizontal data={countryRows} series={[{ key: "value", name: t("people"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
       </StoryChart>
 
-      <StoryChart title={t("ageTitle")} exportName="google-analytics-page-age" host={host} shown={ages.length > 0} asking={waiting}
+      <StoryChart title={t("ageTitle")} exportName="google-analytics-page-age" host={host} shown={ages.length > 0} collecting={waiting}
         hint={t("ageHint", { period, placed: formatNumber(story.ages.readersPlaced), readers: formatNumber(story.ages.readers), conversionsPlaced: formatNumber(story.ages.conversionsPlaced), conversions: story.ages.conversions })}
         csv={() => toCsv([t("ageTitle"), t("thisPage"), t("yourWebsite"), t("conversions")], ages.map((row) => [row.label, Math.round(row.page), Math.round(row.website), row.conversions]))}>
         <SiteBarChart horizontal data={ages} series={pairSeries} labels={whoLabels} formatScale={percent} />
       </StoryChart>
 
-      <StoryChart title={t("genderTitle")} exportName="google-analytics-page-gender" host={host} shown={genders.length > 0} asking={waiting}
+      <StoryChart title={t("genderTitle")} exportName="google-analytics-page-gender" host={host} shown={genders.length > 0} collecting={waiting}
         hint={t("genderHint", { period, placed: formatNumber(story.genders.readersPlaced), readers: formatNumber(story.genders.readers), conversionsPlaced: formatNumber(story.genders.conversionsPlaced), conversions: story.genders.conversions })}
         csv={() => toCsv([t("genderTitle"), t("thisPage"), t("yourWebsite"), t("conversions")], genders.map((row) => [row.label, Math.round(row.page), Math.round(row.website), row.conversions]))}>
         <SiteBarChart horizontal data={genders} series={pairSeries} labels={whoLabels} formatScale={percent} />
       </StoryChart>
 
-      <StoryChart title={t("weekdaysTitle")} hint={t("weekdaysHint", { period })} exportName="google-analytics-page-weekdays" host={host} shown={weekdays.some((row) => row.views > 0)} asking={waiting}
+      <StoryChart title={t("weekdaysTitle")} hint={t("weekdaysHint", { period })} exportName="google-analytics-page-weekdays" host={host} shown={weekdays.some((row) => row.views > 0)} collecting={waiting}
         csv={() => toCsv([t("weekdaysTitle"), t("views")], weekdays.map((row) => [row.label, row.views]))}>
         <SiteBarChart data={weekdays} series={[{ key: "views", name: t("views"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
       </StoryChart>
 
       {story.group ? (
-        <StoryChart title={t("leagueTitle", { group: story.group })} hint={t("leagueHint", { period })} exportName="google-analytics-page-group" host={host} shown={league.length > 0} asking={false}
+        <StoryChart title={t("leagueTitle", { group: story.group })} hint={t("leagueHint", { period })} exportName="google-analytics-page-group" host={host} shown={league.length > 0} collecting={false}
           csv={() => toCsv([t("leagueTitle", { group: story.group ?? "" }), t("visits"), t("conversions")], league.map((row) => [row.label, row.value, row.conversions]))}>
           <SiteBarChart
             horizontal
@@ -253,15 +254,15 @@ type SourceRow = Source & { label: string };
  * conversions they went on to make. The table's settings: the screen draws
  * it under its own header.
  */
-export function useStorySourcesTable(story: PageStory | undefined, asking: Asking, host: string): Parameters<typeof DataTable<SourceRow>>[0] {
+export function useStorySourcesTable(story: PageStory | undefined, host: string): Parameters<typeof DataTable<SourceRow>>[0] {
   const { t } = useStoryWords();
   const sourceName = useSourceName();
   const [search, setSearch, term] = useSiteSearch("qs", "sources");
-  const rows = !story || (story.live && story.sources.length === 0) ? undefined : story.sources.map((row) => ({ ...row, label: sourceName(row) }));
+  const rows = story?.sources.map((row) => ({ ...row, label: sourceName(row) }));
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(row.label) || matches(row.channel));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SOURCE_SORTS, { opening: "visits", name: (row) => row.label, table: "sources" });
-  const pager = useSitePager(sorted, { isLoading: rows === undefined && asking !== "FAILED", table: "sources" });
+  const pager = useSitePager(sorted, { isLoading: rows === undefined, table: "sources" });
   const header = (words: string, title: string) => <span title={title}>{words}</span>;
   return {
     rows: pager.pageRows,
@@ -293,7 +294,7 @@ export function useStorySourcesTable(story: PageStory | undefined, asking: Askin
       />
     ),
     sort: tableSort,
-    empty: { icon: <FileText className="h-8 w-8 text-muted/30" />, label: story?.live ? t("asking") : term ? t("noMatch") : t("noSources") },
+    empty: { icon: <FileText className="h-8 w-8 text-muted/30" />, label: story?.live ? t("collecting") : term ? t("noMatch") : t("noSources") },
     footer: pager.footer,
     columns: [
         { key: "name", header: t("source"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <span className="text-[13px] text-foreground">{row.label}</span> },
@@ -331,14 +332,14 @@ const CLICK_SORTS: SiteSortColumns<Click, "link" | "clicks"> = {
  * which show under Where visitors went next (§3). The table's settings: the
  * screen draws it under its own header.
  */
-export function useStoryClicksTable(story: PageStory | undefined, asking: Asking, host: string): Parameters<typeof DataTable<Click>>[0] {
+export function useStoryClicksTable(story: PageStory | undefined, host: string): Parameters<typeof DataTable<Click>>[0] {
   const { t } = useStoryWords();
   const [search, setSearch, term] = useSiteSearch("qc", "clicks");
-  const rows = !story || (story.live && story.clicks.length === 0) ? undefined : story.clicks;
+  const rows = story?.clicks;
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(row.url) || matches(pathOf(row.url)));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, CLICK_SORTS, { opening: "clicks", name: (row) => row.url, table: "clicks" });
-  const pager = useSitePager(sorted, { isLoading: rows === undefined && asking !== "FAILED", table: "clicks" });
+  const pager = useSitePager(sorted, { isLoading: rows === undefined, table: "clicks" });
   return {
     rows: pager.pageRows,
     rowKey: (row) => `${row.kind}|${row.url}`,
@@ -364,7 +365,7 @@ export function useStoryClicksTable(story: PageStory | undefined, asking: Asking
       />
     ),
     sort: tableSort,
-    empty: { icon: <FileText className="h-8 w-8 text-muted/30" />, label: story?.live ? t("asking") : term ? t("noMatch") : t("noClicks") },
+    empty: { icon: <FileText className="h-8 w-8 text-muted/30" />, label: story?.live ? t("collecting") : term ? t("noMatch") : t("noClicks") },
     footer: pager.footer,
     columns: [
         { key: "link", header: t("link"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <PageLink address={row.url} href={null} title={hostOf(row.url)} /> },
@@ -374,9 +375,8 @@ export function useStoryClicksTable(story: PageStory | undefined, asking: Asking
   };
 }
 
-/** What the story is waiting for, or why Google held some of it back. */
-export function PageStoryNotices({ story, asking }: { story: PageStory; asking: Asking }) {
+/** Why Google held some of the story back. */
+export function PageStoryNotices({ story }: { story: PageStory }) {
   const { t } = useStoryWords();
-  if (story.live && asking === "FAILED") return <Notice tone="warning">{t("askFailed")}</Notice>;
   return !story.live && story.thresholded ? <Notice>{t("heldBack")}</Notice> : null;
 }

@@ -75,6 +75,28 @@ async function slotRows(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnec
 type Days = ReadonlyMap<string, number>;
 const NO_DAYS: Days = new Map();
 
+/** Days of each event's times read for the checks: Google's settled month. */
+const EVENT_DAYS = 30;
+/** Day records read for them: a part or two a day. */
+const EVENT_DAY_RECORDS = 90;
+
+/**
+ * Each event's times a day over the last 30 days, every device, from the
+ * events kept a day (ga-stored-figures-plan.md SF12) — each row keyed by its
+ * day and event (`day␞event`), as `timesByDay` reads them — or null before a
+ * day is kept.
+ */
+async function eventDays(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">): Promise<ListRow[] | null> {
+  const newest = connection.newestDay;
+  if (!newest) return null;
+  const records = await ctx.db
+    .query("googleAnalyticsDays")
+    .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("list", "event").eq("device", "").gte("day", shiftDay(newest, -(EVENT_DAYS - 1))))
+    .take(EVENT_DAY_RECORDS);
+  if (records.length === 0) return null;
+  return records.flatMap((record) => unpackPart(record as PackedPart).map((row) => ({ ...row, key: `${record.day}${DAY_JOIN}${row.key}` })));
+}
+
 /** Each event's times a day, from a list of each event a day. */
 export function timesByDay(rows: readonly ListRow[]): Map<string, Map<string, number>> {
   const byEvent = new Map<string, Map<string, number>>();
@@ -116,20 +138,32 @@ export function daysAlike(first: Days, second: Days): number {
  */
 export function somethingElse(counted: readonly string[], series: ReadonlyMap<string, Days>): Array<{ eventName: string; other: string; days: number }> {
   return counted.flatMap((eventName) => {
-    if (NEVER_TICKED.has(eventName)) return [];
-    const own = series.get(eventName) ?? NO_DAYS;
-    const closest = [...NEVER_TICKED]
-      .map((other) => ({ other, days: daysAlike(own, series.get(other) ?? NO_DAYS) }))
-      .sort((left, right) => right.days - left.days)[0];
-    return closest && closest.days >= SOMETHING_ELSE_DAYS ? [{ eventName, ...closest }] : [];
+    const other = lookalikeOf(eventName, series);
+    return other ? [{ eventName, ...other }] : [];
   });
+}
+
+/**
+ * The event never an enquiry that an event matches, day for day, on at least
+ * `SOMETHING_ELSE_DAYS` days in a row — the closest — or null. Check 10 asks
+ * it of counted conversions, check 11 and Choose what counts of the rest.
+ */
+export function lookalikeOf(eventName: string, series: ReadonlyMap<string, Days>): { other: string; days: number } | null {
+  if (NEVER_TICKED.has(eventName)) return null;
+  const own = series.get(eventName) ?? NO_DAYS;
+  const closest = [...NEVER_TICKED]
+    .map((other) => ({ other, days: daysAlike(own, series.get(other) ?? NO_DAYS) }))
+    .sort((left, right) => right.days - left.days)[0];
+  return closest && closest.days >= SOMETHING_ELSE_DAYS ? closest : null;
 }
 
 /**
  * Check 11: events that read as a way to enquire, happening `UNCOUNTED_FLOOR`
  * times or more in 12 months, that nothing counts — neither ticked, nor
  * copied by a counted conversion on the newest days either happened (Ronins'
- * "Form sent" rebuilt from "contact"). The most first.
+ * "Form sent" rebuilt from "contact"). One that copies an event never an
+ * enquiry is no enquiry, however it is named: Ronins' "Form sent", its link
+ * clicks until 2026-10-13, was advised as 209 uncounted enquiries. The most first.
  */
 export function enquiriesUncounted(
   counted: readonly string[],
@@ -140,6 +174,7 @@ export function enquiriesUncounted(
   return year
     .filter((row) => !countedNames.has(row.eventName) && readsAsEnquiry(row.eventName) && row.times >= UNCOUNTED_FLOOR)
     .filter((row) => !counted.some((eventName) => daysAlike(series.get(eventName) ?? NO_DAYS, series.get(row.eventName) ?? NO_DAYS) > 0))
+    .filter((row) => !lookalikeOf(row.eventName, series))
     .sort((left, right) => right.times - left.times);
 }
 
@@ -268,7 +303,7 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   // 10 to 12: what each conversion really is, from each event's times — a day for 30 days, and in 90 days and 12 months.
   // A list not kept yet (a website's first days; the long periods come weekly) passes rather than guesses.
   const countedNames = counted.map((event) => event.eventName);
-  const seriesRows = await slotRows(ctx, connection, slotKey("eventSeries", "30", "NOW", ""));
+  const seriesRows = await eventDays(ctx, connection);
   const series = timesByDay(seriesRows ?? []);
   const copies = seriesRows ? somethingElse(countedNames, series) : [];
   results.push({
@@ -336,9 +371,17 @@ export const runHealthChecks = internalMutation({
     if (!connection || connection.status !== "CONNECTED") return null;
     const results = await checksOf(ctx, connection);
     const wasFailing = new Set((connection.health?.checks ?? []).filter((check) => !check.passing).map((check) => check.check));
-    // Which listed events count the same day for day, for Choose what counts (BT5), from the same 30 days a day.
-    const series = await slotRows(ctx, connection, slotKey("eventSeries", "30", "NOW", ""));
-    const copies = series ? copiesAmong((connection.events ?? []).map((event) => event.eventName), timesByDay(series)) : [];
+    // Which listed events count the same day for day, for Choose what counts (BT5), from the same 30 days a day,
+    // and which copy an event never an enquiry, named with it, so ticking one is warned against.
+    const series = await eventDays(ctx, connection);
+    const listed = (connection.events ?? []).map((event) => event.eventName);
+    const days = series ? timesByDay(series) : null;
+    const copies = days
+      ? [...copiesAmong(listed, days), ...listed.flatMap((eventName) => {
+        const other = lookalikeOf(eventName, days);
+        return other ? [{ eventName, of: other.other }] : [];
+      })]
+      : [];
     await ctx.db.patch(connection._id, { health: { checkedAt: Date.now(), checks: results }, copies, updatedAt: Date.now() });
     const website = await ctx.db.get(connection.websiteId);
     const host = website?.displayHost ?? website?.host ?? "";

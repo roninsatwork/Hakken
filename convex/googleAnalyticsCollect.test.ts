@@ -9,14 +9,15 @@ import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
-import { analyticsWindow, dueJobs, newestWholeDayIn, periodRange } from "./googleAnalyticsCollect";
+import { KEPT_BACK, analyticsWindow, dueJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
+import { afterTheHour, startGap } from "./googleAnalyticsAgentRun";
 import { shiftDay } from "./searchConsoleDays";
 import { NEWEST, PROPERTY, dayOf, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
 
 /**
  * Collecting a website's Google Analytics, end to end with Google faked at the
  * network (docs/plans/active/google-analytics-plan.md §4): the first
- * collection started on saving what counts, the 60 days kept by device, the
+ * collection started on saving what counts, the 90 days kept by device, the
  * ready-made lists asked of Google, page addresses numbered as Search
  * Console's are, only what changed written again, the daily run's few days,
  * access lost, and another property's figures cleared. Nothing reaches Google.
@@ -106,16 +107,18 @@ afterEach(() => {
 });
 
 describe("which days and lists a run asks for", () => {
-  test("nothing held: the 60 days kept; held: the days since, and the two before again", () => {
+  test("nothing held: the 90 days kept; held: the days since, and the two before again", () => {
     expect(newestWholeDayIn(NOW, "Europe/London")).toBe(NEWEST);
     // Before dawn in London it is still the day before in California, but Analytics keeps the property's own day.
     expect(newestWholeDayIn(Date.parse("2026-10-09T23:30:00Z"), "Europe/London")).toBe("2026-10-09");
-    expect(analyticsWindow(undefined, undefined, NEWEST)).toEqual({ from: shiftDay(NEWEST, -59), top: NEWEST });
-    expect(analyticsWindow("2026-10-07", shiftDay(NEWEST, -59), NEWEST)).toEqual({ from: "2026-10-06", top: NEWEST });
+    expect(analyticsWindow(undefined, undefined, NEWEST)).toEqual({ from: shiftDay(NEWEST, -89), top: NEWEST });
+    expect(analyticsWindow("2026-10-07", shiftDay(NEWEST, -89), NEWEST)).toEqual({ from: "2026-10-06", top: NEWEST });
     // Two mornings missed: every day since the newest held, and two again.
-    expect(analyticsWindow("2026-10-05", shiftDay(NEWEST, -59), NEWEST)).toEqual({ from: "2026-10-04", top: NEWEST });
-    // A first collection that stopped with only its newest 20 days: all 60 again.
-    expect(analyticsWindow(NEWEST, shiftDay(NEWEST, -19), NEWEST)).toEqual({ from: shiftDay(NEWEST, -59), top: NEWEST });
+    expect(analyticsWindow("2026-10-05", shiftDay(NEWEST, -89), NEWEST)).toEqual({ from: "2026-10-04", top: NEWEST });
+    // A first collection that stopped with only its newest 20 days: all 90 again.
+    expect(analyticsWindow(NEWEST, shiftDay(NEWEST, -19), NEWEST)).toEqual({ from: shiftDay(NEWEST, -89), top: NEWEST });
+    // Held as 60 days before the 90 were kept (ga-stored-figures-plan.md SF2): the 30 older fetched once.
+    expect(analyticsWindow(NEWEST, shiftDay(NEWEST, -59), NEWEST)).toEqual({ from: shiftDay(NEWEST, -89), top: NEWEST });
   });
 
   test("the 7 and 30 days each run; the 90 days, 12 months and the year before once a week", () => {
@@ -123,16 +126,17 @@ describe("which days and lists a run asks for", () => {
     expect(periodRange("30", "BEFORE", NEWEST)).toEqual({ from: "2026-08-10", to: "2026-09-08" });
     // A year before is 52 weeks before, so each day falls on the same weekday.
     expect(periodRange("90", "YEAR", NEWEST)).toEqual({ from: "2025-07-12", to: "2025-10-09" });
-    // Fifteen lists each — every event, the campaigns and their words, Visitors' six, and Insights' first channel and
-    // landing pages by channel among them — and each event, each campaign and new and returning people a day for every
-    // period's chart (§18.6.5, §18.6.6; insights-analyst-plan.md I35, §8).
-    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength(2 * (2 * 15 + 3) + 2 * (3 * 15 + 4));
-    expect(dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW)).toHaveLength(2 * (2 * 15 + 3));
+    // Sixteen lists each — every event, the campaigns and their words, Visitors' six, Insights' first channel and
+    // landing pages by channel, and AI assistants' landing pages among them (§18.6.5, §18.6.6; insights-analyst-plan.md
+    // I35, §8; ga-channel-pages-plan.md CH13) — and, weekly, Insights' 12 months a day. The charts read the days, weeks
+    // and months kept (ga-stored-figures-plan.md SF12).
+    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength(2 * 2 * 16 + 2 * 3 * 16 + 1);
+    expect(dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW)).toHaveLength(2 * 2 * 16);
   });
 });
 
 describe("collecting a website's Google Analytics", () => {
-  test("saving what counts starts its first collection at once: the 60 days by device, then the ready-made lists", async () => {
+  test("saving what counts starts its first collection at once: the 90 days by device, then the ready-made lists", async () => {
     const t = harness();
     const { siteId, connectionId, admin } = await connected(t);
     const google = fakeGoogle(history(70));
@@ -143,7 +147,7 @@ describe("collecting a website's Google Analytics", () => {
     expect(runs.map((run) => [run.title, run.status])).toEqual([["Google Analytics: acme-shop.test", "SUCCESS"]]);
     expect(runs[0].finalOutput).toContain("Collected acme-shop.test");
     const connection = (await connectionOf(t, connectionId))!;
-    expect(connection).toMatchObject({ status: "CONNECTED", newestDay: NEWEST, oldestDay: shiftDay(NEWEST, -59) });
+    expect(connection).toMatchObject({ status: "CONNECTED", newestDay: NEWEST, oldestDay: shiftDay(NEWEST, -89) });
     expect(connection.backfilledAt).toBeGreaterThan(0);
     expect(connection.weeklyPeriodsAt).toBeGreaterThan(0);
     expect(connection.collecting).toBeUndefined();
@@ -158,8 +162,8 @@ describe("collecting a website's Google Analytics", () => {
     expect(channels.map((row) => [splitChannelKey(row.key).channel, splitChannelKey(row.key).source, row.visits])).toEqual([
       ["Organic Search", "google", 10], ["Referral", "perplexity.ai", 4], ["Direct", "(direct)", 2],
     ]);
-    // Nothing older than the 60 days kept was asked for.
-    expect(await dayRows(t, siteId, "total", "", shiftDay(NEWEST, -60))).toEqual([]);
+    // Nothing older than the 90 days kept was asked for.
+    expect(await dayRows(t, siteId, "total", "", shiftDay(NEWEST, -90))).toEqual([]);
     // Each report was for the website's own address — but the weekly one of every address, for tracking health.
     const asks = google.calls.filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
@@ -176,9 +180,15 @@ describe("collecting a website's Google Analytics", () => {
     expect(addresses).toEqual(["https://www.acme-shop.test/", "https://www.acme-shop.test/ai-agency/", "https://www.acme-shop.test/contact/"]);
     expect(landing.rows[0]).toMatchObject({ visits: 300, views: 600 });
     expect(landing.slot).toMatchObject({ from: "2026-09-09", to: NEWEST });
-    // A list kept by device has a build for each device; a page list only for every device.
+    // Every list a screen shows for one device is kept for each device (ga-stored-figures-plan.md SF3): the page lists
+    // too, each device's own; every device asked whole, its people as Google counts them.
     expect(await periodRows(t, siteId, "total|7|NOW|mobile")).not.toBeNull();
-    expect(await periodRows(t, siteId, "landing|7|NOW|mobile")).toBeNull();
+    const mobile = (await periodRows(t, siteId, "landing|30|NOW|mobile"))!;
+    const desktop = (await periodRows(t, siteId, "landing|30|NOW|desktop"))!;
+    expect(mobile.rows[0].visits + (desktop.rows.find((row) => row.key === mobile.rows[0].key)?.visits ?? 0)).toBe(landing.rows.find((row) => row.key === mobile.rows[0].key)!.visits);
+    // A landing page's channels for each device too (SF5); Insights' first channel only for every device.
+    expect(await periodRows(t, siteId, "landingChannel|7|NOW|mobile")).not.toBeNull();
+    expect(await periodRows(t, siteId, "firstChannel|7|NOW|mobile")).toBeNull();
     // The 12 months' chart, a day a row.
     expect((await periodRows(t, siteId, "series|365|NOW|"))!.rows.length).toBe(70);
   });
@@ -216,15 +226,18 @@ describe("collecting a website's Google Analytics", () => {
     expect(runs.find((run) => run._id === runId)?.finalOutput).toContain("Started a run of its own for the 1 website");
     expect(runs.filter((run) => run.title === "Google Analytics: acme-shop.test").every((run) => run.status === "SUCCESS")).toBe(true);
     expect((await connectionOf(t, connectionId))?.newestDay).toBe("2026-10-09");
-    // Three days asked, by device: two asks each for totals and channels.
+    // Three days asked, by device: each day fact (ga-stored-figures-plan.md SF12) — two asks each for the totals, the
+    // channels, the campaigns and new and returning people, one for the events, which count every event themselves.
     const dayAsks = google.calls.slice(asked)
       .filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dateRanges: { startDate: string; endDate: string }[]; dimensions: { name: string }[] })
-      // The days kept, by device; each event and each campaign a day are ready-made lists, not days kept.
-      .filter((ask) => ask.dimensions[0]?.name === "date" && ask.dimensions[1]?.name === "deviceCategory");
-    expect(dayAsks.map((ask) => ask.dateRanges[0])).toEqual(Array(4).fill({ startDate: "2026-10-07", endDate: "2026-10-09" }));
-    // The weekly lists were not asked again within the week.
-    expect((await periodRows(t, siteId, "landing|90|NOW|"))!.slot).toEqual(before);
+      .filter((ask) => ask.dimensions[0]?.name === "date" && ask.dimensions[1]?.name === "deviceCategory")
+      // Each page's days (ga-stored-figures-plan.md SF5) are asked beside them, once its two years are filled.
+      .filter((ask) => !ask.dimensions.some((dimension) => dimension.name === "landingPage" || dimension.name === "pagePath"));
+    expect(dayAsks.map((ask) => ask.dateRanges[0])).toEqual(Array(9).fill({ startDate: "2026-10-07", endDate: "2026-10-09" }));
+    // Everything every night (Anthony, 2026-10-14: "I want everything once a day"): the 90 days moved on a day too.
+    expect((await periodRows(t, siteId, "landing|90|NOW|"))!.slot.to).toBe("2026-10-09");
+    expect((await periodRows(t, siteId, "landing|90|NOW|"))!.slot.slot).not.toBe(before.slot);
     // The 7 days moved on a day: rebuilt into the other slot.
     expect((await periodRows(t, siteId, "total|7|NOW|"))!.slot.to).toBe("2026-10-09");
   });
@@ -262,10 +275,12 @@ describe("collecting a website's Google Analytics", () => {
       .filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dateRanges: { startDate: string; endDate: string }[]; dimensions: { name: string }[] })
       .filter((ask) => ask.dimensions[0]?.name === "date" && ask.dimensions[1]?.name === "deviceCategory")
+      // Each page's days (ga-stored-figures-plan.md SF5) apart.
+      .filter((ask) => !ask.dimensions.some((dimension) => dimension.name === "landingPage" || dimension.name === "pagePath"))
       .map((ask) => ask.dateRanges[0]);
-    // The 60 days kept, all again, a week at a time, and the weekly lists though a week has not passed.
+    // The 90 days kept, all again, a week at a time, and the weekly lists though a week has not passed.
     const again = dayRanges(asked);
-    expect([again.map((range) => range.startDate).sort()[0], again.map((range) => range.endDate).sort().at(-1)]).toEqual(["2026-08-11", "2026-10-09"]);
+    expect([again.map((range) => range.startDate).sort()[0], again.map((range) => range.endDate).sort().at(-1)]).toEqual(["2026-07-12", "2026-10-09"]);
     const redone = (await connectionOf(t, connectionId))!;
     expect(redone.countedWith).toBe("EVENT_COUNT");
     expect(redone.weeklyPeriodsAt).toBe(NOW + 24 * 60 * 60 * 1000);
@@ -278,7 +293,108 @@ describe("collecting a website's Google Analytics", () => {
     const next = google.calls.length;
     await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId: await daily() });
     await finishScheduled(t);
-    expect(dayRanges(next)).toEqual(Array(4).fill({ startDate: "2026-10-08", endDate: "2026-10-10" }));
+    expect(dayRanges(next)).toEqual(Array(9).fill({ startDate: "2026-10-08", endDate: "2026-10-10" }));
+  });
+
+  test("a first, weekly-size run keeps inside Google's allowances: never refused, it waits for the hour and carries on", async () => {
+    const t = harness();
+    const { siteId, connectionId, admin } = await connected(t);
+    const google = fakeGoogle(history(70));
+    // Google's 120 asks an hour of age, gender and interests, counted as the real one counts them (ga-stored-figures-plan.md §2c).
+    google.allowance = { thresholdedPerHour: 120, tokensPerAsk: 1 };
+    await save(admin, siteId);
+    await finishScheduled(t);
+
+    // About 168 such asks: never more than the run's budget of 100 in an hour, and none refused.
+    expect(google.refused).toBe(0);
+    const hours = [...google.spent.values()].map((hour) => hour.thresholded);
+    expect(Math.max(...hours)).toBeLessThanOrEqual(120 - KEPT_BACK.thresholdedPerHour);
+    expect(hours.reduce((sum, count) => sum + count, 0)).toBeGreaterThan(120);
+    const site = (await runsOf(t)).find((run) => run.title === "Google Analytics: acme-shop.test")!;
+    expect(site.status).toBe("SUCCESS");
+    const lines = await t.run(async (ctx) => (await ctx.db.query("agentRunSteps").collect()).filter((step) => step.runId === site._id).map((step) => step.output ?? ""));
+    expect(lines.some((line) => line.includes("Nothing more is asked of Google until"))).toBe(true);
+    // Every list built, the long ones in the next hour.
+    expect((await periodRows(t, siteId, "pageWho|365|NOW|tablet"))).not.toBeNull();
+    expect((await connectionOf(t, connectionId))?.weeklyPeriodsAt).toBeDefined();
+  });
+
+  test("every night's run collects everything, inside Google's allowances: about two hours, never refused", async () => {
+    const t = harness();
+    const { siteId, admin, agentId } = await connected(t);
+    const google = fakeGoogle(history(70));
+    await save(admin, siteId);
+    await finishScheduled(t);
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    google.allowance = { thresholdedPerHour: 120, tokensPerAsk: 1 };
+    const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId: agentId!, triggerType: "SCHEDULE", objective: "Collect", title: "Google Analytics: Data Collection Scheduler",
+      status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+    }));
+    await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId });
+    await finishScheduled(t);
+    expect(google.refused).toBe(0);
+    expect(google.spent.size).toBe(2);
+    expect(Math.max(...[...google.spent.values()].map((hour) => hour.thresholded))).toBeLessThanOrEqual(120 - KEPT_BACK.thresholdedPerHour);
+    expect((await periodRows(t, siteId, "pageWho|365|NOW|tablet"))!.slot.to).toBe("2026-10-09");
+  });
+
+  test("Google refusing for the hour (another tool used the allowance): the run asks nothing for an hour, then carries on", async () => {
+    const t = harness();
+    const { siteId, admin, agentId } = await connected(t);
+    const google = fakeGoogle(history(70));
+    await save(admin, siteId);
+    await finishScheduled(t);
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    google.refusing = {
+      when: "userAgeBracket", times: 1, status: 429,
+      message: "Exhausted potentially thresholded requests quota. This quota will refresh in under an hour.",
+    };
+    const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId: agentId!, triggerType: "SCHEDULE", objective: "Collect", title: "Google Analytics: Data Collection Scheduler",
+      status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+    }));
+    await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId });
+    const asked = google.calls.length;
+    await finishScheduled(t);
+
+    const site = (await runsOf(t)).filter((run) => run.title === "Google Analytics: acme-shop.test").at(-1)!;
+    expect(site.status).toBe("SUCCESS");
+    // Refused once, not asked again a few seconds later: the next ask of Google comes an hour later.
+    const reports = google.calls.slice(asked).filter((call) => call.url.endsWith(":runReport"));
+    const refusedAt = reports.findIndex((call) => call.body.includes("userAgeBracket"));
+    expect(reports[refusedAt + 1].at - reports[refusedAt].at).toBeGreaterThanOrEqual(60 * 60 * 1000);
+  });
+
+  test("a run the night is too short for stops when it is over, and leaves the rest to the next night", async () => {
+    const t = harness();
+    const { siteId, admin } = await connected(t);
+    const google = fakeGoogle(history(70));
+    // An allowance so small the weekly lists would take many hours.
+    google.allowance = { thresholdedPerHour: 25, tokensPerAsk: 1 };
+    await save(admin, siteId);
+    await finishScheduled(t);
+    expect(google.refused).toBe(0);
+    const site = (await runsOf(t)).find((run) => run.title === "Google Analytics: acme-shop.test")!;
+    expect(site.status).toBe("SUCCESS");
+    expect(site.finalOutput).toContain("as far as the night allowed");
+    expect(google.spent.size).toBeLessThanOrEqual(6);
+  });
+
+  test("the budget, the hour's turn and the websites' start gaps", () => {
+    expect(overBudget(null, true)).toBeNull();
+    const left = { tokensPerDay: 150_000, tokensPerHour: 30_000, tokensPerProjectPerHour: 10_000, thresholdedPerHour: 20 };
+    expect(overBudget(left, true)).toContain("Google says 20 are left");
+    expect(overBudget(left, false)).toBeNull();
+    expect(overBudget({ ...left, tokensPerProjectPerHour: 2_800 }, false)).toContain("Google says 2800 of the platform's own are left");
+    // A fifth of each kept in hand (AGENTS.md, "Respect Google's quotas").
+    expect(overBudget({ ...left, tokensPerDay: 40_000 }, false)).toContain("today");
+    expect(overBudget({ ...left, tokensPerHour: 8_000 }, false)).toContain("this hour");
+    // Google's hourly allowances refresh within an hour, not on the clock's hour: an hour and two minutes after.
+    expect(new Date(afterTheHour(Date.parse("2026-10-14T03:41:00Z"))).toISOString()).toBe("2026-10-14T04:43:00.000Z");
+    expect(startGap(1)).toBe(2 * 60 * 1000);
+    expect(startGap(100)).toBe(7_200);
+    expect(startGap(10_000)).toBe(5_000);
   });
 
   test("an account that lost the property asks for connecting again, and its run says what to do", async () => {

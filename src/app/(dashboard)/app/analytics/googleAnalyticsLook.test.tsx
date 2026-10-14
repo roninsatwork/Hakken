@@ -4,12 +4,10 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHANNEL, CHART, CONVERSIONS, LANDING_PAGE, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
-import { allPagesSees, channelSees, channelsSees, landingSees } from "@/convex/utils/sees/analytics";
+import { CHART, CONVERSIONS, LANDING_PAGE, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
+import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
-import AnalyticsChannelsPage from "./[siteId]/channels/page";
-import AnalyticsChannelPage from "./[siteId]/channels/channel/page";
 import AnalyticsLandingPagesPage from "./[siteId]/landing-pages/page";
 import AnalyticsLandingPage from "./[siteId]/landing-pages/page/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
@@ -22,8 +20,7 @@ import AnalyticsConnectionPage from "./[siteId]/connection/page";
  * 2026-10-09 (docs/plans/active/google-analytics-plan.md §11; a picture of
  * each in docs/plans/assets/google-analytics/), as changed by the review
  * canvas he signed off on 2026-10-10 (§15): What Hakken sees under every
- * title with figures, Overview's visits a day, a channel's own figures,
- * Landing pages' one line a row, All pages' conversions with their value, and
+ * title with figures, Overview's visits a day, Landing pages' one line a row, All pages' conversions with their value, and
  * Conversions' What counts and Where they came from. Each screen, rendered
  * with sample figures in English, reads as the outline saved in
  * docs/plans/assets/google-analytics/look/.
@@ -112,26 +109,6 @@ describe("Google Analytics' approved looks", () => {
     await screen.findByText("2,412");
     await screen.findByText(/Visits rose 8\.4%, and conversions with them, from 19 to 23\./);
     await expectApprovedLook(container, PLAN, "Overview", "Google Analytics → Overview");
-  });
-
-  it("3 · Channels", async () => {
-    at("/app/analytics/site_1/channels");
-    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS, "googleAnalyticsReads:analyticsListPage": list([CHANNEL], { seen: channelsSees([CHANNEL]) }) });
-    const { container } = render(<AnalyticsChannelsPage />);
-    await screen.findByText("Organic Search");
-    await screen.findByText(/Organic Search sends 1,104 of your 1,104 visits/);
-    await expectApprovedLook(container, PLAN, "Channels", "Google Analytics → Channels");
-  });
-
-  it("16 · a channel's sources, with its own figures", async () => {
-    at("/app/analytics/site_1/channels/channel", "key=Referral");
-    const source = { ...CHANNEL, key: "clutch.co", label: "clutch.co" };
-    const figures = { visits: 1104, visitsBefore: 843, engaged: 679, conversions: 11, conversionsBefore: 1, value: 220_000, valueBefore: 25_000, siteVisits: 2412, siteEngaged: 1289 };
-    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS, "googleAnalyticsReads:analyticsListPage": list([source], { seen: channelSees("Referral", [source], figures, "site_1"), figures }) });
-    const { container } = render(<AnalyticsChannelPage />);
-    await screen.findByText("clutch.co");
-    await screen.findByText("53.4% for the whole website");
-    await expectApprovedLook(container, PLAN, "ChannelSources", "Google Analytics → a channel's sources");
   });
 
   it("5 · Landing pages, one line a row", async () => {
@@ -294,6 +271,24 @@ describe("Google Analytics' approved looks", () => {
     // Both ticked: said once, on the second.
     expect(screen.getAllByText("“Form sent” is a copy of “Contact”: count one of them.".replace(/[“”]/g, ""))).toHaveLength(1);
     screen.getByText(/^What counts, and a value set in Hakken, apply to all history/);
+  });
+
+  it("13 · choose what counts: an event that is really link clicks is warned against, ticked or not", async () => {
+    // Ronins on 2026-10-13: "Form sent" still matched its link clicks, and Tracking health advised counting it.
+    at("/app/analytics/site_1/connection");
+    answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({
+        status: "COUNTING",
+        events: [
+          { eventName: "form_submission", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 7, keyEvent: true, perVisit: false },
+          { eventName: "contact", counted: true, analyticsValue: null, hakkenValue: 20, lastThirtyDays: 3, keyEvent: false, perVisit: false },
+        ] as never,
+        copies: [{ eventName: "form_submission", of: "click" }],
+      }),
+    });
+    render(<AnalyticsConnectionPage />);
+    await screen.findByText("Choose what counts as a conversion");
+    expect(screen.getAllByText("Form sent counts the same as Clicked a link to another website, day for day: it isn't an enquiry, so don't count it.")).toHaveLength(1);
   });
 
   it("14 · Connection", async () => {

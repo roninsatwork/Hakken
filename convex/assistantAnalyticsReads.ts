@@ -14,6 +14,9 @@ import { LIVE_LISTS, askLiveFigures } from "./googleAnalyticsRealtime";
 import { pathOfAddress } from "./utils/sees/analytics";
 import { MOVE_VIEWS } from "./utils/pageMoves";
 import { ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
+import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
+import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
+import { NOT_SORTED_KIND } from "./utils/pageKinds";
 
 /**
  * Every Google Analytics screen, as the Assistant reads it
@@ -71,6 +74,59 @@ function rowOf(row: ShownRow) {
     conversions: row.conversions,
     value: money(row.value),
     changeInVisitsPercent: percent(row.change),
+  };
+}
+
+/** A page group in plain words: the website's own classification, or Hakken's page type ("case study"). */
+function kindWords(kind: string, name: string | null): string {
+  if (name) return name;
+  if (kind === NO_PAGE_KIND) return "no page recorded";
+  if (kind === NOT_SORTED_KIND) return "not sorted";
+  if (kind === OTHER_KIND) return "other kinds of page";
+  return kind.toLowerCase().replace(/_/g, " ");
+}
+
+/**
+ * Channels' parts above its table, as its screen shows them
+ * (ga-channel-pages-plan.md CH9): the channel converting best over 12
+ * months, the key events not counted, each channel by page group, and what a
+ * visit is worth by channel.
+ */
+function channelsParts(top: Awaited<ReturnType<typeof readChannelsTop>>) {
+  const names = new Map(top.map.kinds.map((kind) => [kind.kind, kindWords(kind.kind, kind.name)]));
+  return {
+    convertsBest: top.figures?.best ? { channel: top.figures.best.channel, conversionRatePercent: percent(top.figures.best.rate), websitePercent: percent(top.figures.best.siteRate), over: "the last 12 months" } : null,
+    keyEventsNotCounted: top.figures?.uncounted.map((event) => ({ event: event.eventName, times: event.count, looksLikeAnEnquiry: event.enquiry })) ?? [],
+    whereEachChannelLands: top.map.rows.map((row) => ({
+      channel: row.channel,
+      visits: row.visits,
+      byKindOfPage: row.cells.filter((cell) => cell.visits > 0).map((cell) => ({ kindOfPage: names.get(cell.kind) ?? cell.kind, visits: cell.visits, conversions: cell.conversions })),
+    })),
+    whatAVisitIsWorth: top.worth.rows.map((row) => ({
+      channel: row.channel, visits: row.visits, conversions: row.conversions,
+      conversionRatePercent: percent(row.visits > 0 ? row.conversions / row.visits : null), valuePerVisit: money(row.visits > 0 ? row.value / row.visits : null),
+      ...(row.fewVisits ? { note: "under 100 visits: too few to trust" } : {}),
+    })),
+    whatAVisitIsWorthOver: "the last 12 months, every device",
+  };
+}
+
+/**
+ * A channel's own page above its table (CH3–CH8): its conversions started
+ * and dwell time, where it lands by page group, the pages behind the change,
+ * and AI assistants by how Google filed them.
+ */
+function channelParts(top: Awaited<ReturnType<typeof readChannelTop>>) {
+  const figures = top.figures;
+  return {
+    conversionsItStarted: figures ? { now: figures.started, before: figures.startedBefore, rule: "conversions by people this channel brought first, on that visit or any later one" } : null,
+    secondsEngagedPerVisit: figures && figures.visits > 0 ? Math.round(figures.seconds / figures.visits) : null,
+    websiteSecondsEngagedPerVisit: figures && figures.siteVisits > 0 ? Math.round(figures.siteSeconds / figures.siteVisits) : null,
+    whereItLands: top.kinds.map((kind) => ({ kindOfPage: kindWords(kind.kind, kind.name), pages: kind.pages, visits: kind.visits, visitsBefore: kind.visitsBefore, conversions: kind.conversions, conversionsBefore: kind.conversionsBefore })),
+    pagesBehindTheChange: top.movers.map((page) => ({ page: page.address === "(not set)" ? "no page recorded" : pathOfAddress(page.address), visitsBefore: page.visitsBefore, visits: page.visits })),
+    ...(top.assistants.length > 0 ? {
+      assistantsByHowGoogleFiledThem: top.assistants.map((assistant) => ({ assistant: assistant.name, visits: assistant.visits, conversions: assistant.conversions, filedAs: assistant.filed })),
+    } : {}),
   };
 }
 
@@ -145,8 +201,12 @@ export const googleAnalyticsInternal = internalQuery({
         ...common, list: list.list, ...(args.screen === "channel" ? { channel: args.key ?? "" } : {}), ...(args.search ? { q: args.search } : {}), page: 1, rows: ROWS,
       });
       if (answer.live) return { ...base, ...asked, link: linkTo(list.segment) };
+      const parts = args.screen === "channels" ? channelsParts(await readChannelsTop(site, common))
+        : args.screen === "channel" && args.key ? channelParts(await readChannelTop(site, { ...common, channel: args.key }))
+          : {};
       return {
         ...base,
+        ...parts,
         listed: answer.total,
         // All pages has no money and counts each page's moves (all-pages-rethink-plan.md AP1, AP5), as its screen does.
         rows: list.list === "page" ? answer.rows.map(pageRowOf) : answer.rows.map(rowOf),

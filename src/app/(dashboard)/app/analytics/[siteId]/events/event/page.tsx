@@ -7,6 +7,7 @@ import { MousePointerClick } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { OTHER_ROWS } from "@/convex/utils/analyticsSharedLists";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -25,7 +26,7 @@ import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { ChangeCell, PageLink } from "../../../_components/AnalyticsCells";
 import { ChannelsChart, TopBars } from "../../../_components/AnalyticsChart";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
-import { useLiveAsk } from "../../../_components/AnalyticsListScreen";
+import { useEventFunnel } from "../../../_components/AnalyticsListScreen";
 import { formatPercent, pathOf } from "../../../_components/analyticsFormat";
 import { useEventName } from "../../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
@@ -79,17 +80,17 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
   const nameOf = useEventName();
   const event = useSearchParams().get("key") ?? "";
   const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvent, event ? { ...args, event } : "skip");
-  const asking = useLiveAsk(answer?.live ? { ...args, event } : null);
-  // One device's times a day are asked with Events' own for that device.
-  const askingDays = useLiveAsk(answer && args.device ? { ...args, pages: "eventSeries" } : null);
+  // Its funnel, kept a week, whenever it is not held: the one figure asked of Google (ga-stored-figures-plan.md SF8).
+  const asking = useEventFunnel(answer?.afterLive ? { ...args, event } : null);
   const detail = answer?.detail ?? null;
   // Opened on what it was about, when Google records that for the event; else, and when switched, its pages.
   const [chosen, setChosen] = useSiteParam<"about" | "pages">("show", "about", ["about", "pages"]);
   const showing: Showing = detail && chosen === "about" ? detail : "pages";
   const [search, setSearch, term] = useSiteSearch();
   const currency = status.connection?.currency ?? null;
-  const labelOf = (row: AboutRow) => (showing === "percentScrolled" ? t("scrolled", { percent: row.label }) : row.title ?? (showing === "pages" ? pathOf(row.label) : row.label));
-  const rows: AboutRow[] | undefined = answer && !answer.live ? (showing === "pages" ? answer.pages : answer.about) : undefined;
+  // The rest past its 20 biggest is one row (ga-stored-figures-plan.md SF14).
+  const labelOf = (row: AboutRow) => (row.key === OTHER_ROWS ? t("theRest") : showing === "percentScrolled" ? t("scrolled", { percent: row.label }) : row.title ?? (showing === "pages" ? pathOf(row.label) : row.label));
+  const rows: AboutRow[] | undefined = answer ? (showing === "pages" ? answer.pages : answer.about) : undefined;
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(labelOf(row)) || matches(row.label));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "times", name: nameOfRow });
@@ -124,18 +125,18 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
             value={answer?.after ? formatNumber(answer.after.converted) : "–"}
             detail={(
               <span className="text-secondary">
-                {!answer?.counting ? t("afterNothingCounts") : answer.after ? t("afterOf", { did: answer.after.did }) : answer.live ? t("asking") : t("afterUnknown")}
+                {!answer?.counting ? t("afterNothingCounts") : answer.after ? t("afterOf", { did: answer.after.did }) : answer.afterLive ? t("asking") : t("afterUnknown")}
               </span>
             )}
           />
         </FigureRow>
       ) : null}
 
-      {(answer?.live && asking === "FAILED") || askingDays === "FAILED" ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
+      {answer?.afterLive && asking === "FAILED" ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
       <ChannelsChart
         channels={[t("times")]}
         rest={false}
-        points={(answer?.points ?? []).map((point) => ({ day: point.day, visits: [point.times] }))}
+        points={(answer?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.times] }))}
         host={status.host}
         from={null}
         to={null}
@@ -146,7 +147,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
         title={t(`about.${opening}`)}
         hint={t("barsHint", { period: periodName })}
         rows={answer && !answer.live ? (opening === "pages" ? answer.pages : answer.about).slice(0, BARS).map((row) => ({
-          label: opening === "percentScrolled" ? t("scrolled", { percent: row.label }) : opening === "pages" ? pathOf(row.label) : row.label,
+          label: row.key === OTHER_ROWS ? t("theRest") : opening === "percentScrolled" ? t("scrolled", { percent: row.label }) : opening === "pages" ? pathOf(row.label) : row.label,
           value: row.times,
         })) : undefined}
         measure={tl("times")}
@@ -179,7 +180,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
                 rows={sorted}
                 columns={[
                   { header: t(`column.${showing}`), value: (row) => labelOf(row) },
-                  ...(showing === "pages" ? [{ header: t("column.pages"), value: (row: AboutRow) => row.label }] : []),
+                  ...(showing === "pages" ? [{ header: t("column.pages"), value: (row: AboutRow) => (row.key === OTHER_ROWS ? "" : row.label) }] : []),
                   { header: tl("columns.times"), value: (row) => row.times },
                   { header: tl("columns.people"), value: (row) => row.people },
                   { header: tl("csv.change"), value: (row) => (row.change === null ? null : Math.round(row.change * 1000) / 10) },
@@ -187,11 +188,11 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
               />
             ) : undefined}
           >
-            <span className="text-[12px] text-secondary">{answer?.live ? t("asking") : bar}</span>
+            <span className="text-[12px] text-secondary">{answer?.live ? t("collecting") : bar}</span>
           </TableBar>
         }
         sort={tableSort}
-        empty={{ icon: <MousePointerClick className="h-8 w-8 text-muted/30" />, label: answer?.live ? t("asking") : term ? t("noMatch") : t("empty") }}
+        empty={{ icon: <MousePointerClick className="h-8 w-8 text-muted/30" />, label: answer?.live ? t("collecting") : term ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         columns={[
           {
@@ -199,7 +200,9 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
             header: t(`column.${showing}`),
             sortable: true,
             className: CUT_COLUMN.first,
-            cell: (row) => showing === "pages"
+            cell: (row) => row.key === OTHER_ROWS
+              ? <span className="block truncate text-[13px] text-secondary">{t("theRest")}</span>
+              : showing === "pages"
               ? <PageLink address={row.label} href={row.key.startsWith("~") ? hrefFor("all-pages/page", { key: row.key }) : null} title={row.title} />
               : showing === "linkUrl" && /^https?:\/\//.test(row.key)
                 ? <a href={row.key} target="_blank" rel="noopener noreferrer" title={row.key} className="block truncate text-[13px] text-info hover:underline">{row.label}</a>

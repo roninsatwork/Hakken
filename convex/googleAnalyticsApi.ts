@@ -211,6 +211,37 @@ export type ReportAsk = {
 
 export type ReportRow = { keys: string[]; values: number[] };
 
+/**
+ * What is left of a website's allowances, as Google counts them on each
+ * answer (`returnPropertyQuota`; docs/plans/active/ga-stored-figures-plan.md
+ * SF18): its tokens today and this hour — every tool reading the property's,
+ * and Hakken's own — and its asks this hour that may hold back small groups
+ * (age, gender, interests). Null where Google did not say.
+ */
+export type QuotaLeft = {
+  tokensPerDay: number | null;
+  tokensPerHour: number | null;
+  tokensPerProjectPerHour: number | null;
+  thresholdedPerHour: number | null;
+};
+
+type QuotaStatus = { consumed?: number; remaining?: number };
+
+/** Google's `propertyQuota`, as what is left; null when the answer carried none. */
+export function quotaLeftOf(quota: Record<string, QuotaStatus | undefined> | undefined): QuotaLeft | null {
+  if (!quota) return null;
+  const left = (name: string) => (typeof quota[name]?.remaining === "number" ? quota[name]!.remaining! : null);
+  return {
+    tokensPerDay: left("tokensPerDay"),
+    tokensPerHour: left("tokensPerHour"),
+    tokensPerProjectPerHour: left("tokensPerProjectPerHour"),
+    thresholdedPerHour: left("potentiallyThresholdedRequestsPerHour"),
+  };
+}
+
+/** Dimensions whose asks Google counts against its 120 an hour that may hold back small groups. */
+export const THRESHOLDED_DIMENSIONS: ReadonlySet<string> = new Set(["userAgeBracket", "userGender", "brandingInterest"]);
+
 export type Report = {
   rows: ReportRow[];
   /** Google folded its rarest rows into "(other)" (§2.5). */
@@ -220,6 +251,8 @@ export type Report = {
   /** Longer than Hakken reads: the rest left out. */
   cut: boolean;
   requests: number;
+  /** What is left of the website's allowances after this ask, as Google counts them. */
+  quota: QuotaLeft | null;
 };
 
 function filterOf(ask: ReportAsk) {
@@ -254,6 +287,7 @@ export async function runReport(accessToken: string, property: string, ask: Repo
   let thresholded = false;
   let requests = 0;
   let total = 0;
+  let quota: QuotaLeft | null = null;
   for (let page = 0; page < MOST_REPORT_PAGES; page += 1) {
     const filter = filterOf(ask);
     const answer = await callGoogle(url, accessToken, {
@@ -263,6 +297,8 @@ export async function runReport(accessToken: string, property: string, ask: Repo
       ...(filter ? { dimensionFilter: filter } : {}),
       limit: REPORT_PAGE_ROWS,
       offset: page * REPORT_PAGE_ROWS,
+      // What is left of the website's allowances, with every answer (SF18).
+      returnPropertyQuota: true,
     });
     requests += 1;
     if (!answer.ok) return answer;
@@ -270,7 +306,9 @@ export async function runReport(accessToken: string, property: string, ask: Repo
       rows?: { dimensionValues?: { value?: string }[]; metricValues?: { value?: string }[] }[];
       rowCount?: number;
       metadata?: { dataLossFromOtherRow?: boolean; subjectToThresholding?: boolean };
+      propertyQuota?: Record<string, QuotaStatus | undefined>;
     };
+    quota = quotaLeftOf(json.propertyQuota) ?? quota;
     folded ||= json.metadata?.dataLossFromOtherRow === true;
     thresholded ||= json.metadata?.subjectToThresholding === true;
     total = json.rowCount ?? 0;
@@ -282,7 +320,7 @@ export async function runReport(accessToken: string, property: string, ask: Repo
     }
     if (rows.length >= total || (json.rows ?? []).length < REPORT_PAGE_ROWS) break;
   }
-  return { ok: true, rows, folded, thresholded, cut: rows.length < total, requests };
+  return { ok: true, rows, folded, thresholded, cut: rows.length < total, requests, quota };
 }
 
 /**

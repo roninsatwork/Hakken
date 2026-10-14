@@ -404,8 +404,12 @@ export function allPagesSees(rows: readonly ListRowFacts[], counting: boolean, m
 /** Views with no page before reading as worth a sentence (§18.7): a fifth or more. */
 export const NO_PAGE_BEFORE_SHARE = 0.2;
 
-/** Where a page's views came from just before (GA29): a page of the website by its number, another website by its name, or none. */
-export type BeforeFacts = { kind: "page" | "site" | "none"; key: string; name: string; views: number };
+/**
+ * Where a page's views came from just before (GA29): a page of the website by
+ * its number, another website by its name, none, or the rest past its 20
+ * biggest added up (`other`).
+ */
+export type BeforeFacts = { kind: "page" | "site" | "none" | "other"; key: string; name: string; views: number };
 
 /** The least share of a page's views another page of the website must send for the link on it to be worth keeping. */
 export const KEEP_LINK_SHARE = 0.05;
@@ -447,7 +451,7 @@ export type PageStoryFacts = {
 export function pageSees(rows: readonly BeforeFacts[], siteId: string, isAssistant: (name: string) => boolean, self: string, story: PageStoryFacts | null = null): Seen {
   const total = sum(rows, (row) => row.views);
   if (total === 0 && !story?.started) return seen([{ code: "none" }]);
-  const sources = rows.filter((row) => row.kind !== "none" && row.key !== self && row.views > 0).sort((left, right) => right.views - left.views);
+  const sources = rows.filter((row) => (row.kind === "page" || row.kind === "site") && row.key !== self && row.views > 0).sort((left, right) => right.views - left.views);
   const none = sum(rows.filter((row) => row.kind === "none"), (row) => row.views);
   const nameOf = (row: BeforeFacts) => (row.kind === "page" ? row.key : row.name);
   const [first, second] = sources;
@@ -646,13 +650,17 @@ export function connectSees(host: string, searchConsole: { clicks: number; impre
   );
 }
 
-/** Choose what counts: which key events happened, Purchase ticked on a website that sold nothing, and those that never fire. */
-export function chooseEventsSees(host: string, events: readonly CountedEvent[] | null): Seen {
+/**
+ * Choose what counts: which key events happened, Purchase ticked on a website that sold nothing, and those that never fire.
+ * `lookalikes` are the events Tracking health found copying one never an enquiry, day for day (Ronins' "Form sent", its
+ * link clicks): never named as an enquiry, never offered to tick.
+ */
+export function chooseEventsSees(host: string, events: readonly CountedEvent[] | null, lookalikes: ReadonlySet<string> = new Set()): Seen {
   if (!events) return seen([]);
   if (events.length === 0) return seen([{ code: "noKeyEvents" }]);
   // A scroll or a video play is never a conversion (GA5): never named as one, never offered to tick.
   const fired = events
-    .filter((event) => event.lastThirtyDays > 0 && !NEVER_TICKED.has(event.eventName))
+    .filter((event) => event.lastThirtyDays > 0 && !NEVER_TICKED.has(event.eventName) && !lookalikes.has(event.eventName))
     .sort((left, right) => right.lastThirtyDays - left.lastThirtyDays);
   const purchase = events.find((event) => event.eventName === PURCHASE_EVENT && event.counted && event.lastThirtyDays === 0) ?? null;
   const silent = events.filter((event) => event.lastThirtyDays === 0 && event.eventName !== PURCHASE_EVENT && LIKELY_CONVERSIONS.has(event.eventName));

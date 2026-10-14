@@ -159,13 +159,14 @@ describe("the second round's figures", () => {
     expect(daily.points).toHaveLength(30);
     expect(daily.points[0].visits).toEqual([10, 4, 2]);
 
-    // Ninety days keep no channel days: asked of Google once, then read from what it held.
-    const long = { ...args, period: "90" as const };
-    expect((await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, long)).live).toBe(true);
-    expect(await admin.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { ...long, chart: "channel" })).toEqual({ ok: true, problem: null });
-    const asked = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, long);
-    expect(asked).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
-    expect(asked.points).toHaveLength(70);
+    // Ninety days are kept as days (ga-stored-figures-plan.md SF2): read from what is held, never asked of Google.
+    const ninety = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "90" as const });
+    expect(ninety).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
+    expect(ninety.points).toHaveLength(90);
+    // Twelve months from the two years filled by themselves after the first collection (SF9): a day for 90 days, then weeks.
+    const long = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "365" as const });
+    expect(long).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
+    expect(long.points.filter((point) => !point.lastDay)).toHaveLength(90);
 
     const top = await admin.query(api.googleAnalyticsReads.analyticsTopList, { ...args, list: "page", sort: "views", direction: "desc", count: 2 });
     expect(top.rows.map((row) => [row.label, row.views])).toEqual([["https://www.acme-shop.test/", 600], ["https://www.acme-shop.test/ai-agency/", 270]]);

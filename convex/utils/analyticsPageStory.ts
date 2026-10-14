@@ -22,6 +22,9 @@ export const READ_EVENTS = ["page_view", "scroll"] as const;
 /** A click that leaves the website, and a file downloaded: Google counts no click between the website's own pages. */
 export const CLICK_EVENTS = ["click", "file_download"] as const;
 
+export { OTHER_ROWS } from "./analyticsSharedLists";
+import { OTHER_ROWS } from "./analyticsSharedLists";
+
 /** Google's own words for a figure it couldn't place: never one of the groups shown. */
 const UNPLACED = new Set(["unknown", "(not set)", "", "(other)"]);
 
@@ -75,9 +78,10 @@ export function readShare(rows: readonly ListRow[], visits: number): number | nu
 }
 
 export type NextStory = {
-  /** The page viewed straight after, by its number; null for this page again, or for none. */
+  /** The page viewed straight after, by its number; null for this page again, for none, or for the rest. */
   key: string | null;
-  kind: "page" | "again" | "left";
+  /** `others`: the pages past the 20 most viewed after it, added up (ga-stored-figures-plan.md SF14). */
+  kind: "page" | "again" | "left" | "others";
   views: number;
   /** Of this page's views, 0–1. */
   share: number;
@@ -91,12 +95,14 @@ export type NextStory = {
  */
 export function nextOf(pageViews: number, visitsThatSaw: number, pages: readonly ListRow[]): NextStory[] {
   if (pageViews <= 0) return [];
-  const onward = pages.filter((row) => row.views > 0 && row.key !== "(not set)");
+  const onward = pages.filter((row) => row.views > 0 && row.key !== "(not set)" && row.key !== OTHER_ROWS);
+  const others = pages.filter((row) => row.key === OTHER_ROWS).reduce((sum, row) => sum + row.views, 0);
   const again = Math.max(0, pageViews - visitsThatSaw);
-  const ahead = onward.reduce((sum, row) => sum + row.views, 0);
+  const ahead = onward.reduce((sum, row) => sum + row.views, 0) + others;
   const left = Math.max(0, pageViews - again - ahead);
   const rows: NextStory[] = [
     ...onward.map((row) => ({ key: row.key, kind: "page" as const, views: row.views, share: row.views / pageViews })),
+    ...(others > 0 ? [{ key: null, kind: "others" as const, views: others, share: others / pageViews }] : []),
     ...(again > 0 ? [{ key: null, kind: "again" as const, views: again, share: again / pageViews }] : []),
     ...(left > 0 ? [{ key: null, kind: "left" as const, views: left, share: left / pageViews }] : []),
   ];
@@ -134,6 +140,13 @@ export function sourcesOf(
   back: readonly ListRow[],
   read: readonly ListRow[],
   money: (row: ListRow) => { conversions: number; value: number },
+  /**
+   * From the shared lists (ga-stored-figures-plan.md SF13): pages a visit as
+   * Google counts them, and reading over the whole visit — a source's visits
+   * are not kept by each page they saw, so a visit that reads two pages to
+   * the end counts twice (at most all of them).
+   */
+  shared = false,
 ): SourceStory[] {
   const pageVisits = new Map(pagesSeen.map((row) => [row.key, row.visits]));
   const returning = new Map<string, { all: number; back: number }>();
@@ -160,7 +173,7 @@ export function sourcesOf(
         channel,
         source,
         visits: row.visits,
-        pages: pageVisits.has(row.key) ? differentPages(pageVisits.get(row.key) ?? 0, row.visits) : null,
+        pages: shared ? viewsPerVisit(row.views, row.visits) : pageVisits.has(row.key) ? differentPages(pageVisits.get(row.key) ?? 0, row.visits) : null,
         time: row.visits > 0 ? row.seconds / row.visits : null,
         read: readShare(reads.get(row.key) ?? [], row.visits),
         back: came ? share(came.back, came.all) : null,

@@ -201,7 +201,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
           channelHref={(row) => hrefFor("channels/channel", { key: row.label })}
           showVisits={false}
           sales={sales}
-          empty={where?.live ? t("landingLive") : t("noneBrought")}
+          empty={where?.live ? t("landingCollecting") : t("noneBrought")}
         />
       </AnalyticsPanel>
     </div>

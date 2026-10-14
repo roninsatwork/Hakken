@@ -1,0 +1,309 @@
+import type { ActionCtx, QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
+import { ask, askList, countryIdOf, failed, numberPages, periodRange, writeList, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import type { GoogleFailure } from "./googleApi";
+import { EVERY_DEVICE, PAGE_FACT_JOIN, beforeKey, channelKey, emptyRow, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { assistantOf } from "./utils/aiAssistants";
+import { CLICK_EVENTS, READ_EVENTS } from "./utils/analyticsPageStory";
+import { OTHER_ROWS, PAGE_TOP_ROWS } from "./utils/analyticsSharedLists";
+import { EVENT_DETAIL } from "./utils/analyticsEvents";
+import { PAGE_FACT_LISTS, type AnalyticsPeriod, type AnalyticsWhich, type PageFactList } from "./googleAnalyticsSchema";
+import type { ReportRow } from "./googleAnalyticsApi";
+
+/**
+ * The shared page lists (docs/plans/active/ga-stored-figures-plan.md SF13,
+ * SF14; Anthony, 2026-10-14: "normalise … we don't need to store this so
+ * precisely that it's not reusable"): each one plain fact keyed by page, a
+ * page's top 20 rows and the rest as one "other", for each date range and
+ * device, sorted by page so a screen reads only its page's rows. Every
+ * page's screen, a landing page's channels and Ask Hakken are worked out
+ * from them; a page's screen never asks Google (SF15).
+ */
+
+type Reader = { db: QueryCtx["db"] };
+
+const DEVICES = [EVERY_DEVICE, "desktop", "mobile", "tablet"] as const;
+
+/** One date range and device of the shared page lists, for the main home country or another (`country`): a job of the run. */
+export type PageListsJob = { pages: true; period: AnalyticsPeriod; device: string; country?: string };
+
+/**
+ * The shared lists a run asks: the 7 and 30 days each run, the 90 days and 12
+ * months with the weekly lists — for the main home country, then each other
+ * (ga-stored-figures-plan.md SF7).
+ */
+export function pageListJobs(weekly: boolean, others: readonly string[] = []): PageListsJob[] {
+  const periods: AnalyticsPeriod[] = weekly ? ["7", "30", "90", "365"] : ["7", "30"];
+  return [undefined, ...others].flatMap((country) => periods.flatMap((period) => DEVICES.map((device) => ({ pages: true as const, period, device, ...(country ? { country } : {}) }))));
+}
+
+/** A row's key past its page: its parts. */
+export function factParts(key: string): string[] {
+  return key.split(PAGE_FACT_JOIN);
+}
+
+/** Each path as the website's page number, once for all (`numberPages`): a landing page slashed as the website holds it. */
+async function refsOf(ctx: ActionCtx, target: CollectTarget, paths: readonly string[], landing: boolean): Promise<Map<string, string>> {
+  const unique = [...new Set(paths)];
+  if (unique.length === 0) return new Map();
+  const numbered = await numberPages(ctx, target, unique.map((path) => emptyRow(channelKey(path, path))), landing ? "landing" : "page", true);
+  return new Map(numbered.map((row) => {
+    const { channel: ref, source: path } = splitChannelKey(row.key);
+    return [path, ref];
+  }));
+}
+
+/** Rows numbered by their page, two paths of one page added into one row; "(not set)" kept as it is. */
+async function numbered(ctx: ActionCtx, target: CollectTarget, rows: readonly ListRow[], landing: boolean): Promise<ListRow[]> {
+  const refs = await refsOf(ctx, target, rows.map((row) => splitChannelKey(row.key).channel), landing);
+  return summedRows(rows.map((row) => {
+    const { channel: path, source: rest } = splitChannelKey(row.key);
+    return { ...row, key: channelKey(refs.get(path) ?? path, rest) };
+  }));
+}
+
+function add(into: ListRow, row: ListRow) {
+  for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) into[field] += row[field];
+  if (row.times !== undefined) into.times = (into.times ?? 0) + row.times;
+  for (const [event, count] of row.counts) into.counts.set(event, (into.counts.get(event) ?? 0) + count);
+  for (const [event, value] of row.values) into.values.set(event, (into.values.get(event) ?? 0) + value);
+}
+
+/**
+ * Each page's top rows by `measure`, the rest added into one row (SF14) —
+ * one a group where `groupOf` names one (a landing page's other sources, a
+ * channel each), and rows `keep` names never folded (an AI assistant's).
+ */
+export function topPerPage(rows: readonly ListRow[], measure: (row: ListRow) => number, groupOf: (rest: string) => string = () => OTHER_ROWS, keep: (rest: string) => boolean = () => false): ListRow[] {
+  const byPage = new Map<string, ListRow[]>();
+  for (const row of rows) {
+    const page = splitChannelKey(row.key).channel;
+    byPage.set(page, [...(byPage.get(page) ?? []), row]);
+  }
+  const out: ListRow[] = [];
+  for (const [page, pageRows] of byPage) {
+    const sorted = [...pageRows].sort((left, right) => measure(right) - measure(left) || left.key.localeCompare(right.key));
+    const others = new Map<string, ListRow>();
+    sorted.forEach((row, at) => {
+      const rest = splitChannelKey(row.key).source;
+      if (at < PAGE_TOP_ROWS || keep(rest)) {
+        out.push(row);
+        return;
+      }
+      const key = channelKey(page, groupOf(rest));
+      const into = others.get(key) ?? { ...emptyRow(key), ...(row.times !== undefined ? { times: 0 } : {}) };
+      add(into, row);
+      others.set(key, into);
+    });
+    out.push(...others.values());
+  }
+  return out;
+}
+
+/** Google's rows for a list keyed page first, each figure put by `fill`. */
+function rowsOfAnswer(rows: readonly ReportRow[], fill: (row: ListRow, answer: ReportRow) => void): ListRow[] {
+  const held = new Map<string, ListRow>();
+  for (const answer of rows) {
+    const key = channelKey(answer.keys[0] ?? "", answer.keys.slice(1).join(PAGE_FACT_JOIN));
+    const row = held.get(key) ?? emptyRow(key);
+    fill(row, answer);
+    held.set(key, row);
+  }
+  return [...held.values()];
+}
+
+/**
+ * One date range and device of the shared page lists, each asked of Google
+ * once for every page, numbered, cut to each page's top rows and written.
+ */
+export async function collectPageLists(ctx: ActionCtx, session: Session, connectionId: Id<"googleAnalyticsConnections">, target: CollectTarget, job: PageListsJob, top: string): Promise<StepResult> {
+  const range = periodRange(job.period, "NOW", top);
+  const device = job.device || undefined;
+  const property = target.property!;
+  const country = job.country ?? "";
+  // Another home country's lists (SF7): every ask filtered to it, the countries' list aside.
+  const asking = country ? { ...target, country: countryIdOf(country) } : target;
+  const base = { startDate: range.from, endDate: range.to, hostNames: target.addresses, countries: [asking.country], ...(device ? { device } : {}) };
+  const failure = (answer: GoogleFailure): StepResult => failed(session, answer);
+  const keys = [
+    ...PAGE_FACT_LISTS.map((list) => slotKey(list, job.period, "NOW", job.device, country)),
+    ...(["eventPage", "eventDetail"] as const).map((list) => slotKey(list, job.period, "BEFORE", job.device, country)),
+  ];
+  const slots: Record<string, { slot: number; hash: string; from: string; to: string }> =
+    await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
+  let total = 0;
+  const write = async (list: PageFactList, rows: ListRow[], flags: { folded: boolean; thresholded: boolean; cut: boolean }, events: readonly string[] = [], which: "NOW" | "BEFORE" = "NOW") => {
+    total += rows.length;
+    const key = slotKey(list, job.period, which, job.device, country);
+    return await writeList(ctx, connectionId, target, list, key, rows, which === "NOW" ? range : periodRange(job.period, which, top), flags, slots[key], events);
+  };
+  const flagsOf = (answer: { folded: boolean; thresholded: boolean; cut: boolean }) => ({ folded: answer.folded, thresholded: answer.thresholded, cut: answer.cut });
+
+  // A landing page by source and new or returning, with each key event and reading: its channels, sources and returning visitors.
+  const sourceEvents = [...target.events, ...READ_EVENTS];
+  const sources = await askList(session, { ...asking, events: sourceEvents }, "landingSource", [], range, device ? { device } : {});
+  if (!sources.ok) return failure(sources);
+  const sourceRows = await numbered(ctx, target, [...sources.groups.values()].flat(), true);
+  // A channel's other sources kept as one row of that channel, and an AI assistant's never folded: channel sums stay whole.
+  if (!(await write("landingSource", topPerPage(sourceRows, (row) => row.visits, (rest) => [factParts(rest)[0] ?? "", OTHER_ROWS, ""].join(PAGE_FACT_JOIN), (rest) => assistantOf(factParts(rest)[1] ?? "") !== null), sources.flags, sourceEvents))) return { ok: true, rows: total, requests: session.requests };
+
+  // A page by the page before each view: the website's own pages by number, another website by its address, none.
+  const before = await ask(session, property, { ...base, dimensions: ["pagePath", "pageReferrer"], metrics: ["screenPageViews"] });
+  if (!before.ok) return failure(before);
+  const beforeRows = rowsOfAnswer(before.rows.map((one) => ({ ...one, keys: [one.keys[0] ?? "", beforeKey(one.keys[1] ?? "", target.addresses)] })), (row, one) => { row.views += one.values[0] ?? 0; });
+  const ownBefore = beforeRows.map((row) => splitChannelKey(row.key).source).filter((rest) => rest.startsWith("page:")).map((rest) => rest.slice(5));
+  const ownRefs = await refsOf(ctx, target, ownBefore, false);
+  const byPage = await numbered(ctx, target, beforeRows, false);
+  const referred = summedRows(byPage.map((row) => {
+    const { channel: page, source: rest } = splitChannelKey(row.key);
+    return rest.startsWith("page:") ? { ...row, key: channelKey(page, `page:${ownRefs.get(rest.slice(5)) ?? rest.slice(5)}`) } : row;
+  }));
+  if (!(await write("pageReferrer", topPerPage(referred, (row) => row.views), flagsOf(before)))) return { ok: true, rows: total, requests: session.requests };
+  // Read the other way: each of the website's pages by the pages viewed straight after it.
+  const next = referred.flatMap((row) => {
+    const { channel: page, source: rest } = splitChannelKey(row.key);
+    return rest.startsWith("page:") ? [{ ...row, key: channelKey(rest.slice(5), page) }] : [];
+  });
+  if (!(await write("pageNext", topPerPage(next, (row) => row.views), flagsOf(before)))) return { ok: true, rows: total, requests: session.requests };
+
+  // A page by the links out and downloads clicked on it.
+  const clicks = await ask(session, property, { ...base, dimensions: ["pagePath", "eventName", "linkUrl"], metrics: ["eventCount", "totalUsers"], eventNames: [...CLICK_EVENTS] });
+  if (!clicks.ok) return failure(clicks);
+  const clickRows = rowsOfAnswer(clicks.rows, (row, one) => {
+    row.times = (row.times ?? 0) + (one.values[0] ?? 0);
+    row.people += one.values[1] ?? 0;
+  });
+  if (!(await write("pageClicks", topPerPage(await numbered(ctx, target, clickRows, false), (row) => row.times ?? 0), flagsOf(clicks)))) return { ok: true, rows: total, requests: session.requests };
+
+  // A page's readers by age and gender, where Google can tell.
+  const who = await ask(session, property, { ...base, dimensions: ["pagePath", "userAgeBracket", "userGender"], metrics: ["totalUsers", "screenPageViews"] });
+  if (!who.ok) return failure(who);
+  const whoRows = rowsOfAnswer(who.rows.map((one) => ({ ...one, keys: [one.keys[0] ?? "", (one.keys[1] ?? "").toLowerCase(), (one.keys[2] ?? "").toLowerCase()] })), (row, one) => {
+    row.people += one.values[0] ?? 0;
+    row.views += one.values[1] ?? 0;
+  });
+  if (!(await write("pageWho", await numbered(ctx, target, whoRows, false), flagsOf(who)))) return { ok: true, rows: total, requests: session.requests };
+
+  // The visits that started on a page by age and gender, with each key event: its conversions by each.
+  const landedWho = await askList(session, asking, "landingWho", [], range, device ? { device } : {});
+  if (!landedWho.ok) return failure(landedWho);
+  const landedRows = [...landedWho.groups.values()].flat().map((row) => {
+    const { channel: page, source: rest } = splitChannelKey(row.key);
+    return { ...row, key: channelKey(page, factParts(rest).map((part) => part.toLowerCase()).join(PAGE_FACT_JOIN)) };
+  });
+  if (!(await write("landingWho", await numbered(ctx, target, landedRows, true), landedWho.flags, target.events))) return { ok: true, rows: total, requests: session.requests };
+
+  // A page's readers in every country, whatever the home country (PS8): asked with the main home country's lists alone.
+  if (!country) {
+    const { countries: _countries, ...everyCountry } = base;
+    const countries = await ask(session, property, { ...everyCountry, dimensions: ["pagePath", "countryId"], metrics: ["totalUsers", "screenPageViews"] });
+    if (!countries.ok) return failure(countries);
+    const countryRows = rowsOfAnswer(countries.rows.map((one) => ({ ...one, keys: [one.keys[0] ?? "", (one.keys[1] ?? "").toUpperCase()] })), (row, one) => {
+      row.people += one.values[0] ?? 0;
+      row.views += one.values[1] ?? 0;
+    });
+    if (!(await write("pageCountry", topPerPage(await numbered(ctx, target, countryRows, false), (row) => row.people), flagsOf(countries)))) return { ok: true, rows: total, requests: session.requests };
+  }
+
+  // The pages the visits that started on a page saw, each by its number.
+  const seen = await askList(session, { ...asking, events: [] }, "landingPagesSeen", [], range, device ? { device } : {});
+  if (!seen.ok) return failure(seen);
+  const seenRows = await numbered(ctx, target, [...seen.groups.values()].flat(), true);
+  const seenRefs = await refsOf(ctx, target, seenRows.map((row) => splitChannelKey(row.key).source), false);
+  const seenNumbered = summedRows(seenRows.map((row) => {
+    const { channel: page, source: path } = splitChannelKey(row.key);
+    return { ...row, key: channelKey(page, seenRefs.get(path) ?? path) };
+  }));
+  if (!(await write("landingPagesSeen", topPerPage(seenNumbered, (row) => row.visits), seen.flags))) return { ok: true, rows: total, requests: session.requests };
+
+  // A page's views by day of the week.
+  const weekdays = await askList(session, { ...asking, events: [] }, "pageWeekday", [], range, device ? { device } : {});
+  if (!weekdays.ok) return failure(weekdays);
+  if (!(await write("pageWeekday", await numbered(ctx, target, [...weekdays.groups.values()].flat(), false), weekdays.flags))) return { ok: true, rows: total, requests: session.requests };
+
+  // A page's views on each device, whatever device is chosen: asked with every device's lists alone.
+  if (!device) {
+    const devices = await ask(session, property, { ...base, dimensions: ["pagePath", "deviceCategory"], metrics: ["screenPageViews"] });
+    if (!devices.ok) return failure(devices);
+    const deviceRows = rowsOfAnswer(devices.rows.map((one) => ({ ...one, keys: [one.keys[0] ?? "", (one.keys[1] ?? "").toLowerCase()] })), (row, one) => { row.views += one.values[0] ?? 0; });
+    if (!(await write("pageDevice", await numbered(ctx, target, deviceRows, false), flagsOf(devices)))) return { ok: true, rows: total, requests: session.requests };
+  }
+
+  // Each event by the pages it happened on and by what it was about — its link, file, words, depth or video — now and the
+  // span before, for its own screen (SF15): an event's top 20 of each, the rest as one.
+  const details = [...new Set(Object.values(EVENT_DETAIL))];
+  for (const which of ["NOW", "BEFORE"] as const) {
+    const dates = which === "NOW" ? range : periodRange(job.period, which, top);
+    const at = { ...base, startDate: dates.from, endDate: dates.to };
+    const pages = await ask(session, property, { ...at, dimensions: ["eventName", "pagePath"], metrics: ["eventCount", "totalUsers"] });
+    if (!pages.ok) return failure(pages);
+    const pageRows = rowsOfAnswer(pages.rows, (row, one) => {
+      row.times = (row.times ?? 0) + (one.values[0] ?? 0);
+      row.people += one.values[1] ?? 0;
+    });
+    const refs = await refsOf(ctx, target, pageRows.map((row) => splitChannelKey(row.key).source), false);
+    const byRef = summedRows(pageRows.map((row) => {
+      const { channel: event, source: path } = splitChannelKey(row.key);
+      return { ...row, key: channelKey(event, refs.get(path) ?? path) };
+    }));
+    if (!(await write("eventPage", topPerPage(byRef, (row) => row.times ?? 0), flagsOf(pages), [], which))) return { ok: true, rows: total, requests: session.requests };
+    // What each event was about, asked once for all of them: each row's own detail (`EVENT_DETAIL`), the others "(not set)".
+    const answer = await ask(session, property, { ...at, dimensions: ["eventName", ...details], metrics: ["eventCount", "totalUsers"], eventNames: Object.keys(EVENT_DETAIL) });
+    if (!answer.ok) return failure(answer);
+    const about = rowsOfAnswer(answer.rows.map((one) => {
+      const event = one.keys[0] ?? "";
+      return { ...one, keys: [event, one.keys[1 + details.indexOf(EVENT_DETAIL[event])] ?? ""] };
+    }), (row, one) => {
+      row.times = (row.times ?? 0) + (one.values[0] ?? 0);
+      row.people += one.values[1] ?? 0;
+    });
+    if (!(await write("eventDetail", topPerPage(about, (row) => row.times ?? 0), flagsOf(answer), [], which))) return { ok: true, rows: total, requests: session.requests };
+  }
+  return { ok: true, rows: total, requests: session.requests };
+}
+
+/** Rows that share a key once numbered — a page Analytics names with and without its slash — added into one. */
+function summedRows(rows: readonly ListRow[]): ListRow[] {
+  const held = new Map<string, ListRow>();
+  for (const row of rows) {
+    const into = held.get(row.key);
+    if (into) add(into, row);
+    else held.set(row.key, { ...row, counts: new Map(row.counts), values: new Map(row.values) });
+  }
+  return [...held.values()];
+}
+
+/** One page's rows of a shared list, keyed by what follows the page, and whether Google held back small groups. */
+export type PageRows = { rows: ListRow[]; thresholded: boolean };
+
+/**
+ * One page's rows of a shared list for a date range and device, read from
+ * the parts its rows are in alone (`firstKey`) — or null when the list is
+ * not built yet.
+ */
+export async function readPageRows(ctx: Reader, holdId: Id<"companyWebsites">, list: PageFactList, period: AnalyticsPeriod, device: string, page: string, which: AnalyticsWhich = "NOW", country = ""): Promise<PageRows | null> {
+  const key = slotKey(list, period, which, device, country);
+  const slot = await ctx.db
+    .query("googleAnalyticsPeriodSlots")
+    .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))
+    .first();
+  if (!slot) return null;
+  const prefix = channelKey(page, "");
+  // The part a page's first row is in, and any after it that start within the page.
+  const first = await ctx.db
+    .query("googleAnalyticsPeriods")
+    .withIndex("by_hold_key_slot_first", (q) => q.eq("companyWebsiteId", holdId).eq("key", key).eq("slot", slot.slot).lte("firstKey", prefix))
+    .order("desc")
+    .first();
+  const within = await ctx.db
+    .query("googleAnalyticsPeriods")
+    .withIndex("by_hold_key_slot_first", (q) => q.eq("companyWebsiteId", holdId).eq("key", key).eq("slot", slot.slot).gt("firstKey", prefix).lt("firstKey", `${prefix}￿`))
+    .take(slot.parts);
+  const parts = [...(first ? [first] : []), ...within];
+  const rows = parts
+    .flatMap((part) => unpackPart(part as PackedPart))
+    .filter((row) => row.key.startsWith(prefix))
+    .map((row) => ({ ...row, key: row.key.slice(prefix.length) }));
+  return { rows, thresholded: slot.thresholded === true };
+}

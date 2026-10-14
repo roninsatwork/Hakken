@@ -24,7 +24,6 @@ import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChangeCell } from "../../_components/AnalyticsCells";
 import { ChannelsChart, TopBars } from "../../_components/AnalyticsChart";
-import { useLiveAsk } from "../../_components/AnalyticsListScreen";
 import { changeOf } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
@@ -79,8 +78,6 @@ function EventsBody({ status }: { status: AnalyticsStatus }) {
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
   const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvents, args);
-  const asking = useLiveAsk(answer?.live ? { ...args, pages: "event" } : null);
-  const askingChart = useLiveAsk(answer?.live ? { ...args, pages: "eventSeries" } : null);
   const [kind, setKind] = useSiteParam<EventKind | "">("kind", "", ["", ...EVENT_KINDS]);
   const [search, setSearch, term] = useSiteSearch();
   const currency = status.connection?.currency ?? null;
@@ -97,11 +94,10 @@ function EventsBody({ status }: { status: AnalyticsStatus }) {
     <div className="flex flex-col gap-6">
       <AnalyticsSees screen="events" seen={answer?.seen} currency={currency} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
-      {answer?.live && (asking === "FAILED" || askingChart === "FAILED") ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
       <ChannelsChart
         channels={[nameOf("scroll"), nameOf("click")]}
         rest={false}
-        points={(answer && !answer.live ? answer.points : []).map((point) => ({ day: point.day, visits: [point.scroll, point.click] }))}
+        points={(answer && !answer.live ? answer.points : []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.scroll, point.click] }))}
         host={status.host}
         from={null}
         to={null}
@@ -150,7 +146,7 @@ function EventsBody({ status }: { status: AnalyticsStatus }) {
               />
             ) : undefined}
           >
-            <span className="text-[12px] text-secondary">{answer?.live ? t("asking") : bar}</span>
+            <span className="text-[12px] text-secondary">{answer?.live ? t("collecting") : bar}</span>
           </TableBar>
         }
         sort={tableSort}

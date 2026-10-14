@@ -308,10 +308,12 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
 
   // ── Google Analytics (google-analytics-plan.md §4.3) ─────────────────────
   googleAnalyticsConnections: RECORD,
-  googleAnalyticsDays: cleared("60 days", "googleAnalyticsCollect/finishCollection"),
+  googleAnalyticsDays: cleared("90 days: a channel day then goes into its week (ga-stored-figures-plan.md SF2)", "googleAnalyticsHistory/rollHistory"),
+  googleAnalyticsPageSeries: thinned("each page a day for 90 days, a week to 12 months, a month to two years, reshaped as each day is written; a page with nothing in two years cleared", "googleAnalyticsPageSeries/dropOldPageSeries"),
+  googleAnalyticsHistory: thinned("weeks to 12 months, then each into its month; months to two years, then cleared", "googleAnalyticsHistory/rollHistory"),
   googleAnalyticsPeriodSlots: LATEST,
   googleAnalyticsPeriods: LATEST,
-  googleAnalyticsLive: cleared("at the next collection", "googleAnalyticsCollect/dropLive"),
+  googleAnalyticsLive: cleared("at the next collection; an event's funnel after a week", "googleAnalyticsCollect/dropLive"),
   googleAnalyticsTitles: cleared("a page not seen in the week's ask", "googleAnalyticsTitles/dropOldTitles"),
 
   // ── Bing Webmaster Tools (bing-webmaster-plan.md §4) ──────────────────────

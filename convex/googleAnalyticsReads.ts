@@ -10,7 +10,7 @@ import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { wordStartMatcher } from "./utils/wordStarts";
-import { assistantOf, channelOf } from "./utils/aiAssistants";
+import { AI_ASSISTANTS_CHANNEL, GOOGLE_AI_CHANNEL, assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { UNTAGGED, VISITOR_LISTS, splitChannelKey, type ListRow, type VisitorList } from "./googleAnalyticsLists";
 import { campaignsSees } from "./utils/sees/analyticsCampaigns";
@@ -22,6 +22,7 @@ import { searchConsoleMonth, searchConsoleMonthValidator } from "./googleAnalyti
 import { seeing, seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
 import { PAGE_MOVES, moveOf, type PageMove } from "./utils/pageMoves";
 import { moveCountsValidator, withQuietPages, type PageMoves } from "./googleAnalyticsPageMoves";
+import { channelExtras, classifierFor, landingByChannel, landingOf } from "./googleAnalyticsChannelReads";
 import {
   addInto,
   blank,
@@ -78,7 +79,6 @@ export {
   conversionsOf,
   countedOf,
   grouped,
-  liveAsk,
   readFor,
   readLive,
   readSlot,
@@ -86,11 +86,10 @@ export {
   shownRowValidator,
   type Counted,
   type Held,
-  type LiveList,
   type ShownRow,
 } from "./googleAnalyticsRows";
 
-const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange"> = {
+const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "started" | "elsewhere" | "share"> = {
   name: { value: (row) => row.label, first: "asc" },
   visits: { value: (row) => row.visits, first: "desc" },
   engaged: { value: (row) => row.engagementRate, first: "desc" },
@@ -108,6 +107,12 @@ const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pag
   // All pages' two changes, as counts (all-pages-rethink-plan.md AP4): the most gained first.
   viewsChange: { value: (row) => (row.viewsBefore === null ? null : row.views - row.viewsBefore), first: "desc" },
   conversionsChange: { value: (row) => (row.conversionsBefore === null ? null : row.conversions - row.conversionsBefore), first: "desc" },
+  // Channels' conversions started (ga-channel-pages-plan.md CH9).
+  started: { value: (row) => row.started ?? null, first: "desc" },
+  // AI assistants' visits Google filed elsewhere (CH8).
+  elsewhere: { value: (row) => row.elsewhere ?? null, first: "desc" },
+  // A channel's classifications by their share of its visits (CH7): the same order as their visits.
+  share: { value: (row) => row.visits, first: "desc" },
 };
 /** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
 export function openingSort(list: ListKind): keyof typeof SORTS {
@@ -153,6 +158,8 @@ const listArgs = {
   country: v.optional(v.string()),
   /** The channel whose sources are listed. */
   channel: v.optional(v.string()),
+  /** AI assistants' own page (ga-channel-pages-plan.md CH8): only the visits Google filed under this channel ("Referral"). */
+  filed: v.optional(v.string()),
   /** Only the pages of one page group (its classification's id, or Not sorted). */
   group: v.optional(v.string()),
   /** Only the rows that made this conversion. */
@@ -171,6 +178,7 @@ type ListArgs = {
   /** The home country as its lists are named, already checked (`keptCountry`): empty for the main one. */
   country?: string;
   channel?: string;
+  filed?: string;
   group?: string;
   eventName?: string;
   q?: string;
@@ -183,11 +191,17 @@ type ListArgs = {
    * Its screen, its download and Ask Hakken read it so; a top list does not.
    */
   quiet?: boolean;
+  /**
+   * Channels' table (ga-channel-pages-plan.md CH9): each channel with the
+   * conversions it started and the page group most of its visits land on —
+   * `group` then keeps the channels landing most on that page group.
+   */
+  extras?: boolean;
 };
 
 export type ListAnswer = {
   rows: ShownRow[];
-  /** Not asked yet: the screen asks Google for it (a page list for one device). */
+  /** A device's list the next collection builds (ga-stored-figures-plan.md SF3): every device's shown meanwhile. */
   live: boolean;
   /** The first collection has not built it yet. */
   preparing: boolean;
@@ -200,7 +214,7 @@ export type ListAnswer = {
   groups: { id: string; name: string }[] | null;
   /** What Hakken sees reads these: every row the list's own filters leave, whatever is searched. */
   every: ShownRow[];
-  /** One device's landing pages asked of Google: every device's rows, to weigh them against. */
+  /** One device's landing pages: every device's rows, to weigh them against. */
   everyDevice: ShownRow[] | null;
   /** The list's rows added up, now and in the span before. */
   totals: { now: Figures; before: Figures | null } | null;
@@ -246,18 +260,23 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const counting = countedOf(connection).length > 0;
   const tagged = args.list === "campaign" || args.list === "adKeyword";
   const own = tagged || isVisitorList(args.list);
+  // A channel's own landing pages and page groups (ga-channel-pages-plan.md CH7): every device's, as they are kept.
+  const ofChannel = (args.list === "landing" || args.list === "groups") && args.channel !== undefined ? args.channel : null;
   const base: AnalyticsList = own ? args.list as AnalyticsList
-    : args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : "landing";
+    : args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : ofChannel !== null ? "landingChannel" : "landing";
+  const device = args.device;
   const kept: { every: Held | null } = { every: null };
-  const now = await readFor(ctx, holdId, base, args.period, "NOW", args.device, kept, args.country);
+  // A channel's pages: each assistant's visits credited to AI assistants once, whichever channel Google filed them under (CH13).
+  const now = ofChannel !== null ? await landingByChannel(ctx, holdId, args.period, "NOW", args.country ?? "", args.device) : await readFor(ctx, holdId, base, args.period, "NOW", device, kept, args.country);
   if (now === "LIVE") return { ...EMPTY, live: true, preparing: false, counting };
   if (!now) return { ...EMPTY, live: false, preparing: true, counting };
-  const before = await readFor(ctx, holdId, base, args.period, "BEFORE", args.device, undefined, args.country);
+  const before = ofChannel !== null ? await landingByChannel(ctx, holdId, args.period, "BEFORE", args.country ?? "", args.device) : await readFor(ctx, holdId, base, args.period, "BEFORE", device, undefined, args.country);
   const beforeRows = before && before !== "LIVE" ? before.rows : null;
   const site = figuresOf(now.rows, counted);
 
   let rows: ListRow[] = now.rows;
   let earlier: ListRow[] | null = beforeRows;
+  const elsewhere = new Map<string, number>();
   // The visits from no tagged link are said beside the campaigns, never listed among them.
   const untagged = tagged ? rows.find((row) => row.key === UNTAGGED)?.visits ?? 0 : null;
   if (tagged) {
@@ -267,9 +286,20 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (args.list === "channel") {
     rows = grouped(rows, (row) => displayChannel(row.key));
     earlier = earlier ? grouped(earlier, (row) => displayChannel(row.key)) : null;
+  } else if (ofChannel !== null) {
+    rows = landingOf(rows, ofChannel);
+    earlier = earlier ? landingOf(earlier, ofChannel) : null;
   } else if (args.list === "source") {
     const channel = args.channel ?? "";
-    const of = (row: ListRow) => (displayChannel(row.key) === channel ? displaySource(row.key) : null);
+    const filedAs = (row: ListRow) => args.filed === undefined || splitChannelKey(row.key).channel === args.filed;
+    const of = (row: ListRow) => (displayChannel(row.key) === channel && filedAs(row) ? displaySource(row.key) : null);
+    // Each assistant's visits Google filed outside its own AI Assistant channel (CH8).
+    if (channel === AI_ASSISTANTS_CHANNEL) {
+      for (const row of rows) {
+        if (of(row) === null || splitChannelKey(row.key).channel === GOOGLE_AI_CHANNEL) continue;
+        elsewhere.set(displaySource(row.key), (elsewhere.get(displaySource(row.key)) ?? 0) + row.visits);
+      }
+    }
     rows = grouped(rows, of);
     earlier = earlier ? grouped(earlier, of) : null;
   }
@@ -277,6 +307,8 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   // Page addresses, read whole only when needed.
   const pageList = args.list === "landing" || args.list === "groups" || args.list === "page";
   const kinds = pageList ? await readPageKinds(ctx, holdId) : null;
+  // A channel's pages are grouped as its chart groups them (CH5): Hakken's page types while the website has no classifications.
+  const classes = ofChannel !== null ? await classifierFor(ctx, holdId) : kinds;
   const needAll = pageList && (Boolean(args.q?.trim()) || args.list === "groups" || args.group !== undefined || args.sort === "name");
   const addresses = new Map<string, string>();
   const members = new Map<string, number>();
@@ -285,8 +317,8 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     const named = await decodePages(ctx, holdId, keys);
     keys.forEach((key, index) => addresses.set(key, named[index]));
   }
-  if (pageList && kinds && (args.list === "groups" || args.group !== undefined)) {
-    const kindOf = (row: ListRow) => kinds.kindOf(addresses.get(row.key) ?? row.key);
+  if (pageList && classes && (args.list === "groups" || args.group !== undefined)) {
+    const kindOf = (row: ListRow) => classes.kindOf(addresses.get(row.key) ?? row.key);
     if (args.group !== undefined) {
       rows = rows.filter((row) => kindOf(row) === args.group);
       earlier = earlier ? earlier.filter((row) => kindOf(row) === args.group) : null;
@@ -304,7 +336,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (args.eventName) out = out.filter((row) => row.conversions > 0);
   for (const row of out) {
     if (args.list === "groups") {
-      row.label = row.key === NOT_SORTED_KIND ? NOT_SORTED_KIND : kinds?.nameOf(row.key) ?? row.key;
+      row.label = row.key === NOT_SORTED_KIND ? NOT_SORTED_KIND : classes?.nameOf(row.key) ?? row.key;
       row.members = members.get(row.key) ?? 0;
     } else if (pageList) row.label = addresses.get(row.key) ?? row.key;
     else if (args.list === "campaign") {
@@ -313,10 +345,20 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
       row.source = source;
     }
   }
+  if (args.list === "source" && args.channel === AI_ASSISTANTS_CHANNEL) for (const row of out) row.elsewhere = elsewhere.get(row.key) ?? 0;
   if (args.list === "page" && args.quiet && !args.eventName && args.group === undefined) {
     const whole = await withQuietPages(ctx, holdId, out, earlier, counted, addresses);
     out = whole.rows;
     moves = whole.moves;
+  }
+  if (args.list === "channel" && args.extras) {
+    const extras = await channelExtras(ctx, holdId, args.period, args.country ?? "", counted, args.device);
+    for (const row of out) {
+      const own = extras.get(row.label);
+      row.started = own?.started ?? null;
+      row.landsMost = own?.landsMost ?? null;
+    }
+    if (args.group !== undefined) out = out.filter((row) => row.landsMost?.kind === args.group);
   }
   const every = out;
   if (moves && args.move && args.move !== "all") out = out.filter((row) => moveOf(row.views, row.viewsBefore) === args.move);
@@ -355,6 +397,12 @@ async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownR
   const byRef = new Map(refs.map((row, index) => [row.label, named[index]]));
   const labelled = rows.map((row) => (byRef.has(row.label) ? { ...row, label: byRef.get(row.label)! } : row));
   return await withTitles(ctx, holdId, labelled, (row) => row.label);
+}
+
+/** A channel's landing pages each with its page group (CH7), read only for the rows shown. */
+async function withKinds(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
+  const classifier = await classifierFor(ctx, holdId);
+  return rows.map((row) => ({ ...row, kind: classifier.kindOf(row.label) }));
 }
 
 /**
@@ -405,7 +453,8 @@ export async function listSeen(
   list: ListAnswer,
 ): Promise<Seen> {
   // Visitors' box is the whole screen's, from its own read (`googleAnalyticsVisitorReads.ts`), whichever list is shown.
-  if (list.live || list.preparing || isVisitorList(args.list)) return seen([]);
+  // A channel's landing pages are its page's: their box is the page's own (`analyticsChannelTop`).
+  if (list.live || list.preparing || isVisitorList(args.list) || (args.channel !== undefined && args.list !== "source")) return seen([]);
   const box = args.list === "channel" ? channelsSees(list.every)
     : args.list === "source" ? channelSees(args.channel ?? "", list.every, channelFigures(list), site.siteId)
       : args.list === "page" ? allPagesSees(list.every, list.counting, list.moves)
@@ -469,10 +518,11 @@ export const analyticsListPage = tenantQuery({
 /** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
 export async function readListPage(ctx: SiteReader, args: ObjectType<typeof analyticsListPageArgs>) {
   const site = await requireMySite(ctx, args.siteId);
-  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page" });
+  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
   const page = pageOfList(list.rows, args.page, args.rows);
+  const named = await nameRows(ctx, site.hold._id, page.rows);
   return {
-    rows: await nameRows(ctx, site.hold._id, page.rows),
+    rows: args.list === "landing" && args.channel !== undefined ? await withKinds(ctx, site.hold._id, named) : named,
     total: page.total,
     page: page.page,
     pages: page.pages,
@@ -499,7 +549,7 @@ args: listArgs,
 returns: v.object({ rows: v.array(shownRowValidator), live: v.boolean() }),
 handler: async (ctx, args) => {
   const site = await requireMySite(ctx, args.siteId);
-  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page" });
+  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
   return { rows: await nameRows(ctx, site.hold._id, list.rows), live: list.live };
 },
 });

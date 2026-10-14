@@ -11,10 +11,21 @@ import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/site
 import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
 import { currencySign, pathOf } from "./analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, type Step } from "./useAnalytics";
-import { useLiveAsk, type VisitorList } from "./AnalyticsListScreen";
+import type { VisitorList } from "./AnalyticsListScreen";
+import { coarserThanStep, perStep } from "./stepScale";
 
 /** One day of the chart: the website's figures, and each counted event's own count. */
-export type ChartDay = { day: string; visits: number; engaged: number; views?: number; conversions: number; value: number; events?: number[] };
+export type ChartDay = {
+  day: string;
+  /** Past 90 days, a page's figures are held by week, then month (ga-stored-figures-plan.md SF2b): the point's last day. */
+  lastDay?: string;
+  visits: number;
+  engaged: number;
+  views?: number;
+  conversions: number;
+  value: number;
+  events?: number[];
+};
 
 const MEASURE_COLOURS: Record<string, string> = {
   views: CHART_SERIES_ORANGE,
@@ -30,7 +41,8 @@ export function stepped(days: readonly ChartDay[], step: Step, eventCount = 0): 
   for (const day of [...days].sort((left, right) => left.day.localeCompare(right.day))) {
     const key = step === "day" ? day.day : step === "week" ? weekStart(day.day) : day.day.slice(0, 7);
     const bucket = buckets.get(key) ?? { day: key, first: day.day, last: day.day, visits: 0, engaged: 0, views: 0, conversions: 0, value: 0, events: Array<number>(eventCount).fill(0) };
-    bucket.last = day.day;
+    const last = day.lastDay ?? day.day;
+    if (last > bucket.last) bucket.last = last;
     bucket.visits += day.visits;
     bucket.views = (bucket.views ?? 0) + (day.views ?? 0);
     bucket.engaged += day.engaged;
@@ -39,18 +51,23 @@ export function stepped(days: readonly ChartDay[], step: Step, eventCount = 0): 
     (day.events ?? []).forEach((count, index) => (bucket.events![index] = (bucket.events![index] ?? 0) + count));
     buckets.set(key, bucket);
   }
-  return [...buckets.values()].map((bucket) => datedRow(
-    { day: step === "month" ? `${bucket.day}-01` : bucket.first, lastDay: bucket.last },
-    {
-      visits: bucket.visits,
-      engaged: bucket.engaged,
-      views: bucket.views ?? 0,
-      conversions: bucket.conversions,
-      value: Math.round(bucket.value) / 100,
-      ...Object.fromEntries((bucket.events ?? []).map((count, index) => [`event${index}`, count])),
-    },
-    step === "month" ? formatMonth(bucket.day) : formatShortDay(bucket.first),
-  ));
+  // A week or month held whole is drawn as its average for the step (SF2b), and flagged for the chart's hint.
+  return [...buckets.values()].map((bucket) => {
+    const each = (value: number) => Math.round(perStep(value, bucket.first, bucket.last, step) * 10) / 10;
+    return datedRow(
+      { day: step === "month" ? `${bucket.day}-01` : bucket.first, lastDay: bucket.last },
+      {
+        visits: each(bucket.visits),
+        engaged: each(bucket.engaged),
+        views: each(bucket.views ?? 0),
+        conversions: each(bucket.conversions),
+        value: Math.round(perStep(bucket.value, bucket.first, bucket.last, step)) / 100,
+        ...Object.fromEntries((bucket.events ?? []).map((count, index) => [`event${index}`, each(count)])),
+        ...(coarserThanStep(bucket.first, bucket.last, step) ? { coarse: true } : {}),
+      },
+      step === "month" ? formatMonth(bucket.day) : formatShortDay(bucket.first),
+    );
+  });
 }
 
 /**
@@ -79,7 +96,7 @@ export function AnalyticsChart({ days, host, from, to, currency, exportName }: {
   return (
     <SearchConsoleChartCard
       title={t("title")}
-      hint={t("hint")}
+      hint={`${t("hint")}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
       controls={controls}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number)]))}
@@ -126,7 +143,7 @@ export function VisitsChart({ days, host, from, to, exportName, viewsOnly = fals
   return (
     <SearchConsoleChartCard
       title={t(viewsOnly ? `viewsOnlyTitle.${step}` : `viewsTitle.${step}`)}
-      hint={t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: tf(`periods.${period}`), step })}
+      hint={`${t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: tf(`periods.${period}`), step })}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name), t("conversions")], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number), row.conversions as number]))}
       host={host}
@@ -164,7 +181,7 @@ export function ConversionsChart({ days, events, names, host, from, to, currency
   return (
     <SearchConsoleChartCard
       title={t("conversionsTitle")}
-      hint={t("conversionsHint")}
+      hint={`${t("conversionsHint")}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
       controls={controls}
       exportName="google-analytics-conversions"
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number)]))}
@@ -232,10 +249,15 @@ const CHANNEL_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VI
  * Events' charts are drawn by it too (§18.2 boards 22 and 23): scrolls and
  * link clicks, or one event's times, a line each, under their own `title`.
  */
-export function ChannelsChart({ channels, rest, points, host, from, to, exportName, title }: {
+export function ChannelsChart({ channels, rest, points, host, from, to, exportName, title, updateKey = true, marked = false }: {
+  /** Whether the legend names Google's update mark: a channel's own page leaves it to the hover (ga-channel-pages-plan.md CH4). */
+  updateKey?: boolean;
+  /** A dot on each line's days with a conversion, bigger for more, named in the legend (Channels, CH9). */
+  marked?: boolean;
   channels: readonly string[];
   rest: boolean;
-  points: ReadonlyArray<{ day: string; visits: readonly number[] }>;
+  /** A point held as a week or month past the 90 days (ga-stored-figures-plan.md SF2b) carries its last day. */
+  points: ReadonlyArray<{ day: string; lastDay?: string; visits: readonly number[]; conversions?: readonly number[] }>;
   host: string;
   from: string | null;
   to: string | null;
@@ -250,24 +272,32 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
   const series: SiteSeries[] = [
     ...channels.map((channel, index) => ({ key: `line${index}`, name: channel || t("noChannel"), colour: CHANNEL_COLOURS[index] ?? CHART_SERIES_SLATE })),
     ...(rest ? [{ key: `line${channels.length}`, name: t("everythingElse"), colour: CHART_SERIES_SLATE }] : []),
-  ];
-  const buckets = new Map<string, { first: string; last: string; visits: number[] }>();
+  ].map((entry, index) => (marked ? { ...entry, marks: `dot${index}` } : entry));
+  const buckets = new Map<string, { first: string; last: string; visits: number[]; conversions: number[] }>();
   for (const point of [...points].sort((left, right) => left.day.localeCompare(right.day))) {
     const key = step === "day" ? point.day : step === "week" ? weekStart(point.day) : point.day.slice(0, 7);
-    const bucket = buckets.get(key) ?? { first: point.day, last: point.day, visits: series.map(() => 0) };
-    bucket.last = point.day;
+    const bucket = buckets.get(key) ?? { first: point.day, last: point.day, visits: series.map(() => 0), conversions: series.map(() => 0) };
+    const last = point.lastDay ?? point.day;
+    if (last > bucket.last) bucket.last = last;
     point.visits.forEach((visits, index) => (bucket.visits[index] = (bucket.visits[index] ?? 0) + visits));
+    point.conversions?.forEach((count, index) => (bucket.conversions[index] = (bucket.conversions[index] ?? 0) + count));
     buckets.set(key, bucket);
   }
+  // A week or month held whole is drawn as its average for the step (SF2b), and the hint says so.
+  const coarse = [...buckets.values()].some((bucket) => coarserThanStep(bucket.first, bucket.last, step));
   const data = [...buckets.entries()].map(([key, bucket]) => datedRow(
     { day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last },
-    Object.fromEntries(series.map((entry, index) => [entry.key, bucket.visits[index] ?? 0])),
+    {
+      ...Object.fromEntries(series.map((entry, index) => [entry.key, Math.round(perStep(bucket.visits[index] ?? 0, bucket.first, bucket.last, step) * 10) / 10])),
+      ...(marked ? Object.fromEntries(series.map((_entry, index) => [`dot${index}`, bucket.conversions[index] ?? 0])) : {}),
+    },
     step === "month" ? formatMonth(key) : formatShortDay(bucket.first),
   ));
+  const dotted = marked && data.some((row) => series.some((_entry, index) => Number((row as Record<string, unknown>)[`dot${index}`]) > 0));
   return (
     <SearchConsoleChartCard
       title={title ? title[step] : t(`channelsTitle.${step}`)}
-      hint={title ? title.hint : t("channelsHint", { period: tf(`periods.${period}`) })}
+      hint={`${title ? title.hint : t("channelsHint", { period: tf(`periods.${period}`) })}${coarse ? ` ${t(`coarse.${step}`)}` : ""}`}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
       host={host}
@@ -275,7 +305,9 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
       to={to}
       step={step}
     >
-      {data.length > 0 ? <SiteLineChart data={data} series={series} sharedScale /> : <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>}
+      {data.length > 0
+        ? <SiteLineChart data={data} series={series} sharedScale updateKey={updateKey} {...(dotted ? { markLabel: t(`converted.${step}`) } : {})} />
+        : <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>}
     </SearchConsoleChartCard>
   );
 }
@@ -312,12 +344,11 @@ export function ListTopBars({ list, sort, bars, nameOf }: {
   );
 }
 
-/** Channels' chart, read for itself: from the days kept, or asked of Google once for dates or a country that keep none (GA35). */
+/** Channels' chart, read for itself from the channels kept a day, then a week, then a month (GA35; ga-stored-figures-plan.md SF2). */
 export function ChannelsDailyChart() {
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChannelChart, status?.connection?.newestDay ? args : "skip");
-  useLiveAsk(chart?.live ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, chart: "channel" } : null);
   return (
     <ChannelsChart
       channels={chart?.channels ?? []}
@@ -327,13 +358,15 @@ export function ChannelsDailyChart() {
       from={null}
       to={null}
       exportName="google-analytics-channels-daily"
+      marked
+      updateKey={false}
     />
   );
 }
 
 /**
  * Campaigns' chart (GA28; §18.2 board 17): the visits from tagged links a
- * day, read for itself — ready-made, or one device's asked of Google once.
+ * day, read for itself from the campaigns kept a day (ga-stored-figures-plan.md SF12).
  */
 export function CampaignsDailyChart() {
   const t = useTranslations("googleAnalytics.chart");
@@ -341,12 +374,11 @@ export function CampaignsDailyChart() {
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsCampaignChart, status?.connection?.newestDay ? args : "skip");
-  useLiveAsk(chart?.live ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, pages: "campaignSeries" } : null);
   return (
     <ChannelsChart
       channels={[t("visits")]}
       rest={false}
-      points={(chart?.points ?? []).map((point) => ({ day: point.day, visits: [point.visits] }))}
+      points={(chart?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.visits] }))}
       host={status?.host ?? ""}
       from={null}
       to={null}
@@ -357,21 +389,26 @@ export function CampaignsDailyChart() {
 }
 
 /** Lines of views a day added up into the step chosen, one value a line, dated by each bucket's first day. */
-function viewsByStep(step: Step, series: readonly SiteSeries[], lines: ReadonlyArray<ReadonlyArray<{ day: string; views: number }>>): Array<Record<string, unknown>> {
+function viewsByStep(step: Step, series: readonly SiteSeries[], lines: ReadonlyArray<ReadonlyArray<{ day: string; lastDay?: string; views: number }>>): Array<Record<string, unknown>> {
   const buckets = new Map<string, { first: string; last: string; views: number[] }>();
   lines.forEach((points, line) => {
     for (const point of points) {
       const key = step === "day" ? point.day : step === "week" ? weekStart(point.day) : point.day.slice(0, 7);
       const bucket = buckets.get(key) ?? { first: point.day, last: point.day, views: series.map(() => 0) };
       if (point.day < bucket.first) bucket.first = point.day;
-      if (point.day > bucket.last) bucket.last = point.day;
+      const last = point.lastDay ?? point.day;
+      if (last > bucket.last) bucket.last = last;
       bucket.views[line] += point.views;
       buckets.set(key, bucket);
     }
   });
+  // A page's week or month held whole, as its average for the step (ga-stored-figures-plan.md SF2b).
   return [...buckets.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, bucket]) => datedRow(
     { day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last },
-    Object.fromEntries(series.map((entry, index) => [entry.key, bucket.views[index] ?? 0])),
+    {
+      ...Object.fromEntries(series.map((entry, index) => [entry.key, Math.round(perStep(bucket.views[index] ?? 0, bucket.first, bucket.last, step) * 10) / 10])),
+      ...(coarserThanStep(bucket.first, bucket.last, step) ? { coarse: true } : {}),
+    },
     step === "month" ? formatMonth(key) : formatShortDay(bucket.first),
   ));
 }
@@ -397,7 +434,6 @@ export function PagesDailyChart({ pages }: { pages: readonly string[] }) {
   const ready = Boolean(status?.connection?.newestDay);
   const website = useQuery(api.googleAnalyticsChartReads.analyticsChart, ready ? args : "skip");
   const daily = useQuery(api.googleAnalyticsPageReads.analyticsPagesDaily, ready && pages.length > 0 ? { ...args, pages: [...pages] } : "skip");
-  const asking = useLiveAsk(daily && daily.missing.length > 0 ? { ...args, plotted: daily.missing } : null);
   const drawn = pages.flatMap((ref, index) => {
     const page = daily?.pages.find((one) => one.ref === ref);
     return page?.points ? [{ ...page, points: page.points, colour: PLOTTED_COLOURS[index] ?? CHART_SERIES_SLATE }] : [];
@@ -407,11 +443,11 @@ export function PagesDailyChart({ pages }: { pages: readonly string[] }) {
     ...drawn.map((page, index) => ({ key: `page${index}`, name: pathOf(page.address), colour: page.colour })),
   ];
   const data = viewsByStep(step, series, [website?.points ?? [], ...drawn.map((page) => page.points)]);
-  const hint = t("hint", { period: tf(`periods.${period}`) });
+  const hint = `${t("hint", { period: tf(`periods.${period}`) })}${data.some((row) => row.coarse === true) ? ` ${tc(`coarse.${step}`)}` : ""}`;
   return (
     <SearchConsoleChartCard
       title={t(`title.${step}`)}
-      hint={asking === "FAILED" ? `${hint} ${t("askFailed")}` : hint}
+      hint={hint}
       exportName="google-analytics-pages-daily"
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
       host={status?.host ?? ""}

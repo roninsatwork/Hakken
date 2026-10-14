@@ -3,7 +3,7 @@ import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 // Only the lists' own module and utilities: every Analytics read imports this one, so it imports none of them.
-import { KEPT_BY_DEVICE, LIVE_PARTS, emptyRow, slotKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { LIVE_PARTS, emptyRow, slotKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
 
 /**
@@ -121,7 +121,7 @@ export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: 
   };
 }
 
-/** A list a screen asked of Google live and is held until the next collection (GA20, GA23). */
+/** A list a screen asked of Google live — an event's funnel, kept a week (ga-stored-figures-plan.md SF8). */
 export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: string): Promise<Held | null> {
   const parts = await ctx.db
     .query("googleAnalyticsLive")
@@ -139,23 +139,11 @@ export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: 
   };
 }
 
-/** The lists kept only for every device, asked of Google for one device when a screen opens: the pages, events, campaigns and visitors. */
-export type LiveList =
-  | "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"
-  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries" | "product" | "productSeries";
-
-function isLiveList(list: AnalyticsList): list is LiveList {
-  return !KEPT_BY_DEVICE[list];
-}
-
-/** The name a live ask of a page list for one device is held under: another home country's ends with its code (§18.6.1). */
-export function liveAsk(list: LiveList, period: AnalyticsPeriod, from: string, to: string, device: string, country = ""): string {
-  return `${list}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
-}
-
 /**
- * A list for the dates and device chosen: ready-made, or — a page or event
- * list for one device (GA20, §18.6.5) — asked live, `live` until it has been.
+ * A list for the dates and device chosen, ready-made by each run (GA23) for
+ * every device and each (ga-stored-figures-plan.md SF3) — or `LIVE` while a
+ * device's list is not built yet, which the next run builds: nothing is asked
+ * of Google (SF1).
  */
 export async function readFor(
   ctx: Reader,
@@ -169,14 +157,12 @@ export async function readFor(
   /** The home country, as its lists are named: empty for the main one (§18.6.1). */
   country = "",
 ): Promise<Held | "LIVE" | null> {
-  // The lists kept only for every device: one device is asked of Google when the screen opens.
-  if (isLiveList(list) && device !== "") {
-    const every = await readSlot(ctx, holdId, slotKey(list, period, which, "", country));
-    if (keep) keep.every = every;
-    if (!every) return null;
-    return (await readLive(ctx, holdId, liveAsk(list, period, every.from, every.to, device, country))) ?? "LIVE";
-  }
-  return await readSlot(ctx, holdId, slotKey(list, period, which, device, country));
+  // One device's list, with every device's read on the way for What Hakken sees to weigh it against.
+  const every = device !== "" ? await readSlot(ctx, holdId, slotKey(list, period, which, "", country)) : null;
+  if (keep && device !== "") keep.every = every;
+  const own = await readSlot(ctx, holdId, slotKey(list, period, which, device, country));
+  if (own || device === "" || !every) return own;
+  return "LIVE";
 }
 
 // ---------------------------------------------------------------------------
@@ -224,6 +210,14 @@ export const shownRowValidator = v.object({
   title: v.optional(v.string()),
   /** A campaign's source and medium, where its tagged link was: "linkedin.com / social" (§18.6.6). */
   source: v.optional(v.string()),
+  /** Channels' table (ga-channel-pages-plan.md CH9): the conversions a channel started, by the people it first brought. */
+  started: v.optional(v.union(v.number(), v.null())),
+  /** Channels' table: the page group most of a channel's visits land on, and its share. */
+  /** An AI assistant on AI assistants' own page (CH8): its visits Google filed outside its own AI Assistant channel. */
+  elsewhere: v.optional(v.number()),
+  /** A channel's landing page (ga-channel-pages-plan.md CH7): its page group, as the channel's chart groups it. */
+  kind: v.optional(v.string()),
+  landsMost: v.optional(v.union(v.null(), v.object({ kind: v.string(), name: v.union(v.string(), v.null()), share: v.number() }))),
 });
 export type ShownRow = Infer<typeof shownRowValidator>;
 

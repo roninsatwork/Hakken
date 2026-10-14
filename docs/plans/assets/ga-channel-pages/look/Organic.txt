@@ -1,0 +1,24 @@
+# Google Analytics → a channel's page, its landing pages — the approved look (board "Organic" of docs/plans/assets/ga-channel-pages/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Channels
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Conversions
+  figure: Conversions it started
+  figure: Dwell time
+chart-card: Organic Search a day, against the # days before
+  choice: Measure: Visits | Dwell time | Conversions
+chart-card: Where Organic Search lands, by page classification
+chart-card: The pages behind the change
+change-bars
+search: Find a page…
+filter: Classification
+choice: Show: Landing pages | Classifications | Key events | Sources
+table: Page | Visits | Bounce | Pages | Time | Conversions from visits | Change
+  table-bar
+    download: Download CSV
+  table-footer

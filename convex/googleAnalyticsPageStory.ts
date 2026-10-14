@@ -6,13 +6,13 @@ import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { titlesOf } from "./pageTitles";
 import { slotKey } from "./googleAnalyticsCollect";
-import { pageAsk } from "./googleAnalyticsLive";
-import { channelKey, siteNameOf, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
-import { STORY_LISTS, type StoryList } from "./googleAnalyticsPageStoryAsk";
-import { FEW_VISITS, addInto, conversionsOf, readFor, readLive, readSlot, type Counted, type Held } from "./googleAnalyticsRows";
+import { PAGE_FACT_JOIN, channelKey, emptyRow, siteNameOf, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { readPageRows, type PageRows } from "./googleAnalyticsPageLists";
+import { FEW_VISITS, addInto, conversionsOf, readFor, readSlot, type Counted, type Held } from "./googleAnalyticsRows";
 import type { AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { assistantOf, channelOf } from "./utils/aiAssistants";
 import {
+  OTHER_ROWS,
   STORY_JOIN,
   clicksOf,
   devicesOf,
@@ -21,18 +21,27 @@ import {
   readShare,
   sourcesOf,
   viewsPerVisit,
+  joined,
   weekdaysOf,
   whoOf,
 } from "./utils/analyticsPageStory";
 
 /**
  * A page's story on its own All pages screen (docs/plans/active/analytics-page-screen-plan.md
- * §2): what its figures, kept and asked of Google when the screen opens
- * (`googleAnalyticsPageStoryAsk.ts`), come to — each against the website's,
- * its page group's or its own past (PS5). Read with the screen's own query
- * (`googleAnalyticsPageReads.readPage`), so the screen and Ask Hakken say
- * one thing.
+ * §2): what its figures come to — each against the website's, its page
+ * group's or its own past (PS5). Worked out from the shared page lists every
+ * collection keeps (docs/plans/active/ga-stored-figures-plan.md SF13, SF16;
+ * `googleAnalyticsPageLists.ts`), so a page's screen never asks Google
+ * (SF15): `live` until the next run has built them. Read with the screen's
+ * own query (`googleAnalyticsPageReads.readPage`), so the screen and Ask
+ * Hakken say one thing.
  */
+
+/** The parts of a page's story, each worked out from the shared lists. */
+type StoryList =
+  | "channel" | "storyBack" | "storyRead" | "storySourcePages" | "storyPageVisits" | "storyPageRead" | "storyNext" | "storyDevices"
+  | "storyWeekdays" | "storyCountries" | "storyAges" | "storyGenders" | "storyAgesConverted" | "storyGendersConverted" | "storyClicks"
+  | "storyGroupRead";
 
 type Reader = { db: QueryCtx["db"] };
 
@@ -54,7 +63,7 @@ const whoValidator = v.object({
 });
 
 export const storyValidator = v.object({
-  /** Until every list of the story is held: asked of Google when the screen opens. */
+  /** Until the shared lists it is worked out from are built: the next run builds them. */
   live: v.boolean(),
   /** Google held back small groups in one of its answers. */
   thresholded: v.boolean(),
@@ -98,7 +107,7 @@ export const storyValidator = v.object({
     fewVisits: v.boolean(),
   })),
   next: v.array(v.object({
-    kind: v.union(v.literal("page"), v.literal("again"), v.literal("left")),
+    kind: v.union(v.literal("page"), v.literal("again"), v.literal("left"), v.literal("others")),
     key: v.union(v.string(), v.null()),
     address: v.string(),
     title: v.optional(v.string()),
@@ -126,17 +135,14 @@ export type StoryInput = {
   period: AnalyticsPeriod;
   device: string;
   country: string;
-  /** The dates its live asks are named by. */
-  from: string;
-  to: string;
   counted: readonly Counted[];
   /** The page list as read for the screen: every page's views, for its group's reading. */
   pages: readonly ListRow[];
 };
 
-/** A source as people know it, or null for typed in and for Google's "(not set)". */
+/** A source as people know it, or null for typed in, for Google's "(not set)" and for a channel's other sources. */
 function nameOfSource(source: string): string | null {
-  return source === "(direct)" || source === "(not set)" || source === "" ? null : siteNameOf(source, assistantOf);
+  return source === "(direct)" || source === "(not set)" || source === "" || source === OTHER_ROWS ? null : siteNameOf(source, assistantOf);
 }
 
 /**
@@ -165,11 +171,85 @@ function onLines(rows: readonly ListRow[]): ListRow[] {
 
 const counts = (held: Held | null, field: "people" | "views" | "times") => (held?.rows ?? []).map((row) => ({ key: row.key, count: field === "times" ? row.times ?? 0 : row[field] }));
 
+/** Rows added up by `keyOf`, each figure and event. */
+function summed(rows: readonly ListRow[], keyOf: (row: ListRow) => string): ListRow[] {
+  const held = new Map<string, ListRow>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    const into = held.get(key) ?? { ...emptyRow(key), ...(row.times !== undefined ? { times: 0 } : {}) };
+    addInto(into, row);
+    if (row.times !== undefined) into.times = (into.times ?? 0) + row.times;
+    held.set(key, into);
+  }
+  return [...held.values()];
+}
+
+const SHARED = ["landingSource", "landingPagesSeen", "pageNext", "pageClicks", "pageWho", "landingWho", "pageCountry", "pageWeekday"] as const;
+type Shared = Record<(typeof SHARED)[number] | "pageDevice", PageRows>;
+
+/**
+ * A page's rows of every shared list its story is worked out from (SF13), or
+ * null until each is built for the date range and device — and the page
+ * list counts its reading. Kept for each home country (SF7).
+ */
+async function sharedLists(ctx: Reader, input: StoryInput): Promise<Shared | null> {
+  if (!input.pages[0]?.counts.has("scroll")) return null;
+  const out: Partial<Shared> = {};
+  for (const list of SHARED) {
+    // Its readers' countries are every country's, whatever the home country (PS8): kept with the main one's lists.
+    const rows = await readPageRows(ctx, input.holdId, list, input.period, input.device, input.page, "NOW", list === "pageCountry" ? "" : input.country);
+    if (!rows) return null;
+    out[list] = rows;
+  }
+  // Its views on each device, whatever device the screen is set to.
+  const devices = await readPageRows(ctx, input.holdId, "pageDevice", input.period, "", input.page, "NOW", input.country);
+  if (!devices) return null;
+  return { ...out, pageDevice: devices } as Shared;
+}
+
+/**
+ * The story's lists, as the screen's asks of Google named them, worked out
+ * from the shared lists: a landing page's sources, new or returning, and
+ * their reading; who reads it; its days, devices, countries and clicks.
+ */
+function storyFromShared(shared: Shared, page: string, own: ListRow | null, pages: readonly ListRow[], counted: readonly Counted[]): Map<StoryList, Held> {
+  const held = (rows: ListRow[], thresholded = false): Held => ({ rows, from: "", to: "", folded: false, thresholded, cut: false });
+  // A landing page's row: its channel, source and new or returning.
+  const partsOf = (row: ListRow) => {
+    const [channel = "", source = "", returning = ""] = row.key.split(PAGE_FACT_JOIN);
+    return { channel, source, returning };
+  };
+  const sources = shared.landingSource.rows;
+  const sourceOf = (row: ListRow) => channelKey(partsOf(row).channel, partsOf(row).source);
+  const reading = summed(sources, sourceOf).flatMap((row) => ["page_view", "scroll"].map((event) => ({ ...emptyRow(joined(row.key, event)), times: row.counts.get(event) ?? 0 })));
+  const byAge = (row: ListRow) => row.key.split(PAGE_FACT_JOIN)[0] ?? "";
+  const byGender = (row: ListRow) => row.key.split(PAGE_FACT_JOIN)[1] ?? "";
+  const converted = (keyOf: (row: ListRow) => string) => summed(shared.landingWho.rows.map((row) => ({ ...row, times: conversionsOf(row, counted).conversions })), keyOf);
+  return new Map<StoryList, Held>([
+    ["channel", held(summed(sources, sourceOf), shared.landingSource.thresholded)],
+    ["storyBack", held(sources.map((row) => ({ ...row, key: joined(sourceOf(row), partsOf(row).returning) })), shared.landingSource.thresholded)],
+    ["storyRead", held(reading, shared.landingSource.thresholded)],
+    ["storyPageVisits", held(own ? [{ ...own, key: "all" }] : [])],
+    ["storyPageRead", held(own ? [{ ...emptyRow("scroll"), times: own.counts.get("scroll") ?? 0 }] : [])],
+    // A view of this page whose page before is itself is one of its repeats, counted apart.
+    ["storyNext", held(shared.pageNext.rows.filter((row) => row.key !== page), shared.pageNext.thresholded)],
+    ["storyDevices", held(shared.pageDevice.rows, shared.pageDevice.thresholded)],
+    ["storyWeekdays", held(shared.pageWeekday.rows, shared.pageWeekday.thresholded)],
+    ["storyCountries", held(shared.pageCountry.rows, shared.pageCountry.thresholded)],
+    ["storyAges", held(summed(shared.pageWho.rows, byAge), shared.pageWho.thresholded)],
+    ["storyGenders", held(summed(shared.pageWho.rows, byGender), shared.pageWho.thresholded)],
+    ["storyAgesConverted", held(converted(byAge), shared.landingWho.thresholded)],
+    ["storyGendersConverted", held(converted(byGender), shared.landingWho.thresholded)],
+    ["storyClicks", held(shared.pageClicks.rows, shared.pageClicks.thresholded)],
+    ["storyGroupRead", held(pages.map((row) => ({ ...emptyRow(row.key), times: row.counts.get("scroll") ?? 0 })))],
+  ]);
+}
+
 export async function readPageStory(ctx: Reader, input: StoryInput): Promise<PageStory> {
-  const { holdId, page, period, device, country, from, to, counted } = input;
-  const live = new Map<StoryList | "channel", Held | null>();
-  for (const name of [...STORY_LISTS, "channel"] as const) live.set(name, await readLive(ctx, holdId, pageAsk(name, page, period, from, to, device, country)));
-  const held = (name: StoryList | "channel") => live.get(name) ?? null;
+  const { holdId, page, period, device, country, counted } = input;
+  const shared = await sharedLists(ctx, input);
+  const lists = shared ? storyFromShared(shared, page, input.pages.find((row) => row.key === page) ?? null, input.pages, counted) : new Map<StoryList, Held>();
+  const held = (name: StoryList) => lists.get(name) ?? null;
   const money = (row: ListRow) => conversionsOf(row, counted);
 
   // Visits that started here, kept with the landing pages; the website's, with its totals (PS1, PS5).
@@ -196,9 +276,11 @@ export async function readPageStory(ctx: Reader, input: StoryInput): Promise<Pag
 
   // Each source's visits that started here, one line each.
   const channels = onLines(held("channel")?.rows ?? []);
-  const sourcePages = onLines(held("storySourcePages")?.rows ?? []);
+  // The pages visits that started here saw, each once a visit: by source until the shared lists are built.
+  const sourcePages = shared ? [] : onLines(held("storySourcePages")?.rows ?? []);
+  const pagesSeen = shared ? shared.landingPagesSeen.rows : sourcePages;
   // A line's source is the name people know it by, or Google's own word for typed in and for not known.
-  const sources = sourcesOf(channels, sourcePages, onLines(held("storyBack")?.rows ?? []), onLines(held("storyRead")?.rows ?? []), money)
+  const sources = sourcesOf(channels, sourcePages, onLines(held("storyBack")?.rows ?? []), onLines(held("storyRead")?.rows ?? []), money, shared !== null)
     .map((row) => ({ ...row, name: nameOfSource(row.source) === null ? null : row.source, fewVisits: row.visits < FEW_VISITS }));
   const startedVisits = channels.reduce((sum, row) => sum + row.visits, 0);
   const pageVisits = held("storyPageVisits")?.rows[0] ?? null;
@@ -254,10 +336,10 @@ export async function readPageStory(ctx: Reader, input: StoryInput): Promise<Pag
   };
 
   return {
-    live: [...live.values()].some((one) => one === null),
-    thresholded: [...live.values()].some((one) => one?.thresholded === true),
+    live: shared === null,
+    thresholded: [...lists.values()].some((one) => one.thresholded) || shared?.landingPagesSeen.thresholded === true,
     started,
-    differentPages: sourcePages.length > 0 ? differentPages(sourcePages.reduce((sum, row) => sum + row.visits, 0), startedVisits) : null,
+    differentPages: pagesSeen.length > 0 ? differentPages(pagesSeen.reduce((sum, row) => sum + row.visits, 0), startedVisits) : null,
     viewsPerVisit: pageVisits ? viewsPerVisit(pageVisits.views, pageVisits.visits) : null,
     read: pageVisits ? readShare(held("storyPageRead")?.rows ?? [], pageVisits.visits) : null,
     groupRead,

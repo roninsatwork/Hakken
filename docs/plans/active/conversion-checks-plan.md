@@ -241,3 +241,12 @@ Every conversion happens, then the rest.
   and counted from Google's own figures, so CC3's fix is always "choose it on
   the Connection page". The "mark it as a key event; Hakken's access is
   read-only" wording has gone (BT2).
+- **2026-10-13** — Anthony: "can you fix that". Check 11 advised counting
+  Ronins' "Form sent" (209 in 12 months), which was still its link clicks in
+  the days kept, and another session began building on that advice. Check 11
+  now passes over an event that matches one never an enquiry on 5 days in a
+  row (check 10's rule, `lookalikeOf`). Choose what counts says so on that
+  event's row, ticked or not ("Form sent counts the same as Clicked a link to
+  another website…"), and its What Hakken sees no longer says to tick it.
+  Ronins' Tracking health re-run on dev: 4 of 12 checks need a look, check 11
+  passing.

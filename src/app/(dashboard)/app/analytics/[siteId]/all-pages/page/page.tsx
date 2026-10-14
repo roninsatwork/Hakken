@@ -23,7 +23,6 @@ import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { PageLink } from "../../../_components/AnalyticsCells";
 import { TopBars, VisitsChart } from "../../../_components/AnalyticsChart";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
-import { useLiveAsk } from "../../../_components/AnalyticsListScreen";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "../../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
 import { PageStoryCharts, PageStoryFigures, PageStoryNotices, useStoryClicksTable, useStorySourcesTable } from "../../../_components/PageStory";
@@ -74,16 +73,14 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   const hrefFor = useAnalyticsHref(args.siteId);
   const page = useSearchParams().get("key") ?? "";
   const answer = useQuery(api.googleAnalyticsPageReads.analyticsPage, page ? { ...args, page } : "skip");
-  const asking = useLiveAsk(answer?.live ? { ...args, viewed: { ref: page, path: answer.path } } : null);
-  const telling = useLiveAsk(answer?.story.live ? { ...args, story: { ref: page, path: answer.path } } : null);
-  const sourcesTable = useStorySourcesTable(answer?.story, telling, status.host);
-  const clicksTable = useStoryClicksTable(answer?.story, telling, status.host);
+  const sourcesTable = useStorySourcesTable(answer?.story, status.host);
+  const clicksTable = useStoryClicksTable(answer?.story, status.host);
   const [search, setSearch, term] = useSiteSearch();
   const currency = status.connection?.currency ?? null;
   const address = answer?.address ?? "";
   const row = answer?.row ?? null;
-  const rows = answer && !answer.live ? answer.before : undefined;
-  const nameOf = (entry: BeforeRow) => entry.kind === "none" ? t("noPageBefore") : entry.title ?? (entry.kind === "page" ? pathOf(entry.label) : entry.label);
+  const rows = answer?.before;
+  const nameOf = (entry: BeforeRow) => entry.kind === "none" ? t("noPageBefore") : entry.kind === "other" ? t("otherBefore") : entry.title ?? (entry.kind === "page" ? pathOf(entry.label) : entry.label);
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((entry) => !matches || matches(nameOf(entry)) || matches(entry.kind === "page" ? pathOf(entry.label) : entry.key));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "views", name: nameOf });
@@ -137,8 +134,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
       ) : null}
       {answer ? <PageStoryFigures story={answer.story} currency={currency} /> : null}
 
-      {answer?.live && asking === "FAILED" ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
-      {answer ? <PageStoryNotices story={answer.story} asking={telling} /> : null}
+      {answer ? <PageStoryNotices story={answer.story} /> : null}
       <VisitsChart days={answer && !answer.live ? answer.points : []} host={status.host} from={null} to={null} exportName="google-analytics-page" viewsOnly />
       <TopBars
         title={t("beforeTitle")}
@@ -151,7 +147,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
         to={null}
         labels={(value) => formatNumber(value)}
       />
-      {answer ? <PageStoryCharts story={answer.story} asking={telling} host={status.host} /> : null}
+      {answer ? <PageStoryCharts story={answer.story} host={status.host} /> : null}
       {answer ? <DataTable {...sourcesTable} /> : null}
 
       <DataTable
@@ -171,7 +167,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
                 rows={sorted ?? []}
                 columns={[
                   { header: t("pageBefore"), value: (entry) => nameOf(entry) },
-                  { header: t("address"), value: (entry) => entry.kind === "none" ? "" : entry.kind === "site" ? (entry.hosts ?? [entry.key]).join(", ") : entry.label },
+                  { header: t("address"), value: (entry) => entry.kind === "none" || entry.kind === "other" ? "" : entry.kind === "site" ? (entry.hosts ?? [entry.key]).join(", ") : entry.label },
                   { header: t("views"), value: (entry) => entry.views },
                   { header: `${t("share")} (%)`, value: (entry) => Math.round(entry.share * 1000) / 10 },
                 ]}
@@ -180,7 +176,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
           />
         }
         sort={tableSort}
-        empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: answer?.live ? t("asking") : term ? t("noMatch") : t("noBefore") }}
+        empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: answer?.live ? t("collecting") : term ? t("noMatch") : t("noBefore") }}
         footer={pager.footer}
         columns={[
           {
@@ -191,7 +187,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
             // The page cell for all three: a page's title over its address, a website's name over its own, none over what it means.
             cell: (entry) => entry.kind === "page"
               ? <PageLink address={entry.label} href={hrefFor("all-pages/page", { key: entry.key })} title={entry.title} />
-              : <PageLink address={entry.kind === "none" ? t("noPageBeforeLine") : (entry.hosts ?? [entry.key]).join(", ")} href={null} title={nameOf(entry)} />,
+              : <PageLink address={entry.kind === "none" ? t("noPageBeforeLine") : entry.kind === "other" ? t("otherBeforeLine") : (entry.hosts ?? [entry.key]).join(", ")} href={null} title={nameOf(entry)} />,
           },
           { key: "views", header: t("views"), align: "right", sortable: true, cell: (entry) => <span className="font-mono text-[12px] text-foreground">{formatNumber(entry.views)}</span> },
           { key: "share", header: t("share"), align: "right", sortable: true, cell: (entry) => <span className="font-mono text-[12px] text-secondary">{formatPercent(entry.share)}</span> },

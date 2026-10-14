@@ -10,7 +10,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
-import { AnalyticsListScreen, useLiveAsk, type VisitorList } from "../../_components/AnalyticsListScreen";
+import { AnalyticsListScreen, type VisitorList } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChannelsChart, ListTopBars } from "../../_components/AnalyticsChart";
 import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
@@ -69,14 +69,6 @@ function VisitorsHead({ view }: { view: VisitorList }) {
   const [period] = usePeriod();
   const nameOf = useVisitorName();
   const answer = useQuery(api.googleAnalyticsVisitorReads.analyticsVisitors, status?.connection?.newestDay ? args : "skip");
-  const missing = new Set(answer?.missing ?? []);
-  // One device's lists, each asked of Google once.
-  const ask = (list: "visitorType" | "browser" | "age" | "gender" | "visitorSeries") => (missing.has(list) ? { ...args, pages: list } : null);
-  useLiveAsk(ask("visitorType"));
-  useLiveAsk(ask("browser"));
-  useLiveAsk(ask("age"));
-  useLiveAsk(ask("gender"));
-  useLiveAsk(ask("visitorSeries"));
   const figures = answer?.figures ?? null;
   const share = (part: number) => (figures && figures.people > 0 ? formatPercent(Math.min(1, part / figures.people)) : "–");
   const perPerson = (visits: number, people: number | null) => (people ? visits / people : null);
@@ -101,7 +93,7 @@ function VisitorsHead({ view }: { view: VisitorList }) {
       <ChannelsChart
         channels={[t("new"), t("returningLine")]}
         rest={false}
-        points={(answer?.points ?? []).map((point) => ({ day: point.day, visits: [point.new, point.returning] }))}
+        points={(answer?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.new, point.returning] }))}
         host={status?.host ?? ""}
         from={null}
         to={null}

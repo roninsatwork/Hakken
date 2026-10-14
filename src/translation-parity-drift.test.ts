@@ -40,6 +40,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['sites.businessRecord.views.chatgpt', 'Product name (ChatGPT) and a count'],
     ['sites.businessRecord.views.map', 'Product name (Google Maps) and a count'],
     ['sidebar.postureStudio', 'product name'],
+    ['googleAnalytics.channelsPage.map.conversions', '"conv." is the short form in both languages, under a square of Channels\' map'],
     ['admin.newsFollows.add.namePlaceholder', "an example person's name, the same in every language"],
     ['sidebar.roninsRun', 'product name'],
     ['sidebar.roninsRun3D', 'the separate 3D game product name'],

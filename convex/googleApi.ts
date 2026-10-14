@@ -10,11 +10,12 @@
  * again), the account cannot read the property (`ACCESS`), Google is busy or
  * failing (`BUSY` — wait and ask again), the question itself was refused
  * (`REFUSED` — a split the kind of result does not have), or Google could not
- * be reached.
+ * be reached. `BUDGET` is Hakken's own: a Google Analytics run's budget for
+ * the hour is spent, so nothing was asked (ga-stored-figures-plan.md SF17).
  */
 export type GoogleFailure = {
   ok: false;
-  reason: "EXPIRED" | "ACCESS" | "BUSY" | "REFUSED" | "UNREACHABLE";
+  reason: "EXPIRED" | "ACCESS" | "BUSY" | "REFUSED" | "UNREACHABLE" | "BUDGET";
   status: number;
   detail: string;
 };

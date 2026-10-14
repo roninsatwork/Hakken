@@ -1,0 +1,20 @@
+# Google Analytics → Channels — the approved look (board "Main" of docs/plans/assets/ga-channel-pages/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Channels
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Conversions
+  figure: Converts best
+  figure: Key events not counted
+chart-card: Visits a day by channel
+chart-card: Where each channel lands, by page classification
+channel-map
+chart-card: What a visit is worth, by channel
+search: Find a channel…
+filter: Lands most on
+table: Channel | Visits | Dwell time | Conversions | Started | Change | Lands most on
+  table-bar
+    download: Download CSV
+  table-footer

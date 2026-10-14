@@ -23,7 +23,6 @@ import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChangeCell, FigureCell, MoneyCell } from "../../_components/AnalyticsCells";
 import { ChannelsChart, TopBars } from "../../_components/AnalyticsChart";
 import { BeforeLine } from "../../_components/AnalyticsFigures";
-import { useLiveAsk } from "../../_components/AnalyticsListScreen";
 import { formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
@@ -66,11 +65,6 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
   const [device] = useDevice();
   const currency = status.connection?.currency ?? null;
   const answer = useQuery(api.googleAnalyticsProductReads.analyticsProducts, args);
-  const missing = new Set(answer?.missing ?? []);
-  // One device's lists, each asked of Google once.
-  useLiveAsk(missing.has("event") ? { ...args, pages: "event" } : null);
-  useLiveAsk(missing.has("product") ? { ...args, pages: "product" } : null);
-  useLiveAsk(missing.has("productSeries") ? { ...args, pages: "productSeries" } : null);
   // Any category in the address: the list holds it to the shop's own (`analyticsProductList`).
   const [category, setCategory] = useSiteParam<string>("category", "");
   const [search, setSearch, settled] = useSiteSearch();
@@ -125,7 +119,7 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
       <ChannelsChart
         channels={[t("bought")]}
         rest={false}
-        points={(answer?.points ?? []).map((point) => ({ day: point.day, visits: [point.bought] }))}
+        points={(answer?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.bought] }))}
         host={status.host}
         from={null}
         to={null}
@@ -144,7 +138,7 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
         ) : undefined}
         cardHeader={
           <TableBar footer={paged.footer} noun="products" actions={<ProductsDownload args={listArgs} currency={currency} host={status.host} />}>
-            <span className="text-[12px] text-secondary">{paged.result?.live ? t("asking") : bar}</span>
+            <span className="text-[12px] text-secondary">{paged.result?.live ? t("collecting") : bar}</span>
           </TableBar>
         }
         sort={order.tableSort}

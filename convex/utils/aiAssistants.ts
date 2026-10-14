@@ -24,6 +24,17 @@ export const AI_ASSISTANT_SOURCES: ReadonlyArray<{ name: string; sources: readon
   { name: "Poe", sources: ["poe.com"] },
 ];
 
+/**
+ * Every source an assistant's visit can carry, as Google is asked for them
+ * exactly (ga-channel-pages-plan.md CH13): each website with and without
+ * `www.`, and each assistant's bare name as a tagged link writes it.
+ */
+export const AI_SOURCE_VALUES: readonly string[] = [...new Set([
+  ...AI_ASSISTANT_SOURCES.flatMap((assistant) => assistant.sources.flatMap((source) => [source, `www.${source}`])),
+  ...AI_ASSISTANT_SOURCES.map((assistant) => assistant.name.toLowerCase().replace(/[\s.]+/g, "")),
+  "openai", "bard",
+])];
+
 /** Google's own channel for them, as `sessionDefaultChannelGroup` names it. */
 export const GOOGLE_AI_CHANNEL = "AI Assistant";
 

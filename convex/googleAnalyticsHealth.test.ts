@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { DAY_JOIN, emptyRow } from "./googleAnalyticsLists";
-import { copiesAmong, daysAlike, enquiriesUncounted, neverHappening, somethingElse, timesByDay } from "./googleAnalyticsHealth";
+import { copiesAmong, daysAlike, enquiriesUncounted, lookalikeOf, neverHappening, somethingElse, timesByDay } from "./googleAnalyticsHealth";
 
 /**
  * Tracking health's bell alerts (docs/plans/active/google-analytics-plan.md
@@ -127,6 +127,20 @@ describe("what each conversion really is", () => {
     expect(enquiriesUncounted(COUNTED, year, seriesOf(after)).map((row) => row.eventName)).toEqual(["ronins_enquiry_sent"]);
     // Ticked, it is counted as itself.
     expect(enquiriesUncounted([...COUNTED, "contact", "ronins_enquiry_sent"], year, seriesOf(before))).toEqual([]);
+  });
+
+  test("an uncounted event copying link clicks is no enquiry, however it is named", () => {
+    // Ronins on 2026-10-13: "contact" counted, "Form sent" not, and still its link clicks in the days kept —
+    // check 11 advised counting it, which would have priced 209 link clicks as enquiries for the year.
+    const year = [{ eventName: "contact", times: 68 }, { eventName: "click", times: 209 }, { eventName: "form_submission", times: 209 }];
+    const counted = ["contact", "live_chat_event", "phone_number_click", "email_link_click"];
+    expect(enquiriesUncounted(counted, year, seriesOf(before))).toEqual([]);
+    expect(lookalikeOf("form_submission", seriesOf(before))).toEqual({ other: "click", days: 8 });
+    // Rebuilt from "contact", it differs from the clicks from the first day after, and is not named as them.
+    const after = { ...before, [day(13)]: { click: 2, contact: 1, form_submission: 1 } };
+    expect(lookalikeOf("form_submission", seriesOf(after))).toBeNull();
+    // An event never an enquiry is never another's lookalike.
+    expect(lookalikeOf("click", seriesOf(before))).toBeNull();
   });
 
   test("listed events counting the same day for day are paired for Choose what counts, the first in the list's order named", () => {

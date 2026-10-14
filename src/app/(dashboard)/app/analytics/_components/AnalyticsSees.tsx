@@ -27,8 +27,14 @@ import { useEventName } from "./useEventName";
  * page of this website's section, with the dates and device chosen
  * (`segment`, `filters`), or to an address of its own (`url`).
  */
-export function AnalyticsSees({ screen, seen, currency, keep = true }: {
+export function AnalyticsSees({ screen, seen, currency, keep = true, names }: {
   screen: string;
+  /**
+   * Words for the codes a rule sends in `text` or `more`, where the reader
+   * wants a name: a page group's id read as its classification's name
+   * (ga-channel-pages-plan.md CH12). Null leaves a value as sent.
+   */
+  names?: (value: string) => string | null;
   seen: Seen | null | undefined;
   currency: string | null | undefined;
   /** Saved as the company's advice (`useNoteAdvice`): not for Live, worked out each minute and never kept (GA34). */
@@ -39,8 +45,15 @@ export function AnalyticsSees({ screen, seen, currency, keep = true }: {
   const hrefOf = useAnalyticsHref(siteId);
   const nameOf = useEventName();
   const locale = useLocale();
-  useNoteAdvice(keep ? siteId : null, `googleAnalytics.seen.${screen}`, seen, currency);
-  if (!seen || seen.says.length === 0) return null;
+  const named = <Phrase extends SeenPhrase>(phrase: Phrase): Phrase => (names ? {
+    ...phrase,
+    ...(phrase.text !== undefined ? { text: names(phrase.text) ?? phrase.text } : {}),
+    ...(phrase.more !== undefined ? { more: names(phrase.more) ?? phrase.more } : {}),
+  } : phrase);
+  // Saved as the reader reads it: a page group by its name, never its id, so Ask Hakken says the same.
+  const box = seen && names ? { says: seen.says.map(named), steps: seen.steps.map(named) } : seen;
+  useNoteAdvice(keep ? siteId : null, `googleAnalytics.seen.${screen}`, box, currency);
+  if (!box || box.says.length === 0) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const events = (text: string) => eventList(text, nameOf, locale);
   const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, valuesOf(phrase, currency, events));
@@ -48,8 +61,8 @@ export function AnalyticsSees({ screen, seen, currency, keep = true }: {
     if (to.url) return to.url.startsWith("/") ? { href: to.url } : { href: to.url, external: true };
     return { href: hrefOf(to.segment ?? "", to.filters) };
   };
-  const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
-  return <HakkenSees says={seen.says.map(words)} steps={steps} advice={seenAdvice(seen)} />;
+  const steps: HakkenSeesStep[] = box.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
+  return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} />;
 }
 
 /** Conversions' events, sent joined by commas, by their own names in the reader's language, as it lists them. */
@@ -81,6 +94,8 @@ export function valuesOf(
     text: phrase.text ?? "",
     more: phrase.more ?? "",
     event: events(phrase.text ?? ""),
+    // A second event, in `more`: what a conversion really is (ga-channel-pages-plan.md R3).
+    moreEvent: events(phrase.more ?? ""),
   };
 }
 

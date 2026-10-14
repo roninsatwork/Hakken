@@ -35,6 +35,8 @@ export type TableNoun =
   | "mentions" | "places"
   // Google Analytics (google-analytics-plan.md §5): channels, a channel's sources, landing pages, kinds of conversion.
   | "channels" | "sources" | "landingPages" | "conversionKinds"
+  // A channel's own page (ga-channel-pages-plan.md CH7): every key event of the property.
+  | "keyEvents"
   // A page's own screen (§18.2 board 21): where its views came from just before.
   | "pagesAndWebsites"
   // Events and an event's own screen (§18.2 boards 22, 23): the events, and the files, videos and depths they were about.

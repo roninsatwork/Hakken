@@ -6,6 +6,7 @@ import { CheckCircle2, ChevronDown, Clock3, Repeat2, Trash2 } from "lucide-react
 import { useTranslations } from "next-intl";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
+import { FieldLabel } from "@/src/ui/components/screens/SettingsCard";
 import {
   addTargetedTime,
   formatUtcPreview,
@@ -45,8 +46,8 @@ function SelectShell(props: {
   label: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 min-w-[220px]">
-      <label className="text-[10px] font-mono tracking-[0.28em] text-muted uppercase">{props.label}</label>
+    <div className="flex flex-col gap-1.5 min-w-[220px]">
+      <FieldLabel>{props.label}</FieldLabel>
       <div className="relative">
         {props.children}
         <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -159,17 +160,20 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
       </div>
 
       {draft.mode === "recurring" ? (
-        <div className="flex flex-wrap items-end gap-6">
-          <div className="flex min-w-[320px] flex-col gap-2">
-            <label className="text-[10px] font-mono tracking-[0.28em] text-muted uppercase">{t("fields.interval.executionInterval")}</label>
-            <div className="grid grid-cols-4 rounded-[12px] border border-border-dim p-1">
+        // Lined up by their tops, every label the shared field's: the time's UTC hint below it no longer lifts its box
+        // above the switch beside it (Anthony, 2026-10-14: "the time looks off and not centred").
+        <div className="flex flex-wrap items-start gap-6">
+          <div className="flex min-w-[320px] flex-col gap-1.5">
+            <FieldLabel>{t("fields.interval.executionInterval")}</FieldLabel>
+            {/* The shared field's own height (46px, `Field`), so the switch and the time beside it are one height. */}
+            <div className="grid h-[46px] grid-cols-4 rounded-[12px] border border-border-dim p-1">
               {cadenceOptions.map((option) => (
                 // Stays raw: a segmented-control cell whose fill swaps with selection — matches no variant.
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => update({ cadence: option.id })}
-                  className={`rounded-[8px] px-4 py-2.5 text-[13px] font-bold transition-all ${
+                  className={`rounded-[8px] px-4 text-[13px] font-bold transition-all ${
                     draft.cadence === option.id ? "bg-foreground/10 text-foreground" : "text-muted hover:bg-foreground/5 hover:text-foreground"
                   }`}
                 >

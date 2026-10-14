@@ -1,4 +1,4 @@
-import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
+import { PAGE_FACT_LISTS, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
 import type { ReportRow } from "./googleAnalyticsApi";
 import { PART_ROWS, packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
 
@@ -43,8 +43,8 @@ export const EVENT_METRICS = ["eventCount", "eventValue", "sessions"] as const;
 export const EVENT_LIST_METRICS = ["eventCount", "totalUsers", "sessions"] as const;
 
 /** The lists of events: one ask each, with their own figures, never joined to the key events. */
-export function isEventList(list: AnalyticsList): list is "event" | "eventSeries" {
-  return list === "event" || list === "eventSeries";
+export function isEventList(list: AnalyticsList): list is "event" {
+  return list === "event";
 }
 
 /**
@@ -56,8 +56,8 @@ export function isEventList(list: AnalyticsList): list is "event" | "eventSeries
 export const ITEM_METRICS = ["itemsViewed", "itemsAddedToCart", "itemsPurchased", "itemRevenue"] as const;
 
 /** The lists of products: one ask each, with their own figures. */
-export function isItemList(list: AnalyticsList): list is "product" | "productSeries" {
-  return list === "product" || list === "productSeries";
+export function isItemList(list: AnalyticsList): list is "product" {
+  return list === "product";
 }
 
 /** The shop's four steps (§18.6.6), read from the events list: a website with any in the last 90 days is a shop. */
@@ -74,48 +74,78 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   page: ["pagePath"],
   series: ["date"],
   event: ["eventName"],
-  eventSeries: ["date", "eventName"],
   campaign: ["sessionCampaignName", "sessionSource", "sessionMedium"],
   adKeyword: ["sessionManualTerm"],
-  campaignSeries: ["date", "sessionCampaignName"],
   visitorType: ["newVsReturning"],
   browser: ["browser"],
   system: ["operatingSystem"],
   age: ["userAgeBracket"],
   gender: ["userGender"],
   interest: ["brandingInterest"],
-  visitorSeries: ["date", "newVsReturning"],
   product: ["itemName", "itemCategory"],
-  productSeries: ["date"],
   // With its first source, so an assistant's referrals count as AI assistants, as the screens show them (utils/aiAssistants.ts).
   firstChannel: ["firstUserDefaultChannelGroup", "firstUserSource"],
   landingChannel: ["landingPage", "sessionDefaultChannelGroup"],
+  // Asked for AI assistants' sources only (`AI_SOURCE_VALUES`): every assistant visit by its landing page, whichever channel Google filed it under.
+  landingAssistant: ["landingPage", "sessionDefaultChannelGroup", "sessionSource"],
+  // The shared page lists (SF13), each keyed by page first.
+  landingSource: ["landingPage", "sessionDefaultChannelGroup", "sessionSource", "newVsReturning"],
+  pageReferrer: ["pagePath", "pageReferrer"],
+  // Worked out from the page before, read the other way: never asked of its own.
+  pageNext: ["pagePath", "pageReferrer"],
+  pageClicks: ["pagePath", "eventName", "linkUrl"],
+  pageWho: ["pagePath", "userAgeBracket", "userGender"],
+  landingWho: ["landingPage", "userAgeBracket", "userGender"],
+  pageCountry: ["pagePath", "countryId"],
+  landingPagesSeen: ["landingPage", "pagePath"],
+  pageWeekday: ["pagePath", "dayOfWeek"],
+  // A page's views on each device: asked with every device's shared lists only.
+  pageDevice: ["pagePath", "deviceCategory"],
+  // An event by the pages it happened on, and by what it was about (`EVENT_DETAIL`: one ask a detail).
+  eventPage: ["eventName", "pagePath"],
+  eventDetail: ["eventName"],
 };
 
-/** Whether a list is kept by device (GA20): the small ones and the long charts; the page lists only for every device. */
+/**
+ * Whether a list is kept by device: every list a screen shows for one device
+ * (ga-stored-figures-plan.md SF3, SF4; Anthony, 2026-10-14: "why do we not
+ * store it"), so choosing a device never asks Google. Kept for every device
+ * only: Insights' first channel, read only for every device.
+ */
 export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   total: true,
   channel: true,
-  series: true,
-  landing: false,
-  page: false,
-  // Every device only: a device chosen asks Google when the screen opens, as the page lists do.
-  event: false,
-  eventSeries: false,
-  campaign: false,
-  adKeyword: false,
-  campaignSeries: false,
-  visitorType: false,
-  browser: false,
-  system: false,
-  age: false,
-  gender: false,
-  interest: false,
-  visitorSeries: false,
-  product: false,
-  productSeries: false,
+  // Insights' year a day, read for every device only.
+  series: false,
+  landing: true,
+  page: true,
+  event: true,
+  campaign: true,
+  adKeyword: true,
+  visitorType: true,
+  browser: true,
+  system: true,
+  age: true,
+  gender: true,
+  interest: true,
+  product: true,
   firstChannel: false,
-  landingChannel: false,
+  // A landing page's channels, for its own screen and a channel's page, for each device (SF5).
+  landingChannel: true,
+  landingAssistant: true,
+  // The shared page lists: each device asked on its own (`googleAnalyticsPageLists`).
+  landingSource: true,
+  pageReferrer: true,
+  pageNext: true,
+  pageClicks: true,
+  pageWho: true,
+  landingWho: true,
+  pageCountry: true,
+  landingPagesSeen: true,
+  pageWeekday: true,
+  pageDevice: false,
+  eventPage: true,
+  eventDetail: true,
 };
 
 /** Visitors' lists (§18.6.6), in the order the screen's switch offers them. */
@@ -151,6 +181,36 @@ export function splitChannelKey(key: string): { channel: string; source: string 
   const at = key.indexOf(JOIN);
   return at < 0 ? { channel: key, source: "" } : { channel: key.slice(0, at), source: key.slice(at + JOIN.length) };
 }
+
+/**
+ * What leads an ask: the day, the device — or, for the past kept by week and
+ * month (ga-stored-figures-plan.md SF5), Google's ISO week (`202641`) or
+ * month (`202610`), each read as the day it starts.
+ */
+export type Lead = "date" | "deviceCategory" | "isoYearIsoWeek" | "yearMonth" | "landingPage";
+
+/** An ISO week's Monday: `202641` as `2026-10-05`. */
+export function isoWeekStart(code: string): string {
+  const year = Number(code.slice(0, 4));
+  const week = Number(code.slice(4));
+  // The 4th of January is always in week 1; its Monday starts week 1.
+  const fourth = Date.UTC(year, 0, 4);
+  const monday = fourth - ((new Date(fourth).getUTCDay() + 6) % 7) * 86_400_000;
+  return new Date(monday + (week - 1) * 7 * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** A lead key as the day it stands for: a date, a week's Monday, a month's first day; a device as it is, lower case. */
+function leadValue(lead: Lead, value: string): string {
+  if (lead === "date") return dayOf(value);
+  if (lead === "isoYearIsoWeek") return /^\d{6}$/.test(value) ? isoWeekStart(value) : value;
+  if (lead === "yearMonth") return /^\d{6}$/.test(value) ? `${value.slice(0, 4)}-${value.slice(4, 6)}-01` : value;
+  // A page's path as Google names it: paths are case-sensitive (the 500 busiest pages' stories, SF5b).
+  if (lead === "landingPage") return value;
+  return value.toLowerCase();
+}
+
+/** The parts of a shared page list's key past its page (SF13). */
+export const PAGE_FACT_JOIN = "\u001e";
 
 /** Google's `20261009` as `2026-10-09`. */
 export function dayOf(date: string): string {
@@ -195,19 +255,19 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "total") return "";
   if (list === "channel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   if (list === "series") return dayOf(keys[0] ?? "");
-  if (list === "eventSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${keys[1] ?? ""}`;
-  if (list === "campaignSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${isUntagged(keys[1] ?? "") ? UNTAGGED : keys[1]}`;
   // A campaign with where its link was: "linkedin.com / social"; every untagged visit as one row.
   if (list === "campaign") return isUntagged(keys[0] ?? "") ? UNTAGGED : channelKey(keys[0] ?? "", `${keys[1] ?? ""} / ${keys[2] ?? ""}`);
   if (list === "adKeyword") return isUntagged(keys[0] ?? "") ? UNTAGGED : keys[0] ?? "";
-  if (list === "visitorSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${keys[1] ?? ""}`;
-  if (list === "productSeries") return dayOf(keys[0] ?? "");
   // A product with its category: one name can sit in two.
   if (list === "product") return channelKey(keys[0] ?? "", keys[1] ?? "");
   // A landing page with the channel of its visits (Insights, §8): the page numbered as Landing pages' are.
   if (list === "landingChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
+  // A landing page with Google's channel and the assistant's source: the page first, as `landingChannel`'s, the rest one key.
+  if (list === "landingAssistant") return channelKey(keys[0] ?? "", channelKey(keys[1] ?? "", keys[2] ?? ""));
   // The channel that first brought a person, with the source it came by.
   if (list === "firstChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
+  // A shared page list (SF13): the page first, the rest of its keys one key beside it.
+  if ((PAGE_FACT_LISTS as readonly string[]).includes(list)) return channelKey(keys[0] ?? "", keys.slice(1).join(PAGE_FACT_JOIN));
   return keys[0] ?? "";
 }
 
@@ -219,7 +279,7 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
  */
 export function joinAsks(
   list: AnalyticsList,
-  lead: readonly ("date" | "deviceCategory")[],
+  lead: readonly Lead[],
   main: readonly ReportRow[],
   events: readonly ReportRow[],
   /** The events counted once a visit: their visits, not their times (`EVENT_METRICS`). */
@@ -238,7 +298,7 @@ export function joinAsks(
   };
   // Each figure goes to its own device's group and, when kept by device, to every device's too.
   const targets = (keys: readonly string[]) => {
-    const leadKeys = keys.slice(0, lead.length).map((value, index) => (lead[index] === "date" ? dayOf(value) : value.toLowerCase()));
+    const leadKeys = keys.slice(0, lead.length).map((value, index) => leadValue(lead[index], value));
     const key = rowKey(list, keys.slice(lead.length, lead.length + width));
     if (deviceAt < 0) return [rowOf(leadKeys, key)];
     const every = [...leadKeys];
@@ -325,8 +385,11 @@ export type PackedPart = {
  * or not.
  */
 export function packList(list: AnalyticsList, rows: readonly ListRow[], events: readonly string[]): PackedPart[] {
-  const sorted = list === "series" || list === "eventSeries" || list === "campaignSeries" || list === "visitorSeries" || list === "productSeries"
-    ? [...rows].sort((left, right) => left.key.localeCompare(right.key))
+  // A day's series by its days, and a shared page list by its pages (SF13), so a page's rows sit together.
+  const sorted = list === "series"
+    || (PAGE_FACT_LISTS as readonly string[]).includes(list)
+    // In the database's own order — by code unit, never by locale — so a page's rows are found by `firstKey` (`readPageRows`).
+    ? [...rows].sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0))
     : [...rows].sort((left, right) => (
       list === "page" || list === "product" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits
     ) || left.key.localeCompare(right.key));

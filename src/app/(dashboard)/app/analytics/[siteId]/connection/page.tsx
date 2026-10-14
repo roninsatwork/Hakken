@@ -66,7 +66,7 @@ function ConnectionBody({ status }: { status: AnalyticsStatus }) {
   return (
     <>
       {connection && choosing ? (
-        <AnalyticsSees screen="chooseEvents" seen={chooseEventsSees(status.host, connection.events)} currency={currency} />
+        <AnalyticsSees screen="chooseEvents" seen={chooseEventsSees(status.host, connection.events, new Set(connection.copies.filter((copy) => NEVER_TICKED.has(copy.of)).map((copy) => copy.eventName)))} currency={currency} />
       ) : connection ? (
         <AnalyticsSees screen="connection" seen={connectionSees(status.host, connection.status, connection.events)} currency={currency} />
       ) : null}
@@ -241,6 +241,12 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
     const words = { other: nameOf(pair.eventName), name: nameOf(eventName) };
     return first?.keyEvent !== false && second?.keyEvent === false ? t("copyOf", words) : t("sameAs", words);
   };
+  // An event that copies one never an enquiry, day for day (Ronins' "Form sent", its link clicks): said ticked or not,
+  // since ticking it counts the copied clicks as enquiries for the whole year.
+  const lookalikeNote = (eventName: string): string | null => {
+    const lookalike = connection.copies.find((copy) => copy.eventName === eventName && NEVER_TICKED.has(copy.of));
+    return lookalike ? t("isReally", { name: nameOf(eventName), other: nameOf(lookalike.of) }) : null;
+  };
   const invalid = events.some((event) => {
     const draft = draftOf(event.eventName);
     return draft.counted && draft.value.trim() !== "" && !(Number(draft.value) >= 0);
@@ -279,6 +285,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                 {NEVER_TICKED.has(event.eventName) && !draft.counted ? <p className="pl-7 text-[12px] text-muted">{t("neverTicked")}</p> : null}
                 {event.keyEvent === false ? <p className="pl-7 text-[12px] text-muted">{t("notKeyEvent", { platformName })}</p> : null}
                 {copyNote(event.eventName) ? <p className="pl-7 text-[12px] text-muted">{copyNote(event.eventName)}</p> : null}
+                {lookalikeNote(event.eventName) ? <p className="pl-7 text-[12px] text-muted">{lookalikeNote(event.eventName)}</p> : null}
                 {draft.counted && event.analyticsValue === null ? (
                   <div className="flex flex-col items-start gap-3 pl-7">
                     <SiteViewSwitch

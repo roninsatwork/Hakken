@@ -1,3 +1,5 @@
+import { collectPageDays } from "./googleAnalyticsPageSeries";
+import { collectPageLists, pageListJobs, type PageListsJob } from "./googleAnalyticsPageLists";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
@@ -21,6 +23,8 @@ import {
   type StepResult,
 } from "./googleAnalyticsCollect";
 import { COUNTED_WITH } from "./googleAnalyticsSchema";
+import { countriesKeptReady } from "./searchConsoleCountries";
+import { isTrackedHold } from "./utils/websitePairing";
 
 /**
  * The Google Analytics: Collector Agent's job (docs/plans/active/google-analytics-plan.md
@@ -47,11 +51,43 @@ import { COUNTED_WITH } from "./googleAnalyticsSchema";
 
 export const GOOGLE_ANALYTICS_ROLE = "GOOGLE_ANALYTICS_COLLECTOR";
 
-/** The gap between websites' runs starting: one Google account reading many properties shares Google's limits. */
+/**
+ * Websites' runs start spread out, never all at once (ga-stored-figures-plan.md
+ * SF19): two minutes apart, closer when there are many, all within the first
+ * 12 minutes — a run waiting longer to start would read as stalled
+ * (`ROLE_RUN_LIVE_MS`) — and never closer than five seconds.
+ */
 const STAGGER_MS = 5_000;
+const MOST_GAP_MS = 2 * 60 * 1000;
+const SPREAD_MS = 12 * 60 * 1000;
+
+/** The gap between websites' runs starting, for this many websites. */
+export function startGap(websites: number): number {
+  return Math.max(STAGGER_MS, Math.min(MOST_GAP_MS, Math.floor(SPREAD_MS / Math.max(1, websites))));
+}
 
 /** Connections read per page when listing every connected website. */
 const CONNECTIONS_PER_READ = 500;
+
+/**
+ * A website's run through the night (docs/plans/active/ga-stored-figures-plan.md
+ * SF17–SF20): once its budget for the hour is spent — or Google refuses for
+ * an allowance that refreshes "within an hour but not necessarily on the
+ * whole hour boundaries" (Google's quota page) — it asks nothing more for an
+ * hour and two minutes, looking in every ten minutes so it reads as going
+ * (`ROLE_RUN_LIVE_MS`), then carries on where it left off. No run waits on a
+ * person (AGENTS.md); past the night it stops, and the next night asks again.
+ */
+const NIGHT_MS = 4.5 * 60 * 60 * 1000;
+const LOOK_IN_MS = 10 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+/** Past the hour before carrying on, so Google's count has refreshed. */
+const AFTER_THE_HOUR_MS = 2 * 60 * 1000;
+
+/** When a run waiting for Google's hourly allowance carries on: an hour and two minutes after it stopped. */
+export function afterTheHour(now: number): number {
+  return now + HOUR_MS + AFTER_THE_HOUR_MS;
+}
 
 const NOT_HISTORY = "The newest day and the last two again; a website with nothing held gets the 60 days kept, and its 90 days and 12 months are asked of Google ready-made.";
 
@@ -61,6 +97,27 @@ type Site = { connectionId: Id<"googleAnalyticsConnections">; companyId: Id<"com
 function collectingNow(run: Doc<"agentRuns"> | null, now: number): boolean {
   return run !== null && (run.status === "QUEUED" || run.status === "RUNNING") && now - lastMoved(run) < ROLE_RUN_LIVE_MS;
 }
+
+/** A run waiting for the hour, marked as going without a line in its log. */
+export const lookIn = internalMutation({
+  args: { runId: v.id("agentRuns") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (run && (run.status === "QUEUED" || run.status === "RUNNING")) await ctx.db.patch(args.runId, { updatedAt: Date.now() });
+    return null;
+  },
+});
+
+/** Whether a website's run is still queued or running: a cancelled one stops at its next step. */
+export const runGoing = internalQuery({
+  args: { runId: v.id("agentRuns") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    return run !== null && (run.status === "QUEUED" || run.status === "RUNNING");
+  },
+});
 
 /**
  * What the Collector's run collects: every website connected to Google
@@ -125,8 +182,9 @@ export const runGoogleAnalyticsCollectorNow = internalAction({
         runId: args.runId,
         text: `${sites.length === 1 ? "1 website is" : `${sites.length} websites are`} connected to Google Analytics: ${hosts}. Each gets a run of its own.`,
       });
+      const gap = startGap(sites.length);
       for (const [index, site] of sites.entries()) {
-        const started = await ctx.runMutation(internal.googleAnalyticsAgentRun.startSiteRun, { parentRunId: args.runId, ...site, delayMs: index * STAGGER_MS });
+        const started = await ctx.runMutation(internal.googleAnalyticsAgentRun.startSiteRun, { parentRunId: args.runId, ...site, delayMs: index * gap });
         await ctx.runMutation(internal.roleRuns.logRunLine, {
           runId: args.runId,
           companyId: site.companyId,
@@ -174,6 +232,13 @@ async function beginSiteRun(
   const now = Date.now();
   const top = newestWholeDayIn(now, connection.timeZone ?? "Europe/London");
   const window = recount ? analyticsWindow(undefined, undefined, top) : analyticsWindow(connection.newestDay, connection.oldestDay, top);
+  // Each other home country's days, from where it stands (ga-stored-figures-plan.md SF7): a new one's 90 days, then its new days.
+  const hold = await ctx.db.get(connection.companyWebsiteId);
+  const others = hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [];
+  const countryFrom = others.map((country) => {
+    const held = connection.countryHistory?.find((one) => one.country === country);
+    return { country, from: (recount ? analyticsWindow(undefined, undefined, top) : analyticsWindow(held?.newestDay, held?.oldestDay, top)).from };
+  });
   const runId = await ctx.db.insert("agentRuns", {
     agentId,
     triggerType: "EVENT",
@@ -207,6 +272,8 @@ async function beginSiteRun(
     rows: 0,
     requests: 0,
     recount,
+    countryFrom,
+    begunAt: now,
   });
   return { runId, from: window.from, top: window.top };
 }
@@ -292,12 +359,26 @@ export const collectSiteStep = internalAction({
     requests: v.number(),
     /** Collected again, whole, by Google's own counts (BT4): every list, and the connection marked so when done. */
     recount: v.optional(v.boolean()),
+    /** Each other home country's first day to fetch (SF7), worked out as the run starts so every step agrees. */
+    countryFrom: v.optional(v.array(v.object({ country: v.string(), from: v.string() }))),
+    /** When the run began, for the night it may take (`NIGHT_MS`). */
+    begunAt: v.optional(v.number()),
+    /** Waiting for the hour to turn (SF17, SF20): nothing is asked of Google before this time. */
+    resumeAt: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const finish = (status: "SUCCESS" | "FAILED", summary: string) => finishRun(ctx, args.runId, args.workflowExecutionId, status, summary);
+    // A run cancelled from Admin asks Google for nothing more, whatever step was waiting.
+    if (!(await ctx.runQuery(internal.googleAnalyticsAgentRun.runGoing, { runId: args.runId }))) return null;
+    // Waiting for the hour to turn: looks in, so the run reads as going, and asks Google nothing.
+    if (args.resumeAt !== undefined && Date.now() < args.resumeAt) {
+      await ctx.runMutation(internal.googleAnalyticsAgentRun.lookIn, { runId: args.runId });
+      await ctx.scheduler.runAfter(Math.min(LOOK_IN_MS, args.resumeAt - Date.now()), internal.googleAnalyticsAgentRun.collectSiteStep, args);
+      return null;
+    }
     const started = Date.now();
-    if (args.to === args.top) await ctx.runMutation(internal.roleRuns.markRunStarted, { runId: args.runId });
+    if (args.to === args.top && args.resumeAt === undefined) await ctx.runMutation(internal.roleRuns.markRunStarted, { runId: args.runId });
     try {
       const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
       if (!target || target.status !== "CONNECTED" || target.property !== args.property || target.clearing) {
@@ -320,11 +401,30 @@ export const collectSiteStep = internalAction({
       let weekly = args.weekly;
       let jobAt = args.jobAt;
       let rows = args.rows;
-      let jobs: PeriodJob[] = to === null ? jobsFor(weekly, target.others, target.shop) : [];
+      const countryDays = countryDayJobs(args.countryFrom ?? [], args.top);
+      let jobs: Job[] = to === null ? jobsFor(weekly, target.others, target.shop, countryDays) : [];
       const stop = async (result: Extract<StepResult, { ok: false }>) => {
         if (result.access) {
           await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "NO_ACCESS" });
           await finish("FAILED", `The Google account connected for ${args.host} can no longer read ${args.property} in Google Analytics. Connect it again from its Google Analytics page.`);
+        } else if (result.wait) {
+          // The hour's budget spent, or Google refusing for an allowance that refreshes within the hour (SF17, SF20).
+          const resumeAt = afterTheHour(Date.now());
+          if (resumeAt - (args.begunAt ?? Date.now()) > NIGHT_MS) {
+            await finish("SUCCESS", `Collected ${args.host} as far as the night allowed: ${result.reason}. The rest waits for tomorrow night's run; nothing is lost.`);
+            return;
+          }
+          const at = new Date(resumeAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+          await ctx.runMutation(internal.roleRuns.logRunLine, {
+            runId: args.runId,
+            companyId: args.companyId,
+            heading: "Waiting for the hour",
+            detail: `Kept inside Google's allowances: ${result.reason}. Nothing more is asked of Google until ${at}, when the run carries on where it left off.`,
+            failed: false,
+          });
+          await ctx.scheduler.runAfter(Math.min(LOOK_IN_MS, resumeAt - Date.now()), internal.googleAnalyticsAgentRun.collectSiteStep, {
+            ...args, to, weekly, jobAt, rows, requests: args.requests + open.requests, resumeAt,
+          });
         } else if (result.busy) {
           await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "GOOGLE_BUSY" });
           // Google's own words go with it, so a limit reached reads as which one (conversions-back-in-time-plan.md, phase 5).
@@ -343,18 +443,25 @@ export const collectSiteStep = internalAction({
             return null;
           }
           rows += result.rows;
+          // Each page over time, once the website's pages are held (ga-stored-figures-plan.md SF5).
+          const pages = target.pagesHeld ? await collectPageDays(ctx, open, args.connectionId, target, { from: stepFrom, to }) : null;
+          if (pages && !pages.ok) {
+            await stop(pages);
+            return null;
+          }
           await ctx.runMutation(internal.roleRuns.logRunLine, {
             runId: args.runId,
             companyId: args.companyId,
             heading: days(stepFrom, to),
-            detail: `The totals and channels by device: ${count(result.rows)} rows.`,
+            detail: pages ? `The totals and channels by device: ${count(result.rows)} rows; each page by device: ${count(pages.rows)} rows.` : `The totals and channels by device: ${count(result.rows)} rows.`,
             failed: false,
           });
           to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
           if (to === null) {
-            weekly = args.recount === true || target.untitled || target.eventless
-              || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
-            jobs = jobsFor(weekly, target.others, target.shop);
+            // Everything, every night (Anthony, 2026-10-14: "I want everything once a day"): the 90 days and 12 months,
+            // the page titles and tracking health's weekly checks too — inside Google's allowances (SF17).
+            weekly = true;
+            jobs = jobsFor(weekly, target.others, target.shop, countryDays);
           }
           continue;
         }
@@ -393,7 +500,33 @@ export const collectSiteStep = internalAction({
           return null;
         }
         const job = jobs[jobAt];
-        const result = await collectPeriod(ctx, open, args.connectionId, target, job, args.top);
+        if ("days" in job) {
+          // Another home country's days, and each of its pages once they are held (SF7).
+          const result = await collectDays(ctx, open, args.connectionId, target, { from: job.from, to: job.to }, undefined, job.country);
+          if (!result.ok) {
+            await stop(result);
+            return null;
+          }
+          const held = target.countryHistory.find((one) => one.country === job.country)?.pagesHeld === true;
+          const pages = held ? await collectPageDays(ctx, open, args.connectionId, target, { from: job.from, to: job.to }, job.country) : null;
+          if (pages && !pages.ok) {
+            await stop(pages);
+            return null;
+          }
+          await ctx.runMutation(internal.roleRuns.logRunLine, {
+            runId: args.runId,
+            companyId: args.companyId,
+            heading: `${job.country.toUpperCase()}: ${days(job.from, job.to)}`,
+            detail: `The totals and channels by device for visitors in ${job.country.toUpperCase()}: ${count(result.rows)} rows${pages ? `; each page by device: ${count(pages.rows)} rows` : ""}.`,
+            failed: false,
+          });
+          rows += result.rows + (pages?.rows ?? 0);
+          jobAt += 1;
+          continue;
+        }
+        const result = "pages" in job
+          ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top)
+          : await collectPeriod(ctx, open, args.connectionId, target, job, args.top);
         if (!result.ok) {
           await stop(result);
           return null;
@@ -402,8 +535,9 @@ export const collectSiteStep = internalAction({
         jobAt += 1;
       }
       // The step's few minutes are up: the rest in a step of its own.
+      const { resumeAt: _waited, ...going } = args;
       await ctx.scheduler.runAfter(0, internal.googleAnalyticsAgentRun.collectSiteStep, {
-        ...args,
+        ...going,
         to,
         weekly,
         jobAt,
@@ -417,7 +551,29 @@ export const collectSiteStep = internalAction({
   },
 });
 
-/** The ready-made lists a run asks, in order — the main home country's, then each other's: the same every step of the run. */
-function jobsFor(weekly: boolean, others: readonly string[], shop: boolean): PeriodJob[] {
-  return dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others);
+/** Another home country's days, a step's worth (ga-stored-figures-plan.md SF7). */
+type CountryDaysJob = { days: true; country: string; from: string; to: string };
+type Job = PeriodJob | PageListsJob | CountryDaysJob;
+
+/** Each other home country's days, newest first, a week at a time: from the run's start, so the same every step. */
+function countryDayJobs(countryFrom: ReadonlyArray<{ country: string; from: string }>, top: string): CountryDaysJob[] {
+  return countryFrom.flatMap(({ country, from }) => {
+    const out: CountryDaysJob[] = [];
+    for (let to = top; to >= from;) {
+      const stepFrom = shiftDay(to, -(DAYS_PER_STEP - 1)) > from ? shiftDay(to, -(DAYS_PER_STEP - 1)) : from;
+      out.push({ days: true, country, from: stepFrom, to });
+      to = shiftDay(stepFrom, -1);
+    }
+    return out;
+  });
+}
+
+/**
+ * What a run asks once the main home country's days are in, in order: each
+ * other home country's days, the ready-made lists — the main home country's,
+ * then each other's — and the shared page lists (ga-stored-figures-plan.md
+ * SF13), each country's: the same every step of the run.
+ */
+function jobsFor(weekly: boolean, others: readonly string[], shop: boolean, countryDays: readonly CountryDaysJob[]): Job[] {
+  return [...countryDays, ...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others), ...pageListJobs(weekly, others)];
 }

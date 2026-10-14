@@ -6,6 +6,7 @@ import { useAction, useConvex } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { SearchX } from "lucide-react";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -22,19 +23,18 @@ import { CUT_COLUMN } from "../../sites/_components/SiteCells";
 import { ChangeCell, ConversionsCell, ConversionsChangeCell, ConversionsHereCell, FigureCell, MoneyCell, PageLink, RateCell, TextFigure, ViewsChangeCell } from "./AnalyticsCells";
 import { formatPercent, formatPerVisit, formatTime, pathOf } from "./analyticsFormat";
 import { MOST_PLOTTED, MOVE_VIEWS, type PageMove } from "@/convex/utils/pageMoves";
+import { NO_PAGE_KIND } from "@/convex/utils/sees/analyticsChannel";
+import { AI_ASSISTANTS_CHANNEL } from "@/convex/utils/aiAssistants";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod } from "./useAnalytics";
 import { AnalyticsGate } from "./AnalyticsNotices";
 import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
-/** The lists asked of Google for one device when a screen opens (`googleAnalyticsRows.LiveList`). */
-type LiveList = "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"
-  | "visitorType" | "browser" | "system" | "age" | "gender" | "interest" | "visitorSeries" | "product" | "productSeries";
 export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
 /** Visitors' lists (§18.2 board 15). */
 export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
-type Column = "tick" | "name" | "source" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "value" | "change";
+type Column = "tick" | "name" | "source" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "value" | "change";
 
 const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change"];
 
@@ -48,7 +48,8 @@ const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged
  * their rate, and those against the span before.
  */
 const COLUMNS: Record<ListKind, readonly Column[]> = {
-  channel: ["name", "visits", "engaged", "conversions", "value", "change"],
+  // Channels (ga-channel-pages-plan.md CH9): dwell time, the conversions each started, and the page group most of its visits land on.
+  channel: ["name", "visits", "time", "conversions", "started", "change", "landsMost"],
   source: ["name", "visits", "engaged", "conversions", "value", "change"],
   landing: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
   groups: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
@@ -65,6 +66,12 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
   interest: VISITOR_COLUMNS,
 };
 
+/** A channel's classifications (ga-channel-pages-plan.md CH7): each one's share of the channel's visits beside them. */
+const CHANNEL_GROUP_COLUMNS: readonly Column[] = ["name", "share", "visits", "bounce", "time", "conversions", "change"];
+
+/** AI assistants' own page (CH8): each assistant's visits Google filed outside its AI Assistant channel beside its visits. */
+const ASSISTANT_COLUMNS: readonly Column[] = ["name", "visits", "elsewhere", "engaged", "conversions", "value", "change"];
+
 /** Each list's download: its columns, with the value — and on the page lists engagement too — as columns of their own. */
 const CSV_COLUMNS: Record<ListKind, readonly Column[]> = {
   ...COLUMNS,
@@ -79,6 +86,9 @@ const ONE_LINE: ReadonlySet<ListKind> = new Set(["landing", "groups"]);
 
 /** Which way each heading's first press runs: the most first, names A to Z. */
 const FIRSTS = {
+  share: "desc",
+  elsewhere: "desc",
+  started: "desc",
   name: "asc", visits: "desc", engaged: "desc", bounce: "asc", pages: "desc", people: "desc", time: "desc", views: "desc", conversions: "desc", value: "desc", change: "desc",
   viewsChange: "desc", rate: "desc", conversionsChange: "desc",
 } as const;
@@ -134,7 +144,24 @@ export function AnalyticsListScreen({ header, ...table }: Parameters<typeof Anal
   );
 }
 
-function AnalyticsTable({ list, channel, group, move, plot = false, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head, nameOf }: {
+export type ChannelTable = {
+  /** The channel's visits in these dates, for each classification's share. */
+  visits: number;
+  /** A page group's words, from its id or code (`useKindName`). */
+  kindName: (kind: string) => string;
+};
+
+export function AnalyticsTable({ list, channel, filed, kindName, group, move, plot = false, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head, nameOf, ofChannel }: {
+  /**
+   * A channel's own landing pages or classifications (ga-channel-pages-plan.md
+   * CH7): every device's, as they are kept; each page with its classification,
+   * each classification with its share of the channel's visits.
+   */
+  ofChannel?: ChannelTable;
+  /** AI assistants' sources (CH8): only the visits Google filed under this channel. */
+  filed?: string;
+  /** A page group's words, for Channels' "Lands most on" (CH9). */
+  kindName?: (kind: string) => string;
   /**
    * What the page shows between its title and its table, from the same
    * answer: its What Hakken sees, and a channel's own figures (§14, §15) —
@@ -173,29 +200,30 @@ function AnalyticsTable({ list, channel, group, move, plot = false, noun, search
     list,
     ...(channel !== undefined ? { channel } : {}),
     ...(group !== undefined ? { group } : {}),
+    ...(filed !== undefined ? { filed } : {}),
     ...(settled ? { q: settled } : {}),
     ...(move !== undefined ? { move } : {}),
     sort: order.key,
     direction: order.direction,
   };
   const paged = useSiteListPage(api.googleAnalyticsReads.analyticsListPage, status?.connection?.newestDay ? base : "skip");
+  // A device's list the next collection builds (ga-stored-figures-plan.md SF3): every device's is shown meanwhile.
   const live = paged.result?.live === true;
-  // A page list for one device is asked of Google once; its every device list is shown meanwhile.
   const everyDevice = useSiteListPage(api.googleAnalyticsReads.analyticsListPage, live ? { ...base, device: "" } : "skip");
-  const asking = useLiveAsk(live && list !== "channel" && list !== "source"
-    ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, pages: list === "groups" ? "landing" : list }
-    : null);
   const campaigns = list === "campaign" || list === "adKeyword";
   const shown = live ? everyDevice : paged;
   const currency = status?.connection?.currency ?? null;
   const plotted = usePlotted(shown.pageRows ?? [], plot && list === "page");
-  const columns = COLUMNS[list].filter((column) => column !== "tick" || plotted !== null).map((column) => columnOf(column, list, currency, rowHref, t, nameOf, plotted));
+  const assistants = list === "source" && channel === AI_ASSISTANTS_CHANNEL;
+  const columns = (ofChannel && list === "groups" ? CHANNEL_GROUP_COLUMNS : assistants ? ASSISTANT_COLUMNS : COLUMNS[list])
+    .filter((column) => column !== "tick" || plotted !== null)
+    .map((column) => columnOf(column, list, currency, rowHref, t, nameOf, plotted, ofChannel, assistants, kindName ?? ofChannel?.kindName));
   // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
   const untagged = shown.result?.untagged ?? null;
   const bar = [
     tf(`periods.${period}`), tf(`devices.${device}`).toLowerCase(),
     ...(list === "page" && !live ? [t("moveRule", { views: MOVE_VIEWS })] : []),
-    live ? t("asking") : untagged !== null ? t("untagged", { count: untagged }) : t("greyed"),
+    live ? t("collecting") : untagged !== null ? t("untagged", { count: untagged }) : t("greyed"),
   ].join(" · ");
 
   return (
@@ -203,8 +231,8 @@ function AnalyticsTable({ list, channel, group, move, plot = false, noun, search
       {head ? head(paged.result, plotted?.keys ?? []) : null}
       {live ? (
         <Notice>
-          <span className="block font-medium text-foreground">{asking === "FAILED" ? t("askFailedTitle") : t("askingTitle", { device: tf(`devices.${device}`).toLowerCase() })}</span>
-          <span className="block">{asking === "FAILED" ? t("askFailedBody") : t(campaigns ? "askingBodyCampaigns" : "askingBody", { device: tf(`devices.${device}`).toLowerCase(), platformName })}</span>
+          <span className="block font-medium text-foreground">{t("collectingTitle", { device: tf(`devices.${device}`).toLowerCase() })}</span>
+          <span className="block">{t(campaigns ? "collectingBodyCampaigns" : "collectingBody", { device: tf(`devices.${device}`).toLowerCase(), platformName })}</span>
         </Notice>
       ) : null}
       <DataTable
@@ -242,6 +270,10 @@ function columnOf(
   t: (key: string, values?: Record<string, string | number>) => string,
   nameOf?: (row: ShownRow) => string,
   plotted?: { keys: string[]; tick: (key: string, next: boolean) => void } | null,
+  ofChannel?: ChannelTable,
+  /** AI assistants' own page: its sources are assistants. */
+  assistants = false,
+  kindName?: (kind: string) => string,
 ): DataTableColumn<ShownRow> {
   switch (column) {
     case "tick":
@@ -273,16 +305,19 @@ function columnOf(
     case "name":
       return {
         key: "name",
-        header: t(`columns.${list === "groups" ? "group" : list === "landing" ? "page" : list}`),
+        header: t(`columns.${list === "groups" ? (ofChannel ? "classification" : "group") : list === "landing" ? "page" : assistants ? "assistant" : list}`),
         sortable: true,
         // A page's title and address cut to a line each in their share of the table, as Sites' words are (CUT_COLUMN).
         ...(list === "landing" || list === "page" ? { className: CUT_COLUMN.first } : {}),
-        cell: (row) => list === "landing" || list === "page"
-          ? <PageLink address={row.label} href={rowHref ? rowHref(row) : null} title={row.title} />
+        cell: (row) => list === "landing" && ofChannel && row.kind === NO_PAGE_KIND
+          // The visits Google put to no page: said so, never a link (ga-channel-pages-plan.md CH7).
+          ? <PageLink address={row.label} href={null} title={ofChannel.kindName(NO_PAGE_KIND)} kind={t("noPageLost")} />
+          : list === "landing" || list === "page"
+          ? <PageLink address={row.label} href={rowHref ? rowHref(row) : null} title={row.title} kind={ofChannel && row.kind ? ofChannel.kindName(row.kind) : undefined} />
           : list === "groups"
             ? (
               <span className="flex flex-col leading-tight">
-                <span className="text-[13px] text-foreground">{row.label === "NOT_SORTED" ? t("notSorted") : row.label}</span>
+                <span className="text-[13px] text-foreground">{ofChannel ? ofChannel.kindName(row.key) : row.label === "NOT_SORTED" ? t("notSorted") : row.label}</span>
                 <span className="text-[11.5px] text-muted">{t("pagesCount", { count: row.members ?? 0 })}</span>
               </span>
             )
@@ -290,6 +325,24 @@ function columnOf(
       };
     case "source":
       return { key: "source", header: t("columns.source"), cell: (row) => <span className="text-[12px] text-secondary">{row.source ?? ""}</span> };
+    case "elsewhere":
+      return { key: "elsewhere", header: <span title={t("columns.elsewhereTitle")}>{t("columns.elsewhere")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.elsewhere ? row.elsewhere : null} quiet /> };
+    case "started":
+      return { key: "started", header: <span title={t("columns.startedTitle")}>{t("columns.started")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.started ?? null} /> };
+    case "landsMost":
+      return {
+        key: "landsMost",
+        header: <span title={t("columns.landsMostTitle")}>{t("columns.landsMost")}</span>,
+        cell: (row) => (row.landsMost ? (
+          <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap text-[12px]">
+            <span className="text-foreground">{row.landsMost.name ?? kindName?.(row.landsMost.kind) ?? row.landsMost.kind}</span>
+            <span className="font-mono text-secondary">· {formatPercent(row.landsMost.share)}</span>
+          </span>
+        ) : <NoFigure />),
+      };
+    case "share":
+      // Each row's visits over the channel's: it sorts as the visits do.
+      return { key: "share", header: t("columns.share"), align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(ofChannel && ofChannel.visits > 0 ? row.visits / ofChannel.visits : null)} /> };
     case "visits":
       return { key: "visits", header: t("columns.visits"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.visits} /> };
     case "views":
@@ -309,8 +362,8 @@ function columnOf(
     case "people":
       return { key: "people", header: <span title={t("columns.peopleTitle")}>{t("columns.people")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.people} /> };
     case "time":
-      // All pages calls it dwell time (all-pages-rethink-plan.md AP4); the other lists keep their approved "Time".
-      return { key: "time", header: <span title={t("columns.timeTitle")}>{t(list === "page" ? "columns.dwell" : "columns.time")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatTime(row.timePerVisit)} /> };
+      // All pages and Channels call it dwell time (all-pages-rethink-plan.md AP4, ga-channel-pages-plan.md CH9); the other lists keep their approved "Time".
+      return { key: "time", header: <span title={t("columns.timeTitle")}>{t(list === "page" || list === "channel" ? "columns.dwell" : "columns.time")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatTime(row.timePerVisit)} /> };
     case "conversions":
       return {
         key: "conversions",
@@ -333,13 +386,14 @@ function columnOf(
 }
 
 /**
- * Ask Google once for a list a screen needs (GA20): started when the screen
- * first needs it, never again for the same ask. "FAILED" when Google could not
- * answer; the screen keeps what it has.
+ * Ask Google once for an event's funnel (ga-stored-figures-plan.md SF8), the
+ * one figure a screen still asks for: started when the screen first needs
+ * it, never again for the same ask. "FAILED" when Google could not answer;
+ * the screen keeps what it has.
  */
-export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: LiveList; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; story?: { ref: string; path: string }; event?: string; chart?: "channel"; plotted?: Array<{ ref: string; path: string }> } | null): "ASKING" | "FAILED" | "IDLE" {
-  const t = useTranslations("googleAnalytics.table");
-  const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
+export function useEventFunnel(ask: { siteId: string; period: string; device: string; country?: string; event: string } | null): "ASKING" | "FAILED" | "IDLE" {
+  const t = useTranslations("googleAnalytics.eventScreen");
+  const askLive = useAction(api.googleAnalyticsLive.askEventFunnel);
   const { run } = useAdminAction({ scope: "google-analytics-live" });
   const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
   const asked = useRef(new Set<string>());
@@ -349,7 +403,7 @@ export function useLiveAsk(ask: { siteId: string; period: string; device: string
     asked.current.add(key);
     // The screen says when Google could not answer: a notice, not a toast.
     const asking = async () => {
-      const outcome = await run(() => askLive(JSON.parse(key) as Parameters<typeof askLive>[0]), { key, suppressErrorToast: true, fallbackMessage: t("askFailedTitle") });
+      const outcome = await run(() => askLive(JSON.parse(key) as Parameters<typeof askLive>[0]), { key, suppressErrorToast: true, fallbackMessage: t("askFailed") });
       if (!outcome.ok || !outcome.data.ok) setFailed((before) => new Set([...before, key]));
     };
     void asking();
@@ -404,6 +458,10 @@ function csvValue(row: ShownRow, column: Column): string | number | null {
     case "viewsChange": return row.viewsBefore === null ? null : row.views - row.viewsBefore;
     case "rate": return row.conversionRate === null ? null : Math.round(row.conversionRate * 1000) / 10;
     case "conversionsChange": return row.conversionsBefore === null ? null : row.conversions - row.conversionsBefore;
+    case "share": return null;
+    case "elsewhere": return row.elsewhere ?? null;
+    case "started": return row.started ?? null;
+    case "landsMost": return row.landsMost ? row.landsMost.name ?? row.landsMost.kind : null;
     case "tick": return null;
   }
 }

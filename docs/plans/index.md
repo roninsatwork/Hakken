@@ -7,6 +7,26 @@ completed work.
 
 ## Active Plans
 
+- [Google Analytics — store the figures, stop asking Google from the screens](./active/ga-stored-figures-plan.md)
+  — every figure a screen shows stored by the collection run, so changing the
+  dates never waits on Google and Google's limit of 14,000 tokens an hour per
+  website is spent once a day, not per look: channels over time,
+  every list and chart for each device, a page's and an event's own figures,
+  other home countries — a day for 90 days, a week to 12 months, a month to
+  two years, as the other sections keep it, and shared lists for a page's and
+  an event's own screens. Live and an event's funnel stay with Google. Every
+  run keeps a fifth of Google's allowances in hand and is collected nightly
+  from 01:00 UK, everything every night. **Planned and built 2026-10-14,
+  phases 1–4, about 21 man-days; tested on ronins.co.uk.**
+- [Google Analytics — Channels and a channel's own page, rethought](./active/ga-channel-pages-plan.md)
+  — one page for every channel (What Hakken sees with nine rules that work for
+  any website, four figures including conversions it started and dwell time,
+  the channel over time, where it lands by page classification, the pages
+  behind the change, four table views), AI assistants' own parts, and a
+  stronger Channels overview with a channel-by-classification map. Google
+  Analytics data only. Two new kit parts (ChangeBars, ChannelMap; FiledBars
+  is the stacked bar), and a new kept list of AI assistants' landing pages.
+  **Planned and built 2026-10-13, all 10 phases, local on `dev`.**
 - [Google Analytics — conversions counted back in time](./active/conversions-back-in-time-plan.md)
   — conversions counted with Google's own count of each event instead of its
   key-event count, so any enquiry can count and choosing what counts corrects

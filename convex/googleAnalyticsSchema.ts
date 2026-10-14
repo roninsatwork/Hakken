@@ -108,10 +108,31 @@ export const COUNTED_WITH = "EVENT_COUNT";
  * back by name gets the credit — and `landingChannel`, each landing page by
  * the channel of its visits, so a page's conversions from Google are known.
  */
+/**
+ * The shared lists (ga-stored-figures-plan.md SF13): each one plain fact
+ * keyed first by a page — a landing page by source and new or returning, a
+ * page by the page before (and, read the other way, by the page after), by
+ * link clicked, by age and gender, by country, by weekday, by device, and a
+ * landing page by the pages its visits saw — or by an event: the pages it
+ * happened on and what it was about. Every page's and event's screen is
+ * worked out from them.
+ */
+export const PAGE_FACT_LISTS = [
+  "landingSource", "pageReferrer", "pageNext", "pageClicks", "pageWho", "landingWho", "pageCountry", "landingPagesSeen", "pageWeekday", "pageDevice",
+  "eventPage", "eventDetail",
+] as const;
+export type PageFactList = (typeof PAGE_FACT_LISTS)[number];
+
 export const ANALYTICS_LISTS = [
-  "total", "channel", "landing", "page", "series", "event", "eventSeries", "campaign", "adKeyword", "campaignSeries",
-  "visitorType", "browser", "system", "age", "gender", "interest", "visitorSeries", "product", "productSeries",
+  // `series`: the website's 12 months a day, every device, for Insights (insights-analyst-plan.md): the charts read the
+  // days, weeks and months kept (ga-stored-figures-plan.md SF12).
+  "total", "channel", "landing", "page", "series", "event", "campaign", "adKeyword",
+  "visitorType", "browser", "system", "age", "gender", "interest", "product",
   "firstChannel", "landingChannel",
+  // AI assistants' landing pages (ga-channel-pages-plan.md CH13): each landing page by Google's channel and the AI source, AI sources only.
+  "landingAssistant",
+  // The shared page lists (ga-stored-figures-plan.md SF13): each one fact keyed by page, sorted by it, a page's top 20.
+  ...PAGE_FACT_LISTS,
 ] as const;
 export type AnalyticsList = (typeof ANALYTICS_LISTS)[number];
 export const analyticsListValidator = v.union(
@@ -121,21 +142,47 @@ export const analyticsListValidator = v.union(
   v.literal("page"),
   v.literal("series"),
   v.literal("event"),
-  v.literal("eventSeries"),
   v.literal("campaign"),
   v.literal("adKeyword"),
-  v.literal("campaignSeries"),
   v.literal("visitorType"),
   v.literal("browser"),
   v.literal("system"),
   v.literal("age"),
   v.literal("gender"),
   v.literal("interest"),
-  v.literal("visitorSeries"),
   v.literal("product"),
-  v.literal("productSeries"),
   v.literal("firstChannel"),
   v.literal("landingChannel"),
+  v.literal("landingAssistant"),
+  v.literal("landingSource"),
+  v.literal("pageReferrer"),
+  v.literal("pageNext"),
+  v.literal("pageClicks"),
+  v.literal("pageWho"),
+  v.literal("landingWho"),
+  v.literal("pageCountry"),
+  v.literal("landingPagesSeen"),
+  v.literal("pageWeekday"),
+  v.literal("pageDevice"),
+  v.literal("eventPage"),
+  v.literal("eventDetail"),
+);
+
+/**
+ * The lists kept a day, then a week, then a month (ga-stored-figures-plan.md
+ * SF2, SF12): what happens a day stored once, every date range added up
+ * from it — the website's totals, its channels, each event, each campaign,
+ * new and returning people, and a shop's products.
+ */
+export const DAY_FACT_LISTS = ["total", "channel", "event", "campaign", "visitorType", "product"] as const;
+export type DayFactList = (typeof DAY_FACT_LISTS)[number];
+export const dayFactListValidator = v.union(
+  v.literal("total"),
+  v.literal("channel"),
+  v.literal("event"),
+  v.literal("campaign"),
+  v.literal("visitorType"),
+  v.literal("product"),
 );
 
 /** The ready-made periods (§4.3): days, ending on the newest day held. */
@@ -256,7 +303,10 @@ export const googleAnalyticsTables = {
     listedWith: v.optional(v.string()),
     /** How the figures held were counted (`COUNTED_WITH`); otherwise the next run collects them again, whole (BT4). */
     countedWith: v.optional(v.string()),
-    /** Listed events that count the same day for day (BT5): one is very likely a copy of the other, kept with each health check. */
+    /**
+     * Listed events that count the same day for day (BT5): one is very likely a copy of the other, kept with each health
+     * check. `of` an event never an enquiry (`NEVER_TICKED`, Ronins' link clicks) is a listed event that is really it.
+     */
     copies: v.optional(v.array(v.object({ eventName: v.string(), of: v.string() }))),
     /** The property the figures held came from: choosing another clears them. */
     dataProperty: v.optional(v.string()),
@@ -280,6 +330,32 @@ export const googleAnalyticsTables = {
     newestDay: v.optional(v.string()),
     oldestDay: v.optional(v.string()),
     backfilledAt: v.optional(v.number()),
+    /**
+     * The first day the channels are held from, by week and month past the 90
+     * days (ga-stored-figures-plan.md SF2, SF9): set once the two years are
+     * filled from Google's history; until then only the 90 days are held.
+     */
+    historyFrom: v.optional(v.string()),
+    /** The day lists whose two years are filled (SF12); a website filled before SF12 has the channels alone. */
+    historyFilled: v.optional(v.array(dayFactListValidator)),
+    /**
+     * The first day each page is held from, over time (ga-stored-figures-plan.md SF5): set once its two years are
+     * filled from Google's history; until then a page's own chart is asked of Google.
+     */
+    pageHistoryFrom: v.optional(v.string()),
+    /**
+     * Each other home country's days, and its history and pages filled, as the
+     * main country's fields above (ga-stored-figures-plan.md SF7): its records
+     * are kept beside the main one's, their device `mobile|fra` (`dayDevice`).
+     */
+    countryHistory: v.optional(v.array(v.object({
+      country: v.string(),
+      newestDay: v.optional(v.string()),
+      oldestDay: v.optional(v.string()),
+      historyFrom: v.optional(v.string()),
+      historyFilled: v.optional(v.array(dayFactListValidator)),
+      pageHistoryFrom: v.optional(v.string()),
+    }))),
     lastCollectedAt: v.optional(v.number()),
     /** When the 7 and 30 days were last asked of Google (daily), and the 90 days and 12 months (weekly). */
     dailyPeriodsAt: v.optional(v.number()),
@@ -305,11 +381,13 @@ export const googleAnalyticsTables = {
   /**
    * A day of one of the two small lists (§4.2): one record per website, list,
    * device and day — `device` empty for every device — split into parts of
-   * 2,000 rows. Kept 60 days (§4.3), for the charts and the days' own figures.
+   * 2,000 rows. Kept 90 days (ga-stored-figures-plan.md SF2), for the charts
+   * and the days' own figures; then a channel day goes into its week
+   * (`googleAnalyticsHistory`) and a total day goes.
    */
   googleAnalyticsDays: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    list: v.union(v.literal("total"), v.literal("channel")),
+    list: dayFactListValidator,
     /** Google's `deviceCategory` (`mobile`), or empty for every device. */
     device: v.string(),
     day: v.string(),
@@ -322,6 +400,53 @@ export const googleAnalyticsTables = {
     .index("by_hold_list_device_day", ["companyWebsiteId", "list", "device", "day", "part"])
     // A day's records, as it is written again and as old days go.
     .index("by_hold_list_day_device", ["companyWebsiteId", "list", "day", "device", "part"]),
+
+  /**
+   * The channels past the 90 days kept as days (ga-stored-figures-plan.md
+   * SF2): a week to 12 months, a month to two years, each the sum of its days,
+   * every device and each device — packed and split as the days are. A day
+   * past 90 goes into its week, a week past a year into the month it starts
+   * in, a month past two years goes (`googleAnalyticsHistory.rollHistory`).
+   */
+  googleAnalyticsHistory: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    list: dayFactListValidator,
+    device: v.string(),
+    grain: v.union(v.literal("week"), v.literal("month")),
+    /** The week's Monday or the month's first day. */
+    start: v.string(),
+    part: v.number(),
+    ...analyticsPackedRows,
+    ...leftOut,
+    fetchedAt: v.number(),
+  })
+    // A device's weeks or months, for its chart.
+    .index("by_hold_device_grain_start", ["companyWebsiteId", "list", "device", "grain", "start", "part"])
+    // The oldest weeks or months, as they roll on and go.
+    .index("by_hold_grain_start", ["companyWebsiteId", "grain", "start", "device", "part"]),
+
+  /**
+   * One page over time (ga-stored-figures-plan.md SF5): as a landing page
+   * (`landing`: its visits, engaged visits and key events) or as a page viewed
+   * (`page`: its views too), every device and each — a day for 90 days, a week
+   * to 12 months, a month to two years. Its points are a packed list keyed by
+   * when: `2026-10-12` a day, `w:2026-07-13` a week, `m:2025-10-01` a month.
+   * Reshaped as each new day is written; a page with nothing in two years goes
+   * (`googleAnalyticsPageSeries.dropOldPageSeries`).
+   */
+  googleAnalyticsPageSeries: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    list: v.union(v.literal("landing"), v.literal("page")),
+    /** The page's number on the website (`holdPageRefs`). */
+    page: v.string(),
+    device: v.string(),
+    ...analyticsPackedRows,
+    /** Its newest point's day: a page quiet for two years is cleared by it. */
+    lastDay: v.string(),
+    fetchedAt: v.number(),
+  })
+    .index("by_hold_list_page_device", ["companyWebsiteId", "list", "page", "device"])
+    .index("by_hold_last", ["companyWebsiteId", "lastDay"]),
 
   /**
    * Which build of each ready-made list the screens read (§4.3): a list is
@@ -353,7 +478,11 @@ export const googleAnalyticsTables = {
     slot: v.number(),
     part: v.number(),
     ...analyticsPackedRows,
-  }).index("by_hold_key_slot_part", ["companyWebsiteId", "key", "slot", "part"]),
+    /** A list sorted by page (SF13): the part's first row's key, so a page's screen reads only the parts its rows are in. */
+    firstKey: v.optional(v.string()),
+  })
+    .index("by_hold_key_slot_part", ["companyWebsiteId", "key", "slot", "part"])
+    .index("by_hold_key_slot_first", ["companyWebsiteId", "key", "slot", "firstKey"]),
 
   /**
    * A list asked of Google when a screen needed it (GA20, GA22): a device on

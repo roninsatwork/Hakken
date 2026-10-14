@@ -4,9 +4,12 @@ import { requireMySite, type SiteReader } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
-import { DAY_JOIN, UNTAGGED, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { UNTAGGED, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
-import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readFor, readLive, readSlot } from "./googleAnalyticsReads";
+import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readSlot } from "./googleAnalyticsReads";
+import { merged, readChannelPoints, readDayPoints } from "./googleAnalyticsHistory";
+import { coverageOf } from "./googleAnalyticsCoverage";
+import { dayDevice } from "./utils/analyticsHistory";
 
 /**
  * What the Google Analytics charts read (docs/plans/active/google-analytics-plan.md
@@ -33,6 +36,8 @@ export const analyticsChart = tenantQuery({
   returns: v.object({
     points: v.array(v.object({
       day: v.string(),
+      /** A week's or month's last day: the past beyond 90 days is held by week, then month (SF2b). */
+      lastDay: v.optional(v.string()),
       visits: v.number(),
       engaged: v.number(),
       /** Page views (GA26): Overview's chart leads with them. */
@@ -56,41 +61,38 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   const counted = connection ? countedOf(connection) : [];
   const events = counted.map((event) => event.eventName);
   if (!connection?.newestDay) return { points: [], events };
-  const point = (day: string, row: ListRow) => {
+  const point = (day: string, row: ListRow, lastDay?: string) => {
     const { conversions, value } = conversionsOf(row, counted);
-    return { day, visits: row.visits, engaged: row.engaged, views: row.views, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
+    return { day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
   };
-  // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
-  if (Number(args.period) <= DAYS_CHARTED && country === "") {
-    const first = shiftDay(connection.newestDay, -(Number(args.period) - 1));
+  // The website's totals stored a day, then a week, then a month (ga-stored-figures-plan.md SF12): any dates.
+  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+  // Another home country's own days, kept beside the main one's (SF7).
+  const held = total ? await readDayPoints(ctx, connection, "total", args.device, total.from, total.to, country) : null;
+  if (held) return { points: held.map((one) => point(one.start, merged(one.rows)[0] ?? blank(""), one.end)), events };
+  const newest = coverageOf(connection, country).newestDay;
+  if (Number(args.period) <= DAYS_CHARTED && newest) {
+    const first = shiftDay(newest, -(Number(args.period) - 1));
     const parts = await ctx.db
       .query("googleAnalyticsDays")
-      .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "total").eq("device", args.device).gte("day", first))
+      .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "total").eq("device", dayDevice(args.device, country)).gte("day", first))
       .take(CHART_RECORDS_READ);
     return { points: parts.map((part) => point(part.day, unpackPart(part as PackedPart)[0] ?? blank(""))), events };
   }
-  const series = await readSlot(ctx, holdId, slotKey("series", args.period, "NOW", args.device, country));
-  return { points: (series?.rows ?? []).map((row) => point(row.key, row)), events };
+  // Past what is held: the minutes before a new website's two years are filled.
+  return { points: [], events };
 }
 
 /** Channels drawn as lines of their own on Channels' chart; the rest are one line, "everything else" (§18.2 board 16). */
 const CHANNEL_LINES = 4;
 
-/** The name a channel chart asked of Google live is held under: another home country's ends with its code. */
-export function channelSeriesAsk(period: string, from: string, to: string, device: string, country = ""): string {
-return `channelSeries|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
-}
-
-/** A day and a channel's key, as one key of a live channel chart's rows (`googleAnalyticsLists.ts`). */
-export { DAY_JOIN };
 
 /**
  * Each channel's visits a day (GA35; §18.2 board 16): the four channels with
- * the most visits a line each, the rest one line. From the days kept for the
- * main home country's 7 and 30 days; for longer spans, or another home
- * country, which keep no channel days, asked of Google when the screen opens
- * (`askGoogleAnalyticsLive`, `chart: "channel"`) and held until the next
- * collection — `live` until it has been.
+ * the most visits a line each, the rest one line. From each home country's
+ * channels kept a day, then a week, then a month (ga-stored-figures-plan.md
+ * SF2, SF7) — `live` while the dates reach past what is held, the minutes
+ * before a new website's two years are filled; nothing is asked of Google.
  */
 export const analyticsChannelChart = tenantQuery({
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
@@ -99,40 +101,42 @@ export const analyticsChannelChart = tenantQuery({
     /** The channels with lines of their own, the most visits first; the last line is everything else when there is any. */
     channels: v.array(v.string()),
     rest: v.boolean(),
-    points: v.array(v.object({ day: v.string(), visits: v.array(v.number()) })),
+    /**
+     * Each line's visits a day, and its conversions in the same order (ga-channel-pages-plan.md CH9: a dot on each day
+     * with one); a week's or month's last day where the past is held by week or month (ga-stored-figures-plan.md SF2b).
+     */
+    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.array(v.number()), conversions: v.array(v.number()) })),
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
     const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
-    const none = { live: false, channels: [] as string[], rest: false, points: [] as Array<{ day: string; visits: number[] }> };
+    const none = { live: false, channels: [] as string[], rest: false, points: [] as Array<{ day: string; lastDay?: string; visits: number[]; conversions: number[] }> };
     if (!connection?.newestDay) return none;
-    const byDay = new Map<string, Map<string, number>>();
+    const counted = countedOf(connection);
+    const byDay = new Map<string, Map<string, { visits: number; conversions: number }>>();
     const add = (day: string, rows: readonly ListRow[]) => {
-      const channels = byDay.get(day) ?? new Map<string, number>();
-      for (const row of rows) channels.set(displayChannel(row.key), (channels.get(displayChannel(row.key)) ?? 0) + row.visits);
+      const channels = byDay.get(day) ?? new Map<string, { visits: number; conversions: number }>();
+      for (const row of rows) {
+        const own = channels.get(displayChannel(row.key)) ?? { visits: 0, conversions: 0 };
+        own.visits += row.visits;
+        own.conversions += conversionsOf(row, counted).conversions;
+        channels.set(displayChannel(row.key), own);
+      }
       byDay.set(day, channels);
     };
-    if (Number(args.period) <= DAYS_CHARTED && country === "") {
-      const first = shiftDay(connection.newestDay, -(Number(args.period) - 1));
-      const parts = await ctx.db
-        .query("googleAnalyticsDays")
-        .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "channel").eq("device", args.device).gte("day", first))
-        .take(CHART_RECORDS_READ);
-      for (const part of parts) add(part.day, unpackPart(part as PackedPart));
-    } else {
-      const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-      if (!total) return none;
-      const held = await readLive(ctx, holdId, channelSeriesAsk(args.period, total.from, total.to, args.device, country));
-      if (!held) return { ...none, live: true };
-      for (const row of held.rows) {
-        const at = row.key.indexOf(DAY_JOIN);
-        if (at > 0) add(row.key.slice(0, at), [{ ...row, key: row.key.slice(at + DAY_JOIN.length) }]);
-      }
+    const lastDays = new Map<string, string>();
+    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+    if (!total) return none;
+    const held = await readChannelPoints(ctx, connection, args.device, total.from, total.to, country);
+    if (!held) return { ...none, live: true };
+    for (const point of held) {
+      add(point.start, point.rows);
+      if (point.end !== point.start) lastDays.set(point.start, point.end);
     }
     const totals = new Map<string, number>();
-    for (const channels of byDay.values()) for (const [channel, visits] of channels) totals.set(channel, (totals.get(channel) ?? 0) + visits);
+    for (const channels of byDay.values()) for (const [channel, own] of channels) totals.set(channel, (totals.get(channel) ?? 0) + own.visits);
     const ranked = [...totals.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).map(([channel]) => channel);
     const lines = ranked.slice(0, CHANNEL_LINES);
     const rest = ranked.length > CHANNEL_LINES;
@@ -143,9 +147,12 @@ export const analyticsChannelChart = tenantQuery({
       rest,
       points: days.map((day) => {
         const channels = byDay.get(day)!;
-        const own = lines.map((channel) => channels.get(channel) ?? 0);
-        const others = [...channels.entries()].filter(([channel]) => !lines.includes(channel)).reduce((sum, [, visits]) => sum + visits, 0);
-        return { day, visits: rest ? [...own, others] : own };
+        const others = [...channels.entries()].filter(([channel]) => !lines.includes(channel)).map(([, own]) => own);
+        const of = (measure: "visits" | "conversions") => {
+          const own = lines.map((channel) => channels.get(channel)?.[measure] ?? 0);
+          return rest ? [...own, others.reduce((sum, one) => sum + one[measure], 0)] : own;
+        };
+        return { day, ...(lastDays.has(day) ? { lastDay: lastDays.get(day) } : {}), visits: of("visits"), conversions: of("conversions") };
       }),
     };
   },
@@ -153,29 +160,30 @@ export const analyticsChannelChart = tenantQuery({
 
 /**
  * Campaigns' chart (GA28; §18.2 board 17): the visits from tagged links a
- * day, every campaign added up — from each campaign a day, kept ready-made
- * for every period (§18.6.6); one device's asked of Google when the screen
- * opens (`askGoogleAnalyticsLive`, `pages: "campaignSeries"`) — `live` until
- * it has been. Every day of the period is drawn, a day with none as none.
+ * day, every campaign added up — from each campaign kept a day, then a week,
+ * then a month (ga-stored-figures-plan.md SF12) — `live` while the dates
+ * reach past what is held, the minutes before a new website's two years are
+ * filled. Every point of the period is drawn, one with none as none.
  */
 export const analyticsCampaignChart = tenantQuery({
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
-  returns: v.object({ live: v.boolean(), points: v.array(v.object({ day: v.string(), visits: v.number() })) }),
+  returns: v.object({ live: v.boolean(), points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number() })) }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
     const country = await keptCountry(ctx, site.hold, args.country);
-    const series = await readFor(ctx, holdId, "campaignSeries", args.period, "NOW", args.device, undefined, country);
-    if (series === "LIVE") return { live: true, points: [] };
-    if (!series) return { live: false, points: [] };
-    const byDay = new Map<string, number>();
-    for (const row of series.rows) {
-      const at = row.key.indexOf(DAY_JOIN);
-      if (at < 0 || row.key.slice(at + DAY_JOIN.length) === UNTAGGED) continue;
-      byDay.set(row.key.slice(0, at), (byDay.get(row.key.slice(0, at)) ?? 0) + row.visits);
-    }
-    const points: Array<{ day: string; visits: number }> = [];
-    for (let day = series.from; day && day <= series.to; day = shiftDay(day, 1)) points.push({ day, visits: byDay.get(day) ?? 0 });
-    return { live: false, points };
+    // Each campaign stored a day, then a week, then a month (ga-stored-figures-plan.md SF12), its untagged visits apart.
+    const connection = await connectionOf(ctx, holdId);
+    const total = connection ? await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country)) : null;
+    const held = connection && total ? await readDayPoints(ctx, connection, "campaign", args.device, total.from, total.to, country) : null;
+    if (!held) return { live: Boolean(total), points: [] };
+    return {
+      live: false,
+      points: held.map((point) => ({
+        day: point.start,
+        ...(point.end !== point.start ? { lastDay: point.end } : {}),
+        visits: point.rows.filter((row) => row.key !== UNTAGGED).reduce((sum, row) => sum + row.visits, 0),
+      })),
+    };
   },
 });

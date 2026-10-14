@@ -9,9 +9,12 @@ import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf } from "./pageTitles";
-import { pageAsk } from "./googleAnalyticsLive";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
-import { siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
+import { siteNameOf, splitBeforeKey, splitChannelKey } from "./googleAnalyticsLists";
+import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { readPageSeries } from "./googleAnalyticsPageSeries";
+import { readPageRows } from "./googleAnalyticsPageLists";
+import { OTHER_ROWS } from "./utils/analyticsPageStory";
 import { assistantOf } from "./utils/aiAssistants";
 import { seenValidator } from "./utils/hakkenSees";
 import { pageSees, type BeforeFacts, type PageStoryFacts } from "./utils/sees/analytics";
@@ -21,12 +24,9 @@ import {
   connectionOf,
   conversionsOf,
   countedOf,
-  displayChannel,
   figuresOf,
-  grouped,
   namedSeen,
   readFor,
-  readLive,
   readSlot,
   shown,
   shownRowValidator,
@@ -45,8 +45,8 @@ const analyticsLandingPageArgs = { siteId: v.id("companyWebsites"), page: v.stri
 /**
  * One landing page's figures against the span before, the whole website's
  * engagement for comparison, what its visits converted into, and its chart
- * and channels — those two asked of Google when the screen opens and held
- * (`googleAnalyticsLive.askGoogleAnalyticsLive`); `live` until they are.
+ * and channels — from the page held over time and the landing pages kept by
+ * channel (ga-stored-figures-plan.md SF5); `live` until they are held.
  */
 export const analyticsLandingPage = tenantQuery({
   args: analyticsLandingPageArgs,
@@ -61,7 +61,8 @@ export const analyticsLandingPage = tenantQuery({
     siteEngagementRate: v.union(v.number(), v.null()),
     conversions: v.array(v.object({ eventName: v.string(), count: v.number(), each: v.union(v.number(), v.null()), value: v.union(v.number(), v.null()) })),
     live: v.boolean(),
-    points: v.array(v.object({ day: v.string(), visits: v.number(), engaged: v.number(), conversions: v.number(), value: v.number() })),
+    /** A day; or, past 90 days, a week or a month to its `lastDay` (ga-stored-figures-plan.md SF2b). */
+    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), engaged: v.number(), conversions: v.number(), value: v.number() })),
     channels: v.array(shownRowValidator),
   })),
   handler: async (ctx, args) => await readLandingPage(ctx, args),
@@ -88,8 +89,14 @@ export async function readLandingPage(ctx: SiteReader, args: ObjectType<typeof a
   const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("landing", args.period, "NOW", "", country));
   const from = every?.from ?? "";
   const to = every?.to ?? "";
-  const series = await readLive(ctx, holdId, pageAsk("series", args.page, args.period, from, to, args.device, country));
-  const channels = await readLive(ctx, holdId, pageAsk("channel", args.page, args.period, from, to, args.device, country));
+  // Its chart from the page held over time (ga-stored-figures-plan.md SF5), filled by itself after a first collection.
+  const stored = await readPageSeries(ctx, connection, "landing", args.page, args.device, from, to, country);
+  // Its channels from the landing pages kept by channel (SF5), AI assistants counted once.
+  const byChannel = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
+  const keptChannels = byChannel ? byChannel.rows.flatMap((row) => {
+    const { channel: page, source: channel } = splitChannelKey(row.key);
+    return page === args.page ? [{ ...row, key: channel }] : [];
+  }) : null;
   const titles = await titlesOf(ctx, holdId, [address]);
   return {
     address,
@@ -106,12 +113,13 @@ export async function readLandingPage(ctx: SiteReader, args: ObjectType<typeof a
       const value = own ? conversionsOf({ ...blank(""), counts: new Map([[event.eventName, count]]), values: new Map([[event.eventName, own.values.get(event.eventName) ?? 0]]), revenue: event.eventName === PURCHASE_EVENT ? own.revenue : 0 }, [event]).value : 0;
       return { eventName: event.eventName, count, each, value: count > 0 ? value : null };
     }),
-    live: !series || !channels,
-    points: (series?.rows ?? []).map((row) => {
-      const { conversions, value } = conversionsOf(row, counted);
-      return { day: row.key, visits: row.visits, engaged: row.engaged, conversions, value };
+    // Not held yet — the minutes before a new website's pages are filled: nothing is asked of Google (SF1).
+    live: !stored || !keptChannels,
+    points: (stored ?? []).map((point) => {
+      const { conversions, value } = conversionsOf(point.row, counted);
+      return { day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), visits: point.row.visits, engaged: point.row.engaged, conversions, value };
     }),
-    channels: grouped(channels?.rows ?? [], (row) => displayChannel(row.key))
+    channels: (keptChannels ?? [])
       .map((row) => shown(row, null, counted, false))
       .sort((left, right) => right.value - left.value || right.visits - left.visits),
   };
@@ -127,7 +135,7 @@ type BeforeRow = Infer<typeof beforeRowValidator>;
  * PS2) — and "none". Biggest first.
  */
 export function beforeRows(
-  split: ReadonlyArray<{ kind: "page" | "site" | "none"; value: string; views: number }>,
+  split: ReadonlyArray<{ kind: "page" | "site" | "none" | "other"; value: string; views: number }>,
   total: number,
   addressOf: (ref: string) => string,
   titleOf: (address: string) => string | undefined,
@@ -144,7 +152,7 @@ export function beforeRows(
       continue;
     }
     const title = row.kind === "page" ? titleOf(label) : undefined;
-    byName.set(name, { kind: row.kind, key: row.kind === "none" ? "none" : row.value, label, ...(title ? { title } : {}), hosts: [{ host: row.value, views: row.views }], views: row.views });
+    byName.set(name, { kind: row.kind, key: row.kind === "none" || row.kind === "other" ? row.kind : row.value, label, ...(title ? { title } : {}), hosts: [{ host: row.value, views: row.views }], views: row.views });
   }
   return [...byName.values()]
     .map(({ hosts, ...row }) => {
@@ -164,8 +172,10 @@ export function beforeRows(
  */
 export function storyFacts(story: PageStory, madeHere: number): PageStoryFacts {
   const nameOf = (row: PageStory["sources"][number]) => row.name ?? row.source;
-  const [biggest] = story.sources;
-  const converter = [...story.sources].filter((row) => row.conversions > 0).sort((a, b) => b.conversions - a.conversions)[0] ?? null;
+  // A channel's other sources, added up past a page's 20 biggest, are never one source.
+  const named = story.sources.filter((row) => row.source !== OTHER_ROWS);
+  const [biggest] = named;
+  const converter = [...named].filter((row) => row.conversions > 0).sort((a, b) => b.conversions - a.conversions)[0] ?? null;
   const own = story.started;
   const rate = own && own.visits > 0 ? own.conversions / own.visits : 0;
   const nearest = story.league.find((row) => !row.isThis && row.conversions >= 2 && row.visits > 0 && row.conversions / row.visits > rate) ?? null;
@@ -181,8 +191,9 @@ export function storyFacts(story: PageStory, madeHere: number): PageStoryFacts {
 
 /** A page or website a page's views came from just before (GA29), as its screen shows it. */
 const beforeRowValidator = v.object({
-kind: v.union(v.literal("page"), v.literal("site"), v.literal("none")),
-/** The website's page by its number, another website by its address, or `none`. */
+/** `other`: the pages and websites past a page's 20 biggest, added up (ga-stored-figures-plan.md SF14). */
+kind: v.union(v.literal("page"), v.literal("site"), v.literal("none"), v.literal("other")),
+/** The website's page by its number, another website by its address, `none` or `other`. */
 key: v.string(),
 /** The page's address, or the other website's name as people know it (Google, ChatGPT); empty for none. */
 label: v.string(),
@@ -199,9 +210,8 @@ const analyticsPageArgs = { siteId: v.id("companyWebsites"), page: v.string(), p
 /**
  * One page of All pages (GA29; §18.2 board 21): its figures against the span
  * before, its views a day, and the page or website each view came from just
- * before — those two asked of Google when the screen opens and held until
- * the next collection (`googleAnalyticsLive.askGoogleAnalyticsLive`, `viewed`);
- * `live` until they are.
+ * before — from the page held over time and the shared lists each collection
+ * keeps (ga-stored-figures-plan.md SF5, SF13); `live` until they are held.
  */
 export const analyticsPage = tenantQuery({
   args: analyticsPageArgs,
@@ -215,7 +225,8 @@ export const analyticsPage = tenantQuery({
     /** Its views in the span before; null when there is none to compare. */
     viewsBefore: v.union(v.number(), v.null()),
     live: v.boolean(),
-    points: v.array(v.object({ day: v.string(), visits: v.number(), engaged: v.number(), views: v.number(), conversions: v.number(), value: v.number() })),
+    /** A day; or, past 90 days, a week or a month to its `lastDay` (ga-stored-figures-plan.md SF2b). */
+    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), engaged: v.number(), views: v.number(), conversions: v.number(), value: v.number() })),
     before: v.array(beforeRowValidator),
     /** Its story (analytics-page-screen-plan.md §2): the visits that started on it, where its views went, who reads it. */
     story: storyValidator,
@@ -243,10 +254,12 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
   const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("page", args.period, "NOW", "", country));
   const from = every?.from ?? "";
   const to = every?.to ?? "";
-  const viewed = await readLive(ctx, holdId, pageAsk("viewed", args.page, args.period, from, to, args.device, country));
-  const came = await readLive(ctx, holdId, pageAsk("before", args.page, args.period, from, to, args.device, country));
+  // Its views over time from the page held (SF5), and where they came from, kept by every collection for each page
+  // (SF13): `live` until held, and nothing asked of Google (SF1).
+  const stored = await readPageSeries(ctx, connection, "page", args.page, args.device, from, to, country);
+  const came = await readPageRows(ctx, holdId, "pageReferrer", args.period, args.device, args.page, "NOW", country);
   // The website's own pages named by their addresses and titles; other websites as people know them.
-  const split = (came?.rows ?? []).map((row) => ({ ...splitBeforeKey(row.key), views: row.views }));
+  const split = (came?.rows ?? []).map((row) => ({ ...(row.key === OTHER_ROWS ? { kind: "other" as const, value: "" } : splitBeforeKey(row.key)), views: row.views }));
   const refs = split.filter((row) => row.kind === "page").map((row) => row.value);
   const named = refs.length > 0 ? await decodePages(ctx, holdId, refs) : [];
   const addressOf = new Map(refs.map((ref, at) => [ref, named[at]]));
@@ -255,7 +268,7 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
   const rows = beforeRows(split, total, (ref) => addressOf.get(ref) ?? ref, (label) => titles.get(label));
   const facts: BeforeFacts[] = rows.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views }));
   const story = await readPageStory(ctx, {
-    holdId, page: args.page, address, period: args.period, device: args.device, country, from, to, counted, pages: now && now !== "LIVE" ? now.rows : [],
+    holdId, page: args.page, address, period: args.period, device: args.device, country, counted, pages: now && now !== "LIVE" ? now.rows : [],
   });
   return {
     address,
@@ -264,14 +277,14 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
     group: kind && kind !== NOT_SORTED_KIND ? kinds?.nameOf(kind) ?? null : null,
     row: own ? shown(own, was, counted, before !== null && before !== "LIVE") : null,
     viewsBefore: before && before !== "LIVE" ? was?.views ?? 0 : null,
-    live: !viewed || !came,
-    points: (viewed?.rows ?? []).map((row) => {
-      const { conversions, value } = conversionsOf(row, counted);
-      return { day: row.key, visits: row.visits, engaged: row.engaged, views: row.views, conversions, value };
+    live: !stored || !came,
+    points: (stored ?? []).map((point) => {
+      const { conversions, value } = conversionsOf(point.row, counted);
+      return { day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), visits: point.row.visits, engaged: point.row.engaged, views: point.row.views, conversions, value };
     }),
     before: rows,
     story,
-    seen: viewed && came
+    seen: stored && came
       ? await namedSeen(ctx, holdId, pageSees(facts, args.siteId, (name) => assistantOf(name) !== null, args.page, storyFacts(story, own ? conversionsOf(own, counted).conversions : 0)))
       : { says: [], steps: [] },
   };
@@ -280,10 +293,9 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
 /**
  * All pages' "Views a day" (docs/plans/active/all-pages-rethink-plan.md AP3):
  * each page ticked in its table, five at most, by its page number — its views
- * a day over the dates chosen, asked of Google when first drawn and held
- * until the next collection (`googleAnalyticsLive.askGoogleAnalyticsLive`,
- * `plotted`). The pages not asked yet come back as `missing`, with the path
- * Google names them by. The website's own line is Overview's (`analyticsChart`).
+ * a day over the dates chosen, from each page held over time
+ * (ga-stored-figures-plan.md SF5); null until held. The website's own line is
+ * Overview's (`analyticsChart`).
  */
 export const analyticsPagesDaily = tenantQuery({
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()), pages: v.array(v.string()) },
@@ -291,33 +303,33 @@ export const analyticsPagesDaily = tenantQuery({
     pages: v.array(v.object({
       ref: v.string(),
       address: v.string(),
-      /** Its views a day, the days with none left out; null until Google has answered. */
-      points: v.union(v.null(), v.array(v.object({ day: v.string(), views: v.number() }))),
+      /** Its views a day, the days with none left out — past 90 days a week or month to its `lastDay` (SF2b); null until held. */
+      points: v.union(v.null(), v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), views: v.number() }))),
     })),
-    missing: v.array(v.object({ ref: v.string(), path: v.string() })),
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
     const refs = [...new Set(args.pages.filter(isPageRef))].slice(0, MOST_PLOTTED);
     const connection = await connectionOf(ctx, holdId);
-    if (!connection?.newestDay || refs.length === 0) return { pages: [], missing: [] };
+    if (!connection?.newestDay || refs.length === 0) return { pages: [] };
     const country = await keptCountry(ctx, site.hold, args.country);
-    // The dates the live ask is named by: the ready-made period's (`googleAnalyticsLive.liveTarget`).
+    // The ready-made period's dates, as the chart beside it is drawn over.
     const slot = await ctx.db
       .query("googleAnalyticsPeriodSlots")
       .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", slotKey("total", args.period, "NOW", "", country)))
       .first();
-    if (!slot) return { pages: [], missing: [] };
+    if (!slot) return { pages: [] };
     const addresses = await decodePages(ctx, holdId, refs);
     const pages = [];
-    const missing = [];
     for (const [index, ref] of refs.entries()) {
-      const address = addresses[index];
-      const held = await readLive(ctx, holdId, pageAsk("daily", ref, args.period, slot.from, slot.to, args.device, country));
-      pages.push({ ref, address, points: held ? held.rows.map((row) => ({ day: row.key, views: row.views })) : null });
-      if (!held) missing.push({ ref, path: address.replace(/^https?:\/\/[^/]+/i, "") || "/" });
+      const stored = await readPageSeries(ctx, connection, "page", ref, args.device, slot.from, slot.to, country);
+      pages.push({
+        ref,
+        address: addresses[index],
+        points: stored ? stored.filter((point) => point.row.views > 0).map((point) => ({ day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), views: point.row.views })) : null,
+      });
     }
-    return { pages, missing };
+    return { pages };
   },
 });

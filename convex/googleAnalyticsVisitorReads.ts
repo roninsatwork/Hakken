@@ -1,10 +1,10 @@
+import { readDayPoints } from "./googleAnalyticsHistory";
 import { v, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
-import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
-import { DAY_JOIN, type ListRow } from "./googleAnalyticsLists";
+import type { ListRow } from "./googleAnalyticsLists";
 import { isUnknownValue } from "./utils/analyticsUnknown";
 import { analyticsPeriodValidator, type AnalyticsList } from "./googleAnalyticsSchema";
 import { seenValidator } from "./utils/hakkenSees";
@@ -16,13 +16,13 @@ import { connectionOf, conversionsOf, countedOf, readFor, readSlot, type Held } 
  * GA24, §18.2 board 15, §18.6.6): people, new and returning, visits a person
  * against the span before; new and returning people a day; whether Google
  * signals is on, read from the age and gender lists; and What Hakken sees
- * over all of it. The table reads its own list (`analyticsListPage`). One
- * device's lists are asked of Google when the screen opens: `missing` names
- * those not asked yet. Only the caller's own website (`requireMySite`).
+ * over all of it. The table reads its own list (`analyticsListPage`). Every
+ * device's lists and each device's are kept by each collection: `missing`
+ * names a device's not built yet. Only the caller's own website (`requireMySite`).
  */
 
-/** The lists this read needs besides the totals, each asked of Google for one device. */
-const NEEDED = ["visitorType", "browser", "age", "gender", "visitorSeries"] as const satisfies readonly AnalyticsList[];
+/** The lists this read needs besides the totals, each a device's built by the next collection. */
+const NEEDED = ["visitorType", "browser", "age", "gender"] as const satisfies readonly AnalyticsList[];
 
 const heldOf = (list: Held | "LIVE" | null) => (list && list !== "LIVE" ? list : null);
 
@@ -43,7 +43,8 @@ export const analyticsVisitors = tenantQuery({
       newPeople: v.number(),
       returningPeople: v.number(),
     })),
-    points: v.array(v.object({ day: v.string(), new: v.number(), returning: v.number() })),
+    /** A day; past 90 days a week or month to its `lastDay`, its people its days' added up (SF2b, SF14). */
+    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), new: v.number(), returning: v.number() })),
     signals: v.union(v.null(), v.literal("on"), v.literal("off")),
     thresholded: v.boolean(),
     seen: seenValidator,
@@ -79,20 +80,17 @@ export async function readVisitors(ctx: SiteReader, args: ObjectType<typeof anal
   const ages = known(held("age"));
   const genders = known(held("gender"));
   const signals: "on" | "off" | null = ages === null || genders === null || !whole?.visits ? null : ages || genders ? "on" : "off";
-  const series = held("visitorSeries");
-  const byDay = new Map<string, { new: number; returning: number }>();
-  for (const row of series?.rows ?? []) {
-    const at = row.key.indexOf(DAY_JOIN);
-    if (at < 0) continue;
-    const day = row.key.slice(0, at);
-    const type = row.key.slice(at + DAY_JOIN.length);
-    const point = byDay.get(day) ?? { new: 0, returning: 0 };
-    if (type === "new") point.new += row.people;
-    else if (type === "returning") point.returning += row.people;
-    byDay.set(day, point);
+  // New and returning people stored a day, then a week, then a month (ga-stored-figures-plan.md SF12, SF14: a week's
+  // people its days' added up).
+  const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+  const stored = every ? await readDayPoints(ctx, connection, "visitorType", args.device, every.from, every.to, country) : null;
+  const points: Array<{ day: string; lastDay?: string; new: number; returning: number }> = [];
+  if (stored) {
+    for (const point of stored) {
+      const people = (type: string) => point.rows.filter((row) => row.key === type).reduce((sum, row) => sum + row.people, 0);
+      points.push({ day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), new: people("new"), returning: people("returning") });
+    }
   }
-  const points: Array<{ day: string; new: number; returning: number }> = [];
-  if (series) for (let day = series.from; day && day <= series.to; day = shiftDay(day, 1)) points.push({ day, ...(byDay.get(day) ?? { new: 0, returning: 0 }) });
   const figures = whole ? {
     people: whole.people,
     peopleBefore: was ? was.people : null,

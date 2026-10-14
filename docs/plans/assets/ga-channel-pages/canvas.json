@@ -1,0 +1,117 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-13T20:30:00Z"
+  },
+  "title": "Google Analytics — one channel",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2727,
+      "title": "Channels — the overview",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Direct.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 2607,
+      "title": "Direct",
+      "expand": "fill"
+    },
+    "AiAssistants.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 2684,
+      "title": "AI assistants, 12 months",
+      "expand": "fill"
+    },
+    "Organic.dc.html": {
+      "x": 0,
+      "y": 3147,
+      "w": 1440,
+      "h": 4327,
+      "title": "Organic Search · Landing pages",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "OrganicGroups.dc.html": {
+      "x": 1520,
+      "y": 3147,
+      "w": 1440,
+      "h": 3209,
+      "title": "Organic Search · Classifications",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "OrganicConversions.dc.html": {
+      "x": 3040,
+      "y": 3147,
+      "w": 1440,
+      "h": 3452,
+      "title": "Organic Search · Key events",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "OrganicSources.dc.html": {
+      "x": 4560,
+      "y": 3147,
+      "w": 1440,
+      "h": 3290,
+      "title": "Organic Search · Sources",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "MapPeriods.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 980,
+      "h": 980,
+      "title": "Channels' map with Last 90 days and Last 12 months"
+    },
+    "AiPeriods.dc.html": {
+      "x": 4560,
+      "y": 1100,
+      "w": 980,
+      "h": 780,
+      "title": "AI assistants over time with Last 30 days and Last 90 days"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Direct.dc.html",
+    "AiAssistants.dc.html",
+    "Organic.dc.html",
+    "OrganicGroups.dc.html",
+    "OrganicConversions.dc.html",
+    "OrganicSources.dc.html",
+    "MapPeriods.dc.html",
+    "AiPeriods.dc.html"
+  ],
+  "notes": {
+    "organic": {
+      "x": 0,
+      "y": -300,
+      "text": "Channels, then a channel's own page: Direct and AI assistants",
+      "kind": "title1",
+      "maxW": 5540
+    },
+    "others": {
+      "x": 0,
+      "y": 2847,
+      "text": "Organic Search — one page, four views of its table",
+      "kind": "title1",
+      "maxW": 6000
+    }
+  },
+  "designSystems": []
+}

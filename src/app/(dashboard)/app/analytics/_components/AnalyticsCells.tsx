@@ -104,9 +104,11 @@ export function ConversionsChangeCell({ conversions, before }: { conversions: nu
 }
 
 /** A page's address as a link to its own screen (GA22): the path, the whole address on hover. */
-export function PageLink({ address, href, title }: {
+export function PageLink({ address, href, title, kind }: {
   address: string;
   href: string | null;
+  /** Words after the address: a channel's landing page's classification ("/ai-agency/ · Service", ga-channel-pages-plan.md CH7). */
+  kind?: string;
   /**
    * The page's title (GA27, §18.2 boards 18 and 20): given, it is the row's
    * name over its address — Sites' page cell, its two lines each cut to one
@@ -119,9 +121,22 @@ export function PageLink({ address, href, title }: {
     return (
       <span className="flex min-w-0 flex-col">
         <span className="block truncate text-[13px] text-foreground" title={title}>{title}</span>
+        <span className="flex min-w-0 items-baseline gap-1 text-[12px]">
+          {href ? (
+            <Link href={href} className="truncate text-info hover:underline" title={address} onClick={(event) => event.stopPropagation()}>{path}</Link>
+          ) : <span className="truncate text-secondary" title={address}>{path}</span>}
+          {kind ? <span className="shrink-0 text-muted">· {kind}</span> : null}
+        </span>
+      </span>
+    );
+  }
+  if (kind) {
+    return (
+      <span className="flex min-w-0 items-baseline gap-1">
         {href ? (
-          <Link href={href} className="block truncate text-[12px] text-info hover:underline" title={address} onClick={(event) => event.stopPropagation()}>{path}</Link>
-        ) : <span className="block truncate text-[12px] text-secondary" title={address}>{path}</span>}
+          <Link href={href} className="truncate text-[13px] text-info hover:underline" title={address} onClick={(event) => event.stopPropagation()}>{path}</Link>
+        ) : <span className="truncate text-[13px] text-foreground" title={address}>{path}</span>}
+        <span className="shrink-0 text-[12px] text-muted">· {kind}</span>
       </span>
     );
   }

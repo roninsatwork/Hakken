@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  DefaultLegendContent,
   LabelList,
   Legend,
   Line,
@@ -23,6 +24,8 @@ import {
   usePlotArea,
   useXAxisScale,
   useYAxisScale,
+  type DefaultLegendContentProps,
+  type LegendPayload,
 } from "recharts";
 import { useMemo, useState, type ReactNode } from "react";
 import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
@@ -36,7 +39,7 @@ import {
   CHART_SERIES_TEAL,
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
-import { GoogleUpdateFrame, GoogleUpdateMarkers, googleLegend, useGoogleUpdates } from "./GoogleUpdateMarkers";
+import { GoogleUpdateFrame, GoogleUpdateMarkers, googleKeyEntry, googleLegend, useGoogleUpdates, type GoogleUpdates } from "./GoogleUpdateMarkers";
 import { formatCompact, formatMonthName, formatNumber, formatShortMonth } from "./siteFormat";
 
 /**
@@ -120,8 +123,32 @@ const isPart = (row: Record<string, unknown> | undefined) => row?.part === true;
 function PartDot({ cx, cy, stroke, payload, index, solid, marks }: { cx?: number; cy?: number; stroke?: string; payload?: Record<string, unknown>; index?: number; solid: boolean; marks?: string }) {
   if (cx === undefined || cy === undefined) return <g key={index} />;
   if (isPart(payload)) return <circle key={index} cx={cx} cy={cy} r={4} stroke={stroke} strokeWidth={2} className="fill-background" />;
-  if (marks && payload?.[marks]) return <circle key={index} cx={cx} cy={cy} r={4} fill={stroke} strokeWidth={1.5} className="stroke-background" />;
+  // A count marks bigger the more it holds (a day's conversions, ga-channel-pages-plan.md CH4); a flag, the usual dot.
+  if (marks && payload?.[marks]) {
+    const count = payload[marks];
+    return <circle key={index} cx={cx} cy={cy} r={typeof count === "number" ? 3 + Math.min(count, 3) : 4} fill={stroke} strokeWidth={1.5} className="stroke-background" />;
+  }
   return solid ? <circle key={index} cx={cx} cy={cy} r={3} fill={stroke} /> : <g key={index} />;
+}
+
+/** A line's dot in the legend, on its 32-unit grid; a part of its own, as the legend hands its icon props a circle can't take. */
+function MarkDot({ colour }: { colour: string }) {
+  return <circle cx={16} cy={16} r={9} fill={colour} />;
+}
+
+/** The legend's entry for a line's dots (`SiteSeries.marks`): a dot in the line's colour, and what a dot is. */
+function markEntry(label: string, colour: string): LegendPayload {
+  return { value: label, color: "var(--color-secondary)", dataKey: "marks", legendIcon: <MarkDot colour={colour} /> as unknown as LegendPayload["legendIcon"] };
+}
+
+function MarkedLegend({ marks, google, ...props }: DefaultLegendContentProps & { marks: LegendPayload; google: string | null }) {
+  return <DefaultLegendContent {...props} payload={[...(props.payload ?? []), marks, ...(google ? [googleKeyEntry(google)] : [])]} />;
+}
+
+/** A line chart's legend: its lines, what a dot is when a line marks its points, and Google's mark when its key is kept. */
+function lineLegend(google: GoogleUpdates, updateKey: boolean, marks: { label: string; colour: string } | null) {
+  if (!marks) return updateKey ? googleLegend(google) : undefined;
+  return <MarkedLegend marks={markEntry(marks.label, marks.colour)} google={updateKey && google.shown ? google.keyLabel : null} />;
 }
 
 const AXIS_PROPS = {
@@ -140,11 +167,30 @@ export function SiteLineChart({
   reversed = false,
   sharedScale = false,
   scaleOf,
+  updateKey = true,
+  markLabel,
+  formatValue,
+  formatScale = formatCompact,
 }: {
+  /** How the readout's numbers read, when a whole number is not enough: a time a visit, "1m 04s" (ga-channel-pages-plan.md CH4). */
+  formatValue?: (value: number, entry: ChartTooltipEntry) => ReactNode;
+  /** How the scale's marks read, as `SiteBarChart`'s. */
+  formatScale?: (value: number) => string;
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
   xKey?: string;
   height?: number;
+  /**
+   * What a line's dots are, named in the legend after the lines: "A day
+   * with a conversion: bigger for more" (ga-channel-pages-plan.md CH4).
+   */
+  markLabel?: string;
+  /**
+   * Whether the legend names Google's update mark. Channels' pages leave it
+   * out — the mark says its update on hover (Anthony, 2026-10-13: "we don't
+   * need the label").
+   */
+  updateKey?: boolean;
   /** For positions, where 1 is best: the axis runs upwards from the top. */
   reversed?: boolean;
   /** One scale for every line, when they measure the same thing (a site and its rivals). */
@@ -158,6 +204,9 @@ export function SiteLineChart({
   scaleOf?: (entry: SiteSeries) => string;
 }) {
   const google = useGoogleUpdates(data);
+  // One line's dots in its colour; several lines' dots in the legend's own grey.
+  const marking = series.filter((entry) => entry.marks);
+  const marked = markLabel && marking.length > 0 ? { label: markLabel, colour: marking.length === 1 ? marking[0].colour : "var(--color-secondary)" } : null;
   const axisOf = (entry: SiteSeries) => (scaleOf ? scaleOf(entry) : sharedScale ? "shared" : entry.key);
   // Each scale once, coloured as its line when it holds only one.
   const axes = [...new Map(series.map((entry) => [axisOf(entry), entry])).entries()]
@@ -170,7 +219,7 @@ export function SiteLineChart({
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
             <XAxis {...AXIS_PROPS} minTickGap={24} {...google.axis(xKey)} />
             {sharedScale && !scaleOf ? (
-              <YAxis yAxisId="shared" width={48} reversed={reversed} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
+              <YAxis yAxisId="shared" width={48} reversed={reversed} allowDecimals={false} tickFormatter={formatScale} {...AXIS_PROPS} />
             ) : axes.map(({ id, entry, alone }, index) => (
               <YAxis
                 key={id}
@@ -180,13 +229,13 @@ export function SiteLineChart({
                 width={48}
                 reversed={reversed || (alone && entry.reversed)}
                 allowDecimals={false}
-                tickFormatter={formatCompact}
+                tickFormatter={formatScale}
                 {...AXIS_PROPS}
                 {...(alone ? { stroke: entry.colour } : {})}
               />
             ))}
-            <Tooltip active={google.open ? false : undefined} cursor={CHART_CROSSHAIR} content={<ChartTooltip title={google.readoutTitle} />} />
-            <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={googleLegend(google)} />
+            <Tooltip active={google.open ? false : undefined} cursor={CHART_CROSSHAIR} content={<ChartTooltip title={google.readoutTitle} formatValue={formatValue} />} />
+            <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={lineLegend(google, updateKey, marked)} />
             {series.map((entry) => (
               <Line
                 key={entry.key}
@@ -279,10 +328,19 @@ export function SiteBarChart({
   highlight,
   labels,
   divided = false,
+  updateKey = true,
+  faded,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
   xKey?: string;
+  /** Whether the legend names Google's update mark (`SiteLineChart`'s `updateKey`). */
+  updateKey?: boolean;
+  /**
+   * Rows drawn faint: the span before beside the dates chosen, on one
+   * chart — a channel's key events a day (ga-channel-pages-plan.md CH7).
+   */
+  faded?: (row: Record<string, unknown>) => boolean;
   /**
    * Each bar's figure written on it, so no figure needs a hover (Anthony,
    * 2026-10-12, of Insights' charts: "you have to hover to see the
@@ -404,8 +462,8 @@ export function SiteBarChart({
               cursor={CHART_CURSOR}
               content={<ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />}
             />
-            {series.length > 1 || google.shown ? (
-              <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={googleLegend(google, { seriesShown: series.length > 1 })} />
+            {series.length > 1 || (google.shown && updateKey) ? (
+              <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={updateKey ? googleLegend(google, { seriesShown: series.length > 1 }) : undefined} />
             ) : null}
             {series.map((entry) => (
               <Bar
@@ -419,8 +477,8 @@ export function SiteBarChart({
                 activeBar={CHART_ACTIVE_BAR}
                 isAnimationActive={false}
               >
-                {data.some(isPart) || highlight
-                  ? data.map((row, index) => <Cell key={index} fillOpacity={isPart(row) ? PART_OPACITY : 1} {...(highlight?.rows(row) ? { fill: highlight.colour } : {})} />)
+                {data.some(isPart) || highlight || faded
+                  ? data.map((row, index) => <Cell key={index} fillOpacity={isPart(row) || faded?.(row) ? PART_OPACITY : 1} {...(highlight?.rows(row) ? { fill: highlight.colour } : {})} />)
                   : null}
                 {labelContents.get(entry.key) ? <LabelList dataKey={entry.key} content={labelContents.get(entry.key)!} /> : null}
               </Bar>

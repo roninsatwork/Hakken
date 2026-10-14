@@ -13,7 +13,6 @@ import { formatDay } from "../../../../sites/_components/siteFormat";
 import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsPanel, TopList } from "../../../_components/AnalyticsPanels";
 import { AnalyticsSees } from "../../../_components/AnalyticsSees";
-import { useLiveAsk } from "../../../_components/AnalyticsListScreen";
 import { PageStages } from "../../../_components/PageStages";
 import { pathOf } from "../../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
@@ -47,7 +46,6 @@ function LandingPageBody({ status }: { status: AnalyticsStatus }) {
   const page = useSearchParams().get("key") ?? "";
   const answer = useQuery(api.googleAnalyticsPageReads.analyticsLandingPage, page ? { ...args, page } : "skip");
   const journey = useQuery(api.googleAnalyticsHeroes.analyticsHeroPage, page ? { siteId: args.siteId, page } : "skip");
-  const asking = useLiveAsk(answer?.live ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, page: { ref: page, path: answer.path } } : null);
   const currency = status.connection?.currency ?? null;
   const found = journey?.found ?? null;
   const address = answer?.address ?? "";
@@ -90,13 +88,12 @@ function LandingPageBody({ status }: { status: AnalyticsStatus }) {
         <Notice>{t("noVisits", { period: tf(`periods.${period}`).toLowerCase() })}</Notice>
       ) : null}
 
-      {answer?.live && asking === "FAILED" ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
-      {/* Its chart, agreed on 9 Oct and back (GA35): asked of Google with its channels when the screen opens. */}
+      {/* Its chart, agreed on 9 Oct and back (GA35): from the page held over time (ga-stored-figures-plan.md SF5). */}
       {answer && !answer.live ? (
         <AnalyticsChart days={answer.points} host={status.host} from={null} to={null} currency={currency} exportName="google-analytics-landing-page" />
       ) : null}
       <AnalyticsPanel title={t("channelsTitle")} description={t("channelsDescription")}>
-        <TopList rows={answer?.channels} kind="channel" currency={currency} channelHref={(channel) => hrefFor("channels/channel", { key: channel.label })} empty={answer?.live ? t("asking") : t("noChannels")} />
+        <TopList rows={answer?.channels} kind="channel" currency={currency} channelHref={(channel) => hrefFor("channels/channel", { key: channel.label })} empty={answer?.live ? t("collecting") : t("noChannels")} />
       </AnalyticsPanel>
     </div>
   );
