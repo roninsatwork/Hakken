@@ -721,3 +721,54 @@ describe("tracking health", () => {
     expect(after.checks.find((check) => check.check === "NO_VALUE")?.passing).toBe(true);
   });
 });
+
+describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () => {
+  /** The last 30 days: visits landing on /, a share going on to /about-us/ and from there to /contact/, converting; /ai-agency/'s all leaving. */
+  function routes(): Visit[] {
+    const day = (at: number) => shiftDay(NEWEST, -at);
+    const base = { device: "desktop", channel: "Organic Search", source: "google", seconds: 30 };
+    return Array.from({ length: 30 }, (_, at): Visit[] => [
+      { ...base, date: day(at), landing: "/", page: "/", sessions: 5, engaged: 5, views: 5 },
+      { ...base, date: day(at), landing: "/", page: "/about-us/", referrer: "https://www.acme-shop.test/", sessions: 2, engaged: 2, views: 2 },
+      { ...base, date: day(at), landing: "/", page: "/contact/", referrer: "https://www.acme-shop.test/about-us/", sessions: 1, engaged: 1, views: 1, events: { generate_lead: [1, 0] } },
+      { ...base, date: day(at), landing: "/ai-agency/", page: "/ai-agency/", sessions: 3, engaged: 1, views: 3 },
+    ]).flat();
+  }
+
+  test("the chart, from what each collection keeps: visits landed, left there and went on, two steps on, conversions where made", async () => {
+    const t = harness();
+    const { siteId, user, google } = await collected(t, routes());
+    const asked = google.calls.length;
+    const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "30", device: "" });
+    expect(google.calls.length).toBe(asked);
+    expect(flow.held).toBe(true);
+    const node = (column: number, path: string) => flow.nodes.find((one) => one.column === column && one.path?.endsWith(path));
+    // 150 landed on /, 60 of them went on (counted once a visit): 90 left. All 90 on /ai-agency/ left.
+    expect(node(0, "/")).toMatchObject({ visits: 150, left: 90, conversions: 0 });
+    expect(node(0, "/ai-agency/")).toMatchObject({ visits: 90, left: 90 });
+    // On to /about-us/, 30 of its 60 going on to /contact/, where the 30 conversions were made.
+    expect(node(1, "/about-us/")).toMatchObject({ visits: 60, left: 30 });
+    expect(node(2, "/contact/")).toMatchObject({ visits: 30, conversions: 30 });
+    expect(flow.bands.find((band) => band.to === node(2, "/contact/")!.id)).toMatchObject({ visits: 30, conversions: 30 });
+    expect(flow.columns[0]).toMatchObject({ visits: 240, left: 180 });
+  });
+
+  test("the table: each landing page's visits that went on, and the page most of them opened next, sorted over the whole list", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, routes());
+    const list = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, sort: "left" });
+    // The fewest leaving first: / (60 went on) before /ai-agency/ (none).
+    expect(list.rows.map((row) => [row.label.replace("https://www.acme-shop.test", ""), row.visits, row.onward, row.next?.page.replace("https://www.acme-shop.test", "") ?? null])).toEqual([
+      // The test's Google counts each line of its log as visits of their own, so / holds 240 here.
+      ["/", 240, 60, "/about-us/"],
+      ["/ai-agency/", 90, 0, null],
+    ]);
+    expect(list.rows[0].next?.share).toBe(1);
+  });
+
+  test("only the caller's own website", async () => {
+    const t = harness();
+    const { siteId, rival } = await collected(t, routes());
+    await expect(rival.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "30", device: "" })).rejects.toThrow();
+  });
+});

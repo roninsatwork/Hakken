@@ -89,7 +89,7 @@ export {
   type ShownRow,
 } from "./googleAnalyticsRows";
 
-const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "started" | "elsewhere" | "share"> = {
+const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "started" | "elsewhere" | "share" | "left" | "onward" | "next"> = {
   name: { value: (row) => row.label, first: "asc" },
   visits: { value: (row) => row.visits, first: "desc" },
   engaged: { value: (row) => row.engagementRate, first: "desc" },
@@ -113,6 +113,11 @@ const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pag
   elsewhere: { value: (row) => row.elsewhere ?? null, first: "desc" },
   // A channel's classifications by their share of its visits (CH7): the same order as their visits.
   share: { value: (row) => row.visits, first: "desc" },
+  // Landing pages' funnel (landing-pages-flow-plan.md LF4), by share, so a page's size does not decide: the fewest
+  // leaving first, the most going on first, the strongest single next step first.
+  left: { value: (row) => (row.onward == null || row.visits === 0 ? null : (row.visits - row.onward) / row.visits), first: "asc" },
+  onward: { value: (row) => (row.onward == null || row.visits === 0 ? null : row.onward / row.visits), first: "desc" },
+  next: { value: (row) => row.next?.share ?? null, first: "desc" },
 };
 /** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
 export function openingSort(list: ListKind): keyof typeof SORTS {
@@ -317,8 +322,15 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     const named = await decodePages(ctx, holdId, keys);
     keys.forEach((key, index) => addresses.set(key, named[index]));
   }
+  // Landing pages' funnel (landing-pages-flow-plan.md LF4): each landing page's visits that went on and the page most
+  // opened next, as the collection kept them; added up into page groups below.
+  const onward = (args.list === "landing" || args.list === "groups") && ofChannel === null
+    ? await onwardOf(ctx, holdId, args.period, args.device, args.country ?? "")
+    : null;
+  let groupOnward: Map<string, Onward> | null = null;
   if (pageList && classes && (args.list === "groups" || args.group !== undefined)) {
     const kindOf = (row: ListRow) => classes.kindOf(addresses.get(row.key) ?? row.key);
+    if (args.list === "groups" && onward) groupOnward = onwardByGroup(rows, onward, kindOf);
     if (args.group !== undefined) {
       rows = rows.filter((row) => kindOf(row) === args.group);
       earlier = earlier ? earlier.filter((row) => kindOf(row) === args.group) : null;
@@ -346,6 +358,14 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     }
   }
   if (args.list === "source" && args.channel === AI_ASSISTANTS_CHANNEL) for (const row of out) row.elsewhere = elsewhere.get(row.key) ?? 0;
+  if (onward) {
+    const byKey = groupOnward ?? onward;
+    for (const row of out) {
+      const own = byKey.get(row.key);
+      row.onward = own ? Math.min(row.visits, own.on) : 0;
+      row.next = own && own.next && own.on > 0 ? { page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
+    }
+  }
   if (args.list === "page" && args.quiet && !args.eventName && args.group === undefined) {
     const whole = await withQuietPages(ctx, holdId, out, earlier, counted, addresses);
     out = whole.rows;
@@ -392,11 +412,47 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
 
 /** The page addresses of the rows a screen shows, and their titles (GA27), read only for them. */
 async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
-  const refs = rows.filter((row) => isPageRef(row.label));
-  const named = refs.length > 0 ? await decodePages(ctx, holdId, refs.map((row) => row.label)) : [];
-  const byRef = new Map(refs.map((row, index) => [row.label, named[index]]));
-  const labelled = rows.map((row) => (byRef.has(row.label) ? { ...row, label: byRef.get(row.label)! } : row));
+  const refs = [...new Set(rows.flatMap((row) => [row.label, ...(row.next ? [row.next.page] : [])]).filter(isPageRef))];
+  const named = refs.length > 0 ? await decodePages(ctx, holdId, refs) : [];
+  const byRef = new Map(refs.map((ref, index) => [ref, named[index]]));
+  const labelled = rows.map((row) => ({
+    ...row,
+    ...(byRef.has(row.label) ? { label: byRef.get(row.label)! } : {}),
+    ...(row.next && byRef.has(row.next.page) ? { next: { ...row.next, page: byRef.get(row.next.page)! } } : {}),
+  }));
   return await withTitles(ctx, holdId, labelled, (row) => row.label);
+}
+
+/** A landing page's onward figures as kept (`landingOnward`): the visits that went on, the page most opened next and its visits. */
+type Onward = { on: number; next: string; nextVisits: number };
+
+/** Each landing page's onward figures for the dates, device and country; null until a collection has kept them. */
+async function onwardOf(ctx: Reader, holdId: Id<"companyWebsites">, period: AnalyticsPeriod, device: string, country: string): Promise<Map<string, Onward> | null> {
+  const kept = await readSlot(ctx, holdId, slotKey("landingOnward", period, "NOW", device, country));
+  if (!kept) return null;
+  const byPage = new Map<string, Onward>();
+  for (const row of kept.rows) {
+    const { channel: page, source: next } = splitChannelKey(row.key);
+    byPage.set(page, { on: row.visits, next, nextVisits: row.times ?? 0 });
+  }
+  return byPage;
+}
+
+/** A page group's onward figures: its pages' visits that went on added up, and the page most of them opened next. */
+function onwardByGroup(rows: readonly ListRow[], onward: ReadonlyMap<string, Onward>, kindOf: (row: ListRow) => string): Map<string, Onward> {
+  const groups = new Map<string, { on: number; nexts: Map<string, number> }>();
+  for (const row of rows) {
+    const own = onward.get(row.key);
+    if (!own) continue;
+    const group = groups.get(kindOf(row)) ?? { on: 0, nexts: new Map() };
+    group.on += own.on;
+    if (own.next) group.nexts.set(own.next, (group.nexts.get(own.next) ?? 0) + own.nextVisits);
+    groups.set(kindOf(row), group);
+  }
+  return new Map([...groups.entries()].map(([group, held]) => {
+    const top = [...held.nexts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0];
+    return [group, { on: held.on, next: top?.[0] ?? "", nextVisits: top?.[1] ?? 0 }];
+  }));
 }
 
 /** A channel's landing pages each with its page group (CH7), read only for the rows shown. */

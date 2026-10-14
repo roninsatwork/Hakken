@@ -217,6 +217,14 @@ export const shownRowValidator = v.object({
   elsewhere: v.optional(v.number()),
   /** A channel's landing page (ga-channel-pages-plan.md CH7): its page group, as the channel's chart groups it. */
   kind: v.optional(v.string()),
+  /**
+   * Landing pages and page groups (landing-pages-flow-plan.md LF4): the visits
+   * that opened another page, counted once a visit; null until a collection
+   * has kept them for these dates, device and country.
+   */
+  onward: v.optional(v.union(v.number(), v.null())),
+  /** The page most of those visits opened next, its address once named, and its share of them. */
+  next: v.optional(v.union(v.null(), v.object({ page: v.string(), share: v.number() }))),
   landsMost: v.optional(v.union(v.null(), v.object({ kind: v.string(), name: v.union(v.string(), v.null()), share: v.number() }))),
 });
 export type ShownRow = Infer<typeof shownRowValidator>;

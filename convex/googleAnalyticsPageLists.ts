@@ -226,7 +226,7 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   const onward = await ask(session, property, { ...base, dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] });
   if (!onward.ok) return failure(onward);
   const flow = await flowOf(ctx, target, [...routes.groups.values()].flat(), onward.rows);
-  if (!(await write("landingFlow", flow.flow, routes.flags))) return { ok: true, rows: total, requests: session.requests };
+  if (!(await write("landingFlow", flow.flow, routes.flags, target.events))) return { ok: true, rows: total, requests: session.requests };
   if (!(await write("landingOnward", flow.onward, flagsOf(onward), []))) return { ok: true, rows: total, requests: session.requests };
 
   // A page's views by day of the week.
