@@ -38,6 +38,8 @@ const FORMS = new Set([
   // A keyword's and a page's countries: the record's own tab, under the record's box.
   "src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx",
   "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",
+  // A landing page's own screen retired (landing-pages-flow-plan.md LF8): it only forwards an old link to the page's own screen.
+  "src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page/page.tsx",
 ]);
 
 const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set([".tsx"])))

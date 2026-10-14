@@ -301,47 +301,16 @@ export type Session = {
 export { HOURLY_REFUSAL, KEPT_BACK, overBudget } from "./googleAnalyticsBudget";
 import { HOURLY_REFUSAL, overBudget, quotaStillSeen } from "./googleAnalyticsBudget";
 
-/**
- * A session's start: its sign-in, and what Google last said is left of the
- * website's allowances while that still holds (`quotaStillSeen`), so its
- * first ask keeps to the budget as every later one does (AGENTS.md,
- * "Respect Google's quotas") — a step after another, a fill, a run resumed.
- */
+/** A session's start: its sign-in, and what Google last said is left while it holds (`googleAnalyticsQuota.ts`). */
 export async function openSession(
   ctx: ActionCtx,
   connectionId: Id<"googleAnalyticsConnections">,
 ): Promise<{ ok: true; session: Session } | { ok: false; problem: string }> {
   const token = await accessTokenFor(ctx, connectionId);
   if (!token.ok) return { ok: false, problem: token.problem };
-  const seen = await ctx.runQuery(internal.googleAnalyticsCollect.quotaSeenOf, { connectionId });
+  const seen = await ctx.runQuery(internal.googleAnalyticsQuota.quotaSeenOf, { connectionId });
   return { ok: true, session: { ctx, connectionId, accessToken: token.accessToken, requests: 0, stopped: null, quota: quotaStillSeen(seen, Date.now()) } };
 }
-
-const quotaFields = {
-  tokensPerDay: v.union(v.number(), v.null()),
-  tokensPerHour: v.union(v.number(), v.null()),
-  tokensPerProjectPerHour: v.union(v.number(), v.null()),
-  thresholdedPerHour: v.union(v.number(), v.null()),
-};
-
-/** What Google last said is left for the website, and when; null before any answer said. */
-export const quotaSeenOf = internalQuery({
-  args: { connectionId: v.id("googleAnalyticsConnections") },
-  returns: v.union(v.object({ at: v.number(), ...quotaFields }), v.null()),
-  handler: async (ctx, args) => (await ctx.db.get(args.connectionId))?.quotaSeen ?? null,
-});
-
-/** Each answer's count of what is left, kept on the connection for the next session to start from. */
-export const noteQuota = internalMutation({
-  args: { connectionId: v.id("googleAnalyticsConnections"), quota: v.object(quotaFields) },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const connection = await ctx.db.get(args.connectionId);
-    if (!connection) return null;
-    await ctx.db.patch(connection._id, { quotaSeen: { at: Date.now(), ...args.quota } });
-    return null;
-  },
-});
 
 /**
  * One report, renewing the token once if it has just expired and waiting a
@@ -351,10 +320,8 @@ export const noteQuota = internalMutation({
 export async function ask(session: Session, property: string, report: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
   return await retried(session, async (token) => {
     const answer = await runReport(token, property, report);
-    if (answer.ok && answer.quota) {
-      session.quota = answer.quota;
-      await session.ctx.runMutation(internal.googleAnalyticsCollect.noteQuota, { connectionId: session.connectionId, quota: answer.quota });
-    }
+    if (answer.ok && answer.quota) session.quota = answer.quota;
+    if (answer.ok && answer.quota) await session.ctx.runMutation(internal.googleAnalyticsQuota.noteQuota, { connectionId: session.connectionId, quota: answer.quota });
     return { answer, requests: answer.ok ? answer.requests : 1 };
   }, { budgeted: true, thresholded: report.dimensions.some((dimension) => THRESHOLDED_DIMENSIONS.has(dimension)) });
 }
@@ -875,28 +842,6 @@ export const noteShop = internalMutation({
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.property !== args.property) return null;
     await ctx.db.patch(connection._id, { shop: args.shop || undefined, updatedAt: Date.now() });
-    return null;
-  },
-});
-
-/**
- * A run cut short by the night (`NIGHT_MS`; the audit of 2026-10-14): what it
- * collected is the newest, so it is marked collected and the past rolled on,
- * the screens' lists rebuilt; where its lists stopped is kept for the next
- * night to start from. What asks Google — the fills, tracking health — waits
- * for a run that finishes, inside the next night's allowance.
- */
-export const noteNightCut = internalMutation({
-  args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), listsFrom: v.optional(v.string()) },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const connection = await ctx.db.get(args.connectionId);
-    if (!connection || connection.property !== args.property) return null;
-    const now = Date.now();
-    await ctx.db.patch(connection._id, { ...(args.listsFrom ? { listsFrom: args.listsFrom } : {}), lastCollectedAt: now, collecting: undefined, updatedAt: now });
-    if (connection.newestDay) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHistory.rollHistory, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
-    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
-    await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
     return null;
   },
 });

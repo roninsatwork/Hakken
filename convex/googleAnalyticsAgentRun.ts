@@ -417,7 +417,7 @@ export const collectSiteStep = internalAction({
             // What costs Google nothing is finished now — the days rolled on, the screens' lists rebuilt — and the next
             // night's lists start where this one stopped, so the same last lists are never the ones left out.
             const next = to === null ? jobs[jobAt] : undefined;
-            await ctx.runMutation(internal.googleAnalyticsCollect.noteNightCut, {
+            await ctx.runMutation(internal.googleAnalyticsAgentRun.noteNightCut, {
               connectionId: args.connectionId,
               property: args.property,
               ...(next && !("days" in next) ? { listsFrom: jobKey(next) } : {}),
@@ -600,3 +600,25 @@ export function startingAt<T extends Job>(lists: readonly T[], from: string | un
   const at = from ? lists.findIndex((job) => jobKey(job) === from) : -1;
   return at > 0 ? [...lists.slice(at), ...lists.slice(0, at)] : [...lists];
 }
+
+/**
+ * A run cut short by the night (`NIGHT_MS`; the audit of 2026-10-14): what it
+ * collected is the newest, so it is marked collected and the past rolled on,
+ * the screens' lists rebuilt; where its lists stopped is kept for the next
+ * night to start from. What asks Google — the fills, tracking health — waits
+ * for a run that finishes, inside the next night's allowance.
+ */
+export const noteNightCut = internalMutation({
+  args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), listsFrom: v.optional(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.property !== args.property) return null;
+    const now = Date.now();
+    await ctx.db.patch(connection._id, { ...(args.listsFrom ? { listsFrom: args.listsFrom } : {}), lastCollectedAt: now, collecting: undefined, updatedAt: now });
+    if (connection.newestDay) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHistory.rollHistory, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
+    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
+    await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
+    return null;
+  },
+});
