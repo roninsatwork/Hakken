@@ -654,6 +654,30 @@ describe("The soonest watcher sets the pace", () => {
     expect(detail?.effective.active).toBe(false);
     expect(detail?.companyScheduleActive).toBe(true);
   });
+
+  test("a website switched on under a company switched off collects nothing, and sets no pace", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    // Korda on 2026-10-15: the company off, kordatacle.com on with its own
+    // schedule. The Planner plans only companies switched on, so the screens
+    // say what it does.
+    const korda = await seedCompany(t, "Korda");
+    await scheduleFor(t, korda, "monthly", false);
+    const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: korda, url: "shared.com" });
+    await admin.mutation(api.websites.setCompanyWebsiteSchedule, {
+      id: site, refreshIntervalStr: "daily", collectionEnabled: true,
+    });
+    const ronins = await seedCompany(t, "Ronins Agency");
+    await scheduleFor(t, ronins, "weekly");
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "shared.com" });
+
+    const detail = await admin.query(api.websites.getCompanyWebsiteById, { id: site });
+    expect(detail?.effective).toMatchObject({ active: false, nextRunAt: null, source: "WEBSITE" });
+    const listed = await admin.query(api.websites.listCompanyWebsiteRows, { companyId: korda });
+    expect(listed.rows.find((row) => row._id === site)).toMatchObject({ collecting: false, nextRunAt: null });
+    // Korda's daily would be soonest; switched off, the weekly watcher sets the pace.
+    expect((await sharedRow(admin)).fetchedFor?.companyName).toBe("Ronins Agency");
+  });
 });
 
 describe("The global list", () => {

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
+import { checkedClassificationType } from "./classificationTypes";
 import { FAN_OUT_LIMITS, readFanOutLimits, type FanOutLimits } from "./fanOutLimits";
 import { classificationLineKindValidator, classificationTypeValidator } from "./pagesSchema";
 import { superAdminMutation, superAdminQuery, type TenantMutationCtx } from "./tenantFunctions";
@@ -587,15 +588,16 @@ export const createPageClassification = superAdminMutation({
     const [setup, limits] = await Promise.all([readClassificationSetup(ctx, hold._id), readFanOutLimits(ctx, hold.companyId, hold._id)]);
     holdToClassifications(setup.classifications.length, limits.classificationsPerSite);
     const name = checkedName(args.name, setup, null);
+    const type = await checkedClassificationType(ctx, args.type);
     const lines = checkedLines(args.lines, setup.lines, setup);
     holdToLines(setup.lines.length, setup.lines.length + lines.length, limits.classificationLinesPerSite);
 
     const now = Date.now();
-    const classificationId = await ctx.db.insert("pageClassifications", { companyWebsiteId: hold._id, name, type: args.type, createdAt: now, updatedAt: now });
+    const classificationId = await ctx.db.insert("pageClassifications", { companyWebsiteId: hold._id, name, type, createdAt: now, updatedAt: now });
     for (const line of lines) {
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: hold._id, classificationId, ...line, createdAt: now });
     }
-    await audit(ctx, hold, "CREATE_PAGE_CLASSIFICATION", { type: "pageClassifications", id: classificationId }, { name, type: args.type, lines });
+    await audit(ctx, hold, "CREATE_PAGE_CLASSIFICATION", { type: "pageClassifications", id: classificationId }, { name, type, lines });
     return classificationId;
   },
 });
@@ -619,7 +621,7 @@ export const updatePageClassification = superAdminMutation({
     const classification = await requireItsClassification(ctx, hold._id, args.classificationId);
     const [setup, limits] = await Promise.all([readClassificationSetup(ctx, hold._id), readFanOutLimits(ctx, hold.companyId, hold._id)]);
     const name = args.name === undefined ? classification.name : checkedName(args.name, setup, classification._id);
-    const type = args.type ?? classification.type;
+    const type = args.type === undefined || args.type === classification.type ? classification.type : await checkedClassificationType(ctx, args.type);
     const own = linesOf(setup, classification._id);
 
     let added: LineInput[] = [];

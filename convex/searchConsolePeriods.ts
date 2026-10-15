@@ -27,6 +27,7 @@ import { longListRows, rowsFor } from "./searchConsoleLongLists";
 import {
   addUp,
   bookedColumns,
+  RanLong,
   bySide,
   firstDayKeptFor,
   firstWeekKept,
@@ -651,7 +652,8 @@ export async function buildSitePeriods(
    * and whether its 90 days and twelve months are added up too: weekly, the
    * 7 and 30 days nightly (cost review 1 and 4, `searchConsoleSettling.ts`).
    */
-  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean } = {},
+  // `longPeriod`, with `onlyLong`: one long period alone, a job of its own; `stopAt`: past it the job stops itself (`RanLong`).
+  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean; longPeriod?: "90" | "365"; stopAt?: number; careful?: boolean; held?: { pruned: boolean } } = {},
 ): Promise<number> {
   let written = 0;
   const builtAt = Date.now();
@@ -660,8 +662,13 @@ export async function buildSitePeriods(
   const onlyLong = options.onlyLong === true;
   const allSlots = slotsOf(newest, oldest, historyLimitDay(builtAt));
   const slots = onlyLong
-    ? allSlots.filter((slot) => LONG_PERIODS.includes(slot.period))
+    ? allSlots.filter((slot) => LONG_PERIODS.includes(slot.period) && (options.longPeriod === undefined || slot.period === options.longPeriod))
     : long ? allSlots : allSlots.filter((slot) => !LONG_PERIODS.includes(slot.period));
+  const inTime = (what: string) => { if (options.stopAt !== undefined && Date.now() > options.stopAt) throw new RanLong(what); };
+  // The long periods alone read only whether a line is kept: their rows are asked of Google (the adding-up that hands on).
+  const keptOrHeld = async (searchType: SearchType, list: SearchConsoleList): Promise<Kept[] | null> => (onlyLong
+    ? (await ctx.runQuery(internal.searchConsoleRollups.anyKept, { companyWebsiteId, ...scope, searchType, list }) ? [] : null)
+    : await readKept(ctx, companyWebsiteId, country, searchType, list, newest));
   const scope = country === undefined ? {} : { country };
   const ninety = allSlots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
   const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
@@ -742,7 +749,7 @@ export async function buildSitePeriods(
   const longSpans = slots.filter((slot) => isLong(slot) && slot.span !== null).map((slot) => slot.span!);
   const tracked = google && longSpans.length > 0 ? await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId: companyWebsiteId }) : [];
   const askedOf = async (searchType: SearchType, list: SearchConsoleList) =>
-    google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked) : null;
+    google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked, options.stopAt, options.held) : null;
   const keysAsked = (asked: Map<string, Row[]> | null, side: "key" | "page") =>
     [...(asked?.values() ?? [])].flatMap((rows) => rows.map((row) => (side === "key" ? row.key : row.page ?? "")));
   // Sites' facts for each keyword and page, looked up once for every kind of result.
@@ -757,7 +764,7 @@ export async function buildSitePeriods(
     const lists = LISTS_OF[searchType];
     // Each search added up from the pairs, and each page's searches counted from them.
     const pageCounts = new Map<string, Counts>();
-    const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, country, searchType, "pair", newest) : null;
+    const pairsKept = lists.includes("pair") ? await keptOrHeld(searchType, "pair") : null;
     const pairsAsked = pairsKept ? await askedOf(searchType, "pair") : null;
     const queryFacts = pairsKept ? await factsOf("query", [...keysIn(pairsKept, "keys"), ...keysAsked(pairsAsked, "key")]) : undefined;
     const weeks = pairsKept ? chartFigures(pairsKept, newest, oldest, target?.brandWords ?? [], chartWeeks, searchType) : [];
@@ -777,6 +784,7 @@ export async function buildSitePeriods(
       await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
     }
     for (const slot of slots) {
+      inTime(`Adding up the ${searchType} searches`);
       if (!pairsKept || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);
         continue;
@@ -851,8 +859,9 @@ export async function buildSitePeriods(
     // Pages, countries, devices and kinds of search appearance: Google's own totals, one list at a time.
     // A country has no country list of its own: its slots are only emptied.
     for (const list of ["page", "country", "device", "appearance"] as const) {
+      inTime(`Adding up the ${searchType} ${list} list`);
       const kept = lists.includes(list) && !(country !== undefined && list === "country")
-        ? await readKept(ctx, companyWebsiteId, country, searchType, list, newest)
+        ? await keptOrHeld(searchType, list)
         : null;
       const asked = kept ? await askedOf(searchType, list) : null;
       const pageFacts = list === "page" && kept ? await factsOf("page", [...keysIn(kept, "keys"), ...keysAsked(asked, "key")]) : undefined;

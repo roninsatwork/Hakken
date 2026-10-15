@@ -454,7 +454,8 @@ export async function enquiriesView(ctx: Pick<QueryCtx, "db">, hold: Doc<"compan
 }
 
 const sourceGroupValidator = v.union(...SOURCE_GROUPS.map((group) => v.literal(group)));
-const kindType = v.union(v.literal("SERVICE"), v.literal("INFORMATIONAL"), v.literal("PRODUCT"), v.literal("CASE_STUDY"), v.literal("COMPANY"), v.literal("LEGAL"), v.literal("OTHER"), v.literal("NOT_SORTED"), v.literal("NOT_RECORDED"));
+/** A page's classification type — a key of System Settings → Classification's list — or NOT_SORTED / NOT_RECORDED. */
+const kindType = v.string();
 const chosenValidator = v.object({ id: v.string(), kind: periodKind, months: v.array(v.string()), before: v.union(v.null(), v.array(v.string())), yearAgo: v.union(v.null(), v.array(v.string())) });
 
 /** What brings enquiries: the period chosen in the section's header, for the website chosen. */

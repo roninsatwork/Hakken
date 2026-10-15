@@ -207,7 +207,7 @@ export class OptionalNavSection extends Component<
  * It used to match `/admin/settings` exactly, which stopped working when the
  * one tabbed page became a route per section.
  */
-const SYSTEM_SETTINGS_SECTIONS = ['identity', 'security', 'white-label', 'options', 'limits'];
+const SYSTEM_SETTINGS_SECTIONS = ['identity', 'security', 'white-label', 'options', 'limits', 'classification'];
 
 export function isSystemSettingsRoute(pathname: string) {
   if (pathname === '/admin/settings') return true;

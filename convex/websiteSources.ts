@@ -19,8 +19,7 @@ import { CLARITY_MORNING_UTC } from "./clarity";
  * **The company's switch is the master** (WS5). The DataForSEO Planner plans
  * only companies whose switch is on (`seoAgentRuns.listCollectingCompanies`),
  * so a website whose own switch is on still collects nothing while its
- * company's is off — whatever `resolveWebsiteSchedule` says, which lets the
- * website's switch outrank the company's. This reads what the Planner does.
+ * company's is off. `resolveWebsiteSchedule` says so, and this reads it.
  *
  * **Off keeps everything** (WS4): a free source switched off stays connected,
  * with everything held, and its collector skips it (`switchedOff` on its
@@ -159,9 +158,10 @@ export const getWebsiteSources = superAdminQuery({
     const pairSite = pair ? await ctx.db.get(pair.websiteId) : null;
     const companyOn = schedule?.isActive === true;
     const on = hold.collectionEnabled !== false;
-    // Paired, the pair's settings are the ones that run (`websites.getCompanyWebsiteById`).
+    // Paired, the pair's settings are the ones that run (`websites.getCompanyWebsiteById`);
+    // a competitor switched off is still not collected, so its own switch counts too.
     const resolved = resolveWebsiteSchedule(schedule, pair ?? hold);
-    const collecting = companyOn && on && (pair ? pair.collectionEnabled !== false : true) && resolved.intervalStr !== null;
+    const collecting = on && resolved.active;
     const now = Date.now();
     const owned = !isTrackedHold(hold);
 

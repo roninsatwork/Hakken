@@ -23,8 +23,12 @@ import {
 /** A page no classification catches, once the website has any (decision 3): never an automatic kind. */
 export const NOT_SORTED_KIND = "NOT_SORTED";
 
-export const CLASSIFICATION_TYPES = ["INFORMATIONAL", "SERVICE", "PRODUCT", "CASE_STUDY", "COMPANY", "LEGAL", "OTHER"] as const;
-export type ClassificationType = (typeof CLASSIFICATION_TYPES)[number];
+/**
+ * A classification's type: its key in the one list of System Settings →
+ * Classification (`utils/classificationTypes.ts`) — one of the seven shipped,
+ * which reports read by name, or an added type's own id.
+ */
+export type ClassificationType = string;
 
 /** One of the website's classifications, as a screen names it and a figure adds it up. */
 export type KindChoice = { id: string; name: string; type: ClassificationType };

@@ -47,7 +47,10 @@ const CONNECTION = {
   newestDay: "2026-09-26",
   oldestDay: "2025-05-26",
   countriesNewest: [],
+  daysFrom: "2025-05-26",
   historyDone: true,
+  historyWhole: true,
+  collectingNow: false,
   clearing: false,
   lastCollectedAt: Date.parse("2026-09-27T10:02:00Z"),
   problem: null,
@@ -164,6 +167,36 @@ describe("Performance", () => {
     // A quick pick ends on Google's newest day, not today.
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsolePerformance")).at(-1)?.[1];
     expect(asked).toMatchObject({ searchType: "web", from: "2026-08-28", to: "2026-09-26" });
+    // Its sixteen months are all in: nothing more to say.
+    expect(screen.queryByText(/searchConsole\.historyFilling/)).not.toBeInTheDocument();
+  });
+
+  it("says where its days start while Google's 16 months are still coming in (search-console-first-collection-plan.md, SF5)", () => {
+    at("/app/search-console/site_1");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status({}, { historyWhole: false, daysFrom: "2026-06-29", oldestDay: "2026-06-29" }),
+      "searchConsoleReads:searchConsolePerformance": { days: [], totals: FIGURES, previous: null, named: null },
+    });
+    render(<SearchConsolePerformancePage />);
+    expect(screen.getByText(/searchConsole\.historyFilling/)).toBeInTheDocument();
+  });
+
+  it("says it for a country kept ready too, from that country's own first day (SF3)", () => {
+    at("/app/search-console/site_1", "country=moz");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status({}, { countriesNewest: [{ country: "moz", newestDay: "2026-09-26", daysFrom: "2026-06-29", historyWhole: false }] }),
+      "searchConsoleReads:searchConsolePerformance": { days: [], totals: FIGURES, previous: null, named: null },
+    });
+    render(<SearchConsolePerformancePage />);
+    expect(screen.getByText(/searchConsole\.historyFilling/)).toBeInTheDocument();
+  });
+
+  it("says a newly connected website's first 90 days are coming in now (SF1)", () => {
+    at("/app/search-console/site_1");
+    answer({ "searchConsoleConnect:searchConsoleStatus": status({}, { newestDay: null, oldestDay: null, daysFrom: null, lastCollectedAt: null, collectingNow: true }) });
+    render(<SearchConsolePerformancePage />);
+    expect(screen.getByText("searchConsole.connection.collectingTitle")).toBeInTheDocument();
+    expect(screen.queryByText("searchConsole.connection.nothingCollectedTitle")).not.toBeInTheDocument();
   });
 });
 

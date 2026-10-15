@@ -2,7 +2,7 @@ import { v, type Infer } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, tenantQuery } from "./tenantFunctions";
 import { ADMIN_WRITE_ROLES } from "./authz";
 import { companyHolds, findMySite, requireMySite } from "./siteAccess";
@@ -27,6 +27,7 @@ import {
 } from "./searchConsoleSchema";
 import { historyLimitDay } from "./searchConsoleDays";
 import { kindsHeld } from "./searchConsoleRollups";
+import { ROLE_RUN_LIVE_MS, lastMoved } from "./roleRuns";
 
 /**
  * Connecting an owned website to its Google Search Console
@@ -206,10 +207,12 @@ export const completeSignIn = internalMutation({
 });
 
 /**
- * Connected to a property. Collecting does not start here: it waits for the
- * Search Console agent and its schedule (search-console-plan.md §12). Another
- * property than the one the figures held came from clears them — two
- * properties' figures are never mixed.
+ * Connected to a property, and its first collection started at once — a run
+ * of the Search Console Collector for this website alone
+ * (search-console-first-collection-plan.md, SF1; until 2026-10-15 it waited
+ * for the agent's 04:00 run, search-console-plan.md §12). Another property
+ * than the one the figures held came from clears them first — two
+ * properties' figures are never mixed — and is collected once they are gone.
  */
 async function connectTo(
   ctx: MutationCtx,
@@ -250,9 +253,12 @@ async function connectTo(
   if (another) {
     await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, {
       companyWebsiteId: connection.companyWebsiteId,
+      collectFirst: true,
     });
     // The last property's clicks go from Your pages that night (dataforseo-cost-plan.md, A1).
     await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
+  } else {
+    await ctx.scheduler.runAfter(0, internal.searchConsoleFirstCollection.startFirstCollection, { connectionId: connection._id });
   }
 }
 
@@ -424,9 +430,14 @@ export const searchConsoleStatus = tenantQuery({
         oldestDay: orNull(v.string()),
         /** Where the main country's day totals begin: Google's sixteen-month line once fetched back (phase 9), else `oldestDay`. */
         daysFrom: orNull(v.string()),
-        /** Each country kept ready and collected, with its own newest day: its quick picks end there (§16). */
-        countriesNewest: v.array(v.object({ country: v.string(), newestDay: v.string() })),
+        /** Each country kept ready and collected, with its own newest day: its quick picks end there (§16); and where its day totals begin, once fetched back to Google's line (SF3). */
+        // A kept country's days begin at `daysFrom`; `historyWhole` once they reach back to Google's line.
+        countriesNewest: v.array(v.object({ country: v.string(), newestDay: v.string(), daysFrom: v.string(), historyWhole: v.boolean() })),
         historyDone: v.boolean(),
+        /** The main country's day totals reach Google's sixteen-month line (search-console-first-collection-plan.md, SF5). */
+        historyWhole: v.boolean(),
+        /** The website's own collection run is going now: its first 90 days, started on connecting (SF1). */
+        collectingNow: v.boolean(),
         clearing: v.boolean(),
         lastCollectedAt: v.union(v.number(), v.null()),
         problem: v.union(connectionProblemValidator, v.null()),
@@ -468,8 +479,12 @@ export const searchConsoleStatus = tenantQuery({
           newestDay: connection.newestDay ?? null,
           oldestDay: connection.oldestDay ?? null,
           daysFrom: connection.daysFrom ?? connection.oldestDay ?? null,
-          countriesNewest: (connection.countriesHeld ?? []).map((held) => ({ country: held.country, newestDay: held.newestDay })),
+          countriesNewest: (connection.countriesHeld ?? []).map((held) => ({
+            country: held.country, newestDay: held.newestDay, daysFrom: held.daysFrom ?? held.oldestDay, historyWhole: held.daysFrom !== undefined,
+          })),
           historyDone: connection.backfilledAt !== undefined,
+          historyWhole: connection.daysFrom !== undefined,
+          collectingNow: await siteRunGoing(ctx, connection),
           clearing: connection.clearing === true,
           lastCollectedAt: connection.lastCollectedAt ?? null,
           problem: connection.problem ?? null,
@@ -481,3 +496,9 @@ export const searchConsoleStatus = tenantQuery({
     };
   },
 });
+
+/** Whether a website's own Search Console run is still going: started, not finished, and moved within the time a live run moves in (SF1). */
+export async function siteRunGoing(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">): Promise<boolean> {
+  const run = connection.collecting ? await ctx.db.get(connection.collecting.runId) : null;
+  return Boolean(run && (run.status === "QUEUED" || run.status === "RUNNING") && Date.now() - lastMoved(run) < ROLE_RUN_LIVE_MS);
+}

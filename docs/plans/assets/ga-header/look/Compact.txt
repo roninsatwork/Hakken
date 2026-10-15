@@ -1,0 +1,12 @@
+# Google Analytics → a website's header — the approved look (board "Compact" of docs/plans/assets/ga-header/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header (compact)
+  back: Back to Google Analytics
+  page-header: ‹the record's name›
+    title-switch: Choose a website
+    select: Country
+    select: Device
+    select: Dates
+    select: Chart step
+select: Google Analytics pages

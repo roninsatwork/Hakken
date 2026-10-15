@@ -64,9 +64,15 @@ async function slotRows(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnec
   const parts = await ctx.db
     .query("googleAnalyticsPeriods")
     .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", key).eq("slot", slot.slot))
-    .take(slot.parts);
+    .take(Math.min(slot.parts, HEALTH_PARTS_READ));
   return parts.flatMap((part) => unpackPart(part as PackedPart));
 }
+
+/**
+ * Parts of one list the checks read, 2,000 rows each (collection-reliability-plan.md, RR3): every check reads a list's
+ * biggest rows, and three lists read whole passed a call's 16 MB on a website of 50,000 pages. 20,000 rows a list.
+ */
+const HEALTH_PARTS_READ = 10;
 
 // ---------------------------------------------------------------------------
 // What each conversion really is (conversion-checks-plan.md): checks 10 to 12

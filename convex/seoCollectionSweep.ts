@@ -162,7 +162,8 @@ export const sweepDuty = internalMutation({
       case "refile":
         return await refileUnfiled(ctx, now, cursor, scheduled);
       case "stalledRuns":
-        // Every role's runs, the News agents' too (`roleRuns.ts`).
+        // Every role's runs, the News agents' too (`roleRuns.ts`): a run a collection's watched chain carries is left
+        // to its watch (`collectionSteps.ts`), never closed as dead.
         await closeStalledRoleRuns(ctx, now);
         return FINISHED;
       case "sendWaiting":

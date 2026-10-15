@@ -3,6 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { TRANSLATED_OWNERS, translatedOwnerValidator, type TranslatedOwner } from "./contentTranslationSchema";
+import { shippedType } from "./utils/classificationTypes";
 import { TRANSLATED_LANGUAGES, isTranslatedLanguage, type AppLanguage } from "./utils/contentLanguages";
 import { TRANSLATOR } from "./utils/contentTranslator";
 
@@ -70,6 +71,11 @@ export function sourceFields(owner: TranslatedOwner, row: Doc<TranslatedOwner>):
       if (article.status !== "IN_KNOWLEDGE" || !summary) return null;
       const meaning = article.meaningEn?.trim();
       return meaning ? { summary, meaning } : { summary };
+    }
+    case "classificationTypes": {
+      // A shipped type keeps the names it shipped with, in every language, until it is renamed (classification-types-plan CT7).
+      const type = row as Doc<"classificationTypes">;
+      return type.builtIn && type.nameEn === shippedType(type.key)?.names.en ? null : { name: type.nameEn };
     }
   }
 }

@@ -4,7 +4,7 @@ import { MOST_REPORT_PAGES, REPORT_PAGE_ROWS, runReport, type ReportRow } from "
 import { ask, type Session } from "./googleAnalyticsCollect";
 import { heldRows, topPerPage, trimTo } from "./googleAnalyticsPageLists";
 import { channelKey, listJoiner, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
-import { OTHER_ROWS, PAGE_TOP_ROWS, TRIM_ABOVE, TRIM_KEEP, trimDue } from "./utils/analyticsSharedLists";
+import { HOLD_ROWS, OTHER_ROWS, PAGE_TOP_ROWS, TRIM_ABOVE, TRIM_KEEP, keepPerPage, trimDue } from "./utils/analyticsSharedLists";
 import { useFixedDay, whileMovingClock } from "@/src/test/realTime";
 
 /**
@@ -122,16 +122,41 @@ describe("a big website's page lists, trimmed while they are read (BR3)", () => 
     expect(out.reduce((total, row) => total + row.visits, 0)).toBe(120_000);
   });
 
-  test("a list a cut cannot shorten is not cut again with every answer, only once it has doubled", () => {
+  test("a list a cut cannot shorten is not cut again with every answer, only once another half of what may be held has come in (RR2)", () => {
+    expect(HOLD_ROWS).toBe(100_000);
     const due = trimDue();
     expect(due.now(TRIM_ABOVE)).toBe(false);
     expect(due.now(TRIM_ABOVE + 1)).toBe(true);
-    // Every page under 100 rows: the cut left 70,000.
+    // Every page under 100 rows: the cut left 70,000. Until 2026-10-15 the next cut waited for twice that, 140,000.
     due.after(70_000);
-    expect(due.now(100_000)).toBe(false);
-    expect(due.now(140_001)).toBe(true);
+    expect(due.now(120_000)).toBe(false);
+    expect(due.now(120_001)).toBe(true);
+    // A cut that left 10,000: the next once 50,000 more have come in.
     due.after(10_000);
-    expect(due.now(TRIM_ABOVE + 1)).toBe(true);
+    expect(due.now(60_000)).toBe(false);
+    expect(due.now(60_001)).toBe(true);
+  });
+
+  test("a 14,000-page website's list never holds more than its pages' 21 rows each and half of what may be held (RR2)", () => {
+    // Ten times kordatackle.com's pages, each with 60 rows: 840,000, past Google's 500,000 a list.
+    const pages = 14_000;
+    expect(keepPerPage(pages)).toBe(PAGE_TOP_ROWS + 1);
+    expect(keepPerPage(10)).toBe(TRIM_KEEP);
+    const held = heldRows((row, one) => { row.views += one.values[0] ?? 0; }, trimTo((row) => row.views));
+    let most = 0;
+    let views = 0;
+    for (let at = 0; at < pages * 60; at += 25_000) {
+      const answer = Array.from({ length: Math.min(25_000, pages * 60 - at) }, (_, one) => {
+        const n = at + one;
+        views += 1 + (n % 7);
+        return { keys: [`/page-${n % pages}`, `/before-${Math.floor(n / pages)}`], values: [1 + (n % 7)] };
+      });
+      held.sink(answer);
+      most = Math.max(most, held.size());
+    }
+    // Each page's 21 rows kept and its other row, and at most half of 100,000 and one answer more.
+    expect(most).toBeLessThanOrEqual(pages * (PAGE_TOP_ROWS + 2) + HOLD_ROWS / 2 + 25_000);
+    expect(held.rows().reduce((total, row) => total + row.views, 0)).toBe(views);
   });
 
   test("an \"other\" row added up while read never takes one of a page's top places", () => {

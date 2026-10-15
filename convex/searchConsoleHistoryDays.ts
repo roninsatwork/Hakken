@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { askLive } from "./searchConsoleReads";
 import { historyLimitDay, shiftDay } from "./searchConsoleDays";
 import { kindsHeld } from "./searchConsoleRollups";
@@ -55,9 +55,9 @@ export const historyTarget = internalQuery({
   },
 });
 
-/** One kind of result's days before collection began: each written where none is held. */
+/** One kind of result's days before collection began, for the main country or one kept ready: each written where none is held. */
 export const writeHistoryDays = internalMutation({
-  args: { connectionId: v.id("searchConsoleConnections"), property: v.string(), searchType: searchTypeValidator, rows: v.array(dayRowValidator), fetchedAt: v.number() },
+  args: { connectionId: v.id("searchConsoleConnections"), property: v.string(), country: v.optional(v.string()), searchType: searchTypeValidator, rows: v.array(dayRowValidator), fetchedAt: v.number() },
   returns: v.number(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
@@ -66,10 +66,10 @@ export const writeHistoryDays = internalMutation({
     for (const row of args.rows) {
       const held = await ctx.db
         .query("searchConsoleDays")
-        .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("country", undefined).eq("searchType", args.searchType).eq("day", row.day))
+        .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).eq("day", row.day))
         .first();
       if (held) continue;
-      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: connection.companyWebsiteId, searchType: args.searchType, ...row, fetchedAt: args.fetchedAt });
+      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: connection.companyWebsiteId, ...(args.country ? { country: args.country } : {}), searchType: args.searchType, ...row, fetchedAt: args.fetchedAt });
       written += 1;
     }
     return written;
@@ -204,32 +204,38 @@ export function chartPeriodsToFill(googleFrom: string, reach: string, oldestDay:
   return periods;
 }
 
-/** What the charts' fill needs: their reach, the newest day, the website's brand words, and the weeks and months already held, for the main country. */
+/** What the charts' fill needs: their reach, the newest day, the website's brand words, and the weeks and months already held, for the main country or one kept ready. */
 export const chartFillTarget = internalQuery({
-  args: { connectionId: v.id("searchConsoleConnections") },
+  args: { connectionId: v.id("searchConsoleConnections"), country: v.optional(v.string()) },
   returns: v.union(v.null(), v.object({ reach: v.string(), newest: v.string(), brandWords: v.array(v.string()), held: v.array(v.string()) })),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
-    const hold = connection ? await ctx.db.get(connection.companyWebsiteId) : null;
-    if (!connection?.newestDay || !hold) return null;
-    const { chartWeeks } = await consoleLimitsOf(ctx, hold);
-    const rows = await ctx.db.query("searchConsoleWeeks")
-      .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", hold._id).eq("country", undefined).eq("searchType", "web"))
-      .take(MONTH_ROWS_READ);
-    return {
-      reach: chartReach(connection.newestDay, chartWeeks),
-      newest: connection.newestDay,
-      brandWords: (await holdBrandNames(ctx, hold._id)).map((brand) => brand.name),
-      // Rows built before 2026-10-04 carry no grain: they are weeks.
-      held: rows.filter((row) => row.grain !== "DAY").map((row) => `${row.grain ?? "WEEK"} ${row.week}`),
-    };
+    return connection ? await chartFillOf(ctx, connection, args.country) : null;
   },
 });
+
+/** The charts' fill's needs for one scope, read by `chartFillTarget` and the run's 16-month fill (`searchConsoleHistoryFill.ts`). */
+export async function chartFillOf(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">, country: string | undefined) {
+  const hold = await ctx.db.get(connection.companyWebsiteId);
+  const newest = country === undefined ? connection.newestDay : connection.countriesHeld?.find((held) => held.country === country)?.newestDay;
+  if (!newest || !hold) return null;
+  const { chartWeeks } = await consoleLimitsOf(ctx, hold);
+  const rows = await ctx.db.query("searchConsoleWeeks")
+    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", hold._id).eq("country", country).eq("searchType", "web"))
+    .take(MONTH_ROWS_READ);
+  return {
+    reach: chartReach(newest, chartWeeks),
+    newest,
+    brandWords: (await holdBrandNames(ctx, hold._id)).map((brand) => brand.name),
+    // Rows built before 2026-10-04 carry no grain: they are weeks.
+    held: rows.filter((row) => row.grain !== "DAY").map((row) => `${row.grain ?? "WEEK"} ${row.week}`),
+  };
+}
 
 /** One week's or month's chart row, written where none is held: one collected is never written over. */
 export const writeChartPeriod = internalMutation({
   args: {
-    connectionId: v.id("searchConsoleConnections"), property: v.string(), searchType: searchTypeValidator, grain: v.union(v.literal("WEEK"), v.literal("MONTH")), start: v.string(), days: v.number(),
+    connectionId: v.id("searchConsoleConnections"), property: v.string(), country: v.optional(v.string()), searchType: searchTypeValidator, grain: v.union(v.literal("WEEK"), v.literal("MONTH")), start: v.string(), days: v.number(),
     figures: v.object({ top3: v.number(), top10: v.number(), top20: v.number(), rest: v.number(), brandClicks: v.number(), otherClicks: v.number() }),
   },
   returns: v.boolean(),
@@ -237,10 +243,10 @@ export const writeChartPeriod = internalMutation({
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.property !== args.property || connection.clearing) return false;
     const held = await ctx.db.query("searchConsoleWeeks")
-      .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("country", undefined).eq("searchType", args.searchType).eq("week", args.start))
+      .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).eq("week", args.start))
       .take(3);
     if (held.some((row) => (row.grain ?? "WEEK") === args.grain)) return false;
-    await ctx.db.insert("searchConsoleWeeks", { companyWebsiteId: connection.companyWebsiteId, searchType: args.searchType, grain: args.grain, week: args.start, days: args.days, ...args.figures, builtAt: Date.now() });
+    await ctx.db.insert("searchConsoleWeeks", { companyWebsiteId: connection.companyWebsiteId, ...(args.country ? { country: args.country } : {}), searchType: args.searchType, grain: args.grain, week: args.start, days: args.days, ...args.figures, builtAt: Date.now() });
     return true;
   },
 });

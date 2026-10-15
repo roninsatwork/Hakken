@@ -87,20 +87,35 @@ const rowKey = (row: Row) => (row.page === undefined ? row.key : `${row.key}${SE
 /** Rows of several lists added up by their key (a pair by its search and page together): Google's answers for pieces of a period. */
 export function addUpRows(lists: Iterable<readonly Row[]>): Row[] {
   const sums = new Map<string, Row>();
-  for (const list of lists) {
-    for (const row of list) {
-      const key = rowKey(row);
-      const held = sums.get(key);
-      if (held) {
-        held.clicks += row.clicks;
-        held.impressions += row.impressions;
-        held.positionSum += row.positionSum;
-      } else {
-        sums.set(key, { ...row });
-      }
+  for (const list of lists) addRowsInto(sums, list);
+  return [...sums.values()];
+}
+
+/** Rows added into running sums by their key, as they come: a long period's weekly answers are never all held at once. */
+export function addRowsInto(sums: Map<string, Row>, rows: readonly Row[]): void {
+  for (const row of rows) {
+    const key = rowKey(row);
+    const held = sums.get(key);
+    if (held) {
+      held.clicks += row.clicks;
+      held.impressions += row.impressions;
+      held.positionSum += row.positionSum;
+    } else {
+      sums.set(key, { ...row });
     }
   }
-  return [...sums.values()];
+}
+
+/**
+ * A build of a website's lists that ran past its budget and stopped itself,
+ * before the platform's ten minutes could end it unseen
+ * (search-console-first-collection-plan.md, the adding-up that hands on).
+ */
+export class RanLong extends Error {
+  constructor(what: string) {
+    super(`${what} ran past the time one job may take`);
+    this.name = "RanLong";
+  }
 }
 
 /** Every row of every list added up by its key (a pair by its search and page together). */

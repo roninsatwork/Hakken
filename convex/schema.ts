@@ -26,6 +26,7 @@ import { mentionTables } from "./mentionSchema";
 import { adviceTables } from "./adviceSchema";
 import { insightsTables } from "./insightsSchema";
 import { clarityTables } from "./claritySchema";
+import { collectionStepTables } from "./collectionStepsSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -48,6 +49,7 @@ export default defineSchema({
   ...uploadTables,
   ...siteTables,
   ...searchConsoleTables,
+  ...collectionStepTables,
   ...googleTables,
   ...googleAnalyticsTables,
   ...bingWebmasterTables,

@@ -83,19 +83,29 @@ export function checkedCountry(country: string | undefined): string | undefined 
   return country;
 }
 
-type HeldEntry = { country: string; newestDay: string; oldestDay: string };
+type HeldEntry = { country: string; newestDay: string; oldestDay: string; daysFrom?: string };
 export type HeldRange = { newestDay: string; oldestDay: string };
 
-/** The days held for one country kept ready, as its connection notes them; null before its first collection. */
-export function heldFor(connection: { countriesHeld?: HeldEntry[] } | null, country: string): HeldRange | null {
+/**
+ * The days held for one country kept ready, as its connection notes them;
+ * null before its first collection. `daysFrom`: where its day totals begin
+ * once fetched back to Google's sixteen-month line (SF3).
+ */
+export function heldFor(connection: { countriesHeld?: HeldEntry[] } | null, country: string): (HeldRange & { daysFrom?: string }) | null {
   const entry = connection?.countriesHeld?.find((held) => held.country === country);
-  return entry ? { newestDay: entry.newestDay, oldestDay: entry.oldestDay } : null;
+  return entry ? { newestDay: entry.newestDay, oldestDay: entry.oldestDay, ...(entry.daysFrom ? { daysFrom: entry.daysFrom } : {}) } : null;
 }
 
-/** A connection's held days with one country's set, or dropped when `range` is null. */
-export function withHeld(list: HeldEntry[] | undefined, country: string, range: HeldRange | null): HeldEntry[] | undefined {
+/**
+ * A connection's held days with one country's set, or dropped when `range` is
+ * null. Days joined on keep where its day totals begin (`daysFrom`), unless
+ * `daysFrom` is given.
+ */
+export function withHeld(list: HeldEntry[] | undefined, country: string, range: HeldRange | null, daysFrom?: string): HeldEntry[] | undefined {
+  const was = (list ?? []).find((held) => held.country === country);
   const rest = (list ?? []).filter((held) => held.country !== country);
-  const next = range ? [...rest, { country, ...range }] : rest;
+  const from = daysFrom ?? was?.daysFrom;
+  const next = range ? [...rest, { country, ...range, ...(from ? { daysFrom: from } : {}) }] : rest;
   return next.length > 0 ? next : undefined;
 }
 
@@ -110,7 +120,7 @@ export function withHeld(list: HeldEntry[] | undefined, country: string, range: 
  */
 export type CountryScope =
   | { read: "ALL" }
-  | { read: "KEPT"; country: string; newestDay: string; oldestDay: string }
+  | { read: "KEPT"; country: string; newestDay: string; oldestDay: string; daysFrom?: string }
   | { read: "LIVE"; country: string; kept: boolean };
 
 export async function countryScope(

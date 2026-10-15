@@ -3,11 +3,11 @@
 import { LineChart } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { formatNumber } from "../../sites/_components/siteFormat";
+import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { SearchConsoleChart } from "../_components/SearchConsoleChart";
 import { SearchConsoleFigures, useSiteFiguresFor } from "../_components/SearchConsoleFigures";
 import { LiveProblem, NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../_components/SearchConsoleNotices";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
+import { useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
 import { SearchConsoleSees } from "../_components/SearchConsoleSees";
 import { performanceSees } from "@/convex/utils/sees/searchConsoleScreens";
 
@@ -24,11 +24,18 @@ export default function SearchConsolePerformancePage() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
+  const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const { figures: performance, problem, retry } = useSiteFiguresFor(
     status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to } : null,
   );
   const totals = performance?.totals ?? null;
+  // Google's sixteen months still coming in for the country read, and where its days start until then
+  // (search-console-first-collection-plan.md, SF5): the website's own run fills them straight after its 90 days.
+  const kept = country ? status?.connection?.countriesNewest.find((held) => held.country === country) : undefined;
+  const fillingFrom = !status?.connection?.newestDay ? null
+    : country ? (kept && !kept.historyWhole ? kept.daysFrom : null)
+      : !status.connection.historyWhole ? status.connection.daysFrom : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,6 +62,7 @@ export default function SearchConsolePerformancePage() {
                   })}
                 </p>
               ) : null}
+              {fillingFrom ? <p className="text-[12px] leading-relaxed text-secondary">{t("historyFilling", { day: formatDay(fillingFrom) })}</p> : null}
               <SearchConsoleChart
                 title={t("chart.title")}
                 days={performance.days}

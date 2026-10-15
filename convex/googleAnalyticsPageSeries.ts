@@ -1,3 +1,4 @@
+import { PART_ROWS } from "./utils/searchConsolePacks";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -6,7 +7,7 @@ import { analyticsPackedRows } from "./googleAnalyticsSchema";
 import { EVERY_DEVICE, channelKey, groupKeys, packList, slotKey, splitChannelKey, unpackPart, type Lead, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { addInto, blank } from "./googleAnalyticsRows";
 import { askList, countryIdOf, failed, openSession, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
-import { fillStops, type FillArgs, type FillOutcome } from "./googleAnalyticsHistory";
+import { beginFillStep, fillStops, type FillArgs, type FillOutcome } from "./googleAnalyticsHistory";
 import { fillReachedOf, withoutReached } from "./googleAnalyticsFillAfter";
 import { numberPages } from "./googleAnalyticsPageNumbers";
 import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
@@ -240,11 +241,14 @@ export const pagesSeenOf = internalQuery({
     const key = slotKey("page", "90", "NOW", EVERY_DEVICE, args.country ?? "");
     const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key)).first();
     if (!slot) return null;
-    const parts = await ctx.db
+    // Every part but the last is full (`packList`): only the last is read (collection-reliability-plan.md, RR3), where a
+    // big website's whole list passed a query's 16 MB.
+    if (slot.parts === 0) return 0;
+    const last = await ctx.db
       .query("googleAnalyticsPeriods")
-      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key).eq("slot", slot.slot))
-      .take(slot.parts);
-    return parts.reduce((sum, part) => sum + part.keys.length, 0);
+      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key).eq("slot", slot.slot).eq("part", slot.parts - 1))
+      .first();
+    return (slot.parts - 1) * PART_ROWS + (last?.keys.length ?? 0);
   },
 });
 
@@ -257,23 +261,31 @@ export const pagesSeenOf = internalQuery({
  * `npx convex run googleAnalyticsSteps:fillPageHistory '{"connectionId": "…"}'`.
  */
 export async function fillPageHistoryStep(ctx: ActionCtx, args: FillArgs): Promise<FillOutcome> {
+  const begun = await beginFillStep(ctx, "GA_FILL_PAGES", args);
+  if (!begun.go) return begun.outcome;
+  const close = async (outcome: FillOutcome) => {
+    await ctx.runMutation(internal.collectionSteps.closeChain, { key: begun.watched.key });
+    return outcome;
+  };
   const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
   const newestDay = args.country ? target?.countryHistory.find((one) => one.country === args.country)?.newestDay : target?.newestDay;
-  if (!target?.property || !newestDay) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not connected, or no days collected yet." };
-  if (args.country && !target.others.includes(args.country)) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not one of the website's home countries." };
+  if (!target?.property || !newestDay) return await close({ ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not connected, or no days collected yet." });
+  if (args.country && !target.others.includes(args.country)) return await close({ ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not one of the website's home countries." });
   const opened = await openSession(ctx, args.connectionId);
-  if (!opened.ok) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: opened.problem };
+  if (!opened.ok) return await close({ ok: false, pieces: 0, rows: 0, requests: 0, problem: opened.problem });
   const country = args.country ?? "";
   const newest = newestDay;
   const floors = historyFloors(newest);
   const pages = await ctx.runQuery(internal.googleAnalyticsPageSeries.pagesSeenOf, { companyWebsiteId: target.companyWebsiteId, ...(args.country ? { country: args.country } : {}) });
-  const pieces = pageFillPieces(newest, unitsPerAsk(pages));
+  // The second try after the platform stopped a step: a unit an ask, the smallest piece (RR1).
+  const pieces = pageFillPieces(newest, begun.watched.careful ? 1 : unitsPerAsk(pages));
   let rows = 0;
   const step = fillStops(
     ctx,
-    async (atMs) => await ctx.scheduler.runAfter(atMs, internal.googleAnalyticsSteps.fillPageHistory, args),
+    begun.again,
     args.nightFrom,
     () => ({ pieces: pieces.length, rows, requests: opened.session.requests }),
+    begun.watched,
   );
   const reached = fillReachedOf(target, country, PAGES_FILL);
   for (const piece of pieces) {
@@ -286,9 +298,10 @@ export async function fillPageHistoryStep(ctx: ActionCtx, args: FillArgs): Promi
       await writeRecords(ctx, target, args.connectionId, newest, asked.records);
     }
     await ctx.runMutation(internal.googleAnalyticsFillAfter.noteFillReached, { connectionId: args.connectionId, property: target.property, country, fill: PAGES_FILL, to: piece.to });
+    await step.piece(`each page, to ${piece.to}`, args);
   }
   await ctx.runMutation(internal.googleAnalyticsPageSeries.notePagesHeld, { connectionId: args.connectionId, property: target.property, from: floors.month, ...(args.country ? { country: args.country } : {}) });
-  return { ok: true, pieces: pieces.length, rows, requests: opened.session.requests };
+  return await step.done({ ok: true, pieces: pieces.length, rows, requests: opened.session.requests });
 }
 
 /** The page fill's name among the fills' places (BR6). */

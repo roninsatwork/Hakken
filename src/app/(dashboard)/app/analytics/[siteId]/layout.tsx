@@ -6,8 +6,8 @@ import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Notice } from "@/src/ui/components/screens/Notice";
-import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { formatDay } from "../../sites/_components/siteFormat";
@@ -23,6 +23,11 @@ import { analyticsQuery, pageForPath, useAnalyticsSiteId, useAnalyticsStatus } f
  * websites, the device, dates and step every page reads, the menu, and the
  * page. Read through the caller's own hold: another company's website answers
  * exactly as a missing one does.
+ *
+ * The header is the compact one Anthony chose on 2026-10-15
+ * (docs/plans/active/ga-header-plan.md): the website's name is the switch,
+ * the filters share its row, and how fresh the figures are ends the line
+ * under it.
  */
 export default function AnalyticsSiteLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("googleAnalytics.site");
@@ -65,15 +70,31 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     : t("yourWebsite");
   const firstComing = state === "CONNECTED" && !connection?.historyDone;
   const ownDates = pageForPath(pathname, siteId) === "live" || /\/landing-pages\/page\/?$/.test(pathname);
+  // A landing page's own screen joins Search Console's days to Analytics' and says both itself (§15); Live is the last 30 minutes.
+  const figuresTo = connection?.newestDay && state !== "CHOOSING" && state !== "COUNTING" && !ownDates
+    ? t("figuresTo", { day: formatDay(connection.newestDay) })
+    : null;
 
   return (
     <>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
+          layout="compact"
           back={{ label: t("back"), href: `/app/analytics${analyticsQuery(params)}` }}
           icon={<SiteMark host={status.host} iconUrl={status.iconUrl} owned />}
-          title={status.host}
+          title={
+            status.ownSites.length > 1 ? (
+              <TitleSwitch
+                label={status.host}
+                aria-label={t("switch")}
+                value={siteId}
+                onChange={(next) => router.push(`/app/analytics/${next}${analyticsQuery(params)}`)}
+              >
+                {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
+              </TitleSwitch>
+            ) : status.host
+          }
           description={property}
           pills={
             state === "CONNECTED" && connection?.lastCollectedAt && !firstComing ? (
@@ -84,20 +105,8 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
               <StatusLabel tone={state === "NEEDS_RECONNECT" ? "warning" : state === "CONNECTED" ? "success" : "neutral"}>{ts(state)}</StatusLabel>
             )
           }
-          action={
-            <div className="flex flex-wrap items-end gap-3">
-              {status.ownSites.length > 1 ? (
-                <Select
-                  aria-label={t("switch")}
-                  value={siteId}
-                  onChange={(next) => router.push(`/app/analytics/${next}${analyticsQuery(params)}`)}
-                >
-                  {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
-                </Select>
-              ) : null}
-              <AnalyticsFilters />
-            </div>
-          }
+          action={<AnalyticsFilters />}
+          note={figuresTo}
         />
 
         <AnalyticsConnectionBanner status={status} siteId={siteId} />
@@ -108,10 +117,6 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
             <AnalyticsMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            {/* A landing page's own screen joins Search Console's days to Analytics' and says both itself (§15); Live is the last 30 minutes. */}
-            {connection?.newestDay && state !== "CHOOSING" && state !== "COUNTING" && !ownDates ? (
-              <p className="text-[12px] text-muted">{t("figuresTo", { day: formatDay(connection.newestDay) })}</p>
-            ) : null}
             {children}
           </section>
         </div>

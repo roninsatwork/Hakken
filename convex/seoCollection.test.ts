@@ -342,6 +342,24 @@ describe("expanding a cycle", () => {
 
     expect(await pulls(t)).toHaveLength(0);
   });
+
+  test("plans nothing for a website switched on while its company is switched off", async () => {
+    // Korda on 2026-10-15: the company off, kordatacle.com on with its own
+    // schedule. The company's switch is the master, even for a collection an
+    // agent opened by hand (`dataforseo.collection.start`).
+    const t = harness();
+    const company = await seedCompany(t, "Korda");
+    await seedSchedule(t, company, DAILY, false);
+    await seedCompanyWebsite(t, company, await seedWebsite(t, "kordatacle.com"), {
+      refreshIntervalStr: DAILY,
+      collectionEnabled: true,
+    });
+    const cycleId = await openCycle(t, company, Date.now(), "MANUAL");
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    expect(await pulls(t)).toHaveLength(0);
+  });
 });
 
 describe("checking the searches on a website's record", () => {

@@ -117,14 +117,19 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[]): 
     new Map([...first.entries()].flatMap(([landing, byPage]) => [...byPage.entries()].map(([page, held]) => [`${landing}\u0000${page}`, held.visits] as [string, number]))),
     sum(second.map((route) => [`${route.landing}\u0000${route.page}`, route.visits])),
   ];
+  // Each landing page and page the column reached, once (collection-reliability-plan.md, RR2): every page against every
+  // landing page was a big website's millions of sums for a few thousand that count.
   for (const [column, totals] of [[1, nextTotals], [2, afterTotals]] as const) {
+    const on = new Map<string, number>();
+    for (const [pair, here] of stepVisits[column]) {
+      const [landing, page] = pair.split("\u0000");
+      if (landing === page || !arrivals.has(landing) || here <= 0) continue;
+      const anywhere = reached.get(pair) ?? 0;
+      if (anywhere > 0) on.set(page, (on.get(page) ?? 0) + wentOn(landing, page) * Math.min(1, here / anywhere));
+    }
     for (const page of totals.keys()) {
-      const on = [...arrivals.keys()].filter((landing) => landing !== page).reduce((all, landing) => {
-        const here = stepVisits[column].get(`${landing}\u0000${page}`) ?? 0;
-        const anywhere = reached.get(`${landing}\u0000${page}`) ?? 0;
-        return all + (here > 0 && anywhere > 0 ? wentOn(landing, page) * Math.min(1, here / anywhere) : 0);
-      }, 0);
-      if (on > 0) into(["o", String(column), node(column, page)], 0, Math.round(on));
+      const went = on.get(page) ?? 0;
+      if (went > 0) into(["o", String(column), node(column, page)], 0, Math.round(went));
     }
   }
   [landingTotals, nextTotals, afterTotals].forEach((totals, column) => {

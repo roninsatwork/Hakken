@@ -2,90 +2,32 @@
 
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { memoryNow } from "./utils/stepMemory";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { searchTypeValidator, type SearchType } from "./searchConsoleSchema";
+import { searchTypeValidator } from "./searchConsoleSchema";
 import { failureSummary } from "./roleRuns";
-import { count, countryLabel, days, finishRun } from "./searchConsoleAgentRun";
+import { countryLabel } from "./searchConsoleAgentRun";
+import { planParts, scopesOf, settlePartKey, startParts } from "./searchConsoleSettlePlan";
+import { stageName } from "./searchConsoleSettling";
 import { dropOldLinesOf } from "./searchConsoleRollups";
 import { buildSitePeriods } from "./searchConsolePeriods";
+import { RanLong } from "./utils/searchConsolePacks";
+import { MOST_PAIRS_HELD } from "./searchConsoleLongLists";
 
 /**
- * A website's run settles after its days are in (search-console-plan.md
- * §14.3): the ready-made periods and the charts' weeks are added up again —
- * for all countries and each country kept ready (§16), as one job per kind
- * of result and country, side by side (cost review 4, 2026-10-05:
+ * A website's settle: its ready-made periods and the charts' weeks added up
+ * again after its days are in (search-console-plan.md §14.3) — for all
+ * countries and each country kept ready (§16), one watched job per kind of
+ * result and country, side by side (cost review 4, 2026-10-05:
  * morehandles.co.uk's in one job took four and a half of an action's ten
- * minutes). The last job to finish clears the lines past the 60 days kept —
- * after the build, so a first collection's 90 days give its charts their
- * weeks (keep-less-history-plan.md, part 3) — and ends the run
- * (`searchConsoleSettling.ts`).
+ * minutes), booked by `searchConsoleSettlePlan.ts`. The last job to finish
+ * clears the lines past the 60 days kept — after the build, so a first
+ * collection's 90 days give its charts their weeks (keep-less-history-plan.md,
+ * part 3) — and ends the run (`searchConsoleSettling.settleEnded`).
  * In the Node runtime, which gives a job room for a website's 90 days of
  * keyword-and-page pairs at once (reviewed 2026-10-03).
  */
-export const settleSite = internalAction({
-  args: {
-    runId: v.id("agentRuns"),
-    workflowExecutionId: v.id("workflowExecutions"),
-    connectionId: v.id("searchConsoleConnections"),
-    companyId: v.id("companies"),
-    host: v.string(),
-    summary: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const finish = async () => await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", args.summary);
-    try {
-      const plan = await planParts(ctx, args.connectionId);
-      if (plan === null) {
-        await finish();
-        return null;
-      }
-      await ctx.runMutation(internal.roleRuns.logRunLine, {
-        runId: args.runId,
-        companyId: args.companyId,
-        heading: "Kept",
-        detail: `The lists added up as ${count(plan.parts.length)} ${plan.parts.length === 1 ? "job" : "jobs"} side by side, then the lines past the 60 days kept cleared.`,
-        failed: false,
-      });
-      await startParts(ctx, args.connectionId, plan, {
-        runId: args.runId, workflowExecutionId: args.workflowExecutionId, companyId: args.companyId, summary: args.summary,
-      });
-    } catch (error: unknown) {
-      await finishRun(ctx, args.runId, args.workflowExecutionId, "FAILED", `The days came in, but adding them up stopped: ${failureSummary(error)} The next run adds them up again.`);
-    }
-    return null;
-  },
-});
-
-type Part = { country?: string; searchType: SearchType; newest: string; oldest: string };
-type Plan = { holdId: Id<"companyWebsites">; parts: Part[] };
-
-/** Each scope held — all countries, and each country kept ready — with its newest and oldest day; null with nothing held. */
-async function scopesOf(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">) {
-  const all = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId });
-  if (!all || all.clearing || !all.newestDay || !all.oldestDay) return null;
-  const scopes: Array<{ holdId: Id<"companyWebsites">; country?: string; newest: string; oldest: string }> = [];
-  for (const country of [undefined, ...all.countries]) {
-    const scope = country === undefined ? {} : { country };
-    const state = country === undefined ? all : await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId, ...scope });
-    if (!state || !state.kept || !state.newestDay || !state.oldestDay) continue;
-    scopes.push({ holdId: state.companyWebsiteId, ...scope, newest: state.newestDay, oldest: state.oldestDay });
-  }
-  return { holdId: all.companyWebsiteId, scopes };
-}
-
-/** The jobs that add up each scope's lists: one per kind of result held. Null with nothing held. */
-async function planParts(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">): Promise<Plan | null> {
-  const held = await scopesOf(ctx, connectionId);
-  if (!held) return null;
-  const parts: Part[] = [];
-  for (const { holdId, newest, oldest, ...scope } of held.scopes) {
-    const types = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId: holdId, ...scope });
-    for (const searchType of types) parts.push({ ...scope, searchType, newest, oldest });
-  }
-  return parts.length > 0 ? { holdId: held.holdId, parts } : null;
-}
 
 /** Each scope's lines past the 60 days kept cleared, once the lists have been added up from them. */
 async function dropOldLinesAll(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">) {
@@ -93,29 +35,30 @@ async function dropOldLinesAll(ctx: ActionCtx, connectionId: Id<"searchConsoleCo
   for (const { holdId, newest, country } of held?.scopes ?? []) await dropOldLinesOf(ctx, holdId, newest, country);
 }
 
-/** The settle's jobs started side by side, counted on the connection. */
-async function startParts(
-  ctx: ActionCtx,
-  connectionId: Id<"searchConsoleConnections">,
-  plan: Plan,
-  run?: { runId: Id<"agentRuns">; workflowExecutionId: Id<"workflowExecutions">; companyId: Id<"companies">; summary: string },
-  long?: boolean,
-  onlyLong?: boolean,
-) {
-  const token = await ctx.runMutation(internal.searchConsoleSettling.startSettle, { connectionId, parts: plan.parts.length, ...(run ? { run } : {}) });
-  for (const part of plan.parts) {
-    await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.settlePart, {
-      connectionId, holdId: plan.holdId, token, ...part, ...(long === undefined ? {} : { long }), ...(onlyLong ? { onlyLong } : {}),
-    });
-  }
-}
-
 /**
  * One job of a settle: one kind of result's ready-made periods for all
  * countries or one, its 90 days and twelve months too when a week old (or
  * asked for); the last job to finish asks for Your pages again and ends the
  * run.
+ *
+ * **It hands itself on** (2026-10-15, after kordatackle.com's web job ran past
+ * the ten minutes an action has and the run never ended): a kind is added up
+ * as a chain of jobs, one after another:
+ * - the short periods, from the 60 days kept
+ * - the 90 days and those before, asked of Google
+ * - the twelve months, asked of Google
+ * Each job has its own budget (`STAGE_BUDGET_MS`). One that still runs past it
+ * stops itself between pieces, saying so (`RanLong`), so the run always ends.
+ * The periods it didn't reach keep what was built before, and are added up
+ * when a screen opens them or the next week.
  */
+
+/** A chain job's own time, well inside the ten minutes Convex gives an action. */
+const STAGE_BUDGET_MS = 7 * 60 * 1000;
+
+const stageValidator = v.union(v.literal("SHORT"), v.literal("NINETY"), v.literal("YEAR"));
+type Stage = "SHORT" | "NINETY" | "YEAR";
+
 export const settlePart = internalAction({
   args: {
     connectionId: v.id("searchConsoleConnections"),
@@ -129,46 +72,98 @@ export const settlePart = internalAction({
     long: v.optional(v.boolean()),
     /** Only the 90 days and twelve months: caught up because a screen asked (`searchConsoleCatchUp.ts`). */
     onlyLong: v.optional(v.boolean()),
+    /** The chain's job this is, and what the jobs before it wrote and whether the long periods were due (missing: its first). */
+    stage: v.optional(stageValidator),
+    writtenBefore: v.optional(v.number()),
+    weeklyBefore: v.optional(v.boolean()),
+    /** When this job must stop by; missing, its budget from now. A test sets it to see a job stop itself. */
+    stopAt: v.optional(v.number()),
+    /** The booking this job is (`collectionSteps.ts`, RR1): missing on one booked before the watch. */
+    booking: v.optional(v.number()),
+    /** Its watch gave up carrying it on: counted as done, saying why, so the settle still ends. */
+    closeOnly: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const scope = args.country === undefined ? {} : { country: args.country };
-    let written = 0;
-    let weekly = false;
+    const part = { searchType: args.searchType, ...scope };
+    const key = settlePartKey(args.connectionId, part);
+    const begun = await ctx.runMutation(internal.collectionSteps.stepStarted, { key, ...(args.booking !== undefined ? { booking: args.booking } : {}) });
+    if (!begun.go) return null;
+    const name = `${args.searchType}${args.country ? ` (${countryLabel(args.country)})` : ""}`;
+    let written = args.writtenBefore ?? 0;
+    let weekly = args.weeklyBefore ?? false;
     let failed: string | undefined;
-    try {
-      weekly = args.long ?? await ctx.runQuery(internal.searchConsoleSettling.longPeriodsDue, { holdId: args.holdId, ...scope, searchType: args.searchType });
-      written = await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, { searchType: args.searchType, long: weekly, onlyLong: args.onlyLong });
-    } catch (error: unknown) {
-      failed = `${args.searchType}${args.country ? ` (${countryLabel(args.country)})` : ""}: ${failureSummary(error)}`;
+    let next: Stage | undefined;
+    // Counted already — started again by its watch in the settle's ending: straight to the ending (RR1).
+    const counted = await ctx.runQuery(internal.searchConsoleSettling.partCounted, { connectionId: args.connectionId, token: args.token, part: key });
+    if (!counted && args.closeOnly) failed = `${name}: the platform kept stopping this job, so what it didn't reach keeps what was built before, and is added up when a screen opens it.`;
+    if (!counted && !args.closeOnly) {
+      try {
+        if (args.stage === undefined) weekly = args.long ?? await ctx.runQuery(internal.searchConsoleSettling.longPeriodsDue, { holdId: args.holdId, ...scope, searchType: args.searchType });
+        const stages: Stage[] = args.onlyLong ? ["NINETY", "YEAR"] : weekly ? ["SHORT", "NINETY", "YEAR"] : ["SHORT"];
+        const stage = args.stage ?? stages[0];
+        next = stages[stages.indexOf(stage) + 1];
+        if (begun.skip) {
+          // Stopped by the platform three times at this stage: left out, saying so, and the chain goes on (RR1).
+          failed = `${name}: ${stageName(part, stage)} was stopped by the platform three times, so it keeps what was built before.`;
+        } else {
+          const stopAt = args.stopAt ?? Date.now() + STAGE_BUDGET_MS;
+          const held = { pruned: false };
+          written += await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, stage === "SHORT"
+            ? { searchType: args.searchType, long: false, stopAt, careful: begun.careful, held }
+            : { searchType: args.searchType, long: true, onlyLong: true, longPeriod: stage === "NINETY" ? "90" : "365", stopAt, careful: begun.careful, held });
+          // A period's pairs past what one job may hold: never in silence (RR2).
+          const { runId } = await runOf(ctx, args.connectionId, args.token);
+          if (held.pruned && runId) {
+            await ctx.runMutation(internal.roleRuns.logRunLine, {
+              runId,
+              heading: "Too many searches to hold",
+              detail: `${stageName(part, stage)}: more than ${MOST_PAIRS_HELD.toLocaleString("en-GB")} searches by page came in, so the least-seen searches the keep rule could not keep yet — no click, one page, an average position past 20 — were let go as they came.`,
+              failed: true,
+            });
+          }
+        }
+      } catch (error: unknown) {
+        next = undefined;
+        failed = error instanceof RanLong
+          ? `${name}: ${error.message}; what it didn't reach keeps what was built before, and is added up when a screen opens it.`
+          : `${name}: ${failureSummary(error)}`;
+      }
+      // The next job of the chain, handed what this one wrote: the settle counts a kind once, at the chain's end.
+      if (next !== undefined) {
+        const { stopAt: _stopAt, booking: _booking, ...rest } = args;
+        await ctx.runMutation(internal.collectionSteps.handOn, { ...memoryNow(),
+          key,
+          chain: "SC_SETTLE",
+          args: { ...rest, stage: next, writtenBefore: written, weeklyBefore: weekly },
+          place: stageName(part, next),
+          ...(args.booking !== undefined ? { from: args.booking } : {}),
+          ...(await runOf(ctx, args.connectionId, args.token)),
+        });
+        return null;
+      }
     }
     const settle = await ctx.runMutation(internal.searchConsoleSettling.partDone, {
-      connectionId: args.connectionId, token: args.token, written, weekly, ...(failed ? { failed } : {}),
+      connectionId: args.connectionId, token: args.token, part: key, written, weekly, ...(failed ? { failed } : {}),
     });
-    if (!settle) return null;
-    // The last job: the lines past the days kept cleared, now built from (keep-less-history-plan.md, part 3).
-    await dropOldLinesAll(ctx, args.connectionId);
-    // Your pages reads the 90-day page list (asked for, not waited on), and the run ends.
-    await ctx.runMutation(internal.holdPages.requestRebuild, { holdId: args.holdId });
-    if (!settle.runId || !settle.companyId) return null;
-    const newest = args.newest;
-    await ctx.runMutation(internal.roleRuns.logRunLine, {
-      runId: settle.runId,
-      companyId: settle.companyId,
-      heading: "Added up",
-      detail: `${count(settle.parts)} ${settle.parts === 1 ? "job" : "jobs"}: the 7- and 30-day lists rebuilt${settle.weekly > 0 ? ", and the 90-day and 12-month ones (weekly)" : "; the 90-day and 12-month ones are rebuilt weekly"} (${count(settle.written)} records), to ${days(newest, newest)}.`,
-      failed: settle.failed !== undefined,
-    });
-    await finishRun(
-      ctx,
-      settle.runId,
-      settle.workflowExecutionId,
-      settle.failed ? "FAILED" : "SUCCESS",
-      settle.failed ? `The days came in, but adding them up stopped: ${settle.failed} The next run adds them up again.` : (settle.summary ?? ""),
-    );
+    if (settle) {
+      // The last job: the lines past the days kept cleared, now built from (keep-less-history-plan.md, part 3), and Your
+      // pages, which reads the 90-day page list, asked for (not waited on). Both safe to do again if this job is.
+      await dropOldLinesAll(ctx, args.connectionId);
+      await ctx.runMutation(internal.holdPages.requestRebuild, { holdId: args.holdId });
+      await ctx.runMutation(internal.searchConsoleSettling.settleEnded, { connectionId: args.connectionId, token: args.token, newest: args.newest });
+    }
+    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
     return null;
   },
 });
+
+/** The run a settle carries, for its jobs' chains: their lines and their liveness are the run's. */
+async function runOf(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">, token: number): Promise<{ runId?: Id<"agentRuns"> }> {
+  const runId = await ctx.runQuery(internal.searchConsoleSettling.settleRunOf, { connectionId, token });
+  return runId ? { runId } : {};
+}
 
 /**
  * A website's lists caught up because someone opened a screen reading them

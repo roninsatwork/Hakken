@@ -207,7 +207,9 @@ describe("collecting the main country and a country kept ready", () => {
     // The country kept beside it: every ask filtered to it, over its whole 90 days, and never a country list inside it.
     const kept = asks.filter((ask) => countryOf(ask) === "moz");
     expect(kept.every((ask) => !ask.dimensions.includes("country"))).toBe(true);
-    expect(kept.filter((ask) => ask.dimensions[0] === "date").map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
+    expect(kept.filter((ask) => ask.dimensions[0] === "date" && ask.startDate !== HISTORY_FROM).map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
+    // Then its own days before collection began, back to Google's line, as the main country's (SF3).
+    expect(kept.some((ask) => ask.dimensions[0] === "date" && ask.startDate === HISTORY_FROM)).toBe(true);
     // Image search is neither kept nor shown (2026-10-06).
     expect(asks.some((ask) => ask.type === "image")).toBe(false);
 
@@ -220,7 +222,7 @@ describe("collecting the main country and a country kept ready", () => {
     expect(moz.days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 4`]);
     expect(moz.lists.some((record) => record.list === "country")).toBe(false);
 
-    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);
+    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: NEWEST, oldestDay: WINDOW_FROM, daysFrom: HISTORY_FROM }]);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     const own = runs.find((run) => run.title === "Search Console: acme-shop.test")!;
     expect(own.status).toBe("SUCCESS");
@@ -237,7 +239,7 @@ describe("collecting the main country and a country kept ready", () => {
     await collect(t);
     const kept = asks.filter((ask) => countryOf(ask) === "moz");
     expect(kept.filter((ask) => ask.dimensions[0] === "date" && ask.type === "web").map((ask) => `${ask.startDate} ${ask.endDate}`)).toEqual(["2026-09-23 2026-09-27"]);
-    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: "2026-09-27", oldestDay: WINDOW_FROM }]);
+    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: "2026-09-27", oldestDay: WINDOW_FROM, daysFrom: HISTORY_FROM }]);
   });
 
   test("settling builds each home country's ready-made periods, and New and lost for each", async () => {
@@ -410,6 +412,6 @@ describe("a country past the limit", () => {
     expect(await keptOf(t, siteId, "irl")).toEqual({ days: [], lists: [], periods: [], weeks: [], seen: [], seenDays: [] });
     expect(asks.some((ask) => countryOf(ask) === "irl")).toBe(false);
     expect(asks.some((ask) => countryOf(ask) === "moz")).toBe(true);
-    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);
+    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: NEWEST, oldestDay: WINDOW_FROM, daysFrom: HISTORY_FROM }]);
   });
 });

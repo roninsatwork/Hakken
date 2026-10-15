@@ -28,7 +28,7 @@ import { useToast } from "@/src/context/ToastContext";
 import useDebounce from "@/src/hooks/useDebounce";
 import { SECTION_ICONS } from "../../../_components/websitesSection";
 import { AddBar } from "../../../_components/AddBar";
-import { classificationBase, useClassificationWords } from "./classificationWords";
+import { classificationBase, useClassificationTypes, useClassificationWords } from "./classificationWords";
 import { RemoveClassificationDialog, type RemovingClassification } from "./RemoveClassificationDialog";
 
 type View = "pages" | "classifications";
@@ -384,6 +384,7 @@ function ClassificationList({ companyWebsiteId, base, host, data }: {
   const t = useTranslations("admin.siteView.classification");
   const format = useFormatter();
   const words = useClassificationWords();
+  const types = useClassificationTypes();
   const router = useRouter();
   const [pageNumber, setPageNumber] = useState(1);
   const [removing, setRemoving] = useState<RemovingClassification | null>(null);
@@ -450,7 +451,7 @@ function ClassificationList({ companyWebsiteId, base, host, data }: {
             key: "type",
             header: t("list.columns.type"),
             className: "w-[200px]",
-            cell: (row) => <TagLabel>{words.type(row.type)}</TagLabel>,
+            cell: (row) => <TagLabel>{types.nameOf(row.type)}</TagLabel>,
           },
           {
             key: "pages",

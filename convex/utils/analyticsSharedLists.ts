@@ -28,17 +28,36 @@ export const OTHER_ROWS = "(other)";
 export const TRIM_ABOVE = 50_000;
 
 /**
- * When a list read a piece at a time is cut next (BR3): past `TRIM_ABOVE`
- * rows held, and again only once twice what the last cut left — so a website
- * whose pages each have under 100 rows, which a cut cannot shorten, is not
- * sorted again with every answer.
+ * The most rows one list holds while it is read, whatever the website's size
+ * (collection-reliability-plan.md, RR2; Anthony, 2026-10-15: "we need this
+ * reliable and scalable"): about 65 MB, an eighth of a step's 512. Each page
+ * keeps fewer than `TRIM_KEEP` rows while read when that many pages would pass
+ * it — never fewer than the 20 stored and its "other" row, so what is stored is
+ * what the whole list would give but for rows past a page's 21st on the
+ * biggest websites.
  */
-export function trimDue() {
-  let next = TRIM_ABOVE;
+export const HOLD_ROWS = 100_000;
+
+/** Rows each page keeps while read, for a list of `pages` pages held within `hold` rows. */
+export function keepPerPage(pages: number, hold: number = HOLD_ROWS): number {
+  return Math.max(PAGE_TOP_ROWS + 1, Math.min(TRIM_KEEP, Math.floor(hold / 2 / Math.max(1, pages))));
+}
+
+/**
+ * When a list read a piece at a time is cut next (BR3): past `TRIM_ABOVE`
+ * rows held, then once another half of `hold` has come in since the last cut
+ * — so the rows held never pass what the last cut left and half of `hold`
+ * more, and a website whose pages each have few rows, which a cut cannot
+ * shorten, is not sorted again with every answer. Before RR2 it waited for
+ * twice what the last cut left, which let a 10,000-page website's list grow
+ * to Google's whole 500,000 rows.
+ */
+export function trimDue(hold: number = HOLD_ROWS) {
+  let next = Math.min(TRIM_ABOVE, hold / 2);
   return {
     now: (size: number) => size > next,
     after: (size: number) => {
-      next = Math.max(TRIM_ABOVE, 2 * size);
+      next = Math.max(Math.min(TRIM_ABOVE, hold / 2), size + hold / 2);
     },
   };
 }

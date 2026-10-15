@@ -47,6 +47,8 @@ describe("system settings menu", () => {
       "/admin/settings/options/approvals",
       // A tab of its own, with no dropdown: the platform's limits.
       "/admin/settings/limits",
+      // And another: the page types every classification picks from (classification-types-plan.md, CT1).
+      "/admin/settings/classification",
     ]));
   });
 

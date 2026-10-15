@@ -1,0 +1,11 @@
+# Admin → System Settings → Classification → an added type — the approved look (board "EditAdded" of docs/plans/assets/classification-types/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+record-header: System Settings
+tabs: Identity | Security | System Options | Limits | Classification
+detail-header
+  back: Classification
+  page-header: ‹the record's name›
+settings-card: Type
+  field: Name
+save

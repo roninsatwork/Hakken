@@ -20,7 +20,7 @@ export const STATUS = {
   connection: {
     status: "CONNECTED", signingIn: false, googleAccount: "owner@acme-shop.test", property: "sc-domain:acme-shop.test", permission: "siteOwner",
     choices: [], connectedAt: Date.parse("2026-09-27T10:00:00Z"), disconnectedAt: null, newestDay: "2026-09-26", oldestDay: "2025-05-26", countriesNewest: [],
-    historyDone: true, clearing: false, lastCollectedAt: Date.parse("2026-09-27T10:02:00Z"), problem: null, attempt: null,
+    historyDone: true, historyWhole: true, collectingNow: false, clearing: false, lastCollectedAt: Date.parse("2026-09-27T10:02:00Z"), problem: null, attempt: null,
   },
 };
 

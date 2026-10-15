@@ -200,14 +200,38 @@ export const dropUnusedBooks = internalMutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const inUse = await buildsInUse(ctx, args);
-    const records = await ctx.db
-      .query("searchConsolePeriodBooks")
-      .withIndex("by_hold_build_kind_record", (q) => q
-        .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType))
-      .take(BOOK_RECORDS_MOST);
-    const unused = records.filter((record) => !inUse.has(record.builtAt)).slice(0, DROP_PER_STEP);
-    for (const record of unused) await ctx.db.delete(record._id);
-    return unused.length === DROP_PER_STEP;
+    // Build by build, oldest first, stepping over those in use by their first record alone (collection-reliability-plan.md,
+    // RR3): reading up to 4,000 records of every build to find 40 to delete passed a read's 16 MB on a big website.
+    for (let after = -Infinity; ;) {
+      const first = await ctx.db
+        .query("searchConsolePeriodBooks")
+        .withIndex("by_hold_build_kind_record", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).gt("builtAt", after))
+        .first();
+      if (!first) return false;
+      if (inUse.has(first.builtAt)) {
+        after = first.builtAt;
+        continue;
+      }
+      const unused = await ctx.db
+        .query("searchConsolePeriodBooks")
+        .withIndex("by_hold_build_kind_record", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).eq("builtAt", first.builtAt))
+        .take(DROP_PER_STEP);
+      for (const record of unused) await ctx.db.delete(record._id);
+      if (unused.length === DROP_PER_STEP) return true;
+      // This build gone: more left only if another build after it is unused too, found by its first record alone.
+      for (let next = first.builtAt; ;) {
+        const later = await ctx.db
+          .query("searchConsolePeriodBooks")
+          .withIndex("by_hold_build_kind_record", (q) => q
+            .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).gt("builtAt", next))
+          .first();
+        if (!later) return false;
+        if (!inUse.has(later.builtAt)) return true;
+        next = later.builtAt;
+      }
+    }
   },
 });
 

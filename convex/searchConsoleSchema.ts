@@ -230,7 +230,12 @@ export const searchConsoleTables = {
      * holds nothing, so its first run fetches the same 90 days. Dropped when
      * the country's figures are cleared, so a country put back starts again.
      */
-    countriesHeld: v.optional(v.array(v.object({ country: v.string(), newestDay: v.string(), oldestDay: v.string() }))),
+    /**
+     * Each country kept ready's days held: from where its collection began to its newest, and — once fetched
+     * back to Google's sixteen-month line — where its day totals begin (`daysFrom`, as the main country's below;
+     * search-console-first-collection-plan.md, SF3).
+     */
+    countriesHeld: v.optional(v.array(v.object({ country: v.string(), newestDay: v.string(), oldestDay: v.string(), daysFrom: v.optional(v.string()) }))),
     /**
      * Where the website's day totals begin, once they are fetched back to
      * Google's sixteen-month line (`searchConsoleHistoryDays.ts`;
@@ -267,6 +272,8 @@ export const searchConsoleTables = {
       workflowExecutionId: v.optional(v.id("workflowExecutions")),
       companyId: v.optional(v.id("companies")),
       summary: v.optional(v.string()),
+      /** Each job counted once, however often it says it is done (collection-reliability-plan.md, RR4). */
+      doneParts: v.optional(v.array(v.string())),
     })),
     /**
      * Countries kept ready that are nearly all of the website's searches: they

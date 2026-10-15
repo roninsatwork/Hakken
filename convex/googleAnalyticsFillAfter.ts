@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
-import { internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
+import { bookStep, chainGoing, stepKey } from "./collectionSteps";
 import { countriesKeptReady } from "./searchConsoleCountries";
 import { isTrackedHold } from "./utils/websitePairing";
 import { coverageOf, filledLists } from "./googleAnalyticsCoverage";
@@ -26,9 +26,21 @@ export async function fillAfterCollection(ctx: MutationCtx, connection: Doc<"goo
     const of = country ? { country } : {};
     const filled = filledLists(coverage);
     const lists = DAY_FACT_LISTS.filter((list) => list !== "product" || connection.shop === true).filter((list) => !filled.includes(list));
-    if (lists.length > 0) await ctx.scheduler.runAfter(0, internal.googleAnalyticsSteps.fillHistory, { connectionId: connection._id, lists, nightFrom, ...of });
-    if (!coverage.pageHistoryFrom) await ctx.scheduler.runAfter(0, internal.googleAnalyticsSteps.fillPageHistory, { connectionId: connection._id, nightFrom, ...of });
+    // Each fill watched (collection-reliability-plan.md, RR1), and started once: one still going is left to go on (RR4).
+    const days = fillStepKey("GA_FILL_DAYS", connection._id, country);
+    if (lists.length > 0 && !(await chainGoing(ctx, days))) {
+      await bookStep(ctx, { key: days, chain: "GA_FILL_DAYS", args: { connectionId: connection._id, lists, nightFrom, ...of }, place: "its first piece" });
+    }
+    const pages = fillStepKey("GA_FILL_PAGES", connection._id, country);
+    if (!coverage.pageHistoryFrom && !(await chainGoing(ctx, pages))) {
+      await bookStep(ctx, { key: pages, chain: "GA_FILL_PAGES", args: { connectionId: connection._id, nightFrom, ...of }, place: "its first piece" });
+    }
   }
+}
+
+/** A fill's watched chain (`collectionSteps.ts`): one a list kind, website and home country. */
+export function fillStepKey(chain: "GA_FILL_DAYS" | "GA_FILL_PAGES", connectionId: Id<"googleAnalyticsConnections">, country = ""): string {
+  return stepKey(chain, connectionId, country);
 }
 
 /**

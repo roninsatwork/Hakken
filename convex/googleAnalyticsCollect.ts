@@ -6,14 +6,13 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { isTrackedHold } from "./utils/websitePairing";
 import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
 import { countriesKeptReady, mainConsoleCountry, stillKeptReady } from "./searchConsoleCountries";
-import { ANALYTICS_DAYS_KEPT as DAYS_KEPT, countryOfDayDevice, dayDevice } from "./utils/analyticsHistory";
+import { countryOfDayDevice, dayDevice } from "./utils/analyticsHistory";
 import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
-import { fillAfterCollection } from "./googleAnalyticsFillAfter";
+import { closeConnection } from "./googleAnalyticsRunEnd";
 import { shiftDay } from "./searchConsoleDays";
 import { numberPages } from "./googleAnalyticsPageNumbers";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
-import { forgetCountedHistory } from "./insightHistoryForget";
 import { THRESHOLDED_DIMENSIONS, runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type QuotaLeft, type RealtimeAsk, type ReportAsk, type ReportRow, type ReportSink, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
@@ -25,7 +24,6 @@ import {
   MAIN_METRICS,
   ITEM_METRICS,
   SHOP_STEPS,
-  VISITOR_LISTS,
   fingerprint,
   groupKeys,
   isEventList,
@@ -38,16 +36,14 @@ import {
   type PackedPart,
 } from "./googleAnalyticsLists";
 import { trimDue } from "./utils/analyticsSharedLists";
+import { PART_ROWS } from "./utils/searchConsolePacks";
 import {
-  COUNTED_WITH,
   DAY_FACT_LISTS,
   PAGE_FACT_LISTS,
   analyticsPackedRows,
   dayFactListValidator,
   type DayFactList,
   type AnalyticsList,
-  type AnalyticsPeriod,
-  type AnalyticsWhich,
 } from "./googleAnalyticsSchema";
 import { AI_SOURCE_VALUES } from "./utils/aiAssistants";
 import { READ_EVENTS } from "./utils/analyticsPageStory";
@@ -72,9 +68,6 @@ import { READ_EVENTS } from "./utils/analyticsPageStory";
  * reading, then the slot flips, so a screen never reads half of one build.
  */
 
-/** The days fetched again each run while Google's figures settle (24 to 48 hours, §2.5): the newest and the two before. */
-export const REFETCH_DAYS = 3;
-
 /** Days asked a step: a week. */
 export const DAYS_PER_STEP = 7;
 
@@ -84,107 +77,30 @@ export const STEP_BUDGET_MS = 4 * 60 * 1000;
 /** Waits before asking a busy Google again. */
 const BUSY_WAITS_MS = [2_000, 8_000];
 
-/** The weekly periods are asked again once this old. */
-const WEEK_MS = 6.5 * 24 * 60 * 60 * 1000;
-
 /** Ready-made parts written a call: each up to 2,000 rows. */
 const PARTS_PER_WRITE = 4;
 
-/** Parts of a ready-made list removed a call. */
-const PARTS_PER_DELETE = 64;
+/**
+ * Parts of a ready-made list removed a call: each up to 2,000 rows, a few hundred KB, read to be deleted — twelve
+ * stay well inside a call's 16 MB (collection-reliability-plan.md, RR3; 64 and 64 more passed it on a big website).
+ */
+const PARTS_PER_DELETE = 12;
 
 /** Live lists removed a call. */
 const LIVE_PER_DELETE = 200;
 
-/** A day's records of one list: a part or two for each of a handful of devices. */
+/** A day's records of one list and device: its parts, each up to 2,000 rows — 200,000 rows a day. */
 const DAY_RECORDS_READ = 100;
 
-/** The newest whole day in the property's own time zone (§2.5): yesterday there. */
-export function newestWholeDayIn(now: number, timeZone: string): string {
-  let today: string;
-  try {
-    today = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now));
-  } catch {
-    today = new Date(now).toISOString().slice(0, 10);
-  }
-  return shiftDay(today, -1);
-}
+/** The devices Google Analytics names, and every device's own record: a full day's records are read a device at a time. */
+const DAY_DEVICES = [EVERY_DEVICE, "desktop", "mobile", "tablet", "smart tv"] as const;
 
-/**
- * The days a run fetches: every day after the newest held, up to the newest
- * whole day, and the two before the first of them again while they settle —
- * so a day a run missed is caught by the next. With none held yet (or a first
- * collection that stopped part-way), the 60 days kept.
- */
-export function analyticsWindow(newestDay: string | undefined, oldestDay: string | undefined, top: string): { from: string; top: string } {
-  const oldest = shiftDay(top, -(DAYS_KEPT - 1));
-  if (!newestDay || (oldestDay !== undefined && oldestDay > oldest)) return { from: oldest, top };
-  const firstNew = shiftDay(newestDay, 1) < top ? shiftDay(newestDay, 1) : top;
-  const from = shiftDay(firstNew, -(REFETCH_DAYS - 1));
-  return { from: from > oldest ? from : oldest, top };
-}
+/** A day's parts written a call, each up to 2,000 rows: a big shop's day of products goes in several (RR3). */
+const DAY_PARTS_A_WRITE = 24;
 
-/** A ready-made list's dates: the period ending on the newest day, the span before it, or the same span a year (52 weeks) before. */
-export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top: string): { from: string; to: string } {
-  const days = Number(period);
-  const to = which === "NOW" ? top : which === "BEFORE" ? shiftDay(top, -days) : shiftDay(top, -364);
-  return { from: shiftDay(to, -(days - 1)), to };
-}
-
-/** A ready-made list's name, as every reader of the lists names it (`googleAnalyticsLists.ts`). */
-export { slotKey };
-
-/** A ready-made list to ask: for the main home country, or — `country`, its code — for another home country (§18.6.1). */
-export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: AnalyticsWhich; country?: string };
-
-/**
- * All pages before landing pages: a landing page finds its address, slash and
- * all, already numbered (`numberPages`). Every event beside them (§18.6.5),
- * the campaigns and the words their links carry, and Visitors' lists (§18.6.6).
- */
-const PAGE_LISTS: readonly AnalyticsList[] = [
-  "total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS,
-  // Insights' two (insights-analyst-plan.md I35, §8): the channel that first brought each person, and each landing page by channel.
-  "firstChannel", "landingChannel",
-  // AI assistants' landing pages, whichever channel Google filed them under (ga-channel-pages-plan.md CH13).
-  "landingAssistant",
-];
-
-/** A shop's own list (§18.6.6): each product, with the span before. */
-const SHOP_LISTS: readonly AnalyticsList[] = ["product"];
-
-/**
- * The ready-made lists a run asks for: the 7 and 30 days every run, and the
- * 90 days and 12 months once a week (§4.1). The same span a year before is
- * asked for the long periods (§10, Q2); for the short ones it waits for the
- * "Compare with" choice to be drawn (§4.1). Every chart reads what is kept a
- * day, a week and a month (ga-stored-figures-plan.md SF12), each home
- * country's; the main one's 12 months a day stays a list of its own, every
- * device, for Insights' months and profile changes.
- */
-export function dueJobs(
-  connection: Pick<Doc<"googleAnalyticsConnections">, "weeklyPeriodsAt" | "shop">,
-  now: number,
-  others: readonly string[] = [],
-): PeriodJob[] {
-  const jobs: PeriodJob[] = [];
-  const weekly = connection.weeklyPeriodsAt === undefined || now - connection.weeklyPeriodsAt >= WEEK_MS;
-  // A shop's products beside the rest (§18.6.6): never asked of a website that sells nothing.
-  const lists = connection.shop ? [...PAGE_LISTS, ...SHOP_LISTS] : PAGE_LISTS;
-  for (const country of [undefined, ...others]) {
-    const of = country ? { country } : {};
-    for (const period of ["7", "30"] as const) {
-      for (const which of ["NOW", "BEFORE"] as const) for (const list of lists) jobs.push({ list, period, which, ...of });
-    }
-    if (weekly) {
-      for (const period of ["90", "365"] as const) {
-        for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of lists) jobs.push({ list, period, which, ...of });
-      }
-      if (!country) jobs.push({ list: "series", period: "365", which: "NOW" });
-    }
-  }
-  return jobs;
-}
+// What a run asks and for which dates, worked out from what is held (`googleAnalyticsJobs.ts`), named here as before.
+export { REFETCH_DAYS, analyticsWindow, dueJobs, newestWholeDayIn, periodRange, slotKey, type PeriodJob } from "./googleAnalyticsJobs";
+import { periodRange, type PeriodJob } from "./googleAnalyticsJobs";
 
 // ---------------------------------------------------------------------------
 // What a step needs
@@ -404,7 +320,7 @@ export async function askList(
    * `trim`: a page list's own cut (ga-big-site-reliability-plan.md BR3), made as Google's answers arrive once more than
    * `TRIM_ABOVE` rows are held, so a big website's list is never held whole.
    */
-  also: { converting?: boolean; trim?: (rows: ListRow[]) => ListRow[] } = {},
+  also: { converting?: boolean; trim?: (rows: ListRow[]) => ListRow[]; hold?: number } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
   const base = {
@@ -421,7 +337,7 @@ export async function askList(
   const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
   // Each answer joined as it arrives, and a page list trimmed while it is read (BR2, BR3).
   const joined = listJoiner(list, lead, new Set(target.perVisit));
-  const due = trimDue();
+  const due = trimDue(also.hold);
   const trimmed = (add: (rows: ReportRow[]) => void) => (rows: ReportRow[]) => {
     add(rows);
     if (also.trim && due.now(joined.size())) {
@@ -479,7 +395,15 @@ export function siteOrigin(addresses: readonly string[], host: string): string {
  * budget spent, or Google refusing for an allowance that refreshes within the
  * hour — is `wait`: the run carries on once the hour turns (SF17, SF20).
  */
-export type StepResult = { ok: true; rows: number; requests: number } | { ok: false; reason: string; access: boolean; busy: boolean; wait: boolean; requests: number };
+export type StepResult =
+  | {
+      ok: true;
+      rows: number;
+      requests: number;
+      /** An answer reached Google's row limit, and the rows past it are not in what was kept: said on the run (RR2). */
+      cut?: boolean;
+    }
+  | { ok: false; reason: string; access: boolean; busy: boolean; wait: boolean; requests: number };
 
 export function failed(session: Session, failure: GoogleFailure | null): Extract<StepResult, { ok: false }> {
   const wait = failure?.reason === "BUDGET" || (failure?.reason === "BUSY" && HOURLY_REFUSAL.test(failure.detail));
@@ -506,6 +430,10 @@ export function dayFactsOf(target: Pick<CollectTarget, "shop">): DayFactList[] {
  * A week of days, newest first: each day fact by day and device (SF12), each
  * day written as one record per list and device. A day Google has nothing
  * for is written with its figures at nought, so it reads as held.
+ *
+ * One list at a time, asked, written and let go before the next
+ * (collection-reliability-plan.md, RR2); a list whose last week held more
+ * than `SPLIT_ROWS` rows — a big shop's products — a day an ask.
  */
 export async function collectDays(
   ctx: ActionCtx,
@@ -518,39 +446,62 @@ export async function collectDays(
   country?: string,
 ): Promise<StepResult> {
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
-  const answers: Array<[DayFactList, Extract<Asked, { ok: true }>]> = [];
-  for (const list of lists) {
-    const asked = await askList(session, asking, list, ["date", "deviceCategory"], range);
-    if (!asked.ok) return failed(session, asked);
-    answers.push([list, asked]);
-  }
-  let rows = 0;
   const days: string[] = [];
   for (let day = range.to; day >= range.from; day = shiftDay(day, -1)) days.push(day);
-  for (const day of days) {
-    const records: { list: DayFactList; device: string; parts: PackedPart[]; folded: boolean; thresholded: boolean; cut: boolean }[] = [];
-    for (const [list, asked] of answers) {
-      const devices = new Map<string, ListRow[]>();
-      for (const [group, groupRows] of asked.groups) {
-        const [groupDay, device] = groupKeys(group);
-        if (groupDay === day) devices.set(device, groupRows);
-      }
-      if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
-      for (const [device, groupRows] of devices) {
-        rows += groupRows.length;
-        records.push({ list, device: dayDevice(device, country), parts: packList(list, groupRows, target.events), ...asked.flags });
+  const weeks: Record<string, { parts: number }> = await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, {
+    companyWebsiteId: target.companyWebsiteId,
+    keys: lists.map((list) => slotKey(list, "7", "NOW", EVERY_DEVICE, country ?? "")),
+  });
+  let rows = 0;
+  let cut = false;
+  // Each day's records, packed — Google's rows let go as each list is packed — and written once a day for every list.
+  type DayRecord = { list: DayFactList; device: string; parts: PackedPart[]; folded: boolean; thresholded: boolean; cut: boolean };
+  const byDay = new Map<string, DayRecord[]>(days.map((day) => [day, []]));
+  for (const list of lists) {
+    const big = (weeks[slotKey(list, "7", "NOW", EVERY_DEVICE, country ?? "")]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS;
+    for (const span of big ? days.map((day) => ({ from: day, to: day })) : [range]) {
+      const asked = await askList(session, asking, list, ["date", "deviceCategory"], span);
+      if (!asked.ok) return failed(session, asked);
+      cut ||= asked.flags.cut;
+      for (let day = span.to; day >= span.from; day = shiftDay(day, -1)) {
+        const devices = new Map<string, ListRow[]>();
+        for (const [group, groupRows] of asked.groups) {
+          const [groupDay, device] = groupKeys(group);
+          if (groupDay === day) devices.set(device, groupRows);
+        }
+        if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
+        for (const [device, groupRows] of devices) {
+          rows += groupRows.length;
+          byDay.get(day)!.push({ list, device: dayDevice(device, country), parts: packList(list, groupRows, target.events), ...asked.flags });
+        }
       }
     }
-    await ctx.runMutation(internal.googleAnalyticsCollect.writeDay, {
-      connectionId,
-      property: target.property!,
-      day,
-      records,
-      fetchedAt: Date.now(),
-      ...(country ? { country } : {}),
-    });
   }
-  return { ok: true, rows, requests: session.requests };
+  for (const day of days) {
+    // A day's records a few parts a write at most (RR3): a big shop's day of products is many.
+    const records = byDay.get(day)!;
+    for (let first = 0; first < records.length;) {
+      let parts = 0;
+      let last = first;
+      while (last < records.length && (last === first || parts + records[last].parts.length <= DAY_PARTS_A_WRITE)) {
+        parts += records[last].parts.length;
+        last += 1;
+      }
+      // Never a list split across two writes: a write replaces each of its lists' days whole.
+      while (last < records.length && records[last].list === records[last - 1].list) last += 1;
+      await ctx.runMutation(internal.googleAnalyticsCollect.writeDay, {
+        connectionId,
+        property: target.property!,
+        day,
+        records: records.slice(first, last),
+        fetchedAt: Date.now(),
+        ...(country ? { country } : {}),
+      });
+      first = last;
+    }
+    byDay.delete(day);
+  }
+  return { ok: true, rows, requests: session.requests, ...(cut ? { cut: true } : {}) };
 }
 
 const packedPartValidator = v.object(analyticsPackedRows);
@@ -585,12 +536,23 @@ export const writeDay = internalMutation({
     // Only the lists fetched: a fill of one list leaves the others' days as they are.
     for (const list of [...new Set(args.records.map((record) => record.list))]) {
       const fresh = args.records.filter((record) => record.list === list);
-      // Only this home country's records: each country's sit beside the others' (`dayDevice`).
-      const held = (await ctx.db
+      // Only this home country's records: each country's sit beside the others' (`dayDevice`). One read of the list's
+      // day — and when it is full, device by device, all their parts (RR3): the one read stopped at 100, and a big day's
+      // records past it were written again beside themselves.
+      const whole = await ctx.db
         .query("googleAnalyticsDays")
         .withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", hold).eq("list", list).eq("day", args.day))
-        .take(DAY_RECORDS_READ))
-        .filter((row) => countryOfDayDevice(row.device) === country);
+        .take(DAY_RECORDS_READ);
+      let held = whole.filter((row) => countryOfDayDevice(row.device) === country);
+      if (whole.length === DAY_RECORDS_READ) {
+        held = [];
+        for (const device of new Set([...fresh.map((record) => record.device), ...DAY_DEVICES.map((one) => dayDevice(one, args.country))])) {
+          held.push(...await ctx.db
+            .query("googleAnalyticsDays")
+            .withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", hold).eq("list", list).eq("day", args.day).eq("device", device))
+            .take(DAY_RECORDS_READ));
+        }
+      }
       for (const record of fresh) {
         for (const [part, packed] of record.parts.entries()) {
           const before = held.find((row) => row.device === record.device && row.part === part);
@@ -602,6 +564,7 @@ export const writeDay = internalMutation({
           }
         }
       }
+      // A device Google no longer names that day goes, and a part past a device's new count.
       for (const row of held) {
         const kept = fresh.find((record) => record.device === row.device);
         if (!kept || row.part >= kept.parts.length) await ctx.db.delete(row._id);
@@ -633,13 +596,13 @@ function samePart(held: PackedPart, fresh: PackedPart): boolean {
 export const slotsOf = internalQuery({
   args: { companyWebsiteId: v.id("companyWebsites"), keys: v.array(v.string()) },
   handler: async (ctx, args) => {
-    const out: Record<string, { slot: number; hash: string; from: string; to: string }> = {};
+    const out: Record<string, { slot: number; hash: string; from: string; to: string; parts: number }> = {};
     for (const key of args.keys) {
       const slot = await ctx.db
         .query("googleAnalyticsPeriodSlots")
         .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key))
         .first();
-      if (slot) out[key] = { slot: slot.slot, hash: slot.hash, from: slot.from, to: slot.to };
+      if (slot) out[key] = { slot: slot.slot, hash: slot.hash, from: slot.from, to: slot.to, parts: slot.parts };
     }
     return out;
   },
@@ -717,18 +680,45 @@ export const flipSlot = internalMutation({
         companyWebsiteId: hold, key: args.key, slot: args.slot, parts: args.parts, from: args.from, to: args.to, hash: args.hash, ...flags, builtAt: now,
       });
     }
-    // This build's parts past its own count, and the whole of the build it replaces.
-    const stale = [
-      ...await ctx.db
-        .query("googleAnalyticsPeriods")
-        .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold).eq("key", args.key).eq("slot", args.slot).gte("part", args.parts))
-        .take(PARTS_PER_DELETE),
-      ...await ctx.db
-        .query("googleAnalyticsPeriods")
-        .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold).eq("key", args.key).eq("slot", 1 - args.slot))
-        .take(PARTS_PER_DELETE),
-    ];
-    for (const part of stale) await ctx.db.delete(part._id);
+    // This build's parts past its own count, and the whole of the build it replaces: a few now, the rest after.
+    if (await dropSomeStale(ctx, hold, args.key, args.slot, args.parts)) {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropStaleParts, { companyWebsiteId: hold, key: args.key, slot: args.slot, parts: args.parts });
+    }
+    return null;
+  },
+});
+
+/** A few of a list's stale parts gone — past its build's count, and the build it replaced: true while more are left. */
+async function dropSomeStale(ctx: MutationCtx, hold: Id<"companyWebsites">, key: string, slot: number, parts: number): Promise<boolean> {
+  const past = await ctx.db
+    .query("googleAnalyticsPeriods")
+    .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold).eq("key", key).eq("slot", slot).gte("part", parts))
+    .take(PARTS_PER_DELETE);
+  const replaced = await ctx.db
+    .query("googleAnalyticsPeriods")
+    .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold).eq("key", key).eq("slot", 1 - slot))
+    .take(PARTS_PER_DELETE);
+  for (const part of [...past, ...replaced]) await ctx.db.delete(part._id);
+  return past.length === PARTS_PER_DELETE || replaced.length === PARTS_PER_DELETE;
+}
+
+/**
+ * The rest of a list's stale parts, a few a call until none is left (RR3): until 2026-10-15 a flip removed 64 and left
+ * any past them for good, where a page's own read (`readPageRows`) could find them. A slot flipped again since keeps
+ * its newer build's parts: only what is stale now goes.
+ */
+export const dropStaleParts = internalMutation({
+  args: { companyWebsiteId: v.id("companyWebsites"), key: v.string(), slot: v.number(), parts: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const held = await ctx.db
+      .query("googleAnalyticsPeriodSlots")
+      .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", args.key))
+      .first();
+    if (!held) return null;
+    if (await dropSomeStale(ctx, args.companyWebsiteId, args.key, held.slot, held.parts)) {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropStaleParts, { ...args, slot: held.slot, parts: held.parts });
+    }
     return null;
   },
 });
@@ -746,45 +736,82 @@ export async function collectPeriod(
   target: CollectTarget,
   job: PeriodJob,
   top: string,
+  /** The second try at this list after the platform stopped it (collection-reliability-plan.md, RR1): smaller pieces. */
+  how: { careful?: boolean } = {},
 ): Promise<StepResult> {
   const range = periodRange(job.period, job.which, top);
-  const lead = KEPT_BY_DEVICE[job.list] ? (["deviceCategory"] as const) : ([] as const);
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).
   const reading = job.list === "page" ? { ...asking, events: [...asking.events, ...READ_EVENTS] } : asking;
   // Landing pages by channel for the dates now also count the visits that made any listed event: Conversions' flow (CV8).
   const also = { converting: job.list === "landingChannel" && job.which === "NOW" };
-  const asked = await askList(session, reading, job.list, lead, range, {}, also);
-  if (!asked.ok) return failed(session, asked);
-  const devices = new Map<string, ListRow[]>();
-  for (const [group, rows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, rows);
-  // A shop is one with any of its four steps in the last 90 days (§18.6.6): noted each time those events are read.
-  if (job.list === "event" && job.period === "90" && job.which === "NOW" && !job.country) {
-    const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
-    if (shop !== target.shop) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
-  }
-  // People cannot be added up across devices (§18.6.2): every device is asked whole, as the website's totals always
-  // were — the channels aside, whose people no screen shows for every device.
-  if (lead.length > 0 && job.list !== "channel") {
-    const whole = await askList(session, reading, job.list, [], range, {}, also);
-    if (!whole.ok) return failed(session, whole);
-    devices.set(EVERY_DEVICE, [...whole.groups.values()].flat());
-  }
-  if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
-  const keys = [...devices.keys()].map((device) => slotKey(job.list, job.period, job.which, device, country));
-  const slots: Record<string, { slot: number; hash: string; from: string; to: string }> =
-    await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
+  const keyOf = (device: string) => slotKey(job.list, job.period, job.which, device, country);
+  const held: Record<string, { slot: number; hash: string; from: string; to: string; parts: number }> =
+    await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys: [EVERY_DEVICE, ...SPLIT_DEVICES].map(keyOf) });
+  // A big website's list by device is asked a device at a time, each written and let go before the next (RR2): one ask
+  // of every device at once held them all — a 10,000-page website's landing pages by channel, 750,000 rows. Judged by
+  // its last build, and always on a careful second try.
+  const byDevice = KEPT_BY_DEVICE[job.list];
+  const split = byDevice && (how.careful === true || (held[keyOf(EVERY_DEVICE)]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS);
   let rows = 0;
-  for (const [device, deviceRows] of devices) {
+  let cut = false;
+  const writeDevice = async (device: string, deviceRows: ListRow[], flags: { folded: boolean; thresholded: boolean; cut: boolean }) => {
     const listRows = job.list === "landing" || job.list === "page" || job.list === "landingChannel" || job.list === "landingAssistant"
       ? await numberPages(ctx, target, deviceRows, job.list)
       : deviceRows;
     rows += listRows.length;
-    const key = slotKey(job.list, job.period, job.which, device, country);
-    if (!(await writeList(ctx, connectionId, target, job.list, key, listRows, range, asked.flags, slots[key], reading.events))) return { ok: true, rows, requests: session.requests };
+    cut ||= flags.cut;
+    const key = keyOf(device);
+    return await writeList(ctx, connectionId, target, job.list, key, listRows, range, flags, held[key], reading.events);
+  };
+  const ended = (): StepResult => ({ ok: true, rows, requests: session.requests, ...(cut ? { cut: true } : {}) });
+  if (split) {
+    for (const device of [...SPLIT_DEVICES, EVERY_DEVICE]) {
+      const asked = await askList(session, reading, job.list, [], range, device === EVERY_DEVICE ? {} : { device }, also);
+      if (!asked.ok) return failed(session, asked);
+      if (job.list === "event" && device === EVERY_DEVICE) await noteShopFrom(ctx, connectionId, target, job, asked);
+      if (!(await writeDevice(device, [...asked.groups.values()].flat(), asked.flags))) return ended();
+    }
+    return ended();
   }
-  return { ok: true, rows, requests: session.requests };
+  const lead = byDevice ? (["deviceCategory"] as const) : ([] as const);
+  const asked = await askList(session, reading, job.list, lead, range, {}, also);
+  if (!asked.ok) return failed(session, asked);
+  const devices = new Map<string, ListRow[]>();
+  for (const [group, groupRows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, groupRows);
+  if (job.list === "event") await noteShopFrom(ctx, connectionId, target, job, asked);
+  // People cannot be added up across devices (§18.6.2): every device is asked whole, as the website's totals always
+  // were — the channels aside, whose people no screen shows for every device.
+  let wholeFlags = asked.flags;
+  if (lead.length > 0 && job.list !== "channel") {
+    const whole = await askList(session, reading, job.list, [], range, {}, also);
+    if (!whole.ok) return failed(session, whole);
+    devices.set(EVERY_DEVICE, [...whole.groups.values()].flat());
+    wholeFlags = whole.flags;
+  }
+  if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
+  for (const [device, deviceRows] of devices) {
+    // A device's held for a slot read with the rest: one the website had none of before is read now.
+    const key = keyOf(device);
+    if (!(key in held)) Object.assign(held, await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys: [key] }));
+    if (!(await writeDevice(device, deviceRows, device === EVERY_DEVICE ? wholeFlags : asked.flags))) return ended();
+    devices.delete(device);
+  }
+  return ended();
+}
+
+/** The devices a big website's list is asked for one at a time (RR2), with every device's beside them. */
+const SPLIT_DEVICES = ["desktop", "mobile", "tablet"] as const;
+
+/** Rows past which a list's last build says its devices are asked one at a time: a lead ask would hold four times as many. */
+export const SPLIT_ROWS = 25_000;
+
+/** A shop is one with any of its four steps in the last 90 days (§18.6.6): noted each time those events are read. */
+async function noteShopFrom(ctx: ActionCtx, connectionId: Id<"googleAnalyticsConnections">, target: CollectTarget, job: PeriodJob, asked: Extract<Asked, { ok: true }>) {
+  if (job.period !== "90" || job.which !== "NOW" || job.country) return;
+  const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
+  if (shop !== target.shop) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
 }
 
 /**
@@ -833,7 +860,11 @@ export const noteShop = internalMutation({
   },
 });
 
-/** The run's last word on the connection: when it was collected, and the weekly lists when they were asked. */
+/**
+ * The run's last word on the connection, for a run that asked every list: the
+ * one closing every ending goes through (`googleAnalyticsRunEnd.ts`), as far as
+ * a whole run reaches.
+ */
 export const finishCollection = internalMutation({
   args: {
     connectionId: v.id("googleAnalyticsConnections"),
@@ -852,41 +883,16 @@ export const finishCollection = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const connection = await ctx.db.get(args.connectionId);
-    if (!connection || connection.property !== args.property) return null;
-    const now = Date.now();
-    const first = args.firstDone && connection.backfilledAt === undefined;
-    // Insights' months counted the old way are asked again on its next run (BT6).
-    if (args.recount) await forgetCountedHistory(ctx, connection.companyWebsiteId);
-    await ctx.db.patch(connection._id, {
+    await closeConnection(ctx, {
+      connectionId: args.connectionId,
+      property: args.property,
+      reached: "WHOLE",
+      weekly: args.weekly,
+      recount: args.recount === true,
       ...(args.hostVisits ? { hostVisits: args.hostVisits } : {}),
-      ...(args.recount ? { countedWith: COUNTED_WITH } : {}),
-      lastCollectedAt: now,
-      dailyPeriodsAt: now,
-      ...(args.weekly ? { weeklyPeriodsAt: now } : {}),
-      ...(args.firstDone && connection.backfilledAt === undefined ? { backfilledAt: now } : {}),
-      collecting: undefined,
-      // A whole run asked every list: the next starts from the first again.
-      listsFrom: undefined,
-      problem: undefined,
-      problemAt: undefined,
-      problemDetail: undefined,
-      updatedAt: now,
+      ...(args.nightFrom !== undefined ? { nightFrom: args.nightFrom } : {}),
+      fills: true,
     });
-    // The past rolled on (ga-stored-figures-plan.md SF2): days past 90 into weeks, weeks past a year into months;
-    // each week, the pages quiet for two years cleared (SF5).
-    if (connection.newestDay) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHistory.rollHistory, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
-    if (connection.newestDay && args.weekly) await ctx.scheduler.runAfter(0, internal.googleAnalyticsPageSeries.dropOldPageSeries, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
-    // What screens asked of Google live is held until now (GA23): the ready-made lists are fresher.
-    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
-    // Tracking health when the first collection is in, and every week (GA11).
-    if (first || args.weekly) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHealth.runHealthChecks, { connectionId: connection._id });
-    // Each page's visits sit beside Search Console's clicks in the website's page list (§4.6): it is rebuilt, as
-    // Search Console's settle asks, and writes only the pages whose figures moved.
-    await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
-    // A home country taken off the website's list goes (§18.6.1).
-    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountriesNotKept, { companyWebsiteId: connection.companyWebsiteId });
-    if (args.nightFrom !== undefined) await fillAfterCollection(ctx, connection, args.nightFrom);
     return null;
   },
 });

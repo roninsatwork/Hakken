@@ -1,179 +1,293 @@
-# Collection reliability plan
+# Google Analytics and Search Console — a run that always finishes, on any size of website
 
-Written 2026-09-25, after Korda's collection stalled for 17 hours.
+**Planned 2026-10-15. Status: being built — Anthony's go 2026-10-15 ("ok build it please and double check it");
+paused at the stopping point below, on dev, uncommitted.** Overtakes
+the open items of `ga-big-site-reliability-plan.md` and the adding-up part of
+`search-console-first-collection-plan.md`; neither is edited.
 
-Anthony, 2026-09-25: "I can't emphasise enough how important it is for this
-collection process to be robust and reliable. Can you double and triple check
-everything please to ensure this key component always works."
+## Why
 
-The DataForSEO collection is the part everything else stands on. This plan
-lists every way it can fail that four independent reviews of the code found:
-planning, sending, filing and housekeeping, one review each, read-only. It
-says which findings have been checked against the code and which are still
-only reported, and the order they will be fixed in.
+Anthony, 2026-10-15, after kordatackle.com's Analytics run stopped: "how can
+you make it more robust as we are failing at every run … I don't want to do
+this piecemeal."
 
-**Checked** means read in the code and confirmed. **Reported** means found by
-a review and not yet confirmed; each is checked before it is fixed.
+Nine Analytics and Search Console runs have failed since 5 October. They fail
+in four ways:
 
-## What happened
-
-Every stored DataForSEO answer (up to a megabyte) sat inside its request row.
-Anything that read many requests read their answers too, and Korda's 149
-answers came to 20.5 MB — more than a single Convex function may read (16 MB).
-Three things read that way: closing a finished collection, filing the last
-answer of a collection, and the hourly check. Each failed and undid itself,
-every time, so the site crawl's answer — ready since the evening before — was
-never filed and the collection never closed. The error was visible only on
-Admin → Health and in the Convex logs.
-
-## Already fixed (2026-09-25)
-
-- Answers live in their own table (`seoPullAnswers`); a request row is a few
-  hundred bytes again. The 190 stored answers were moved across without loss.
-- A collection's requests are looked up by collection and status through an
-  index, never read whole (`cyclePullIn`, `by_cycle_status`).
-- The hourly check runs each duty as its own transaction, so one failing duty
-  no longer undoes the others.
-- An unanswered request is given up after 12 hours, not 24.
-- Only a collection with requests still to send holds up a new one.
-- Korda's stalled collection: the crawl's answer fetched and filed, the
-  collection closed with all 149 answers.
-- Close this run, for a collection that will not finish on its own. It never
-  deletes a request another company's run still needs.
-
-## Stage 1 — never pay twice, never lose a paid answer
-
-Done 2026-09-25. Tests: `seoCollectionMoney.test.ts` (sending, one Collector
-at a time, fetching, late answers, a dead Collector, counting, collections
-that stop part-way, answers never filed), `seoCollectionClose.test.ts`,
-`seoCollection.test.ts`, `seoCollectionParse.test.ts`.
-
-| # | Finding | Fixed |
+| When | Website | What stopped it |
 |---|---|---|
-| 1.1 | A batch's answers were recorded one by one inside the same `try` as the send; one failed record put the rest of an accepted batch back in the queue, to be bought again. | Every outcome is recorded in one mutation (`settleSeoSendBatch`), retried until it lands and safe to repeat; nothing DataForSEO may have is ever released. |
-| 1.2 | A 45-second timeout or a dropped connection was read as "not accepted" and re-sent; DataForSEO's live calls take up to 120 s and are charged when they finish. | Live calls are waited for 130 s. A timeout, dropped connection, gateway error (500/502/504) or unreadable reply is an unknown outcome: the request is failed with the reason, never re-sent (`DataForSeoUncertain`, `failUncertainSends`). If DataForSEO did take it, its pingback finds it by its tag and the answer is still filed. |
-| 1.3 | A task missing from DataForSEO's reply was re-sent. | Failed as an unknown outcome, not re-sent. |
-| 1.4 | A Collector that died between sending and recording left claims the hourly check put back in the queue. | A batch is marked `postedAt` just before it goes; the hourly check fails a dead claim that reached the send and returns only one that never did. |
-| 1.5 | Fetching an answer failed it on any error, including DataForSEO's "task in queue" / "task handed" (40601, 40602). | Still-running codes, network errors, refused-for-now and account codes, and task-level faults on their side leave it waiting; only a definite task error fails it; the 12-hour limit is the only give-up, and a late pingback revives a given-up request. |
-| 1.6 | Every retry counted a try, rate limits included; an outage, an empty balance or a revoked key failed the whole queue. | 429, 503 and account refusals (40100, 40104, 40200, 40203, 40207, 40210) count no try. The login is checked before anything is claimed. The Collector stops at an account refusal, and after four "not now" replies in a row, saying why in its run. |
-| 1.7 | Several Collectors could run at once, each with its own spend limit; a batch could overshoot a limit. | One Collector at a time (`takeCollectorTurn`: the earliest live run sends, a later one stops at once, saying so). A batch is trimmed to what is left of the limit, at what the call has cost on average. |
-| 1.8 | A failed expansion page left a collection "writing its list" for ever, blocking every later one. | The hourly check restarts an expansion quiet for 15 minutes from where it got to, and closes it, saying why, after three restarts. |
-| 1.9 | A collection capped at its plan limit was treated as finished while it still held unsent requests. | A collection holds up the next while any of its own requests are still to go, whatever its status. |
-| 1.10 | The bulk calls were bought every collection and never filed. | No longer bought (Anthony, 2026-09-25) — about 7 cents a collection; the screens take the same figures from `backlinks_summary`. |
-| 1.11 | Filing was started from the action after the answer was recorded; only clashes were retried; a judging error marked filed data failed. | Filing is scheduled inside the mutation that records the answer, once. Each filed answer is marked `filedAt`; the hourly check files again any answer recorded and never filed, up to three tries. Keyword judging runs on its own after filing (`judgeKeywordsLater`). |
-| 1.12 | `backlinks_history` and `backlinks_new_lost` refused with "Invalid Field: 'date_from'". | Already fixed on 2026-09-23: the two failures date from a test before `date_from` was dropped, and every request since has been answered. |
+| 5 Oct | morehandles.co.uk (SC) | One read past Convex's 16 MB |
+| 13–14 Oct | ronins.co.uk (GA) ×2 | Google said busy (an hourly allowance) |
+| 14 Oct 04:00 | ronins.co.uk, morehandles.co.uk (SC) | One database call too big ("too many system operations") |
+| 15 Oct 11:18 | kordatackle.com (GA) | Step killed by Convex |
+| 15 Oct 15:00 | kordatackle.com (GA) | Step out of memory (512 MB) on the 90-day mobile page lists |
+| 15 Oct 15:13 | kordatackle.com (SC) | Adding-up job past Convex's 10 minutes |
 
-Counting was corrected on the way (from 2.5): a queued request is counted as
-sent once, not again when its answer comes, in the run and in the daily totals;
-given-up and switched-off requests are counted as failed.
+Each was fixed where it broke, and the next run broke somewhere else. Two
+checks of the whole code (2026-10-15, one per collector) found why:
 
-## Stage 2 — lists and summaries that are right
+1. **Nothing carries a broken run on.** When Convex kills a step, the run's
+   place is lost, and no one picks it up. Twenty minutes later the hourly sweep
+   marks the run failed. Its closing work never runs. On kordatackle.com this
+   left three things wrong:
+   - its page still says "Collecting its first 90 days";
+   - its two-year fill never started, so "New and returning visitors a day" is
+     empty;
+   - the next night runs the same lists in the same order, and dies in the same
+     place.
+2. **Memory and time grow with the website.** Many of Google's answers are held
+   whole. Many database calls read or write everything a website has in one go.
+   Each fix so far was tested on ronins.co.uk (156 pages) or with a 10-page
+   test. Korda has about 1,400 pages, and the next big client may have 10,000.
+3. **Jobs collide.** Two adding-up chains can run for one website at once.
+   A live run can look dead and be collected again. One step's work can be
+   counted twice.
 
-Done 2026-09-25. Tests: `siteKeywordList.test.ts`, `siteRebuildTurn.test.ts`,
-`seoPullAnswers.test.ts`, `dataForSeoLinkParsers.test.ts`,
-`seoRunReports.test.ts`, `seoCollection.test.ts`.
+The checks found 16 places in Analytics and 14 in Search Console. Fixing them
+one at a time is what has been happening. This plan fixes them by five rules
+that every step of both collectors must keep, with a test that fails any step
+that breaks one.
 
-| # | Finding | Fixed |
+## The five rules
+
+### RR1 — A run always finishes
+
+- **A watch on every step.** Each step is booked with a watch, set past the
+  longest an action can live. The DataForSEO Collector already works this way
+  (`seoCollectorRun.ts`). Its watch becomes one shared part, used by:
+  - Analytics' run and both of its fills;
+  - Search Console's run, its 16-month fill and its adding-up chain.
+- **The run's place is saved after every job,** in the database, not only in
+  the next step's arguments. A watch that finds its step dead carries the run
+  on from the saved place.
+- **A job that dies is tried once more, in smaller pieces.** If it dies again,
+  the run skips it and says so on the run: which list, and why. The next night
+  starts with that list.
+- **One closing, whatever the ending.** Finished, failed, cut short by the
+  night, cancelled or killed — every ending goes through the same closing. It:
+  - clears the "collecting" mark;
+  - notes what was collected;
+  - rolls the days on;
+  - rebuilds the screens' lists;
+  - starts the fills.
+
+  It runs once, however many times it is called. Today a run cut short by the
+  night skips half of this, and a killed run skips all of it.
+- **A run counts as moving on every step,** not only when it writes a line.
+  Search Console's adding-up can go 30 minutes without a line, so it is marked
+  dead while still working, and the website is collected a second time.
+- **The sweep reads every open run.** Today it reads the newest 50 for each
+  agent, so with more websites than that an early dead run is never closed.
+
+### RR2 — Nothing is held whole
+
+- **Every Google answer is read in pages and added up as it arrives, inside a
+  fixed amount of memory.** That covers the asks that are held whole today:
+  - Analytics: the landing-page flow, where people came from, who visited a
+    page, who landed, weekdays, devices, the ready-made lists, the days, the
+    day-list fill and page titles;
+  - Search Console: the 90 days of keywords and pages, and the 12 months'
+    searches.
+- **Today's trim keeps 100 rows a page,** so a page list still grows with the
+  number of pages: about 280,000 rows on Korda, the whole 500,000 on a
+  10,000-page site. It becomes a limit on all the rows held at once, whatever
+  the website's size.
+- **One list per job.** Analytics' page-list job asks Google 24 times and writes
+  17 lists in one step, holding them all to the end. Each list becomes its own
+  job, which gives:
+  - memory freed between lists;
+  - a place saved after each list;
+  - a time check before each one.
+- **Search Console's collecting steps move to the Node runtime** (512 MB, from
+  64 MB), as Analytics' did on 15 October. Today only its adding-up has it.
+- **Search Console's 12-month adding-up is saved part-way,** a few weeks at a
+  time. Today it starts again from nothing each time it is cut short, so on a
+  big website it would never finish.
+- **Google's row limit is never passed silently.** An answer that reaches the
+  limit (50,000 rows for Search Console, 500,000 for Analytics) is asked again
+  in smaller pieces, and the run says so. Today Search Console drops the rows
+  past the limit without a word.
+
+### RR3 — Every database call has a fixed size
+
+Every query and write reads and writes at most a fixed number of rows,
+whatever the website's size, and anything bigger goes in pieces. The places
+that break it today:
+
+- **Search Console:**
+  - noting which searches were seen (the likeliest cause of 14 October);
+  - looking up search facts, about 1 second a call already;
+  - dropping old books, which reads 4,000 records to delete 40;
+  - clearing a website's figures. When this fails, the website stays
+    "clearing" for ever and is never collected again.
+- **Analytics:**
+  - swapping a list for its new copy (64 + 64 whole parts in one read);
+  - a day's write, whose cap of 100 rows writes duplicates past it;
+  - rolling the days on;
+  - the tracking-health checks;
+  - the pages seen;
+  - the history writes.
+
+### RR4 — One job of each kind per website at a time
+
+- A second adding-up chain never takes over from the first.
+- The weekly rebuild waits while a website is still being added up.
+- A finished part is counted once, however often it is reported.
+- The fills are started once, so Google is never asked twice.
+- Two steps adding the same new pages wait their turn instead of failing
+  after five clashes.
+
+### RR5 — Proven at ten times Korda before a real run
+
+- **A rehearsal on the real backend.** A pretend property answers like a
+  website ten times kordatackle.com: 14,000 pages, four devices, three home
+  countries, and 100,000 Search Console rows a day. The whole run goes start to
+  finish, both collectors, on the dev backend, where Convex's real limits apply
+  (the test library doesn't check memory or bytes read).
+  - It asks Google nothing.
+  - It runs under a test website on dev, removed afterwards.
+  - It is a test tool, not a setting anyone sees.
+- **Killed on purpose.** In the tests, a step is killed at each kind of job.
+  The run must still finish, with its closing work done.
+- **Every step writes its peak memory and the most rows one call read.** A step
+  past half of a limit writes a warning line on the run, so a website growing
+  towards a limit shows weeks before it fails.
+- **Guards in `npm run check`:** a Google ask with no running add-up, a
+  collection step booked without a watch, or a collection query that reads a
+  growing table whole fails the check.
+
+## Limits, each a number in the code
+
+These are my proposals; each is Anthony's to change.
+
+| Limit | Proposed | Why |
 |---|---|---|
-| 2.1 | The full keyword list is paged by the organic count while its pages also carry featured snippets, map packs and AI Overview rows, so its tail is never bought, and its completeness is over-counted. | Paged by DataForSEO's `total_count`, every kind of row; each page records what it asked for, what came back, what was left off and the list's total. |
-| 2.2 | A list counts as complete before every page is filed, so keywords on a failed or trimmed page are marked lost, then come back as new next week. `markLost` does not re-check the day; the rebuild is not asked for at the list's end. | A day's list is complete only when every page up to its total is filed with nothing left off (`listDayComplete`); `markLost` leaves rows already as new; the rebuild is asked for after each page's figures are written. |
-| 2.3 | Two rebuilds of the same site or content gap can delete each other's rows. | One rebuild at a time per site and per content gap (`beginRebuild`, `endRebuild`); one asked for meanwhile waits a minute and tries again; a turn left by a rebuild that died frees itself after 11 minutes. |
-| 2.4 | Answers over 512,000 characters are dropped silently; lists lose their tail rows; the limit counts characters while storage counts bytes. | Answers are kept in parts of 900 KB, up to 3.6 MB, and passed between functions as those parts (`seoPullAnswers.ts`); an answer missing a part reads as none, never half of one. Every size is measured in bytes. A list may take 3.2 MB, so a thousand rows of long addresses are no longer cut; rows still left off are counted on the request (`rowsLeftOff`), and an answer too large to keep at all is marked (`rawTruncated`). A results page is still cut to what is read past 480 KB — only the words around each result go. |
-| 2.5 | Counts: a queued request is counted as sent twice; given-up and switched-off requests are not counted as failed; overlapping collections count some AI costs twice; a collection served wholly from held data gets no report. | Sent and failed counted once (Stage 1). A page's type is counted for one run only — the one whose request for that website came last before it. A Collector run's sends are read only up to the company's next run. A collection served wholly from held data is finished the one way every collection is, so it gets its report, which says nothing needed buying. |
+| A step's watch | 12 minutes after it starts | Past the 10 minutes an action can live |
+| Tries of a job that died | 2, the second in smaller pieces | Then skipped and said so |
+| Rows of one list held at once | 100,000 | About 65 MB, an eighth of Node's memory |
+| Rows one database call reads or writes | 1,000 | Far under 16 MB and 8 MB |
+| Warning line | at half of any limit | Shows growth before a failure |
+| Rehearsal size | 10× kordatackle.com | 14,000 pages; the next big client may have 10,000 |
 
-## Stage 3 — holds as companies grow
+## What does not change
 
-Done 2026-09-25. Tests:
-`seoCollectionSweep.test.ts`, `seoAgentRuns.test.ts`, `seoCollection.test.ts`,
-`seoIdempotency.test.ts`, `seoCollectionReports.test.ts`, `sites.test.ts`,
-`siteCrawlDetail.test.ts`, `seoFanOut.test.ts`, `seoKeywordIntent.test.ts`.
+- What is collected, how often, and what the screens show.
+- Google's allowances: the hour and day budgets, a fifth kept in hand, no
+  retry loops on a refusal (AGENTS.md).
+- The fills still start after the night's run.
+- Nothing is asked of Google while this is built (memory: no pulls until the
+  build ends). Re-collecting kordatackle.com is Anthony's go, after the
+  rehearsal passes, with the allowance counted first.
 
-| # | Finding | Fixed |
+## Until it is built
+
+Tonight's Analytics run for kordatackle.com asks for the same lists and will
+stop in the same place. Nothing already held is lost.
+
+## Phases
+
+| Phase | What | Man-days |
 |---|---|---|
-| 3.1 | The Planner reads only the first 500 schedules, waits on each company in turn inside one action (10-minute limit), and a run that dies stays "running" for ever. | Companies are read a hundred at a time, every one of them. Every company's work list is opened first and waited for once — a minute however many companies — and a run stops opening more at seven minutes, saying where it stopped. The hourly check closes a Planner or Collector run twenty minutes old and still "running" as failed, saying why, with its workflow execution. |
-| 3.2 | Expansion is budgeted on lines written, not reads (Convex allows about 4,096 reads per transaction); one website cannot be split across pages; question calls are uncapped. | A page counts its reads as they happen and stops at 2,500. A website's planning is a run of steps — a question, a search, a call — and a page can stop between any two; the next picks it up at that step (`cursorStep`), without judging the website "collected" by the lines the page before wrote. Questions stop at the cycle's ceiling like every other call. |
-| 3.3 | The hourly fetch reaches 200 answers an hour, the answer purge 8 an hour, cycle retirement has no overall budget (can exceed Convex's write limit), and requests are never purged by age. | Each duty takes pages until it is done, its page budget is spent or the check has run six minutes: every answer out an hour is fetched, spaced ten a second; stored answers are cleared eight rows a page, as many pages as there are; retirement deletes at most 2,000 rows a page, retires failed and capped runs as well as finished ones — never one with a request still out — and takes each run's report with it. **Request rows are kept for ever** — Anthony's decision, 2026-09-25: each is the cost record of one request, checkable against DataForSEO's bill, filed data points at it, and it is under a kilobyte. Only the stored answers are cleared, after 30 days. |
-| 3.4 | The company Costs screen reads rollups from the table's start; a run report reads every agent step of the company in its window; `requestGapsFor` can schedule over 1,000 functions at once; `recountCitedPages` can read past 16 MB; `readStoredResults` cannot resume. | The Costs screen reads the window's days (`by_day`). A run report reads the Collector's own calls for the company (`by_agent_company_started`). Gap rebuilds are asked for four holds a step. A cited page is recounted under the answer's own question, engine and place, one small job a page (`recountCitedPage`, `by_website_url_question`). The stored-answer backfill hands on to another run at five minutes, from where it stopped. |
-| 3.5 | Searches and questions share a 32-bit key: at 10,000 checks a day a collision (one search served another's page) happens about one day in a hundred. | A 64-bit key. Three real pairs of searches that shared a 32-bit key are pinned in `seoIdempotency.test.ts`. |
-| 3.6 | Smaller: Live mode judges "due" from what was planned, not answered; the weekly hold ignores location and limits; only 200 of 1,000 searches are checked; crawl detail can be duplicated or wiped; fan-out counts inflate on re-file; keyword meanings can stay unjudged past 500 rows. | "Due" is judged from the newest run that planned the website, only if anything it asked came back. A call held for its own cadence holds only when asked the same way — same place, same page of a list. Every search a website tracks is checked (1,000). Crawl detail is replaced only when fetched whole, cleared whole, and a refusal is tried again three times before the crawl says why. A fan-out search counts once per answer, whenever filed. A meaning is carried onto every ranking and gap, five hundred a step. |
+| 1 | RR1 and RR4: the shared watch, the saved place, one closing, both collectors and their fills | 1.5 |
+| 2 | RR2 for Analytics: one list per job, a fixed amount held, every ask added up as it arrives | 1.5 |
+| 3 | RR2 for Search Console: Node runtime, the 12 months saved part-way, Google's row limit | 1 |
+| 4 | RR3, both collectors: every database call a fixed size | 1 |
+| 5 | RR5: the rehearsal at 10×, the kill tests, the memory lines, the guards; the full gate with GitHub's steps | 1 |
 
-## Seeing what goes wrong
+**Total: about 6 man-days.** Overall: 0%.
 
-Asked 2026-09-25: "Do we have good observability in the ui to help see what
-goes wrong." The agents' own runs are well covered (each call, its cost, why a
-run stopped). What happens between runs — fetching and filing answers — was
-not: when it failed, nothing said so on any collection screen.
+## Stopping point — 2026-10-15, evening
 
-Done 2026-09-25. Tests: `seoRunReports.test.ts`, `seoCollectionMoney.test.ts`,
-and the run page, Collection runs and queue screen tests.
+Anthony had to travel. The build stopped at a safe point. These tests passed for everything changed:
+- the collectors' 1,216 tests;
+- the full local check, which was running as the build paused.
 
-| # | Addition | Done |
-|---|---|---|
-| V1 | A failure fetching or filing an answer is written on the request, and the run page and queue say "could not be filed: …" rather than "waiting". | Each fetch that does not bring an answer writes why on the request (`lastFetch`). A run's report keeps its requests that need a look — failed, answered but not filed, too large to keep, rows left off — and the run page lists them under **Needs a look**, with the reason. The queue marks an answer not filed as **Not filed**, not collected, and says when one was too large or cut. |
-| V2 | A request out for hours is flagged on the run page and the queue. | Out over an hour unanswered, a request is listed on the run page — read live, as the page is — and flagged on the queue, each with the last word on its answer. |
-| V3 | The hourly check's last result is shown on the Collection runs screen, not only on Health. | A note on the company's Collection runs screen: when the check last ran, and whether it went well, failed (how many times in a row, and why), or is overdue. |
+The live dev backend runs this code, so tonight's runs use it. Nothing was committed or pushed.
 
-## Progress
+**Done (phases 1–3, and part of 4):**
 
-Overall: 100%. Stages 1–3 and V1–V3: 100%.
+- **RR1, the watch** (`convex/collectionSteps.ts`, `collectionStepsSchema.ts`). Each chain of steps is one row:
+  - one for Analytics' run, its day fill and its page fill;
+  - one for Search Console's run, its 16-month fill and each of its adding-up jobs.
+
+  The row holds the next step's own arguments, which are the saved place, its booking number, its tries and its peak
+  memory.
+  - Every two minutes a cron, `collection-step-watch` in the job ledger, looks at the open chains. A step that Convex
+    says has ended without handing on is carried on from its saved place.
+  - The second try at a place goes carefully: that job alone, in smaller pieces.
+  - The third try skips it, saying so on the run.
+  - After 8 carries, only the chain's closing runs.
+
+  *Changed from the plan:* a check of the open chains replaces a timer for each step. A pending timer moved the
+  tests' fake clock by 12 minutes during every step, and a check leaves nothing to book or cancel. A dead step is now
+  found within about 14 minutes.
+- **One closing for Analytics** (`googleAnalyticsRunEnd.ts`, `closeSiteRun`), whatever the ending: whole, days in, or
+  none. It clears the collecting mark, rolls the days on, rebuilds the lists and starts the fills, once.
+  - A run cut short by the night goes through it too (`noteNightCut` is gone).
+  - `finishCollection` now uses the same closing.
+- **One settle at a time for Search Console** (`searchConsoleSettling.startSettleParts`, `partDone` by part, `settleEnded`):
+  - Each job is counted once.
+  - A settle that carries a run takes over from one that doesn't, and the run it replaces is ended, saying why.
+  - The weekly rebuild and a screen's catch-up wait while a website's own run is going.
+  - The planning moved to `searchConsoleSettlePlan.ts`; `settleSite` is gone.
+- **The hourly sweep** reads every open run by its status, and leaves a watched run to its watch.
+- **Page numbering** never fails on a clash (`holdPageRefs.placePages`).
+- **RR2, Analytics:**
+  - Rows held are bounded by `HOLD_ROWS` (100,000) with `keepPerPage`, half that on a careful try.
+  - The page lists are 15 jobs for each date range and device (`PAGE_LIST_PARTS`).
+  - Every ask is added up as it arrives: who, landed who, weekdays, devices, the flow's routes and its onward visits.
+  - The flow's every-page-against-every-landing-page sum is now done once for each pair.
+  - A big website's lists are asked a device at a time (`SPLIT_ROWS`, 25,000).
+  - The days are written one list at a time, and a big list's a day at a time.
+  - The two-year day fill asks a big list a few days at a time and writes 4 records a call.
+  - A list cut at Google's row limit says so on the run.
+- **RR2, Search Console:**
+  - The run's and the 16-month fill's steps run in the Node runtime (`searchConsoleSteps.ts`).
+  - A long period's pairs are held within `MOST_PAIRS_HELD` (400,000), the least-seen searches that cannot yet be
+    kept going first, and the run says so.
+- **RR3, done:**
+  - Seen searches are noted 100 a call (was 500).
+  - Search facts are looked up 50 a call (was 200), 16 asks side by side.
+  - Unused books are dropped one build at a time.
+  - A website's books are cleared 20 records a call.
+  - Only the book chunks a line needs are read.
+  - A day's records are read device by device, with no cap at 100.
+  - Rolling the days on handles one list and device a call, 20 records.
+  - A list's old copy is removed 12 parts a call until none is left (`dropStaleParts`).
+  - The health checks read at most 10 parts of a list.
+  - The fill's page count is read from the list's last part.
+- **RR5, begun:** each step's memory is kept as its chain's peak (`utils/stepMemory.ts`), with a warning line on the
+  run past 256 MB.
+- `googleAnalyticsJobs.ts` holds the run's planning helpers, moved out of `googleAnalyticsCollect.ts` to keep it under
+  the 1,000-line ceiling.
+
+**Left, in order:**
+
+0. **The test-speed check:** the full check's 7,800 tests pass, but `scripts/check-test-speed.mjs` fails. Several
+   Analytics tests take 4–5 s each on their own, against its 5 s line: `googleAnalyticsCountries.test.ts`, the fills,
+   products and history tests.
+   - One collection with two home countries takes about 4 s and makes 2,112 asks of the fake Google.
+   - Already done: one write a day, and one slots read for each step's page-list parts.
+   - Next: count those asks by kind against HEAD to find what got dearer, then make the tests or the run lighter. Never
+     add them to the slow list.
+1. **RR3, the rest:**
+   - `holdPages.consolePages` reads the whole 90-day Search Console page period on every call. Read it a part at a
+     time.
+   - `rebuildHoldPages` holds every source at once, in the default runtime.
+   - Each page's daily figures (`collectPageDays`, `writeRecords`) are written 100 pages a call.
+2. **RR5:**
+   - The rehearsal at 10× kordatackle.com on the dev backend, with a pretend property.
+   - The kill tests: a step stopped at each kind of job, with the run still finishing and its closing done.
+   - The guards in `npm run check`.
+   - Measure Search Console's short periods at 10×. They still read the 90 days' kept lines at once; build them to
+     stream if the measurement says so.
+3. **Double-check:** an independent review of the whole change, then the full gate with GitHub's steps.
+
+**Found outside this plan, for later:** a Search Console screen's search reads a whole book (`wholeBook`, up to
+4,001 records). That passes a read's 16 MB on a website with ten times kordatackle.com's searches.
 
 ## Change log
 
-- 2026-09-25 — Written from four reviews of the collection path and checks of
-  the code, after Korda's collection stalled.
-- 2026-09-25 — Stage 1 done: never pay twice, never lose a paid answer (see
-  its table). The bulk calls stopped at Anthony's word. 1.12 found already
-  fixed on 2026-09-23.
-- 2026-09-25 — Stage 2 done: lists paged and judged complete by their real
-  total, one rebuild at a time, answers kept in parts rather than dropped, and
-  every cost counted once (see its table).
-- 2026-09-25 — Stage 3 done but for one decision: the hourly check works
-  through what it finds, the Planner reaches every company inside its time,
-  work lists count their reads and resume mid-website, 64-bit keys, and the
-  smaller faults (see its table). Every tracked search is now checked, not the
-  first 200 — more calls for a website tracking more than 200.
-- 2026-09-25 — V1–V3 done: what needs a look on the run page, flags on the
-  queue, and the hourly check on the Collection runs screen.
-- 2026-09-25 — Request rows kept for ever, at Anthony's word (3.3): "Keep them
-  for ever."
-- 2026-09-25 — **Every run is a full run**, at Anthony's word ("each run should
-  be a full run always"). The weekly and monthly holds (and 3.6's param-aware
-  hold) are gone, and so is reuse of answers already in: a run buys every call,
-  list page, crawl, question and search, sharing only a request still on its
-  way. Request keys carry the run. The Sites Overview's headline shows the
-  newest value held for each figure, never a dash while one is held.
-- 2026-09-25 — Full runs **reverted the same day**, at Anthony's word: "put it
-  back to how it was with different collections", "continue to show the
-  existing data for things we don't collect", "the data set always looks
-  complete and we build on it with incremental". The weekly and monthly
-  holds, the reuse ladder and day-keyed requests are back exactly as they were
-  (3.6's hold matched on how a call is asked stays). The Overview's newest-value
-  headline stays: it is what makes an incremental run look complete.
-- 2026-09-25 — Each call with its own cadence is bought on the run nearest
-  that cadence, and every run by a company that collects about as seldom as
-  the call (`collectsEveryRun`, `repeatDays`): a monthly company's run is the
-  full scan; weekly and fortnightly runs buy the lists every run and the
-  crawl, anchors and referring IPs every fourth and every other run; a daily
-  one buys the lists weekly and the crawl monthly. Held for its whole cadence
-  before, a weekly list — bought a few minutes short of seven days earlier —
-  was bought every other week on a weekly schedule, and a monthly company
-  skipped the crawl after every month of 30 days or fewer. Paged lists reuse a
-  still-fresh page as single calls do, so a second press or a second company
-  on the same day does not buy one twice.
-- 2026-09-29 — **A supplier's refusal is asked again, slowly.** Overnight,
-  Google refused DataForSEO's own access to its AI engine, and all ten of
-  Ronins' questions to it came back as DataForSEO's 50301 "3rd Party API
-  Service Unavailable (rate_limit_exceeded)": each refused in under half a second,
-  charged nothing, and failed at once. They were not sent too fast — one
-  about every 20 seconds, against DataForSEO's 2,000 a minute — and the
-  other three engines at the same pace all answered. Anthony: "don't we
-  retry but slower". Now 50301, 50302 and 50303 (supplier unavailable,
-  update in progress) are "not now" when nothing was charged: the request
-  is asked again after a minute, two, then three
-  (`SEO_SUPPLIER_RETRY_WAITS_MS`), inside the Collector's 7-minute run,
-  while the rest of the queue carries on; refused after the last, or with no
-  run left for the next wait, it is failed, and the next night's run asks
-  again. A retry never outlives its run (`retryUntil`): a later run would buy
-  it beside that night's own request. A live call that failed at no charge
-  can be asked again the same day, so Collect now retries it (before, its
-  task id counted it as bought).
+- 2026-10-15 — Paused at the stopping point above (Anthony travelling).
+
+- 2026-10-15 — Planned from the two code checks; waiting for Anthony's go.

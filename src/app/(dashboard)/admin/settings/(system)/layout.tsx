@@ -6,6 +6,7 @@ import {
   Database,
   Gauge,
   Hourglass,
+  Layers,
   Palette,
   Settings as SettingsIcon,
   ShieldCheck,
@@ -71,6 +72,11 @@ export default function SystemSettingsLayout({ children }: { children: React.Rea
     // starts (docs/plans/active/platform-limits-plan.md). Anthony, 2026-09-28:
     // "the platform defaults should be another option on the system settings menu".
     { label: t("nav.limits"), href: `${SETTINGS_ROOT}/limits`, icon: Gauge },
+    // One page, so no dropdown: the page types every company's classifications
+    // pick from (docs/plans/active/classification-types-plan.md, CT1).
+    // Anthony, 2026-10-15: "we need a new tab in system settings for it. Lets
+    // call it Classification".
+    { label: t("nav.classification"), href: `${SETTINGS_ROOT}/classification`, icon: Layers },
   ];
 
   return (

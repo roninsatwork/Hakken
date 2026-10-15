@@ -263,6 +263,9 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   holdPages: LATEST,
   moneyPageChecks: LATEST,
   pageClassifications: RECORD,
+  classificationTypes: RECORD,
+  // A row a chain and website, written over by each run (collection-reliability-plan.md, RR1).
+  collectionSteps: LATEST,
   pageClassificationLines: RECORD,
   pageClassificationPicks: RECORD,
   discoveredCompetitors: RECORD,

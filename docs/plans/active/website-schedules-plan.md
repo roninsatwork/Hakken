@@ -103,6 +103,35 @@ Nothing asks Google, Bing or Clarity while this is built or tested.
   company's "off", which the Planner does not. Only screens read that today
   (the company Websites list's next run, a shared website's pace). Aligning it
   is its own small change.
+  **Done 2026-10-15 (on dev, uncommitted).** The company's switch is now the
+  master in the resolver itself: a website collects only while its company's
+  switch is on and its own is not off (`seoScheduleService.ts`).
+  `getWebsiteSources` reads the resolver instead of applying the rule itself.
+  What changes, by caller:
+  - **Admin → a company → Websites** (`getCompanyWebsites`,
+    `listCompanyWebsiteRows`): a website under a company switched off reads
+    "Not collecting" with no next run. Korda's kordatacle.com did not.
+  - **Admin → Websites, and a website's watchers** (`getPaginatedWebsites`,
+    `getWebsiteById` through `soonestPull`): a company switched off no longer
+    sets a shared host's pace, and its watcher row reads "Paused".
+  - **The client's Discovery → Websites list and site header**
+    (`sites.ts`, through `loadSite`): no cadence or first check for a company
+    switched off.
+  - **Read, but on no screen today:** `getCompanyWebsiteById`'s `effective`,
+    `getSiteHeader`'s `schedule`, and the monthly costs built on `loadSite`
+    (`getSiteHeader`, the search, question and rival rows). For a company
+    switched off they now say no next run and $0 a month, because nothing is
+    bought.
+  - **The Planner** (`collectedOnItsOwn`, `dueByCadence`, `findFreshPull`
+    through `isWebsiteDue`): no change to what is bought. Scheduled runs only
+    reach companies switched on, where the old and new rules agree. A
+    collection opened while the company is off — an agent's
+    `dataforseo.collection.start`, or one still being written when the switch
+    goes off — no longer plans its websites switched on; before, it planned
+    them and the queue dropped them unsent (`stillWanted`).
+  Tests: `seoScheduleService.test.ts` ("what one website runs at"),
+  `websites.test.ts` and `seoCollection.test.ts` (Korda's case), each failing
+  under the old rule.
 
 ## Built (2026-10-15, on dev)
 

@@ -35,6 +35,7 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/DetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
 - `src/ui/components/screens/DetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
 - `src/ui/components/screens/PageHeader.tsx`: list-page title/description/action header and primary action button.
+- `src/ui/components/screens/TitleSwitch.tsx`: a page title that opens the list of records of its kind — the name, a quiet arrow, the native select laid invisibly over it. Added 2026-10-15 for a website in Google Analytics (`ga-header-plan.md`); it goes in a `DetailHeader`'s `title`.
 - `src/ui/components/screens/Select.tsx`: styled select control; with `chip`, a compact filter that names itself ("Position", then "Position: 1–3" in grey behind a lighter border) and is as wide as its words.
 - `src/ui/components/screens/Field.tsx`: labelled field wrapper for typed form controls that must carry an accessible label.
 - `src/ui/components/screens/Checkbox.tsx`: shared checkbox/tick-box control, including hidden-label table-cell use.
@@ -396,6 +397,21 @@ Orange means *this page's action*, and nothing else. Filters, pickers, secondary
   title={record.keyword}
   description={t("checkedOnceNotice", { day })}
   pills={<><StatusLabel size="md" tone="info">…</StatusLabel><IntentLabel size="md" intent={…} /></>}
+/>
+```
+
+**A website in Google Analytics or Search Console** — a record read through filters. `DetailHeader` with `layout="compact"`, chosen by Anthony on 2026-10-15 (option 3 of three drawn, after *"this ux is terrible for button position in the header"*; `docs/plans/active/ga-header-plan.md`). The title and the page's filters share one row, the filters on the right and centred on the title; the description, the status label and a quiet `note` — how fresh the figures are — share one line under it, the note at the far end. With more than one website the title is a `TitleSwitch`, so the name is never said twice. Search Console's website header was drawn and approved the same way the same day; every other record page keeps the stacked header until he says otherwise.
+
+```tsx
+<DetailHeader
+  layout="compact"
+  back={{ label: t("back"), href }}
+  icon={<SiteMark host={host} owned />}
+  title={<TitleSwitch label={host} aria-label={t("switch")} value={siteId} onChange={go}>{options}</TitleSwitch>}
+  description={property}
+  pills={<StatusLabel tone="neutral">…</StatusLabel>}
+  action={<AnalyticsFilters />}
+  note={t("figuresTo", { day })}
 />
 ```
 

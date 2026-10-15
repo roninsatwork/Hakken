@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { appendRunStep } from "./agentRunStepWriter";
 import { calculateModelCostUsd } from "./aiCostService";
 import { appErrorMessage } from "./utils/appError";
@@ -61,31 +61,39 @@ export const logRunLine = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.runId);
-    if (!run) return null;
-    const stepId = await appendRunStep(ctx, {
-      runId: args.runId,
-      agentId: run.agentId,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      kind: "PLAN",
-      status: args.failed ? "FAILED" : "SUCCESS",
-      input: args.heading,
-      output: args.detail,
-    });
-    await ctx.db.insert("agentLogs", {
-      agentId: run.agentId,
-      runId: args.runId,
-      stepId,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      interactionType: args.heading,
-      promptContent: "",
-      responseContent: args.detail,
-      outcome: args.failed ? "FAILED" : "SUCCESS",
-      createdAt: Date.now(),
-    });
+    await writeRunLine(ctx, args);
     return null;
   },
 });
+
+/** A line on a run's timeline and in its log, from inside a mutation (`logRunLine`). */
+export async function writeRunLine(
+  ctx: MutationCtx,
+  args: { runId: Id<"agentRuns">; companyId?: Id<"companies">; heading: string; detail: string; failed: boolean },
+): Promise<void> {
+  const run = await ctx.db.get(args.runId);
+  if (!run) return;
+  const stepId = await appendRunStep(ctx, {
+    runId: args.runId,
+    agentId: run.agentId,
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    kind: "PLAN",
+    status: args.failed ? "FAILED" : "SUCCESS",
+    input: args.heading,
+    output: args.detail,
+  });
+  await ctx.db.insert("agentLogs", {
+    agentId: run.agentId,
+    runId: args.runId,
+    stepId,
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    interactionType: args.heading,
+    promptContent: "",
+    responseContent: args.detail,
+    outcome: args.failed ? "FAILED" : "SUCCESS",
+    createdAt: Date.now(),
+  });
+}
 
 /** What went wrong, as one readable line for a failed run's summary. */
 export function failureSummary(error: unknown): string {
@@ -102,31 +110,41 @@ export const finishRoleRun = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.runId);
-    if (run) {
-      await appendRunStep(ctx, {
-        runId: args.runId,
-        agentId: run.agentId,
-        kind: "FINAL",
-        status: args.status,
-        output: args.summary,
-        ...(args.status === "FAILED" ? { error: args.summary } : {}),
-      });
-    }
-    const now = Date.now();
-    await ctx.db.patch(args.runId, {
-      status: args.status,
-      finalOutput: args.summary,
-      ...(args.status === "FAILED" ? { error: args.summary } : {}),
-      completedAt: now,
-      updatedAt: now,
-    });
-    if (args.workflowExecutionId) {
-      await ctx.db.patch(args.workflowExecutionId, { status: args.status, completedAt: now });
-    }
+    await closeRoleRun(ctx, args);
     return null;
   },
 });
+
+/**
+ * A run's end, from inside a mutation: a collection's one closing ends its run
+ * in the same transaction as the rest of its closing (collection-reliability-plan.md, RR1).
+ * Its workflow execution is found by the run when not given.
+ */
+export async function closeRoleRun(
+  ctx: MutationCtx,
+  args: { runId: Id<"agentRuns">; workflowExecutionId?: Id<"workflowExecutions">; status: "SUCCESS" | "FAILED"; summary: string },
+): Promise<void> {
+  const run = await ctx.db.get(args.runId);
+  if (!run) return;
+  await appendRunStep(ctx, {
+    runId: args.runId,
+    agentId: run.agentId,
+    kind: "FINAL",
+    status: args.status,
+    output: args.summary,
+    ...(args.status === "FAILED" ? { error: args.summary } : {}),
+  });
+  const now = Date.now();
+  await ctx.db.patch(args.runId, {
+    status: args.status,
+    finalOutput: args.summary,
+    ...(args.status === "FAILED" ? { error: args.summary } : {}),
+    completedAt: now,
+    updatedAt: now,
+  });
+  if (args.workflowExecutionId) await ctx.db.patch(args.workflowExecutionId, { status: args.status, completedAt: now });
+  else await closeRunExecution(ctx, run, args.status, now);
+}
 
 // ── One at a time ──────────────────────────────────────────────────────────
 
@@ -396,8 +414,8 @@ export const runSpendLeft = internalQuery({
 /** Silent past this, a run still "running" has died: an action is stopped at ten minutes. */
 const RUN_LIFE_MS = 20 * 60 * 1000;
 
-/** A role's newest runs past that life, looked at each hour. */
-const STALLED_RUNS_READ = 50;
+/** Open runs past that life, of each status, looked at each hour. */
+const STALLED_RUNS_READ = 500;
 
 export const RUN_STALLED =
   "This run stopped without finishing — the platform ended it, at its time limit or a restart — so it never said how it went.";
@@ -411,21 +429,28 @@ export const RUN_STALLED =
  * collection sweep (`seoCollectionSweep.ts`).
  */
 export async function closeStalledRoleRuns(ctx: MutationCtx, now: number): Promise<void> {
+  const roles = new Set<Id<"agents">>();
   for (const role of ASSIGNABLE_AGENT_ROLES) {
     const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
-    if (!agent) continue;
+    if (agent) roles.add(agent._id);
+  }
+  // Every run still open, however many websites a night starts (collection-reliability-plan.md, RR1): read by its
+  // status, not as an agent's newest 50, which left an early dead run open for good once a night held more.
+  for (const status of ["RUNNING", "QUEUED"] as const) {
     const old = await ctx.db
       .query("agentRuns")
-      .withIndex("by_agent_started", (q) => q.eq("agentId", agent._id).lt("startedAt", now - RUN_LIFE_MS))
-      .order("desc")
+      .withIndex("by_status_started", (q) => q.eq("status", status).lt("startedAt", now - RUN_LIFE_MS))
       .take(STALLED_RUNS_READ);
     for (const run of old) {
-      if (run.status !== "QUEUED" && run.status !== "RUNNING") continue;
+      if (!roles.has(run.agentId)) continue;
       // Started long ago but still moving: a run in many steps is not dead (2026-10-05).
       if (now - lastMoved(run) < RUN_LIFE_MS) continue;
+      // Carried by a watched chain still open: its watch carries it on, or ends it with its closing (RR1).
+      const chains = await ctx.db.query("collectionSteps").withIndex("by_run", (q) => q.eq("runId", run._id)).take(20);
+      if (chains.some((chain) => chain.closedAt === undefined)) continue;
       await appendRunStep(ctx, {
         runId: run._id,
-        agentId: agent._id,
+        agentId: run.agentId,
         kind: "FINAL",
         status: "FAILED",
         output: RUN_STALLED,
@@ -439,13 +464,17 @@ export async function closeStalledRoleRuns(ctx: MutationCtx, now: number): Promi
 
 /** A run's workflow execution, started with it, found by its start. */
 async function failRunExecution(ctx: MutationCtx, run: Doc<"agentRuns">, now: number): Promise<void> {
+  await closeRunExecution(ctx, run, "FAILED", now);
+}
+
+async function closeRunExecution(ctx: MutationCtx, run: Doc<"agentRuns">, status: "SUCCESS" | "FAILED", now: number): Promise<void> {
   const executions = await ctx.db
     .query("workflowExecutions")
     .withIndex("by_startedAt", (q) => q.gte("startedAt", run.startedAt - 60_000).lte("startedAt", run.startedAt + 60_000))
     .take(50);
   for (const execution of executions) {
     if (execution.agentRunId === run._id && execution.status === "RUNNING") {
-      await ctx.db.patch(execution._id, { status: "FAILED", completedAt: now });
+      await ctx.db.patch(execution._id, { status, completedAt: now });
     }
   }
 }

@@ -47,6 +47,7 @@ describe("approved looks", () => {
       "TableBar.tsx": ['data-part="table-bar"'],
       "TableControls.tsx": ['data-part="search"', 'data-part="filter"'],
       "Select.tsx": ['data-part="filter"', 'data-part="select"'],
+      "TitleSwitch.tsx": ['data-part="title-switch"'],
       "SettingsCard.tsx": ['data-part="settings-card"'],
       "CompactList.tsx": ['data-part="compact-list"'],
       "SaveControls.tsx": ['data-part="save"'],

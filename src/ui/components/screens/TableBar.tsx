@@ -19,6 +19,8 @@ export type TableNoun =
   | "fanOutQueries"
   // A website's own classifications of its pages: admin › Page classification's Classifications view (page-groups-plan.md).
   | "classifications"
+  // The page types every classification picks from: System Settings → Classification (classification-types-plan.md).
+  | "types"
   // Keyword research (keyword-research-plan.md): research lists (board 1), keyword ideas (board 5), and the AI assistants asked (board 4).
   | "lists" | "ideas" | "assistants"
   // Admin → Content → Library's articles (content-library-plan.md).

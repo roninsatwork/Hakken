@@ -579,6 +579,8 @@ This supersedes SC5 (its own daily job) and the sixteen months on connecting
   collects nothing (`searchConsoleConnect.connectTo`,
   `searchConsoleSync.clearFigures`). The collecting itself stays
   (`collectRecent` and its steps), for the agent to start.
+  **Changed 2026-10-15:** connecting now starts the Collector's own run for
+  that website at once (search-console-first-collection-plan.md, SF1).
 - **Everything collected for ronins.co.uk cleared** on dev — the day totals,
   the 2.16 million rows of every search, page, country, device and search
   appearance by day, and the tables' copies — by
@@ -768,6 +770,13 @@ The items are left as they were agreed, for the record.
    2026-10-02, of fetching months 4 to 16: "so we don't need this then do we
    now"): the history builds up from the day a website is connected, and a
    period longer than what is held says how much is held.
+   **Changed:**
+   - **2026-10-12:** the main country's day totals and charts are fetched
+     back to Google's sixteen-month line (insights-intelligence-plan.md,
+     phase 9).
+   - **2026-10-15:** a website's first 90 days start the moment it is
+     connected, and its 16 months fill straight after, the countries kept
+     ready too (search-console-first-collection-plan.md).
 8. **What goes**: the record-per-row tables (`searchConsoleRows`,
    `searchConsoleDays`) and the tables' compact copies of kind `gsc`, replaced
    by the day, week and month records and the ready-made period totals.
@@ -1401,3 +1410,8 @@ title).
   part of their page wherever pages are compared or counted; pages open at
   their top and Back returns to its place; sorting keeps the reader's place;
   `NoFigure`; the click-rate scale; "By page classification".
+- **2026-10-15** — Collecting on connecting, and the 16 months filled
+  straight after the first 90 days, the countries kept ready too, paced and
+  shown as lines on the run (search-console-first-collection-plan.md).
+  Adding up now hands itself on, as a chain of jobs per kind of result. Until
+  then, kordatackle.com's web job ran past the ten minutes an action has.

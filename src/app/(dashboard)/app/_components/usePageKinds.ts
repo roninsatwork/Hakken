@@ -36,8 +36,8 @@ export type PageKindsView = {
   allowed: readonly string[] | undefined;
 };
 
-/** The tone a classification's label takes, by its type; Not sorted is neutral. Words carry the meaning, never the colour alone. */
-const TYPE_TONES: Record<ClassificationType, StatusTone> = {
+/** The tone a classification's label takes, by its type; Not sorted, and a type added in System Settings, are neutral. Words carry the meaning, never the colour alone. */
+const TYPE_TONES: Partial<Record<ClassificationType, StatusTone>> = {
   INFORMATIONAL: "info",
   SERVICE: "success",
   PRODUCT: "success",
@@ -48,7 +48,7 @@ const TYPE_TONES: Record<ClassificationType, StatusTone> = {
 };
 
 export function kindTone(type: ClassificationType | null): StatusTone {
-  return type ? TYPE_TONES[type] : "neutral";
+  return (type ? TYPE_TONES[type] : undefined) ?? "neutral";
 }
 
 const PAGE_TYPE_LIST: readonly string[] = PAGE_TYPES;

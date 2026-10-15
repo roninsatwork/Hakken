@@ -219,3 +219,17 @@ export const typesHeld = internalQuery({
   returns: v.array(searchTypeValidator),
   handler: async (ctx, args) => await kindsHeld(ctx, args.companyWebsiteId, args.country),
 });
+
+/** Whether any day's line of a list is kept for the scope: what a build of the long periods alone needs of them (searchConsolePeriods.ts). */
+export const anyKept = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator, list: listValidator },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const line = await ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q
+        .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).eq("list", args.list).eq("grain", "DAY"))
+      .first();
+    return line !== null;
+  },
+});

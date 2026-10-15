@@ -21,16 +21,15 @@ import { indexedValidator, pageFactsValidator, speedValidator } from "./utils/mo
  *   place of Hakken's page kinds; a page none catches is Not sorted.
  */
 
-/** What a classification's type is: reports add up across classifications by it. */
-export const classificationTypeValidator = v.union(
-  v.literal("INFORMATIONAL"),
-  v.literal("SERVICE"),
-  v.literal("PRODUCT"),
-  v.literal("CASE_STUDY"),
-  v.literal("COMPANY"),
-  v.literal("LEGAL"),
-  v.literal("OTHER"),
-);
+/**
+ * What a classification's type is: reports add up across classifications by
+ * it. The type's key from the one list in System Settings → Classification
+ * (docs/plans/active/classification-types-plan.md), checked against it on
+ * every write (`classificationTypes.ts`): one of the seven shipped
+ * (INFORMATIONAL, SERVICE, …), which reports read by name as they always
+ * have, or an added type's own id, which reports count on its own.
+ */
+export const classificationTypeValidator = v.string();
 
 /** How a line catches a page: by the start of its address, a part of it, the whole of it, or the sitemap file that lists it. */
 export const classificationLineKindValidator = v.union(
@@ -130,7 +129,27 @@ export const pagesTables = {
     type: classificationTypeValidator,
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_hold", ["companyWebsiteId"]),
+  })
+    .index("by_hold", ["companyWebsiteId"])
+    // The classifications of one type, across every company: System Settings → Classification counts them, and a type in use is not removed.
+    .index("by_type", ["type"]),
+
+  /**
+   * The page types every company's classifications pick from (System
+   * Settings → Classification, docs/plans/active/classification-types-plan.md):
+   * a row for each type added there, and for each of the seven shipped types
+   * once it is edited — until then a shipped type is as
+   * `utils/classificationTypes.ts` writes it. The name is written once, in
+   * English; the Translator writes the rest (owner `classificationTypes`).
+   */
+  classificationTypes: defineTable({
+    /** A shipped type's own key (INFORMATIONAL, …), or an added type's own id. What a classification's `type` holds. */
+    key: v.string(),
+    nameEn: v.string(),
+    builtIn: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
 
   /** One address line of a classification: the pages it catches. The more exact line wins between classifications. */
   pageClassificationLines: defineTable({

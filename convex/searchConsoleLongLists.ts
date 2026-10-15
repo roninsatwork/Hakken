@@ -2,10 +2,10 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { GOOGLE_DIMENSIONS } from "./searchConsoleApi";
 import { shiftDay } from "./searchConsoleDays";
-import { keptLines } from "./searchConsoleKeep";
+import { keepsSearch, keptLines } from "./searchConsoleKeep";
 import { askLive, countryFilters } from "./searchConsoleReads";
 import type { SearchConsoleList, SearchType } from "./searchConsoleSchema";
-import { addUpRows, fromGoogle, type Row } from "./utils/searchConsolePacks";
+import { RanLong, addRowsInto, addUpRows, fromGoogle, type Row } from "./utils/searchConsolePacks";
 
 /**
  * The 90 days', the 90 days before's and twelve months' lists asked of
@@ -38,6 +38,45 @@ const PIECE_DAYS = 7;
 
 /** Asks of Google at once. */
 const ASKS_AT_ONCE = 4;
+
+/**
+ * The most search-and-page pairs one period holds while its weeks are added up
+ * (collection-reliability-plan.md, RR2): about 120 MB. Past it, the searches the
+ * keep rule could not keep on what has come in so far — no click, one page,
+ * an average position past 20, not tracked — go, those seen least first, down
+ * to half of it, and the build says so. Only a website far past kordatackle.com's
+ * size reaches it; until 2026-10-15 such a year was held whole, and would have
+ * run its step out of memory.
+ */
+export const MOST_PAIRS_HELD = 400_000;
+
+/**
+ * Pairs held cut back to half of `MOST_PAIRS_HELD`: the searches that could not
+ * be kept on their figures so far, the least seen first. True when any went.
+ */
+export function prunePairs(sums: Map<string, Row>, tracked: ReadonlySet<string>, most: number = MOST_PAIRS_HELD): boolean {
+  if (sums.size <= most) return false;
+  const searches = new Map<string, { clicks: number; impressions: number; positionSum: number; pages: number; keys: string[] }>();
+  for (const [key, row] of sums) {
+    const one = searches.get(row.key) ?? { clicks: 0, impressions: 0, positionSum: 0, pages: 0, keys: [] };
+    one.clicks += row.clicks;
+    one.impressions += row.impressions;
+    one.positionSum += row.positionSum;
+    one.pages += 1;
+    one.keys.push(key);
+    searches.set(row.key, one);
+  }
+  const unkept = [...searches.entries()]
+    .filter(([search, figures]) => !tracked.has(search) && !keepsSearch(figures))
+    .sort((left, right) => left[1].impressions - right[1].impressions || (left[0] < right[0] ? -1 : 1));
+  let pruned = false;
+  for (const [, figures] of unkept) {
+    if (sums.size <= most / 2) break;
+    for (const key of figures.keys) sums.delete(key);
+    pruned = true;
+  }
+  return pruned;
+}
 
 /** Every day from `from` to `to`, in pieces of a week at most, never across a period's first day or past its last. */
 export function piecesOf(spans: readonly Span[]): Span[] {
@@ -106,23 +145,41 @@ export async function longListRows(
   scope: Scope,
   spans: readonly Span[],
   tracked: readonly string[],
+  /** When the job must stop by: past it, a batch of asks is not started and the build stops itself (`RanLong`). */
+  stopAt?: number,
+  /** Set when a period's pairs passed `MOST_PAIRS_HELD` and its least-seen unkeepable searches went (RR2). */
+  held: { pruned: boolean } = { pruned: false },
 ): Promise<Map<string, Row[]> | null> {
   const out = new Map<string, Row[]>();
+  const trackedSet = new Set(tracked);
   if (scope.list === "pair") {
     const pieces = piecesOf(spans);
-    const answers = await askedEach(ctx, google, scope, pieces);
-    if (answers === null) return null;
-    // A week of a very busy website's pairs cut too: that week asked again a day at a time.
-    for (const [index, answer] of answers.entries()) {
-      if (!answer.cut) continue;
-      const days = await askedEach(ctx, google, scope, daysOf(pieces[index]));
-      if (days === null) return null;
-      answers[index] = { rows: addUpRows(days.map((day) => day.rows)), cut: false };
+    // Each period's pairs added up as the weeks come in, a few asks at a time — a busy website's year of weekly
+    // answers is never all held at once (the adding-up that hands on, 2026-10-15: kordatackle.com's ran out of time).
+    const sums = spans.map(() => new Map<string, Row>());
+    for (let at = 0; at < pieces.length; at += ASKS_AT_ONCE) {
+      if (stopAt !== undefined && Date.now() > stopAt) throw new RanLong(`Asking Google for the ${scope.searchType} searches and pages`);
+      const batch = pieces.slice(at, at + ASKS_AT_ONCE);
+      const answers = await Promise.all(batch.map((piece) => asked(ctx, google, scope, piece)));
+      for (const [index, answer] of answers.entries()) {
+        if (answer === null) return null;
+        const piece = batch[index];
+        let rows = answer.rows;
+        // A week of a very busy website's pairs cut too: that week asked again a day at a time.
+        if (answer.cut) {
+          const days = await askedEach(ctx, google, scope, daysOf(piece));
+          if (days === null) return null;
+          rows = addUpRows(days.map((day) => day.rows));
+        }
+        spans.forEach((span, which) => {
+          if (piece.from >= span.from && piece.to <= span.to) {
+            addRowsInto(sums[which], rows);
+            if (prunePairs(sums[which], trackedSet)) held.pruned = true;
+          }
+        });
+      }
     }
-    for (const span of spans) {
-      const inside = answers.filter((_, index) => pieces[index].from >= span.from && pieces[index].to <= span.to).map((answer) => answer.rows);
-      out.set(spanKey(span), keptLines(addUpRows(inside), new Set(tracked)));
-    }
+    spans.forEach((span, which) => out.set(spanKey(span), keptLines([...sums[which].values()], new Set(tracked))));
     return out;
   }
   for (const span of spans) {

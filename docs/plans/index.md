@@ -7,6 +7,17 @@ completed work.
 
 ## Active Plans
 
+- [Google Analytics and Search Console — a run that always finishes](./active/collection-reliability-plan.md)
+  — being built, paused 2026-10-15 at its "Stopping point": five rules for both
+  collectors (a watch on every step, nothing held whole, fixed-size database
+  calls, one job at a time, a rehearsal at ten times Korda); phases 1–3 done.
+- [Search Console — collect on connecting, and fill its 16 months](./active/search-console-first-collection-plan.md)
+  — plan only: a website's first 90 days start the moment Search Console is
+  connected, and its 16 months fill at night in paced pieces, like Analytics.
+- [System Settings → Classification — one list of page types for every company](./active/classification-types-plan.md)
+  — the page types every company's classifications pick from, renamed and
+  added in System Settings, written once in English; one field, the Type, and
+  every report reads the seven built-in types as before.
 - [A website's Schedules — everything Hakken collects, each with its own switch](./active/website-schedules-plan.md)
   — Admin → a website → Schedules rebuilt as one table of what is collected
   (rankings and AI answers, Search Console, Google Analytics, Bing, Clarity),

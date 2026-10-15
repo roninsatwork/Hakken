@@ -101,6 +101,10 @@ describe("appError conversion holds and spreads", () => {
    */
   const INTERNAL_ERROR_CLASSES = new Map<string, string>([
     [
+      "RanLong",
+      "convex/searchConsolePeriods.ts and searchConsoleLongLists.ts throw it inside a Search Console settle job when the job's own time budget is spent; convex/searchConsoleSettle.ts settlePart catches it in the same action and writes the reason on the settle. It never leaves the job, and no screen waits on the action.",
+    ],
+    [
       "McpFailure",
       "convex/mcpToolCall.ts:162 is its only consumer and converts it into an `{ ok: false, error }` return value; nothing rethrows it.",
     ],

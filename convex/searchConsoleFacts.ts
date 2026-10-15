@@ -24,8 +24,11 @@ import { pagePath, pageTypeByAddress } from "./utils/siteShapes";
  * (§13.4).
  */
 
-/** Keys looked up per ask: each is one or two index reads. */
-const KEYS_PER_ASK = 200;
+/**
+ * Keys looked up per ask: each is up to three index reads (collection-reliability-plan.md, RR3). 200 a call took about a
+ * second, a query's whole time; 50 keep each well inside it, and more asks run side by side.
+ */
+const KEYS_PER_ASK = 50;
 
 /** Unknown, as a number kept beside the others (a period's arrays hold numbers only). */
 export const UNKNOWN = -1;
@@ -90,7 +93,7 @@ export const keyFacts = internalQuery({
 export type Facts = Map<string, { kind: string; number: number }>;
 
 /** Asks of `keyFacts` run at once: one after another, 5,000 keys took about 25 seconds (2026-10-03). */
-const ASKS_AT_ONCE = 8;
+const ASKS_AT_ONCE = 16;
 
 /** The facts for every key, asked a few hundred at a time, several asks at once. */
 export async function factsFor(

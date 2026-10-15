@@ -54,6 +54,8 @@ type Google = {
   figures: Figures;
   /** Answers instead of the figures, for a status Google gives to every ask. */
   analyticsStatus?: number;
+  /** Google too busy for the asks this picks: a 429, as Google answers when it wants Hakken to wait. */
+  busyWhen?: (ask: { startDate: string; dimensions: string[] }) => boolean;
   refreshStatus?: number;
   calls: { url: string; body: string }[];
 };
@@ -92,6 +94,7 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
       };
       // Only one search's or one page's rows, when asked for them (a country filter it does not split by).
       const only = (ask.dimensionFilterGroups ?? []).flatMap((group) => group.filters).filter((filter) => filter.dimension === "query" || filter.dimension === "page");
+      if (google.busyWhen?.(ask)) return new Response("Too many requests", { status: 429 });
       const days = google.figures[property]?.[ask.type] ?? {};
       if (ask.startRow > 0) return Response.json({});
       const figures = (row: Row) => ({ clicks: row.clicks, impressions: row.impressions, ctr: row.clicks / row.impressions, position: row.position ?? 3.5 });
@@ -416,16 +419,102 @@ describe("collecting", () => {
     };
   }
 
-  test("connecting collects nothing: collecting waits for the Search Console agent", async () => {
+  test("connecting starts the website's own collection at once: its last 90 days, then its days back to Google's line (SF1)", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ figures: figures() });
+    const { agentId } = await collector(t);
+    await signIn(t, admin, siteId);
+    await finishScheduled(t);
+
+    expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", property, newestDay: NEWEST });
+    expect((await held(t)).days).toBeGreaterThan(0);
+    // A run of the Collector for this website alone, as its nightly ones are, with no schedule's run behind it.
+    const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", agentId)).collect());
+    const own = runs.find((run) => run.title === "Search Console: acme-shop.test");
+    expect(own).toMatchObject({ status: "SUCCESS" });
+    // Its last stage: the days before collection began, back to Google's line, as a line on the run (SF2).
+    expect((await connectionOf(t, siteId))?.daysFrom).toBeDefined();
+    const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
+    expect(lines.some((line) => line.runId === own!._id && line.interactionType === "16 months, United Kingdom (GBR)")).toBe(true);
+    expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(true);
+  });
+
+  test("without the Collector agent, or with it switched off, connecting collects nothing", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await finishScheduled(t);
-
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", property });
+    expect(await held(t)).toEqual({ days: 0, lists: 0 });
+
+    const { agentId } = await collector(t);
+    await t.run(async (ctx) => await ctx.db.patch(agentId, { isActive: false }));
+    await t.mutation(internal.searchConsoleFirstCollection.startFirstCollection, { connectionId: (await connectionOf(t, siteId))!._id });
+    await finishScheduled(t);
     expect(await held(t)).toEqual({ days: 0, lists: 0 });
     expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).toEqual([]);
     expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(false);
+  });
+
+  test("each kind is added up as a chain of jobs — the short periods, the 90 days, the twelve months — each with its own time (2026-10-15)", async () => {
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({ figures: figures() });
+    await collector(t);
+    await signIn(t, admin, siteId);
+    await finishScheduled(t);
+
+    // A first collection's lists are a week old by definition: every kind's chain runs all three jobs.
+    const jobs = await t.run(async (ctx) => await ctx.db.system.query("_scheduled_functions").collect());
+    const settleJobs = jobs.filter((job) => job.name.includes("settlePart")).map((job) => (job.args[0] as { searchType: string; stage?: string }));
+    const web = settleJobs.filter((job) => job.searchType === "web").map((job) => job.stage ?? "FIRST");
+    expect(web).toEqual(["FIRST", "NINETY", "YEAR"]);
+    const periods = await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect());
+    expect(periods.some((row) => row.searchType === "web" && row.list === "page" && row.period === "90")).toBe(true);
+    expect(periods.some((row) => row.searchType === "web" && row.list === "page" && row.period === "7")).toBe(true);
+    // The settle ended: nothing left half-way to stop the next one.
+    expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
+  });
+
+  test("a job past its time stops itself between pieces, and the settle still ends, keeping what was built before (2026-10-15)", async () => {
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({ figures: figures() });
+    await collector(t);
+    await signIn(t, admin, siteId);
+    await finishScheduled(t);
+    const connection = (await connectionOf(t, siteId))!;
+    const before = (await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect())).length;
+
+    const token = await t.mutation(internal.searchConsoleSettling.startSettle, { connectionId: connection._id, parts: 1 });
+    await t.action(internal.searchConsoleSettle.settlePart, {
+      connectionId: connection._id, holdId: siteId, token, searchType: "web", newest: connection.newestDay!, oldest: connection.oldestDay!, long: true, stopAt: Date.now() - 1,
+    });
+    await finishScheduled(t);
+
+    expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
+    expect((await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect())).length).toBe(before);
+  });
+
+  test("Google busy during the 16 months: the fill waits, three times at most, then the next run carries on from what came in (SF4)", async () => {
+    const { t, siteId, admin } = await setup();
+    // Google is busy for every ask before collection began; the collection's own 90 days come in.
+    const google = fakeGoogle({ figures: figures(), busyWhen: (ask) => ask.startDate < "2026-06-01" });
+    const { agentId } = await collector(t);
+    await signIn(t, admin, siteId);
+    await finishScheduled(t);
+
+    const lines = async () => (await t.run(async (ctx) => await ctx.db.query("agentLogs").collect())).map((line) => line.interactionType);
+    expect((await lines()).filter((line) => line === "16 months: waiting for Google")).toHaveLength(3);
+    expect(await lines()).toContain("16 months: Google stayed busy");
+    const first = (await t.run(async (ctx) => await ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", agentId)).collect()))
+      .find((run) => run.title === "Search Console: acme-shop.test");
+    expect(first?.status).toBe("SUCCESS");
+    expect((await connectionOf(t, siteId))?.daysFrom).toBeUndefined();
+
+    // Google answers again: the nightly run fills what is missing, and the days now begin at Google's line.
+    google.busyWhen = undefined;
+    await collect(t);
+    expect((await connectionOf(t, siteId))?.daysFrom).toBeDefined();
+    expect(await lines()).toContain("16 months, United Kingdom (GBR)");
   });
 
   test("a new website's first run brings its last 90 days, each day one record a list, then its days back to Google's line", async () => {
@@ -840,7 +929,7 @@ describe("collecting", () => {
     expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(true);
   });
 
-  test("another property after a disconnect: the old figures go, and the next run brings the new", async () => {
+  test("another property after a disconnect: the old figures go, and the new property's are collected at once (SF1)", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({
       figures: {
@@ -861,12 +950,8 @@ describe("collecting", () => {
     expect((await connectionOf(t, siteId))?.status).toBe("CHOOSING");
     await admin.mutation(api.searchConsoleConnect.chooseSearchConsoleProperty, { siteId, property: "https://www.acme-shop.test/" });
     await finishScheduled(t);
-    // The old property's figures are gone, and nothing new came in by itself.
-    expect(await held(t)).toEqual({ days: 0, lists: 0 });
-    expect(await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect())).toEqual([]);
+    // The old property's figures are gone, and the new one's came in at once, without the schedule.
     expect((await connectionOf(t, siteId))?.clearing).toBeUndefined();
-
-    await collect(t);
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["acme shop", 3]]);
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", dataProperty: "https://www.acme-shop.test/", newestDay: NEWEST });
   });
@@ -933,7 +1018,7 @@ describe("the Search Console Collector agent", () => {
     return { t, siteId, blogId, google };
   }
 
-  test("each connected website gets a run of its own: its last 90 days to start, never older, then settled", async () => {
+  test("each connected website gets a run of its own: its last 90 days to start, then its days back to Google's line, then settled", async () => {
     const { t, siteId, blogId } = await twoSites();
     const { agentId, runId } = await collector(t);
 
@@ -946,7 +1031,7 @@ describe("the Search Console Collector agent", () => {
     expect(started.finalOutput).toContain("each of the 2 websites");
     const own = runs.filter((run) => run._id !== runId);
     expect(own.map((run) => run.title).sort()).toEqual(["Search Console: acme-blog.test", "Search Console: acme-shop.test"]);
-    expect(own.every((run) => run.status === "SUCCESS" && run.finalOutput?.includes("nothing older is fetched"))).toBe(true);
+    expect(own.every((run) => run.status === "SUCCESS" && run.finalOutput?.includes("back to Google's sixteen months"))).toBe(true);
     const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
     expect(own.every((run) => lines.some((line) => line.runId === run._id && line.responseContent.includes("rows from")))).toBe(true);
     // Each website's run ends by adding up its periods, as one job per kind of result side by side (cost review 4).
@@ -975,6 +1060,31 @@ describe("the Search Console Collector agent", () => {
     expect((await runsOf(t, agentId)).find((run) => run._id === runId)?.finalOutput).toContain("still going");
     expect(await runsOf(t, agentId)).toHaveLength(2);
     expect(await held(t)).toEqual({ days: 0, lists: 0 });
+  });
+
+  test("a website's own run doesn't stop the nightly run: that website is left to it, the others collected (SF1)", async () => {
+    const { t, siteId, blogId } = await twoSites();
+    const { agentId, runId } = await collector(t);
+    // The shop's first collection, started on connecting, still going: a run kept with its company.
+    const companyId = (await t.run(async (ctx) => await ctx.db.get(siteId)))!.companyId;
+    const going = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId, triggerType: "EVENT", objective: "Collect", title: "Search Console: acme-shop.test", companyId,
+      status: "RUNNING", startedAt: Date.now() - 60_000, updatedAt: Date.now(),
+    }));
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first();
+      await ctx.db.patch(connection!._id, { collecting: { runId: going, from: "2026-06-29", top: NEWEST } });
+    });
+
+    await t.action(internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId });
+    await finishScheduled(t);
+
+    const runs = await runsOf(t, agentId);
+    expect(runs.find((run) => run._id === runId)).toMatchObject({ status: "SUCCESS" });
+    expect(runs.filter((run) => run.title === "Search Console: acme-shop.test")).toHaveLength(1);
+    expect(runs.find((run) => run.title === "Search Console: acme-blog.test")?.status).toBe("SUCCESS");
+    expect((await connectionOf(t, blogId))?.newestDay).toBe(NEWEST);
+    expect((await connectionOf(t, siteId))?.newestDay).toBeUndefined();
   });
 
   test("a website whose sign-in Google took back: its run fails saying what to do, the other still collects", async () => {

@@ -1893,15 +1893,6 @@
           "confirm": "Remove",
           "failed": "Could not remove the classification. Try again."
         },
-        "types": {
-          "INFORMATIONAL": "Informational content",
-          "SERVICE": "Service",
-          "PRODUCT": "Product",
-          "CASE_STUDY": "Case study",
-          "COMPANY": "Company",
-          "LEGAL": "Legal",
-          "OTHER": "Other"
-        },
         "kinds": {
           "STARTS_WITH": "Starts with",
           "CONTAINS": "Contains",
@@ -4901,7 +4892,8 @@
         "selfImprovement": "Self-Improvement",
         "approvals": "Agent Approval Window",
         "purgeHistory": "Purge History",
-        "limits": "Limits"
+        "limits": "Limits",
+        "classification": "Classification"
       },
       "selfImprovement": {
         "title": "Self-Improvement",
@@ -6747,6 +6739,46 @@
           "description": "How many {platformName} tasks one person can have switched on. Paused and deleted tasks don't count. When someone reaches it, {platformName} tells them and suggests pausing one.",
           "cost": "Credits show in Usage, under {platformName} tasks."
         }
+      }
+    },
+    "classificationTypes": {
+      "title": "Classification",
+      "description": "The page types every company's classifications pick from. Rename one, or add your own.",
+      "add": "Add type",
+      "addFullTip": "There are already {most} types, the most there can be. Remove an added type first.",
+      "columns": {
+        "type": "Type",
+        "usedBy": "Used by",
+        "actions": "Actions"
+      },
+      "more": "{count}+",
+      "edit": "Edit {name}",
+      "remove": "Remove {name}",
+      "empty": "No types.",
+      "loading": "Loading the types…",
+      "back": "Classification",
+      "newTitle": "New type",
+      "newDescription": "Once added, every company's classifications can pick it. Reports count it on its own, apart from the seven built-in types.",
+      "card": "Type",
+      "name": "Name",
+      "nameHint": "Write it in English. {platformName} translates it for every language.",
+      "namePlaceholder": "Location page",
+      "added": "Added on {date}.",
+      "uses": "{count, plural, =0 {No classification uses it yet.} one {# classification on one website uses it, and a new name shows on it.} other {# classifications on {websites, plural, one {# website} other {# websites}} use it, and a new name shows on all of them.}}",
+      "usesMore": "More than {count} classifications on {websites} websites or more use it, and a new name shows on all of them.",
+      "builtInFoot": "Built in, so it can be renamed but not removed.",
+      "inUseFoot": "Classifications use it, so it can't be removed until they move to another type.",
+      "removeType": "Remove type",
+      "save": "Save",
+      "create": "Add type",
+      "saved": "Saved",
+      "saveFailed": "Could not save the type. Try again.",
+      "notFound": "This type is no longer in the list.",
+      "removeDialog": {
+        "title": "Remove {name}?",
+        "body": "No classification uses it, so no page changes. Companies can no longer pick it.",
+        "confirm": "Remove",
+        "failed": "Could not remove the type. Try again."
       }
     },
     "websitesSection": {
@@ -10018,6 +10050,7 @@
       "articles": "{count, plural, =1 {# article} other {# articles}}",
       "positions": "{count, plural, =1 {# position} other {# positions}}",
       "kinds": "{count, plural, =1 {# kind} other {# kinds}}",
+      "types": "{count, plural, one {# type} other {# types}}",
       "fanOutQueries": "{count, plural, =1 {# tracked fan-out query} other {# tracked fan-out queries}}",
       "classifications": "{count, plural, =1 {# classification} other {# classifications}}",
       "lists": "{count, plural, =1 {# list} other {# lists}}",
@@ -14645,6 +14678,7 @@
       "new": "New in these dates"
     },
     "named": "{named} of {total} clicks came from searches Google names. The other {hidden} came from searches Google hides for privacy: they are in the totals, never in a list.",
+    "historyFilling": "Google's 16 months are still coming in: the days shown start on {day} for now.",
     "chart": {
       "title": "Clicks and impressions over time",
       "searchTitle": "This search over time",
@@ -14808,9 +14842,11 @@
       "collected": "Collected",
       "updatedDetail": "{when} · Google's figures to {day}",
       "notYet": "Not yet",
-      "collectedDetail": "By the Search Console Collector agent, on its own schedule in Admin → Schedules",
+      "collectedDetail": "By the Search Console Collector agent: at once when connected, then on its own schedule in Admin → Schedules",
+      "collectingTitle": "Collecting its last 90 days now",
+      "collectingBody": "{host} is connected to Google Search Console. Its last 90 days are coming in now, then its day totals back to Google's 16 months: a few minutes for a small website, about 40 for a large one.",
       "nothingCollectedTitle": "Connected, with nothing collected yet",
-      "nothingCollectedBody": "{host} is connected to Google Search Console. Its last 90 days come in on the Search Console agent's next scheduled run.",
+      "nothingCollectedBody": "{host} is connected to Google Search Console. Its last 90 days come in on the Search Console agent's next run.",
       "disconnect": "Disconnect",
       "confirm": "Disconnecting stops collecting and gives Google's access back. The figures collected so far stay, marked with the day it was disconnected.",
       "confirmDisconnect": "Disconnect",
@@ -14844,7 +14880,7 @@
       "disconnectedOn": "Disconnected on {day}",
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
       "keptNone": "Nothing new comes in until it's connected again.",
-      "historyKept": "Totals from {from}, and searches and pages from {day}; longer periods are asked of Google. Days are kept for 90 days, then as weeks; after 12 months, as months.",
+      "historyKept": "Totals from {from}, and searches and pages from {day}; longer periods are asked of Google, which keeps 16 months.",
       "disconnectTitle": "Disconnect Search Console?"
     },
     "keywords": {

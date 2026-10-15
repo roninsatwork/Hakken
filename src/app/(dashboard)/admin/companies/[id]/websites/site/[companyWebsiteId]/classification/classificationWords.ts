@@ -1,7 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useQuery } from "convex/react";
+import { useLocale, useTranslations } from "next-intl";
 
+import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { siteBase } from "../siteView";
 
@@ -13,9 +15,6 @@ import { siteBase } from "../siteView";
 
 export type ClassificationType = Doc<"pageClassifications">["type"];
 export type LineKind = Doc<"pageClassificationLines">["kind"];
-
-/** Reports add up across classifications by type. */
-export const CLASSIFICATION_TYPES: readonly ClassificationType[] = ["INFORMATIONAL", "SERVICE", "PRODUCT", "CASE_STUDY", "COMPANY", "LEGAL", "OTHER"];
 
 export const LINE_KINDS: readonly LineKind[] = ["STARTS_WITH", "CONTAINS", "EXACT", "SITEMAP_FILE"];
 
@@ -29,10 +28,26 @@ export function classificationListHref(companyId: string, companyWebsiteId: stri
   return `${classificationBase(companyId, companyWebsiteId)}?view=classifications`;
 }
 
+/**
+ * The types a classification picks from, in the order they are offered and
+ * the reader's language: the one list of System Settings → Classification
+ * (docs/plans/active/classification-types-plan.md). `choices` is undefined
+ * while it loads.
+ */
+export function useClassificationTypes() {
+  const language = useLocale();
+  const choices = useQuery(api.classificationTypes.classificationTypeChoices, { language });
+  const byKey = new Map((choices ?? []).map((choice) => [choice.key, choice]));
+  return {
+    choices,
+    /** A type's name; "…" while the list loads. */
+    nameOf: (type: ClassificationType) => byKey.get(type)?.name ?? (choices === undefined ? "…" : "–"),
+  };
+}
+
 export function useClassificationWords() {
   const t = useTranslations("admin.siteView.classification");
   return {
-    type: (type: ClassificationType) => t(`types.${type}`),
     kind: (kind: LineKind) => t(`kinds.${kind}`),
     /** A line as a sentence reads it: "starts with /hub/". */
     line: (line: { kind: LineKind; value: string }) => `${t(`kindsInline.${line.kind}`)} ${line.value}`,

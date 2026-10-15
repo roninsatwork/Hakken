@@ -8,6 +8,7 @@ import { requireMySite } from "./siteAccess";
 import { periodOf } from "./searchConsoleLists";
 import { firstPartOf } from "./searchConsolePeriodReads";
 import { LONG_PERIODS } from "./searchConsolePeriods";
+import { settlingNow } from "./searchConsoleSettling";
 
 /**
  * A website's lists caught up when someone opens them behind
@@ -58,7 +59,7 @@ export const searchConsoleCatchUp = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const behind = await behindOf(ctx, site.hold._id, args.from, args.to);
     if (!behind) return { behind: false, heldTo: null, newest: null, progress: null };
-    const settling = behind.connection.settling;
+    const settling = settlingNow(behind.connection) ? behind.connection.settling : undefined;
     return {
       behind: true,
       heldTo: behind.heldTo,
@@ -77,7 +78,7 @@ export const requestSearchConsoleCatchUp = tenantMutation({
     const behind = await behindOf(ctx, site.hold._id, args.from, args.to);
     if (!behind) return false;
     const { connection } = behind;
-    if (connection.settling || (connection.catchUpAt !== undefined && Date.now() - connection.catchUpAt < ASKED_WITHIN_MS)) return false;
+    if (settlingNow(connection) || (connection.catchUpAt !== undefined && Date.now() - connection.catchUpAt < ASKED_WITHIN_MS)) return false;
     await ctx.db.patch(connection._id, { catchUpAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.catchUpSite, { connectionId: connection._id, long: behind.long });
     return true;

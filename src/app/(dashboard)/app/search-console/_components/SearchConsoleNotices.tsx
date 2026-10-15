@@ -157,13 +157,16 @@ export function SearchConsoleGate({ status, siteId, children }: {
     );
   }
   if (status.connection?.status === "CONNECTED") {
+    // Its first collection starts on connecting (search-console-first-collection-plan.md, SF1): coming in now, or
+    // with the Collector agent's next run when the agent is off.
+    const collecting = status.connection.collectingNow;
     return (
       <div className={PANEL}>
         <Plug className="h-6 w-6 shrink-0 text-muted" aria-hidden="true" />
         <div className="flex max-w-2xl flex-col items-start gap-3">
           <div className="flex flex-col gap-1.5">
-            <h2 className="text-[15px] font-medium text-foreground">{t("nothingCollectedTitle")}</h2>
-            <p className="text-[13px] text-secondary">{t("nothingCollectedBody", { host: status.host })}</p>
+            <h2 className="text-[15px] font-medium text-foreground">{t(collecting ? "collectingTitle" : "nothingCollectedTitle")}</h2>
+            <p className="text-[13px] text-secondary">{t(collecting ? "collectingBody" : "nothingCollectedBody", { host: status.host })}</p>
           </div>
           <Link href={hrefFor("connection")} className="text-[13px] font-medium text-info hover:underline">{t("title")} →</Link>
         </div>

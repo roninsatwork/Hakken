@@ -1893,15 +1893,6 @@
           "confirm": "Togli",
           "failed": "Impossibile togliere la classificazione. Riprova."
         },
-        "types": {
-          "INFORMATIONAL": "Contenuti informativi",
-          "SERVICE": "Servizio",
-          "PRODUCT": "Prodotto",
-          "CASE_STUDY": "Caso di studio",
-          "COMPANY": "Azienda",
-          "LEGAL": "Note legali",
-          "OTHER": "Altro"
-        },
         "kinds": {
           "STARTS_WITH": "Inizia con",
           "CONTAINS": "Contiene",
@@ -4901,7 +4892,8 @@
         "selfImprovement": "Auto-Miglioramento",
         "approvals": "Finestra di Approvazione Agente",
         "purgeHistory": "Cronologia Purge",
-        "limits": "Limiti"
+        "limits": "Limiti",
+        "classification": "Classificazione"
       },
       "selfImprovement": {
         "title": "Auto-miglioramento",
@@ -6747,6 +6739,46 @@
           "description": "Quante attività di {platformName} una persona può avere attive. Quelle in pausa o eliminate non contano. Quando qualcuno raggiunge il limite, {platformName} lo avvisa e suggerisce di metterne una in pausa.",
           "cost": "I crediti compaiono in Utilizzo, sotto Attività di {platformName}."
         }
+      }
+    },
+    "classificationTypes": {
+      "title": "Classificazione",
+      "description": "I tipi di pagina tra cui scelgono le classificazioni di ogni azienda. Rinominane uno o aggiungine uno tuo.",
+      "add": "Aggiungi tipo",
+      "addFullTip": "Ci sono già {most} tipi, il massimo possibile. Rimuovi prima un tipo aggiunto.",
+      "columns": {
+        "type": "Tipo",
+        "usedBy": "Usato da",
+        "actions": "Azioni"
+      },
+      "more": "{count}+",
+      "edit": "Modifica {name}",
+      "remove": "Rimuovi {name}",
+      "empty": "Nessun tipo.",
+      "loading": "Caricamento dei tipi…",
+      "back": "Classificazione",
+      "newTitle": "Nuovo tipo",
+      "newDescription": "Una volta aggiunto, le classificazioni di ogni azienda possono sceglierlo. I report lo conteggiano a parte, separato dai sette tipi predefiniti.",
+      "card": "Tipo",
+      "name": "Nome",
+      "nameHint": "Scrivilo in inglese. {platformName} lo traduce in ogni lingua.",
+      "namePlaceholder": "Location page",
+      "added": "Aggiunto il {date}.",
+      "uses": "{count, plural, =0 {Nessuna classificazione lo usa ancora.} one {# classificazione su un sito lo usa, e un nuovo nome compare lì.} other {# classificazioni su {websites, plural, one {# sito} other {# siti}} lo usano, e un nuovo nome compare su tutte.}}",
+      "usesMore": "Più di {count} classificazioni su {websites} siti o più lo usano, e un nuovo nome compare su tutte.",
+      "builtInFoot": "Predefinito: si può rinominare ma non rimuovere.",
+      "inUseFoot": "Lo usano delle classificazioni: non si può rimuovere finché non passano a un altro tipo.",
+      "removeType": "Rimuovi tipo",
+      "save": "Salva",
+      "create": "Aggiungi tipo",
+      "saved": "Salvato",
+      "saveFailed": "Impossibile salvare il tipo. Riprova.",
+      "notFound": "Questo tipo non è più nell'elenco.",
+      "removeDialog": {
+        "title": "Rimuovere {name}?",
+        "body": "Nessuna classificazione lo usa, quindi nessuna pagina cambia. Le aziende non potranno più sceglierlo.",
+        "confirm": "Rimuovi",
+        "failed": "Impossibile rimuovere il tipo. Riprova."
       }
     },
     "websitesSection": {
@@ -10018,6 +10050,7 @@
       "articles": "{count, plural, =1 {# articolo} other {# articoli}}",
       "positions": "{count, plural, =1 {# posizione} other {# posizioni}}",
       "kinds": "{count, plural, =1 {# tipo} other {# tipi}}",
+      "types": "{count, plural, one {# tipo} other {# tipi}}",
       "fanOutQueries": "{count, plural, =1 {# query fan-out monitorata} other {# query fan-out monitorate}}",
       "classifications": "{count, plural, =1 {# classificazione} other {# classificazioni}}",
       "lists": "{count, plural, =1 {# lista} other {# liste}}",
@@ -14645,6 +14678,7 @@
       "new": "Nuova in queste date"
     },
     "named": "{named} dei {total} clic vengono da ricerche che Google nomina. Gli altri {hidden} vengono da ricerche che Google nasconde per la privacy: sono nei totali, mai in un elenco.",
+    "historyFilling": "I 16 mesi di Google stanno ancora arrivando: per ora i giorni mostrati iniziano il {day}.",
     "chart": {
       "title": "Clic e impressioni nel tempo",
       "searchTitle": "Questa ricerca nel tempo",
@@ -14808,9 +14842,11 @@
       "collected": "Raccolta",
       "updatedDetail": "{when} · Dati di Google fino al {day}",
       "notYet": "Non ancora",
-      "collectedDetail": "Dall'agente Search Console Collector, secondo la sua pianificazione in Admin → Pianificazioni",
+      "collectedDetail": "Dall'agente Collector di Search Console: subito al collegamento, poi con la sua pianificazione in Admin → Pianificazioni",
+      "collectingTitle": "Raccolta degli ultimi 90 giorni in corso",
+      "collectingBody": "{host} è collegato a Google Search Console. I suoi ultimi 90 giorni stanno arrivando ora, poi i totali giornalieri fino ai 16 mesi di Google: pochi minuti per un sito piccolo, circa 40 per uno grande.",
       "nothingCollectedTitle": "Collegato, ma non è stato ancora raccolto nulla",
-      "nothingCollectedBody": "{host} è collegato a Google Search Console. I suoi ultimi 90 giorni arrivano alla prossima esecuzione pianificata dell'agente Search Console.",
+      "nothingCollectedBody": "{host} è collegato a Google Search Console. I suoi ultimi 90 giorni arrivano alla prossima esecuzione dell'agente Search Console.",
       "disconnect": "Scollega",
       "confirm": "Scollegando si ferma la raccolta e si restituisce l'accesso a Google. I dati raccolti finora restano, segnati con il giorno dello scollegamento.",
       "confirmDisconnect": "Scollega",
@@ -14844,7 +14880,7 @@
       "disconnectedOn": "Scollegato il {day}",
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
-      "historyKept": "Totali dal {from}, e ricerche e pagine dal {day}; i periodi più lunghi si chiedono a Google. I giorni si conservano per 90 giorni, poi come settimane; dopo 12 mesi, come mesi.",
+      "historyKept": "Totali dal {from}, ricerche e pagine dal {day}; i periodi più lunghi sono chiesti a Google, che conserva 16 mesi.",
       "disconnectTitle": "Scollegare Search Console?"
     },
     "keywords": {

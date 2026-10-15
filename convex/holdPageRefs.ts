@@ -60,8 +60,14 @@ const PAGES_PER_ADD = 1_000;
 /** Records cleared a call when the website goes: each up to 250 addresses. */
 const RECORDS_PER_DELETE = 40;
 
-/** A website's page list as an action holds it: each address by its number, and each number by its address. */
-export type PageList = { addresses: string[]; numbers: Map<string, number> };
+/**
+ * A website's page list as an action holds it: each address by its number, and each number by its address —
+ * and how long the list was when it was read, past which another run may have added pages (`placePages`).
+ */
+export type PageList = { addresses: string[]; numbers: Map<string, number>; readTo: number };
+
+/** Records past the list read that one placing reads back: a list grown more than this since is read again whole. */
+const MOST_RECORDS_SINCE = 200;
 
 /** One page of a website's page list, record by record. */
 export const pageListPart = internalQuery({
@@ -85,7 +91,7 @@ async function readPageList(ctx: ActionCtx, holdId: Id<"companyWebsites">): Prom
     if (part.isDone) break;
     cursor = part.continueCursor;
   }
-  return { addresses, numbers: new Map(addresses.map((address, number) => [address, number])) };
+  return { addresses, numbers: new Map(addresses.map((address, number) => [address, number])), readTo: addresses.length };
 }
 
 /** Each action's page lists, read once however many lists it reads or writes. */
@@ -173,32 +179,83 @@ export const addPages = internalMutation({
 });
 
 /**
+ * Addresses put on the end of a website's list, whatever another run added
+ * meanwhile (collection-reliability-plan.md, RR4): the addresses added past
+ * `from` — where the action's list was read to — are read back here, those
+ * among them numbered as they are, and only the rest put on the end. Answers
+ * each address's number, and every address added past `from`, for the
+ * action's list to hold; null when the list has grown too far since to read
+ * back, and the action reads it again whole.
+ *
+ * Until 2026-10-15 a run found the list changed under it and tried again, five
+ * times, then failed — Search Console's four asks at once and Google
+ * Analytics' run numbered the same website's pages side by side.
+ */
+export const placePages = internalMutation({
+  args: { holdId: v.id("companyWebsites"), from: v.number(), pages: v.array(v.string()) },
+  returns: v.union(v.null(), v.object({ numbers: v.array(v.number()), since: v.array(v.object({ address: v.string(), number: v.number() })) })),
+  handler: async (ctx, args) => {
+    if (args.pages.length > PAGES_PER_ADD) throw appError("INVALID_INPUT", `At most ${PAGES_PER_ADD} page addresses a call, not ${args.pages.length}.`);
+    const records = await ctx.db
+      .query("holdPageAddresses")
+      .withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId).gte("record", Math.floor(args.from / PAGE_RECORD)))
+      .take(MOST_RECORDS_SINCE + 1);
+    if (records.length > MOST_RECORDS_SINCE) return null;
+    const since = new Map<string, number>();
+    for (const one of records) {
+      one.addresses.forEach((address, place) => {
+        const number = one.record * PAGE_RECORD + place;
+        if (number >= args.from && !since.has(address)) since.set(address, number);
+      });
+    }
+    const last = records.at(-1);
+    let end = last ? last.record * PAGE_RECORD + last.addresses.length : Math.min(args.from, 0);
+    if (!last && args.from > 0) {
+      // Nothing from `from` on: the list ends at or before it — read where.
+      const tail = await ctx.db.query("holdPageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId)).order("desc").first();
+      end = tail ? tail.record * PAGE_RECORD + tail.addresses.length : 0;
+    }
+    const fresh = [...new Set(args.pages)].filter((page) => !since.has(page));
+    const added = fresh.map((page, place) => [page, end + place] as const);
+    const pages = [...fresh];
+    let tail = last ?? null;
+    if (!tail && end > 0) tail = await ctx.db.query("holdPageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId)).order("desc").first();
+    if (tail && tail.addresses.length < PAGE_RECORD && pages.length > 0) {
+      await ctx.db.patch(tail._id, { addresses: [...tail.addresses, ...pages.splice(0, PAGE_RECORD - tail.addresses.length)] });
+    }
+    for (let record = Math.ceil((end + fresh.length - pages.length) / PAGE_RECORD); pages.length > 0; record += 1) {
+      await ctx.db.insert("holdPageAddresses", { companyWebsiteId: args.holdId, record, addresses: pages.splice(0, PAGE_RECORD) });
+    }
+    for (const [page, number] of added) since.set(page, number);
+    return { numbers: args.pages.map((page) => since.get(page)!), since: [...since].map(([address, number]) => ({ address, number })) };
+  },
+});
+
+/**
  * Addresses as references from an action: the website's list read once a run,
- * and the addresses it does not hold put on its end, a thousand a call. When
- * another run has added to the list meanwhile, it is read again and the
- * addresses still missing added after.
+ * and the addresses it does not hold put on its end, a thousand a call — with
+ * whatever another run added meanwhile read back, never failing on it
+ * (`placePages`).
  */
 export async function encodePagesFromAction(ctx: ActionCtx, holdId: Id<"companyWebsites">, pages: readonly string[]): Promise<string[]> {
   let list = await addressesOf(ctx, holdId);
-  for (let tries = 0; ; tries += 1) {
+  for (;;) {
     const missing = [...new Set(pages)].filter((page) => !isPageRef(page) && !list.numbers.has(page));
     if (missing.length === 0) break;
     const chunk = missing.slice(0, PAGES_PER_ADD);
-    const from: number | null = await ctx.runMutation(internal.holdPageRefs.addPages, { holdId, from: list.addresses.length, pages: chunk });
-    if (from === null) {
-      if (tries >= 5) throw appError("CONFLICT", "The website's page list kept changing while its pages were being numbered.");
+    const placed: { numbers: number[]; since: Array<{ address: string; number: number }> } | null =
+      await ctx.runMutation(internal.holdPageRefs.placePages, { holdId, from: list.readTo, pages: chunk });
+    if (placed === null) {
       list = await addressesOf(ctx, holdId, true);
       continue;
     }
-    chunk.forEach((page, place) => {
-      list.addresses[from + place] = page;
-      list.numbers.set(page, from + place);
-    });
+    for (const { address, number } of placed.since) {
+      list.addresses[number] = address;
+      list.numbers.set(address, number);
+    }
   }
   return pages.map((page) => (isPageRef(page) ? page : refOf(list.numbers.get(page)!)));
 }
-
-
 
 /** A website no longer held: its page numbers go, a few records a call, until none is left. */
 export const purgeHold = internalMutation({

@@ -33,6 +33,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "connection-probes": (ctx) => ctx.runAction(internal.connectionProbes.probeConnections, {}),
   "agent-run-stall-recovery": (ctx) =>
     ctx.runMutation(internal.agentRunCheckpoints.recoverStalledRuns, {}),
+  // A collection's step the platform stopped, carried on from its saved place (collection-reliability-plan.md, RR1).
+  "collection-step-watch": (ctx) => ctx.runMutation(internal.collectionSteps.watchChains, {}),
   "agent-approval-expiry": (ctx) =>
     ctx.runMutation(internal.agentRunApprovals.expireStalePendingApprovals, {}),
   "workflow-approval-expiry": (ctx) =>
@@ -99,6 +101,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "upload-garbage-collection": 5,
   "workflow-schedule-dispatcher": 1,
   "agent-run-stall-recovery": 2,
+  "collection-step-watch": 2,
   "agent-skill-rollup-rebuild": 10,
   "governance-rollup-rebuild": 10,
   "purge-stall-reaper": 10,

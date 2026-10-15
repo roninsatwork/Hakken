@@ -32,9 +32,6 @@ const ADD_PER_STEP = 2_000;
 /** Book records cleared per call. */
 const DROP_PER_STEP = 20;
 
-/** Records of one month's book read inside a query: a million keywords, past any website's month. */
-const BOOK_CHUNKS_MOST = 250;
-
 /** The month whose book a day's line points to: "2026-09". */
 export const monthOfDay = (day: string): string => day.slice(0, 7);
 
@@ -202,10 +199,16 @@ export async function lineKeywordsInQuery(
   keys: string | string[],
 ): Promise<string[]> {
   if (typeof keys !== "string") return keys;
-  const records = await ctx.db
-    .query("searchConsoleKeywordBooks")
-    .withIndex("by_hold_country_month_chunk", (q) => q.eq("companyWebsiteId", holdId).eq("country", country).eq("month", monthOfDay(day)))
-    .take(BOOK_CHUNKS_MOST);
-  const keywords = records.sort((left, right) => left.chunk - right.chunk).flatMap((record) => record.keywords);
-  return unpackNumbers(keys).map((place) => keywords[place] ?? "");
+  // Only the chunks the line's places fall in, each read once (collection-reliability-plan.md, RR3): a busy month's
+  // whole book, 250 chunks of 4,000 keywords, passed a query's 16 MB.
+  const places = unpackNumbers(keys);
+  const chunks = new Map<number, string[]>();
+  for (const chunk of new Set(places.map((place) => Math.floor(place / BOOK_CHUNK)))) {
+    const record = await ctx.db
+      .query("searchConsoleKeywordBooks")
+      .withIndex("by_hold_country_month_chunk", (q) => q.eq("companyWebsiteId", holdId).eq("country", country).eq("month", monthOfDay(day)).eq("chunk", chunk))
+      .first();
+    chunks.set(chunk, record?.keywords ?? []);
+  }
+  return places.map((place) => chunks.get(Math.floor(place / BOOK_CHUNK))?.[place % BOOK_CHUNK] ?? "");
 }

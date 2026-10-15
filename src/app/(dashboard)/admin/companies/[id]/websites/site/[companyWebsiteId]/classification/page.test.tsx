@@ -45,6 +45,12 @@ const pagesData = {
   summary,
 };
 
+/** The types every classification picks from: System Settings → Classification's list (classification-types-plan.md). */
+const typeChoices = [
+  { key: "INFORMATIONAL", name: "Informational content" },
+  { key: "COMPANY", name: "About the company" },
+];
+
 const listData = {
   classifications: [
     { ...classifications[0], pages: 58, byHand: 1, lines: [{ _id: "line_1", kind: "STARTS_WITH", value: "/hub/" }] },
@@ -71,6 +77,7 @@ describe("a website's Page classification", () => {
       "websiteClientView:getSiteHeader": ownedHeader,
       "pageClassifications:pageClassificationPages": pagesData,
       "pageClassifications:pageClassificationList": listData,
+      "classificationTypes:classificationTypeChoices": typeChoices,
       ...overrides,
     };
     vi.mocked(useQuery).mockImplementation(((reference: unknown, args: unknown) => {
@@ -217,7 +224,7 @@ describe("a website's Page classification", () => {
     // Only the view on screen is asked for.
     expect(lastArgs("pageClassificationPages")).toBeUndefined();
     const hub = rowOf("Content hub");
-    expect(within(hub).getByText(`${T}.types.INFORMATIONAL`)).toBeInTheDocument();
+    expect(within(hub).getByText("Informational content")).toBeInTheDocument();
     expect(within(hub).getByText("58")).toBeInTheDocument();
     expect(within(hub).getByText(`${T}.kindsInline.STARTS_WITH /hub/`)).toBeInTheDocument();
     expect(within(rowOf("Company")).getByText(`${T}.list.byHandOnly`)).toBeInTheDocument();

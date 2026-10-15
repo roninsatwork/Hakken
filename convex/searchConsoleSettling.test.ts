@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import type { SearchType } from "./searchConsoleSchema";
+import { SETTLE_STALE_MS, settlingNow } from "./searchConsoleSettling";
 
 /**
  * Whether a website's lists have been added up (`reportsBuilt`), which
@@ -111,5 +112,14 @@ describe("whether a website's lists have been added up", () => {
     const { t, holdId, connectionId } = await setup();
     await days(t, holdId, undefined, []);
     expect(await reportsBuilt(t, connectionId)).toBe(true);
+  });
+});
+
+describe("a settle that died", () => {
+  test("is no longer taken as going once it is older than any chain takes, so it never blocks the next (2026-10-15)", () => {
+    const now = Date.parse("2026-10-15T15:00:00Z");
+    expect(settlingNow({ settling: { token: now - 60_000 } }, now)).toBe(true);
+    expect(settlingNow({ settling: { token: now - SETTLE_STALE_MS - 1 } }, now)).toBe(false);
+    expect(settlingNow({}, now)).toBe(false);
   });
 });

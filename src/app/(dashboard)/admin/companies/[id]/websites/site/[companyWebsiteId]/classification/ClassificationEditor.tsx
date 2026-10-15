@@ -24,9 +24,9 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SECTION_ICONS } from "../../../_components/websitesSection";
 import { AddBar } from "../../../_components/AddBar";
 import {
-  CLASSIFICATION_TYPES,
   LINE_KINDS,
   classificationListHref,
+  useClassificationTypes,
   useClassificationWords,
   type ClassificationType,
   type LineKind,
@@ -61,6 +61,7 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
   const tCommon = useTranslations("common");
   const format = useFormatter();
   const words = useClassificationWords();
+  const types = useClassificationTypes();
   const router = useRouter();
   const canWrite = useCanWriteHere();
   const listHref = classificationListHref(companyId, companyWebsiteId);
@@ -201,7 +202,7 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
               className="w-full"
               selectClassName="h-[46px] rounded-[12px]"
             >
-              {CLASSIFICATION_TYPES.map((each) => <option key={each} value={each}>{words.type(each)}</option>)}
+              {(types.choices ?? []).map((each) => <option key={each.key} value={each.key}>{each.name}</option>)}
             </Select>
             <FieldHint>{t("typeHint")}</FieldHint>
           </div>

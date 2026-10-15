@@ -122,10 +122,19 @@ type WebsiteOverride = {
 /**
  * What one website actually runs at.
  *
- * A website with no override follows its company's schedule row. A website with
- * one stops following — for the interval, the switch, or both independently,
- * because wanting one site watched more closely is not the same as wanting it
- * switched off.
+ * A website with no schedule of its own follows its company's schedule row; a
+ * website with one runs at its own interval instead, because wanting one site
+ * watched more closely is not the same as wanting the whole company watched
+ * more closely.
+ *
+ * **The company's switch is the master** (website-schedules-plan.md, WS5). A
+ * website collects only while its company's switch is on and its own is not
+ * off. The DataForSEO Planner plans only companies whose switch is on
+ * (`seoAgentRuns.listCollectingCompanies`) and the queue drops whatever their
+ * company stopped wanting (`seoCollectionQueue.stillWanted`), so a website
+ * switched on under a company switched off is bought nothing. Until
+ * 2026-10-15 a website's own switch outranked its company's here, and screens
+ * reading this said Korda's sites were collecting while nothing was bought.
  *
  * No company schedule at all means nothing is pulled. That is deliberately not
  * the same as "pulled slowly": a company nobody has scheduled should cost
@@ -144,7 +153,7 @@ export function resolveWebsiteSchedule(
       ? "COMPANY"
       : "NONE";
 
-  const active = (website?.collectionEnabled ?? companySchedule?.isActive ?? false) && intervalStr !== null;
+  const active = companySchedule?.isActive === true && website?.collectionEnabled !== false && intervalStr !== null;
 
   return {
     active,

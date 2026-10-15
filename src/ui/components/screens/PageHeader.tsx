@@ -62,8 +62,17 @@ type AdminDetailHeaderProps = Omit<AdminPageHeaderProps, "divider" | "icon"> & {
    * above the title, the labels on the title row to the right, and one
    * sentence about this record under it — no icon, and no box repeating the
    * labels.
+   * `compact`: a record read through filters (a website in Google Analytics,
+   * Anthony's choice of 2026-10-15, docs/plans/active/ga-header-plan.md):
+   * the title and `action` share one row, and the description, the labels
+   * and `note` share one line under it.
    */
-  layout?: "stacked" | "path";
+  layout?: "stacked" | "path" | "compact";
+  /**
+   * The `compact` layout's quiet note at the far end of the line under the
+   * title — how fresh the figures are.
+   */
+  note?: ReactNode;
 };
 
 const BACK_ROW_CLASSES =
@@ -78,8 +87,9 @@ const BACK_ROW_CLASSES =
  * lives up here rather than woven into the title row so the title starts at
  * the left edge exactly like every other admin page.
  */
-export function DetailHeader({ back, layout = "stacked", icon, ...headerProps }: AdminDetailHeaderProps) {
+export function DetailHeader({ back, layout = "stacked", icon, note, ...headerProps }: AdminDetailHeaderProps) {
   if (layout === "path") return <PathHeader back={back} {...headerProps} />;
+  if (layout === "compact") return <CompactHeader back={back} icon={icon} note={note} {...headerProps} />;
   return (
     <div data-part="detail-header" className="flex flex-col gap-3">
       <BackRow {...back} />
@@ -115,6 +125,38 @@ function PathHeader({ back, title, description, pills, action }: Omit<AdminDetai
         ) : null}
       </div>
       {description ? <p className="max-w-2xl text-[13px] leading-relaxed text-secondary">{description}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * The `compact` layout of `DetailHeader`. The page's filters sit on the
+ * title's row, centred on it, and go under the title on a phone; the line
+ * under the title wraps rather than breaking the note in two, which drops
+ * whole to a line of its own when there is no room beside the labels.
+ */
+function CompactHeader({ back, icon, title, description, pills, action, note }: Omit<AdminDetailHeaderProps, "layout">) {
+  return (
+    <div data-part="detail-header" data-part-variant="compact" className="flex flex-col gap-3">
+      <BackRow {...back} />
+      <div data-part="page-header" className="flex flex-col gap-3 border-b border-border-dim pb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 data-part-title className="flex min-w-0 items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
+            {icon}
+            {title}
+          </h1>
+          {action}
+        </div>
+        {description || pills || note ? (
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {description ? <p className="text-[13px] text-secondary tracking-wide">{description}</p> : null}
+              {pills}
+            </div>
+            {note ? <p className="text-[12px] text-muted sm:whitespace-nowrap">{note}</p> : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

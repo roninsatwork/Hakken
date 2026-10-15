@@ -205,7 +205,7 @@ describe("a country the website keeps ready", () => {
   it("a day behind all countries, reads its own ready-made figures: the quick picks end on its own newest day (drift fixes, 2026-10-03)", () => {
     at("/app/search-console/site_1/keywords", "country=gbr");
     answer({
-      "searchConsoleConnect:searchConsoleStatus": { ...STATUS, connection: { ...STATUS.connection, countriesNewest: [{ country: "gbr", newestDay: "2026-09-25" }] } },
+      "searchConsoleConnect:searchConsoleStatus": { ...STATUS, connection: { ...STATUS.connection, countriesNewest: [{ country: "gbr", newestDay: "2026-09-25", daysFrom: "2025-05-26", historyWhole: true }] } },
       "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
       "searchConsoleLists:searchConsoleListPage": LIST,
       "searchConsoleTracking:searchConsoleTracking": TRACKING,

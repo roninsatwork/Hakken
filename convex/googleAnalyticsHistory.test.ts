@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
+import { finishScheduled } from "@/src/test/finishScheduled";
 import { NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
 import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
@@ -121,6 +122,8 @@ describe("channels over time", () => {
     // A week on: the newest day moves seven days, and the run rolls the past on.
     const newest = shiftDay(NEWEST, 7);
     await t.mutation(internal.googleAnalyticsHistory.rollHistory, { companyWebsiteId: siteId, newest });
+    // One list and device a call, the rest scheduled at once after (collection-reliability-plan.md, RR3).
+    await finishScheduled(t);
     const after = await held();
     const floors = historyFloors(newest);
     expect(after.days.every((day) => day.day >= floors.day)).toBe(true);

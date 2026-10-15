@@ -14,6 +14,7 @@ import { NavItem, SubNavItem } from "@/src/ui/components/layout/SidebarNavigatio
 import { UserNavTree } from "@/src/ui/components/layout/SidebarNavTrees";
 import { SectionMenu } from "@/src/app/(dashboard)/app/_components/SectionMenu";
 import { IntentLabel, PageLinkCell, PositionCell, RecordLinkCell, TrendCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Change } from "@/src/ui/components/screens/Change";
 import { ChangeBars } from "@/src/ui/components/screens/ChangeBars";
@@ -36,6 +37,7 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 
 const noop = () => {};
 
@@ -124,6 +126,31 @@ const PARTS: Part[] = [
         description="Looked up in the United Kingdom · Measured against example.co.uk"
         pills={<StatusLabel tone="success">Looked up 01/10/2026, 09:14</StatusLabel>}
         action={<Select value="30" onChange={noop} className="w-[160px]"><option value="30">Last 30 days</option></Select>}
+      />
+    ),
+  },
+  {
+    id: "record-header-compact",
+    name: "Record header — compact, the name is the switch",
+    source: "src/ui/components/screens/PageHeader.tsx (DetailHeader layout=\"compact\"), TitleSwitch.tsx",
+    use: "A record read through filters (a website in Google Analytics): the filters on the title's row, one line under it with a quiet note at its end. With more than one record the title opens the list.",
+    render: () => (
+      <DetailHeader
+        layout="compact"
+        back={{ label: "Back to Google Analytics", href: "#" }}
+        icon={<SiteMark host="kordatacle.com" owned />}
+        title={<TitleSwitch label="kordatacle.com" aria-label="Choose a website" value="1" onChange={noop}><option value="1">kordatacle.com</option></TitleSwitch>}
+        description="Your website · Google Analytics property Kordatackle.com (397603311)"
+        pills={<StatusLabel tone="neutral">Collecting its first 90 days</StatusLabel>}
+        action={
+          <div className="flex flex-wrap items-end gap-3">
+            <Select aria-label="Country" value="gb" onChange={noop}><option value="gb">United Kingdom</option></Select>
+            <Select aria-label="Device" value="all" onChange={noop}><option value="all">Every device</option></Select>
+            <Select aria-label="Dates" value="30" onChange={noop}><option value="30">Last 30 days</option></Select>
+            <Select aria-label="Chart step" value="day" onChange={noop}><option value="day">Daily</option></Select>
+          </div>
+        }
+        note="Analytics' figures to 14 Oct 2026; the last two days can still change."
       />
     ),
   },

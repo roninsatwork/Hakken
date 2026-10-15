@@ -54,6 +54,12 @@ describe("a classification's own page", () => {
     const answers: Record<string, unknown> = {
       "websiteClientView:getSiteHeader": ownedHeader,
       "pageClassifications:pageClassificationDetail": saved,
+      // The Type dropdown offers System Settings → Classification's list (classification-types-plan.md).
+      "classificationTypes:classificationTypeChoices": [
+        { key: "INFORMATIONAL", name: "Informational content" },
+        { key: "SERVICE", name: "Service" },
+        { key: "OTHER", name: "Other" },
+      ],
       ...overrides,
     };
     vi.mocked(useQuery).mockImplementation(((reference: unknown, args: unknown) => {

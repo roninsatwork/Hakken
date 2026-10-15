@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-import type { ActionCtx, MutationCtx } from "./_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
+import { accessTokenFor, siteRunGoing, type ConnectionProblem } from "./searchConsoleConnect";
 import { noteHoldPagesChanged } from "./holdPages";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
@@ -30,13 +30,15 @@ import { noteRegister } from "./searchConsoleSeenDays";
  * the screens read them (docs/plans/active/search-console-plan.md §14).
  *
  * **Started only by the Search Console Collector** (§12): each website's own
- * run (`searchConsoleAgentRun.ts`) runs the steps here. Nothing is collected
- * on connecting, and nothing on a hidden job.
+ * run (`searchConsoleAgentRun.ts`) runs the steps here — its nightly run, or
+ * the first collection started on connecting (search-console-first-
+ * collection-plan.md, SF1). Nothing is collected on a hidden job.
  *
  * **What a run fetches**: the days since the newest held and the last four
  * again — Google's figures settle over two to three days — so a day is
  * replaced until it is final. A website with no days held yet gets its last
- * 90 days, a week a step (§14.3, item 7). Nothing older, ever.
+ * 90 days, a week a step (§14.3, item 7); its day totals before them come
+ * from the run's last stage (`searchConsoleHistoryFill.ts`).
  *
  * **Three asks a day for each kind of result** (§14.3, item 1): the totals by
  * date; each search with the page it brought people to (a pair); each page —
@@ -80,8 +82,11 @@ const BUSY_WAITS_MS = [2_000, 8_000];
 const PURGE_BATCH = 5;
 const PURGE_ROWS = 500;
 
+/** Keyword and period book records cleared per mutation: a keyword book's record is up to 4,000 keywords. */
+const BOOKS_PER_PURGE = 20;
+
 /** Keys noted as seen per mutation. */
-export const SEEN_CHUNK = 500;
+export const SEEN_CHUNK = 100;
 
 const kindValidator = v.union(v.literal("DAILY"), v.literal("HISTORY"));
 const figuresValidator = { clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() };
@@ -175,27 +180,37 @@ export const agentCollections = internalQuery({
     const now = Date.now();
     const out = [];
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
-      // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
-      if (!connection.property || connection.clearing || connection.switchedOff) continue;
-      const website = await ctx.db.get(connection.websiteId);
-      const hold = await ctx.db.get(connection.companyWebsiteId);
-      const kept = hold ? await countriesKeptReady(ctx, hold) : [];
-      out.push({
-        connectionId: connection._id,
-        companyId: connection.companyId,
-        host: website?.displayHost ?? website?.host ?? connection.property,
-        property: connection.property,
-        ...recentWindow(connection.newestDay, now, connection.oldestDay),
-        main: hold ? mainConsoleCountry(hold) : "gbr",
-        countries: kept.map((code) => {
-          const held = heldFor(connection, code);
-          return { code, from: recentWindow(held?.newestDay, now, held?.oldestDay).from };
-        }),
-      });
+      // A website whose own run is still going — its first collection, started on connecting — is left to it
+      // (search-console-first-collection-plan.md, SF1), so nothing is fetched twice.
+      if (await siteRunGoing(ctx, connection)) continue;
+      const site = await collectionOf(ctx, connection, now);
+      if (site) out.push(site);
     }
     return out;
   },
 });
+
+/** A website's collection as its run takes it: its recent days, its main country, and each country kept ready from its own held days; null while it can't be collected. */
+export async function collectionOf(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">, now: number) {
+  // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
+  if (connection.status !== "CONNECTED" || !connection.property || connection.clearing || connection.switchedOff) return null;
+  const website = await ctx.db.get(connection.websiteId);
+  const hold = await ctx.db.get(connection.companyWebsiteId);
+  const kept = hold ? await countriesKeptReady(ctx, hold) : [];
+  return {
+    connectionId: connection._id,
+    companyId: connection.companyId,
+    host: website?.displayHost ?? website?.host ?? connection.property,
+    property: connection.property,
+    ...recentWindow(connection.newestDay, now, connection.oldestDay),
+    main: hold ? mainConsoleCountry(hold) : "gbr",
+    countries: kept.map((code) => {
+      const held = heldFor(connection, code);
+      return { code, from: recentWindow(held?.newestDay, now, held?.oldestDay).from };
+    }),
+  };
+}
+
 
 // ---------------------------------------------------------------------------
 // One step
@@ -330,8 +345,14 @@ export type StepOutcome = {
  * Says how it ended; the Collector's run goes on from there
  * (`searchConsoleAgentRun.ts`).
  */
-export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number): Promise<StepOutcome> {
-  const stepFrom = laterDay(args.from, shiftDay(args.to, -(DAYS_PER_STEP - 1)));
+export async function runStep(
+  ctx: ActionCtx,
+  args: StepArgs,
+  budgetMs: number,
+  /** The second try after the platform stopped a step (collection-reliability-plan.md, RR1): a day, an ask at a time. */
+  how: { days?: number; parallel?: number } = {},
+): Promise<StepOutcome> {
+  const stepFrom = laterDay(args.from, shiftDay(args.to, -((how.days ?? DAYS_PER_STEP) - 1)));
   const ended = (end: StepOutcome["ended"]): StepOutcome =>
     ({ ended: end, fromDay: stepFrom, toDay: args.to, processedFrom: null, nextTo: args.to, requests: 0, rows: 0, refused: [], error: null });
   const country = args.country === undefined ? {} : { country: args.country };
@@ -459,7 +480,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
       }
       for (const list of listsOf(type)) asks.push({ type, list, shown });
     }
-    await inTurns(asks, PARALLEL_ASKS, async ({ type, list, shown }) => {
+    await inTurns(asks, how.parallel ?? PARALLEL_ASKS, async ({ type, list, shown }) => {
       if (failure || session.stopped) return;
       let parts: Packed[] = pack([], list === "pair");
       if (shown) {
@@ -596,9 +617,6 @@ export const startRun = internalMutation({
   handler: async (ctx, args) => await ctx.db.insert("searchConsoleRuns", { ...args, requests: 0, rows: 0 }),
 });
 
-/** A history fetch asked again at most this often, while the days don't yet reach Google's line. */
-const HISTORY_RETRY_MS = 60 * 60 * 1000;
-
 /**
  * A step's end: its run finished, and the days it brought joined to the days
  * held when they meet them — all countries', or the one country's. A
@@ -643,12 +661,8 @@ export const finishStep = internalMutation({
       if (joined && args.country === undefined) {
         patch.newestDay = joined.newestDay;
         patch.oldestDay = joined.oldestDay;
-        // The days before collection began, fetched back to Google's sixteen-month line once collection reaches its
-        // oldest day (phase 9) — never mid-way, when its months are still to come — an hour apart at most.
-        if (args.reachedFrom && !connection.daysFrom && (!connection.historyAt || now - connection.historyAt > HISTORY_RETRY_MS)) {
-          patch.historyAt = now;
-          await ctx.scheduler.runAfter(0, internal.searchConsoleHistoryDays.fetchHistoryDays, { connectionId: connection._id });
-        }
+        // The days before collection began come from the run's last stage, once every country's days are in
+        // (search-console-first-collection-plan.md, SF2; `searchConsoleHistoryFill.ts`), not from a step.
       } else if (joined && args.country !== undefined && await stillKeptReady(ctx, connection.companyWebsiteId, args.country)) {
         patch.countriesHeld = withHeld(connection.countriesHeld, args.country, joined);
       }
@@ -857,13 +871,12 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
-  // Its keyword books go last, once no kept list points to them. The page numbers stay: they are the
-  // website's, and Google Analytics' lists point to them too (`holdPageRefs.ts`).
-  const refsGone = lists.length < PURGE_BATCH
-    ? await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS)
-    : false;
-  return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
-    && seenDays.length < PURGE_ROWS && refsGone;
+  // Its keyword books go last, once nothing else is left, a few large records a call (collection-reliability-plan.md,
+  // RR3): 500 of them, each up to 4,000 keywords, passed a call's 16 MB, and the website stayed "clearing" for good. The
+  // page numbers stay: they are the website's, and Google Analytics' lists point to them too (`holdPageRefs.ts`).
+  const restGone = lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
+    && seenDays.length < PURGE_ROWS;
+  return restGone && await deleteBooks(ctx, companyWebsiteId, "ALL", BOOKS_PER_PURGE) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", BOOKS_PER_PURGE);
 }
 
 /**
@@ -874,7 +887,12 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
  * minutes rather than at the next night's (`searchConsoleMainCountry.ts`).
  */
 export const clearFigures = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), collectAfter: v.optional(v.boolean()) },
+  args: {
+    companyWebsiteId: v.id("companyWebsites"),
+    collectAfter: v.optional(v.boolean()),
+    /** Another property was chosen on connecting: once cleared, the website's own first collection starts (SF1). */
+    collectFirst: v.optional(v.boolean()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     if (!(await clearSome(ctx, args.companyWebsiteId))) {
@@ -888,6 +906,7 @@ export const clearFigures = internalMutation({
     if (!connection) return null;
     await ctx.db.patch(connection._id, { clearing: undefined, updatedAt: Date.now() });
     if (args.collectAfter) await ctx.scheduler.runAfter(0, internal.searchConsoleMainCountry.collectSwitched, {});
+    if (args.collectFirst) await ctx.scheduler.runAfter(0, internal.searchConsoleFirstCollection.startFirstCollection, { connectionId: connection._id });
     return null;
   },
 });

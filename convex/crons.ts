@@ -115,6 +115,16 @@ crons.interval(
   { job: "agent-run-stall-recovery" }
 );
 
+// Every step of a website's collection watched (collection-reliability-plan.md, RR1): one the platform stopped —
+// out of memory, past an action's ten minutes, a restart — is carried on from its saved place, so a run always
+// finishes. A check of the open chains, not a timer a step, so a step's own clock never moves for it.
+crons.interval(
+  "collection-step-watch",
+  { minutes: 2 },
+  internal.jobLedger.runJob,
+  { job: "collection-step-watch" }
+);
+
 // Give up on approvals nobody answered, so a parked run does not hold its
 // checkpoint and its place in every count for ever. The window is measured in
 // hours, so this only needs to run often enough that the number is roughly true.

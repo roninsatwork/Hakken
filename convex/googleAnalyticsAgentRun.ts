@@ -3,6 +3,7 @@ import { collectPageLists, pageListJobs, type PageListsJob } from "./googleAnaly
 import { collectActionFunnels, type FunnelsJob } from "./googleAnalyticsActionFunnels";
 import { v, type ObjectType } from "convex/values";
 import { internal } from "./_generated/api";
+import { memoryNow } from "./utils/stepMemory";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { failureSummary, lastMoved, ROLE_RUN_LIVE_MS } from "./roleRuns";
@@ -11,6 +12,7 @@ import { siteAddresses } from "./googleAnalyticsApi";
 import { prepareAnalyticsCountry } from "./googleAnalyticsCountries";
 import { collectTitles } from "./googleAnalyticsTitles";
 import { count, days, finishRun } from "./searchConsoleAgentRun";
+import { bookStep, stepKey } from "./collectionSteps";
 import {
   DAYS_PER_STEP,
   STEP_BUDGET_MS,
@@ -68,6 +70,9 @@ export function startGap(websites: number): number {
   return Math.max(STAGGER_MS, Math.min(MOST_GAP_MS, Math.floor(SPREAD_MS / Math.max(1, websites))));
 }
 
+/** How often a step saves its place as it goes (`collectionSteps.notePlace`, RR1). */
+const SAVE_EVERY_MS = 10_000;
+
 /** Connections read per page when listing every connected website. */
 const CONNECTIONS_PER_READ = 500;
 
@@ -92,17 +97,6 @@ type Site = { connectionId: Id<"googleAnalyticsConnections">; companyId: Id<"com
 function collectingNow(run: Doc<"agentRuns"> | null, now: number): boolean {
   return run !== null && (run.status === "QUEUED" || run.status === "RUNNING") && now - lastMoved(run) < ROLE_RUN_LIVE_MS;
 }
-
-/** A run waiting for the hour, marked as going without a line in its log. */
-export const lookIn = internalMutation({
-  args: { runId: v.id("agentRuns") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.runId);
-    if (run && (run.status === "QUEUED" || run.status === "RUNNING")) await ctx.db.patch(args.runId, { updatedAt: Date.now() });
-    return null;
-  },
-});
 
 /** Whether a website's run is still queued or running: a cancelled one stops at its next step. */
 export const runGoing = internalQuery({
@@ -258,7 +252,8 @@ async function beginSiteRun(
   });
   // The days this run fetches, so its page and Collection pipeline can say how far it has got.
   await ctx.db.patch(connection._id, { collecting: { runId, from: window.from, top: window.top } });
-  await ctx.scheduler.runAfter(delayMs, internal.googleAnalyticsSteps.collectSiteStep, {
+  // Its first step, watched (collection-reliability-plan.md, RR1).
+  const first: CollectSiteStepArgs = {
     runId,
     workflowExecutionId,
     ...site,
@@ -274,7 +269,8 @@ async function beginSiteRun(
     begunAt: now,
     ...(connection.listsFrom ? { listsFrom: connection.listsFrom } : {}),
     ...(night ? { night: true } : {}),
-  });
+  };
+  await bookStep(ctx, { key: runStepKey(site.connectionId), chain: "GA_RUN", runId, args: first, place: placeOf(first, []), delayMs });
   return { runId, from: window.from, top: window.top };
 }
 
@@ -367,8 +363,35 @@ export const collectSiteStepArgs = {
    * fills start after it.
    */
   night: v.optional(v.boolean()),
+  /** The booking this step is (`collectionSteps.ts`, RR1): missing on a step booked before the watch. */
+  booking: v.optional(v.number()),
+  /** Its watch gave up carrying it on: the run's closing alone (RR1). */
+  closeOnly: v.optional(v.boolean()),
+  /** The lists left out after the platform stopped them three times, by `jobKey`: the next run starts with the first. */
+  skipped: v.optional(v.array(v.string())),
 };
 export type CollectSiteStepArgs = ObjectType<typeof collectSiteStepArgs>;
+
+/** A website's run's watched chain (`collectionSteps.ts`): one a connection, written over by each run. */
+export function runStepKey(connectionId: Id<"googleAnalyticsConnections">): string {
+  return stepKey("GA_RUN", connectionId);
+}
+
+/** Where a run is, in plain words: the same place started again is another try at it (RR1). */
+function placeOf(args: Pick<CollectSiteStepArgs, "to" | "jobAt">, jobs: readonly Job[]): string {
+  if (args.to !== null) return `the days to ${args.to}`;
+  const job = jobs[args.jobAt];
+  return job ? `list ${args.jobAt + 1} of ${jobs.length} (${jobName(job)})` : "the run's end";
+}
+
+/** A job, in plain words, for the run's lines. */
+function jobName(job: Job): string {
+  const of = "country" in job && job.country ? `, ${job.country.toUpperCase()}` : "";
+  if ("days" in job) return `${job.country.toUpperCase()} days ${job.from} to ${job.to}`;
+  if ("funnels" in job) return "what people did before converting, 12 months";
+  if ("pages" in job) return `the page lists, ${job.period} days, ${job.device || "every device"}${of}`;
+  return `${job.list}, ${job.period} days, ${job.which === "NOW" ? "now" : job.which === "BEFORE" ? "the span before" : "a year before"}${of}`;
+}
 
 /**
  * One step of a website's run: its days a week at a time, newest first, then
@@ -376,15 +399,55 @@ export type CollectSiteStepArgs = ObjectType<typeof collectSiteStepArgs>;
  * up; what is left goes to the next step, an action of its own — in the Node
  * runtime (`googleAnalyticsSteps.collectSiteStep`, BR4), where a big website's
  * lists fit.
+ *
+ * Watched (collection-reliability-plan.md, RR1): its place is saved after each
+ * week and each list, so a step the platform stops is started again from
+ * there by its watch — the second time that one job alone, carefully; the
+ * third time it is left out, saying so, and the next run starts with it. Every
+ * ending goes through the run's one closing (`googleAnalyticsRunEnd.ts`).
  */
 export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteStepArgs): Promise<null> {
-  const finish = (status: "SUCCESS" | "FAILED", summary: string) => finishRun(ctx, args.runId, args.workflowExecutionId, status, summary);
+  const key = runStepKey(args.connectionId);
+  const begun = await ctx.runMutation(internal.collectionSteps.stepStarted, { key, ...(args.booking !== undefined ? { booking: args.booking } : {}) });
+  if (!begun.go) return null;
+  const skipped = [...(args.skipped ?? [])];
+  const close = async (status: "SUCCESS" | "FAILED", summary: string, reached: "WHOLE" | "DAYS" | "NONE", more: { weekly?: boolean; hostVisits?: Array<{ host: string; visits: number }>; listsFrom?: string; fills?: boolean } = {}) =>
+    await ctx.runMutation(internal.googleAnalyticsRunEnd.closeSiteRun, {
+      connectionId: args.connectionId,
+      property: args.property,
+      runId: args.runId,
+      workflowExecutionId: args.workflowExecutionId,
+      stepKey: key,
+      status,
+      summary,
+      reached,
+      weekly: more.weekly ?? args.weekly,
+      recount: args.recount === true,
+      ...(more.hostVisits ? { hostVisits: more.hostVisits } : {}),
+      // The night's run: the two-year fills follow it, inside the same night (BR7).
+      ...(args.night ? { nightFrom: args.begunAt ?? Date.now() } : {}),
+      ...(more.listsFrom ?? skipped[0] ? { listsFrom: more.listsFrom ?? skipped[0] } : {}),
+      fills: more.fills ?? true,
+    });
+  // How far the run got before this step: its days in once `to` is null, some of them once it moved from the top.
+  const reachedSoFar = (to: string | null): "DAYS" | "NONE" => (to === null || to !== args.top ? "DAYS" : "NONE");
   // A run cancelled from Admin asks Google for nothing more, whatever step was waiting.
-  if (!(await ctx.runQuery(internal.googleAnalyticsAgentRun.runGoing, { runId: args.runId }))) return null;
+  if (!(await ctx.runQuery(internal.googleAnalyticsAgentRun.runGoing, { runId: args.runId }))) {
+    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+    return null;
+  }
+  const handOn = async (next: CollectSiteStepArgs, place: string, delayMs = 0) =>
+    await ctx.runMutation(internal.collectionSteps.handOn, { ...memoryNow(),
+      key, chain: "GA_RUN", runId: args.runId, args: next, place, delayMs, ...(args.booking !== undefined ? { from: args.booking } : {}),
+    });
+  // Its watch gave up carrying it on: what it has is kept, and the run ends saying so.
+  if (args.closeOnly) {
+    await close("FAILED", `The platform kept stopping ${args.host}'s run, so it ended with what it had collected; the next run starts again from there.`, reachedSoFar(args.to));
+    return null;
+  }
   // Waiting for the hour to turn: looks in, so the run reads as going, and asks Google nothing.
   if (args.resumeAt !== undefined && Date.now() < args.resumeAt) {
-    await ctx.runMutation(internal.googleAnalyticsAgentRun.lookIn, { runId: args.runId });
-    await ctx.scheduler.runAfter(Math.min(LOOK_IN_MS, args.resumeAt - Date.now()), internal.googleAnalyticsSteps.collectSiteStep, args);
+    await handOn(args, "waiting for the hour", Math.min(LOOK_IN_MS, args.resumeAt - Date.now()));
     return null;
   }
   const started = Date.now();
@@ -392,17 +455,17 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
   try {
     const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
     if (!target || target.status !== "CONNECTED" || target.property !== args.property || target.clearing) {
-      await finish("SUCCESS", `Nothing collected for ${args.host}: it was disconnected, or another property chosen, before its run finished.`);
+      await close("SUCCESS", `Nothing collected for ${args.host}: it was disconnected, or another property chosen, before its run finished.`, "NONE");
       return null;
     }
     if (!target.owned) {
       await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "NOT_OWNED" });
-      await finish("SUCCESS", `${args.host} is no longer one of the company's own websites, so it isn't collected.`);
+      await close("SUCCESS", `${args.host} is no longer one of the company's own websites, so it isn't collected.`, "NONE");
       return null;
     }
     const opened = await openSession(ctx, args.connectionId);
     if (!opened.ok) {
-      await finish("FAILED", stoppedBecause(opened.problem, args.host));
+      await close("FAILED", stoppedBecause(opened.problem, args.host), reachedSoFar(args.to));
       return null;
     }
     const open = opened.session;
@@ -413,10 +476,24 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
     let rows = args.rows;
     const countryDays = countryDayJobs(args.countryFrom ?? [], args.top);
     let jobs: Job[] = to === null ? jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom) : [];
+    const { resumeAt: _waited, ...going } = args;
+    const now = (): CollectSiteStepArgs => ({ ...going, to, weekly, jobAt, rows, requests: args.requests + open.requests, ...(skipped.length > 0 ? { skipped } : {}) });
+    // The place saved as the step goes, at most every `SAVE_EVERY_MS` (RR1): a step the platform stops is started again
+    // from within that of where it died, without a write after every one of a run's few hundred small jobs.
+    let savedAt = Date.now();
+    const saved = async () => {
+      if (Date.now() - savedAt < SAVE_EVERY_MS) return;
+      savedAt = Date.now();
+      await ctx.runMutation(internal.collectionSteps.notePlace, { ...memoryNow(),
+        key, ...(args.booking !== undefined ? { booking: args.booking } : {}), args: now(), place: placeOf({ to, jobAt }, jobs),
+      });
+    };
+    const line = async (heading: string, detail: string, failed = false) =>
+      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading, detail, failed });
     const stop = async (result: Extract<StepResult, { ok: false }>) => {
       if (result.access) {
         await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "NO_ACCESS" });
-        await finish("FAILED", `The Google account connected for ${args.host} can no longer read ${args.property} in Google Analytics. Connect it again from its Google Analytics page.`);
+        await close("FAILED", `The Google account connected for ${args.host} can no longer read ${args.property} in Google Analytics. Connect it again from its Google Analytics page.`, reachedSoFar(to));
       } else if (result.wait) {
         // The hour's budget spent, or Google refusing for an allowance that refreshes within the hour (SF17, SF20).
         const resumeAt = afterTheHour(Date.now());
@@ -424,35 +501,53 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
           // What costs Google nothing is finished now — the days rolled on, the screens' lists rebuilt — and the next
           // night's lists start where this one stopped, so the same last lists are never the ones left out.
           const next = to === null ? jobs[jobAt] : undefined;
-          await ctx.runMutation(internal.googleAnalyticsAgentRun.noteNightCut, {
-            connectionId: args.connectionId,
-            property: args.property,
-            ...(next && !("days" in next) ? { listsFrom: jobKey(next) } : {}),
-          });
-          await finish("SUCCESS", `Collected ${args.host} as far as the night allowed: ${result.reason}. The rest waits for tomorrow night's run, which starts where this one stopped; nothing is lost.`);
+          await close(
+            "SUCCESS",
+            `Collected ${args.host} as far as the night allowed: ${result.reason}. The rest waits for tomorrow night's run, which starts where this one stopped; nothing is lost.`,
+            reachedSoFar(to),
+            { ...(next && !("days" in next) ? { listsFrom: jobKey(next) } : {}), fills: false },
+          );
           return;
         }
         const at = new Date(resumeAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
-        await ctx.runMutation(internal.roleRuns.logRunLine, {
-          runId: args.runId,
-          companyId: args.companyId,
-          heading: "Waiting for the hour",
-          detail: `Kept inside Google's allowances: ${result.reason}. Nothing more is asked of Google until ${at}, when the run carries on where it left off.`,
-          failed: false,
-        });
-        await ctx.scheduler.runAfter(Math.min(LOOK_IN_MS, resumeAt - Date.now()), internal.googleAnalyticsSteps.collectSiteStep, {
-          ...args, to, weekly, jobAt, rows, requests: args.requests + open.requests, resumeAt,
-        });
+        await line("Waiting for the hour", `Kept inside Google's allowances: ${result.reason}. Nothing more is asked of Google until ${at}, when the run carries on where it left off.`);
+        await handOn({ ...now(), resumeAt }, "waiting for the hour", Math.min(LOOK_IN_MS, resumeAt - Date.now()));
       } else if (result.busy) {
         await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: "GOOGLE_BUSY" });
         // Google's own words go with it, so a limit reached reads as which one (conversions-back-in-time-plan.md, phase 5).
-        await finish("FAILED", `Google was too busy to answer for ${args.host}. Nothing is lost: the next run asks again. Google said: ${result.reason}`);
+        await close("FAILED", `Google was too busy to answer for ${args.host}. Nothing is lost: the next run asks again. Google said: ${result.reason}`, reachedSoFar(to));
       } else {
-        await finish("FAILED", stoppedBecause(result.reason, args.host));
+        await close("FAILED", stoppedBecause(result.reason, args.host), reachedSoFar(to));
       }
     };
+    // The days done: from here the ready-made lists, every one every night (Anthony, 2026-10-14: "I want everything
+    // once a day"), the 90 days and 12 months, the page titles and tracking health's weekly checks too (SF17).
+    const daysDone = () => {
+      weekly = true;
+      jobs = jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom);
+    };
 
-    while (Date.now() - started < STEP_BUDGET_MS) {
+    // Stopped by the platform three times at one place: that place is left out, saying so, and the run goes on (RR1).
+    if (begun.skip) {
+      if (to !== null) {
+        const stepFrom = shiftDay(to, -(DAYS_PER_STEP - 1)) > args.from ? shiftDay(to, -(DAYS_PER_STEP - 1)) : args.from;
+        await line(days(stepFrom, to), "Left out: the platform stopped this week's step three times. The next run fetches these days again.", true);
+        to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
+        if (to === null) daysDone();
+      } else if (jobAt < jobs.length) {
+        await line("Left out", `${jobName(jobs[jobAt])}: the platform stopped it three times, so it keeps what was built before, and the next run asks it first.`, true);
+        skipped.push(jobKey(jobs[jobAt]));
+        jobAt += 1;
+      }
+      await saved();
+    }
+
+    // The second try at one place: that job alone in this step, so it has the step's memory and time to itself (RR1).
+    const careful = begun.careful;
+    // The page lists' slots, read once a step for each date range and device's parts.
+    const pageSlots = new Map<string, Record<string, { slot: number; hash: string; from: string; to: string }>>();
+    let done = 0;
+    while (Date.now() - started < STEP_BUDGET_MS && !(careful && done > 0)) {
       if (to !== null) {
         const stepFrom = shiftDay(to, -(DAYS_PER_STEP - 1)) > args.from ? shiftDay(to, -(DAYS_PER_STEP - 1)) : args.from;
         const result = await collectDays(ctx, open, args.connectionId, target, { from: stepFrom, to });
@@ -467,56 +562,38 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
           await stop(pages);
           return null;
         }
-        await ctx.runMutation(internal.roleRuns.logRunLine, {
-          runId: args.runId,
-          companyId: args.companyId,
-          heading: days(stepFrom, to),
-          detail: pages ? `The totals and channels by device: ${count(result.rows)} rows; each page by device: ${count(pages.rows)} rows.` : `The totals and channels by device: ${count(result.rows)} rows.`,
-          failed: false,
-        });
+        await line(days(stepFrom, to), pages ? `The totals and channels by device: ${count(result.rows)} rows; each page by device: ${count(pages.rows)} rows.` : `The totals and channels by device: ${count(result.rows)} rows.`);
         to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
-        if (to === null) {
-          // Everything, every night (Anthony, 2026-10-14: "I want everything once a day"): the 90 days and 12 months,
-          // the page titles and tracking health's weekly checks too — inside Google's allowances (SF17).
-          weekly = true;
-          jobs = jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom);
-        }
+        if (to === null) daysDone();
+        done += 1;
+        await saved();
         continue;
       }
       if (jobAt >= jobs.length) {
         // With the weekly lists, each page's title (§18.6.3): a title Google could not give waits for next week.
         if (weekly) {
           const titles = await collectTitles(ctx, open, args.connectionId, target, args.top);
-          await ctx.runMutation(internal.roleRuns.logRunLine, {
-            runId: args.runId,
-            companyId: args.companyId,
-            heading: "Page titles",
-            detail: titles.ok
+          await line(
+            "Page titles",
+            titles.ok
               ? `${count(titles.titled)} pages' titles, each as Google Analytics saw it most over the last 90 days.`
               : `Google couldn't give the pages' titles this week, so last week's stay: ${titles.reason}`,
-            failed: !titles.ok,
-          });
+            !titles.ok,
+          );
         }
         // With the weekly lists, every address's visits, for tracking health's strangers check (§6, check 8).
         const hosts = weekly ? await siteAddresses(open.accessToken, args.property, target.addresses[0] ?? args.host, args.top) : null;
-        await ctx.runMutation(internal.googleAnalyticsCollect.finishCollection, {
-          connectionId: args.connectionId,
-          property: args.property,
-          weekly,
-          firstDone: true,
-          recount: args.recount === true,
-          ...(hosts?.ok ? { hostVisits: hosts.found.visits.slice(0, 50) } : {}),
-          // The night's run: the two-year fills follow it, inside the same night (BR7).
-          ...(args.night ? { nightFrom: args.begunAt ?? started } : {}),
-        });
-        await ctx.runMutation(internal.roleRuns.logRunLine, {
-          runId: args.runId,
-          companyId: args.companyId,
-          heading: "Ready-made lists",
-          detail: `${jobs.length} lists asked of Google ready-made: the last ${weekly ? "7 and 30 days, 90 days and 12 months" : "7 and 30 days"}, each with the span before${weekly ? ", and the 90 days and 12 months a year before" : ""}. A list whose figures did not move was left as it was.`,
-          failed: false,
-        });
-        await finish("SUCCESS", `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(args.requests + open.requests)} asks to Google. ${NOT_HISTORY}`);
+        await line(
+          "Ready-made lists",
+          `${jobs.length} lists asked of Google ready-made: the last ${weekly ? "7 and 30 days, 90 days and 12 months" : "7 and 30 days"}, each with the span before${weekly ? ", and the 90 days and 12 months a year before" : ""}. A list whose figures did not move was left as it was.${skipped.length > 0 ? ` ${skipped.length === 1 ? "One was" : `${count(skipped.length)} were`} left out; the next run asks ${skipped.length === 1 ? "it" : "them"} first.` : ""}`,
+          skipped.length > 0,
+        );
+        await close(
+          "SUCCESS",
+          `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(args.requests + open.requests)} asks to Google. ${NOT_HISTORY}`,
+          "WHOLE",
+          { weekly, ...(hosts?.ok ? { hostVisits: hosts.found.visits.slice(0, 50) } : {}) },
+        );
         return null;
       }
       const job = jobs[jobAt];
@@ -533,41 +610,33 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
           await stop(pages);
           return null;
         }
-        await ctx.runMutation(internal.roleRuns.logRunLine, {
-          runId: args.runId,
-          companyId: args.companyId,
-          heading: `${job.country.toUpperCase()}: ${days(job.from, job.to)}`,
-          detail: `The totals and channels by device for visitors in ${job.country.toUpperCase()}: ${count(result.rows)} rows${pages ? `; each page by device: ${count(pages.rows)} rows` : ""}.`,
-          failed: false,
-        });
+        await line(`${job.country.toUpperCase()}: ${days(job.from, job.to)}`, `The totals and channels by device for visitors in ${job.country.toUpperCase()}: ${count(result.rows)} rows${pages ? `; each page by device: ${count(pages.rows)} rows` : ""}.`);
         rows += result.rows + (pages?.rows ?? 0);
         jobAt += 1;
+        done += 1;
+        await saved();
         continue;
       }
       const result = "funnels" in job
         ? await collectActionFunnels(ctx, open, target, args.top)
         : "pages" in job
-          ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top)
-          : await collectPeriod(ctx, open, args.connectionId, target, job, args.top);
+          ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top, { careful, slots: pageSlots })
+          : await collectPeriod(ctx, open, args.connectionId, target, job, args.top, { careful });
       if (!result.ok) {
         await stop(result);
         return null;
       }
+      // Google's row limit is never passed in silence (RR2): the list keeps what came, and the run says so.
+      if (result.cut) await line("Google's row limit", `${jobName(job)}: Google's answer reached the most rows it gives at once, so the smallest rows past it are not in this list.`, true);
       rows += result.rows;
       jobAt += 1;
+      done += 1;
+      await saved();
     }
-    // The step's few minutes are up: the rest in a step of its own.
-    const { resumeAt: _waited, ...going } = args;
-    await ctx.scheduler.runAfter(0, internal.googleAnalyticsSteps.collectSiteStep, {
-      ...going,
-      to,
-      weekly,
-      jobAt,
-      rows,
-      requests: args.requests + open.requests,
-    });
+    // The step's few minutes are up, or its careful job done: the rest in a step of its own.
+    await handOn(now(), placeOf({ to, jobAt }, jobs));
   } catch (error: unknown) {
-    await finish("FAILED", failureSummary(error));
+    await close("FAILED", failureSummary(error), reachedSoFar(args.to));
   }
   return null;
 }
@@ -616,25 +685,3 @@ export function startingAt<T extends Job>(lists: readonly T[], from: string | un
   const at = from ? lists.findIndex((job) => jobKey(job) === from) : -1;
   return at > 0 ? [...lists.slice(at), ...lists.slice(0, at)] : [...lists];
 }
-
-/**
- * A run cut short by the night (`NIGHT_MS`; the audit of 2026-10-14): what it
- * collected is the newest, so it is marked collected and the past rolled on,
- * the screens' lists rebuilt; where its lists stopped is kept for the next
- * night to start from. What asks Google — the fills, tracking health — waits
- * for a run that finishes, inside the next night's allowance.
- */
-export const noteNightCut = internalMutation({
-  args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), listsFrom: v.optional(v.string()) },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const connection = await ctx.db.get(args.connectionId);
-    if (!connection || connection.property !== args.property) return null;
-    const now = Date.now();
-    await ctx.db.patch(connection._id, { ...(args.listsFrom ? { listsFrom: args.listsFrom } : {}), lastCollectedAt: now, collecting: undefined, updatedAt: now });
-    if (connection.newestDay) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHistory.rollHistory, { companyWebsiteId: connection.companyWebsiteId, newest: connection.newestDay });
-    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
-    await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
-    return null;
-  },
-});

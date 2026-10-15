@@ -2,7 +2,14 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 
 import schema from "./schema";
-import { collectionTimetable, nextCollection, type CollectionTimetable } from "./seoScheduleService";
+import {
+  collectionTimetable,
+  isWebsiteDue,
+  nextCollection,
+  resolveWebsiteSchedule,
+  soonestPull,
+  type CollectionTimetable,
+} from "./seoScheduleService";
 
 /**
  * When a company's work is next sent to DataForSEO.
@@ -94,5 +101,36 @@ describe("the two agents' timetable", () => {
     expect(read.planner[0]).toMatchObject({ nextRunAt: 1 });
     // The Collector is switched off, so the dispatcher runs none of its schedules.
     expect(read.collector).toEqual([]);
+  });
+});
+
+describe("what one website runs at", () => {
+  const company = (isActive: boolean) => ({ intervalStr: MONTHLY, isActive });
+  const ownDaily = { refreshIntervalStr: daily("01:00"), collectionEnabled: true };
+
+  test("the company's switch is the master: a website switched on under a company switched off collects nothing", () => {
+    // Korda on 2026-10-15: the company off, kordatacle.com on with its own
+    // schedule. The Planner plans only companies switched on.
+    expect(resolveWebsiteSchedule(company(false), ownDaily, NOW))
+      .toEqual({ active: false, intervalStr: daily("01:00"), source: "WEBSITE", nextRunAt: null });
+    expect(isWebsiteDue(company(false), ownDaily, undefined, NOW)).toBe(false);
+  });
+
+  test("under a company switched on, a website collects unless its own switch is off", () => {
+    expect(resolveWebsiteSchedule(company(true), undefined, NOW)).toMatchObject({ active: true, source: "COMPANY" });
+    expect(resolveWebsiteSchedule(company(true), ownDaily, NOW)).toMatchObject({ active: true, source: "WEBSITE" });
+    expect(resolveWebsiteSchedule(company(true), { collectionEnabled: false }, NOW)).toMatchObject({ active: false, nextRunAt: null });
+  });
+
+  test("no company schedule at all means nothing is pulled, whatever the website says", () => {
+    expect(resolveWebsiteSchedule(null, ownDaily, NOW).active).toBe(false);
+  });
+
+  test("a shared host's pace leaves out a watcher whose company is switched off", () => {
+    const off = resolveWebsiteSchedule(company(false), ownDaily, NOW);
+    const on = resolveWebsiteSchedule(company(true), undefined, NOW);
+
+    expect(soonestPull([{ resolved: off, watcher: "Korda" }, { resolved: on, watcher: "Ronins" }]))
+      .toEqual({ nextRunAt: on.nextRunAt, driver: "Ronins" });
   });
 });

@@ -1,0 +1,12 @@
+# Search Console → a website's header — the approved look (board "SearchConsole" of docs/plans/assets/ga-header/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header (compact)
+  back: Back to Search Console
+  page-header: ‹the record's name›
+    title-switch: Choose a website
+    select: Country
+    select: Dates
+    select: Step
+select: Search Console pages
+field: Jump to a page
