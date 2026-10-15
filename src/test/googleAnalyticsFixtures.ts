@@ -120,8 +120,8 @@ const OVERVIEW_FIGURES = {
   preparing: false,
   from: "2026-09-09",
   to: "2026-10-08",
-  now: FIGURES,
-  before: { ...FIGURES, visits: 2225, engaged: 1190, conversions: 19, value: 350_000 },
+  now: { ...FIGURES, views: 6_120, people: 1_870, newPeople: 1_540, length: 2412 * 95 },
+  before: { ...FIGURES, visits: 2225, engaged: 1190, conversions: 19, value: 350_000, views: 5_880, people: 1_710, newPeople: 1_420, length: 2225 * 92 },
   changedMost: [{ kind: "landing" as const, key: "~0", label: "https://www.acme-shop.test/ai-agency/", conversions: 2, value: 30_000, conversionsNow: 3 }],
   landingLive: false,
   counting: true,
@@ -130,6 +130,55 @@ const OVERVIEW_FIGURES = {
 
 /** Overview's answer, its What Hakken sees worked out by its own rules. */
 export const OVERVIEW = { ...OVERVIEW_FIGURES, seen: overviewSees(OVERVIEW_FIGURES) };
+
+/** Overview's panels (ga-overview-plan.md OV2–OV7): each kind of data's first rows. */
+export const OVERVIEW_PANELS = {
+  channels: {
+    rows: [
+      { key: "Organic Search", label: "Organic Search", visits: 1104, change: 0.08, conversions: 11, value: 220_000 },
+      { key: "Direct", label: "Direct", visits: 620, change: 0.12, conversions: 8, value: 150_000 },
+      { key: "Paid Search", label: "Paid Search", visits: 310, change: -0.05, conversions: 4, value: 70_000 },
+    ],
+    count: 6,
+    tagged: 340 as number | null,
+    keywords: 96 as number | null,
+  },
+  kinds: {
+    rows: [
+      { key: "service", label: "service", kindName: "Service" as string | null, visits: 980, change: 0.1, left: 0.42, conversions: 12, value: 240_000 },
+      { key: "blog", label: "blog", kindName: "Blog" as string | null, visits: 640, change: 0.04, left: 0.61, conversions: 3, value: 60_000 },
+      { key: "NOT_SORTED", label: "NOT_SORTED", kindName: null as string | null, visits: 210, change: null, left: 0.55, conversions: 1, value: 25_000 },
+    ],
+    count: 5,
+  } as { rows: Array<{ key: string; label: string; kindName: string | null; visits: number; change: number | null; left: number | null; conversions: number; value: number }>; count: number } | null,
+  landing: {
+    rows: [
+      { key: "~0", label: "https://www.acme-shop.test/ai-agency/", kindName: "Service" as string | null, title: "AI agency", visits: 520, change: 0.18, left: 0.38, conversions: 6, value: 120_000 },
+      { key: "~1", label: "https://www.acme-shop.test/", kindName: "Service" as string | null, visits: 410, change: -0.03, left: 0.29, conversions: 5, value: 100_000 },
+      { key: "~2", label: "https://www.acme-shop.test/blog/seo-guide/", kindName: "Blog" as string | null, visits: 300, change: 0.22, left: 0.71, conversions: 1, value: 25_000 },
+    ],
+    count: 48,
+    left: 0.41 as number | null,
+  },
+  conversions: {
+    rows: [
+      { eventName: "generate_lead", status: "counted" as const, times: 14, value: 350_000 as number | null, change: 0.27 as number | null },
+      { eventName: "click_tel", status: "counted" as const, times: 6, value: 90_000 as number | null, change: 0.2 as number | null },
+      { eventName: "form_submit", status: "uncounted" as const, times: 7, value: null as number | null, change: null as number | null },
+    ] as Array<{ eventName: string; status: "counted" | "uncounted" | "never"; times: number; value: number | null; change: number | null }>,
+    count: 4,
+  },
+  who: [
+    { kind: "visitorType" as const, label: "new", share: 0.82, shareBefore: 0.8 as number | null },
+    { kind: "device" as const, label: "desktop", share: 0.61, shareBefore: 0.64 as number | null },
+    { kind: "age" as const, label: "25-34", share: 0.38, shareBefore: null as number | null },
+    { kind: "gender" as const, label: "male", share: 0.57, shareBefore: 0.57 as number | null },
+    { kind: "interest" as const, label: "Technology/Technophiles", share: 0.22, shareBefore: 0.2 as number | null },
+    { kind: "browser" as const, label: "Chrome", share: 0.66, shareBefore: 0.65 as number | null },
+    { kind: "system" as const, label: "Windows", share: 0.44, shareBefore: 0.46 as number | null },
+  ] as Array<{ kind: "visitorType" | "device" | "age" | "gender" | "interest" | "browser" | "system"; label: string; share: number; shareBefore: number | null }>,
+  shop: null as null | { rows: Array<{ key: string; name: string; looks: number; basket: number; bought: number; revenue: number }>; count: number; basket: number; bought: number; revenue: number },
+};
 
 export const CHART = {
   points: Array.from({ length: 30 }, (_, index) => ({

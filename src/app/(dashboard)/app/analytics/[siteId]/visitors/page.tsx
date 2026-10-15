@@ -5,7 +5,6 @@ import type { FunctionReturnType } from "convex/server";
 import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
@@ -18,6 +17,7 @@ import { AnalyticsListScreen, type VisitorList } from "../../_components/Analyti
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChannelsChart } from "../../_components/AnalyticsChart";
 import { useFlowKindName } from "../../_components/ConversionParts";
+import { useVisitorName } from "../../_components/useVisitorName";
 import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
 import { formatPercent, formatPerVisit } from "../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
@@ -65,17 +65,6 @@ export default function AnalyticsVisitorsPage() {
 }
 
 type VisitorMap = NonNullable<FunctionReturnType<typeof api.googleAnalyticsConversionReads.analyticsVisitorMap>>;
-
-/** A group's name in the reader's words: "New", "Female", "Unknown"; a browser or a system as Google names it. */
-function useVisitorName(): (label: string) => string {
-  const t = useTranslations("googleAnalytics.visitors.names");
-  return (label) => {
-    const key = label.trim().toLowerCase();
-    // Google's words for not knowing, as the reader's "Unknown".
-    if (isUnknownValue(label)) return t("unknown");
-    return t.has(key) ? t(key) : label;
-  };
-}
 
 function VisitorsHead({ map, kindName }: { map: VisitorMap | null; kindName: (kind: string) => string }) {
   const t = useTranslations("googleAnalytics.visitors");

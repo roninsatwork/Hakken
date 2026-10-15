@@ -15931,21 +15931,99 @@
       "title": "Panoramica",
       "description": "Cosa ha contato Google Analytics su questo sito: le visite, da dove sono arrivate e le conversioni che hanno fatto.",
       "preparing": "I dati per queste date sono in preparazione e compaiono tra un momento.",
-      "changedTitle": "Cosa è cambiato di più",
-      "changedDescription": "Rispetto a {before}: le pagine e i canali le cui conversioni e il cui valore si sono mossi di più.",
-      "changedEmpty": "Niente si è mosso rispetto al periodo precedente.",
-      "pageOrChannel": "Pagina o canale",
-      "kind": "Tipo",
-      "kinds": {
-        "landing": "Pagina di destinazione",
-        "channel": "Canale"
+      "columns": {
+        "channel": "Canale",
+        "classification": "Classificazione della pagina",
+        "page": "Pagina di destinazione",
+        "visits": "Visite",
+        "change": "Variazione",
+        "left": "Uscite da qui",
+        "conversions": "Conversioni",
+        "value": "Valore"
       },
-      "conversions": "Conversioni",
-      "value": "Valore",
-      "channelsTitle": "I canali che hanno reso di più",
-      "channelsDescription": "Da dove sono arrivate le visite, per il valore che hanno portato.",
-      "noChannels": "Nessuna visita in queste date.",
-      "landingLive": "Richiesta a Google delle pagine di destinazione di questo dispositivo…"
+      "unclassified": "Non classificata",
+      "moreThan": "{rate} in più rispetto a {before}",
+      "fewerThan": "{rate} in meno rispetto a {before}",
+      "sameAs": "come {before}",
+      "noBefore": "ancora niente da confrontare",
+      "channels": {
+        "title": "Da dove sono arrivate le visite",
+        "note": "{visits} visite da {count, plural, =1 {un canale} other {# canali}}, {change}.",
+        "tagged": "{tagged} sono arrivate da link tracciati e {keywords} da parole chiave degli annunci.",
+        "noneTagged": "Nessuna visita è arrivata da un link tracciato o da una parola chiave degli annunci.",
+        "seeAll": "Vedi {count, plural, =1 {i canali} other {tutti i # canali}}",
+        "empty": "Nessuna visita in queste date."
+      },
+      "kinds": {
+        "title": "Pagine per classificazione",
+        "note": "Il tipo di pagina su cui sono arrivate le visite: {count, plural, =1 {una classificazione} other {# classificazioni}}.",
+        "none": "Le pagine di questo sito non hanno ancora classificazioni, quindi le visite non si possono raggruppare per tipo di pagina di arrivo.",
+        "seeAll": "Vedi {count, plural, =1 {le classificazioni delle pagine} other {tutte le # classificazioni delle pagine}}",
+        "empty": "Nessuna visita in queste date."
+      },
+      "landing": {
+        "title": "Dove sono arrivate le visite",
+        "note": "{views} visualizzazioni di pagina, {change}: {pages} pagine e {time} a visita.",
+        "left": "Il {left} delle visite è uscito dalla pagina di arrivo.",
+        "seeAll": "Vedi il funnel",
+        "empty": "Nessuna pagina di destinazione in queste date."
+      },
+      "conversions": {
+        "title": "Conversioni",
+        "note": "{conversions, plural, =1 {Una conversione} other {# conversioni}}, {change}: il {rate} delle visite ha convertito.",
+        "worth": "{conversions, plural, =1 {Una conversione} other {# conversioni}} per {value}, {change}: il {rate} delle visite ha convertito.",
+        "nothingCounted": "Ancora niente conta come conversione: scegli cosa conta nella pagina Connessione.",
+        "keyEvent": "Evento chiave",
+        "times": "Volte",
+        "counted": "Conteggiato",
+        "status": {
+          "counted": "Conteggiato come conversione",
+          "uncounted": "Non conteggiato",
+          "never": "Mai avvenuto"
+        },
+        "seeAll": "Vedi tutte le conversioni",
+        "empty": "Nessun evento chiave in queste date."
+      },
+      "who": {
+        "title": "Chi ha visitato",
+        "note": "{people} persone, {change}: il {newShare} nuove per il sito. Ogni riga è il gruppo più grande del suo tipo che Google ha potuto nominare.",
+        "kind": "Tipo",
+        "most": "La maggior parte",
+        "share": "Quota",
+        "points": "{points} pt",
+        "kinds": {
+          "visitorType": "Nuovi o di ritorno",
+          "device": "Dispositivo",
+          "age": "Età",
+          "gender": "Genere",
+          "interest": "Interessi",
+          "browser": "Browser",
+          "system": "Sistema operativo"
+        },
+        "seeAll": "Vedi tutti i visitatori",
+        "empty": "Google non ha nominato nessun gruppo di visitatori in queste date."
+      },
+      "shop": {
+        "title": "Negozio",
+        "note": "{bought, plural, =1 {Uno acquistato} other {# acquistati}} per {revenue}; {basket, plural, =1 {uno aggiunto al carrello} other {# aggiunti al carrello}}.",
+        "product": "Prodotto",
+        "viewed": "Visti",
+        "basket": "Aggiunti al carrello",
+        "bought": "Acquistati",
+        "revenue": "Ricavi",
+        "seeAll": "Vedi tutti i prodotti",
+        "empty": "Niente venduto in queste date."
+      },
+      "health": {
+        "title": "Salute del tracciamento",
+        "failing": "{failing} controlli su {total} da guardare; {passing, plural, =0 {nessuno è superato} =1 {l'altro è superato} other {gli altri # sono superati}}.",
+        "passing": "Tutti i {total} controlli sono superati.",
+        "notChecked": "Non ancora controllato: i controlli partono quando Google Analytics si collega, e ogni settimana.",
+        "check": "Controllo",
+        "found": "Cosa ha trovato {platformName}",
+        "seeAll": "Vedi la salute del tracciamento",
+        "empty": "Tutti i controlli sono superati."
+      }
     },
     "live": {
       "title": "In diretta",

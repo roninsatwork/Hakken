@@ -712,8 +712,6 @@ export const analyticsOverview = tenantQuery({
     })),
     /** Landing pages for one device are asked live: what changed most then holds channels only until they are. */
     landingLive: v.boolean(),
-    /** Each channel's visits, the most first: Overview's "Where visits came from" (GA35, §18.2 board 13). */
-    channelVisits: v.array(v.object({ label: v.string(), visits: v.number() })),
     /** Whether anything counts as a conversion. */
     counting: v.boolean(),
     /** Search Console's last 30 days, when it is connected: how often Google shows the pages, and how often they are clicked. */
@@ -738,7 +736,6 @@ export const readOverview = seeing(async (ctx: SiteReader, args: { siteId: Id<"c
     before: null,
     changedMost: [] as Moved[],
     landingLive: false,
-    channelVisits: [] as Array<{ label: string; visits: number }>,
     counting: false,
     searchConsole: null,
   };
@@ -774,7 +771,6 @@ export const readOverview = seeing(async (ctx: SiteReader, args: { siteId: Id<"c
       return { ...row, label: row.kind === "landing" ? named[index] : row.label, ...(title ? { title } : {}) };
     }),
     landingLive: landing.live,
-    channelVisits: [...channels.rows].sort((left, right) => right.visits - left.visits).map((row) => ({ label: row.label, visits: row.visits })),
     counting: counted.length > 0,
     searchConsole: await searchConsoleMonth(ctx, holdId),
   };

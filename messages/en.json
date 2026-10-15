@@ -15931,21 +15931,99 @@
       "title": "Overview",
       "description": "What Google Analytics counted on this website: the visits, where they came from, and the conversions they made.",
       "preparing": "The figures for these dates are being prepared, and appear in a moment.",
-      "changedTitle": "What changed most",
-      "changedDescription": "Against {before}: the pages and channels whose conversions and value moved most.",
-      "changedEmpty": "Nothing moved against the span before.",
-      "pageOrChannel": "Page or channel",
-      "kind": "Kind",
-      "kinds": {
-        "landing": "Landing page",
-        "channel": "Channel"
+      "columns": {
+        "channel": "Channel",
+        "classification": "Page classification",
+        "page": "Landing page",
+        "visits": "Visits",
+        "change": "Change",
+        "left": "Left from it",
+        "conversions": "Conversions",
+        "value": "Value"
       },
-      "conversions": "Conversions",
-      "value": "Value",
-      "channelsTitle": "Channels that made the most",
-      "channelsDescription": "Where the visits came from, by the value they brought.",
-      "noChannels": "No visits in these dates.",
-      "landingLive": "Asking Google for this device's landing pages…"
+      "unclassified": "Unclassified",
+      "moreThan": "{rate} more than {before}",
+      "fewerThan": "{rate} fewer than {before}",
+      "sameAs": "the same as {before}",
+      "noBefore": "nothing to compare with yet",
+      "channels": {
+        "title": "Where visits came from",
+        "note": "{visits} visits from {count, plural, =1 {one channel} other {# channels}}, {change}.",
+        "tagged": "{tagged} came from tagged links and {keywords} from ad keywords.",
+        "noneTagged": "No visit came from a tagged link or an ad keyword.",
+        "seeAll": "See all {count, plural, =1 {channels} other {# channels}}",
+        "empty": "No visits in these dates."
+      },
+      "kinds": {
+        "title": "Pages by classification",
+        "note": "The kind of page visits landed on: {count, plural, =1 {one classification} other {# classifications}}.",
+        "none": "This website's pages have no classifications yet, so its visits can't be grouped by the kind of page they landed on.",
+        "seeAll": "See all {count, plural, =1 {page classifications} other {# page classifications}}",
+        "empty": "No visits in these dates."
+      },
+      "landing": {
+        "title": "Where visits landed",
+        "note": "{views} page views, {change}: {pages} pages and {time} a visit.",
+        "left": "{left} of visits left from the page they landed on.",
+        "seeAll": "See the funnel",
+        "empty": "No landing pages in these dates."
+      },
+      "conversions": {
+        "title": "Conversions",
+        "note": "{conversions, plural, =1 {One conversion} other {# conversions}}, {change}: {rate} of visits converted.",
+        "worth": "{conversions, plural, =1 {One conversion} other {# conversions}} worth {value}, {change}: {rate} of visits converted.",
+        "nothingCounted": "Nothing counts as a conversion yet: choose what does on the Connection page.",
+        "keyEvent": "Key event",
+        "times": "Times",
+        "counted": "Counted",
+        "status": {
+          "counted": "Counted as a conversion",
+          "uncounted": "Not counted",
+          "never": "Never happened"
+        },
+        "seeAll": "See all conversions",
+        "empty": "No key events in these dates."
+      },
+      "who": {
+        "title": "Who visited",
+        "note": "{people} people, {change}: {newShare} new to the website. Each row is the biggest group of its kind Google could name.",
+        "kind": "Kind",
+        "most": "Most of them",
+        "share": "Share",
+        "points": "{points} pts",
+        "kinds": {
+          "visitorType": "New or returning",
+          "device": "Device",
+          "age": "Age",
+          "gender": "Gender",
+          "interest": "Interests",
+          "browser": "Browser",
+          "system": "Operating system"
+        },
+        "seeAll": "See all visitors",
+        "empty": "Google hasn't named any group of visitors in these dates."
+      },
+      "shop": {
+        "title": "Shop",
+        "note": "{bought, plural, =1 {One bought} other {# bought}} for {revenue}; {basket, plural, =1 {one added to a basket} other {# added to a basket}}.",
+        "product": "Product",
+        "viewed": "Viewed",
+        "basket": "Added to basket",
+        "bought": "Bought",
+        "revenue": "Revenue",
+        "seeAll": "See all products",
+        "empty": "Nothing sold in these dates."
+      },
+      "health": {
+        "title": "Tracking health",
+        "failing": "{failing} of {total} checks need a look; {passing, plural, =0 {none passes} =1 {the other one passes} other {the other # pass}}.",
+        "passing": "All {total} checks pass.",
+        "notChecked": "Not checked yet: the checks run when Google Analytics connects, and every week.",
+        "check": "Check",
+        "found": "What {platformName} found",
+        "seeAll": "See tracking health",
+        "empty": "Every check passes."
+      }
     },
     "live": {
       "title": "Live",

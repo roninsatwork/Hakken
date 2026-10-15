@@ -4,7 +4,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHART, CONVERSIONS, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
+import { CHART, CONVERSIONS, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, OVERVIEW_PANELS, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
@@ -79,11 +79,14 @@ describe("Google Analytics' approved looks", () => {
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsOverview": OVERVIEW,
       "googleAnalyticsChartReads:analyticsChart": CHART,
+      "googleAnalyticsOverviewReads:analyticsOverviewPanels": OVERVIEW_PANELS,
     });
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("2,412");
     await screen.findByText(/Visits rose 8\.4%, and conversions with them, from 19 to 23\./);
-    await expectApprovedLook(container, PLAN, "Overview", "Google Analytics → Overview");
+    await screen.findByText("AI agency");
+    // Option 4 of the Overview canvas, "Every figure" (ga-overview-plan.md, built 2026-10-15).
+    await expectApprovedLook(container, "ga-overview", "Overview", "Google Analytics → Overview");
   });
 
   it("5 · Funnel (was Landing pages): how visits moved, then each landing page's own funnel (landing-pages-flow-plan.md, approved 2026-10-14)", async () => {

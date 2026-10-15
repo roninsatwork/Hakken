@@ -519,6 +519,12 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
       theSpanBefore: { visits: shown.before!.visits },
       link: `/app/analytics/${siteId}?period=30`,
     });
+    // Its panels, the rows the screen shows (ga-overview-plan.md OV2–OV8).
+    const panels = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "30", device: "" }))!;
+    expect((overview.whereVisitsCameFrom as { mostVisits: Array<{ channel: string; visits: number }> }).mostVisits.map((row) => [row.channel, row.visits]))
+      .toEqual(panels.channels.rows.map((row) => [row.label, row.visits]));
+    expect((overview.whoVisited as Array<{ kind: string }>).map((row) => row.kind)).toEqual(panels.who.map((row) => row.kind));
+    expect(overview.trackingHealth).toBeDefined();
 
     const landing = await read("landingPages");
     const landingShown = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });

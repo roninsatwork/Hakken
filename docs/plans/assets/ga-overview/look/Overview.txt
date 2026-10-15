@@ -1,0 +1,27 @@
+# Google Analytics → Overview — the approved look (board "Overview" of docs/plans/assets/ga-overview/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Overview
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Page views
+  figure: People
+  figure: Engaged visits
+  figure: Visit length
+  figure: Pages a visit
+  figure: Bounce rate
+  figure: Conversions →
+chart-card: Page views and visits a day
+chart-card: Where visits came from
+compact-list: Channel | Visits | Change | Conversions | Value
+chart-card: Pages by classification
+compact-list: Page classification | Visits | Change | Left from it | Conversions
+chart-card: Where visits landed
+compact-list: Landing page | Visits | Change | Left from it | Conversions
+chart-card: Conversions
+compact-list: Key event | Times | Value | Change | Counted
+chart-card: Who visited
+compact-list: Kind | Most of them | Share | Change
+chart-card: Tracking health
+compact-list: Check | What Hakken found

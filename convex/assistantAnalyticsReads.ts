@@ -7,6 +7,7 @@ import type { SiteReader } from "./siteAccess";
 import { holdFor } from "./assistantReads";
 import { isTrackedHold } from "./utils/websitePairing";
 import { readConversions, readListPage, readOverview, type ShownRow } from "./googleAnalyticsReads";
+import { readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitors } from "./googleAnalyticsVisitorReads";
 import { productList, readProducts } from "./googleAnalyticsProductReads";
@@ -45,6 +46,41 @@ const reader = (ctx: Pick<QueryCtx, "db">, companyId: Id<"companies">): SiteRead
 const money = (hundredths: number | null | undefined) => (hundredths === null || hundredths === undefined ? null : Math.round(hundredths) / 100);
 /** A share as a percentage, to one place. */
 const percent = (share: number | null | undefined) => (share === null || share === undefined ? null : Math.round(share * 1000) / 10);
+
+/** Overview's panels in plain words (ga-overview-plan.md OV2–OV7): the rows the screen shows, money in the currency. */
+function overviewPanelParts(panels: OverviewPanels) {
+  const kindName = (name: string | null | undefined) => (name === undefined ? undefined : name ?? "unclassified");
+  return {
+    whereVisitsCameFrom: {
+      channels: panels.channels.count,
+      visitsFromTaggedLinks: panels.channels.tagged,
+      visitsFromAdKeywords: panels.channels.keywords,
+      mostVisits: panels.channels.rows.map((row) => ({ channel: row.label, visits: row.visits, changePercent: percent(row.change), conversions: row.conversions, value: money(row.value) })),
+    },
+    pagesByClassification: panels.kinds
+      ? { classifications: panels.kinds.count, mostVisits: panels.kinds.rows.map((row) => ({ classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions })) }
+      : "The website's pages have no classifications yet.",
+    whereVisitsLanded: {
+      leftFromTheirLandingPagePercent: percent(panels.landing.left),
+      mostVisits: panels.landing.rows.map((row) => ({
+        page: row.title ? `${row.title} — ${pathOfAddress(row.label)}` : pathOfAddress(row.label),
+        classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions,
+      })),
+    },
+    keyEvents: panels.conversions.rows.map((row) => ({
+      event: row.eventName,
+      status: row.status === "counted" ? "counted as a conversion" : row.status === "never" ? "counted, but never happened" : "not counted",
+      times: row.times, value: money(row.value), changePercent: percent(row.change),
+    })),
+    whoVisited: panels.who.map((row) => ({ kind: row.kind, biggestGroup: row.label, sharePercent: percent(row.share), sharePercentBefore: percent(row.shareBefore) })),
+    ...(panels.shop ? {
+      shop: {
+        bought: panels.shop.bought, revenue: money(panels.shop.revenue), addedToBasket: panels.shop.basket,
+        bestSellers: panels.shop.rows.map((row) => ({ product: row.name, viewed: row.looks, addedToBasket: row.basket, bought: row.bought, revenue: money(row.revenue) })),
+      },
+    } : {}),
+  };
+}
 
 /** A list's row as the Assistant reads it: plain names and units, the screen's own figures. */
 /** A page of All pages as its screen shows it: no money, its views and conversions against the span before. */
@@ -226,12 +262,17 @@ export const googleAnalyticsInternal = internalQuery({
           visits: figure.visits, pageViews: figure.views, people: figure.people, engagedVisits: figure.engaged,
           conversions: figure.conversions, value: money(figure.value),
         };
+        const panels = await readOverviewPanels(site, common);
         return {
           ...base,
           from: answer.from, to: answer.to,
           now: figures(answer.now), theSpanBefore: figures(answer.before),
-          visitsByChannel: answer.channelVisits,
           changedMost: answer.changedMost.map((row) => ({ name: row.title ?? pathOfAddress(row.label), kind: row.kind, conversionsChange: row.conversions, valueChange: money(row.value) })),
+          // Its panels, as the screen shows them (ga-overview-plan.md OV2–OV8): each its first rows.
+          ...(panels ? overviewPanelParts(panels) : {}),
+          trackingHealth: connection.health
+            ? { checks: connection.health.checks.length, needALook: connection.health.checks.filter((check) => !check.passing).map((check) => check.check) }
+            : "not checked yet",
           link: linkTo(""),
         };
       }

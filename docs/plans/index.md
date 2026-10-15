@@ -187,6 +187,13 @@ completed work.
   new shared lists and about 8 nightly funnel asks; no fill. Drawn and
   approved 2026-10-14 (about 9.5 man-days) and built on dev the same day,
   not committed; conversions by page classification added on Anthony's word.
+- [Google Analytics — Overview: every figure](./active/ga-overview-plan.md)
+  — Overview keeps What Hakken sees, its figures and its chart, then one
+  panel for each kind of data, each its top 3 rows and a link to its own
+  page: channels, page classifications, landing pages, conversions, who
+  visited, the shop (only when the website sells) and tracking health. Reads
+  only what the night's run keeps. Drawn as option 4 of 4 and built on dev
+  2026-10-15.
 - [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
   — the All pages screen of one page gains the visits that started on it and
   their conversions, named apart from those made on it; different pages a
