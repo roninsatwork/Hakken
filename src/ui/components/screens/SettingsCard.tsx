@@ -203,34 +203,55 @@ export function SettingSwitch({ label, description, checked, onChange, children 
           <span className="text-[13px] font-medium text-foreground">{label}</span>
           <p className="text-[12px] leading-relaxed text-muted">{description}</p>
         </div>
-        {/* Raw on purpose: a toggle switch drawn by its inner spans — not a
-            button recipe at all. */}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={label}
-          onClick={() => onChange(!checked)}
-          className="mt-0.5 shrink-0"
-        >
-          <span
-            className={cn(
-              "relative block h-5 w-9 rounded-full transition-colors",
-              checked ? "bg-brand" : "bg-foreground/15",
-            )}
-          >
-            <span
-              className={cn(
-                // The knob on a lit switch takes the words-on-brand colour,
-                // so it still shows on a pale brand colour (2026-10-03).
-                "absolute top-0.5 h-4 w-4 rounded-full transition-all",
-                checked ? "left-[18px] bg-on-brand" : "left-0.5 bg-white",
-              )}
-            />
-          </span>
-        </button>
+        <Switch label={label} checked={checked} onChange={onChange} className="mt-0.5" />
       </div>
       {children}
     </div>
+  );
+}
+
+/**
+ * The switch itself, for a row that says what it is elsewhere: a table row's
+ * "On" (a website's Schedules, docs/plans/active/website-schedules-plan.md,
+ * WS3). The one `SettingSwitch` draws, shared rather than copied. `label`
+ * names it for a screen reader and its tooltip.
+ */
+export function Switch({ label, checked, onChange, disabled = false, className }: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  /** Layout only — margin, alignment. */
+  className?: string;
+}) {
+  return (
+    // Raw on purpose: a toggle switch drawn by its inner spans — not a
+    // button recipe at all.
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn("shrink-0 disabled:cursor-not-allowed disabled:opacity-50", className)}
+    >
+      <span
+        className={cn(
+          "relative block h-5 w-9 rounded-full transition-colors",
+          checked ? "bg-brand" : "bg-foreground/15",
+        )}
+      >
+        <span
+          className={cn(
+            // The knob on a lit switch takes the words-on-brand colour,
+            // so it still shows on a pale brand colour (2026-10-03).
+            "absolute top-0.5 h-4 w-4 rounded-full transition-all",
+            checked ? "left-[18px] bg-on-brand" : "left-0.5 bg-white",
+          )}
+        />
+      </span>
+    </button>
   );
 }

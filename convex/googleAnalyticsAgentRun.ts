@@ -147,7 +147,8 @@ export const agentCollections = internalQuery({
     const now = Date.now();
     const out: Site[] = [];
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
-      if (!connection.property || connection.clearing) continue;
+      // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
+      if (!connection.property || connection.clearing || connection.switchedOff) continue;
       if (connection.collecting && collectingNow(await ctx.db.get(connection.collecting.runId), now)) continue;
       const website = await ctx.db.get(connection.websiteId);
       out.push({
@@ -220,7 +221,7 @@ async function beginSiteRun(
   delayMs: number,
 ): Promise<{ runId: Id<"agentRuns">; from: string; top: string } | "CLEARING" | "LISTING" | null> {
   const connection = await ctx.db.get(site.connectionId);
-  if (!connection || connection.status !== "CONNECTED" || connection.property !== site.property) return null;
+  if (!connection || connection.status !== "CONNECTED" || connection.property !== site.property || connection.switchedOff) return null;
   // Its figures must be its main home country's: when not, they are cleared and this run waits for the clearing's (§18.6.1).
   if (connection.clearing || (await prepareAnalyticsCountry(ctx, connection)) === "SWITCHING") return "CLEARING";
   // Figures counted another way are collected again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4):

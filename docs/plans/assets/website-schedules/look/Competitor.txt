@@ -1,0 +1,10 @@
+# Admin → a company → Websites → a competitor → Schedules — the approved look (board "Competitor" of docs/plans/assets/website-schedules/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Schedules
+table: Source | Status | How often | Next | Last collected | Cost | On
+  table-footer
+settings-card: When rankings and AI answers are collected
+  notice (warning)
+  select: Watched against
+  save

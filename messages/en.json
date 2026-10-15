@@ -1451,32 +1451,6 @@
       "hideCompetitors": "Hide the competitors of {host}"
     },
     "companyWebsiteDetail": {
-      "loading": "Loading website...",
-      "notFound": "Website not found",
-      "settingsTitle": "How often",
-      "settingsSubtitle": "The setting that differs between clients watching one site. By default it follows its company's schedule; give it its own only when it needs watching more or less closely than the rest.",
-      "placeOnMarket": "Where it's watched from is set on its Market page",
-      "collectionLabel": "Collect data for this website",
-      "errors": {
-        "settingsFailed": "Could not save these settings. Try again."
-      },
-      "nextRun": "Next run {when}",
-      "overrideLabel": "Use its own schedule",
-      "overrideDescription": "Off follows {company}, and moves whenever that changes.",
-      "collectionDescription": "Off stops this website alone, leaving the rest of the company collecting.",
-      "pairing": {
-        "title": "Watched against",
-        "pairedSubtitle": "Collected with {host} — on its day and from its place — so the two can be compared. Its schedule and place are {host}'s.",
-        "unpairedSubtitle": "Not paired with one of this company's own sites, so it is collected on its own schedule, from the place set on its Market page.",
-        "none": "None — collect it on its own",
-        "save": "Save",
-        "saved": "Saved",
-        "collectedWith": "Collected with {host}",
-        "from": "from {place}",
-        "errors": {
-          "saveFailed": "Could not change what this site is watched against. Try again."
-        }
-      },
       "discovered": {
         "title": "Websites competing for the same searches",
         "subtitle": "Found by looking at who ranks for the searches this website ranks for. Nothing is tracked until you say so, and a directory or publisher is kept on the list rather than hidden — being outranked by one is still worth knowing.",
@@ -1500,22 +1474,12 @@
         "errors": {
           "decideFailed": "Could not save that. Try again."
         }
-      },
-      "competitorsFollow": "Its competitors follow it — numbers pulled in different weeks are not a comparison.",
-      "summaryOwn": "{host} and its competitors are pulled {schedule}.",
-      "summaryFollows": "{host} follows {company}: {schedule}.",
-      "nothingScheduled": "Nothing is pulled for {host}.",
-      "saved": "Saved",
-      "askedLive": "Every engine is asked live, which is four times cheaper than queueing — so there is no method to choose."
+      }
     },
     "siteView": {
       "loading": "Loading website...",
       "notFound": "That website is no longer held by this company.",
       "competitorsOwnedOnly": "This site is itself a competitor, so it has no competitors of its own here.",
-      "paired": {
-        "compare": "See how it compares with {host}",
-        "alone": "Not compared with any of your sites yet. Pair it with one to compare the two."
-      },
       "overview": {
         "title": "To do",
         "lastChecked": "How {host} is doing, and what to do next. Last checked {when}.",
@@ -1724,9 +1688,89 @@
       },
       "schedulesPage": {
         "title": "Schedules",
-        "subtitle": "How often {host} is collected. Anything left to follow the company keeps the company’s schedule.",
-        "subtitleCompetitor": "Which of the company’s own sites {host} is watched against, and so when it is collected.",
-        "record": "Who else watches {host}: its shared website record"
+        "subtitle": "What {platformName} collects for {host}, and when.",
+        "subtitleCompetitor": "What {platformName} collects for {host}, a competitor {company} watches, and when.",
+        "record": "Who else watches {host}: its shared website record",
+        "sources": {
+          "columns": {
+            "source": "Source",
+            "status": "Status",
+            "howOften": "How often",
+            "next": "Next",
+            "last": "Last collected",
+            "cost": "Cost",
+            "on": "On"
+          },
+          "names": {
+            "RANKINGS": "Rankings and AI answers",
+            "SEARCH_CONSOLE": "Search Console",
+            "GOOGLE_ANALYTICS": "Google Analytics",
+            "BING": "Bing Webmaster",
+            "CLARITY": "Clarity"
+          },
+          "gives": {
+            "RANKINGS": "Google positions, AI answers, competitors and links",
+            "SEARCH_CONSOLE": "Clicks and searches from Google",
+            "GOOGLE_ANALYTICS": "Visits, pages and conversions",
+            "BING": "Clicks and searches from Bing",
+            "CLARITY": "Scrolling, rage clicks and dead clicks"
+          },
+          "status": {
+            "collecting": "Collecting",
+            "off": "Switched off",
+            "companyOff": "Off for all of {company}",
+            "notConnected": "Not connected",
+            "settingUp": "Being set up",
+            "connectAgain": "Connect again",
+            "notScheduled": "Not scheduled"
+          },
+          "cost": {
+            "paid": "Paid",
+            "free": "Free"
+          },
+          "pairedWith": "With {host}",
+          "connect": "Connect",
+          "finish": "Finish",
+          "reconnect": "Connect again",
+          "connectTip": "Opens {company}'s workspace at its {source} connection",
+          "switchTip": "Collect {source} for {host}",
+          "empty": "Nothing to collect.",
+          "noteOwned": "Off stops {platformName} asking and keeps what it has. Search Console, Google Analytics, Bing and Clarity are free and run every day once connected.",
+          "noteCompetitor": "Off stops {platformName} asking and keeps what it has. Search Console, Google Analytics, Bing and Clarity are only for {company}'s own websites.",
+          "errors": {
+            "switchFailed": "Could not change that switch. Try again.",
+            "connectFailed": "Could not open {company}'s workspace. Try again."
+          },
+          "showing": "{count, plural, one {# source} other {# sources}}"
+        },
+        "card": {
+          "title": "When rankings and AI answers are collected",
+          "off": "Rankings and AI answers are switched off for {host}, so nothing is bought for it. Switch them on above to choose when.",
+          "companyOff": "{company}'s collection is switched off, so nothing is collected for any of its websites.",
+          "openCompany": "Open {company}'s Schedules",
+          "scheduleLabel": "Schedule",
+          "scheduleDescription": "Same as {company} moves whenever {company}'s schedule changes.",
+          "sameAs": "Same as {company}",
+          "own": "Its own",
+          "companySchedule": "{company}'s schedule: {schedule}.",
+          "noCompanySchedule": "{company} has no schedule yet.",
+          "changeCompany": "Change {company}'s schedule",
+          "pairLabel": "Watched against",
+          "pairDescription": "Paired, it is collected with that website, on its day and from its place, so the two compare.",
+          "notPaired": "Not paired",
+          "collectedWith": "Collected with {host}: {schedule}.",
+          "collectedWithOnSave": "Collected with {host} once saved.",
+          "changePair": "Change {host}'s schedule",
+          "next": "Next: {when}.",
+          "nothingWhileOff": "Nothing is collected for {host} while {company}'s collection is switched off.",
+          "notScheduled": "Nothing is scheduled for {host}.",
+          "competitorsFollow": "Its competitors are collected on the same day, so their figures compare.",
+          "placeOnMarket": "Where it's watched from is set on its Market page",
+          "saved": "Saved",
+          "errors": {
+            "saveFailed": "Could not save these settings. Try again."
+          }
+        }
       },
       "market": {
         "description": "Where {host}'s customers are, and where its rankings are checked from. For this company only: another company watching the same website sets its own.",
@@ -2888,6 +2932,14 @@
           },
           "createFailed": "The schedule could not be created. Try again.",
           "saveFailed": "The schedule could not be saved. Try again."
+        },
+        "scheduleShort": {
+          "daily": "Daily, {time}",
+          "weekly": "Weekly, {day} {time}",
+          "fortnightly": "Fortnightly, {day} {time}",
+          "monthly": "Monthly, day {day}, {time}",
+          "hourly": "Every {hours} hours",
+          "utc": "{time} UTC"
         }
       }
     },

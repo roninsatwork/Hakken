@@ -73,7 +73,8 @@ export const agentCollections = internalQuery({
     const now = Date.now();
     const out: Site[] = [];
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
-      if (!connection.site || connection.clearing) continue;
+      // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
+      if (!connection.site || connection.clearing || connection.switchedOff) continue;
       if (connection.collecting && collectingNow(await ctx.db.get(connection.collecting.runId), now)) continue;
       const website = await ctx.db.get(connection.websiteId);
       out.push({ connectionId: connection._id, companyId: connection.companyId, host: website?.displayHost ?? website?.host ?? connection.site, site: connection.site });
@@ -125,7 +126,7 @@ export const runBingCollectorNow = internalAction({
 /** One website's run, under the agent, and its first step; null when it is no longer connected. */
 async function beginSiteRun(ctx: MutationCtx, agentId: Id<"agents">, site: Site, delayMs: number): Promise<Id<"agentRuns"> | null> {
   const connection = await ctx.db.get(site.connectionId);
-  if (!connection || connection.status !== "CONNECTED" || connection.site !== site.site || connection.clearing) return null;
+  if (!connection || connection.status !== "CONNECTED" || connection.site !== site.site || connection.clearing || connection.switchedOff) return null;
   const now = Date.now();
   const runId = await ctx.db.insert("agentRuns", {
     agentId,

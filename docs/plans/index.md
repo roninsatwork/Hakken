@@ -7,6 +7,14 @@ completed work.
 
 ## Active Plans
 
+- [A website's Schedules — everything Hakken collects, each with its own switch](./active/website-schedules-plan.md)
+  — Admin → a website → Schedules rebuilt as one table of what is collected
+  (rankings and AI answers, Search Console, Google Analytics, Bing, Clarity),
+  each with its status, next and last collection, cost and a switch, then one
+  card for when rankings are bought. Off keeps a source connected and its
+  data; the company's switch is the master, and the page now says so (Korda's
+  is off, so nothing of Korda's is collected). **Planned and built on dev
+  2026-10-15.**
 - [Google Analytics — store the figures, stop asking Google from the screens](./active/ga-stored-figures-plan.md)
   — every figure a screen shows stored by the collection run, so changing the
   dates never waits on Google and Google's limit of 14,000 tokens an hour per

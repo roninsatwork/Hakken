@@ -1,5 +1,5 @@
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
   companyCollectionSchedule,
   isWebsiteDue,
@@ -29,8 +29,8 @@ const LINES_READ_FOR_DUE = 50;
  * given up, or never sent — waited a whole period for the next (reliability
  * plan 3.6). A run whose every read request failed collected nothing.
  */
-async function lastCollectedAt(
-  ctx: MutationCtx,
+export async function lastCollectedAt(
+  ctx: { db: QueryCtx["db"] },
   companyId: Id<"companies">,
   websiteId: Id<"websites">,
 ): Promise<number | undefined> {

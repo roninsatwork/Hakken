@@ -65,6 +65,7 @@ the set but i need to be told"):
 - `src/ui/components/screens/HakkenSees.tsx`: `HakkenSees` — **What Hakken sees**, the box under the title of every Visibility screen: two or three sentences saying what the page means for the business, then "Do first" and up to three numbered steps, each with a quiet link to where it is done. A `SettingsCard` with fixed contents. Its words come from fixed rules over what the page already reads, as codes (`convex/utils/hakkenSees.ts`); Sites' `SiteSees` turns them into the screen's words and links. Added 2026-10-10 (discovery-detail-and-hakken-sees-plan.md §2; Anthony: "I love the what hakken sees addition"). It folds away (search-console-volatility-plan.md §8, HS1–HS3; Anthony: "so once you read it you can minimise it"): its title is the button, folded it is one row with its first sentence, remembered per screen in the browser (`hakkenSeesFold.ts`) and opened again by itself when its advice changes — pass `advice={seenAdvice(seen)}`, the box's codes and quoted names, never its numbers.
 - `SettingsCard` gained `fold`: a card read once and then wanted out of the way folds to one row — its title as the button, a `summary` cut to the line, the chevron Search Console's side menu draws — and its contents are not drawn. What Hakken sees is it. Added 2026-10-10.
 - `SegmentedChoice` (in `SettingsCard.tsx`) gained `size="compact"`: as wide as its choices, for switching between views of one card or table. Sites' `SiteViewSwitch` is it.
+- `Switch` (in `SettingsCard.tsx`): the switch `SettingSwitch` draws, on its own, for a row that says what it is elsewhere — a table's "On" column whose switches act at once. A website's Schedules (website-schedules-plan.md, WS3) is it; Anthony approved the switch in a table there on 2026-10-15. It names itself to a screen reader and in its tooltip. Added 2026-10-15.
 
 Added 2026-10-13 for Google Analytics' Channels and a channel's own page
 (docs/plans/active/ga-channel-pages-plan.md CH11; Anthony named and approved
@@ -273,7 +274,7 @@ Settings pages use `SettingBlock` and `ColorInput` from `src/app/(dashboard)/adm
 
 `ColorInput` renders a label, uppercase HEX display value, and hidden native color input backed by a visible swatch. It emits uppercase values through `onChange`.
 
-A settings screen that is a **list** of on/off switches is a list screen, not a form: `PageHeader`, then `DataTable` with `Checkbox` in a "Switched on" column, as System Security, Developer Options and Self-Improvement do since 2026-08-23. `SettingSwitch` is for a single setting inside a form. Neither is a hand-drawn toggle glyph, and the build enforces that.
+A settings screen that is a **list** of on/off switches is a list screen, not a form: `PageHeader`, then `DataTable` with `Checkbox` in a "Switched on" column, as System Security, Developer Options and Self-Improvement do since 2026-08-23. `SettingSwitch` is for a single setting inside a form. A table whose rows each switch on or off **at once**, with no Save — a website's Schedules, one row per source collected — puts the kit's `Switch` in its "On" column (2026-10-15). None of them is a hand-drawn toggle glyph, and the build enforces that.
 
 The broader settings storage and runtime token behavior is documented in [System Settings And Branding](./system-settings-and-branding.md).
 

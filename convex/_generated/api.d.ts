@@ -850,6 +850,7 @@ import type * as websiteIdentity from "../websiteIdentity.js";
 import type * as websiteMoves from "../websiteMoves.js";
 import type * as websitePurge from "../websitePurge.js";
 import type * as websiteSiteRows from "../websiteSiteRows.js";
+import type * as websiteSources from "../websiteSources.js";
 import type * as websiteTrackingStats from "../websiteTrackingStats.js";
 import type * as websiteTrackingStatsMigration from "../websiteTrackingStatsMigration.js";
 import type * as websites from "../websites.js";
@@ -1745,6 +1746,7 @@ declare const fullApi: ApiFromModules<{
   websiteMoves: typeof websiteMoves;
   websitePurge: typeof websitePurge;
   websiteSiteRows: typeof websiteSiteRows;
+  websiteSources: typeof websiteSources;
   websiteTrackingStats: typeof websiteTrackingStats;
   websiteTrackingStatsMigration: typeof websiteTrackingStatsMigration;
   websites: typeof websites;

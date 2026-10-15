@@ -289,6 +289,8 @@ export const googleAnalyticsTables = {
     companyWebsiteId: v.id("companyWebsites"),
     websiteId: v.id("websites"),
     status: analyticsStatusValidator,
+    /** Switched off on the website's Schedules page (docs/plans/active/website-schedules-plan.md, WS4): kept connected with everything held, and not collected until switched on again. */
+    switchedOff: v.optional(v.boolean()),
     /** The shared Google sign-in this connection reads with (`googleSchema.ts`). */
     googleConnectionId: v.optional(v.id("googleConnections")),
     /** A sign-in under way: its single-use state, when it began and who began it. */

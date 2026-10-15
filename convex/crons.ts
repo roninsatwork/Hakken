@@ -1,5 +1,6 @@
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
+import { CLARITY_MORNING_UTC } from "./clarity";
 
 const crons = cronJobs();
 crons.interval(
@@ -39,7 +40,7 @@ crons.daily(
 // Microsoft Clarity keeps three days: each connected project's last day is read every morning and kept (insights-analyst-plan.md §7b).
 crons.daily(
   "clarity-morning",
-  { hourUTC: 4, minuteUTC: 50 },
+  { ...CLARITY_MORNING_UTC },
   internal.jobLedger.runJob,
   { job: "clarity-morning" }
 );

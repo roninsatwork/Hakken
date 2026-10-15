@@ -661,7 +661,10 @@ export const setCompanyWebsiteSchedule = superAdminMutation({
     const now = Date.now();
     await ctx.db.patch(args.id, {
       refreshIntervalStr: args.refreshIntervalStr,
-      collectionEnabled: args.collectionEnabled,
+      // The website's switch has its own row on its Schedules page since
+      // 2026-10-15 (`websiteSources.setRankingsOn`): saving the schedule
+      // leaves it alone unless it is sent.
+      ...(args.collectionEnabled === undefined ? {} : { collectionEnabled: args.collectionEnabled }),
       updatedAt: now,
     });
 

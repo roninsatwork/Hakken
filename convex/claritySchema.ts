@@ -16,6 +16,8 @@ export const clarityTables = {
     companyId: v.id("companies"),
     companyWebsiteId: v.id("companyWebsites"),
     status: clarityStatusValidator,
+    /** Switched off on the website's Schedules page (docs/plans/active/website-schedules-plan.md, WS4): kept connected with everything held, and not collected until switched on again. */
+    switchedOff: v.optional(v.boolean()),
     /** The Data Export token, as ciphertext only (`connectorTokenCrypto`); never sent to a screen. */
     tokenCiphertext: v.string(),
     /** Clarity's project, when its answers name it. */

@@ -1,0 +1,12 @@
+# Admin → a company → Websites → a website → Schedules — the approved look (board "Main" of docs/plans/assets/website-schedules/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Schedules
+table: Source | Status | How often | Next | Last collected | Cost | On
+  table-footer
+settings-card: When rankings and AI answers are collected
+  notice (warning)
+  choice: Schedule: Same as Korda | Its own
+  select: on day
+  field: at
+  save

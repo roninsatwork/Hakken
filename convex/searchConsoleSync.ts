@@ -175,7 +175,8 @@ export const agentCollections = internalQuery({
     const now = Date.now();
     const out = [];
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
-      if (!connection.property || connection.clearing) continue;
+      // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
+      if (!connection.property || connection.clearing || connection.switchedOff) continue;
       const website = await ctx.db.get(connection.websiteId);
       const hold = await ctx.db.get(connection.companyWebsiteId);
       const kept = hold ? await countriesKeptReady(ctx, hold) : [];
@@ -575,7 +576,7 @@ async function stillCollecting(
   country?: string,
 ) {
   const connection = await ctx.db.get(connectionId);
-  if (connection === null || connection.property !== property || connection.clearing === true || connection.status !== "CONNECTED") return false;
+  if (connection === null || connection.property !== property || connection.clearing === true || connection.status !== "CONNECTED" || connection.switchedOff) return false;
   return await stillKeptReady(ctx, connection.companyWebsiteId, country);
 }
 

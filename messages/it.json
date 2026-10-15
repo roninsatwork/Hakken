@@ -1451,32 +1451,6 @@
       "hideCompetitors": "Nascondi i concorrenti di {host}"
     },
     "companyWebsiteDetail": {
-      "loading": "Caricamento sito web...",
-      "notFound": "Sito web non trovato",
-      "settingsTitle": "Con quale frequenza",
-      "settingsSubtitle": "L'impostazione che cambia tra i clienti che osservano lo stesso sito. Di norma segue la pianificazione dell'azienda; dagli una pianificazione propria solo quando va osservato più o meno da vicino degli altri.",
-      "placeOnMarket": "Da dove viene osservato si imposta nella sua pagina Mercato",
-      "collectionLabel": "Raccogli dati per questo sito web",
-      "errors": {
-        "settingsFailed": "Impossibile salvare queste impostazioni. Riprova."
-      },
-      "nextRun": "Prossima esecuzione {when}",
-      "overrideLabel": "Usa una pianificazione propria",
-      "overrideDescription": "Disattivato segue {company} e si muove quando quella cambia.",
-      "collectionDescription": "Disattivato ferma solo questo sito web, lasciando il resto dell'azienda in raccolta.",
-      "pairing": {
-        "title": "Confrontato con",
-        "pairedSubtitle": "Raccolto insieme a {host} — lo stesso giorno e dallo stesso luogo — così i due si possono confrontare. Pianificazione e luogo sono quelli di {host}.",
-        "unpairedSubtitle": "Non abbinato a un sito di questa azienda, quindi viene raccolto con una pianificazione propria, dal luogo impostato nella sua pagina Mercato.",
-        "none": "Nessuno — raccoglilo da solo",
-        "save": "Salva",
-        "saved": "Salvato",
-        "collectedWith": "Raccolto insieme a {host}",
-        "from": "da {place}",
-        "errors": {
-          "saveFailed": "Impossibile cambiare il sito di confronto. Riprova."
-        }
-      },
       "discovered": {
         "title": "Siti in gara sulle stesse ricerche",
         "subtitle": "Trovati guardando chi si posiziona sulle ricerche di questo sito. Nulla viene seguito finché non lo decidi tu, e directory ed editori restano in elenco invece di sparire: essere superati da uno è comunque utile saperlo.",
@@ -1500,22 +1474,12 @@
         "errors": {
           "decideFailed": "Non è stato possibile salvare. Riprova."
         }
-      },
-      "competitorsFollow": "I suoi concorrenti lo seguono: numeri raccolti in settimane diverse non sono un confronto.",
-      "summaryOwn": "{host} e i suoi concorrenti vengono raccolti {schedule}.",
-      "summaryFollows": "{host} segue {company}: {schedule}.",
-      "nothingScheduled": "Non viene raccolto nulla per {host}.",
-      "saved": "Salvato",
-      "askedLive": "Ogni motore viene interrogato in diretta, quattro volte più economico della coda: non c'è un metodo da scegliere."
+      }
     },
     "siteView": {
       "loading": "Caricamento sito...",
       "notFound": "Questo sito non appartiene più a questa azienda.",
       "competitorsOwnedOnly": "Questo sito è a sua volta un concorrente, quindi qui non ha concorrenti propri.",
-      "paired": {
-        "compare": "Guarda il confronto con {host}",
-        "alone": "Non ancora confrontato con nessuno dei tuoi siti. Abbinalo a uno per confrontarli."
-      },
       "overview": {
         "title": "Da fare",
         "lastChecked": "Come va {host}, e cosa fare dopo. Ultimo controllo {when}.",
@@ -1724,9 +1688,89 @@
       },
       "schedulesPage": {
         "title": "Programmi",
-        "subtitle": "Quanto spesso {host} viene raccolto. Ciò che segue l’azienda mantiene il programma dell’azienda.",
-        "subtitleCompetitor": "Con quale dei siti propri dell’azienda {host} viene confrontato, e quindi quando viene raccolto.",
-        "record": "Chi altro segue {host}: la sua scheda condivisa"
+        "subtitle": "Cosa raccoglie {platformName} per {host}, e quando.",
+        "subtitleCompetitor": "Cosa raccoglie {platformName} per {host}, un concorrente che {company} segue, e quando.",
+        "record": "Chi altro segue {host}: la sua scheda condivisa",
+        "sources": {
+          "columns": {
+            "source": "Fonte",
+            "status": "Stato",
+            "howOften": "Ogni quanto",
+            "next": "Prossima",
+            "last": "Ultima raccolta",
+            "cost": "Costo",
+            "on": "Attiva"
+          },
+          "names": {
+            "RANKINGS": "Posizionamenti e risposte AI",
+            "SEARCH_CONSOLE": "Search Console",
+            "GOOGLE_ANALYTICS": "Google Analytics",
+            "BING": "Bing Webmaster",
+            "CLARITY": "Clarity"
+          },
+          "gives": {
+            "RANKINGS": "Posizioni su Google, risposte AI, concorrenti e link",
+            "SEARCH_CONSOLE": "Clic e ricerche da Google",
+            "GOOGLE_ANALYTICS": "Visite, pagine e conversioni",
+            "BING": "Clic e ricerche da Bing",
+            "CLARITY": "Scorrimento, clic di rabbia e clic a vuoto"
+          },
+          "status": {
+            "collecting": "In raccolta",
+            "off": "Disattivata",
+            "companyOff": "Disattivata per tutta {company}",
+            "notConnected": "Non collegata",
+            "settingUp": "In configurazione",
+            "connectAgain": "Da ricollegare",
+            "notScheduled": "Non programmata"
+          },
+          "cost": {
+            "paid": "A pagamento",
+            "free": "Gratuita"
+          },
+          "pairedWith": "Con {host}",
+          "connect": "Collega",
+          "finish": "Completa",
+          "reconnect": "Ricollega",
+          "connectTip": "Apre lo spazio di lavoro di {company} sul collegamento di {source}",
+          "switchTip": "Raccogli {source} per {host}",
+          "empty": "Niente da raccogliere.",
+          "noteOwned": "Disattivata, {platformName} smette di chiedere e conserva ciò che ha. Search Console, Google Analytics, Bing e Clarity sono gratuite e, una volta collegate, girano ogni giorno.",
+          "noteCompetitor": "Disattivata, {platformName} smette di chiedere e conserva ciò che ha. Search Console, Google Analytics, Bing e Clarity sono solo per i siti di {company}.",
+          "errors": {
+            "switchFailed": "Impossibile cambiare l'interruttore. Riprova.",
+            "connectFailed": "Impossibile aprire lo spazio di lavoro di {company}. Riprova."
+          },
+          "showing": "{count, plural, one {# fonte} other {# fonti}}"
+        },
+        "card": {
+          "title": "Quando si raccolgono posizionamenti e risposte AI",
+          "off": "Posizionamenti e risposte AI sono disattivati per {host}, quindi non si acquista nulla. Attivali qui sopra per scegliere quando.",
+          "companyOff": "La raccolta di {company} è disattivata, quindi non si raccoglie nulla per nessuno dei suoi siti.",
+          "openCompany": "Apri le Programmazioni di {company}",
+          "scheduleLabel": "Programmazione",
+          "scheduleDescription": "Come {company} cambia ogni volta che cambia la programmazione di {company}.",
+          "sameAs": "Come {company}",
+          "own": "Propria",
+          "companySchedule": "Programmazione di {company}: {schedule}.",
+          "noCompanySchedule": "{company} non ha ancora una programmazione.",
+          "changeCompany": "Cambia la programmazione di {company}",
+          "pairLabel": "Confrontato con",
+          "pairDescription": "Abbinato, si raccoglie insieme a quel sito, nello stesso giorno e dallo stesso luogo, così i due si confrontano.",
+          "notPaired": "Non abbinato",
+          "collectedWith": "Raccolto con {host}: {schedule}.",
+          "collectedWithOnSave": "Raccolto con {host} una volta salvato.",
+          "changePair": "Cambia la programmazione di {host}",
+          "next": "Prossima: {when}.",
+          "nothingWhileOff": "Non si raccoglie nulla per {host} finché la raccolta di {company} è disattivata.",
+          "notScheduled": "Nulla è programmato per {host}.",
+          "competitorsFollow": "I suoi concorrenti si raccolgono nello stesso giorno, così i dati si confrontano.",
+          "placeOnMarket": "Da dove viene osservato si imposta nella sua pagina Mercato",
+          "saved": "Salvato",
+          "errors": {
+            "saveFailed": "Impossibile salvare queste impostazioni. Riprova."
+          }
+        }
       },
       "market": {
         "description": "Dove sono i clienti di {host}, e da dove vengono controllati i suoi posizionamenti. Solo per questa azienda: un'altra azienda che osserva lo stesso sito imposta i propri.",
@@ -2888,6 +2932,14 @@
           },
           "createFailed": "Impossibile creare la pianificazione. Riprova.",
           "saveFailed": "Impossibile salvare la pianificazione. Riprova."
+        },
+        "scheduleShort": {
+          "daily": "Ogni giorno, {time}",
+          "weekly": "Ogni settimana, {day} {time}",
+          "fortnightly": "Ogni due settimane, {day} {time}",
+          "monthly": "Ogni mese, giorno {day}, {time}",
+          "hourly": "Ogni {hours} ore",
+          "utc": "{time} UTC"
         }
       }
     },

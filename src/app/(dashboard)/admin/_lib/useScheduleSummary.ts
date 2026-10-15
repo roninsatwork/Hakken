@@ -79,3 +79,34 @@ export function useScheduleSummary() {
     return t("scheduleSummary.daily", { time: draft.timeLocal, utcTime });
   };
 }
+
+/**
+ * An `intervalStr` short enough for a table cell — "Daily, 04:00",
+ * "Weekly, Monday 02:10" — for a website's Schedules, where each source's
+ * row says how often (docs/plans/active/website-schedules-plan.md, WS1).
+ * The time is the schedule's own; a schedule kept in UTC says so.
+ */
+export function useShortScheduleSummary() {
+  const t = useTranslations("admin.workflows.schedules");
+
+  return (intervalStr: string) => {
+    const draft = hydrateScheduleDraft(intervalStr);
+    if (draft.mode === "targetedTimes") {
+      return normalizeTimes(draft.timesLocal).join(", ") || t("scheduleSummary.targetedEmpty");
+    }
+    const time = draft.timezone === "UTC" ? t("scheduleShort.utc", { time: draft.timeLocal }) : draft.timeLocal;
+    const day = t(`editor.fields.interval.days.${DAY_KEYS[draft.dayOfWeek] ?? "monday"}`);
+    switch (draft.cadence) {
+      case "hourly":
+        return t("scheduleShort.hourly", { hours: String(draft.everyHours) });
+      case "weekly":
+        return t("scheduleShort.weekly", { day, time });
+      case "fortnightly":
+        return t("scheduleShort.fortnightly", { day, time });
+      case "monthly":
+        return t("scheduleShort.monthly", { day: String(draft.dayOfMonth), time });
+      default:
+        return t("scheduleShort.daily", { time });
+    }
+  };
+}

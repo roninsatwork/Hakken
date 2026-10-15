@@ -4,13 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { MapPin } from "lucide-react";
+import { ArrowUpRight, MapPin } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
-import { SettingsCard, SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
+import { Select } from "@/src/ui/components/screens/Select";
+import { SegmentedChoice, SettingRow, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { formatDateTime } from "@/src/lib/dates";
 import { SeoScheduleFields } from "@/src/app/(dashboard)/admin/_components/SeoScheduleFields";
 import {
   createDefaultScheduleDraft,
@@ -20,9 +23,15 @@ import {
   type ScheduleDraft,
 } from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
+import type { WebsiteSourcesData } from "./WebsiteSources";
 
 /** The cadences the SEO control offers. Anything else cannot be drawn by it. */
 const SEO_CADENCES = new Set(["daily", "weekly", "fortnightly", "monthly"]);
+
+/** The pairing choice's value for "not paired". A real id is never empty. */
+const UNPAIRED = "";
+
+type Mode = "company" | "own";
 
 /**
  * Coerce whatever is stored into something this control can actually draw.
@@ -30,8 +39,7 @@ const SEO_CADENCES = new Set(["daily", "weekly", "fortnightly", "monthly"]);
  * A website may hold an interval the old generic builder wrote — hourly, or a
  * list of exact times — because that builder offered both and nothing on the
  * server refused them. Opening such a row without this would show four
- * cadence cards with none selected, which is the silent-wrong-state bug the
- * rebuild removed. Weekly is the recommended cadence.
+ * cadence cards with none selected. Weekly is the recommended cadence.
  */
 function hydrateSeoDraft(intervalStr?: string | null): ScheduleDraft {
   const draft = hydrateScheduleDraft(intervalStr);
@@ -41,166 +49,220 @@ function hydrateSeoDraft(intervalStr?: string | null): ScheduleDraft {
   return draft;
 }
 
+/** A link in the card's quiet style: the kit's link with its arrow. */
+function CardLink({ href, children }: { href: string; children: string }) {
+  return (
+    <Link href={href} className="inline-flex w-fit items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
+      {children}
+      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+    </Link>
+  );
+}
+
 /**
- * How often this site is collected — the setting that genuinely differs
- * between two companies watching one host. Where it is watched from moved to
- * its Market page on 2026-10-03, beside where it trades, so the two place
- * settings sit together and nothing is set twice (docs/plans/active/
- * search-console-plan.md §16); a line here says where it went.
+ * "When rankings and AI answers are collected" (docs/plans/active/website-schedules-plan.md,
+ * WS5–WS7): the one card on a website's Schedules page. A choice of the
+ * company's schedule or its own — the four cadences and their day and time
+ * when its own — then when it is next collected and where from. A competitor
+ * starts with what it is watched against: paired, it is collected with that
+ * website, on its day; unpaired, it has the same choice. The company's switch
+ * is the master, so the card warns while it is off. One Save.
  *
- * A card on the website's Schedules page (docs/plans/active/
- * websites-section-menu-plan.md) — it was a dialog in the website's header
- * until 2026-09-28, one of four places its settings sat.
- * The schedule is built on `SeoScheduleFields`, the same control the company
- * screen uses — four cadences, no hourly pull, no list of exact times, because
- * every pull is money on a service billed per call. What is stored is only the
- * *difference* from the company: a site following its company stores nothing,
- * so changing the company moves it.
+ * Only the *difference* from the company is stored: a website following its
+ * company stores no schedule, so changing the company moves it. Its own switch
+ * is the table's ("What Hakken collects") and is left alone here.
  */
 export function SiteSchedule({
+  data,
   companyWebsiteId,
-  host,
   marketHref,
+  companySchedulesHref,
+  siteSchedulesHref,
 }: {
+  data: WebsiteSourcesData;
   companyWebsiteId: Id<"companyWebsites">;
-  host: string;
   /** The website's Market page, where it is watched from is set. */
   marketHref: string;
+  /** The company's own Schedules page, where its switch and schedule are. */
+  companySchedulesHref: string;
+  /** Another website's Schedules page in this section: its pair's. */
+  siteSchedulesHref: (siteId: Id<"companyWebsites">) => string;
 }) {
-  const t = useTranslations("admin.companyWebsiteDetail");
+  const t = useTranslations("admin.siteView.schedulesPage.card");
   const tCommon = useTranslations("common");
-
-  const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
-  const scheduleSummary = useScheduleSummary();
+  const summary = useScheduleSummary();
   const setSchedule = useMutation(api.websites.setCompanyWebsiteSchedule);
+  const setPairing = useMutation(api.websiteAttachments.setTrackedPairing);
+  const ownSites = useQuery(api.websiteAttachments.listCompanyOwnedWebsites, data.owned ? "skip" : { companyId: data.companyId });
   const action = useAdminAction({ scope: "admin-site-settings" });
 
-  // Adopted once per saved state, keyed on the row's id and its stored values,
-  // so an edit in progress survives the query refreshing underneath it.
-  const adoptKey = website
-    ? `${website._id}:${website.refreshIntervalStr ?? ""}:${String(website.collectionEnabled)}`
-    : null;
+  const company = data.companyName;
+  const host = data.host;
+  const rankings = data.rankings;
+  const storedPair = rankings.pairedWith?.companyWebsiteId ?? UNPAIRED;
+
+  // Adopted once per saved state, so an edit in progress survives the query
+  // refreshing underneath it.
+  const adoptKey = `${companyWebsiteId}:${rankings.ownIntervalStr ?? ""}:${storedPair}`;
   const [adopted, setAdopted] = useState<string | null>(null);
-  const [overriding, setOverriding] = useState(false);
+  const [mode, setMode] = useState<Mode>("company");
   const [draft, setDraft] = useState<ScheduleDraft>(createDefaultScheduleDraft());
-  const [collecting, setCollecting] = useState(true);
+  const [pair, setPair] = useState<string>(UNPAIRED);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
-  if (website && adoptKey !== adopted) {
+  if (adoptKey !== adopted) {
     setAdopted(adoptKey);
-    setOverriding(Boolean(website.refreshIntervalStr));
-    setDraft(hydrateSeoDraft(website.refreshIntervalStr ?? website.companyIntervalStr));
-    setCollecting(website.collectionEnabled ?? website.effective.active);
+    setMode(rankings.ownIntervalStr ? "own" : "company");
+    setDraft(hydrateSeoDraft(rankings.ownIntervalStr ?? data.companyIntervalStr));
+    setPair(storedPair);
     setError("");
   }
-
-  const handleSave = async () => {
-    if (!website) return;
-    setError("");
-    setSaved(false);
-
-    if (overriding) {
-      const problem = validateScheduleDraft(draft);
-      if (problem) {
-        setError(problem);
-        return;
-      }
-    }
-
-    const outcome = await action.run(
-      async () => {
-        await setSchedule({
-          id: companyWebsiteId,
-          // Absence is how a site says "follow the company", so not overriding
-          // sends nothing rather than freezing it at today's company schedule.
-          refreshIntervalStr: overriding ? serializeScheduleDraft(draft) : undefined,
-          collectionEnabled: overriding ? collecting : undefined,
-        });
-      },
-      { suppressErrorToast: true, fallbackMessage: t("errors.settingsFailed") },
-    );
-
-    if (outcome.ok) setSaved(true);
-    else setError(outcome.message);
-  };
 
   const touched = <Value,>(set: (value: Value) => void) => (value: Value) => {
     set(value);
     setSaved(false);
   };
 
-  const summary = () => {
-    if (!website) return "";
-    if (!overriding) {
-      return website.companyIntervalStr
-        ? t("summaryFollows", {
-          host,
-          company: website.companyName ?? "",
-          schedule: scheduleSummary(website.companyIntervalStr),
-        })
-        : t("nothingScheduled", { host });
+  const paired = !data.owned && pair !== UNPAIRED;
+
+  const handleSave = async () => {
+    setError("");
+    setSaved(false);
+    if (!paired && mode === "own") {
+      const problem = validateScheduleDraft(draft);
+      if (problem) {
+        setError(problem);
+        return;
+      }
     }
-    if (!collecting) return t("nothingScheduled", { host });
-    return t("summaryOwn", { host, schedule: scheduleSummary(serializeScheduleDraft(draft)) });
+    const outcome = await action.run(
+      async () => {
+        if (!data.owned && pair !== storedPair) {
+          await setPairing({ id: companyWebsiteId, againstCompanyWebsiteId: pair === UNPAIRED ? null : (pair as Id<"companyWebsites">) });
+        }
+        // Paired, its day is its pair's: there is no schedule of its own to save.
+        if (!paired) {
+          await setSchedule({
+            id: companyWebsiteId,
+            // Absence is how a website says "follow the company", so following
+            // sends nothing rather than freezing today's company schedule.
+            refreshIntervalStr: mode === "own" ? serializeScheduleDraft(draft) : undefined,
+          });
+        }
+      },
+      { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
+    );
+    if (outcome.ok) setSaved(true);
+    else if (outcome.message) setError(outcome.message);
   };
 
-  return (
-    <SettingsCard title={t("settingsTitle")}>
-      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t("settingsSubtitle")}</p>
+  if (!rankings.on) {
+    return (
+      <SettingsCard title={t("title")}>
+        <p className="text-[13px] text-secondary">{t("off", { host })}</p>
+      </SettingsCard>
+    );
+  }
 
-      {website === undefined ? (
-        <p className="text-[13px] text-secondary">{t("loading")}</p>
-      ) : website === null ? (
-        <p className="text-[13px] text-destructive">{t("notFound")}</p>
+  const choice = (
+    <>
+      <SettingRow label={t("scheduleLabel")} description={t("scheduleDescription", { company })}>
+        <SegmentedChoice<Mode>
+          label={t("scheduleLabel")}
+          size="compact"
+          value={mode}
+          options={[{ value: "company", label: t("sameAs", { company }) }, { value: "own", label: t("own") }]}
+          onChange={touched(setMode)}
+        />
+      </SettingRow>
+      {mode === "company" ? (
+        <div className="flex flex-col gap-3 border-t border-border-dim pt-5">
+          <p className="text-[13px] text-foreground">
+            {data.companyIntervalStr
+              ? t("companySchedule", { company, schedule: summary(data.companyIntervalStr) })
+              : t("noCompanySchedule", { company })}
+          </p>
+          <CardLink href={companySchedulesHref}>{t("changeCompany", { company })}</CardLink>
+        </div>
       ) : (
-        <div className="flex flex-col gap-5">
-          <SettingSwitch
-            label={t("overrideLabel")}
-            description={t("overrideDescription", { company: website.companyName ?? "" })}
-            checked={overriding}
-            onChange={touched(setOverriding)}
-          />
-
-          {overriding ? (
-            <div className="flex flex-col gap-5 border-t border-border-dim pt-5">
-              <SettingSwitch
-                label={t("collectionLabel")}
-                description={t("collectionDescription")}
-                checked={collecting}
-                onChange={touched(setCollecting)}
-              />
-              {collecting ? <SeoScheduleFields draft={draft} onChange={touched(setDraft)} /> : null}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-2 border-t border-border-dim pt-4">
-            <p className="text-[13px] text-foreground">{summary()}</p>
-            <p className="text-[12px] text-muted">{t("competitorsFollow")}</p>
-            <p className="text-[12px] text-muted">{t("askedLive")}</p>
-            <Link
-              href={marketHref}
-              className="flex w-fit items-center gap-1.5 text-[12px] text-secondary transition-colors hover:text-foreground"
-            >
-              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("placeOnMarket")}
-            </Link>
-          </div>
-
-          <SaveError>{error}</SaveError>
-
-          <div className="flex justify-end border-t border-border-dim pt-4">
-            <SaveAction
-              onClick={handleSave}
-              isSaving={action.isBusy()}
-              label={tCommon("save")}
-              savingLabel={tCommon("saving")}
-              successLabel={t("saved")}
-              showSuccess={saved}
-            />
-          </div>
+        <div className="border-t border-border-dim pt-5">
+          <SeoScheduleFields draft={draft} onChange={touched(setDraft)} />
         </div>
       )}
+    </>
+  );
+
+  const pairHost = (ownSites ?? []).find((site) => site.companyWebsiteId === pair)?.displayHost ?? rankings.pairedWith?.displayHost ?? "";
+  const next = !data.companyOn
+    ? t("nothingWhileOff", { host, company })
+    : rankings.nextRunAt
+      ? t("next", { when: formatDateTime(rankings.nextRunAt, { options: { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" } }) })
+      : t("notScheduled", { host });
+
+  return (
+    <SettingsCard title={t("title")}>
+      <div className="flex flex-col">
+        {data.companyOn ? null : (
+          <div className="flex flex-col gap-2 pb-2">
+            <Notice tone="warning">{t("companyOff", { company })}</Notice>
+            <CardLink href={companySchedulesHref}>{t("openCompany", { company })}</CardLink>
+          </div>
+        )}
+
+        {data.owned ? choice : (
+          <>
+            <SettingRow label={t("pairLabel")} description={t("pairDescription")}>
+              <Select
+                value={pair}
+                onChange={touched(setPair)}
+                disabled={ownSites === undefined}
+                aria-label={t("pairLabel")}
+              >
+                {(ownSites ?? []).map((site) => (
+                  <option key={site.companyWebsiteId} value={site.companyWebsiteId}>{site.displayHost}</option>
+                ))}
+                <option value={UNPAIRED}>{t("notPaired")}</option>
+              </Select>
+            </SettingRow>
+            {paired ? (
+              <div className="flex flex-col gap-3 border-t border-border-dim pt-5">
+                <p className="text-[13px] text-foreground">
+                  {pair === storedPair && rankings.intervalStr
+                    ? t("collectedWith", { host: pairHost, schedule: summary(rankings.intervalStr) })
+                    : t("collectedWithOnSave", { host: pairHost })}
+                </p>
+                <CardLink href={siteSchedulesHref(pair as Id<"companyWebsites">)}>{t("changePair", { host: pairHost })}</CardLink>
+              </div>
+            ) : choice}
+          </>
+        )}
+
+        <div className="mt-2 flex flex-col gap-2 border-t border-border-dim pt-4">
+          <p className="text-[13px] text-foreground">{next}</p>
+          {data.owned ? <p className="text-[12px] text-muted">{t("competitorsFollow")}</p> : null}
+          <Link
+            href={marketHref}
+            className="flex w-fit items-center gap-1.5 text-[12px] text-secondary transition-colors hover:text-foreground"
+          >
+            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("placeOnMarket")}
+          </Link>
+        </div>
+
+        <SaveError>{error}</SaveError>
+
+        <div className="mt-2 flex justify-end border-t border-border-dim pt-4">
+          <SaveAction
+            onClick={handleSave}
+            isSaving={action.isBusy()}
+            label={tCommon("save")}
+            savingLabel={tCommon("saving")}
+            successLabel={t("saved")}
+            showSuccess={saved}
+          />
+        </div>
+      </div>
     </SettingsCard>
   );
 }

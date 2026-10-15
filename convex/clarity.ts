@@ -19,6 +19,8 @@ import { shiftDay } from "./utils/insightFacts";
  */
 
 const EXPORT_URL = "https://www.clarity.ms/export-data/api/v1/project-live-insights";
+/** When each connected website's morning is asked (`crons.ts`, "clarity-morning"); a website's Schedules page shows it. */
+export const CLARITY_MORNING_UTC = { hourUTC: 4, minuteUTC: 50 } as const;
 /**
  * Days of a website's figures kept: 13 months (Anthony, 2026-10-12, "13 is good"),
  * enough to set a month against the same month a year before — the counting check's
@@ -182,11 +184,13 @@ export const disconnectClarity = tenantMutation({
   },
 });
 
-/** Each connected website, for the morning's asks. */
+/** Each connected website, for the morning's asks: not one switched off on its Schedules page (website-schedules-plan.md, WS4). */
 export const connectedWebsites = internalQuery({
   args: {},
   returns: v.array(v.id("companyWebsites")),
-  handler: async (ctx) => (await ctx.db.query("clarityConnections").withIndex("by_status", (q) => q.eq("status", "CONNECTED")).take(500)).map((row) => row.companyWebsiteId),
+  handler: async (ctx) => (await ctx.db.query("clarityConnections").withIndex("by_status", (q) => q.eq("status", "CONNECTED")).take(500))
+    .filter((row) => !row.switchedOff)
+    .map((row) => row.companyWebsiteId),
 });
 
 export const tokenOf = internalQuery({
@@ -194,7 +198,8 @@ export const tokenOf = internalQuery({
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, args) => {
     const row = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
-    return row?.status === "CONNECTED" && row.tokenCiphertext ? row.tokenCiphertext : null;
+    // Switched off, a website is asked nothing, whoever starts its morning.
+    return row?.status === "CONNECTED" && !row.switchedOff && row.tokenCiphertext ? row.tokenCiphertext : null;
   },
 });
 

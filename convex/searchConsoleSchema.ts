@@ -194,6 +194,8 @@ export const searchConsoleTables = {
     companyWebsiteId: v.id("companyWebsites"),
     websiteId: v.id("websites"),
     status: connectionStatusValidator,
+    /** Switched off on the website's Schedules page (docs/plans/active/website-schedules-plan.md, WS4): kept connected with everything held, and not collected until switched on again. */
+    switchedOff: v.optional(v.boolean()),
     /** A sign-in under way: its single-use state, when it began and who began it. */
     pendingState: v.optional(v.string()),
     pendingAt: v.optional(v.number()),
