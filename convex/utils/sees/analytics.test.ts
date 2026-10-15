@@ -17,6 +17,8 @@ import {
   pageSees,
   pathOfAddress,
   trackingHealthSees,
+  trackingCheckSees,
+  HEALTH_CHECKS_WITH_STEPS,
   websitesSees,
   type BeforeFacts,
   type ListRowFacts,
@@ -576,6 +578,43 @@ describe("10 · Tracking health", () => {
       ],
     });
     worded("trackingHealth", box);
+  });
+});
+
+describe("10 · A tracking health check's own screen (ga-tracking-health-plan.md TH2)", () => {
+  test("ronins.co.uk's conversions that never happen: what it found, why it matters, and three steps", () => {
+    const box = trackingCheckSees({ check: "NEVER_HAPPENS", passing: false, names: ["live_chat_event", "phone_number_click", "email_link_click"], count: 90 }, "ronins.co.uk");
+    expect(box).toEqual({
+      says: [
+        { code: "check.NEVER_HAPPENS", a: 90, b: 90, text: "live_chat_event,phone_number_click,email_link_click", c: 3 },
+        { code: "why.NEVER_HAPPENS" },
+      ],
+      steps: [
+        // Try each one on the website itself, look for it in Google Analytics, then check Conversions.
+        { code: "step.NEVER_HAPPENS.s1", text: "live_chat_event,phone_number_click,email_link_click", c: 3, link: "yourWebsite", to: { url: "https://ronins.co.uk/" } },
+        { code: "step.NEVER_HAPPENS.s2", text: "live_chat_event,phone_number_click,email_link_click", c: 3, link: "googleAnalytics", to: { url: "https://analytics.google.com/" } },
+        { code: "step.NEVER_HAPPENS.s3", text: "live_chat_event,phone_number_click,email_link_click", c: 3, link: "conversions", to: { segment: "conversions" } },
+      ],
+    });
+    worded("trackingHealth", box);
+  });
+
+  test("every check has its steps and its words, failing or passing; an unknown check says nothing", () => {
+    // Every check Tracking health runs has a screen of its own: one added without its steps fails here.
+    expect([...HEALTH_CHECKS_WITH_STEPS].sort()).toEqual([...HEALTH_CHECKS].sort());
+    const events = new Set(["NO_VALUE", "SOMETHING_ELSE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
+    for (const check of HEALTH_CHECKS) {
+      const box = trackingCheckSees({ check, passing: false, names: events.has(check) ? ["click_email"] : ["visits"], others: ["click"], count: 3, share: 0.2 }, "acme-shop.test");
+      expect(box.says.map((phrase) => phrase.code)).toEqual([expect.stringMatching(new RegExp(`^check\\.${check}`)), `why.${check}`]);
+      expect(box.steps.length).toBeGreaterThan(0);
+      expect(box.steps.map((step) => step.code)).toEqual(box.steps.map((_, at) => `step.${check}.s${at + 1}`));
+      worded("trackingHealth", box);
+      const passing = trackingCheckSees({ check, passing: true }, "acme-shop.test");
+      expect(passing).toEqual({ says: [{ code: `passing.${check}` }], steps: [] });
+      worded("trackingHealth", passing);
+    }
+    expect(trackingCheckSees({ check: "NOT_A_CHECK", passing: false }, "acme-shop.test")).toEqual({ says: [], steps: [] });
+    expect(trackingCheckSees(null, "acme-shop.test")).toEqual({ says: [], steps: [] });
   });
 });
 

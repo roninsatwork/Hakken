@@ -651,6 +651,52 @@ export function trackingHealthSees(health: { checks: readonly Check[] } | null):
   );
 }
 
+/** Google Analytics itself, where most fixes are made. */
+const GOOGLE_ANALYTICS: SeenTarget = { url: "https://analytics.google.com/" };
+const theWebsite = (host: string): SeenTarget => ({ url: `https://${host}/` });
+
+/**
+ * Where each step of a check's fix is done (ga-tracking-health-plan.md TH2),
+ * in the order of its steps' words (`step.<check>.s1`, `s2`, …): a page of
+ * this section, the website itself, or Google Analytics.
+ */
+const CHECK_STEPS: Record<string, (host: string) => Array<{ link: string; to: SeenTarget }>> = {
+  TRACKING_STOPPED: (host) => [{ link: "yourWebsite", to: theWebsite(host) }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }],
+  NOTHING_COUNTED: () => [{ link: "chooseWhatCounts", to: CHOOSE }],
+  SOMETHING_ELSE: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "conversions", to: toPage("conversions") }],
+  TOO_MUCH_UNKNOWN: () => [{ link: "campaigns", to: toPage("campaigns") }, { link: "landingPages", to: toPage("funnel") }],
+  ENQUIRY_UNCOUNTED: () => [{ link: "chooseWhatCounts", to: CHOOSE }],
+  NEVER_HAPPENS: (host) => [
+    { link: "yourWebsite", to: theWebsite(host) }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "conversions", to: toPage("conversions") },
+  ],
+  SUDDEN_FALL: (host) => [{ link: "yourWebsite", to: theWebsite(host) }, { link: "conversions", to: toPage("conversions") }],
+  NO_VALUE: () => [{ link: "changeWhatCounts", to: CHOOSE }],
+  PAYMENT_REFERRALS: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "referrals", to: toPage("channels/channel", { key: "Referral" }) }],
+  SELF_REFERRAL: (host) => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "yourWebsite", to: theWebsite(host) }],
+  STRANGERS: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }],
+  COUNTED_AGAIN: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "allPages", to: toPage("all-pages") }],
+};
+
+/** The checks a check's own screen knows, each with its steps. */
+export const HEALTH_CHECKS_WITH_STEPS = Object.keys(CHECK_STEPS);
+
+/**
+ * A check's own screen (ga-tracking-health-plan.md TH2): what it found and
+ * why that matters, then its fix as numbered steps, each with where it is
+ * done; a passing check says so in a sentence.
+ */
+export function trackingCheckSees(check: Check | null, host: string): Seen {
+  if (!check || !CHECK_STEPS[check.check]) return seen([]);
+  if (check.passing) return seen([{ code: `passing.${check.check}` }]);
+  const found = checkSays(check);
+  // The steps that name its events say them as its sentence does.
+  const named = found.text !== undefined ? { text: found.text, ...(found.c !== undefined ? { c: found.c } : {}) } : {};
+  return seen(
+    [found, { code: `why.${check.check}` }],
+    CHECK_STEPS[check.check](host).map((step, at): SeenStep => ({ code: `step.${check.check}.s${at + 1}`, ...named, ...step })),
+  );
+}
+
 type CountedEvent = { eventName: string; counted: boolean; analyticsValue: number | null; hakkenValue: number | null; lastThirtyDays: number };
 
 /** Connection: whether it is collecting, what counts and what each is worth, and the kinds that never happen. */

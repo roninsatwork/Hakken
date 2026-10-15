@@ -12,6 +12,7 @@ import AnalyticsLandingPagesPage from "./[siteId]/funnel/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
+import AnalyticsTrackingCheckPage from "./[siteId]/tracking-health/check/page";
 import AnalyticsConnectionPage from "./[siteId]/connection/page";
 
 /**
@@ -166,7 +167,20 @@ describe("Google Analytics' approved looks", () => {
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS });
     const { container } = render(<AnalyticsTrackingHealthPage />);
     await screen.findByText("Every conversion has a value");
-    await expectApprovedLook(container, PLAN, "TrackingHealth", "Google Analytics → Tracking health");
+    // Option 1 of its canvas, "The checklist" (ga-tracking-health-plan.md TH1, chosen 2026-10-15).
+    await expectApprovedLook(container, "ga-tracking-health", "Checklist", "Google Analytics → Tracking health");
+  });
+
+  it("9 · a tracking health check's own screen: what it found, why, the steps, and the conversions it names (TH2)", async () => {
+    at("/app/analytics/site_1/tracking-health/check", "key=NEVER_HAPPENS");
+    answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({
+        health: { checkedAt: Date.parse("2026-10-15T02:22:00Z"), checks: [{ check: "NEVER_HAPPENS", passing: false, names: ["click_tel", "click_email"], count: 90 }] },
+      }),
+    });
+    const { container } = render(<AnalyticsTrackingCheckPage />);
+    await screen.findByText(/In Google Analytics, open Reports, then Realtime, and check each one arrives\./);
+    await expectApprovedLook(container, "ga-tracking-health", "Check", "Google Analytics → a tracking health check");
   });
 
   it("9 · Tracking health: what each conversion really is, as ronins.co.uk was before 2026-10-13", async () => {
@@ -192,14 +206,18 @@ describe("Google Analytics' approved looks", () => {
     });
     render(<AnalyticsTrackingHealthPage />);
     await screen.findByText("Each conversion is what it says");
-    expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
-      "What Hakken sees", "Each conversion is what it says", "Every enquiry is counted", "Every conversion happens", "Only this website is in the property",
+    // One line a check, those that need a look first, the costliest first.
+    expect(screen.getAllByRole("row").slice(1).map((row) => row.querySelector("td")?.textContent)).toEqual([
+      "Each conversion is what it says", "Every enquiry is counted", "Every conversion happens", "Only this website is in the property",
     ]);
-    screen.getByText(/matches Clicked a link to another website on each of the last 7 days either happened, so it is counting that, not enquiries\./);
-    screen.getByText(/happened 179 times in the last 12 months, but nothing counts it as a conversion\./);
-    screen.getByText(/haven't happened once in the last 90 days\./);
-    // A key event already: chosen here, with the button to do it.
-    screen.getByText(/^choose it on the Connection page: Hakken counts it from Google.s own figures, for the whole year\.$/);
+    screen.getByText("Form sent is really Clicked a link to another website.");
+    screen.getByText("Contact isn't counted.");
+    // Its own screen says how to fix it, with the button to do it: a key event already, so it is only to be chosen.
+    cleanup();
+    at("/app/analytics/site_1/tracking-health/check", "key=ENQUIRY_UNCOUNTED");
+    render(<AnalyticsTrackingCheckPage />);
+    await screen.findByText(/Choose “Contact” on the Connection page: they are then counted from Google.s own figures, for the whole year\./);
+    screen.getByText(/happened 179 times in 12 months but isn.t counted/);
     expect(screen.getAllByRole("button", { name: "Choose what counts" })).toHaveLength(1);
   });
 

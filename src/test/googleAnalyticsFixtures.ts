@@ -56,6 +56,8 @@ export const CONNECTION = {
       { check: "STRANGERS" as const, passing: false, names: ["staging.acme-shop.test"], count: 61 },
     ],
   } as { checkedAt: number; checks: Array<{ check: string; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number }> } | null,
+  /** Visits on each of the property's addresses over the last 30 days (ga-tracking-health-plan.md TH2). */
+  hostVisits: [{ host: "www.acme-shop.test", visits: 2_400 }, { host: "staging.acme-shop.test", visits: 61 }] as Array<{ host: string; visits: number }> | null,
 };
 
 export const STATUS = {

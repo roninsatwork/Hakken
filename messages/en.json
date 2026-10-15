@@ -16813,6 +16813,57 @@
       "passingCount": "{count, plural, =1 {1 check passing} other {# checks passing}}",
       "show": "Show",
       "hide": "Hide",
+      "figures": {
+        "passing": "Checks passing",
+        "passingValue": "{passing} of {total}",
+        "needLook": "{count, plural, =1 {One needs a look} other {# need a look}}",
+        "allPass": "All pass",
+        "unknown": "Visits {platformName} can't credit",
+        "unknownLine": "no channel or no landing page",
+        "never": "Conversions that never happen",
+        "neverLine": "{days, plural, =365 {not once in 12 months} other {not once in the last # days}}",
+        "neverNone": "each one happened recently",
+        "strangers": "Visits on other addresses",
+        "strangersLine": "left out of every figure",
+        "strangersNone": "only this website sends visits"
+      },
+      "table": {
+        "bar": "Needs a look first · click a check for what to do",
+        "check": "Check",
+        "status": "Status",
+        "found": "What {platformName} found",
+        "affects": "It affects",
+        "download": "Download CSV",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "screen": {
+        "back": "Tracking health",
+        "description": "{about} Checked every week; last checked {when}.",
+        "unknown": "This isn't one of the checks {platformName} runs.",
+        "events": {
+          "title": "The conversions it names",
+          "note": "Each by its own name and Google's.",
+          "event": "Conversion",
+          "google": "Google's name",
+          "found": "What {platformName} found",
+          "NEVER_HAPPENS": "Never happened",
+          "ENQUIRY_UNCOUNTED": "Not counted",
+          "NO_VALUE": "No value",
+          "SOMETHING_ELSE": "Matches {other}"
+        },
+        "addresses": {
+          "title": "The addresses",
+          "note": "Each address the check found.",
+          "address": "Address",
+          "visits": "Visits, last 30 days"
+        },
+        "pages": {
+          "title": "The pages",
+          "note": "The pages Google Analytics counts more than once a visit.",
+          "page": "Page"
+        }
+      },
       "checks": {
         "NOTHING_COUNTED": {
           "title": "Something counts as a conversion",
@@ -16820,7 +16871,9 @@
           "failing": "Nothing counts as a conversion on {host} yet.",
           "why": "Without conversions, no page or channel can be weighed by what it brings in.",
           "fix": "tick the events that are a conversion on the Connection page.",
-          "short": "Nothing counts as a conversion yet."
+          "short": "Nothing counts as a conversion yet.",
+          "about": "Whether anything counts as a conversion.",
+          "affects": "Conversions"
         },
         "NO_VALUE": {
           "title": "Every conversion has a value",
@@ -16828,7 +16881,9 @@
           "failing": "{names} has no value in Google Analytics or in {platformName}, so its {count} conversions add nothing to Value.",
           "why": "Value is how one page or channel is weighed against another; a conversion with no value counts for nothing there.",
           "fix": "give it a value here, or in Google Analytics.",
-          "short": "{names} has no value."
+          "short": "{names} has no value.",
+          "about": "Whether every conversion counted has a value.",
+          "affects": "Value"
         },
         "TRACKING_STOPPED": {
           "title": "Tracking hasn't stopped",
@@ -16836,7 +16891,9 @@
           "failing": "No visits were recorded on {names}, after weeks of steady ones.",
           "why": "When the tracking tag comes off a website, every figure here stops with it.",
           "fix": "check the Google Analytics tag is still on every page — a new theme, a cookie banner or a tag manager change is the usual cause.",
-          "short": "A day went by with no visits."
+          "short": "A day went by with no visits.",
+          "about": "Whether visits are recorded every day, as they were.",
+          "affects": "Every figure"
         },
         "SUDDEN_FALL": {
           "title": "No sudden fall",
@@ -16844,7 +16901,9 @@
           "failing": "The last week's {measure} were {share} under the four weeks before.",
           "why": "A fall this sudden is usually tracking breaking, not real visitors leaving.",
           "fix": "check the tag is on every page and the conversions still fire; if both are fine, the fall is real.",
-          "short": "The last week's {measure} fell {share}."
+          "short": "The last week's {measure} fell {share}.",
+          "about": "Whether the last week's visits or conversions fell sharply against the four weeks before.",
+          "affects": "Every figure"
         },
         "SELF_REFERRAL": {
           "title": "The website isn't its own referral",
@@ -16852,7 +16911,9 @@
           "failing": "{count} visits came from {names} — the website's own address — as referrals.",
           "why": "A redirect or a second domain breaks each visit in two, and the second half loses where it came from.",
           "fix": "add the address to Google Analytics' list of unwanted referrals, and keep the tag the same on every domain.",
-          "short": "Its own address shows as a referral."
+          "short": "Its own address shows as a referral.",
+          "about": "Whether the website shows up as its own referral.",
+          "affects": "Channels"
         },
         "PAYMENT_REFERRALS": {
           "title": "Payment pages don't take the credit",
@@ -16860,7 +16921,9 @@
           "failing": "{names} sent {count} visits as referrals: the shoppers coming back from paying.",
           "why": "The payment page takes the credit for the sale, and the channel that really brought the shopper loses it.",
           "fix": "add the payment pages to Google Analytics' list of unwanted referrals.",
-          "short": "Payment pages take the credit for sales."
+          "short": "Payment pages take the credit for sales.",
+          "about": "Whether payment pages show up as referrals and take the credit for sales.",
+          "affects": "Channels, sales"
         },
         "TOO_MUCH_UNKNOWN": {
           "title": "Little is unknown",
@@ -16868,7 +16931,9 @@
           "failing": "{share} of visits have no channel (Unassigned) or no landing page ((not set)).",
           "why": "Visits with no channel or page can't be credited to anything, so the rest look smaller than they are.",
           "fix": "check campaign links carry their tags, and that the tag loads before anything redirects.",
-          "short": "{share} of visits are of unknown origin."
+          "short": "{share} of visits are of unknown origin.",
+          "about": "Whether nearly every visit has a channel and a landing page.",
+          "affects": "Channels, landing pages"
         },
         "STRANGERS": {
           "title": "Only this website is in the property",
@@ -16876,7 +16941,9 @@
           "failing": "{count} visits in the last 30 days were recorded on {names}. {platformName} leaves them out of these figures.",
           "why": "a staging site or spam in the same property swells Google Analytics' own reports and can hide what real visitors do.",
           "fix": "stop the other address sending to Google Analytics — take the tracking tag off it, or give it a property of its own.",
-          "short": "{count} visits were recorded on {names}."
+          "short": "{count} visits were recorded on {addresses, plural, =1 {{first}} other {# other addresses, such as {first}}}.",
+          "about": "Whether only this website sends visits to its Google Analytics property.",
+          "affects": "Google Analytics' own reports"
         },
         "COUNTED_AGAIN": {
           "title": "Each page counted once a visit",
@@ -16884,7 +16951,9 @@
           "failing": "Google Analytics counts {count, plural, one {one page} other {# pages}} 1.5 times or more a visit, such as {names}: pages a visit and bounce rate read better than they are.",
           "why": "a page counted again each time someone clicks one of its contents links makes visits look deeper than they are, and hides how many people leave after one page.",
           "fix": "in Google Analytics, open Admin, Data streams, your website, Enhanced measurement, Page views, and untick “Page changes based on browser history events”; or have the website's contents links move down the page without changing its address.",
-          "short": "{count, plural, one {One page is} other {# pages are}} counted more than once a visit, such as {names}."
+          "short": "{count, plural, one {One page is} other {# pages are}} counted more than once a visit, such as {names}.",
+          "about": "Whether Google Analytics counts each page once a visit.",
+          "affects": "Pages a visit, bounce rate"
         },
         "SOMETHING_ELSE": {
           "title": "Each conversion is what it says",
@@ -16892,7 +16961,9 @@
           "failing": "{names} matches {others} on each of the last {count} days either happened, so it is counting that, not enquiries.",
           "why": "Every conversion, and its value, is counting something that is never an enquiry, so pages and channels are weighed by the wrong thing.",
           "fix": "the conversion is built from the wrong event. In Google Analytics, open Admin, Events, Custom configurations, Customised events, and rebuild it from the real enquiry; if a tag manager sends it, fix the trigger it fires on.",
-          "short": "{names} is really {others}."
+          "short": "{names} is really {others}.",
+          "about": "Whether each conversion counts an enquiry, not something that happens beside it day for day.",
+          "affects": "Conversions, value"
         },
         "ENQUIRY_UNCOUNTED": {
           "title": "Every enquiry is counted",
@@ -16900,7 +16971,9 @@
           "failing": "{names} happened {count} times in the last 12 months, but nothing counts {kinds, plural, one {it} other {them}} as a conversion.",
           "why": "Enquiries left uncounted are missing from conversions and value, so the pages and channels that brought them look worse than they are.",
           "fix": "choose {kinds, plural, one {it} other {them}} on the Connection page: {platformName} counts {kinds, plural, one {it} other {them}} from Google's own figures, for the whole year.",
-          "short": "{names} isn't counted."
+          "short": "{names} isn't counted.",
+          "about": "Whether every event that reads as an enquiry counts as a conversion.",
+          "affects": "Conversions"
         },
         "NEVER_HAPPENS": {
           "title": "Every conversion happens",
@@ -16908,7 +16981,9 @@
           "failing": "{names} {kinds, plural, one {hasn't} other {haven't}} happened once in {days, plural, =365 {12 months} other {the last # days}}.",
           "why": "A conversion that never fires hides every enquiry made that way: the people who called, emailed or chatted are missing from every figure.",
           "fix": "try it yourself as a visitor, in a private window, and look for it in Google Analytics' Realtime report. If it doesn't arrive, the tag that sends it is missing or broken.",
-          "short": "{names} never {kinds, plural, one {happens} other {happen}}."
+          "short": "{names} never {kinds, plural, one {happens} other {happen}}.",
+          "about": "Whether each conversion counted has happened recently.",
+          "affects": "Conversions"
         }
       }
     },
@@ -17245,6 +17320,81 @@
         "checkBrowser": "Send your contact form on {text} and check it arrives."
       },
       "trackingHealth": {
+        "why": {
+          "NOTHING_COUNTED": "Without conversions, no page or channel can be weighed by what it brings in.",
+          "NO_VALUE": "Value is how one page or channel is weighed against another; a conversion with no value counts for nothing there.",
+          "TRACKING_STOPPED": "When the tracking tag comes off a website, every figure here stops with it.",
+          "SUDDEN_FALL": "A fall this sudden is usually tracking breaking, not real visitors leaving.",
+          "SELF_REFERRAL": "A redirect or a second domain breaks each visit in two, and the second half loses where it came from.",
+          "PAYMENT_REFERRALS": "The payment page takes the credit for the sale, and the channel that really brought the shopper loses it.",
+          "TOO_MUCH_UNKNOWN": "Visits with no channel or page can't be credited to anything, so the rest look smaller than they are.",
+          "STRANGERS": "A staging site or spam in the same property swells Google Analytics' own reports and can hide what real visitors do.",
+          "COUNTED_AGAIN": "A page counted again each time someone clicks one of its contents links makes visits look deeper than they are, and hides how many people leave after one page.",
+          "SOMETHING_ELSE": "Every conversion, and its value, is counting something that is never an enquiry, so pages and channels are weighed by the wrong thing.",
+          "ENQUIRY_UNCOUNTED": "Enquiries left uncounted are missing from conversions and value, so the pages and channels that brought them look worse than they are.",
+          "NEVER_HAPPENS": "A conversion that never fires hides every enquiry made that way: the people who called, emailed or chatted are missing from every figure."
+        },
+        "passing": {
+          "NOTHING_COUNTED": "Conversions are being counted.",
+          "NO_VALUE": "Every conversion counted has a value.",
+          "TRACKING_STOPPED": "Visits are being recorded every day.",
+          "SUDDEN_FALL": "No week fell sharply against the four weeks before.",
+          "SELF_REFERRAL": "The website doesn't send visits to itself.",
+          "PAYMENT_REFERRALS": "No payment page shows as a referral.",
+          "TOO_MUCH_UNKNOWN": "Nearly every visit has a channel and a landing page.",
+          "STRANGERS": "No other address sends visits to this property.",
+          "COUNTED_AGAIN": "No page is counted more than once a visit.",
+          "SOMETHING_ELSE": "No conversion matches another kind of event day for day.",
+          "ENQUIRY_UNCOUNTED": "No event that reads as an enquiry goes uncounted.",
+          "NEVER_HAPPENS": "Every conversion counted has happened recently."
+        },
+        "step": {
+          "NOTHING_COUNTED": {
+            "s1": "Tick the events that are a conversion on the Connection page."
+          },
+          "NO_VALUE": {
+            "s1": "Say what {event} {countC, plural, =1 {is} other {are}} worth on the Connection page, or give {countC, plural, =1 {it} other {them}} a value in Google Analytics."
+          },
+          "TRACKING_STOPPED": {
+            "s1": "Open the website and check the Google Analytics tag is still on every page: a new theme, a cookie banner or a tag manager change is the usual cause.",
+            "s2": "Open Google Analytics' Realtime report while you visit the website, and check your visit arrives."
+          },
+          "SUDDEN_FALL": {
+            "s1": "Check the tracking tag is still on every page of the website.",
+            "s2": "Send your contact form yourself and check Conversions counts it. If both are fine, the fall is real."
+          },
+          "SELF_REFERRAL": {
+            "s1": "In Google Analytics, open Admin, Data streams, your website, Configure tag settings, then List unwanted referrals, and add the website's own address.",
+            "s2": "Keep the same tracking tag on every address the website uses."
+          },
+          "PAYMENT_REFERRALS": {
+            "s1": "In Google Analytics, open Admin, Data streams, your website, Configure tag settings, then List unwanted referrals, and add the payment pages.",
+            "s2": "A week later, check the payment pages have gone from the Referral channel."
+          },
+          "TOO_MUCH_UNKNOWN": {
+            "s1": "Check every campaign link carries its tags: utm_source, utm_medium and utm_campaign.",
+            "s2": "Make the tracking tag load before anything redirects, so every visit keeps its landing page."
+          },
+          "STRANGERS": {
+            "s1": "Take the tracking tag off the other addresses you own, or give each a Google Analytics property of its own. Addresses you don't own are spam, and stay out of these figures."
+          },
+          "COUNTED_AGAIN": {
+            "s1": "In Google Analytics, open Admin, Data streams, your website, Enhanced measurement, Page views, and untick “Page changes based on browser history events”.",
+            "s2": "Or have the website's contents links move down the page without changing its address."
+          },
+          "SOMETHING_ELSE": {
+            "s1": "In Google Analytics, open Admin, Events, then Custom configurations and Customised events, and rebuild the conversion from the real enquiry.",
+            "s2": "If a tag manager sends it, fix the trigger it fires on, then check Conversions a few days later."
+          },
+          "ENQUIRY_UNCOUNTED": {
+            "s1": "Choose {event} on the Connection page: they are then counted from Google's own figures, for the whole year."
+          },
+          "NEVER_HAPPENS": {
+            "s1": "Open the website in a private window and try each one yourself: {event}.",
+            "s2": "In Google Analytics, open Reports, then Realtime, and check each one arrives.",
+            "s3": "Any that doesn't arrive has a missing or broken tag: ask whoever built the website to fix it, then check Conversions a few days later."
+          }
+        },
         "allPassing": "All {a} checks pass: Google Analytics is counting this website properly.",
         "failing": "{count, plural, =1 {One} other {#}} of the {b} checks {count, plural, =1 {needs} other {need}} a look.",
         "check": {
@@ -17313,6 +17463,8 @@
         "checkSilent": "Tick {event} if {count, plural, =1 {it is an enquiry} other {they are enquiries}}, and have {count, plural, =1 {its} other {their}} tracking checked."
       },
       "links": {
+        "googleAnalytics": "Google Analytics",
+        "yourWebsite": "Your website",
         "overview": "Overview",
         "chooseWhatCounts": "Choose what counts",
         "changeWhatCounts": "Change what counts",

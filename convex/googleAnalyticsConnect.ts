@@ -742,6 +742,8 @@ export const statusConnectionValidator = v.object({
   attempt: v.union(v.null(), v.object({ outcome: analyticsAttemptValidator, account: orNull(v.string()), at: v.number() })),
   /** The tracking health checks' last results (§6). */
   health: v.union(v.null(), v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
+  /** Visits on each of the property's addresses over the last 30 days: the other addresses a check names (ga-tracking-health-plan.md TH2). */
+  hostVisits: v.union(v.null(), v.array(v.object({ host: v.string(), visits: v.number() }))),
   /** A shop, as its last 90 days' events say: the Products page shows only for one (§18.6.6). */
   shop: v.boolean(),
 });
@@ -837,5 +839,6 @@ async function asStatus(
       ? { outcome: connection.attempt.outcome, account: connection.attempt.account ?? null, at: connection.attempt.at }
       : null,
     health: connection.health ?? null,
+    hostVisits: connection.hostVisits ?? null,
   };
 }

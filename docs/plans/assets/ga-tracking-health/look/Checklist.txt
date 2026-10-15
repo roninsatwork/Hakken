@@ -1,0 +1,14 @@
+# Google Analytics → Tracking health — the approved look (board "Checklist" of docs/plans/assets/ga-tracking-health/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Tracking health
+settings-card: What Hakken sees
+figures
+  figure: Checks passing
+  figure: Visits Hakken can't credit
+  figure: Conversions that never happen
+  figure: Visits on other addresses
+table: Check | Status | What Hakken found | It affects
+  table-bar
+    download: Download CSV
+  table-footer

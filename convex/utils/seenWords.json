@@ -1106,6 +1106,81 @@
         "checkBrowser": "Send your contact form on {text} and check it arrives."
       },
       "trackingHealth": {
+        "why": {
+          "NOTHING_COUNTED": "Without conversions, no page or channel can be weighed by what it brings in.",
+          "NO_VALUE": "Value is how one page or channel is weighed against another; a conversion with no value counts for nothing there.",
+          "TRACKING_STOPPED": "When the tracking tag comes off a website, every figure here stops with it.",
+          "SUDDEN_FALL": "A fall this sudden is usually tracking breaking, not real visitors leaving.",
+          "SELF_REFERRAL": "A redirect or a second domain breaks each visit in two, and the second half loses where it came from.",
+          "PAYMENT_REFERRALS": "The payment page takes the credit for the sale, and the channel that really brought the shopper loses it.",
+          "TOO_MUCH_UNKNOWN": "Visits with no channel or page can't be credited to anything, so the rest look smaller than they are.",
+          "STRANGERS": "A staging site or spam in the same property swells Google Analytics' own reports and can hide what real visitors do.",
+          "COUNTED_AGAIN": "A page counted again each time someone clicks one of its contents links makes visits look deeper than they are, and hides how many people leave after one page.",
+          "SOMETHING_ELSE": "Every conversion, and its value, is counting something that is never an enquiry, so pages and channels are weighed by the wrong thing.",
+          "ENQUIRY_UNCOUNTED": "Enquiries left uncounted are missing from conversions and value, so the pages and channels that brought them look worse than they are.",
+          "NEVER_HAPPENS": "A conversion that never fires hides every enquiry made that way: the people who called, emailed or chatted are missing from every figure."
+        },
+        "passing": {
+          "NOTHING_COUNTED": "Conversions are being counted.",
+          "NO_VALUE": "Every conversion counted has a value.",
+          "TRACKING_STOPPED": "Visits are being recorded every day.",
+          "SUDDEN_FALL": "No week fell sharply against the four weeks before.",
+          "SELF_REFERRAL": "The website doesn't send visits to itself.",
+          "PAYMENT_REFERRALS": "No payment page shows as a referral.",
+          "TOO_MUCH_UNKNOWN": "Nearly every visit has a channel and a landing page.",
+          "STRANGERS": "No other address sends visits to this property.",
+          "COUNTED_AGAIN": "No page is counted more than once a visit.",
+          "SOMETHING_ELSE": "No conversion matches another kind of event day for day.",
+          "ENQUIRY_UNCOUNTED": "No event that reads as an enquiry goes uncounted.",
+          "NEVER_HAPPENS": "Every conversion counted has happened recently."
+        },
+        "step": {
+          "NOTHING_COUNTED": {
+            "s1": "Tick the events that are a conversion on the Connection page."
+          },
+          "NO_VALUE": {
+            "s1": "Say what {event} {countC, plural, =1 {is} other {are}} worth on the Connection page, or give {countC, plural, =1 {it} other {them}} a value in Google Analytics."
+          },
+          "TRACKING_STOPPED": {
+            "s1": "Open the website and check the Google Analytics tag is still on every page: a new theme, a cookie banner or a tag manager change is the usual cause.",
+            "s2": "Open Google Analytics' Realtime report while you visit the website, and check your visit arrives."
+          },
+          "SUDDEN_FALL": {
+            "s1": "Check the tracking tag is still on every page of the website.",
+            "s2": "Send your contact form yourself and check Conversions counts it. If both are fine, the fall is real."
+          },
+          "SELF_REFERRAL": {
+            "s1": "In Google Analytics, open Admin, Data streams, your website, Configure tag settings, then List unwanted referrals, and add the website's own address.",
+            "s2": "Keep the same tracking tag on every address the website uses."
+          },
+          "PAYMENT_REFERRALS": {
+            "s1": "In Google Analytics, open Admin, Data streams, your website, Configure tag settings, then List unwanted referrals, and add the payment pages.",
+            "s2": "A week later, check the payment pages have gone from the Referral channel."
+          },
+          "TOO_MUCH_UNKNOWN": {
+            "s1": "Check every campaign link carries its tags: utm_source, utm_medium and utm_campaign.",
+            "s2": "Make the tracking tag load before anything redirects, so every visit keeps its landing page."
+          },
+          "STRANGERS": {
+            "s1": "Take the tracking tag off the other addresses you own, or give each a Google Analytics property of its own. Addresses you don't own are spam, and stay out of these figures."
+          },
+          "COUNTED_AGAIN": {
+            "s1": "In Google Analytics, open Admin, Data streams, your website, Enhanced measurement, Page views, and untick “Page changes based on browser history events”.",
+            "s2": "Or have the website's contents links move down the page without changing its address."
+          },
+          "SOMETHING_ELSE": {
+            "s1": "In Google Analytics, open Admin, Events, then Custom configurations and Customised events, and rebuild the conversion from the real enquiry.",
+            "s2": "If a tag manager sends it, fix the trigger it fires on, then check Conversions a few days later."
+          },
+          "ENQUIRY_UNCOUNTED": {
+            "s1": "Choose {event} on the Connection page: they are then counted from Google's own figures, for the whole year."
+          },
+          "NEVER_HAPPENS": {
+            "s1": "Open the website in a private window and try each one yourself: {event}.",
+            "s2": "In Google Analytics, open Reports, then Realtime, and check each one arrives.",
+            "s3": "Any that doesn't arrive has a missing or broken tag: ask whoever built the website to fix it, then check Conversions a few days later."
+          }
+        },
         "allPassing": "All {a} checks pass: Google Analytics is counting this website properly.",
         "failing": "{count, plural, =1 {One} other {#}} of the {b} checks {count, plural, =1 {needs} other {need}} a look.",
         "check": {
@@ -1174,6 +1249,8 @@
         "checkSilent": "Tick {event} if {count, plural, =1 {it is an enquiry} other {they are enquiries}}, and have {count, plural, =1 {its} other {their}} tracking checked."
       },
       "links": {
+        "googleAnalytics": "Google Analytics",
+        "yourWebsite": "Your website",
         "overview": "Overview",
         "chooseWhatCounts": "Choose what counts",
         "changeWhatCounts": "Change what counts",
@@ -2516,6 +2593,81 @@
         "checkBrowser": "Invia il tuo modulo di contatto da {text} e controlla che arrivi."
       },
       "trackingHealth": {
+        "why": {
+          "NOTHING_COUNTED": "Senza conversioni, nessuna pagina o canale può essere pesato per ciò che porta.",
+          "NO_VALUE": "Il Valore è il modo in cui una pagina o un canale si pesa rispetto a un altro; una conversione senza valore lì non conta nulla.",
+          "TRACKING_STOPPED": "Quando il tag di tracciamento sparisce da un sito, ogni dato qui si ferma con lui.",
+          "SUDDEN_FALL": "Un calo così improvviso di solito è il tracciamento che si rompe, non visitatori veri che se ne vanno.",
+          "SELF_REFERRAL": "Un reindirizzamento o un secondo dominio spezza ogni visita in due, e la seconda metà perde da dove è arrivata.",
+          "PAYMENT_REFERRALS": "La pagina di pagamento si prende il merito della vendita, e il canale che ha davvero portato il cliente lo perde.",
+          "TOO_MUCH_UNKNOWN": "Le visite senza canale o pagina non si possono attribuire a nulla, quindi il resto sembra più piccolo di quanto è.",
+          "STRANGERS": "Un sito di prova o lo spam nella stessa proprietà gonfia i rapporti di Google Analytics e può nascondere cosa fanno i visitatori veri.",
+          "COUNTED_AGAIN": "Una pagina contata di nuovo ogni volta che qualcuno clicca un link del suo indice fa sembrare le visite più profonde di quanto siano, e nasconde quante persone se ne vanno dopo una pagina.",
+          "SOMETHING_ELSE": "Ogni conversione, e il suo valore, conta qualcosa che non è mai una richiesta, quindi pagine e canali vengono pesati sulla cosa sbagliata.",
+          "ENQUIRY_UNCOUNTED": "Le richieste non contate mancano da conversioni e valore, quindi le pagine e i canali che le hanno portate sembrano peggiori di quanto siano.",
+          "NEVER_HAPPENS": "Una conversione che non scatta mai nasconde ogni richiesta fatta in quel modo: chi ha chiamato, scritto o chattato manca da ogni dato."
+        },
+        "passing": {
+          "NOTHING_COUNTED": "Le conversioni vengono contate.",
+          "NO_VALUE": "Ogni conversione contata ha un valore.",
+          "TRACKING_STOPPED": "Le visite vengono registrate ogni giorno.",
+          "SUDDEN_FALL": "Nessuna settimana è calata di colpo rispetto alle quattro precedenti.",
+          "SELF_REFERRAL": "Il sito non manda visite a sé stesso.",
+          "PAYMENT_REFERRALS": "Nessuna pagina di pagamento appare come referral.",
+          "TOO_MUCH_UNKNOWN": "Quasi ogni visita ha un canale e una pagina di destinazione.",
+          "STRANGERS": "Nessun altro indirizzo manda visite a questa proprietà.",
+          "COUNTED_AGAIN": "Nessuna pagina è contata più di una volta a visita.",
+          "SOMETHING_ELSE": "Nessuna conversione coincide giorno per giorno con un altro tipo di evento.",
+          "ENQUIRY_UNCOUNTED": "Nessun evento che sembra una richiesta resta escluso dal conteggio.",
+          "NEVER_HAPPENS": "Ogni conversione contata è avvenuta di recente."
+        },
+        "step": {
+          "NOTHING_COUNTED": {
+            "s1": "Spunta gli eventi che sono una conversione nella pagina Connessione."
+          },
+          "NO_VALUE": {
+            "s1": "Indica quanto {countC, plural, =1 {vale} other {valgono}} {event} nella pagina Connessione, oppure {countC, plural, =1 {dagli} other {dai loro}} un valore in Google Analytics."
+          },
+          "TRACKING_STOPPED": {
+            "s1": "Apri il sito e controlla che il tag di Google Analytics sia ancora su ogni pagina: di solito la causa è un nuovo tema, un banner dei cookie o una modifica al tag manager.",
+            "s2": "Apri il rapporto In tempo reale di Google Analytics mentre visiti il sito, e controlla che la tua visita arrivi."
+          },
+          "SUDDEN_FALL": {
+            "s1": "Controlla che il tag di tracciamento sia ancora su ogni pagina del sito.",
+            "s2": "Invia tu stesso il modulo di contatto e controlla che Conversioni lo conti. Se entrambi vanno bene, il calo è reale."
+          },
+          "SELF_REFERRAL": {
+            "s1": "In Google Analytics, apri Amministrazione, Stream di dati, il tuo sito, Configura le impostazioni del tag, poi Elenca i referral indesiderati, e aggiungi l'indirizzo del sito stesso.",
+            "s2": "Tieni lo stesso tag di tracciamento su ogni indirizzo che il sito usa."
+          },
+          "PAYMENT_REFERRALS": {
+            "s1": "In Google Analytics, apri Amministrazione, Stream di dati, il tuo sito, Configura le impostazioni del tag, poi Elenca i referral indesiderati, e aggiungi le pagine di pagamento.",
+            "s2": "Dopo una settimana, controlla che le pagine di pagamento siano sparite dal canale Referral."
+          },
+          "TOO_MUCH_UNKNOWN": {
+            "s1": "Controlla che ogni link di campagna porti i suoi parametri: utm_source, utm_medium e utm_campaign.",
+            "s2": "Fai caricare il tag di tracciamento prima di qualsiasi reindirizzamento, così ogni visita conserva la sua pagina di destinazione."
+          },
+          "STRANGERS": {
+            "s1": "Togli il tag di tracciamento dagli altri indirizzi che possiedi, o dai a ciascuno una proprietà Google Analytics sua. Gli indirizzi che non possiedi sono spam, e restano fuori da questi dati."
+          },
+          "COUNTED_AGAIN": {
+            "s1": "In Google Analytics, apri Amministrazione, Stream di dati, il tuo sito, Misurazione avanzata, Visualizzazioni di pagina, e togli la spunta da “Modifiche della pagina basate su eventi della cronologia del browser”.",
+            "s2": "Oppure fai sì che i link dell'indice del sito scorrano la pagina senza cambiarne l'indirizzo."
+          },
+          "SOMETHING_ELSE": {
+            "s1": "In Google Analytics, apri Amministrazione, Eventi, poi Configurazioni personalizzate ed Eventi personalizzati, e ricostruisci la conversione dalla richiesta vera.",
+            "s2": "Se la invia un tag manager, correggi l'attivatore su cui scatta, poi ricontrolla Conversioni dopo qualche giorno."
+          },
+          "ENQUIRY_UNCOUNTED": {
+            "s1": "Scegli {event} nella pagina Connessione: vengono poi contati dai dati di Google stessi, per tutto l'anno."
+          },
+          "NEVER_HAPPENS": {
+            "s1": "Apri il sito in una finestra privata e prova tu stesso ciascuno: {event}.",
+            "s2": "In Google Analytics, apri Rapporti, poi In tempo reale, e controlla che ciascuno arrivi.",
+            "s3": "Quello che non arriva ha un tag mancante o rotto: chiedi a chi ha costruito il sito di sistemarlo, poi ricontrolla Conversioni dopo qualche giorno."
+          }
+        },
         "allPassing": "Tutti i {a} controlli passano: Google Analytics conta questo sito come si deve.",
         "failing": "{count, plural, =1 {Uno} other {#}} dei {b} controlli {count, plural, =1 {va guardato} other {vanno guardati}}.",
         "check": {
@@ -2584,6 +2736,8 @@
         "checkSilent": "Spunta {event} se {count, plural, =1 {è una richiesta} other {sono richieste}}, e fai controllare il {count, plural, =1 {suo} other {loro}} tracciamento."
       },
       "links": {
+        "googleAnalytics": "Google Analytics",
+        "yourWebsite": "Il tuo sito",
         "overview": "Panoramica",
         "chooseWhatCounts": "Scegli cosa conta",
         "changeWhatCounts": "Cambia cosa conta",

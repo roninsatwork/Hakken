@@ -194,6 +194,12 @@ completed work.
   visited, the shop (only when the website sells) and tracking health. Reads
   only what the night's run keeps. Drawn as option 4 of 4 and built on dev
   2026-10-15.
+- [Google Analytics — Tracking health: the checklist](./active/ga-tracking-health-plan.md)
+  — four figures for what is wrong, then all 12 checks in one table, one
+  line each and the failing ones first; each check opens its own screen
+  with what it found, why it matters and the fix as numbered steps. Reads
+  only the checks the weekly run keeps. Option 1 of 3, chosen and built on
+  dev 2026-10-15.
 - [Google Analytics — a page's own screen that tells its story](./active/analytics-page-screen-plan.md)
   — the All pages screen of one page gains the visits that started on it and
   their conversions, named apart from those made on it; different pages a

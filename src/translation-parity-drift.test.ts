@@ -40,6 +40,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['sites.businessRecord.views.chatgpt', 'Product name (ChatGPT) and a count'],
     ['sites.businessRecord.views.map', 'Product name (Google Maps) and a count'],
     ['sidebar.postureStudio', 'product name'],
+    ['googleAnalytics.seen.links.googleAnalytics', 'Product name (Google Analytics): a tracking health step\'s link to it'],
     ['googleAnalytics.channelsPage.map.conversions', '"conv." is the short form in both languages, under a square of Channels\' map'],
     ['googleAnalytics.menu.landingPages', '"Funnel" is the word Italian marketing uses too (Anthony, 2026-10-14: Landing pages renamed Funnel)'],
     ['googleAnalytics.landing.title', '"Funnel" is the word Italian marketing uses too (Anthony, 2026-10-14: Landing pages renamed Funnel)'],

@@ -41,6 +41,7 @@ const ANALYTICS_SCREENS = [
   // 22 · Events is part of Conversions (ga-conversions-visitors-plan.md CV1): its old address forwards there.
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, with every event, and 16 · Nothing counted yet
   `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
+  `${ANALYTICS}/[siteId]/tracking-health/check/page.tsx`, // A tracking health check's own screen (ga-tracking-health-plan.md TH2)
   `${ANALYTICS}/[siteId]/connection/page.tsx`, // 11 · Connection, and 14 · Choose what counts
   `${ANALYTICS}/_components/AnalyticsNotices.tsx`, // 12 · Not connected yet, on every page until connected
 ];

@@ -36,6 +36,9 @@ export function useHealthWords(status: AnalyticsStatus): (check: Check) => { tit
     const values = {
       host: status.host,
       names: names.join(", "),
+      // A long list said short (ga-tracking-health-plan.md TH1): how many, and the first.
+      first: names[0] ?? "",
+      addresses: names.length,
       others: (check.others ?? []).map(nameOf).join(", "),
       count: formatNumber(check.count ?? 0),
       share: formatPercent(check.share ?? 0),
