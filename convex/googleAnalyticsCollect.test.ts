@@ -68,6 +68,11 @@ const save = (admin: ReturnType<Harness["withIdentity"]>, siteId: Id<"companyWeb
     ],
   });
 
+/** The first night: the two-year fills follow its run (ga-big-site-reliability-plan.md BR7), started now. */
+const firstNight = async (t: Harness, connectionId: Id<"googleAnalyticsConnections">) => {
+  await t.mutation(internal.googleAnalyticsFillAfter.startFills, { connectionId });
+  await finishScheduled(t);
+};
 const runsOf = (t: Harness) => t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
 const connectionOf = (t: Harness, connectionId: Id<"googleAnalyticsConnections">) => t.run(async (ctx) => await ctx.db.get(connectionId));
 
@@ -212,6 +217,7 @@ describe("collecting a website's Google Analytics", () => {
     const google = fakeGoogle(history(70));
     await save(admin, siteId);
     await finishScheduled(t);
+    await firstNight(t, connectionId);
     const before = (await periodRows(t, siteId, "landing|90|NOW|"))!.slot;
 
     // The next morning: one new day, nothing else changed.
@@ -252,6 +258,7 @@ describe("collecting a website's Google Analytics", () => {
     const google = fakeGoogle(history(70));
     await save(admin, siteId);
     await finishScheduled(t);
+    await firstNight(t, connectionId);
     expect((await connectionOf(t, connectionId))?.countedWith).toBe("EVENT_COUNT");
     // Every list's counted events are asked by Google's own counts and visits, never by the key-event count.
     const eventAsks = google.calls.filter((call) => call.url.endsWith(":runReport"))
@@ -528,6 +535,7 @@ describe("collecting a website's Google Analytics", () => {
     fakeGoogle(history(10));
     await save(admin, siteId);
     await finishScheduled(t);
+    await firstNight(t, connectionId);
     expect((await dayRows(t, siteId, "total", "", NEWEST))).toHaveLength(1);
     expect((await connectionOf(t, connectionId))?.historyFilled).toContain("channel");
 

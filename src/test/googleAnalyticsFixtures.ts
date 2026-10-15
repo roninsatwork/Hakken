@@ -41,7 +41,9 @@ export const CONNECTION = {
   clearing: false,
   lastCollectedAt: Date.parse("2026-10-09T03:10:00Z") as number | null,
   collecting: null,
-  problem: null,
+  problem: null as "GOOGLE_BUSY" | "NO_ACCESS" | "REVOKED" | "UNREADABLE" | "NOT_CONFIGURED" | "NOT_OWNED" | null,
+  problemDetail: null as string | null,
+  readAgainAt: null as number | null,
   attempt: null,
   health: {
     checkedAt: Date.parse("2026-10-09T03:10:00Z"),

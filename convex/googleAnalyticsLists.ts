@@ -305,15 +305,33 @@ export function joinAsks(
   /** The visits that made any listed event, when asked (`askList`'s `converting`): each row's own, the same split. */
   converting: readonly ReportRow[] | null = null,
 ): Map<string, ListRow[]> {
+  const joined = listJoiner(list, lead, perVisit);
+  joined.addMain(main);
+  if (converting) joined.addConverting(converting);
+  joined.addEvents(events);
+  return joined.groups();
+}
+
+/**
+ * `joinAsks` a piece at a time (ga-big-site-reliability-plan.md BR2, BR3): the
+ * main ask's rows, then the converting visits, then the key events', each as
+ * Google's answers arrive, with `trim` cutting each group's rows down as they
+ * go — so a big website's list is never held whole while it is read.
+ */
+export function listJoiner(list: AnalyticsList, lead: readonly Lead[], perVisit: ReadonlySet<string> = new Set()) {
   const width = LIST_DIMENSIONS[list].length;
   const deviceAt = lead.indexOf("deviceCategory");
   const groups = new Map<string, Map<string, ListRow>>();
+  let convertingAsked = false;
   const rowOf = (leadKeys: string[], key: string) => {
     const group = leadKeys.join(JOIN);
     let rows = groups.get(group);
     if (!rows) groups.set(group, (rows = new Map()));
     let row = rows.get(key);
-    if (!row) rows.set(key, (row = emptyRow(key)));
+    if (!row) {
+      rows.set(key, (row = emptyRow(key)));
+      if (convertingAsked) row.converting = 0;
+    }
     return row;
   };
   // Each figure goes to its own device's group and, when kept by device, to every device's too.
@@ -325,55 +343,76 @@ export function joinAsks(
     every[deviceAt] = EVERY_DEVICE;
     return [rowOf(leadKeys, key), rowOf(every, key)];
   };
-  for (const row of main) {
-    if (isItemList(list)) {
-      // Looked at, added to the basket, bought, revenue (`ITEM_METRICS`).
-      for (const target of targets(row.keys)) {
-        target.views += row.values[0] ?? 0;
-        target.basket = (target.basket ?? 0) + (row.values[1] ?? 0);
-        target.purchases += row.values[2] ?? 0;
-        target.revenue += hundredths(row.values[3] ?? 0);
+  return {
+    addMain(main: readonly ReportRow[]) {
+      for (const row of main) {
+        if (isItemList(list)) {
+          // Looked at, added to the basket, bought, revenue (`ITEM_METRICS`).
+          for (const target of targets(row.keys)) {
+            target.views += row.values[0] ?? 0;
+            target.basket = (target.basket ?? 0) + (row.values[1] ?? 0);
+            target.purchases += row.values[2] ?? 0;
+            target.revenue += hundredths(row.values[3] ?? 0);
+          }
+          continue;
+        }
+        if (isEventList(list)) {
+          // Times, people and visits with one (`EVENT_LIST_METRICS`).
+          for (const target of targets(row.keys)) {
+            target.times = (target.times ?? 0) + (row.values[0] ?? 0);
+            target.people += row.values[1] ?? 0;
+            target.visits += row.values[2] ?? 0;
+          }
+          continue;
+        }
+        for (const target of targets(row.keys)) {
+          target.visits += row.values[0] ?? 0;
+          target.engaged += row.values[1] ?? 0;
+          target.seconds += row.values[2] ?? 0;
+          target.views += row.values[3] ?? 0;
+          target.purchases += row.values[4] ?? 0;
+          target.revenue += hundredths(row.values[5] ?? 0);
+          target.people += row.values[6] ?? 0;
+          target.newPeople += row.values[7] ?? 0;
+          target.length += Math.round((row.values[8] ?? 0) * (row.values[0] ?? 0));
+        }
       }
-      continue;
-    }
-    if (isEventList(list)) {
-      // Times, people and visits with one (`EVENT_LIST_METRICS`).
-      for (const target of targets(row.keys)) {
-        target.times = (target.times ?? 0) + (row.values[0] ?? 0);
-        target.people += row.values[1] ?? 0;
-        target.visits += row.values[2] ?? 0;
+    },
+    /** The visits that made any listed event: every row gets the figure, nought where none did, so the list says it was asked. */
+    addConverting(converting: readonly ReportRow[]) {
+      if (!convertingAsked) {
+        convertingAsked = true;
+        for (const group of groups.values()) for (const row of group.values()) row.converting = 0;
       }
-      continue;
-    }
-    for (const target of targets(row.keys)) {
-      target.visits += row.values[0] ?? 0;
-      target.engaged += row.values[1] ?? 0;
-      target.seconds += row.values[2] ?? 0;
-      target.views += row.values[3] ?? 0;
-      target.purchases += row.values[4] ?? 0;
-      target.revenue += hundredths(row.values[5] ?? 0);
-      target.people += row.values[6] ?? 0;
-      target.newPeople += row.values[7] ?? 0;
-      target.length += Math.round((row.values[8] ?? 0) * (row.values[0] ?? 0));
-    }
-  }
-  if (converting) {
-    // Every row gets the figure, nought where no visit made a listed event, so the list says it was asked.
-    for (const group of groups.values()) for (const row of group.values()) row.converting = 0;
-    for (const row of converting) for (const target of targets(row.keys)) target.converting = (target.converting ?? 0) + (row.values[0] ?? 0);
-  }
-  for (const row of events) {
-    const eventName = row.keys[lead.length + width] ?? "";
-    if (!eventName) continue;
-    const count = perVisit.has(eventName) ? row.values[2] ?? 0 : row.values[0] ?? 0;
-    for (const target of targets(row.keys)) {
-      target.counts.set(eventName, (target.counts.get(eventName) ?? 0) + count);
-      target.values.set(eventName, (target.values.get(eventName) ?? 0) + hundredths(row.values[1] ?? 0));
-    }
-  }
-  const out = new Map<string, ListRow[]>();
-  for (const [group, rows] of groups) out.set(group, [...rows.values()]);
-  return out;
+      for (const row of converting) for (const target of targets(row.keys)) target.converting = (target.converting ?? 0) + (row.values[0] ?? 0);
+    },
+    addEvents(events: readonly ReportRow[]) {
+      for (const row of events) {
+        const eventName = row.keys[lead.length + width] ?? "";
+        if (!eventName) continue;
+        const count = perVisit.has(eventName) ? row.values[2] ?? 0 : row.values[0] ?? 0;
+        for (const target of targets(row.keys)) {
+          target.counts.set(eventName, (target.counts.get(eventName) ?? 0) + count);
+          target.values.set(eventName, (target.values.get(eventName) ?? 0) + hundredths(row.values[1] ?? 0));
+        }
+      }
+    },
+    /** Rows held, in all groups: what a trim keeps within. */
+    size(): number {
+      let size = 0;
+      for (const group of groups.values()) size += group.size;
+      return size;
+    },
+    /** Each group's rows cut down by `cut` (a page list's trim), in place. */
+    trim(cut: (rows: ListRow[]) => ListRow[]) {
+      for (const [group, rows] of groups) groups.set(group, new Map(cut([...rows.values()]).map((row) => [row.key, row])));
+    },
+    groups(): Map<string, ListRow[]> {
+      const out = new Map<string, ListRow[]>();
+      for (const [group, rows] of groups) out.set(group, [...rows.values()]);
+      return out;
+    },
+  };
 }
 
 /** The lead keys of a joined group, as `joinAsks` made them. */

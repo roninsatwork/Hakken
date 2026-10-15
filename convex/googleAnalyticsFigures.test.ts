@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -143,9 +143,12 @@ describe("the second round's figures", () => {
 
   test("charts: page views a day, each channel a day from the days kept or asked of Google, and a list's top ten", async () => {
     const t = harness();
-    const { siteId, admin } = await connected(t);
+    const { siteId, connectionId, admin } = await connected(t);
     fakeGoogle(history(70));
     await save(admin, siteId);
+    await finishScheduled(t);
+    // The first night: the two-year fills follow its run (ga-big-site-reliability-plan.md BR7).
+    await t.mutation(internal.googleAnalyticsFillAfter.startFills, { connectionId });
     await finishScheduled(t);
     const args = { siteId, period: "30" as const, device: "" };
 
@@ -163,7 +166,7 @@ describe("the second round's figures", () => {
     const ninety = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "90" as const });
     expect(ninety).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
     expect(ninety.points).toHaveLength(90);
-    // Twelve months from the two years filled by themselves after the first collection (SF9): a day for 90 days, then weeks.
+    // Twelve months from the two years filled by themselves after the first night's collection (SF9, BR7): a day for 90 days, then weeks.
     const long = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "365" as const });
     expect(long).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
     expect(long.points.filter((point) => !point.lastDay)).toHaveLength(90);

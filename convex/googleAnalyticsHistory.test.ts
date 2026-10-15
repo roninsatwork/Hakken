@@ -55,9 +55,9 @@ describe("the fill's pieces", () => {
 describe("channels over time", () => {
   test("filled once: 12 months and the 12 before read from what is held, by day, week and month, never asking Google", async () => {
     const t = harness();
+    // Filled by its first night (ga-big-site-reliability-plan.md BR7).
     const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
-    const filled = await t.action(internal.googleAnalyticsHistory.fillHistory, { connectionId });
-    expect(filled.ok).toBe(true);
+    expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.historyFilled).toContain("channel");
     const asked = google.calls.length;
     const year = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "365", ...args });
     expect(year).toMatchObject({ live: false, liveBefore: false });
@@ -76,8 +76,7 @@ describe("channels over time", () => {
 
   test("filled once: Overview, Events, Campaigns and Visitors read 12 months from each fact a day, never asking Google", async () => {
     const t = harness();
-    const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
-    expect((await t.action(internal.googleAnalyticsHistory.fillHistory, { connectionId })).ok).toBe(true);
+    const { siteId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
     const asked = google.calls.length;
     const year = { siteId, period: "365" as const, device: "" };
     const overview = await user.query(api.googleAnalyticsChartReads.analyticsChart, year);
@@ -94,7 +93,7 @@ describe("channels over time", () => {
 
   test("a website held as 60 days: the fill tops the days up to 90 first, and nothing past the days is read until it has", async () => {
     const t = harness();
-    const { siteId, connectionId, user } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
+    const { siteId, connectionId, user } = await collectedWebsite(t, twoYears(), encryptConnectorToken, { firstNight: false });
     // As a website collected before 90 days were kept: its 60 newest days.
     const sixty = shiftDay(NEWEST, -59);
     await t.run(async (ctx) => {
@@ -104,7 +103,7 @@ describe("channels over time", () => {
       await ctx.db.patch(connectionId, { oldestDay: sixty });
     });
     expect((await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "90", ...args })).live).toBe(true);
-    expect((await t.action(internal.googleAnalyticsHistory.fillHistory, { connectionId })).ok).toBe(true);
+    expect((await t.action(internal.googleAnalyticsSteps.fillHistory, { connectionId })).ok).toBe(true);
     const ninety = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "90", ...args });
     expect(ninety).toMatchObject({ live: false, liveBefore: false });
     expect(visitsOf(ninety.now)).toBe(900);
@@ -112,8 +111,7 @@ describe("channels over time", () => {
 
   test("rolling on: every day fact's day past 90 goes into its week, a week past a year into its month, the figures kept whole", async () => {
     const t = harness();
-    const { siteId, connectionId } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
-    await t.action(internal.googleAnalyticsHistory.fillHistory, { connectionId });
+    const { siteId } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
     const held = async () => await t.run(async (ctx) => {
       const days = await ctx.db.query("googleAnalyticsDays").withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", siteId)).collect();
       const history = await ctx.db.query("googleAnalyticsHistory").withIndex("by_hold_grain_start", (q) => q.eq("companyWebsiteId", siteId)).collect();

@@ -403,6 +403,15 @@ export const googleAnalyticsTables = {
     /** What stopped the connection or its last collection; cleared when a collection goes right. */
     problem: v.optional(analyticsProblemValidator),
     problemAt: v.optional(v.number()),
+    /** Google's own words for the problem, when it gave any (ga-big-site-reliability-plan.md BR1). */
+    problemDetail: v.optional(v.string()),
+    /** Reading the property's events failed: when Hakken asks again by itself (BR1). Cleared once they are read. */
+    readAgainAt: v.optional(v.number()),
+    /**
+     * How far each two-year fill has got (ga-big-site-reliability-plan.md BR6): for the main home country (`""`) or
+     * another, a day list's or the pages' (`pages`) last day filled, oldest first; the next fill starts after it.
+     */
+    fillsReached: v.optional(v.array(v.object({ country: v.string(), fill: v.string(), to: v.string() }))),
     /** The last sign-in that did not connect, and the account it was tried with. */
     attempt: v.optional(v.object({ outcome: analyticsAttemptValidator, account: v.optional(v.string()), at: v.number() })),
     createdAt: v.number(),

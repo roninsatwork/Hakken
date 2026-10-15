@@ -1,11 +1,13 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { DAY_FACT_LISTS, analyticsPackedRows, dayFactListValidator, type DayFactList } from "./googleAnalyticsSchema";
 import { EVERY_DEVICE, groupKeys, packList, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { addInto, blank } from "./googleAnalyticsRows";
-import { DAYS_PER_STEP, askList, collectDays, countryIdOf, dayFactsOf, openSession } from "./googleAnalyticsCollect";
+import { DAYS_PER_STEP, STEP_BUDGET_MS, askList, collectDays, countryIdOf, dayFactsOf, failed, openSession, type StepResult } from "./googleAnalyticsCollect";
+import { NIGHT_MS, afterTheHour } from "./googleAnalyticsBudget";
+import { fillReachedOf, withoutReached } from "./googleAnalyticsFillAfter";
 import { shiftDay } from "./searchConsoleDays";
 import { coverageOf, filledLists, withCoverage } from "./googleAnalyticsCoverage";
 import { dayDevice, historyFloors, homeOf, monthOfWeek, pointsBetween, type Grain } from "./utils/analyticsHistory";
@@ -234,13 +236,24 @@ const recordValidator = v.object({
 
 /** A piece of the fill written: each week or month whole, in place of what was there. */
 export const writeHistory = internalMutation({
-  args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), records: v.array(recordValidator), fetchedAt: v.number() },
+  args: {
+    connectionId: v.id("googleAnalyticsConnections"),
+    property: v.string(),
+    records: v.array(recordValidator),
+    fetchedAt: v.number(),
+    /** The fill's place once this piece is written (ga-big-site-reliability-plan.md BR6), noted with it. */
+    reached: v.optional(v.object({ country: v.string(), fill: v.string(), to: v.string() })),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     // Disconnected, or another property chosen, while the fill ran: what it fetched is not this connection's.
     if (!connection || connection.status !== "CONNECTED" || connection.property !== args.property || connection.clearing) return null;
     for (const record of args.records) await writeRecord(ctx, connection.companyWebsiteId, record.list, record.device, record.grain, record.start, record.parts, args.fetchedAt);
+    if (args.reached) {
+      const kept = withoutReached(connection, args.reached.country, [args.reached.fill]) ?? [];
+      await ctx.db.patch(connection._id, { fillsReached: [...kept, args.reached], updatedAt: Date.now() });
+    }
     return null;
   },
 });
@@ -263,9 +276,11 @@ export const noteHistoryFrom = internalMutation({
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.property !== args.property) return null;
     const filled = [...new Set([...filledLists(coverageOf(connection, args.country)), ...args.lists])];
+    // Filled: the lists' places are no longer needed (BR6).
+    const fillsReached = withoutReached(connection, args.country ?? "", args.lists);
     await ctx.db.patch(connection._id, args.country
-      ? { countryHistory: withCoverage(connection, args.country, { historyFrom: args.from, historyFilled: filled }), updatedAt: Date.now() }
-      : { historyFrom: args.from, historyFilled: filled, updatedAt: Date.now() });
+      ? { countryHistory: withCoverage(connection, args.country, { historyFrom: args.from, historyFilled: filled }), fillsReached, updatedAt: Date.now() }
+      : { historyFrom: args.from, historyFilled: filled, fillsReached, updatedAt: Date.now() });
     return null;
   },
 });
@@ -290,75 +305,130 @@ export function fillPieces(newest: string): Array<{ from: string; to: string }> 
   return pieces;
 }
 
+/** A fill's arguments (ga-big-site-reliability-plan.md BR6, BR7): the lists still to fill, the home country, the night. */
+export const fillArgs = {
+  connectionId: v.id("googleAnalyticsConnections"),
+  /** Another home country kept ready (SF7), by its code (`fra`): its own two years. */
+  country: v.optional(v.string()),
+  /** When the night's run began: a fill that spends the hour's budget waits for the hour while the night lasts (BR7). */
+  nightFrom: v.optional(v.number()),
+};
+export const fillHistoryArgs = { ...fillArgs, lists: v.optional(v.array(dayFactListValidator)) };
+export type FillArgs = ObjectType<typeof fillArgs>;
+export type FillHistoryArgs = ObjectType<typeof fillHistoryArgs>;
+
+/** What a fill's step did: `handedOn` when it carries on in a step of its own — now, or after the hour. */
+export type FillOutcome = { ok: boolean; pieces: number; rows: number; requests: number; problem?: string; handedOn?: "STEP" | "HOUR" };
+export const fillOutcomeValidator = v.object({
+  ok: v.boolean(),
+  pieces: v.number(),
+  rows: v.number(),
+  requests: v.number(),
+  problem: v.optional(v.string()),
+  handedOn: v.optional(v.union(v.literal("STEP"), v.literal("HOUR"))),
+});
+
+/**
+ * How a fill stops part-way (BR6, BR7): its step's minutes up, it carries on
+ * at once in a step of its own; the hour's budget spent inside the night, it
+ * carries on after the hour; anything else, or past the night, it stops, and
+ * the next night's run starts it again where it stopped.
+ */
+export function fillStops(ctx: ActionCtx, again: (atMs: number) => Promise<unknown>, nightFrom: number | undefined, outcome: () => Omit<FillOutcome, "ok" | "problem" | "handedOn">) {
+  const started = Date.now();
+  return {
+    timeUp: () => Date.now() - started >= STEP_BUDGET_MS,
+    handOn: async (): Promise<FillOutcome> => {
+      await again(0);
+      return { ok: true, ...outcome(), handedOn: "STEP" };
+    },
+    stopped: async (result: Extract<StepResult, { ok: false }>): Promise<FillOutcome> => {
+      if (result.wait && nightFrom !== undefined) {
+        const resumeAt = afterTheHour(Date.now());
+        if (resumeAt - nightFrom <= NIGHT_MS) {
+          await again(resumeAt - Date.now());
+          return { ok: true, ...outcome(), handedOn: "HOUR" };
+        }
+      }
+      return { ok: false, ...outcome(), problem: result.reason };
+    },
+  };
+}
+
 /**
  * Two years of the day facts asked of Google once (SF9, SF12): every day past
  * the 90 kept as days, by device, added into its week or month and written
- * whole; and the 90 days themselves for a list not kept as days before.
- * Run only when Anthony says, for one website:
- * `npx convex run googleAnalyticsHistory:fillHistory '{"connectionId": "…"}'`.
+ * whole; and the 90 days themselves for a list not kept as days before. A
+ * step of the fill (`googleAnalyticsSteps.fillHistory`): each piece's place is
+ * noted as it is written, so a fill stopped part-way starts after it (BR6).
+ * Run by hand only when Anthony says, for one website:
+ * `npx convex run googleAnalyticsSteps:fillHistory '{"connectionId": "…"}'`.
  */
-export const fillHistory = internalAction({
-  args: {
-    connectionId: v.id("googleAnalyticsConnections"),
-    lists: v.optional(v.array(dayFactListValidator)),
-    /** Another home country kept ready (SF7), by its code (`fra`): its own two years. */
-    country: v.optional(v.string()),
-  },
-  returns: v.object({ ok: v.boolean(), pieces: v.number(), rows: v.number(), requests: v.number(), problem: v.optional(v.string()) }),
-  handler: async (ctx, args): Promise<{ ok: boolean; pieces: number; rows: number; requests: number; problem?: string }> => {
-    const found = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
-    const coverage = args.country ? found?.countryHistory.find((one) => one.country === args.country) : found;
-    if (!found?.property || !coverage?.newestDay) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not connected, or no days collected yet." };
-    if (args.country && !found.others.includes(args.country)) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not one of the website's home countries." };
-    const target = args.country ? { ...found, country: countryIdOf(args.country) } : found;
-    const opened = await openSession(ctx, args.connectionId);
-    if (!opened.ok) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: opened.problem };
-    const newest = coverage.newestDay;
-    const lists = args.lists ?? dayFactsOf(target);
-    const pieces = fillPieces(newest);
-    let rows = 0;
-    const stopped = (reason: string) => ({ ok: false, pieces: pieces.length, rows, requests: opened.session.requests, problem: reason });
-    // The 90 days kept as days, each list back from its oldest day held: a website collected when 60 were kept, a list
-    // never kept as days before SF12, a shop's products from before it was found to be one.
-    const floors = historyFloors(newest);
-    for (const list of lists) {
-      const oldest: string | null = await ctx.runQuery(internal.googleAnalyticsHistory.oldestDayOf, { companyWebsiteId: found.companyWebsiteId, list, device: dayDevice(EVERY_DEVICE, args.country) });
-      const last = oldest === null ? newest : oldest > floors.day ? shiftDay(oldest, -1) : null;
-      if (!last) continue;
-      for (let to = last; to >= floors.day; to = shiftDay(to, -DAYS_PER_STEP)) {
-        const from = shiftDay(to, -(DAYS_PER_STEP - 1)) > floors.day ? shiftDay(to, -(DAYS_PER_STEP - 1)) : floors.day;
-        const days = await collectDays(ctx, opened.session, args.connectionId, target, { from, to }, [list], args.country);
-        if (!days.ok) return stopped(days.reason);
-        rows += days.rows;
-      }
+export async function fillHistoryStep(ctx: ActionCtx, args: FillHistoryArgs): Promise<FillOutcome> {
+  const found = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
+  const coverage = args.country ? found?.countryHistory.find((one) => one.country === args.country) : found;
+  if (!found?.property || !coverage?.newestDay) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not connected, or no days collected yet." };
+  if (args.country && !found.others.includes(args.country)) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not one of the website's home countries." };
+  const target = args.country ? { ...found, country: countryIdOf(args.country) } : found;
+  const opened = await openSession(ctx, args.connectionId);
+  if (!opened.ok) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: opened.problem };
+  const country = args.country ?? "";
+  const newest = coverage.newestDay;
+  const lists = args.lists ?? dayFactsOf(target);
+  const pieces = fillPieces(newest);
+  let rows = 0;
+  const step = fillStops(
+    ctx,
+    async (atMs) => await ctx.scheduler.runAfter(atMs, internal.googleAnalyticsSteps.fillHistory, args),
+    args.nightFrom,
+    () => ({ pieces: pieces.length, rows, requests: opened.session.requests }),
+  );
+  // The 90 days kept as days, each list back from its oldest day held: a website collected when 60 were kept, a list
+  // never kept as days before SF12, a shop's products from before it was found to be one. Carries on from its oldest.
+  const floors = historyFloors(newest);
+  for (const list of lists) {
+    const oldest: string | null = await ctx.runQuery(internal.googleAnalyticsHistory.oldestDayOf, { companyWebsiteId: found.companyWebsiteId, list, device: dayDevice(EVERY_DEVICE, args.country) });
+    const last = oldest === null ? newest : oldest > floors.day ? shiftDay(oldest, -1) : null;
+    if (!last) continue;
+    for (let to = last; to >= floors.day; to = shiftDay(to, -DAYS_PER_STEP)) {
+      if (step.timeUp()) return await step.handOn();
+      const from = shiftDay(to, -(DAYS_PER_STEP - 1)) > floors.day ? shiftDay(to, -(DAYS_PER_STEP - 1)) : floors.day;
+      const days = await collectDays(ctx, opened.session, args.connectionId, target, { from, to }, [list], args.country);
+      if (!days.ok) return await step.stopped(days);
+      rows += days.rows;
     }
-    for (const piece of pieces) {
-      const records: Array<{ list: DayFactList; device: string; grain: HistoryGrain; start: string; rows: ListRow[] }> = [];
-      for (const list of lists) {
-        const asked = await askList(opened.session, target, list, ["date", "deviceCategory"], piece);
-        if (!asked.ok) return stopped(asked.reason);
-        // Each day's rows into its week or month, every device kept as Google adds it up.
-        const byRecord = new Map<string, { list: DayFactList; device: string; grain: HistoryGrain; start: string; rows: ListRow[] }>();
-        for (const [group, groupRows] of asked.groups) {
-          const [day, device] = groupKeys(group);
-          const home = homeOf(day, newest);
-          if (!home || home.grain === "day") continue;
-          const key = `${device}|${home.grain}|${home.start}`;
-          const record = byRecord.get(key) ?? { list, device: dayDevice(device ?? EVERY_DEVICE, args.country), grain: home.grain, start: home.start, rows: [] };
-          record.rows.push(...groupRows);
-          rows += groupRows.length;
-          byRecord.set(key, record);
-        }
-        records.push(...byRecord.values());
+  }
+  // Each piece oldest first, each list's place noted with its records, so a piece written is never asked again (BR6).
+  const reached = new Map(lists.map((list) => [list, fillReachedOf(found, country, list)]));
+  for (const piece of pieces) {
+    for (const list of lists) {
+      const at = reached.get(list);
+      if (at && piece.to <= at) continue;
+      if (step.timeUp()) return await step.handOn();
+      const asked = await askList(opened.session, target, list, ["date", "deviceCategory"], piece);
+      if (!asked.ok) return await step.stopped(failed(opened.session, asked));
+      // Each day's rows into its week or month, every device kept as Google adds it up.
+      const byRecord = new Map<string, { list: DayFactList; device: string; grain: HistoryGrain; start: string; rows: ListRow[] }>();
+      for (const [group, groupRows] of asked.groups) {
+        const [day, device] = groupKeys(group);
+        const home = homeOf(day, newest);
+        if (!home || home.grain === "day") continue;
+        const key = `${device}|${home.grain}|${home.start}`;
+        const record = byRecord.get(key) ?? { list, device: dayDevice(device ?? EVERY_DEVICE, args.country), grain: home.grain, start: home.start, rows: [] };
+        record.rows.push(...groupRows);
+        rows += groupRows.length;
+        byRecord.set(key, record);
       }
       await ctx.runMutation(internal.googleAnalyticsHistory.writeHistory, {
         connectionId: args.connectionId,
         property: found.property,
-        records: records.map((record) => ({ list: record.list, device: record.device, grain: record.grain, start: record.start, parts: packList(record.list, merged(record.rows), target.events) })),
+        records: [...byRecord.values()].map((record) => ({ list: record.list, device: record.device, grain: record.grain, start: record.start, parts: packList(record.list, merged(record.rows), target.events) })),
         fetchedAt: Date.now(),
+        reached: { country, fill: list, to: piece.to },
       });
+      reached.set(list, piece.to);
     }
-    await ctx.runMutation(internal.googleAnalyticsHistory.noteHistoryFrom, { connectionId: args.connectionId, property: found.property!, from: floors.month, lists, ...(args.country ? { country: args.country } : {}) });
-    return { ok: true, pieces: pieces.length, rows, requests: opened.session.requests };
-  },
-});
+  }
+  await ctx.runMutation(internal.googleAnalyticsHistory.noteHistoryFrom, { connectionId: args.connectionId, property: found.property!, from: floors.month, lists, ...(args.country ? { country: args.country } : {}) });
+  return { ok: true, pieces: pieces.length, rows, requests: opened.session.requests };
+}

@@ -26,6 +26,11 @@ completed work.
   run keeps a fifth of Google's allowances in hand and is collected nightly
   from 01:00 UK, everything every night. **Planned and built 2026-10-14,
   phases 1–4, about 21 man-days; tested on ronins.co.uk.**
+- [Google Analytics — reliable on big websites](./active/ga-big-site-reliability-plan.md)
+  — the nightly pull on a big website: Google's answers read 25,000 rows at a
+  time and page lists trimmed while read, in the Node runtime; the two-year
+  fills after the night's run, resumed where they stop; connecting tries again
+  by itself. **Planned and built on dev 2026-10-15.**
 - [Google Analytics — Channels and a channel's own page, rethought](./active/ga-channel-pages-plan.md)
   — one page for every channel (What Hakken sees with nine rules that work for
   any website, four figures including conversions it started and dwell time,

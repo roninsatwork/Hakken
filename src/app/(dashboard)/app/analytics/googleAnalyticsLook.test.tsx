@@ -255,6 +255,24 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, PLAN, "ChooseEvents", "Google Analytics → choose what counts");
   });
 
+  it("13 · choose what counts: Google didn't answer when the events were read, said with when it asks again (ga-big-site-reliability-plan.md BR1)", async () => {
+    at("/app/analytics/site_1/connection");
+    answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({
+        status: "COUNTING",
+        events: null,
+        problem: "GOOGLE_BUSY",
+        problemDetail: "BUSY 503: The service is currently unavailable.",
+        readAgainAt: Date.parse("2026-10-15T10:22:00Z"),
+      }),
+    });
+    render(<AnalyticsConnectionPage />);
+    await screen.findByText(/^Google didn't answer when .* events were read, so they aren't listed yet\.$/);
+    screen.getByText(/asks again by itself at .*\. There's nothing for you to do\.$/);
+    screen.getByText("Google said: BUSY 503: The service is currently unavailable.");
+    expect(screen.queryByText(/^Reading the property's key events/)).toBeNull();
+  });
+
   it("13 · choose what counts: an enquiry that is no key event, and a key event built from it (conversions-back-in-time-plan.md §6)", async () => {
     at("/app/analytics/site_1/connection");
     answer({

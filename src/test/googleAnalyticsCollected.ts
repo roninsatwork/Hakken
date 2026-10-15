@@ -1,5 +1,5 @@
 import type { TestConvex } from "convex-test";
-import { api } from "@/convex/_generated/api";
+import { api, internal } from "@/convex/_generated/api";
 import type schema from "@/convex/schema";
 import { finishScheduled } from "./finishScheduled";
 import { seedGoogleSignIn } from "./googleGrant";
@@ -10,11 +10,19 @@ import { PROPERTY, fakeGoogle, type Visit } from "./googleAnalyticsFake";
  * Acme's own website, connected, its key events listed — generate_lead worth
  * £250 in Hakken, click_tel with no value, sign_up worth Analytics' own £10,
  * all three counted, and form_submit listed but not counted — then collected
- * whole. With a rival company's admin, to prove a read is the caller's own.
+ * whole, and its two years filled as its first night does
+ * (ga-big-site-reliability-plan.md BR7). With a rival company's admin, to
+ * prove a read is the caller's own.
  * The token's encryption is the test's to hand in (`connectorTokenCrypto`), as
  * `seedGoogleSignIn` takes it: this folder never imports a Convex module.
  */
-export async function collectedWebsite(t: TestConvex<typeof schema>, visits: Visit[], encryptConnectorToken: Parameters<typeof seedGoogleSignIn>[1]) {
+export async function collectedWebsite(
+  t: TestConvex<typeof schema>,
+  visits: Visit[],
+  encryptConnectorToken: Parameters<typeof seedGoogleSignIn>[1],
+  /** `firstNight: false`: only connected and collected, its two years not filled yet. */
+  options: { firstNight?: boolean } = {},
+) {
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
     const adminId = await ctx.db.insert("users", { name: "Admin", email: "admin@acme-shop.test", role: "ADMIN", companyId, createdAt: 1 });
@@ -54,5 +62,10 @@ export async function collectedWebsite(t: TestConvex<typeof schema>, visits: Vis
     ],
   });
   await finishScheduled(t);
+  // The first night: the two-year fills follow its run (BR7).
+  if (options.firstNight !== false) {
+    await t.mutation(internal.googleAnalyticsFillAfter.startFills, { connectionId: ids.connectionId });
+    await finishScheduled(t);
+  }
   return { ...ids, google, admin, user: t.withIdentity({ subject: ids.userId }), rival: t.withIdentity({ subject: ids.rivalId }) };
 }

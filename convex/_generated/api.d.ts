@@ -251,6 +251,7 @@ import type * as googleAnalyticsReads from "../googleAnalyticsReads.js";
 import type * as googleAnalyticsRealtime from "../googleAnalyticsRealtime.js";
 import type * as googleAnalyticsRows from "../googleAnalyticsRows.js";
 import type * as googleAnalyticsSchema from "../googleAnalyticsSchema.js";
+import type * as googleAnalyticsSteps from "../googleAnalyticsSteps.js";
 import type * as googleAnalyticsTitles from "../googleAnalyticsTitles.js";
 import type * as googleAnalyticsVisitorReads from "../googleAnalyticsVisitorReads.js";
 import type * as googleApi from "../googleApi.js";
@@ -1147,6 +1148,7 @@ declare const fullApi: ApiFromModules<{
   googleAnalyticsRealtime: typeof googleAnalyticsRealtime;
   googleAnalyticsRows: typeof googleAnalyticsRows;
   googleAnalyticsSchema: typeof googleAnalyticsSchema;
+  googleAnalyticsSteps: typeof googleAnalyticsSteps;
   googleAnalyticsTitles: typeof googleAnalyticsTitles;
   googleAnalyticsVisitorReads: typeof googleAnalyticsVisitorReads;
   googleApi: typeof googleApi;

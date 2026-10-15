@@ -64,6 +64,7 @@ export const liveTarget = internalQuery({
       countryHistory: [],
       untitled: false,
       shop: connection.shop === true,
+      fillsReached: [],
       eventless: false,
     };
     // What counts as a conversion: an event's screen asks who converted after it (§18.6.5).

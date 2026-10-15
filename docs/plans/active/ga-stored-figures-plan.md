@@ -557,6 +557,10 @@ Decided while building, in the plan's spirit:
 
 ## Change log
 
+- 2026-10-15 — On a big website (ga-big-site-reliability-plan.md): the two
+  years fill after the night's run, not on connecting, and carry on where
+  they stop; the run's step and the fills run in the Node runtime, now
+  `googleAnalyticsSteps:collectSiteStep`, `fillHistory` and `fillPageHistory`.
 - 2026-10-14 — Asked whether to drop the device split for age, gender and
   interests to avoid the night's hour-long wait: "stick to the original
   plan" — every list by device, about 1 hour 20 minutes a night.

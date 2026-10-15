@@ -223,6 +223,16 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
   }, [changing, reread, siteId]);
 
   if (!events) {
+    // Google didn't answer when the events were read: said plainly, with when Hakken asks again by itself (BR1).
+    if (connection.readAgainAt !== null) {
+      return (
+        <Notice tone="warning">
+          <span className="block font-medium text-foreground">{t("readFailedTitle", { property: connection.propertyName ?? "" })}</span>
+          <span className="block">{t("readFailed", { at: formatDateTime(connection.readAgainAt), platformName })}</span>
+          {connection.problemDetail ? <span className="block">{t("googleSaid", { words: connection.problemDetail })}</span> : null}
+        </Notice>
+      );
+    }
     return <Notice>{t("reading")}</Notice>;
   }
   const draftOf = (eventName: string): Draft => {

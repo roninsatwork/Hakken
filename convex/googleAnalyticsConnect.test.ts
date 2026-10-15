@@ -4,7 +4,7 @@ import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
-import { finishScheduled } from "@/src/test/finishScheduled";
+import { finishDueNow, finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 
 /**
@@ -38,6 +38,8 @@ type Google = {
   keyEvents: { eventName: string; defaultValue?: { numericValue: number }; countingMethod?: string }[];
   /** Each key event's count and value sent in the last 30 days. */
   eventFigures: Record<string, [number, number]>;
+  /** The next times the key events are asked for, Google's answer instead: busy (503) or not allowed (403). */
+  keyEventsFail?: { times: number; status: number };
   calls: { url: string; body: string }[];
 };
 
@@ -85,6 +87,10 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
       return Response.json({ dataStreams: (entry?.streams ?? []).map((address) => ({ type: "WEB_DATA_STREAM", webStreamData: { defaultUri: address } })) });
     }
     const keyEvents = /analyticsadmin\.googleapis\.com\/v1beta\/(properties\/\d+)\/keyEvents/.exec(url);
+    if (keyEvents && google.keyEventsFail && google.keyEventsFail.times > 0) {
+      google.keyEventsFail.times -= 1;
+      return new Response(JSON.stringify({ error: { message: google.keyEventsFail.status === 503 ? "The service is currently unavailable." : "User does not have sufficient permissions for this property." } }), { status: google.keyEventsFail.status });
+    }
     if (keyEvents) return Response.json({ keyEvents: google.keyEvents });
     const details = /analyticsadmin\.googleapis\.com\/v1beta\/(properties\/\d+)$/.exec(url);
     if (details) return Response.json({ displayName: "Acme", timeZone: "Europe/London", currencyCode: "GBP" });
@@ -290,6 +296,40 @@ describe("connecting a website's Google Analytics", () => {
     const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
     expect(audit.map((entry) => entry.actionType)).toContain("GOOGLE_ANALYTICS_CONNECTED");
     expect(JSON.stringify(audit)).not.toContain("ya29");
+  });
+
+  test("Google failing to list the events: the screen says so and when it asks again, and it asks again by itself until it reads", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ keyEventsFail: { times: 2, status: 503 } });
+    await signIn(t, admin, siteId);
+    await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
+    await finishDueNow(t);
+
+    // Not read: Google's words kept, and the next try 5 minutes on (ga-big-site-reliability-plan.md BR1).
+    const failed = (await admin.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId }))!.connection!;
+    expect(failed).toMatchObject({ status: "COUNTING", events: null, problem: "GOOGLE_BUSY" });
+    expect(failed.problemDetail).toContain("BUSY 503");
+    expect(failed.readAgainAt! - Date.now()).toBeGreaterThan(4 * 60_000);
+    expect(failed.readAgainAt! - Date.now()).toBeLessThanOrEqual(5 * 60_000);
+
+    // Asked again by itself — a second failure, 30 minutes on — then read.
+    await finishScheduled(t);
+    const read = (await admin.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId }))!.connection!;
+    expect(read).toMatchObject({ status: "COUNTING", problem: null, problemDetail: null, readAgainAt: null });
+    expect(read.events?.map((event) => event.eventName)).toEqual(["generate_lead", "click_tel", "sign_up", "scroll"]);
+    expect(google.calls.filter((call) => call.url.includes("/keyEvents")).length).toBe(3);
+  });
+
+  test("an account that can't read the property's events: connect again, and nothing asked again", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ keyEventsFail: { times: 1, status: 403 } });
+    await signIn(t, admin, siteId);
+    await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
+    await finishScheduled(t);
+
+    const stopped = (await admin.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId }))!.connection!;
+    expect(stopped).toMatchObject({ status: "NEEDS_RECONNECT", problem: "NO_ACCESS", readAgainAt: null });
+    expect(google.calls.filter((call) => call.url.includes("/keyEvents")).length).toBe(1);
   });
 
   test("a sign-in with Analytics left unticked keeps nothing and says why", async () => {

@@ -16816,6 +16816,9 @@
     },
     "counts": {
       "reading": "Reading the property's key events, and the events that read as enquiries, from Google…",
+      "readFailedTitle": "Google didn't answer when {property}'s events were read, so they aren't listed yet.",
+      "readFailed": "{platformName} asks again by itself at {at}. There's nothing for you to do.",
+      "googleSaid": "Google said: {words}",
       "addresses": "The property {property} records visits on {count} addresses. {platformName} reads {host}'s own, {read}, and leaves {others} out of every figure.",
       "title": "Choose what counts as a conversion",
       "description": "The key events in the property {property}, and its other events that read as an enquiry. Tick each one that is a conversion — an enquiry, a sale, a booking; {platformName} has ticked the likely ones. A scroll or a video play is never ticked for you.",

@@ -1,16 +1,18 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { internalAction, internalMutation, type ActionCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { analyticsPackedRows } from "./googleAnalyticsSchema";
-import { EVERY_DEVICE, channelKey, groupKeys, packList, splitChannelKey, unpackPart, type Lead, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { EVERY_DEVICE, channelKey, groupKeys, packList, slotKey, splitChannelKey, unpackPart, type Lead, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { addInto, blank } from "./googleAnalyticsRows";
 import { askList, countryIdOf, failed, openSession, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import { fillStops, type FillArgs, type FillOutcome } from "./googleAnalyticsHistory";
+import { fillReachedOf, withoutReached } from "./googleAnalyticsFillAfter";
 import { numberPages } from "./googleAnalyticsPageNumbers";
 import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
 import { shiftDay } from "./searchConsoleDays";
 import { HISTORY_REACH_DAYS, dayDevice, historyFloors, homeOf, monthOfWeek, pointsBetween, type Grain } from "./utils/analyticsHistory";
-import { weekStart } from "./utils/searchConsolePacks";
+import { monthStart, weekStart } from "./utils/searchConsolePacks";
 
 /**
  * Each page over time (docs/plans/active/ga-stored-figures-plan.md SF5):
@@ -164,61 +166,133 @@ async function writeRecords(ctx: ActionCtx, target: CollectTarget, connectionId:
 export async function collectPageDays(ctx: ActionCtx, session: Session, connectionId: Doc<"googleAnalyticsConnections">["_id"], target: CollectTarget, range: { from: string; to: string }, country?: string): Promise<StepResult> {
   let rows = 0;
   const newestDay = country ? target.countryHistory.find((one) => one.country === country)?.newestDay : target.newestDay;
-  for (const list of SERIES_LISTS) {
-    const asked = await askPages(ctx, session, target, list, "date", range, country);
-    if (!asked.ok) return failed(session, asked);
-    rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
-    await writeRecords(ctx, target, connectionId, range.to > (newestDay ?? "") ? range.to : newestDay!, asked.records);
+  // As many days an ask as keep the answer small: a big website's a day at a time (ga-big-site-reliability-plan.md BR5).
+  const pages = await ctx.runQuery(internal.googleAnalyticsPageSeries.pagesSeenOf, { companyWebsiteId: target.companyWebsiteId, ...(country ? { country } : {}) });
+  for (const piece of spans(range.from, shiftDay(range.to, 1), nextDay, unitsPerAsk(pages))) {
+    for (const list of SERIES_LISTS) {
+      const asked = await askPages(ctx, session, target, list, "date", piece, country);
+      if (!asked.ok) return failed(session, asked);
+      rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
+      await writeRecords(ctx, target, connectionId, range.to > (newestDay ?? "") ? range.to : newestDay!, asked.records);
+    }
   }
   return { ok: true, rows, requests: session.requests };
 }
 
 /**
- * Each page's two years asked of Google once (SF5, SF9): the 90 days by day,
- * then the year's weeks and the year before's months asked as weeks and
- * months, so a big website's fill stays small. Run only when Anthony says:
- * `npx convex run googleAnalyticsPageSeries:fillPageHistory '{"connectionId": "…"}'`.
+ * Rows one ask of each page over time is kept near (ga-big-site-reliability-plan.md BR5): a page's points a unit —
+ * a month, a week or a day — for each device, every device added up beside them.
  */
-export const fillPageHistory = internalAction({
-  args: {
-    connectionId: v.id("googleAnalyticsConnections"),
-    /** Another home country kept ready (SF7), by its code (`fra`): its own pages' two years. */
-    country: v.optional(v.string()),
-  },
-  returns: v.object({ ok: v.boolean(), rows: v.number(), requests: v.number(), problem: v.optional(v.string()) }),
-  handler: async (ctx, args): Promise<{ ok: boolean; rows: number; requests: number; problem?: string }> => {
-    const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
-    const newestDay = args.country ? target?.countryHistory.find((one) => one.country === args.country)?.newestDay : target?.newestDay;
-    if (!target?.property || !newestDay) return { ok: false, rows: 0, requests: 0, problem: "Not connected, or no days collected yet." };
-    if (args.country && !target.others.includes(args.country)) return { ok: false, rows: 0, requests: 0, problem: "Not one of the website's home countries." };
-    const opened = await openSession(ctx, args.connectionId);
-    if (!opened.ok) return { ok: false, rows: 0, requests: 0, problem: opened.problem };
-    const newest = newestDay;
-    const floors = historyFloors(newest);
+export const PAGE_ROWS_PER_ASK = 30_000;
+const DEVICES_SPLIT = 3;
+
+/**
+ * Units of time (months, weeks or days) one ask covers for a website with
+ * `pages` pages viewed in 90 days, so its answer stays near
+ * `PAGE_ROWS_PER_ASK`: a 95-page website a whole span at once, a
+ * 15,000-page website a unit at a time. Unknown, one at a time.
+ */
+export function unitsPerAsk(pages: number | null): number {
+  if (!pages || pages <= 0) return 1;
+  return Math.max(1, Math.floor(PAGE_ROWS_PER_ASK / (pages * DEVICES_SPLIT)));
+}
+
+/** From `from` to the day before `before`, `units` units an ask, each unit's next start given by `next`. */
+function spans(from: string, before: string, next: (start: string) => string, units: number): Array<{ from: string; to: string }> {
+  const out: Array<{ from: string; to: string }> = [];
+  for (let start = from; start < before;) {
+    let end = start;
+    for (let unit = 0; unit < units && end < before; unit += 1) end = next(end);
+    const stop = end < before ? end : before;
+    out.push({ from: start, to: shiftDay(stop, -1) });
+    start = stop;
+  }
+  return out;
+}
+
+const nextMonth = (day: string) => monthStart(shiftDay(monthStart(day), 32));
+const nextWeek = (day: string) => shiftDay(weekStart(day), 7);
+const nextDay = (day: string) => shiftDay(day, 1);
+
+/**
+ * The pieces of a page fill, oldest first (BR5, BR6): the months before the
+ * year's weeks, the weeks to the 90 days, the week the 90 days begin in, and
+ * the 90 days — `units` months, weeks or days an ask, so no month or week is
+ * split between two asks and a big website's answer stays small.
+ */
+export function pageFillPieces(newest: string, units: number): Array<{ lead: Lead; from: string; to: string }> {
+  const floors = historyFloors(newest);
+  return [
     // The month before the year's weeks begin ends where the weeks begin, so no day is asked twice.
-    const pieces: Array<{ lead: Lead; from: string; to: string }> = [
-      { lead: "yearMonth", from: floors.month, to: shiftDay(floors.week, -1) },
-      { lead: "isoYearIsoWeek", from: floors.week, to: shiftDay(weekStart(floors.day), -1) },
-      // The week the 90 days begin in, its days before them as that week.
-      { lead: "isoYearIsoWeek", from: weekStart(floors.day), to: shiftDay(floors.day, -1) },
-    ];
-    for (let to = newest; to >= floors.day; to = shiftDay(to, -7)) {
-      pieces.push({ lead: "date", from: shiftDay(to, -6) > floors.day ? shiftDay(to, -6) : floors.day, to });
-    }
-    let rows = 0;
-    for (const piece of pieces) {
-      if (piece.from > piece.to) continue;
-      for (const list of SERIES_LISTS) {
-        const asked = await askPages(ctx, opened.session, target, list, piece.lead, piece, args.country);
-        if (!asked.ok) return { ok: false, rows, requests: opened.session.requests, problem: asked.reason };
-        rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
-        await writeRecords(ctx, target, args.connectionId, newest, asked.records);
-      }
-    }
-    await ctx.runMutation(internal.googleAnalyticsPageSeries.notePagesHeld, { connectionId: args.connectionId, property: target.property, from: floors.month, ...(args.country ? { country: args.country } : {}) });
-    return { ok: true, rows, requests: opened.session.requests };
+    ...spans(floors.month, floors.week, nextMonth, units).map((span) => ({ lead: "yearMonth" as Lead, ...span })),
+    ...spans(floors.week, weekStart(floors.day), nextWeek, units).map((span) => ({ lead: "isoYearIsoWeek" as Lead, ...span })),
+    // The week the 90 days begin in, its days before them as that week.
+    ...(weekStart(floors.day) < floors.day ? [{ lead: "isoYearIsoWeek" as Lead, from: weekStart(floors.day), to: shiftDay(floors.day, -1) }] : []),
+    ...spans(floors.day, shiftDay(newest, 1), nextDay, units).map((span) => ({ lead: "date" as Lead, ...span })),
+  ];
+}
+
+/** Pages viewed in 90 days, as the website's own list holds them (BR5); null before it is built. */
+export const pagesSeenOf = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), country: v.optional(v.string()) },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, args) => {
+    const key = slotKey("page", "90", "NOW", EVERY_DEVICE, args.country ?? "");
+    const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key)).first();
+    if (!slot) return null;
+    const parts = await ctx.db
+      .query("googleAnalyticsPeriods")
+      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key).eq("slot", slot.slot))
+      .take(slot.parts);
+    return parts.reduce((sum, part) => sum + part.keys.length, 0);
   },
 });
+
+/**
+ * Each page's two years asked of Google once (SF5, SF9): months, weeks and
+ * days, as many an ask as keep the answer small (BR5). A step of the fill
+ * (`googleAnalyticsSteps.fillPageHistory`): each piece's place is noted once
+ * both lists are written, so a fill stopped part-way starts after it (BR6).
+ * Run by hand only when Anthony says:
+ * `npx convex run googleAnalyticsSteps:fillPageHistory '{"connectionId": "…"}'`.
+ */
+export async function fillPageHistoryStep(ctx: ActionCtx, args: FillArgs): Promise<FillOutcome> {
+  const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });
+  const newestDay = args.country ? target?.countryHistory.find((one) => one.country === args.country)?.newestDay : target?.newestDay;
+  if (!target?.property || !newestDay) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not connected, or no days collected yet." };
+  if (args.country && !target.others.includes(args.country)) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: "Not one of the website's home countries." };
+  const opened = await openSession(ctx, args.connectionId);
+  if (!opened.ok) return { ok: false, pieces: 0, rows: 0, requests: 0, problem: opened.problem };
+  const country = args.country ?? "";
+  const newest = newestDay;
+  const floors = historyFloors(newest);
+  const pages = await ctx.runQuery(internal.googleAnalyticsPageSeries.pagesSeenOf, { companyWebsiteId: target.companyWebsiteId, ...(args.country ? { country: args.country } : {}) });
+  const pieces = pageFillPieces(newest, unitsPerAsk(pages));
+  let rows = 0;
+  const step = fillStops(
+    ctx,
+    async (atMs) => await ctx.scheduler.runAfter(atMs, internal.googleAnalyticsSteps.fillPageHistory, args),
+    args.nightFrom,
+    () => ({ pieces: pieces.length, rows, requests: opened.session.requests }),
+  );
+  const reached = fillReachedOf(target, country, PAGES_FILL);
+  for (const piece of pieces) {
+    if (piece.from > piece.to || (reached && piece.to <= reached)) continue;
+    if (step.timeUp()) return await step.handOn();
+    for (const list of SERIES_LISTS) {
+      const asked = await askPages(ctx, opened.session, target, list, piece.lead, piece, args.country);
+      if (!asked.ok) return await step.stopped(failed(opened.session, asked));
+      rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
+      await writeRecords(ctx, target, args.connectionId, newest, asked.records);
+    }
+    await ctx.runMutation(internal.googleAnalyticsFillAfter.noteFillReached, { connectionId: args.connectionId, property: target.property, country, fill: PAGES_FILL, to: piece.to });
+  }
+  await ctx.runMutation(internal.googleAnalyticsPageSeries.notePagesHeld, { connectionId: args.connectionId, property: target.property, from: floors.month, ...(args.country ? { country: args.country } : {}) });
+  return { ok: true, pieces: pieces.length, rows, requests: opened.session.requests };
+}
+
+/** The page fill's name among the fills' places (BR6). */
+export const PAGES_FILL = "pages";
 
 export const notePagesHeld = internalMutation({
   args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), from: v.string(), country: v.optional(v.string()) },
@@ -226,9 +300,11 @@ export const notePagesHeld = internalMutation({
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.property !== args.property) return null;
+    // Filled: its place is no longer needed (BR6).
+    const fillsReached = withoutReached(connection, args.country ?? "", [PAGES_FILL]);
     await ctx.db.patch(connection._id, args.country
-      ? { countryHistory: withCoverage(connection, args.country, { pageHistoryFrom: args.from }), updatedAt: Date.now() }
-      : { pageHistoryFrom: args.from, updatedAt: Date.now() });
+      ? { countryHistory: withCoverage(connection, args.country, { pageHistoryFrom: args.from }), fillsReached, updatedAt: Date.now() }
+      : { pageHistoryFrom: args.from, fillsReached, updatedAt: Date.now() });
     return null;
   },
 });

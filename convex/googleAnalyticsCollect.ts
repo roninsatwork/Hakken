@@ -14,7 +14,7 @@ import { numberPages } from "./googleAnalyticsPageNumbers";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { forgetCountedHistory } from "./insightHistoryForget";
-import { THRESHOLDED_DIMENSIONS, runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type QuotaLeft, type RealtimeAsk, type ReportAsk, type ReportRow, type Report } from "./googleAnalyticsApi";
+import { THRESHOLDED_DIMENSIONS, runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type QuotaLeft, type RealtimeAsk, type ReportAsk, type ReportRow, type ReportSink, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
   EVENT_LIST_METRICS,
@@ -30,13 +30,14 @@ import {
   groupKeys,
   isEventList,
   isItemList,
-  joinAsks,
+  listJoiner,
   packList,
   type Lead,
   slotKey,
   type ListRow,
   type PackedPart,
 } from "./googleAnalyticsLists";
+import { trimDue } from "./utils/analyticsSharedLists";
 import {
   COUNTED_WITH,
   DAY_FACT_LISTS,
@@ -224,6 +225,8 @@ export type CollectTarget = {
   untitled: boolean;
   /** A shop (§18.6.6): its products are asked beside the other lists. */
   shop: boolean;
+  /** How far each two-year fill has got (ga-big-site-reliability-plan.md BR6). */
+  fillsReached: Array<{ country: string; fill: string; to: string }>;
   /**
    * No list of every event, campaign or visitor kept yet (§18.6.5, §18.6.6)
    * — the interests came last, so their list says for all: the weekly lists
@@ -271,6 +274,7 @@ export const collectTarget = internalQuery({
       countryHistory: (connection.countryHistory ?? []).map((one) => ({ country: one.country, newestDay: one.newestDay, oldestDay: one.oldestDay, pagesHeld: one.pageHistoryFrom !== undefined })),
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
       shop: connection.shop === true,
+      fillsReached: connection.fillsReached ?? [],
       // A shop's first products are asked at once too, as every new list was.
       eventless: (await ctx.db
         .query("googleAnalyticsPeriodSlots")
@@ -317,9 +321,12 @@ export async function openSession(
  * little when Google is busy — and not asked at all once the run's budget
  * for the hour is spent (SF17).
  */
-export async function ask(session: Session, property: string, report: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
+export async function ask(session: Session, property: string, report: ReportAsk, sink?: ReportSink): Promise<({ ok: true } & Report) | GoogleFailure> {
+  // Asked again after a failure part-way: with a sink, from the page Google reached (ga-big-site-reliability-plan.md BR2).
+  let fromPage = 0;
   return await retried(session, async (token) => {
-    const answer = await runReport(token, property, report);
+    const answer = await runReport(token, property, report, sink, fromPage);
+    if (!answer.ok) fromPage = answer.pagesRead;
     if (answer.ok && answer.quota) session.quota = answer.quota;
     if (answer.ok && answer.quota) await session.ctx.runMutation(internal.googleAnalyticsQuota.noteQuota, { connectionId: session.connectionId, quota: answer.quota });
     return { answer, requests: answer.ok ? answer.requests : 1 };
@@ -394,8 +401,10 @@ export async function askList(
   /**
    * `converting`: a third ask, the visits that made any listed event, each once (`sessions` filtered to the events, no
    * split by event) — landing pages by channel for the dates now (ga-conversions-visitors-plan.md CV8).
+   * `trim`: a page list's own cut (ga-big-site-reliability-plan.md BR3), made as Google's answers arrive once more than
+   * `TRIM_ABOVE` rows are held, so a big website's list is never held whole.
    */
-  also: { converting?: boolean } = {},
+  also: { converting?: boolean; trim?: (rows: ListRow[]) => ListRow[] } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
   const base = {
@@ -410,7 +419,17 @@ export async function askList(
         : list === "landingAssistant" ? { only: { dimension: "sessionSource", values: [...AI_SOURCE_VALUES] } } : {}),
   };
   const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
-  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...metrics] });
+  // Each answer joined as it arrives, and a page list trimmed while it is read (BR2, BR3).
+  const joined = listJoiner(list, lead, new Set(target.perVisit));
+  const due = trimDue();
+  const trimmed = (add: (rows: ReportRow[]) => void) => (rows: ReportRow[]) => {
+    add(rows);
+    if (also.trim && due.now(joined.size())) {
+      joined.trim(also.trim);
+      due.after(joined.size());
+    }
+  };
+  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...metrics] }, trimmed((rows) => joined.addMain(rows)));
   if (!main.ok) return main;
   let events: ({ ok: true } & Report) | null = null;
   // An event list counts every event itself, and a product list cannot be split by event: no key events to join (§18.6.5, §18.6.6).
@@ -420,19 +439,18 @@ export async function askList(
       dimensions: [...dimensions, "eventName"],
       metrics: [...EVENT_METRICS],
       eventNames: target.events,
-    });
+    }, trimmed((rows) => joined.addEvents(rows)));
     if (!answer.ok) return answer;
     events = answer;
   }
-  let converting: ({ ok: true } & Report) | null = null;
   if (also.converting && target.events.length > 0) {
-    const answer = await ask(session, target.property!, { ...base, dimensions, metrics: ["sessions"], eventNames: target.events });
+    const answer = await ask(session, target.property!, { ...base, dimensions, metrics: ["sessions"], eventNames: target.events }, trimmed((rows) => joined.addConverting(rows)));
     if (!answer.ok) return answer;
-    converting = answer;
   }
+  if (also.trim) joined.trim(also.trim);
   return {
     ok: true,
-    groups: joinAsks(list, lead, main.rows, events?.rows ?? [], new Set(target.perVisit), converting?.rows ?? null),
+    groups: joined.groups(),
     flags: {
       folded: main.folded || (events?.folded ?? false),
       thresholded: main.thresholded || (events?.thresholded ?? false),
@@ -463,7 +481,7 @@ export function siteOrigin(addresses: readonly string[], host: string): string {
  */
 export type StepResult = { ok: true; rows: number; requests: number } | { ok: false; reason: string; access: boolean; busy: boolean; wait: boolean; requests: number };
 
-export function failed(session: Session, failure: GoogleFailure | null): StepResult {
+export function failed(session: Session, failure: GoogleFailure | null): Extract<StepResult, { ok: false }> {
   const wait = failure?.reason === "BUDGET" || (failure?.reason === "BUSY" && HOURLY_REFUSAL.test(failure.detail));
   return {
     ok: false,
@@ -826,6 +844,11 @@ export const finishCollection = internalMutation({
     hostVisits: v.optional(v.array(v.object({ host: v.string(), visits: v.number() }))),
     /** The run collected it again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4). */
     recount: v.optional(v.boolean()),
+    /**
+     * When the night's run began (ga-big-site-reliability-plan.md BR7): the two-year fills start only after a night's
+     * collection, never after the first one on connecting, and wait for the hour inside that night.
+     */
+    nightFrom: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -847,6 +870,7 @@ export const finishCollection = internalMutation({
       listsFrom: undefined,
       problem: undefined,
       problemAt: undefined,
+      problemDetail: undefined,
       updatedAt: now,
     });
     // The past rolled on (ga-stored-figures-plan.md SF2): days past 90 into weeks, weeks past a year into months;
@@ -862,7 +886,7 @@ export const finishCollection = internalMutation({
     await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
     // A home country taken off the website's list goes (§18.6.1).
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountriesNotKept, { companyWebsiteId: connection.companyWebsiteId });
-    await fillAfterCollection(ctx, connection);
+    if (args.nightFrom !== undefined) await fillAfterCollection(ctx, connection, args.nightFrom);
     return null;
   },
 });
@@ -940,7 +964,7 @@ export const clearFigures = internalMutation({
       .first();
     if (connection?.clearing) {
       await ctx.db.patch(connection._id, {
-        clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyFrom: undefined, historyFilled: undefined, pageHistoryFrom: undefined, countryHistory: undefined, listsFrom: undefined, quotaSeen: undefined,
+        clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyFrom: undefined, historyFilled: undefined, pageHistoryFrom: undefined, countryHistory: undefined, listsFrom: undefined, quotaSeen: undefined, fillsReached: undefined,
         dailyPeriodsAt: undefined, weeklyPeriodsAt: undefined, updatedAt: Date.now(),
       });
       // The new property's figures start coming in at once (§10, Q15).

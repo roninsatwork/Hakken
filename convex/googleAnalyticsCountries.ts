@@ -148,7 +148,15 @@ export const dropCountryRecords = internalMutation({
       await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountryRecords, { companyWebsiteId: args.companyWebsiteId, store: args.store + 1 });
     } else {
       const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
-      if (connection) await ctx.db.patch(connection._id, { countryHistory: (connection.countryHistory ?? []).filter((one) => kept.has(one.country)), updatedAt: Date.now() });
+      if (connection) {
+        // Its fills' places go with its records (ga-big-site-reliability-plan.md BR6): kept again, it fills from the start.
+        const reached = (connection.fillsReached ?? []).filter((one) => one.country === "" || kept.has(one.country));
+        await ctx.db.patch(connection._id, {
+          countryHistory: (connection.countryHistory ?? []).filter((one) => kept.has(one.country)),
+          fillsReached: reached.length > 0 ? reached : undefined,
+          updatedAt: Date.now(),
+        });
+      }
     }
     return null;
   },

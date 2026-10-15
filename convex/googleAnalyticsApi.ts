@@ -180,11 +180,22 @@ export async function listKeyEvents(accessToken: string, property: string): Prom
 // The Data API
 // ---------------------------------------------------------------------------
 
-/** Rows Google gives in one answer; more are paged with `offset`. */
-export const REPORT_PAGE_ROWS = 100_000;
+/**
+ * Rows Google gives in one answer; more are paged with `offset`. 25,000 keeps
+ * one answer near 8 MB of text and 20 MB once read
+ * (ga-big-site-reliability-plan.md BR2; 100,000 until 2026-10-15).
+ */
+export const REPORT_PAGE_ROWS = 25_000;
 
-/** Pages of a report read at most: a list longer than this is cut, and says so. */
-const MOST_REPORT_PAGES = 5;
+/** Pages of a report read at most — 500,000 rows: a list longer than this is cut, and says so. */
+export const MOST_REPORT_PAGES = 20;
+
+/**
+ * Where a report's rows go as each of Google's answers arrives (BR2), rather
+ * than all held until the last: a page list adds them up and trims them as
+ * they come (`googleAnalyticsPageLists.ts`).
+ */
+export type ReportSink = (rows: ReportRow[]) => void;
 
 export type ReportAsk = {
   startDate: string;
@@ -277,18 +288,29 @@ function filterOf(ask: ReportAsk) {
 }
 
 /**
- * Every row of one report, paged by 100,000. Google's own words for what it
- * left out come back with the rows, for the screens to say (§2.5).
+ * Every row of one report, paged by `REPORT_PAGE_ROWS`. Google's own words for
+ * what it left out come back with the rows, for the screens to say (§2.5).
+ * With a `sink`, each answer's rows go to it as they arrive and none are held
+ * here (BR2); `fromPage` carries on an ask Google stopped part-way from the
+ * page it reached, which a failure names (`pagesRead`) — only with a sink,
+ * which has the pages before it.
  */
-export async function runReport(accessToken: string, property: string, ask: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
+export async function runReport(
+  accessToken: string,
+  property: string,
+  ask: ReportAsk,
+  sink?: ReportSink,
+  fromPage = 0,
+): Promise<({ ok: true } & Report) | (GoogleFailure & { pagesRead: number })> {
   const url = `${DATA}/${property}:runReport`;
   const rows: ReportRow[] = [];
   let folded = false;
   let thresholded = false;
   let requests = 0;
   let total = 0;
+  let seen = sink ? fromPage * REPORT_PAGE_ROWS : 0;
   let quota: QuotaLeft | null = null;
-  for (let page = 0; page < MOST_REPORT_PAGES; page += 1) {
+  for (let page = sink ? fromPage : 0; page < MOST_REPORT_PAGES; page += 1) {
     const filter = filterOf(ask);
     const answer = await callGoogle(url, accessToken, {
       dateRanges: [{ startDate: ask.startDate, endDate: ask.endDate }],
@@ -301,7 +323,7 @@ export async function runReport(accessToken: string, property: string, ask: Repo
       returnPropertyQuota: true,
     });
     requests += 1;
-    if (!answer.ok) return answer;
+    if (!answer.ok) return { ...answer, pagesRead: page };
     const json = answer.json as {
       rows?: { dimensionValues?: { value?: string }[]; metricValues?: { value?: string }[] }[];
       rowCount?: number;
@@ -312,15 +334,16 @@ export async function runReport(accessToken: string, property: string, ask: Repo
     folded ||= json.metadata?.dataLossFromOtherRow === true;
     thresholded ||= json.metadata?.subjectToThresholding === true;
     total = json.rowCount ?? 0;
-    for (const row of json.rows ?? []) {
-      rows.push({
-        keys: (row.dimensionValues ?? []).map((value) => value.value ?? ""),
-        values: (row.metricValues ?? []).map((value) => Number(value.value ?? 0) || 0),
-      });
-    }
-    if (rows.length >= total || (json.rows ?? []).length < REPORT_PAGE_ROWS) break;
+    const answered = (json.rows ?? []).map((row) => ({
+      keys: (row.dimensionValues ?? []).map((value) => value.value ?? ""),
+      values: (row.metricValues ?? []).map((value) => Number(value.value ?? 0) || 0),
+    }));
+    seen += answered.length;
+    if (sink) sink(answered);
+    else for (const row of answered) rows.push(row);
+    if (seen >= total || answered.length < REPORT_PAGE_ROWS) break;
   }
-  return { ok: true, rows, folded, thresholded, cut: rows.length < total, requests, quota };
+  return { ok: true, rows, folded, thresholded, cut: seen < total, requests, quota };
 }
 
 /**

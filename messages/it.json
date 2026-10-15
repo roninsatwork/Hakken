@@ -16816,6 +16816,9 @@
     },
     "counts": {
       "reading": "Lettura degli eventi chiave della proprietà, e degli eventi che sembrano richieste, da Google…",
+      "readFailedTitle": "Google non ha risposto quando sono stati letti gli eventi di {property}, quindi non sono ancora elencati.",
+      "readFailed": "{platformName} riprova da solo alle {at}. Non devi fare nulla.",
+      "googleSaid": "Google ha detto: {words}",
       "addresses": "La proprietà {property} registra visite su {count} indirizzi. {platformName} legge quello di {host}, {read}, e lascia {others} fuori da ogni dato.",
       "title": "Scegli cosa conta come conversione",
       "description": "Gli eventi chiave della proprietà {property}, e i suoi altri eventi che sembrano una richiesta. Spunta ognuno che è una conversione — una richiesta, una vendita, una prenotazione; {platformName} ha spuntato quelli probabili. Uno scorrimento o un video avviato non vengono mai spuntati per te.",

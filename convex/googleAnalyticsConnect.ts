@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import type { ActionCtx, QueryCtx } from "./_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, tenantQuery } from "./tenantFunctions";
@@ -207,7 +207,7 @@ export const completeSignIn = internalMutation({
       googleConnectionId: args.googleConnectionId,
       attempt: undefined,
       ...(mending
-        ? { status: "CONNECTED" as const, choices: undefined, addressesFound: undefined, problem: undefined, problemAt: undefined }
+        ? { status: "CONNECTED" as const, choices: undefined, addressesFound: undefined, problem: undefined, problemAt: undefined, problemDetail: undefined }
         : {
           status: "CHOOSING" as const,
           choices: args.choices.map(({ addresses: _addresses, others: _others, ...choice }) => choice),
@@ -286,6 +286,9 @@ export const countingTarget = internalQuery({
     const hold = await ctx.db.get(connection.companyWebsiteId);
     return {
       property: connection.property,
+      // Its events still to be read (BR1): chosen and not read yet, or listed before Hakken counted as it does now.
+      waiting: (connection.status === "COUNTING" || connection.status === "CONNECTED")
+        && (connection.eventsReadAt === undefined || connection.listedWith !== COUNTED_WITH),
       host: website.host,
       addresses: connection.addresses ?? null,
       googleConnectionId: connection.googleConnectionId ?? null,
@@ -299,6 +302,23 @@ export const countingTarget = internalQuery({
 export const MOST_ENQUIRY_EVENTS = 20;
 
 /**
+ * When reading a property's events fails, Hakken asks again by itself
+ * (ga-big-site-reliability-plan.md BR1): after 5 minutes, 30, 2 hours, then
+ * every 6 hours until it reads — nothing for anyone to press.
+ */
+export const READ_AGAIN_MS = [5 * 60_000, 30 * 60_000, 2 * 3_600_000, 6 * 3_600_000] as const;
+
+/** How long before asking again, after `attempt` failures. */
+export function readAgainIn(attempt: number): number {
+  return READ_AGAIN_MS[Math.min(Math.max(attempt, 0), READ_AGAIN_MS.length - 1)];
+}
+
+/** Google's own words for a refusal, as the screens and run logs quote them. */
+function googleWords(failure: { reason: string; status: number; detail: string }): string {
+  return `${failure.reason} ${failure.status}: ${failure.detail}`.slice(0, 300);
+}
+
+/**
  * Read from Google what the admin chooses from (§3, steps 4 and 5): the
  * property's name, time zone and currency, the website's own addresses when
  * they are not known yet, the property's key events, and the events that read
@@ -308,13 +328,32 @@ export const MOST_ENQUIRY_EVENTS = 20;
  * which then starts.
  */
 export const readWhatCounts = internalAction({
-  args: { connectionId: v.id("googleAnalyticsConnections"), thenCollect: v.optional(v.boolean()) },
+  args: {
+    connectionId: v.id("googleAnalyticsConnections"),
+    thenCollect: v.optional(v.boolean()),
+    /** Asked again after a failure (BR1): how many times before, and the property it was for. */
+    attempt: v.optional(v.number()),
+    property: v.optional(v.string()),
+  },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<null> => {
     const target = await ctx.runQuery(internal.googleAnalyticsConnect.countingTarget, { connectionId: args.connectionId });
     if (!target) return null;
+    // Asked again: only while the same property's events are still to be read, so a choice made meanwhile wins.
+    if (args.attempt !== undefined && (!target.waiting || target.property !== args.property)) return null;
+    const failedWith = async (problem: "GOOGLE_BUSY" | "NO_ACCESS" | "REVOKED" | "UNREADABLE" | "NOT_CONFIGURED", detail?: string): Promise<null> => {
+      await ctx.runMutation(internal.googleAnalyticsConnect.readFailed, {
+        connectionId: args.connectionId,
+        property: target.property,
+        problem,
+        ...(detail ? { detail } : {}),
+        attempt: args.attempt ?? 0,
+        ...(args.thenCollect ? { thenCollect: true } : {}),
+      });
+      return null;
+    };
     const token = await accessTokenFor(ctx, args.connectionId);
-    if (!token.ok) return null;
+    if (!token.ok) return await failedWith(token.problem);
     const details = await propertyDetails(token.accessToken, target.property);
     // The property's own time zone is known from here on; until then, yesterday in UTC.
     const newest = details.ok ? newestWholeDayIn(Date.now(), details.details.timeZone) : yesterdayUtc(Date.now());
@@ -324,11 +363,8 @@ export const readWhatCounts = internalAction({
     const keyEvents = await listKeyEvents(token.accessToken, target.property);
     if (!details.ok || !addresses.ok || !keyEvents.ok) {
       const refused = [details, addresses, keyEvents].find((answer) => !answer.ok);
-      await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, {
-        connectionId: args.connectionId,
-        problem: refused && !refused.ok && refused.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY",
-      });
-      return null;
+      if (!refused || refused.ok) return null;
+      return await failedWith(refused.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY", googleWords(refused));
     }
     // The events that read as enquiries, seen in the last 12 months, beside the key events: Hakken counts them from
     // Google's own counts, marked as key events or not (BT2).
@@ -341,10 +377,7 @@ export const readWhatCounts = internalAction({
       hostNames: addresses.found.addresses,
       countries: [target.country],
     });
-    if (!year.ok) {
-      await ctx.runMutation(internal.googleAnalyticsConnect.noteProblem, { connectionId: args.connectionId, problem: year.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY" });
-      return null;
-    }
+    if (!year.ok) return await failedWith(year.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY", googleWords(year));
     const enquiries = year.rows
       .filter((row) => !keyNames.has(row.keys[0]) && readsAsEnquiry(row.keys[0]) && row.values[0] > 0)
       .sort((left, right) => right.values[0] - left.values[0])
@@ -449,6 +482,9 @@ export const writeWhatCounts = internalMutation({
       }),
       eventsReadAt: Date.now(),
       listedWith: COUNTED_WITH,
+      // Read at last (BR1): no read waiting, and a connection still choosing has nothing wrong left to say.
+      readAgainAt: undefined,
+      ...(connection.status === "COUNTING" ? { problem: undefined, problemAt: undefined, problemDetail: undefined } : {}),
       ...(grew && connected ? { countedWith: undefined } : {}),
       updatedAt: Date.now(),
     });
@@ -507,6 +543,7 @@ export const saveWhatCounts = adminMutation({
           disconnectedAt: undefined,
           problem: undefined,
           problemAt: undefined,
+          problemDetail: undefined,
           ...(another ? { clearing: true, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined } : {}),
         }
         : {}),
@@ -569,6 +606,7 @@ export const disconnectGoogleAnalytics = adminMutation({
       addressesFound: undefined,
       problem: undefined,
       problemAt: undefined,
+      problemDetail: undefined,
       updatedAt: now,
     });
     await ctx.db.insert("auditLogs", {
@@ -617,22 +655,61 @@ export const purgeHold = internalMutation({
  * say so until a collection goes right.
  */
 export const noteProblem = internalMutation({
-  args: { connectionId: v.id("googleAnalyticsConnections"), problem: analyticsProblemValidator },
+  args: { connectionId: v.id("googleAnalyticsConnections"), problem: analyticsProblemValidator, detail: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection) return null;
-    const now = Date.now();
-    const reconnect = args.problem === "REVOKED" || args.problem === "NO_ACCESS" || args.problem === "UNREADABLE";
-    const working = connection.status === "CONNECTED" || connection.status === "COUNTING";
-    await ctx.db.patch(connection._id, {
-      problem: args.problem,
-      problemAt: now,
-      ...(reconnect && working ? { status: "NEEDS_RECONNECT" as const } : {}),
-      updatedAt: now,
+    await noteProblemOn(ctx, connection, args.problem, args.detail);
+    return null;
+  },
+});
+
+async function noteProblemOn(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">, problem: Doc<"googleAnalyticsConnections">["problem"] & string, detail?: string) {
+  const now = Date.now();
+  const reconnect = problem === "REVOKED" || problem === "NO_ACCESS" || problem === "UNREADABLE";
+  const working = connection.status === "CONNECTED" || connection.status === "COUNTING";
+  await ctx.db.patch(connection._id, {
+    problem,
+    problemAt: now,
+    problemDetail: detail,
+    ...(reconnect && working ? { status: "NEEDS_RECONNECT" as const, readAgainAt: undefined } : {}),
+    updatedAt: now,
+  });
+  // Its visits leave the hold's pages at their next rebuild, as Search Console's clicks do when it stops.
+  if (reconnect && connection.status === "CONNECTED") await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
+}
+
+/**
+ * Reading a property's events failed (ga-big-site-reliability-plan.md BR1):
+ * the problem kept with Google's words and, when it is Google's and not the
+ * account's, the read asked again by itself after `readAgainIn` — the time
+ * kept, so the screen says when.
+ */
+export const readFailed = internalMutation({
+  args: {
+    connectionId: v.id("googleAnalyticsConnections"),
+    property: v.string(),
+    problem: analyticsProblemValidator,
+    detail: v.optional(v.string()),
+    attempt: v.number(),
+    thenCollect: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.property !== args.property) return null;
+    await noteProblemOn(ctx, connection, args.problem, args.detail);
+    // The account can no longer read it, or the sign-in is gone: a person must connect again, and the screen says so.
+    if (args.problem !== "GOOGLE_BUSY") return null;
+    const wait = readAgainIn(args.attempt);
+    await ctx.db.patch(connection._id, { readAgainAt: Date.now() + wait });
+    await ctx.scheduler.runAfter(wait, internal.googleAnalyticsConnect.readWhatCounts, {
+      connectionId: args.connectionId,
+      property: args.property,
+      attempt: args.attempt + 1,
+      ...(args.thenCollect ? { thenCollect: true } : {}),
     });
-    // Its visits leave the hold's pages at their next rebuild, as Search Console's clicks do when it stops.
-    if (reconnect && connection.status === "CONNECTED") await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
     return null;
   },
 });
@@ -739,6 +816,8 @@ export const statusConnectionValidator = v.object({
   lastCollectedAt: v.union(v.number(), v.null()),
   collecting: v.union(v.null(), v.object({ from: v.string(), top: v.string() })),
   problem: v.union(analyticsProblemValidator, v.null()),
+  problemDetail: orNull(v.string()),
+  readAgainAt: v.union(v.number(), v.null()),
   attempt: v.union(v.null(), v.object({ outcome: analyticsAttemptValidator, account: orNull(v.string()), at: v.number() })),
   /** The tracking health checks' last results (§6). */
   health: v.union(v.null(), v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
@@ -835,6 +914,8 @@ async function asStatus(
     lastCollectedAt: connection.lastCollectedAt ?? null,
     collecting: connection.collecting ? { from: connection.collecting.from, top: connection.collecting.top } : null,
     problem: connection.problem ?? null,
+    problemDetail: connection.problemDetail ?? null,
+    readAgainAt: connection.readAgainAt ?? null,
     attempt: connection.attempt
       ? { outcome: connection.attempt.outcome, account: connection.attempt.account ?? null, at: connection.attempt.at }
       : null,

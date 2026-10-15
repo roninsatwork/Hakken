@@ -67,6 +67,9 @@ async function collected(t: Harness, visits: Visit[]) {
     ],
   });
   await finishScheduled(t);
+  // The first night: the two-year fills follow its run (ga-big-site-reliability-plan.md BR7).
+  await t.mutation(internal.googleAnalyticsFillAfter.startFills, { connectionId: ids.connectionId });
+  await finishScheduled(t);
   return { ...ids, google, admin, user: t.withIdentity({ subject: ids.userId }), rival: t.withIdentity({ subject: ids.rivalId }) };
 }
 

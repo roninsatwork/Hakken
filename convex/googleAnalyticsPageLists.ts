@@ -7,7 +7,7 @@ import type { GoogleFailure } from "./googleApi";
 import { EVERY_DEVICE, PAGE_FACT_JOIN, beforeKey, channelKey, emptyRow, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { assistantOf } from "./utils/aiAssistants";
 import { CLICK_EVENTS, READ_EVENTS } from "./utils/analyticsPageStory";
-import { OTHER_ROWS, PAGE_TOP_ROWS } from "./utils/analyticsSharedLists";
+import { OTHER_ROWS, PAGE_TOP_ROWS, TRIM_KEEP, trimDue } from "./utils/analyticsSharedLists";
 import { EVENT_DETAIL } from "./utils/analyticsEvents";
 import { buildFlow, type Onward, type Route } from "./utils/landingFlow";
 import { PAGE_FACT_LISTS, type AnalyticsPeriod, type AnalyticsWhich, type PageFactList } from "./googleAnalyticsSchema";
@@ -76,32 +76,84 @@ function add(into: ListRow, row: ListRow) {
 /**
  * Each page's top rows by `measure`, the rest added into one row (SF14) —
  * one a group where `groupOf` names one (a landing page's other sources, a
- * channel each), and rows `keep` names never folded (an AI assistant's).
+ * channel each), and rows `keep` names never folded (an AI assistant's). A
+ * row that is already a page's "other" — added up while a big website's list
+ * was read (`TRIM_KEEP`, ga-big-site-reliability-plan.md BR3) — never takes
+ * one of the top places: it is added into the other row again.
  */
-export function topPerPage(rows: readonly ListRow[], measure: (row: ListRow) => number, groupOf: (rest: string) => string = () => OTHER_ROWS, keep: (rest: string) => boolean = () => false): ListRow[] {
+export function topPerPage(
+  rows: readonly ListRow[],
+  measure: (row: ListRow) => number,
+  groupOf: (rest: string) => string = () => OTHER_ROWS,
+  keep: (rest: string) => boolean = () => false,
+  top: number = PAGE_TOP_ROWS,
+): ListRow[] {
   const byPage = new Map<string, ListRow[]>();
   for (const row of rows) {
     const page = splitChannelKey(row.key).channel;
-    byPage.set(page, [...(byPage.get(page) ?? []), row]);
+    const pageRows = byPage.get(page);
+    if (pageRows) pageRows.push(row);
+    else byPage.set(page, [row]);
   }
   const out: ListRow[] = [];
   for (const [page, pageRows] of byPage) {
     const sorted = [...pageRows].sort((left, right) => measure(right) - measure(left) || left.key.localeCompare(right.key));
     const others = new Map<string, ListRow>();
-    sorted.forEach((row, at) => {
+    // A row's place among the page's rows, an "other" row left out of the count.
+    let at = 0;
+    for (const row of sorted) {
       const rest = splitChannelKey(row.key).source;
-      if (at < PAGE_TOP_ROWS || keep(rest)) {
+      const other = groupOf(rest) === rest;
+      const place = other ? top : at;
+      if (!other) at += 1;
+      if (place < top || keep(rest)) {
         out.push(row);
-        return;
+        continue;
       }
       const key = channelKey(page, groupOf(rest));
       const into = others.get(key) ?? { ...emptyRow(key), ...(row.times !== undefined ? { times: 0 } : {}) };
       add(into, row);
       others.set(key, into);
-    });
+    }
     out.push(...others.values());
   }
   return out;
+}
+
+/** A page list's cut while it is read (BR3): each page's `TRIM_KEEP` biggest, by the list's own rule. */
+export function trimTo(measure: (row: ListRow) => number, groupOf?: (rest: string) => string, keep?: (rest: string) => boolean): (rows: ListRow[]) => ListRow[] {
+  return (rows) => topPerPage(rows, measure, groupOf, keep, TRIM_KEEP);
+}
+
+/**
+ * A page list's rows as Google's answers arrive (BR2, BR3): each answer row
+ * keyed as the list keeps it (`keysOf`), its figures put by `fill`, added up
+ * by key — and once more than `TRIM_ABOVE` are held, cut by `cut`, so a big
+ * website's list is never held whole.
+ */
+export function heldRows(fill: (row: ListRow, answer: ReportRow) => void, cut: (rows: ListRow[]) => ListRow[], keysOf: (answer: ReportRow) => string[] = (answer) => answer.keys) {
+  const held = new Map<string, ListRow>();
+  const due = trimDue();
+  return {
+    sink: (rows: ReportRow[]) => {
+      for (const answer of rows) {
+        const keys = keysOf(answer);
+        const key = channelKey(keys[0] ?? "", keys.slice(1).join(PAGE_FACT_JOIN));
+        const row = held.get(key) ?? emptyRow(key);
+        fill(row, answer);
+        held.set(key, row);
+      }
+      if (due.now(held.size)) {
+        const kept = cut([...held.values()]);
+        held.clear();
+        for (const row of kept) held.set(row.key, row);
+        due.after(held.size);
+      }
+    },
+    rows: () => [...held.values()],
+    /** Rows held now: cut back whenever past `TRIM_ABOVE`. */
+    size: () => held.size,
+  };
 }
 
 /** Google's rows for a list keyed page first, each figure put by `fill`. */
@@ -145,16 +197,19 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
 
   // A landing page by source and new or returning, with each key event and reading: its channels, sources and returning visitors.
   const sourceEvents = [...target.events, ...READ_EVENTS];
-  const sources = await askList(session, { ...asking, events: sourceEvents }, "landingSource", [], range, device ? { device } : {});
+  // A channel's other sources kept as one row of that channel, and an AI assistant's never folded: channel sums stay whole.
+  const sourceOther = (rest: string) => [factParts(rest)[0] ?? "", OTHER_ROWS, ""].join(PAGE_FACT_JOIN);
+  const assistant = (rest: string) => assistantOf(factParts(rest)[1] ?? "") !== null;
+  const sources = await askList(session, { ...asking, events: sourceEvents }, "landingSource", [], range, device ? { device } : {}, { trim: trimTo((row) => row.visits, sourceOther, assistant) });
   if (!sources.ok) return failure(sources);
   const sourceRows = await numbered(ctx, target, [...sources.groups.values()].flat(), true);
-  // A channel's other sources kept as one row of that channel, and an AI assistant's never folded: channel sums stay whole.
-  if (!(await write("landingSource", topPerPage(sourceRows, (row) => row.visits, (rest) => [factParts(rest)[0] ?? "", OTHER_ROWS, ""].join(PAGE_FACT_JOIN), (rest) => assistantOf(factParts(rest)[1] ?? "") !== null), sources.flags, sourceEvents))) return { ok: true, rows: total, requests: session.requests };
+  if (!(await write("landingSource", topPerPage(sourceRows, (row) => row.visits, sourceOther, assistant), sources.flags, sourceEvents))) return { ok: true, rows: total, requests: session.requests };
 
   // A page by the page before each view: the website's own pages by number, another website by its address, none.
-  const before = await ask(session, property, { ...base, dimensions: ["pagePath", "pageReferrer"], metrics: ["screenPageViews"] });
+  const beforeHeld = heldRows((row, one) => { row.views += one.values[0] ?? 0; }, trimTo((row) => row.views), (one) => [one.keys[0] ?? "", beforeKey(one.keys[1] ?? "", target.addresses)]);
+  const before = await ask(session, property, { ...base, dimensions: ["pagePath", "pageReferrer"], metrics: ["screenPageViews"] }, beforeHeld.sink);
   if (!before.ok) return failure(before);
-  const beforeRows = rowsOfAnswer(before.rows.map((one) => ({ ...one, keys: [one.keys[0] ?? "", beforeKey(one.keys[1] ?? "", target.addresses)] })), (row, one) => { row.views += one.values[0] ?? 0; });
+  const beforeRows = beforeHeld.rows();
   const ownBefore = beforeRows.map((row) => splitChannelKey(row.key).source).filter((rest) => rest.startsWith("page:")).map((rest) => rest.slice(5));
   const ownRefs = await refsOf(ctx, target, ownBefore, false);
   const byPage = await numbered(ctx, target, beforeRows, false);
@@ -171,12 +226,13 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   if (!(await write("pageNext", topPerPage(next, (row) => row.views), flagsOf(before)))) return { ok: true, rows: total, requests: session.requests };
 
   // A page by the links out and downloads clicked on it.
-  const clicks = await ask(session, property, { ...base, dimensions: ["pagePath", "eventName", "linkUrl"], metrics: ["eventCount", "totalUsers"], eventNames: [...CLICK_EVENTS] });
-  if (!clicks.ok) return failure(clicks);
-  const clickRows = rowsOfAnswer(clicks.rows, (row, one) => {
+  const clickHeld = heldRows((row, one) => {
     row.times = (row.times ?? 0) + (one.values[0] ?? 0);
     row.people += one.values[1] ?? 0;
-  });
+  }, trimTo((row) => row.times ?? 0));
+  const clicks = await ask(session, property, { ...base, dimensions: ["pagePath", "eventName", "linkUrl"], metrics: ["eventCount", "totalUsers"], eventNames: [...CLICK_EVENTS] }, clickHeld.sink);
+  if (!clicks.ok) return failure(clicks);
+  const clickRows = clickHeld.rows();
   if (!(await write("pageClicks", topPerPage(await numbered(ctx, target, clickRows, false), (row) => row.times ?? 0), flagsOf(clicks)))) return { ok: true, rows: total, requests: session.requests };
 
   // A page's readers by age and gender, where Google can tell.
@@ -202,7 +258,7 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   // Interests are among the 120 asks an hour Google allows of age, gender and interests, so they are asked once, not
   // twice with the key events: a night's run stays two hours (CV10).
   for (const [list, events] of [["landingBrowser", target.events], ["landingSystem", target.events], ["landingInterest", []]] as const) {
-    const asked = await askList(session, { ...asking, events: [...events] }, list, [], range, device ? { device } : {});
+    const asked = await askList(session, { ...asking, events: [...events] }, list, [], range, device ? { device } : {}, { trim: trimTo((row) => row.visits) });
     if (!asked.ok) return failure(asked);
     if (!(await write(list, topPerPage(await numbered(ctx, target, [...asked.groups.values()].flat(), true), (row) => row.visits), asked.flags, events))) return { ok: true, rows: total, requests: session.requests };
   }
@@ -210,17 +266,18 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   // A page's readers in every country, whatever the home country (PS8): asked with the main home country's lists alone.
   if (!country) {
     const { countries: _countries, ...everyCountry } = base;
-    const countries = await ask(session, property, { ...everyCountry, dimensions: ["pagePath", "countryId"], metrics: ["totalUsers", "screenPageViews"] });
-    if (!countries.ok) return failure(countries);
-    const countryRows = rowsOfAnswer(countries.rows.map((one) => ({ ...one, keys: [one.keys[0] ?? "", (one.keys[1] ?? "").toUpperCase()] })), (row, one) => {
+    const countryHeld = heldRows((row, one) => {
       row.people += one.values[0] ?? 0;
       row.views += one.values[1] ?? 0;
-    });
+    }, trimTo((row) => row.people), (one) => [one.keys[0] ?? "", (one.keys[1] ?? "").toUpperCase()]);
+    const countries = await ask(session, property, { ...everyCountry, dimensions: ["pagePath", "countryId"], metrics: ["totalUsers", "screenPageViews"] }, countryHeld.sink);
+    if (!countries.ok) return failure(countries);
+    const countryRows = countryHeld.rows();
     if (!(await write("pageCountry", topPerPage(await numbered(ctx, target, countryRows, false), (row) => row.people), flagsOf(countries)))) return { ok: true, rows: total, requests: session.requests };
   }
 
   // The pages the visits that started on a page saw, each by its number.
-  const seen = await askList(session, { ...asking, events: [] }, "landingPagesSeen", [], range, device ? { device } : {});
+  const seen = await askList(session, { ...asking, events: [] }, "landingPagesSeen", [], range, device ? { device } : {}, { trim: trimTo((row) => row.visits) });
   if (!seen.ok) return failure(seen);
   const seenRows = await numbered(ctx, target, [...seen.groups.values()].flat(), true);
   const seenRefs = await refsOf(ctx, target, seenRows.map((row) => splitChannelKey(row.key).source), false);
@@ -255,12 +312,14 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
   for (const which of ["NOW", "BEFORE"] as const) {
     const dates = which === "NOW" ? range : periodRange(job.period, which, top);
     const at = { ...base, startDate: dates.from, endDate: dates.to };
-    const pages = await ask(session, property, { ...at, dimensions: ["eventName", "pagePath"], metrics: ["eventCount", "totalUsers"] });
-    if (!pages.ok) return failure(pages);
-    const pageRows = rowsOfAnswer(pages.rows, (row, one) => {
+    const timesAndPeople = (row: ListRow, one: ReportRow) => {
       row.times = (row.times ?? 0) + (one.values[0] ?? 0);
       row.people += one.values[1] ?? 0;
-    });
+    };
+    const pageHeld = heldRows(timesAndPeople, trimTo((row) => row.times ?? 0));
+    const pages = await ask(session, property, { ...at, dimensions: ["eventName", "pagePath"], metrics: ["eventCount", "totalUsers"] }, pageHeld.sink);
+    if (!pages.ok) return failure(pages);
+    const pageRows = pageHeld.rows();
     const refs = await refsOf(ctx, target, pageRows.map((row) => splitChannelKey(row.key).source), false);
     const byRef = summedRows(pageRows.map((row) => {
       const { channel: event, source: path } = splitChannelKey(row.key);
@@ -268,15 +327,13 @@ export async function collectPageLists(ctx: ActionCtx, session: Session, connect
     }));
     if (!(await write("eventPage", topPerPage(byRef, (row) => row.times ?? 0), flagsOf(pages), [], which))) return { ok: true, rows: total, requests: session.requests };
     // What each event was about, asked once for all of them: each row's own detail (`EVENT_DETAIL`), the others "(not set)".
-    const answer = await ask(session, property, { ...at, dimensions: ["eventName", ...details], metrics: ["eventCount", "totalUsers"], eventNames: Object.keys(EVENT_DETAIL) });
-    if (!answer.ok) return failure(answer);
-    const about = rowsOfAnswer(answer.rows.map((one) => {
+    const aboutHeld = heldRows(timesAndPeople, trimTo((row) => row.times ?? 0), (one) => {
       const event = one.keys[0] ?? "";
-      return { ...one, keys: [event, one.keys[1 + details.indexOf(EVENT_DETAIL[event])] ?? ""] };
-    }), (row, one) => {
-      row.times = (row.times ?? 0) + (one.values[0] ?? 0);
-      row.people += one.values[1] ?? 0;
+      return [event, one.keys[1 + details.indexOf(EVENT_DETAIL[event])] ?? ""];
     });
+    const answer = await ask(session, property, { ...at, dimensions: ["eventName", ...details], metrics: ["eventCount", "totalUsers"], eventNames: Object.keys(EVENT_DETAIL) }, aboutHeld.sink);
+    if (!answer.ok) return failure(answer);
+    const about = aboutHeld.rows();
     if (!(await write("eventDetail", topPerPage(about, (row) => row.times ?? 0), flagsOf(answer), [], which))) return { ok: true, rows: total, requests: session.requests };
   }
   return { ok: true, rows: total, requests: session.requests };

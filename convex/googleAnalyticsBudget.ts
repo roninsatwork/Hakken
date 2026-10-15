@@ -19,6 +19,21 @@ import type { QuotaLeft } from "./googleAnalyticsApi";
  * is left comes down to it. An Analytics 360 property's ten times the tokens
  * keeps the same amounts back.
  */
+/**
+ * A website's night (ga-stored-figures-plan.md SF19): its run, and the two-year fills after it
+ * (ga-big-site-reliability-plan.md BR7), may go on for 4½ hours from the run's start; past it, what is left waits for
+ * the next night.
+ */
+export const NIGHT_MS = 4.5 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+/** Past the hour before carrying on, so Google's count has refreshed. */
+const AFTER_THE_HOUR_MS = 2 * 60 * 1000;
+
+/** When a run or a fill waiting for Google's hourly allowance carries on: an hour and two minutes after it stopped. */
+export function afterTheHour(now: number): number {
+  return now + HOUR_MS + AFTER_THE_HOUR_MS;
+}
+
 export const KEPT_BACK = {
   /** A fifth of the 120 asks an hour that may hold back small groups: the run uses 96 at most. */
   thresholdedPerHour: 24,
