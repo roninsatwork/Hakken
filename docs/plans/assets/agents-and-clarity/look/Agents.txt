@@ -1,0 +1,12 @@
+# Admin → Agents — the approved look (board "Agents" of docs/plans/assets/agents-and-clarity/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: AI Agent Management
+  primary-action: New Agent
+select: What it does
+select: When it runs
+select: Status
+search: Search agents by name...
+table: Agent | What it does | Runs | Model | Status | Actions
+  table-bar: All agents
+  table-footer

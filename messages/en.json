@@ -3286,7 +3286,13 @@
         "showingLoaded": "Showing {count} agents",
         "loadMore": "Load more agents",
         "loadingMore": "Loading agents...",
-        "working": "Working now"
+        "working": "Working now",
+        "whatItDoes": "What it does",
+        "runs": "Runs",
+        "platformDefault": "Platform default",
+        "allAgents": "All agents",
+        "showing": "Showing {start}–{end} of {total}",
+        "noneMatch": "No agents match these choices."
       },
       "modal": {
         "initTitle": "Create an agent",
@@ -4574,6 +4580,57 @@
           "summary": "{share}% of this job was spent on one step: {step}.",
           "summaryFailed": "{share}% of this job was spent on a step that then failed: {step}."
         }
+      },
+      "filters": {
+        "label": "Choose which agents",
+        "what": "What it does",
+        "when": "When it runs",
+        "status": "Status",
+        "kept": "Your choices stay in the page's address, so a link opens the same list."
+      },
+      "what": {
+        "all": "All agents",
+        "collect": "Collecting data",
+        "insights": "Insights team",
+        "tasks": "Tasks and alerts",
+        "assist": "Assistant and research",
+        "write": "Writing and sending",
+        "wiki": "Wiki staff",
+        "platform": "Platform",
+        "own": "Your own agents"
+      },
+      "when": {
+        "all": "Any time",
+        "schedule": "On a schedule",
+        "team": "In the Insights team's run",
+        "event": "When something happens",
+        "asked": "When someone asks",
+        "never": "Never on its own"
+      },
+      "statusFilter": {
+        "all": "Any status",
+        "active": "Active",
+        "working": "Working now",
+        "draft": "Draft"
+      },
+      "runs": {
+        "team": "In the Insights team's run",
+        "saved": "When something is saved",
+        "imported": "When a document is imported",
+        "answered": "When a question is answered",
+        "sensitive": "When something sensitive is added",
+        "collected": "After each collection",
+        "asked": "When someone asks",
+        "yes": "When someone says yes",
+        "lookUp": "When someone presses Look up",
+        "never": "Not run on its own",
+        "noSchedule": "No schedule yet",
+        "paused": "{schedule}, paused",
+        "everyMinutes": "Every {minutes} minutes",
+        "everyHour": "Every hour",
+        "everyHours": "Every {hours} hours",
+        "daily": "Daily, {time} UTC",
+        "monthly": "Monthly, on the {day}, {time} UTC"
       }
     },
     "settings": {
@@ -10151,7 +10208,8 @@
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
       "companies": "{count, plural, =1 {# company} other {# companies}}",
-      "peopleRead": "{count, plural, =1 {# person read} other {# people read}}"
+      "peopleRead": "{count, plural, =1 {# person read} other {# people read}}",
+      "agents": "{count, plural, =1 {# agent} other {# agents}}"
     },
     "chart": {
       "download": "Download",

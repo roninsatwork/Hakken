@@ -50,6 +50,7 @@ export function SectionMenu({
   jump,
   groups,
   currentId,
+  currentIds,
   openAtFirst,
 }: {
   /** The menu's name, for a screen reader and the phone's drop-down. */
@@ -59,10 +60,18 @@ export function SectionMenu({
   groups: SectionMenuGroup[];
   /** The page being read. */
   currentId: string;
+  /**
+   * A menu of filters rather than pages: the choice lit in each group, one a
+   * group — the Agents screen's What it does, When it runs and Status
+   * (agents-and-clarity-plan.md, AG1). Given, every group's choice wears the
+   * pill, and a phone gets a drop-down a group. Item ids are unique across groups.
+   */
+  currentIds?: readonly string[];
   openAtFirst: readonly string[];
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState("");
+  const isChosen = (id: string) => (currentIds ? currentIds.includes(id) : id === currentId);
   const currentGroup = groups.find((group) => group.items.some((item) => item.id === currentId))?.id ?? null;
 
   const [open, setOpen] = useState<ReadonlySet<string>>(
@@ -88,26 +97,44 @@ export function SectionMenu({
 
   return (
     <>
-      <div className="lg:hidden">
-        <Select
-          aria-label={label}
-          value={currentId}
-          onChange={(id) => {
-            const href = groups.flatMap((group) => group.items).find((item) => item.id === id)?.href;
-            if (href) router.push(href);
-          }}
-        >
+      {currentIds ? (
+        <div className="flex flex-wrap gap-3 lg:hidden">
           {groups.map((group) => (
-            <optgroup key={group.id} label={group.label}>
-              {group.items.map((item) => (
-                <option key={item.id} value={item.id} disabled={!item.href}>
-                  {item.label}{item.href || !item.note ? "" : ` · ${item.note}`}
-                </option>
-              ))}
-            </optgroup>
+            <Select
+              key={group.id}
+              aria-label={group.label}
+              value={group.items.find((item) => isChosen(item.id))?.id ?? ""}
+              onChange={(id) => {
+                const href = group.items.find((item) => item.id === id)?.href;
+                if (href) router.push(href);
+              }}
+            >
+              {group.items.map((item) => <option key={item.id} value={item.id}>{item.label}{item.count ? ` · ${item.count}` : ""}</option>)}
+            </Select>
           ))}
-        </Select>
-      </div>
+        </div>
+      ) : (
+        <div className="lg:hidden">
+          <Select
+            aria-label={label}
+            value={currentId}
+            onChange={(id) => {
+              const href = groups.flatMap((group) => group.items).find((item) => item.id === id)?.href;
+              if (href) router.push(href);
+            }}
+          >
+            {groups.map((group) => (
+              <optgroup key={group.id} label={group.label}>
+                {group.items.map((item) => (
+                  <option key={item.id} value={item.id} disabled={!item.href}>
+                    {item.label}{item.href || !item.note ? "" : ` · ${item.note}`}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
+        </div>
+      )}
 
       <nav aria-label={label} className="hidden flex-col gap-1 text-[13px] lg:flex">
         {jump ? <Field label={jump.label} labelHidden placeholder={jump.placeholder} value={filter} onChange={(event) => setFilter(event.target.value)} /> : null}
@@ -143,13 +170,13 @@ export function SectionMenu({
                         </span>
                       );
                     }
-                    const isCurrent = item.id === currentId;
+                    const isCurrent = isChosen(item.id);
                     const Icon = item.icon;
                     return (
                       <Link
                         key={item.id}
                         href={item.href}
-                        aria-current={isCurrent ? "page" : undefined}
+                        aria-current={isCurrent ? (currentIds ? "true" : "page") : undefined}
                         className={cn(
                           // The page being read wears the sidebar's own pill (`navStyles.ts`);
                           // the rest keep a clear border so nothing shifts when it moves.

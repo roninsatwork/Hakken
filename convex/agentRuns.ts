@@ -1,6 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { type Infer, v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { buildAgentRunAuditMetadata } from "./auditLogService";
@@ -529,6 +529,21 @@ export const getForAgent = adminQuery({
   },
 });
 
+/** The runs in flight now, a bounded read: what makes an agent "Working now" on the Agents screen and in its filters. */
+export async function liveAgentRuns(ctx: { db: QueryCtx["db"] }): Promise<Array<Doc<"agentRuns">>> {
+  return (
+    await Promise.all(
+      (["RUNNING", "QUEUED", "PENDING_APPROVAL"] as const).map((status) =>
+        ctx.db
+          .query("agentRuns")
+          .withIndex("by_status_started", (q) => q.eq("status", status))
+          .order("desc")
+          .take(100)
+      )
+    )
+  ).flat();
+}
+
 /**
  * Which agents have a run in flight right now.
  *
@@ -542,17 +557,7 @@ export const getWorkingAgentIds = adminQuery({
   returns: agentRunShapes.workingAgentIdsShape,
   handler: async (ctx) => {
     const { user } = ctx;
-    const live = (
-      await Promise.all(
-        (["RUNNING", "QUEUED", "PENDING_APPROVAL"] as const).map((status) =>
-          ctx.db
-            .query("agentRuns")
-            .withIndex("by_status_started", (q) => q.eq("status", status))
-            .order("desc")
-            .take(100)
-        )
-      )
-    ).flat();
+    const live = await liveAgentRuns(ctx);
 
     const visible = user.role === "ADMIN"
       ? live.filter((run) => run.companyId === user.companyId)

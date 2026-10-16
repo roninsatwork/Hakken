@@ -651,6 +651,7 @@ import type * as utils_agentRoles from "../utils/agentRoles.js";
 import type * as utils_agentRunShapes from "../utils/agentRunShapes.js";
 import type * as utils_agentShapes from "../utils/agentShapes.js";
 import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
+import type * as utils_agentWork from "../utils/agentWork.js";
 import type * as utils_aiAssistants from "../utils/aiAssistants.js";
 import type * as utils_aiModelShapes from "../utils/aiModelShapes.js";
 import type * as utils_analyticsAccess from "../utils/analyticsAccess.js";
@@ -1571,6 +1572,7 @@ declare const fullApi: ApiFromModules<{
   "utils/agentRunShapes": typeof utils_agentRunShapes;
   "utils/agentShapes": typeof utils_agentShapes;
   "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
+  "utils/agentWork": typeof utils_agentWork;
   "utils/aiAssistants": typeof utils_aiAssistants;
   "utils/aiModelShapes": typeof utils_aiModelShapes;
   "utils/analyticsAccess": typeof utils_analyticsAccess;
