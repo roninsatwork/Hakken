@@ -51,6 +51,8 @@ export default function ClarityConnectionPage() {
       {connected ? (
         <SettingsCard title={t("connectedTitle")}>
           <p className="text-[13px] text-secondary">{connection?.lastCollectedAt ? t("connectedRead", { when: formatDateTime(connection.lastCollectedAt) }) : t("connectedFirst")}</p>
+          {/* Clarity's ten asks a day, said rather than hidden (agents-and-clarity-plan.md, CC3). */}
+          <p className="text-[13px] text-secondary">{t("asksToday", { used: connection?.asksToday ?? 0 })}</p>
           {connection?.problem ? <Notice tone="warning">{connection.problem}</Notice> : null}
           <div className="flex justify-end border-t border-border-dim pt-4">
             <Button variant="quiet" onClick={() => void action.run(() => disconnect({ siteId }), { key: "disconnect", fallbackMessage: t("failed") })} disabled={action.isBusy()}>{t("disconnect")}</Button>

@@ -1,0 +1,11 @@
+# Microsoft Clarity → Recordings — the approved look (board "ClarityRecordings" of docs/plans/assets/agents-and-clarity/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Recordings
+settings-card: What Hakken sees
+search: Find a page…
+filter: What it shows
+table: Recording | Page | From | When | Length | Pages | Clicks | Actions
+  table-bar
+    download: Download CSV
+  table-footer

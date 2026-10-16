@@ -1,0 +1,21 @@
+# Microsoft Clarity → a page — the approved look (board "ClarityPage" of docs/plans/assets/agents-and-clarity/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Pages
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Scrolled, on average
+  figure: Time engaged
+  figure: Went straight back
+chart-card: How far down /ai-agency/ is scrolled, day by day
+chart-card: Errors on this page
+compact-list: Where | Visits | With an error | Clicks that failed | ·
+chart-card: Recordings of this page
+compact-list: Recording | From | Length | ·
+chart-card: Phones and computers on this page
+compact-list: Device | Visits | Scrolled | Time engaged | Went straight back
+chart-card: Where its visitors came from
+compact-list: Source | Visits | Scrolled | Went straight back

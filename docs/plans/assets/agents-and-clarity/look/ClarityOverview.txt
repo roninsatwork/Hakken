@@ -1,0 +1,28 @@
+# Microsoft Clarity → Overview — the approved look (board "ClarityOverview" of docs/plans/assets/agents-and-clarity/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Overview
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Scrolled, on average
+  figure: Time engaged
+  figure: Went straight back
+  figure: Visits with an error →
+  figure: Pages a visit
+  figure: Dead clicks
+  figure: Rage clicks
+chart-card: How far down visitors scroll, day by day
+chart-card: Errors visitors hit
+compact-list: Page | With an error | Of its visits | Clicks that failed | Mostly on | ·
+chart-card: Recordings worth watching
+compact-list: Recording | From | Length | Pages | ·
+chart-card: Pages where visitors give up
+compact-list: Page | Visits | Scrolled | Change | Went straight back | ·
+chart-card: How far down each kind of page is scrolled
+chart-card: Phones and computers
+compact-list: Device | Visits | Share | Scrolled | Change | Time engaged | Went straight back
+chart-card: Where visitors came from
+compact-list: Source | Visits | Scrolled | Time engaged | Went straight back
+chart-card: Where visitors get stuck
+compact-list: What happened | Visits | What Hakken found

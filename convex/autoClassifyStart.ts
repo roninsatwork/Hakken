@@ -9,16 +9,17 @@ import { closeRoleRun, failureSummary, writeRunLine } from "./roleRuns";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { AUTO_CLASSIFY_DECISION, GROUPS_OFFERED, groupsStamp } from "./utils/autoClassify";
-import { AUTO_CLASSIFIER, AUTO_CLASSIFY_SCHEDULE, AUTO_CLASSIFY_STALL_MS } from "./utils/autoClassifyAgent";
+import { AUTO_CLASSIFIER, AUTO_CLASSIFY_STALL_MS } from "./utils/autoClassifyAgent";
 import { classifierFor, normalisePage } from "./utils/pageClassification";
 import { isTrackedHold } from "./utils/websitePairing";
-import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
 /**
  * Starting Auto Classify (docs/plans/active/auto-classify-plan.md, AC6, AC10):
- * the built-in agent, kept there with its nightly schedule; one website's run
- * started from the button, after its groups change, or by the night's run; and
- * what the Page classification screen shows of it.
+ * the built-in agent, kept there; one website's run started from the Auto
+ * Classify button, or for every website from the agent's own Run button; and
+ * what the Page classification screen shows of it. Nothing starts it by itself
+ * — no schedule, and no group change (Anthony, 2026-10-16: "i want it only to
+ * be on the press of the button").
  *
  * Each website is a run of its own under the agent — its steps, log lines,
  * model costs and Jev's answers on that run — and one row a website
@@ -38,7 +39,7 @@ export async function findAutoClassifier(ctx: Reader): Promise<Doc<"agents"> | n
   return await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", AUTO_CLASSIFIER.systemKey)).first();
 }
 
-/** Idempotent: the agent, made once and kept in step, and its nightly schedule made with it. Never overwrites its switch or a changed schedule. */
+/** Idempotent: the agent, made once and kept in step, with no schedule. Never overwrites its switch. */
 export async function ensureAutoClassifier(ctx: MutationCtx): Promise<Id<"agents">> {
   const now = Date.now();
   const definition = {
@@ -64,14 +65,6 @@ export async function ensureAutoClassifier(ctx: MutationCtx): Promise<Id<"agents
     isGlobal: true,
     createdAt: now,
     updatedAt: now,
-  });
-  await ctx.db.insert("schedules", {
-    name: AUTO_CLASSIFY_SCHEDULE.name,
-    agentId,
-    intervalStr: AUTO_CLASSIFY_SCHEDULE.intervalStr,
-    isActive: true,
-    nextRunAt: getNextWorkflowScheduleRunAt({ intervalStr: AUTO_CLASSIFY_SCHEDULE.intervalStr, now: new Date(now) }),
-    createdAt: now,
   });
   return agentId;
 }
@@ -121,8 +114,7 @@ const count = (n: number, one: string, many: string) => `${n.toLocaleString("en-
 
 const TRIGGER_WORDS = {
   BUTTON: "Started from the Auto Classify button.",
-  GROUPS_CHANGED: "Started because the website's groups changed.",
-  NIGHT: "Started by the night's run, for the pages found since.",
+  AGENT: "Started from the Auto Classify agent's Run button in Agents.",
 } as const;
 type Trigger = keyof typeof TRIGGER_WORDS;
 
@@ -131,8 +123,7 @@ export type StartOutcome = "STARTED" | "GOING" | "NOTHING" | Exclude<Readiness, 
 /**
  * One website's run, under the agent: its first step, and its row for the
  * screen. A run still going is left to go — it reads what is left at each
- * step, so it takes up any change too; one whose last step was lost is closed
- * and a new one starts.
+ * step; one whose last step was lost is closed and a new one starts.
  */
 export async function beginSiteRun(ctx: MutationCtx, hold: Doc<"companyWebsites">, trigger: Trigger): Promise<StartOutcome> {
   const ready = await readiness(ctx, hold.companyId);
@@ -225,14 +216,14 @@ export const startAutoClassify = superAdminMutation({
   },
 });
 
-/** After a website's groups change (`autoClassifyNote.ts`), or for the night's run: its pages sorted again, when Auto Classify is on. */
+/** One website's run for the agent's own Run button in Agents (`runAutoClassifyNow`). */
 export const startForWebsite = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), night: v.optional(v.boolean()) },
+  args: { companyWebsiteId: v.id("companyWebsites") },
   returns: v.union(startOutcome, v.literal("GONE")),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.companyWebsiteId);
     if (!hold || isTrackedHold(hold)) return "GONE";
-    return await beginSiteRun(ctx, hold, args.night ? "NIGHT" : "GROUPS_CHANGED");
+    return await beginSiteRun(ctx, hold, "AGENT");
   },
 });
 
@@ -278,7 +269,7 @@ export const autoClassifyStatus = superAdminQuery({
   },
 });
 
-// ── The night's run, and the watch ─────────────────────────────────────────
+// ── The agent's own Run button, and the watch ──────────────────────────────
 
 /** Groups read to find the websites that have any: more than every company's groups together today. */
 const GROUPS_SCANNED = 5_000;
@@ -294,9 +285,9 @@ export const websitesWithGroups = internalQuery({
 });
 
 /**
- * The run the schedule or the agent's Run button starts: each website with
- * groups gets a run of its own when it has pages to ask or a group to
- * describe; the rest are named as having nothing to do.
+ * The run the agent's Run button in Agents starts — a person's press, as the
+ * Auto Classify button is: each website with groups gets a run of its own
+ * when it has pages to ask or a group to describe. It has no schedule.
  */
 export const runAutoClassifyNow = internalAction({
   args: { runId: v.id("agentRuns"), workflowExecutionId: v.optional(v.id("workflowExecutions")) },
@@ -309,7 +300,7 @@ export const runAutoClassifyNow = internalAction({
       const holds: Id<"companyWebsites">[] = await ctx.runQuery(internal.autoClassifyStart.websitesWithGroups, {});
       const outcomes: Record<string, number> = {};
       for (const companyWebsiteId of holds) {
-        const outcome: string = await ctx.runMutation(internal.autoClassifyStart.startForWebsite, { companyWebsiteId, night: true });
+        const outcome: string = await ctx.runMutation(internal.autoClassifyStart.startForWebsite, { companyWebsiteId });
         outcomes[outcome] = (outcomes[outcome] ?? 0) + 1;
       }
       const started = outcomes.STARTED ?? 0;
@@ -355,7 +346,7 @@ export const carryOnStalled = internalMutation({
   },
 });
 
-/** Every ten minutes: the agent and its schedule kept there, and any run whose step was lost carried on. */
+/** Every ten minutes: the agent kept there, and a run a person started whose step was lost carried on. It never starts a run. */
 export const watchAutoClassify = internalAction({
   args: {},
   returns: v.null(),

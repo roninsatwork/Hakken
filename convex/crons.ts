@@ -1,6 +1,5 @@
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
-import { CLARITY_MORNING_UTC } from "./clarity";
 
 const crons = cronJobs();
 crons.interval(
@@ -37,13 +36,8 @@ crons.daily(
   { job: "google-updates-feed" }
 );
 
-// Microsoft Clarity keeps three days: each connected project's last day is read every morning and kept (insights-analyst-plan.md §7b).
-crons.daily(
-  "clarity-morning",
-  { ...CLARITY_MORNING_UTC },
-  internal.jobLedger.runJob,
-  { job: "clarity-morning" }
-);
+// Microsoft Clarity's mornings are the Microsoft Clarity: Collector Agent's schedule since 2026-10-16
+// (agents-and-clarity-plan.md, CC2): no timer of its own here, so Clarity is never asked twice for a morning.
 
 // The Caretaker Agent's daily sweep: any task that can no longer work paused, its owner told (hakken-tasks-plan.md, Phase 5).
 crons.daily(

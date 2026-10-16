@@ -1,0 +1,13 @@
+# Microsoft Clarity → Pages — the approved look (board "ClarityPages" of docs/plans/assets/agents-and-clarity/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Pages
+settings-card: What Hakken sees
+chart-card: How far down your busiest pages are scrolled
+search: Find a page…
+filter: Page group
+filter: Scrolled
+table: Page | Visits | Scrolled | Change | Engaged | Went straight back | Errors | Actions
+  table-bar
+    download: Download CSV
+  table-footer

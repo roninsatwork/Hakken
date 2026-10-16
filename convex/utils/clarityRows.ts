@@ -45,14 +45,61 @@ export const DEVICE_JOIN = "|";
 export const CLARITY_FIGURES = ["visits", "bots", "scrollSum", "activeSum", "dead", "rage", "quickBack", "excessive", "errors", "errorClicks", "users", "pagesSum"] as const;
 export type ClarityFigure = (typeof CLARITY_FIGURES)[number];
 export type ClarityTotals = Record<ClarityFigure, number>;
-/** A row's totals: a page on a device, or a device across the website (`page` null). */
-export type ClarityTotalsRow = ClarityTotals & { page: string | null; device: string };
+/**
+ * A row's totals: a page on a device, or a device across the website (`page`
+ * null) — and, in the asks split a third way, the source or the browser the
+ * visits came by (`split`).
+ */
+export type ClarityTotalsRow = ClarityTotals & { page: string | null; device: string; split?: string };
 
 export const clarityTotalsRowValidator = v.object({
   page: v.union(v.string(), v.null()),
   device: v.string(),
+  split: v.optional(v.string()),
   ...(Object.fromEntries(CLARITY_FIGURES.map((figure) => [figure, v.number()])) as Record<ClarityFigure, ReturnType<typeof v.number>>),
 });
+
+/**
+ * The asks Hakken makes of Clarity's export, each the splits Clarity is asked
+ * for (agents-and-clarity-plan.md, "Finishing Parts 3 and 4"): by page and
+ * device, and by device — the day's own figures — then by device and source,
+ * by page, device and source, by browser and device, and by page, browser and
+ * device. Every ask is split by device, so every screen can choose one.
+ */
+export type ClarityAsk = "URL,Device" | "URL" | "Device" | "Device,Source" | "URL,Device,Source" | "Browser,Device" | "URL,Browser,Device";
+
+/**
+ * Rows Clarity sends an answer at most, the busiest first, never paged
+ * (its Data Export documentation). An answer this long was cut: what was
+ * quieter is missing from it.
+ */
+export const CLARITY_ROWS_AN_ANSWER = 1_000;
+
+/**
+ * The device of a page asked for without its devices — a large website's
+ * pages past the busiest few hundred (agents-and-clarity-plan.md, "Large
+ * websites"): counted in every figure across devices, in none for one device.
+ */
+export const ANY_DEVICE = "Any";
+
+/** Whether Clarity cut an answer at its 1,000 rows. */
+export function clarityAnswerCut(json: unknown): boolean {
+  const metrics = Array.isArray(json) ? (json as Array<{ information?: unknown[] }>) : [];
+  return metrics.some((metric) => (metric.information?.length ?? 0) >= CLARITY_ROWS_AN_ANSWER);
+}
+
+/**
+ * A cut list of pages on each device, filled out from the pages asked for
+ * alone: each page the first list holds keeps its rows by device; a page only
+ * the second holds joins on `ANY_DEVICE`. A page is never counted twice.
+ */
+export function withUnsplitPages(byDevice: readonly ClarityTotalsRow[], alone: readonly ClarityTotalsRow[]): ClarityTotalsRow[] {
+  const held = new Set(byDevice.map((row) => row.page));
+  return [...byDevice, ...alone.filter((row) => !held.has(row.page)).map((row) => ({ ...row, device: ANY_DEVICE }))];
+}
+
+/** A row's place, page, device and split together: what adds up across days and what one day less another subtracts. */
+export const totalsKey = (row: Pick<ClarityTotalsRow, "page" | "device" | "split">) => `${row.page ?? ""}${DEVICE_JOIN}${row.device}${DEVICE_JOIN}${row.split ?? ""}`;
 
 /** Scroll depth is kept to a tenth of a percent, pages a visit to a hundredth. */
 export const SCROLL_STEP = 10;
@@ -96,15 +143,42 @@ function addressOf(info: Info): string {
   return "";
 }
 
-function deviceOf(info: Info): string {
+/** A dimension's value by its name, whatever its case: Clarity's answer names them `Device`, `Browser`, `Source`. */
+function valueOf(info: Info, dimension: string): string | null {
   for (const [name, value] of Object.entries(info)) {
-    if (typeof value === "string" && /^device$/i.test(name.trim()) && value.trim()) return value.trim();
+    if (typeof value === "string" && name.trim().toLowerCase() === dimension.toLowerCase()) return value.trim();
   }
-  return "Other";
+  return null;
+}
+
+const deviceOf = (info: Info): string => valueOf(info, "Device") || "Other";
+
+/** A visit's source as Clarity names it ("google", "chatgpt.com"); one it gives no name is a direct visit. */
+const sourceOf = (info: Info): string => valueOf(info, "Source") || "Direct";
+const browserOf = (info: Info): string => valueOf(info, "Browser") || "Other";
+
+/**
+ * The website's address as Clarity records it ("https://www.example.com"),
+ * from the first page in an answer split by page: what a link to a page's
+ * heatmap in Clarity needs, since Hakken keeps only each page's path.
+ */
+export function clarityOriginFrom(json: unknown): string | null {
+  const metrics = Array.isArray(json) ? (json as Array<{ information?: Info[] }>) : [];
+  for (const metric of metrics) {
+    for (const info of metric.information ?? []) {
+      const address = addressOf(info);
+      try {
+        if (address) return new URL(address).origin;
+      } catch {
+        // Not a whole address: the next row may be.
+      }
+    }
+  }
+  return null;
 }
 
 /** What one row of Clarity's answer said, before it is turned into totals. */
-type Raw = { page: string | null; device: string; sessions: number; bots: number; users: number; pagesPerVisit: number | null; scroll: number | null; active: number | null; shares: Partial<Record<"dead" | "rage" | "quickBack" | "excessive" | "errors" | "errorClicks", number>> };
+type Raw = { page: string | null; device: string; split?: string; sessions: number; bots: number; users: number; pagesPerVisit: number | null; scroll: number | null; active: number | null; shares: Partial<Record<"dead" | "rage" | "quickBack" | "excessive" | "errors" | "errorClicks", number>> };
 
 const SHARES: Record<string, keyof Raw["shares"]> = {
   DeadClickCount: "dead",
@@ -116,19 +190,22 @@ const SHARES: Record<string, keyof Raw["shares"]> = {
 };
 
 /**
- * Clarity's answer as totals: by page and device ("URL,Device"), or by device
- * across the website ("Device"). A share is turned into the visits it is a
- * share of, so it adds up across days; a page only bots visited is left out,
- * and across the website the bots are kept as their own count.
+ * Clarity's answer as totals, one row a page (when the ask is split by page),
+ * device and source or browser (when split a third way). A share is turned
+ * into the visits it is a share of, so it adds up across days; a page only
+ * bots visited is left out, and across the website the bots are kept as
+ * their own count.
  */
-export function clarityTotalsFrom(json: unknown, dimension: "URL,Device" | "Device"): ClarityTotalsRow[] {
+export function clarityTotalsFrom(json: unknown, dimension: ClarityAsk): ClarityTotalsRow[] {
   const metrics = Array.isArray(json) ? (json as Array<{ metricName?: string; information?: Info[] }>) : [];
+  const split = dimension.includes("Source") ? sourceOf : dimension.includes("Browser") ? browserOf : null;
   const raws = new Map<string, Raw>();
   const rawOf = (info: Info) => {
-    const page = dimension === "URL,Device" ? pathOf(addressOf(info)) : null;
-    const device = deviceOf(info);
-    const key = `${page ?? ""}${DEVICE_JOIN}${device}`;
-    const held = raws.get(key) ?? { page, device, sessions: 0, bots: 0, users: 0, pagesPerVisit: null, scroll: null, active: null, shares: {} };
+    const page = dimension.startsWith("URL") ? pathOf(addressOf(info)) : null;
+    const device = dimension.includes("Device") ? deviceOf(info) : ANY_DEVICE;
+    const by = split ? split(info) : undefined;
+    const key = totalsKey({ page, device, split: by });
+    const held = raws.get(key) ?? { page, device, ...(by === undefined ? {} : { split: by }), sessions: 0, bots: 0, users: 0, pagesPerVisit: null, scroll: null, active: null, shares: {} };
     raws.set(key, held);
     return held;
   };
@@ -159,6 +236,7 @@ export function clarityTotalsFrom(json: unknown, dimension: "URL,Device" | "Devi
     rows.push({
       page: raw.page,
       device: raw.device,
+      ...(raw.split === undefined ? {} : { split: raw.split }),
       visits,
       bots: Math.max(0, Math.round(raw.bots)),
       scrollSum: raw.scroll === null ? 0 : Math.round(raw.scroll * SCROLL_STEP * visits),
@@ -192,4 +270,99 @@ export function rowOf(key: string, totals: ClarityTotals): ClarityRow {
     quickBack: share(totals.quickBack),
     excessiveScroll: share(totals.excessive),
   };
+}
+
+/**
+ * A missed morning caught up (agents-and-clarity-plan.md, CC4): Clarity
+ * answers for the last 24, 48 or 72 hours, never one day on its own, so the
+ * day before yesterday is the two days' totals less yesterday's — visits
+ * exactly, and the averages and shares with them, since every figure kept is
+ * a total. A row Clarity's list held one way and not the other is left as it
+ * is; no figure goes below nought.
+ */
+export function subtractTotalsRows(longer: readonly ClarityTotalsRow[], shorter: readonly ClarityTotalsRow[]): ClarityTotalsRow[] {
+  const later = new Map(shorter.map((row) => [totalsKey(row), row]));
+  const rows: ClarityTotalsRow[] = [];
+  for (const row of longer) {
+    const after = later.get(totalsKey(row));
+    const day = { ...row };
+    if (after) for (const figure of CLARITY_FIGURES) day[figure] = Math.max(0, row[figure] - after[figure]);
+    if (day.visits > 0 || (day.page === null && day.bots > 0)) rows.push(day);
+  }
+  return rows.sort((a, b) => b.visits - a.visits);
+}
+
+/**
+ * Fewer visits than this and a page's, a device's, a source's or a browser's
+ * figures are too few to judge: shown greyed, with the reason on hover, and
+ * never left out ("Finishing Parts 3 and 4", decision 4; CS9).
+ */
+export const CLARITY_FEW_VISITS = 10;
+
+const nullableNumber = v.union(v.number(), v.null());
+
+/**
+ * Every measure a Clarity screen shows, worked out once from the totals: the
+ * visits by people and by bots, the people, how far down a page is scrolled
+ * and how long a visit is active on average, pages a visit, and each
+ * frustration and error as visits and as a share of the visits — so the
+ * Overview, Pages, a page's own screen and Errors can never disagree (CF4).
+ */
+export const clarityMeasuresValidator = v.object({
+  visits: v.number(),
+  bots: v.number(),
+  users: v.number(),
+  scroll: nullableNumber,
+  activeSeconds: nullableNumber,
+  pagesPerVisit: nullableNumber,
+  quickBack: v.number(),
+  dead: v.number(),
+  rage: v.number(),
+  excessive: v.number(),
+  errors: v.number(),
+  errorClicks: v.number(),
+  /** Each of the six above as a share of the visits, 0 to 100, to a tenth; null with no visits. */
+  shares: v.object({
+    quickBack: nullableNumber,
+    dead: nullableNumber,
+    rage: nullableNumber,
+    excessive: nullableNumber,
+    errors: nullableNumber,
+    errorClicks: nullableNumber,
+  }),
+});
+export type ClarityMeasures = Infer<typeof clarityMeasuresValidator>;
+
+export function measuresOf(totals: ClarityTotals): ClarityMeasures {
+  const visits = totals.visits;
+  const share = (count: number) => (visits > 0 ? oneDecimal((count / visits) * 100) : null);
+  return {
+    visits,
+    bots: totals.bots,
+    users: totals.users,
+    scroll: visits > 0 ? oneDecimal(totals.scrollSum / SCROLL_STEP / visits) : null,
+    activeSeconds: visits > 0 ? Math.round(totals.activeSum / visits) : null,
+    pagesPerVisit: visits > 0 && totals.pagesSum > 0 ? oneDecimal(totals.pagesSum / PAGES_STEP / visits) : null,
+    quickBack: totals.quickBack,
+    dead: totals.dead,
+    rage: totals.rage,
+    excessive: totals.excessive,
+    errors: totals.errors,
+    errorClicks: totals.errorClicks,
+    shares: {
+      quickBack: share(totals.quickBack),
+      dead: share(totals.dead),
+      rage: share(totals.rage),
+      excessive: share(totals.excessive),
+      errors: share(totals.errors),
+      errorClicks: share(totals.errorClicks),
+    },
+  };
+}
+
+/** Rows' totals added up into one: a website's, a page's across its devices, a source's. */
+export function sumTotals(rows: Iterable<ClarityTotals>): ClarityTotals {
+  const sum = emptyTotals();
+  for (const row of rows) addTotals(sum, row);
+  return sum;
 }

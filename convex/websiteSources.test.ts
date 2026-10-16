@@ -94,8 +94,7 @@ describe("what Hakken collects for a website", () => {
       ["SEARCH_CONSOLE", "CONNECTED", true],
       ["GOOGLE_ANALYTICS", "NOT_CONNECTED", false],
       ["BING", "NOT_CONNECTED", false],
-      // Clarity has no agent: its morning job always runs.
-      ["CLARITY", "NOT_CONNECTED", true],
+      ["CLARITY", "NOT_CONNECTED", false],
     ]);
     expect(page?.sources[0]).toMatchObject({ on: true, intervalStr: NIGHTLY, nextRunAt: expect.any(Number), lastCollectedAt: expect.any(Number) });
     // Not connected, nothing is next.
@@ -183,16 +182,16 @@ describe("every collector passes a switched-off website by", () => {
     expect(await t.query(internal.bingWebmasterAgentRun.agentCollections, {})).toEqual([]);
   });
 
-  test("Clarity's morning neither lists it nor hands over its token", async () => {
+  test("Clarity's run lists it no more", async () => {
     const t = harness();
     const seeded = await seed(t);
     const connectionId = await t.run(async (ctx) => await ctx.db.insert("clarityConnections", {
       companyId: seeded.companyId, companyWebsiteId: seeded.holdId, status: "CONNECTED", tokenCiphertext: "sealed", createdAt: Date.now(), updatedAt: Date.now(),
     }));
-    expect(await t.query(internal.clarity.connectedWebsites, {})).toEqual([seeded.holdId]);
+    expect(await t.query(internal.clarityAgentRun.agentCollections, {})).toHaveLength(1);
 
     await t.run(async (ctx) => await ctx.db.patch(connectionId, { switchedOff: true }));
-    expect(await t.query(internal.clarity.connectedWebsites, {})).toEqual([]);
-    expect(await t.query(internal.clarity.tokenOf, { holdId: seeded.holdId })).toBeNull();
+    expect(await t.query(internal.clarityAgentRun.agentCollections, {})).toEqual([]);
+    expect((await t.query(internal.clarityAgentRun.sitePlan, { holdId: seeded.holdId })).ciphertext).toBeNull();
   });
 });

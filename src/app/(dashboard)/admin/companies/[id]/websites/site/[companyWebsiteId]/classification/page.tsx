@@ -14,6 +14,7 @@ import { GROUPS_OFFERED } from "@/convex/utils/autoClassify";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { Meter } from "@/src/ui/components/screens/Meter";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -253,9 +254,13 @@ function ClassificationPages({ companyWebsiteId, data, auto, search, onSearch, f
               </div>
             ) : undefined}
           >
-            {sorting
-              ? t("auto.sorting", { done: format.number(sorting.done), total: format.number(sorting.total) })
-              : t("notice", { sorted: summary.sorted, pages: summary.pages, notSorted: summary.notSorted })}
+            {sorting ? (
+              // Its line, and the bar filling as each step lands, as Search Console's catch-up draws its own (approved board 2, 2026-10-16).
+              <span className="flex flex-col gap-2">
+                <span>{t("auto.sorting", { done: format.number(sorting.done), total: format.number(sorting.total) })}</span>
+                <Meter value={sorting.total > 0 ? sorting.done / sorting.total : 0} size="md" />
+              </span>
+            ) : t("notice", { sorted: summary.sorted, pages: summary.pages, notSorted: summary.notSorted })}
           </Notice>
         )
       ) : null}

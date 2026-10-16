@@ -324,11 +324,14 @@ describe("a website's Page classification", () => {
     expect(await screen.findByText(`${T}.auto.outcomes.DECISION_OFF`)).toBeInTheDocument();
   });
 
-  it("while it sorts, the notice says how far it has got and offers no button", () => {
+  it("while it sorts, the notice says how far it has got, with a bar filling as it goes, and offers no button", () => {
     answer({ "autoClassifyStart:autoClassifyStatus": { ...autoOn, run: sortingRun } });
-    renderWithProviders(<PageClassificationPage />);
+    const { container } = renderWithProviders(<PageClassificationPage />);
 
     expect(screen.getByText(`${T}.auto.sorting`)).toBeInTheDocument();
+    // 2,140 of 8,374 done: the bar a quarter full.
+    const fill = container.querySelector<HTMLElement>(".rounded-full.bg-hover > span");
+    expect(parseFloat(fill?.style.width ?? "0")).toBeCloseTo((2_140 / 8_374) * 100, 1);
     expect(screen.queryByText(`${T}.notice`)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: `${T}.auto.button` })).not.toBeInTheDocument();
   });

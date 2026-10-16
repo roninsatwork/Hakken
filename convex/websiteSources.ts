@@ -6,7 +6,7 @@ import { appError } from "./utils/appError";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { companyCollectionSchedule, resolveWebsiteSchedule } from "./seoScheduleService";
 import { lastCollectedAt } from "./seoCollectionDue";
-import { CLARITY_MORNING_UTC } from "./clarity";
+import { CLARITY_COLLECTOR } from "./utils/clarityCollectorAgent";
 
 /**
  * Everything Hakken collects for one website, and the switch for each
@@ -37,23 +37,13 @@ const SOURCE_NAMES: Record<Source, string> = {
   CLARITY: "Clarity",
 };
 
-/** The agent that collects each source, by its system key. Clarity has none: a morning job (`crons.ts`, "clarity-morning"). */
-const COLLECTOR_KEYS: Record<Exclude<Source, "CLARITY">, string> = {
+/** The agent that collects each source, by its system key: Clarity's since 2026-10-16 (agents-and-clarity-plan.md, CC1). */
+const COLLECTOR_KEYS: Record<Source, string> = {
   SEARCH_CONSOLE: "SEARCH_CONSOLE_COLLECTOR",
   GOOGLE_ANALYTICS: "GOOGLE_ANALYTICS_COLLECTOR",
   BING: "BING_WEBMASTER_COLLECTOR",
+  CLARITY: CLARITY_COLLECTOR.systemKey,
 };
-
-/** Clarity's morning as a schedule, so the page words it as it words every other one. */
-const CLARITY_INTERVAL = JSON.stringify({
-  version: 2,
-  kind: "recurring",
-  cadence: "daily",
-  timeLocal: `${String(CLARITY_MORNING_UTC.hourUTC).padStart(2, "0")}:${String(CLARITY_MORNING_UTC.minuteUTC).padStart(2, "0")}`,
-  timezone: "UTC",
-});
-
-const DAY_MS = 86_400_000;
 
 /** A connection as the page shows it. */
 const stateValidator = v.union(v.literal("NOT_CONNECTED"), v.literal("SETTING_UP"), v.literal("CONNECT_AGAIN"), v.literal("CONNECTED"));
@@ -90,13 +80,7 @@ async function connectionOf(ctx: { db: QueryCtx["db"] }, source: Source, holdId:
 async function collectorSchedule(
   ctx: { db: QueryCtx["db"] },
   source: Source,
-  now: number,
 ): Promise<{ intervalStr: string; nextRunAt: number | null } | null> {
-  if (source === "CLARITY") {
-    const today = new Date(now);
-    const at = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), CLARITY_MORNING_UTC.hourUTC, CLARITY_MORNING_UTC.minuteUTC);
-    return { intervalStr: CLARITY_INTERVAL, nextRunAt: at > now ? at : at + DAY_MS };
-  }
   const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", COLLECTOR_KEYS[source])).first();
   if (!agent || agent.isActive === false) return null;
   const schedules = await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agent._id)).take(5);
@@ -162,7 +146,6 @@ export const getWebsiteSources = superAdminQuery({
     // a competitor switched off is still not collected, so its own switch counts too.
     const resolved = resolveWebsiteSchedule(schedule, pair ?? hold);
     const collecting = on && resolved.active;
-    const now = Date.now();
     const owned = !isTrackedHold(hold);
 
     const sources = [];
@@ -170,7 +153,7 @@ export const getWebsiteSources = superAdminQuery({
       for (const source of SOURCES) {
         const connection = await connectionOf(ctx, source, hold._id);
         const state = stateOf(connection?.status);
-        const running = await collectorSchedule(ctx, source, now);
+        const running = await collectorSchedule(ctx, source);
         const sourceOn = connection?.switchedOff !== true;
         sources.push({
           source,

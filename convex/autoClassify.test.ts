@@ -9,8 +9,9 @@ import { AUTO_CLASSIFY_DECISION } from "./utils/autoClassify";
 import { AUTO_CLASSIFIER, AUTO_CLASSIFY_STALL_MS } from "./utils/autoClassifyAgent";
 
 /**
- * Auto Classify (docs/plans/active/auto-classify-plan.md): switched off it
- * starts nothing; on, each website is a run of its own under the Auto
+ * Auto Classify (docs/plans/active/auto-classify-plan.md): it runs only when a
+ * person presses a button — no schedule, and no group change starts it.
+ * Switched off it starts nothing; on, each website is a run of its own under the Auto
  * Classify agent, with its first step and log line; its answers fill only
  * what no person and no line sets, the same on every screen; a page is asked
  * once, and again only when the groups change; a person's description is
@@ -85,18 +86,19 @@ describe("Auto Classify", () => {
 
     expect(await s.as.mutation(api.autoClassifyStart.startAutoClassify, { companyWebsiteId: s.siteId })).toBe("STARTED");
 
-    const { agent, schedule, run, lines } = await t.run(async (ctx) => {
+    const { agent, schedules, run, lines } = await t.run(async (ctx) => {
       const agent = (await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", AUTO_CLASSIFIER.systemKey)).first())!;
       const run = (await ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", agent._id)).first())!;
       return {
         agent,
-        schedule: await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agent._id)).first(),
+        schedules: await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agent._id)).collect(),
         run,
         lines: await ctx.db.query("agentLogs").withIndex("by_run", (q) => q.eq("runId", run._id)).collect(),
       };
     });
     expect(agent.name).toBe("Auto Classify");
-    expect(schedule?.isActive).toBe(true);
+    // No schedule: it runs only when a person presses a button.
+    expect(schedules).toEqual([]);
     expect(run).toMatchObject({ title: "Auto Classify: morehandles.test", status: "QUEUED", companyId: s.companyId });
     expect(lines.map((line) => line.interactionType)).toEqual(["What there is to do"]);
     expect(lines[0].responseContent).toContain("Started from the Auto Classify button.");
@@ -195,11 +197,14 @@ describe("Auto Classify", () => {
     expect(await detail()).toMatchObject({ description: "Pages for hinges and hinge packs.", descriptionBy: "HAKKEN" });
   });
 
-  test("a group added, changed or removed sorts the website again two minutes later", async () => {
+  test("a group added, changed or removed starts nothing: Auto Classify runs only when its button is pressed", async () => {
     const t = harness();
-    const s = await setUp(t);
-    await s.create("Hinges", [{ kind: "STARTS_WITH", value: "/hinges/" }]);
-    expect(await scheduledNames(t)).toEqual(["autoClassifyStart:startForWebsite"]);
+    const s = await setUp(t, { on: true });
+    const hinges = await s.create("Hinges", [{ kind: "STARTS_WITH", value: "/hinges/" }], "Pages for hinges.");
+    await s.as.mutation(api.pageClassifications.updatePageClassification, { companyWebsiteId: s.siteId, classificationId: hinges, description: "Hinges and hinge packs." });
+    await s.as.mutation(api.pageClassifications.removePageClassification, { companyWebsiteId: s.siteId, classificationId: hinges });
+    expect(await scheduledNames(t)).toEqual([]);
+    expect(await stateOf(t, s.siteId)).toBeNull();
   });
 
   test("a run whose last step was lost carries on from where it was, saying so on its run", async () => {
@@ -233,13 +238,13 @@ describe("Auto Classify", () => {
     expect(await stateOf(t, s.siteId)).toMatchObject({ status: "DONE" });
   });
 
-  test("the night's run starts a run of its own for each website with pages to sort", async () => {
+  test("the agent's own Run button starts a run of its own for each website with pages to sort", async () => {
     const t = harness();
     const s = await setUp(t, { on: true });
     await s.create("Hinges", [{ kind: "STARTS_WITH", value: "/hinges/" }], "Pages for hinges.");
     const agentId = await t.mutation(internal.autoClassifyStart.ensureAutoClassifierInternal, {});
     const parent = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
-      agentId, triggerType: "SCHEDULE", objective: "Sort", title: "Auto Classify: new pages each night", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+      agentId, triggerType: "MANUAL", objective: "Sort", title: "Auto Classify", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
     }));
 
     await t.action(internal.autoClassifyStart.runAutoClassifyNow, { runId: parent });
@@ -252,23 +257,18 @@ describe("Auto Classify", () => {
       const child = runs.find((run) => run._id !== parent)!;
       return await ctx.db.query("agentLogs").withIndex("by_run", (q) => q.eq("runId", child._id)).collect();
     });
-    expect(lines[0].responseContent).toContain("Started by the night's run");
+    expect(lines[0].responseContent).toContain("Started from the Auto Classify agent's Run button in Agents.");
   });
 
-  test("its Run button and its nightly schedule start its own job, not a model", async () => {
+  test("its Run button in Agents starts its own job, not a model, and it has no schedule", async () => {
     const t = harness();
     const s = await setUp(t);
     const agentId = await t.mutation(internal.autoClassifyStart.ensureAutoClassifierInternal, {});
     await s.as.mutation(api.scheduler.manualRunSchedule, { agentId });
-    await t.run(async (ctx) => {
-      const schedule = (await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agentId)).first())!;
-      await ctx.db.patch(schedule._id, { nextRunAt: Date.now() - 1_000 });
-    });
-    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
 
     const names = await scheduledNames(t);
-    expect(names.filter((name) => name === "autoClassifyStart:runAutoClassifyNow")).toHaveLength(2);
-    expect(names.some((name) => name.includes("runTriggeredAgentObjective"))).toBe(false);
+    expect(names).toEqual(["autoClassifyStart:runAutoClassifyNow"]);
+    expect(await t.run(async (ctx) => await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agentId)).collect())).toEqual([]);
   });
 
   test("each step's Jev answers are added to its run's cost, so Agents and the observatory show what a run cost", async () => {

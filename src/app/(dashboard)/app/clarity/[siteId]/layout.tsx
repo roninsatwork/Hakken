@@ -7,19 +7,21 @@ import Header from "@/src/ui/components/layout/Header";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
-import { formatDateTime } from "@/src/lib/dates";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
-import { CLARITY_DAYS, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
+import { formatWhen, useDeviceName } from "../_components/ClarityParts";
+import { CLARITY_DAYS, CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
 
 /**
- * One website in Microsoft Clarity's section (docs/plans/active/
- * insights-analyst-plan.md I27, phase 15, drawn as the Clarity boards): its
- * header with the way back and its connection, the switch between the
- * company's own websites and the days, the menu, and the page.
+ * One website in Microsoft Clarity's section (docs/plans/active/agents-and-clarity-plan.md,
+ * Part 4, CS2, drawn on "Hakken — Microsoft Clarity"): Google Analytics'
+ * compact header — the website's name, the switch between the company's own
+ * websites, every device or one, and the days — how fresh the figures are at
+ * the end of the line under it, the menu, and the page.
  */
 export default function ClaritySiteLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("clarity");
@@ -27,51 +29,65 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
   const pathname = useClarityPath();
+  const query = useClarityQuery();
+  const deviceName = useDeviceName();
   const [days, setDays] = useSiteParam<string>("days", "30", CLARITY_DAYS.map(String));
+  const [device, setDevice] = useSiteParam<string>("device", "", ["", ...CLARITY_DEVICES]);
   if (status === undefined) return <><Header /><div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (status === null || !status.owned) return <><Header /><HakkenEmptyState icon={MousePointerClick} title={t("site.notFoundTitle")} description={t("site.notFoundDescription")} /></>;
   const connection = status.connection;
   const state = connection?.status ?? "NOT_CONNECTED";
   const current = clarityPageForPath(pathname, siteId);
+  const href = (segment: string) => `/app/clarity/${siteId}${segment ? `/${segment}` : ""}${query}`;
   return (
     <>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
+          layout="compact"
           back={{ label: t("site.back"), href: "/app/clarity" }}
           icon={<SiteMark host={status.host} iconUrl={null} owned />}
-          title={status.host}
+          title={
+            status.ownSites.length > 1 ? (
+              <TitleSwitch label={status.host} aria-label={t("site.switch")} value={siteId} onChange={(next) => router.push(`/app/clarity/${next}${query}`)}>
+                {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
+              </TitleSwitch>
+            ) : status.host
+          }
           description={connection?.projectName ? t("site.withProject", { name: connection.projectName }) : t("site.yourWebsite")}
           pills={state === "CONNECTED" && connection?.lastCollectedAt
-            ? <StatusLabel tone="success">{t("site.updated", { when: formatDateTime(connection.lastCollectedAt) })}</StatusLabel>
+            ? <StatusLabel tone="success">{t("site.updated", { when: formatWhen(connection.lastCollectedAt) })}</StatusLabel>
             : <StatusLabel tone={state === "NEEDS_RECONNECT" ? "warning" : "neutral"}>{t(`status.${state}`)}</StatusLabel>}
           action={
-            <div className="flex flex-wrap items-end gap-3">
-              {status.ownSites.length > 1 ? (
-                <Select aria-label={t("site.switch")} value={siteId} onChange={(next) => router.push(`/app/clarity/${next}`)}>
-                  {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
+            current === "connection" ? null : (
+              <div className="flex flex-wrap items-end gap-3">
+                {current === "recordings" ? null : (
+                  <Select aria-label={t("site.device")} value={device} onChange={setDevice}>
+                    <option value="">{t("site.everyDevice")}</option>
+                    {CLARITY_DEVICES.map((value) => <option key={value} value={value}>{deviceName(value)}</option>)}
+                  </Select>
+                )}
+                <Select aria-label={t("site.days")} value={days} onChange={setDays}>
+                  {CLARITY_DAYS.map((value) => <option key={value} value={String(value)}>{t("site.lastDays", { days: value })}</option>)}
                 </Select>
-              ) : null}
-              <Select aria-label={t("site.days")} value={days} onChange={setDays}>
-                {CLARITY_DAYS.map((value) => <option key={value} value={String(value)}>{t("site.lastDays", { days: value })}</option>)}
-              </Select>
-            </div>
+              </div>
+            )
           }
+          note={connection?.newestDay ? t("site.figuresTo", { day: formatDay(connection.newestDay) }) : null}
         />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-4 lg:self-start">
             <SectionMenu
               label={t("menu.label")}
               groups={[
-                { id: "figures", label: t("menu.figures"), items: CLARITY_PAGES.filter((page) => page.id !== "connection").map((page) => ({ id: page.id, label: t(`menu.${page.id}`), href: `/app/clarity/${siteId}${page.segment ? `/${page.segment}` : ""}` })) },
+                { id: "figures", label: t("menu.figures"), items: CLARITY_PAGES.filter((page) => page.id !== "connection").map((page) => ({ id: page.id, label: t(`menu.${page.id}`), href: href(page.segment) })) },
                 { id: "settings", label: t("menu.settings"), items: [{ id: "connection", label: t("menu.connection"), href: `/app/clarity/${siteId}/connection` }] },
               ]}
               currentId={current}
               openAtFirst={["figures", "settings"]}
             />
           </aside>
-          <section className="flex min-w-0 flex-col gap-3">
-            {connection?.newestDay ? <p className="text-[12px] text-muted">{t("site.figuresTo", { day: formatDay(connection.newestDay) })}</p> : null}
+          <section className="flex min-w-0 flex-col gap-6">
             {children}
           </section>
         </div>

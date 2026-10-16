@@ -46,13 +46,19 @@ here, with a date, before building anything that disagrees with it.
   Sure and fairly sure are applied; not sure leaves the page Unclassified.
   Nothing is queued for a person (AGENTS.md: no queue waits on a person).
 - **AC5. Asked once.** Each page is asked once and its answer kept. Pages Auto
-  Classify placed are asked again only when the groups change: a group added,
-  renamed or removed, or a description changed. Pages set by hand or caught by
+  Classify placed are asked again, at the next press, only when the groups
+  have changed since: a group added, renamed or removed, or a description
+  changed. Pages set by hand or caught by
   a rule are never asked.
-- **AC6. It runs by itself.** The button starts it now. After that it runs each
-  night for new pages and after any group changes, busiest pages first,
-  handing itself on in steps until done. A run is judged alive by its last
-  step, never its start.
+- **AC6. It runs only when a person presses a button** (Anthony, 2026-10-16:
+  "i dont want the classify to auto start ever", "i want it only to be on the
+  press of the button like i asked"). The Auto Classify button on Page
+  classification sorts one website; the agent's own Run button in Agents sorts
+  every website with groups. No schedule, and no group change, starts it. It
+  works in steps that hand on to the next until done, busiest pages first, and
+  a run is judged alive by its last step, never its start; a watch every ten
+  minutes carries on a run a person started whose step was lost — it never
+  starts one.
 - **AC7. It is a Decision.** "Which group is this page in?" sits with the other
   Decisions (Admin → AI → Decisions): one switch, the model it uses, every
   answer and its cost on the Decisions screens. Like every Decision it ships
@@ -68,8 +74,8 @@ here, with a date, before building anything that disagrees with it.
   websites, so Auto Classify is too.
 - **AC10. An agent of its own, seen like every other** (Anthony, 2026-10-16, with
   the go: "remember to hook up the agents to costs and logs and observations").
-  Auto Classify is a built-in agent ("Auto Classify", made by itself with a
-  nightly schedule at 05:30, after Search Console's run). Each website it sorts
+  Auto Classify is a built-in agent ("Auto Classify", made by itself, with no
+  schedule: it runs only when a person presses a button, AC6). Each website it sorts
   is a run of its own in Agents and the run observatory: every step a line on
   the run's timeline and in its log; each description's model call priced on
   the run and on the cost screens; every Jev answer filed under the run, so
@@ -108,6 +114,10 @@ written once in English and not translated.
   While it runs, the box reads "Auto Classify is sorting the unclassified
   pages, the busiest first: 2,140 of 8,374 done. Each page takes its group as
   it is sorted, and a page it isn't sure about stays Unclassified."
+  Under that line, the kit's bar (`Meter`) fills as each step lands, as
+  Search Console's catch-up draws its own (Anthony, 2026-10-16: "we need a
+  better UX for the auto classify can we have a progress bar"; drawn on
+  board 2, "happy with the bar lets build it").
 - **How it's set** reads "By Auto Classify: sure" or "By Auto Classify: fairly
   sure", beside "By the rule: …" and "Set by hand". Picking a group by hand on
   a row replaces Auto Classify's answer, as with a rule.
@@ -231,3 +241,9 @@ everything already collected the moment it runs, with no collection again.
   the button, progress, "By Auto Classify", the filter choice and the
   Description box; tests and look tests from the approved boards. A page
   taken out by hand from Auto Classify's answer is never asked again.
+- 2026-10-16 — Anthony: "i dont want the classify to auto start ever … i want it
+  only to be on the press of the button like i asked". The run after a group
+  changed and the nightly schedule were mine, not asked for: both taken out
+  (code and dev's schedule row) the same afternoon. AC6 rewritten.
+- 2026-10-16 — The progress bar under Auto Classify's line, drawn on board 2 and
+  approved ("ys happy with the bar lets build it"), built the same afternoon.

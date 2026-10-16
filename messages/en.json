@@ -1956,7 +1956,7 @@
           "saveFailed": "Could not save the classification. Try again.",
           "remove": "Remove this classification",
           "descriptionLabel": "Description",
-          "descriptionHintWritten": "{platformName} wrote this from the classification's name, its rules, its busiest pages and what {host} offers. Auto Classify reads it to sort the pages no rule catches, so it says what belongs here and what doesn't. Change it any time: this classification's pages are then sorted again.",
+          "descriptionHintWritten": "{platformName} wrote this from the classification's name, its rules, its busiest pages and what {host} offers. Auto Classify reads it to sort the pages no rule catches, so it says what belongs here and what doesn't. Change it any time, then press Auto Classify to sort the pages again.",
           "descriptionHintPerson": "What belongs here, and the nearest thing that doesn't. Auto Classify reads it to sort the pages no rule catches. Leave it empty and {platformName} writes one.",
           "byAuto": "By Auto Classify: {certainty}"
         },
@@ -4623,6 +4623,7 @@
         "asked": "When someone asks",
         "yes": "When someone says yes",
         "lookUp": "When someone presses Look up",
+        "autoClassify": "When someone presses Auto Classify",
         "never": "Not run on its own",
         "noSchedule": "No schedule yet",
         "paused": "{schedule}, paused",
@@ -10209,7 +10210,8 @@
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
       "companies": "{count, plural, =1 {# company} other {# companies}}",
       "peopleRead": "{count, plural, =1 {# person read} other {# people read}}",
-      "agents": "{count, plural, =1 {# agent} other {# agents}}"
+      "agents": "{count, plural, =1 {# agent} other {# agents}}",
+      "recordings": "{count, plural, =1 {# recording} other {# recordings}}"
     },
     "chart": {
       "download": "Download",
@@ -21150,6 +21152,8 @@
       "yourWebsite": "Your website",
       "updated": "Read {when}",
       "switch": "Website",
+      "device": "Device",
+      "everyDevice": "Every device",
       "days": "Days",
       "lastDays": "Last {days} days",
       "figuresTo": "Clarity's figures to {day}, read each morning."
@@ -21159,92 +21163,357 @@
       "figures": "Clarity",
       "overview": "Overview",
       "pages": "Pages",
-      "devices": "Devices",
+      "recordings": "Recordings",
+      "errors": "Errors",
       "settings": "Settings",
-      "connection": "Connection",
-      "frustration": "Frustration"
+      "connection": "Connection"
+    },
+    "devices": {
+      "PC": "Computers",
+      "Mobile": "Phones",
+      "Tablet": "Tablets",
+      "Other": "Other devices",
+      "Any": "Not split by device"
+    },
+    "sources": {
+      "direct": "Direct",
+      "own": "Your website (between its pages)"
+    },
+    "common": {
+      "tooFew": "Too few visits to judge",
+      "heatmap": "Heatmap",
+      "watch": "Watch",
+      "watchIt": "Watch it",
+      "openHeatmap": "Open the heatmap",
+      "lastDays": "the last {days} days",
+      "soFar": "{count, plural, =0 {no days yet} one {# day so far} other {# days so far}}, since {since}",
+      "onBefore": "on the {days} days before",
+      "noBefore": "nothing to compare with yet: Clarity's figures start on {since}",
+      "noneIn": "None in {span}",
+      "percentOn": "{way, select, up {▲} down {▼} other {=}} {value}% {against}",
+      "pointsOn": "{way, select, up {▲} down {▼} other {=}} {value} points {against}",
+      "secondsOn": "{way, select, up {▲} down {▼} other {=}} {value}s {against}",
+      "visitsOn": "{way, select, up {▲} down {▼} other {=}} {value, plural, one {# visit} other {# visits}} {against}",
+      "plainOn": "{way, select, up {▲} down {▼} other {=}} {value} {against}",
+      "theDaysBefore": "The {days} days before",
+      "browserOn": "{browser} on {device}",
+      "everyDevice": "every device",
+      "everywhere": "every browser",
+      "downloadCsv": "Download CSV",
+      "downloading": "Preparing…",
+      "downloadFailed": "The file couldn't be made. Try again.",
+      "shareOf": "{share}% · {errors} of {visits}",
+      "columns": {
+        "page": "Page",
+        "visits": "Visits",
+        "scrolled": "Scrolled",
+        "scrolledAverage": "Scrolled, on average",
+        "scrolledBefore": "Scrolled, the days before",
+        "change": "Change",
+        "wentBack": "Went straight back",
+        "time": "Time engaged",
+        "engaged": "Engaged",
+        "engagedSeconds": "Seconds engaged",
+        "errors": "Errors",
+        "withError": "With an error",
+        "ofItsVisits": "Of its visits",
+        "clicksFailed": "Clicks that failed",
+        "mostlyOn": "Mostly on",
+        "device": "Device",
+        "share": "Share",
+        "source": "Source",
+        "group": "Page group",
+        "browser": "Browser",
+        "where": "Where",
+        "recording": "Recording",
+        "from": "From",
+        "length": "Length",
+        "pages": "Pages",
+        "clicks": "Clicks",
+        "when": "When",
+        "activeSeconds": "Seconds active",
+        "link": "Link"
+      },
+      "countedFrom": "Errors, people and pages a visit are counted from {day}: the days before were kept before Clarity was read for them.",
+      "pagesFrom": "Each page's own figures start on {day}: the days before hold the website's figures only.",
+      "cut": "On {count, plural, one {# day} other {# days}} Clarity sent only its busiest 1,000 rows by page, so quieter pages may be missing.",
+      "cutBrowsers": "On {count, plural, one {# day} other {# days}} Clarity sent only its busiest 1,000 rows by page and browser, so a quieter page's browser may be missing.",
+      "cutSources": "On {count, plural, one {# day} other {# days}} Clarity sent only its busiest 1,000 rows by page and source, so a quieter source may be missing."
     },
     "overview": {
       "title": "Overview",
-      "description": "How visitors behave on your pages: how far they scroll, how long they stay, and where they get stuck. From Microsoft Clarity.",
+      "description": "How visitors behave on your pages: how far down they scroll, how long they're engaged, where they get stuck, and what breaks. From Microsoft Clarity.",
       "notConnectedTitle": "Clarity isn't connected yet",
       "notConnectedDescription": "Connect this website's Microsoft Clarity project, and its figures are read each morning and kept.",
       "connect": "Connect Clarity",
+      "soFarNotice": "Clarity was connected on {since}, and it hands over only its last three days, so these figures cover {held, plural, one {# day} other {# days}} so far. The {days} days fill in a morning at a time.",
       "sees": {
-        "scroll": "Visitors on {page} scroll {scroll}% of the way down on average: most never reach its lower half.",
-        "dead": "On {page}, {dead}% of visits click something that does nothing.",
-        "noPages": "No page has enough visits yet to say how it is read."
+        "worst": "{page} loses its visitors soonest: they scroll {scroll} of the way down it on average{change}{back}.",
+        "change": ", {points} points {way, select, less {less} other {more}} than the {days} days before",
+        "back": ", and {share} go straight back",
+        "noneJudged": "No page has had 10 visits in {held, plural, one {this # day} other {these # days}} yet, so none can be judged on its own. Across the website, visitors scroll {scroll} of the way down a page on average.",
+        "phonesLess": "Phone visitors scroll less: {phones} of the way down a page, against {computers} on a computer.",
+        "phonesMore": "Phone visitors scroll further: {phones} of the way down a page, against {computers} on a computer.",
+        "furthest": "Your {group} pages are scrolled furthest, {scroll} of the way.",
+        "errors": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error, on {pages, plural, one {# page} other {# pages}}.",
+        "noErrors": "No visit hit a JavaScript error."
       },
-      "do": "Fix the pages visitors leave before their enquiry button.",
-      "seeReviews": "See the page reviews",
-      "seeInsights": "See the Insights findings about behaviour",
+      "do": {
+        "top": "Move {page}'s main point and its enquiry link nearer the top.",
+        "error": "Fix the JavaScript error on {page}.",
+        "errorOn": "Fix the JavaScript error on {page}: it happens mostly in {browser} on {device}.",
+        "errorsLink": "Errors",
+        "watchBack": "Watch the visits that went straight back from {page}.",
+        "recordingsLink": "Recordings"
+      },
       "figures": {
         "visits": "Visits",
-        "lastDays": "last {days} days",
-        "scroll": "Average scroll depth",
-        "scrollDetail": "of each page",
-        "dead": "Visits with a dead click",
-        "deadDetail": "clicked something that does nothing",
-        "quickBack": "Quick backs",
-        "quickBackDetail": "left within seconds"
-      },
-      "chart": {
-        "title": "Visits with a frustration, day by day",
-        "hint": "Dead clicks and rage clicks, as a share of visits.",
+        "botsLeftOut": "{count, plural, one {# bot visit} other {# bot visits}} left out",
+        "scroll": "Scrolled, on average",
+        "scrollDetail": "of the way down each page",
+        "time": "Time engaged",
+        "timeDetail": "a visit: scrolling, clicking or typing",
+        "back": "Went straight back",
+        "backDetail": "{count, plural, =0 {no visit left a page within seconds} one {# visit left a page within seconds} other {# visits left a page within seconds}}",
+        "errors": "Visits with an error",
+        "errorsDetail": "{count, plural, one {# visit} other {# visits}}, on {pages, plural, one {# page} other {# pages}}",
+        "noErrors": "none hit a JavaScript error",
+        "pagesAVisit": "Pages a visit",
+        "pagesAVisitDetail": "pages seen in one visit",
         "dead": "Dead clicks",
-        "rage": "Rage clicks"
+        "rage": "Rage clicks",
+        "ofVisits": "{share} of visits"
+      },
+      "scrollChart": {
+        "title": "How far down visitors scroll, day by day",
+        "hint": "The share of each page scrolled, on average: {span} against the {days} days before.",
+        "hintAlone": "The share of each page scrolled, on average, {span}.",
+        "now": "Scrolled",
+        "before": "Scrolled, the days before",
+        "empty": "The chart starts once Clarity has two days of figures."
+      },
+      "errorsPanel": {
+        "title": "Errors visitors hit",
+        "description": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error, on {pages, plural, one {# page} other {# pages}}, and {clicks, plural, one {# click} other {# clicks}} set one off.",
+        "none": "No visit hit a JavaScript error or a click that failed in {span}: good news.",
+        "seeAll": "See errors",
+        "empty": "No errors."
+      },
+      "recordingsPanel": {
+        "title": "Recordings worth watching",
+        "description": "Picked by {platformName} each morning from Clarity's recordings: the visits that show where people give up. Each one plays in Clarity.",
+        "seeAll": "See all {count} picked",
+        "empty": "None picked yet: a few are picked each morning."
+      },
+      "pagesPanel": {
+        "title": "Pages where visitors give up",
+        "description": "Your busiest pages and how far down they're scrolled, on average. {count, plural, one {# page} other {# pages}} had visits; {low, plural, =0 {none is} one {# is} other {# are}} scrolled less than a quarter of the way.",
+        "seeAll": "See all {count} pages",
+        "empty": "No pages yet."
+      },
+      "groupsChart": {
+        "title": "How far down each kind of page is scrolled",
+        "hint": "Your page groups, on average: {span} against the {days} days before. Faint: too few visits to judge.",
+        "hintAlone": "Your page groups, on average, {span}. Faint: too few visits to judge.",
+        "empty": "No page groups yet."
+      },
+      "devicesPanel": {
+        "title": "Phones and computers",
+        "description": "Phone visitors scroll {phones} of the way down a page, against {computers} on a computer.",
+        "plain": "How visitors behave on each kind of device.",
+        "empty": "No visits yet."
+      },
+      "sourcesPanel": {
+        "title": "Where visitors came from",
+        "description": "Each source on its own line, as Clarity names it, {span}.",
+        "coming": "Where visitors came from is read from tomorrow morning.",
+        "empty": "No visits yet.",
+        "comingEmpty": "Each source shows here from tomorrow."
+      },
+      "stuckPanel": {
+        "title": "Where visitors get stuck",
+        "description": "Clarity watches for clicks on things that do nothing, clicks in anger, scrolling up and down hunting, and quick returns.",
+        "dead": "Dead clicks",
+        "rage": "Rage clicks",
+        "excessive": "Scrolling up and down",
+        "back": "Went straight back",
+        "what": "What happened",
+        "found": "What {platformName} found",
+        "mostOn": "{count} of them from {page}",
+        "spread": "{count, plural, one {# visit} other {# visits}}, spread across the website"
       }
     },
     "pages": {
       "title": "Pages",
-      "description": "Each page's behaviour: scroll depth, time, frustrations and quick backs. Open Clarity for a page's heatmap.",
-      "search": "Find a page",
-      "download": "Download CSV",
-      "noMatch": "No page matches",
-      "empty": "No pages read yet: Clarity's figures arrive each morning once it is connected.",
-      "tableTitle": "{count, plural, one {# page} other {# pages}} · Last {days} days",
-      "openInClarity": "Open in Clarity",
+      "description": "Each page's behaviour: how far down it's scrolled, how long people are engaged, who goes straight back, and errors. Open a page for its heatmap and recordings.",
+      "search": "Find a page…",
+      "groupFilter": "Page group",
+      "everyGroup": "Every page group",
+      "scrolledFilter": "Scrolled",
+      "scrolledAny": "Any amount",
+      "scrolledLow": "Less than a quarter",
+      "noMatch": "No page matches.",
+      "empty": "No pages yet: Clarity's figures arrive each morning.",
+      "tableNote": "{span} · {device} · figures from fewer than {few} visits are greyed: too few to judge",
       "sees": {
-        "low": "{count, plural, one {One page loses} other {# pages lose}} most visitors before halfway down, such as {pages}.",
-        "fine": "Visitors read most of your pages past halfway.",
-        "none": "No pages read yet."
+        "loading": "Reading your pages…",
+        "none": "No page has had a visit in these days yet.",
+        "count": "{count, plural, one {# page} other {# pages}} had visits, {span}.",
+        "low": "{count, plural, one {# is} other {# are}} scrolled less than a quarter of the way down on average, among them {pages}.",
+        "noneLow": "None is scrolled less than a quarter of the way down on average.",
+        "furthest": "{page} is scrolled furthest: {scroll} of the way.",
+        "few": "{count, plural, one {# page} other {# pages}} had fewer than {few} visits: too few to judge, so their figures are greyed."
       },
-      "do": "See each page's review.",
-      "seeReviews": "See the page reviews",
-      "columns": {
-        "page": "Page",
-        "visits": "Visits",
-        "scroll": "Scroll depth",
-        "time": "Active time",
-        "dead": "Dead clicks",
-        "quickBack": "Quick backs",
-        "heatmap": "Heatmap"
+      "do": {
+        "startWith": "Start with {page}: {visits} visits, scrolled {scroll} of the way down on average.",
+        "startWithChange": "Start with {page}: {visits} visits, scrolled {scroll} of the way down on average, {points} points {way, select, less {less} other {more}} than before.",
+        "seePage": "See the page"
       },
-      "device": "Device",
-      "everyDevice": "Every device"
+      "chart": {
+        "title": "How far down your busiest pages are scrolled",
+        "hint": "Your ten pages with the most visits, on average. Orange: less than a quarter of the way. Faint: fewer than {few} visits, too few to judge. The website as a whole: {website}.",
+        "empty": "No pages yet."
+      },
+      "emptyDevice": "No page had a visit on {device}, {span}."
     },
-    "devices": {
-      "title": "Devices",
-      "description": "The same behaviour by device, so a page that works on a computer and not on a phone shows.",
-      "search": "Find a device",
-      "download": "Download CSV",
-      "noMatch": "No device matches",
-      "empty": "No devices read yet: Clarity's figures arrive each morning once it is connected.",
-      "tableTitle": "{count, plural, one {# device} other {# devices}} · Last {days} days",
+    "page": {
+      "back": "Back to Pages",
+      "openHeatmap": "Open its heatmap in Clarity",
       "sees": {
-        "low": "{count, plural, one {One device scrolls} other {# devices scroll}} less than halfway on average: {pages}.",
-        "fine": "Visitors on every device read past halfway on average.",
-        "none": "No devices read yet."
+        "none": "No visits to this page {span}.",
+        "scroll": "Visitors scroll {scroll} of the way down {page} on average{change}. {group}The whole website: {website}.",
+        "change": ", against {before} the days before",
+        "group": "Your other {group} pages are scrolled {scroll} of the way. ",
+        "few": "Only {count, plural, one {# visit} other {# visits}} so far: too few to judge the page on its own yet.",
+        "phonesBack": "{count} of its {visits} phone visits went straight back within seconds.",
+        "errorsOn": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error here, mostly in {where}.",
+        "errors": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error here."
       },
-      "do": "See each page's review.",
-      "seeReviews": "See the page reviews",
-      "columns": {
-        "page": "Device",
+      "do": {
+        "top": "Move the page's main point and its enquiry link nearer the top.",
+        "watchErrors": "Watch the visits that hit the error.",
+        "recordingsLink": "Recordings"
+      },
+      "figures": {
         "visits": "Visits",
-        "scroll": "Scroll depth",
-        "time": "Active time",
-        "dead": "Dead clicks",
-        "quickBack": "Quick backs"
+        "onPhones": "{count} of them on phones",
+        "scroll": "Scrolled, on average",
+        "website": "The website: {value}",
+        "time": "Time engaged",
+        "back": "Went straight back"
+      },
+      "chart": {
+        "title": "How far down {page} is scrolled, day by day",
+        "hint": "The share of the page scrolled, on average, against the whole website's.",
+        "website": "Your website",
+        "empty": "The chart starts once the page has two days of figures."
+      },
+      "errorsPanel": {
+        "title": "Errors on this page",
+        "description": "{count} of its {visits} visits hit a JavaScript error; {clicks, plural, one {# click} other {# clicks}} set one off.",
+        "none": "No visit hit an error on this page, {span}.",
+        "coming": "Errors by browser are read from tomorrow morning.",
+        "empty": "No errors."
+      },
+      "recordingsPanel": {
+        "title": "Recordings of this page",
+        "description": "Picked by {platformName} from Clarity's recordings. Each one plays in Clarity.",
+        "empty": "None of this page picked yet."
+      },
+      "devicesPanel": {
+        "title": "Phones and computers on this page",
+        "phonesLess": "Phone visitors scroll less of this page: {phones} of the way, against {computers} on a computer.",
+        "phonesMore": "Phone visitors scroll further down this page: {phones} of the way, against {computers} on a computer.",
+        "plain": "How visitors behave on this page on each kind of device.",
+        "empty": "No visits."
+      },
+      "sourcesPanel": {
+        "title": "Where its visitors came from",
+        "description": "Each source on its own line, as Clarity names it.",
+        "coming": "Where visitors came from is read from tomorrow morning.",
+        "empty": "No visits.",
+        "comingEmpty": "Each source shows here from tomorrow."
+      }
+    },
+    "errors": {
+      "title": "Errors",
+      "description": "Where your pages break for visitors: JavaScript errors, and clicks on something that then failed. Each one can be watched in Clarity.",
+      "search": "Find a page…",
+      "everyBrowser": "Every browser",
+      "noMatch": "No page matches.",
+      "empty": "No page had an error, {span}: good news.",
+      "sees": {
+        "none": "No visit hit a JavaScript error or a click that failed, {span}: good news.",
+        "count": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error, {span}{change}.",
+        "change": ", {count} {way, select, more {more} other {fewer}} than the {days} days before",
+        "top": "{count, plural, one {# was} other {# were}} on {page}, where {clicks, plural, =0 {no click failed} one {# click failed} other {# clicks failed}}.",
+        "topOn": "{count, plural, one {# was} other {# were}} on {page}, mostly in {where}, where {clicks, plural, =0 {no click failed} one {# click failed} other {# clicks failed}}.",
+        "browser": "{browser} has the most errors for its visits: {errors} of its {visits}."
+      },
+      "do": {
+        "fix": "Fix the error on {page} in {where} first.",
+        "fixClicks": "Fix the error on {page} in {where} first: it stops clicks working.",
+        "seePage": "See the page"
+      },
+      "figures": {
+        "visits": "Visits with an error",
+        "ofVisits": "{share} of visits",
+        "clicks": "Clicks that failed",
+        "clicksDetail": "a click that set off an error",
+        "pages": "Pages with an error",
+        "pagesDetail": "of {count, plural, one {# page} other {# pages}} with visits",
+        "days": "Days with an error",
+        "daysDetail": "of {count, plural, one {# day} other {# days}} Clarity recorded"
+      },
+      "dayChart": {
+        "title": "Visits with an error, day by day",
+        "hint": "Visits that hit a JavaScript error, each day, {span}.",
+        "empty": "No days yet."
+      },
+      "browserChart": {
+        "title": "Errors by browser",
+        "hint": "The share of each browser's visits that hit an error, {span}. Faint: too few visits to judge.",
+        "coming": "Browsers are read from tomorrow morning.",
+        "empty": "No browsers yet.",
+        "hintPlain": "The share of each browser's visits that hit an error."
+      }
+    },
+    "recordings": {
+      "title": "Recordings",
+      "description": "The visits worth watching, picked each morning from Clarity's recordings: errors, failed or angry clicks, quick returns and the longest reads. Each one plays in Clarity.",
+      "search": "Find a page…",
+      "kindFilter": "What it shows",
+      "everyKind": "Everything",
+      "kindCount": "{kind} ({count})",
+      "noMatch": "No recording matches.",
+      "empty": "None picked yet: a few are picked each morning.",
+      "tableNote": "Picked over {span} · Clarity keeps a recording 30 days",
+      "kinds": {
+        "ERRORS": "JavaScript errors",
+        "ERROR_CLICKS": "Clicks that failed",
+        "RAGE": "Rage clicks",
+        "DEAD": "Dead clicks",
+        "QUICK_BACK": "Went straight back",
+        "LONGEST": "Longest visits"
+      },
+      "what": {
+        "ERRORS": "Visit that hit a JavaScript error on {page}",
+        "ERROR_CLICKS": "Visit that clicked something on {page} that then failed",
+        "RAGE": "Visit with rage clicks on {page}",
+        "DEAD": "Visit with dead clicks on {page}",
+        "QUICK_BACK": "Visit that went straight back from {page} after {time}",
+        "LONGEST": "Long read of {page}: {time}",
+        "LONGEST_PAGES": "Long visit: {time} over {pages} pages, the longest on {page}"
+      },
+      "sees": {
+        "loading": "Reading the recordings…",
+        "none": "None picked yet. Each morning a few of Clarity's recordings are picked: visits that hit an error, clicked something that failed or clicked in anger, went straight back, and the longest reads.",
+        "count": "{count, plural, one {# recording} other {# recordings}} picked over {span}: {kinds}.",
+        "how": "Each morning, what yesterday's figures say happened comes first; the longest visits fill the rest."
+      },
+      "do": {
+        "all": "Every recording, with Clarity's own filters, is in Clarity.",
+        "openClarity": "Open Clarity"
       }
     },
     "connection": {
@@ -21262,38 +21531,8 @@
       "connectedRead": "Clarity was last read {when}.",
       "connectedFirst": "Connected: Clarity's first figures arrive tomorrow morning.",
       "disconnect": "Disconnect",
-      "limits": "Clarity allows 10 requests a project a day and gives out the last three days only. It's asked twice each morning and the history is kept here."
-    },
-    "frustration": {
-      "title": "Frustration",
-      "description": "Where visitors get stuck: clicks on things that do nothing, clicks in anger, scrolling up and down hunting, and leaving within seconds. Page by page, the most frustrated first.",
-      "search": "Find a page",
-      "download": "Download CSV",
-      "noMatch": "No page matches",
-      "empty": "No pages with enough visits yet: Clarity's figures arrive each morning once it is connected.",
-      "tableTitle": "{count, plural, one {# page} other {# pages}} · Last {days} days, the most frustrated first",
-      "sees": {
-        "worst": "On {page}, {share}% of visits click something that does nothing or click in anger: the most of any page.",
-        "calm": "No page with enough visits frustrates its visitors much.",
-        "none": "No pages read yet."
-      },
-      "do": "Fix the page whose visitors get stuck most.",
-      "seeReviews": "See the page reviews",
-      "chart": {
-        "title": "Visits with a frustration, day by day",
-        "hint": "Dead clicks and rage clicks, as a share of visits.",
-        "dead": "Dead clicks",
-        "rage": "Rage clicks"
-      },
-      "columns": {
-        "page": "Page",
-        "visits": "Visits",
-        "frustrated": "Frustrated",
-        "dead": "Dead clicks",
-        "rage": "Rage clicks",
-        "excessive": "Excessive scrolling",
-        "quickBack": "Quick backs"
-      }
+      "limits": "Clarity allows 10 asks a project a day and hands over its last three days only, so its figures are read each morning and kept here: six asks for the day's figures, where visitors came from and their browsers, and up to two for recordings worth watching, with 2 always kept in hand.",
+      "asksToday": "{used} of Clarity's 10 asks for this project are used today, with 2 always kept in hand. The Microsoft Clarity: Collector Agent asks up to 8 times each morning."
     }
   }
 }

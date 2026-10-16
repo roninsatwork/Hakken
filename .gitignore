@@ -55,3 +55,6 @@ poseData.json
 
 # The drawing kit is built from the code (npm run drawing-kit), never committed.
 /docs/design/drawing-kit/build/
+
+# Claude Code session worktrees: whole copies of the project, never committed, and never scanned for the stylesheet.
+.claude/worktrees/

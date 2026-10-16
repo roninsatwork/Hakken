@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { buildSpan, clarityFigures } from "./clarity";
+import { buildSpan } from "./clarity";
+import { clarityErrors, clarityOverview, clarityPage, clarityPagesList } from "./clarityScreens";
 import { emptyTotals, type ClarityTotalsRow } from "./utils/clarityRows";
 import { packTotals } from "./utils/clarityPacks";
 import { shiftDay } from "./utils/insightFacts";
@@ -22,6 +23,11 @@ import { heldBy } from "@/src/test/heapMeter";
  * 90-day screen read 4.6 MB at morehandles.co.uk's size and added up 180
  * records each time it opened (measured 2026-10-16). Counted, not timed, so it
  * holds on any machine; seeded here and never on GitHub, as Search Console's is.
+ *
+ * Since "Finishing Parts 3 and 4" each day also keeps its sources and browsers,
+ * each the most Clarity sends — 1,000 rows of a page on a device by a source
+ * or a browser — in records of their own, so neither the morning's build of a
+ * kind nor a screen reads another kind's rows.
  */
 
 const ON_GITHUB = process.env.GITHUB_ACTIONS === "true";
@@ -35,6 +41,8 @@ const PAGES = 15_000;
 const WORDS = ["door", "handles", "brass", "lever", "cupboard", "knobs", "sash", "window", "latch", "pull", "black", "chrome", "satin", "antique", "bathroom", "kitchen"];
 const path = (index: number) => `/${WORDS[index % 16]}-${WORDS[(index >> 4) % 16]}/${WORDS[(index >> 8) % 16]}-${index}.html`;
 const DEVICES = ["PC", "Mobile", "Tablet"];
+const SOURCES = ["google", "Direct", "bing", "chatgpt.com", "linkedin.com", "duckduckgo", "facebook.com", "search.yahoo.com", "ecosia.org", "big-shop.test"];
+const BROWSERS = ["Chrome", "Safari", "Edge", "Firefox", "Samsung"];
 
 describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
   const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -58,34 +66,52 @@ describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
         });
         const site = DEVICES.map((device, at) => ({ ...emptyTotals(), page: null, device, visits: 30_000 - at * 9_000, bots: 900, scrollSum: (30_000 - at * 9_000) * 300, activeSum: (30_000 - at * 9_000) * 50 }));
         await ctx.db.insert("clarityFigures", { companyWebsiteId: hold, span: "DAY", key: day, part: 0, from: day, to: day, days: 1, pages: packTotals(pages), site: packTotals(site), builtAt: 1 });
+        for (const [kind, names] of [["SOURCES", SOURCES], ["BROWSERS", BROWSERS]] as const) {
+          const split = (row: ClarityTotalsRow, at: number) => ({ ...row, split: names[(at * 7 + back) % names.length] });
+          await ctx.db.insert("clarityFigures", {
+            companyWebsiteId: hold, span: "DAY", kind, key: day, part: 0, from: day, to: day, days: 1,
+            pages: packTotals(pages.map(split)),
+            site: packTotals(DEVICES.flatMap((device, at) => names.map((name, place) => ({ ...site[at], device, split: name, visits: Math.round(site[at].visits / (place + 2)) })))),
+            builtAt: 1,
+          });
+        }
       }
       return { holdId: hold, ownerId: userId as string };
     }));
   });
 
-  test("the morning's 90 days worked out within half of one read and of a query's memory", async () => {
+  test("the morning's 90 days of each kind worked out within half of one read and of a query's memory", async () => {
     const handler = (buildSpan as unknown as { _handler: (ctx: object, args: object) => Promise<null> })._handler;
-    const read = await t.run(async (ctx) => {
-      const meter = metered(ctx.db);
-      const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "LAST_90", key: NEWEST, from: shiftDay(NEWEST, -(DAYS - 1)), to: NEWEST }));
-      return { bytes: meter.bytes(), holds: held.bytes };
-    });
-    expect(read.bytes).toBeLessThan(HALF_READ);
-    expect(read.holds).toBeLessThan(HALF_MEMORY);
-    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_90")).collect());
+    for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
+      const read = await t.run(async (ctx) => {
+        const meter = metered(ctx.db);
+        const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "LAST_90", ...(kind ? { kind } : {}), key: NEWEST, from: shiftDay(NEWEST, -(DAYS - 1)), to: NEWEST }));
+        return { bytes: meter.bytes(), holds: held.bytes };
+      });
+      expect(read.bytes, kind ?? "own figures").toBeLessThan(HALF_READ);
+      expect(read.holds, kind ?? "own figures").toBeLessThan(HALF_MEMORY);
+    }
+    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_90").eq("kind", undefined)).collect());
     expect(parts.length).toBeGreaterThan(1);
   });
 
-  test("a 90-day Pages screen and Overview each read one period, within half of one read", async () => {
-    const built = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_part", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_90").eq("part", 0)).first());
-    if (!built) await t.mutation(internal.clarity.buildSpan, { holdId, span: "LAST_90", key: NEWEST, from: shiftDay(NEWEST, -(DAYS - 1)), to: NEWEST });
-    const pages = await readBy(t, ownerId, clarityFigures as never, { siteId: holdId, by: "PAGE", days: 90 });
-    const answer = pages.answer as { rows: unknown[]; days: number };
-    expect(answer.days).toBe(DAYS);
-    expect(answer.rows.length).toBeGreaterThan(ROWS);
+  test("a 90-day Pages screen, Overview, a page's own screen and Errors each read within half of one read", async () => {
+    for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
+      const built = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_90").eq("kind", kind)).first());
+      if (!built) await t.mutation(internal.clarity.buildSpan, { holdId, span: "LAST_90", ...(kind ? { kind } : {}), key: NEWEST, from: shiftDay(NEWEST, -(DAYS - 1)), to: NEWEST });
+    }
+    const pages = await readBy(t, ownerId, clarityPagesList as never, { siteId: holdId, days: 90, page: 1, rows: 25 });
+    const answer = pages.answer as { total: number; period: { now: { days: number } } };
+    expect(answer.period.now.days).toBe(DAYS);
+    expect(answer.total).toBeGreaterThan(ROWS);
     expect(pages.bytes).toBeLessThan(HALF_READ);
-    // Overview's devices read the period's first part only: a few kilobytes, however many pages.
-    const devices = await readBy(t, ownerId, clarityFigures as never, { siteId: holdId, by: "DEVICE", days: 90 });
-    expect(devices.bytes).toBeLessThan(pages.bytes);
+    for (const [name, query, args] of [
+      ["Overview", clarityOverview, { siteId: holdId, days: 90 }],
+      ["a page", clarityPage, { siteId: holdId, days: 90, page: path(0) }],
+      ["Errors", clarityErrors, { siteId: holdId, days: 90 }],
+    ] as const) {
+      const read = await readBy(t, ownerId, query as never, args);
+      expect(read.bytes, name).toBeLessThan(HALF_READ);
+    }
   });
 });

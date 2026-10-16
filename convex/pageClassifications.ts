@@ -17,7 +17,6 @@ import {
 } from "./utils/pageClassification";
 import { suggestClassifications } from "./utils/suggestClassifications";
 import { AUTO_BUCKETS, DESCRIPTION_LENGTH, answersOf, appliedAnswers, type AutoAnswer } from "./utils/autoClassify";
-import { noteGroupsChanged } from "./autoClassifyNote";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
@@ -642,7 +641,6 @@ export const createPageClassification = superAdminMutation({
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: hold._id, classificationId, ...line, createdAt: now });
     }
     await audit(ctx, hold, "CREATE_PAGE_CLASSIFICATION", { type: "pageClassifications", id: classificationId }, { name, type, lines, description: description || null });
-    await noteGroupsChanged(ctx, hold);
     return classificationId;
   },
 });
@@ -704,7 +702,6 @@ export const updatePageClassification = superAdminMutation({
       linesAdded: added,
       linesRemoved: plainLines(removed),
     });
-    await noteGroupsChanged(ctx, hold);
     return null;
   },
 });
@@ -780,7 +777,6 @@ export const removePageClassification = superAdminMutation({
       lines: plainLines(lines),
       pagesByHand: picks.length,
     });
-    await noteGroupsChanged(ctx, hold);
     return { lines: lines.length, pagesByHand: picks.length };
   },
 });

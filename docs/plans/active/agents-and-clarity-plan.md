@@ -1,10 +1,13 @@
 # Agents and Microsoft Clarity — the Agents screen, a Clarity Collector, and Clarity's figures put right
 
-**Planned 2026-10-16. Status: the Agents screen is drawn and liked (Anthony,
-2026-10-16: "ok ty this is good"); Clarity's screens are drawn on
+**Planned 2026-10-16. Status, 2026-10-16 evening: everything built on local
+`dev`, not committed, not pushed. Part 0 (Clarity's data), Part 2 (the
+Collector) and Part 5 (the Agents screen) were built first; Parts 3 and 4 —
+more of Clarity's data, recordings, and the screens as drawn on
 [Hakken — Microsoft Clarity](https://claude.ai/artifact/Gw4pfVgJ9SmyBRwq3q3MNJ)
-for discussion; the Clarity parts may change. Nothing built. Waiting for
-Anthony's go.**
+— were built after Anthony found the screens had never been built ("These
+are not the screens I designed and where is my data", then "Can you take
+over and finish the work off"). See "Built 2026-10-16" at the end.**
 
 ## Where this came from
 
@@ -166,7 +169,16 @@ own addresses.
   every figure, and the Overview says how many were left out. Checked against
   Analytics for the same days first (audit, item 8).
 
-## Part 2 — the Microsoft Clarity Collector (CC1–CC6)
+## Part 2 — the Microsoft Clarity Collector (CC1–CC6): built 2026-10-16
+
+Built on Anthony's word (2026-10-16: "yes please we need it work properly").
+What was built differs from the plan below in three places, each said here:
+the agent's definition is in `convex/utils/clarityCollectorAgent.ts` and its
+job in `convex/clarityAgentRun.ts`, not `agentRoles.ts`; Run is never refused
+— a run with no asks left says so in its log and the next morning collects;
+and connecting (CC6) starts the website's first run at once, which files
+yesterday as a day, rather than showing three days as one block. Tests:
+`convex/clarityAgentRun.test.ts`.
 
 - **CC1. A Collector agent like the others.** A new role,
   `MICROSOFT_CLARITY_COLLECTOR` (`convex/utils/agentRoles.ts`), built as the
@@ -338,6 +350,54 @@ build the agent stuff"), on branch `agents-screen` in the worktree
   reading every agent on each page; the filters do that job.
 
 
+## Finishing Parts 3 and 4 — decisions, 2026-10-16 (afternoon)
+
+Anthony, 2026-10-16, on finding the drawn screens were never built: "Can you
+take over and finish the work off". Built in this order: more of Clarity's
+data first, so the panels fill from the next morning, then the four drawn
+screens and Recordings. What one ask of each found, before building:
+
+- **Clarity's export**: up to three splits an ask, from Browser, Device,
+  Country/Region, OS, Source, Medium, Campaign, Channel and URL; at most
+  1,000 rows an answer, never paged; ten asks a project a day. Its answer
+  names a page `Url`, a source `Source` ("google", "chatgpt.com", the
+  website's own address) and a browser `Browser`.
+- **Clarity's recordings** (`POST clarity.microsoft.com/mcp/recordings/sample`,
+  what Microsoft's own Clarity connector calls) take the same Data Export
+  token, filtered by JavaScript errors, failed clicks, rage and dead clicks,
+  quick backs or device, sorted by start or length, up to 250 a time. Each
+  carries its link to watch it, its length, its pages and clicks, and each
+  page's address, title and referrer. The link names the Clarity project
+  (`jqixjfyq4g` for ronins.co.uk), which is what a heatmap link needs.
+  Microsoft does not say whether these asks count against the export's ten a
+  day, so Hakken counts them as if they do.
+
+Decisions, each changeable:
+
+1. **Six export asks a morning**, two kept in hand as before: the day's own
+   two, by page and device and by device, unchanged; then yesterday's
+   sources, by device and source and by page, device and source; and its
+   browsers, by browser and device and by page, browser and device. Sources
+   are asked apart from the day's own figures because Clarity answers 1,000
+   rows at most: a busy website's many referrers would cut the rows its
+   visits are counted from. A missed morning is caught up with the day's own
+   two only; its sources and browsers are left out, and a screen says so when
+   they cover fewer days than the rest.
+2. **Up to two recording asks a morning**, after the export's, with what is
+   left of the eight: the kinds yesterday's figures say happened — JavaScript
+   errors, failed clicks, rage clicks, dead clicks, quick backs — then the
+   longest visits. Five recordings an ask; kept 30 days, as Clarity keeps
+   recordings. A normal morning uses 7 asks (2 + 4 + 1), or 8 when two kinds
+   happened; a morning catching up a missed one uses 8 and picks none.
+3. **Days kept 180, not 90**, so the 90 days can be set against the 90 days
+   before; sources and browsers by day kept 90. Every comparison reads a
+   ready-made "before" period built each morning beside the 7, 30 and 90 days.
+4. **Too few to judge is 10 visits**, greyed with the reason on hover, never
+   left out (CS9); the hidden 20 goes.
+5. **Page titles** come from the website's one page list (`holdPages`), and
+   **page groups** from its classifications, read the way Google Analytics'
+   screens read them — a page's name and group, not another source's figures.
+
 ## Order and size
 
 | Step | What | Man-days |
@@ -345,11 +405,99 @@ build the agent stuff"), on branch `agents-screen` in the worktree
 | 0 | CD1–CD8 — Clarity's data normalised (built 2026-10-16; merge, convert dev, check the first morning) | 2 |
 | 1 | CF1 — confirm each page is filed as itself on the first real morning (read in CD1) | 0.25 |
 | 2 | CF3, CF5 on the screens — honest days and the words (CF4, CF6 done in CD3, CD2) | 0.5 |
-| 3 | CC1–CC6 — the Clarity Collector | 2 |
-| 4 | CM1–CM2 — more of what Clarity sends, and recordings worth watching | 1.5 |
+| 3 | CC1–CC6 — the Clarity Collector (built 2026-10-16) | 2 |
+| 4 | CM1–CM2 — more of what Clarity sends, and recordings worth watching (built 2026-10-16) | 1.5 |
 | 5 | AG1–AG6 — the Agents screen (built 2026-10-16; commit and merge on Anthony's word) | 2 |
-| 6 | CS1–CS9 — Clarity's screens, as drawn once approved | 4 |
+| 6 | CS1–CS9 — Clarity's screens, as drawn (built 2026-10-16) | 4 |
 | | **Total** | **12.25** |
 
 Each step is built, tested and shown on its own; nothing is committed or
 pushed until Anthony asks.
+
+## Built 2026-10-16 — Parts 3 and 4
+
+On local `dev`, uncommitted, every test and guard passing; checked in
+Anthony's Chrome against ronins.co.uk's real figures.
+
+**Collected** (`clarityAgentRun.ts`, `clarity.ts`, `utils/clarityRows.ts`,
+`utils/clarityRecordings.ts`): the day's own two asks as before, then
+yesterday's sources and browsers (four asks) and up to two recording asks,
+as "Finishing Parts 3 and 4" decides. Each kind of figure is kept in records
+of its own (`kind`: none, `SOURCES`, `BROWSERS`), and every record's pages in
+the pages' order, in parts that note their first page (`firstPage`), so a
+page's own screen reads only the part holding that page. Clarity's project id
+and the website's address are kept with the connection, from the first
+recording's link and the first page's address: a "Heatmap" link opens that
+page's heatmap in Clarity, built as Clarity's own heatmaps list builds it
+(checked in Clarity). The periods before (`BEFORE_7/30/90`) are built each
+morning for the comparisons.
+
+**The screens** (`app/clarity/[siteId]/…`, `convex/clarityScreens.ts`):
+Overview, Pages, a page's own screen (`pages/page?path=…`), Errors and
+Recordings, with Google Analytics' compact header (every device or one, and
+the days). Devices and Frustration are gone, as CS2 has it. Their looks are
+held by `clarityLook.test.tsx` (`docs/plans/assets/agents-and-clarity/look/`).
+**Recordings was not drawn**: it is the standard list screen (search, "What it
+shows", the table, its download), to be drawn if Anthony wants it changed.
+
+**Honest by construction** (CF3, `stats-need-comparisons`):
+
+- Days are said as held: "4 days so far, since 12 Oct", never "the last 30".
+- The days before are compared only when Clarity recorded as many of them as
+  of the days shown; until then a figure says there is nothing to compare
+  with yet, and since when.
+- ronins.co.uk's 12–14 Oct were kept before Part 0: they hold no pages (filed
+  as "/" and dropped), and no errors, people or pages a visit. The Overview
+  says each page's own figures start on 15 Oct, and errors, people and pages
+  a visit are counted from 15 Oct; those figures and their days leave the
+  earlier days out rather than count them as none.
+
+**Every limit this adds** (`no-hidden-limits`):
+
+| Limit | Where | Why |
+|---|---|---|
+| 1,000 rows an answer | Clarity's own | Clarity never pages an answer: a page, source or browser past its 1,000 busiest rows of a day is not sent; the screens say on how many days it happened ("Large websites") |
+| 6 export asks and up to 2 recording asks a morning, 2 always in hand | `utils/clarityCollectorAgent.ts` | Clarity's 10 a day; recordings counted as if they share them |
+| A missed morning is caught up without its sources and browsers | `clarityAgentRun.ts` | the asks: the day's own figures come first |
+| 5 recordings an ask; kept 30 days; a screen reads at most 500 | `clarityAgentRun.ts`, `clarity.ts`, `clarityScreens.ts` | Clarity keeps a recording 30 days; about 300 are ever held |
+| Days kept 180, sources and browsers by day 90, months 13 | `clarity.ts` | the 90 days set against the 90 before |
+| Fewer than 10 visits: greyed, "Too few visits to judge" on hover, never left out | `CLARITY_FEW_VISITS` | CS9; the hidden 20 is gone |
+| A day's pages in parts of about 250 rows, a period's of about 4,000 | `clarity.ts` | one page's screen reads one part; no record nears 1 MiB |
+| Overview shows the 4 busiest pages, 5 pages with errors, 3 recordings; Pages' chart the 10 busiest | the screens | each with "See all" to the whole list |
+
+**Still open**: the first full morning (17 Oct, 05:50) is the first to collect
+sources, browsers and recordings by itself — check its run log on the Agents
+screen. Clarity's heatmap link takes no device or dates: Clarity opens its own
+defaults.
+
+## Large websites — built 2026-10-16
+
+Anthony, 2026-10-16: "How do we work with larger sites", "is this enough
+info", then "Ok let's do this".
+
+**Measured first**, on morehandles.co.uk (10,016 pages): only 789 had a Google
+click in the last 90 days; the busiest 330 took 92.7% of the clicks, the
+busiest 1,000 all of them, and 120 had the 10 a page needs to be judged. So a
+day's busiest 1,000 pages hold nearly every page worth judging; the busiest
+330 or so — what an answer split by page and device holds — miss the quieter
+ones. (Search Console's clicks, as Hakken holds no Analytics visits a page for
+it; Clarity counts every visit, so its list runs a little wider.)
+
+**Built:**
+
+- **Said when it happens.** An answer of 1,000 rows was cut
+  (`clarityAnswerCut`). A day whose pages were cut is marked (`cut`), each
+  period counts them (`cutDays`), and Overview, Pages, Errors and a page's
+  sources say "On N days Clarity sent only its busiest 1,000 rows…".
+- **The pages asked again without their devices.** When yesterday's pages by
+  device come back cut, the Collector asks for them by page alone — one more
+  ask, so such a website keeps one recording ask a morning, not two — and
+  fills the list out (`withUnsplitPages`): a page the first list holds keeps
+  its rows by device; one only the second holds is kept as "Not split by
+  device" (`ANY_DEVICE`), counted in every figure across devices and in none
+  for one device. A list still cut at 1,000 is kept marked as cut.
+- Tests: `clarityAgentRun.test.ts` (a cut list asked again, and one still cut),
+  `clarityScreens.test.ts` (cut days counted; a page not split by device in
+  every device's figures but none's own).
+
+ronins.co.uk is unaffected: its answers are far short of 1,000 rows.

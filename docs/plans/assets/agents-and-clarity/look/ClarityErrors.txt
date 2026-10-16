@@ -1,0 +1,18 @@
+# Microsoft Clarity → Errors — the approved look (board "ClarityErrors" of docs/plans/assets/agents-and-clarity/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Errors
+settings-card: What Hakken sees
+figures
+  figure: Visits with an error
+  figure: Clicks that failed
+  figure: Pages with an error
+  figure: Days with an error
+chart-card: Visits with an error, day by day
+chart-card: Errors by browser
+search: Find a page…
+filter: Browser
+table: Page | Visits | With an error | Of its visits | Clicks that failed | Mostly on | Actions
+  table-bar
+    download: Download CSV
+  table-footer

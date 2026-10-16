@@ -1956,7 +1956,7 @@
           "saveFailed": "Impossibile salvare la classificazione. Riprova.",
           "remove": "Togli questa classificazione",
           "descriptionLabel": "Descrizione",
-          "descriptionHintWritten": "{platformName} l'ha scritta dal nome della classificazione, dalle sue regole, dalle sue pagine più visitate e da ciò che {host} offre. La classificazione automatica la legge per ordinare le pagine che nessuna regola prende, quindi dice cosa ci va e cosa no. Puoi cambiarla quando vuoi: le pagine di questa classificazione vengono poi ordinate di nuovo.",
+          "descriptionHintWritten": "{platformName} l'ha scritta dal nome della classificazione, dalle sue regole, dalle sue pagine più visitate e da ciò che {host} offre. La classificazione automatica la legge per ordinare le pagine che nessuna regola prende, quindi dice cosa ci va e cosa no. Puoi cambiarla quando vuoi, poi premi Classificazione automatica per ordinare di nuovo le pagine.",
           "descriptionHintPerson": "Cosa ci va, e la cosa più vicina che non ci va. La classificazione automatica la legge per ordinare le pagine che nessuna regola prende. Lasciala vuota e {platformName} ne scrive una.",
           "byAuto": "Dalla classificazione automatica: {certainty}"
         },
@@ -4623,6 +4623,7 @@
         "asked": "Quando qualcuno lo chiede",
         "yes": "Quando qualcuno dice sì",
         "lookUp": "Quando qualcuno preme Cerca",
+        "autoClassify": "Quando qualcuno preme Classificazione automatica",
         "never": "Non lavora da solo",
         "noSchedule": "Nessuna programmazione",
         "paused": "{schedule}, in pausa",
@@ -10209,7 +10210,8 @@
       "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
       "companies": "{count, plural, =1 {# azienda} other {# aziende}}",
       "peopleRead": "{count, plural, =1 {# persona ha letto} other {# persone hanno letto}}",
-      "agents": "{count, plural, =1 {# agente} other {# agenti}}"
+      "agents": "{count, plural, =1 {# agente} other {# agenti}}",
+      "recordings": "{count, plural, =1 {# registrazione} other {# registrazioni}}"
     },
     "chart": {
       "download": "Scarica",
@@ -21150,101 +21152,368 @@
       "yourWebsite": "Il tuo sito",
       "updated": "Letto {when}",
       "switch": "Sito",
+      "device": "Dispositivo",
+      "everyDevice": "Tutti i dispositivi",
       "days": "Giorni",
       "lastDays": "Ultimi {days} giorni",
-      "figuresTo": "Dati di Clarity al {day}, letti ogni mattina."
+      "figuresTo": "Dati di Clarity fino al {day}, letti ogni mattina."
     },
     "menu": {
       "label": "Microsoft Clarity",
       "figures": "Clarity",
       "overview": "Panoramica",
       "pages": "Pagine",
-      "devices": "Dispositivi",
+      "recordings": "Registrazioni",
+      "errors": "Errori",
       "settings": "Impostazioni",
-      "connection": "Collegamento",
-      "frustration": "Frustrazione"
+      "connection": "Collegamento"
+    },
+    "devices": {
+      "PC": "Computer",
+      "Mobile": "Telefoni",
+      "Tablet": "Tablet",
+      "Other": "Altri dispositivi",
+      "Any": "Senza divisione per dispositivo"
+    },
+    "sources": {
+      "direct": "Diretto",
+      "own": "Il tuo sito (tra le sue pagine)"
+    },
+    "common": {
+      "tooFew": "Troppe poche visite per giudicare",
+      "heatmap": "Mappa di calore",
+      "watch": "Guarda",
+      "watchIt": "Guardala",
+      "openHeatmap": "Apri la mappa di calore",
+      "lastDays": "gli ultimi {days} giorni",
+      "soFar": "{count, plural, =0 {ancora nessun giorno} one {# giorno finora} other {# giorni finora}}, dal {since}",
+      "onBefore": "rispetto ai {days} giorni prima",
+      "noBefore": "ancora niente da confrontare: i dati di Clarity partono dal {since}",
+      "noneIn": "Nessuno in {span}",
+      "percentOn": "{way, select, up {▲} down {▼} other {=}} {value}% {against}",
+      "pointsOn": "{way, select, up {▲} down {▼} other {=}} {value} punti {against}",
+      "secondsOn": "{way, select, up {▲} down {▼} other {=}} {value}s {against}",
+      "visitsOn": "{way, select, up {▲} down {▼} other {=}} {value, plural, one {# visita} other {# visite}} {against}",
+      "plainOn": "{way, select, up {▲} down {▼} other {=}} {value} {against}",
+      "theDaysBefore": "I {days} giorni prima",
+      "browserOn": "{browser} su {device}",
+      "everyDevice": "tutti i dispositivi",
+      "everywhere": "tutti i browser",
+      "downloadCsv": "Scarica CSV",
+      "downloading": "Preparazione…",
+      "downloadFailed": "Non è stato possibile creare il file. Riprova.",
+      "shareOf": "{share}% · {errors} su {visits}",
+      "columns": {
+        "page": "Pagina",
+        "visits": "Visite",
+        "scrolled": "Scorrimento",
+        "scrolledAverage": "Scorrimento medio",
+        "scrolledBefore": "Scorrimento, i giorni prima",
+        "change": "Variazione",
+        "wentBack": "Tornati subito indietro",
+        "time": "Tempo attivo",
+        "engaged": "Attivo",
+        "engagedSeconds": "Secondi attivi",
+        "errors": "Errori",
+        "withError": "Con un errore",
+        "ofItsVisits": "Delle sue visite",
+        "clicksFailed": "Clic falliti",
+        "mostlyOn": "Soprattutto su",
+        "device": "Dispositivo",
+        "share": "Quota",
+        "source": "Provenienza",
+        "group": "Gruppo di pagine",
+        "browser": "Browser",
+        "where": "Dove",
+        "recording": "Registrazione",
+        "from": "Da",
+        "length": "Durata",
+        "pages": "Pagine",
+        "clicks": "Clic",
+        "when": "Quando",
+        "activeSeconds": "Secondi attivi",
+        "link": "Link"
+      },
+      "countedFrom": "Errori, persone e pagine per visita sono contati dal {day}: i giorni prima erano stati conservati prima che Clarity li fornisse.",
+      "pagesFrom": "I dati di ogni singola pagina partono dal {day}: i giorni prima hanno solo i dati del sito.",
+      "cut": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina, quindi le pagine meno visitate possono mancare.",
+      "cutBrowsers": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina e browser, quindi il browser di una pagina meno visitata può mancare.",
+      "cutSources": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina e provenienza, quindi una provenienza minore può mancare."
     },
     "overview": {
       "title": "Panoramica",
-      "description": "Come si comportano i visitatori sulle tue pagine: quanto scorrono, quanto restano e dove si bloccano. Da Microsoft Clarity.",
+      "description": "Come si comportano i visitatori sulle tue pagine: quanto scorrono, quanto restano attivi, dove si bloccano e cosa si rompe. Da Microsoft Clarity.",
       "notConnectedTitle": "Clarity non è ancora collegato",
-      "notConnectedDescription": "Collega il progetto Microsoft Clarity di questo sito, e i suoi dati vengono letti ogni mattina e conservati.",
+      "notConnectedDescription": "Collega il progetto Microsoft Clarity di questo sito: i suoi dati vengono letti ogni mattina e conservati.",
       "connect": "Collega Clarity",
+      "soFarNotice": "Clarity è stato collegato il {since} e consegna solo i suoi ultimi tre giorni, quindi questi dati coprono finora {held, plural, one {# giorno} other {# giorni}}. I {days} giorni si riempiono una mattina alla volta.",
       "sees": {
-        "scroll": "I visitatori di {page} scorrono in media il {scroll}% della pagina: la maggior parte non arriva alla seconda metà.",
-        "dead": "Su {page}, il {dead}% delle visite clicca qualcosa che non fa nulla.",
-        "noPages": "Nessuna pagina ha ancora abbastanza visite per dire come viene letta."
+        "worst": "{page} perde i visitatori prima di tutte: in media scorrono il {scroll} della pagina{change}{back}.",
+        "change": ", {points} punti {way, select, less {in meno} other {in più}} rispetto ai {days} giorni prima",
+        "back": ", e il {share} torna subito indietro",
+        "noneJudged": "Nessuna pagina ha ancora avuto 10 visite in {held, plural, one {questo # giorno} other {questi # giorni}}, quindi nessuna si può giudicare da sola. Su tutto il sito, i visitatori scorrono in media il {scroll} di una pagina.",
+        "phonesLess": "Chi visita da telefono scorre meno: il {phones} di una pagina, contro il {computers} da computer.",
+        "phonesMore": "Chi visita da telefono scorre di più: il {phones} di una pagina, contro il {computers} da computer.",
+        "furthest": "Le tue pagine {group} sono le più lette fino in fondo: il {scroll}.",
+        "errors": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript, su {pages, plural, one {# pagina} other {# pagine}}.",
+        "noErrors": "Nessuna visita ha incontrato un errore JavaScript."
       },
-      "do": "Sistema le pagine che i visitatori lasciano prima del pulsante di richiesta.",
-      "seeReviews": "Vedi le revisioni delle pagine",
-      "seeInsights": "Vedi le scoperte di Insights sul comportamento",
+      "do": {
+        "top": "Sposta il messaggio principale di {page} e il suo link di contatto più in alto.",
+        "error": "Correggi l'errore JavaScript su {page}.",
+        "errorOn": "Correggi l'errore JavaScript su {page}: capita soprattutto con {browser} su {device}.",
+        "errorsLink": "Errori",
+        "watchBack": "Guarda le visite tornate subito indietro da {page}.",
+        "recordingsLink": "Registrazioni"
+      },
       "figures": {
         "visits": "Visite",
-        "lastDays": "ultimi {days} giorni",
+        "botsLeftOut": "{count, plural, one {# visita di bot esclusa} other {# visite di bot escluse}}",
         "scroll": "Scorrimento medio",
         "scrollDetail": "di ogni pagina",
-        "dead": "Visite con un clic a vuoto",
-        "deadDetail": "hanno cliccato qualcosa che non fa nulla",
-        "quickBack": "Uscite rapide",
-        "quickBackDetail": "andati via in pochi secondi"
-      },
-      "chart": {
-        "title": "Visite con una frustrazione, giorno per giorno",
-        "hint": "Clic a vuoto e clic ripetuti, come quota delle visite.",
+        "time": "Tempo attivo",
+        "timeDetail": "per visita: scorrendo, cliccando o scrivendo",
+        "back": "Tornati subito indietro",
+        "backDetail": "{count, plural, =0 {nessuna visita ha lasciato una pagina in pochi secondi} one {# visita ha lasciato una pagina in pochi secondi} other {# visite hanno lasciato una pagina in pochi secondi}}",
+        "errors": "Visite con un errore",
+        "errorsDetail": "{count, plural, one {# visita} other {# visite}}, su {pages, plural, one {# pagina} other {# pagine}}",
+        "noErrors": "nessuna ha incontrato un errore JavaScript",
+        "pagesAVisit": "Pagine per visita",
+        "pagesAVisitDetail": "pagine viste in una visita",
         "dead": "Clic a vuoto",
-        "rage": "Clic ripetuti"
+        "rage": "Clic di rabbia",
+        "ofVisits": "il {share} delle visite"
+      },
+      "scrollChart": {
+        "title": "Quanto scorrono i visitatori, giorno per giorno",
+        "hint": "La parte di ogni pagina scorsa, in media: {span} rispetto ai {days} giorni prima.",
+        "hintAlone": "La parte di ogni pagina scorsa, in media, {span}.",
+        "now": "Scorrimento",
+        "before": "Scorrimento, i giorni prima",
+        "empty": "Il grafico parte quando Clarity ha due giorni di dati."
+      },
+      "errorsPanel": {
+        "title": "Errori incontrati dai visitatori",
+        "description": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript, su {pages, plural, one {# pagina} other {# pagine}}, e {clicks, plural, one {# clic ne ha causato uno} other {# clic ne hanno causato uno}}.",
+        "none": "Nessuna visita ha incontrato un errore JavaScript o un clic fallito in {span}: buone notizie.",
+        "seeAll": "Vedi gli errori",
+        "empty": "Nessun errore."
+      },
+      "recordingsPanel": {
+        "title": "Registrazioni da guardare",
+        "description": "Scelte da {platformName} ogni mattina tra le registrazioni di Clarity: le visite che mostrano dove le persone rinunciano. Ognuna si guarda in Clarity.",
+        "seeAll": "Vedi tutte le {count} scelte",
+        "empty": "Ancora nessuna scelta: ne vengono scelte alcune ogni mattina."
+      },
+      "pagesPanel": {
+        "title": "Pagine dove i visitatori rinunciano",
+        "description": "Le tue pagine più visitate e quanto vengono scorse, in media. {count, plural, one {# pagina ha avuto} other {# pagine hanno avuto}} visite; {low, plural, =0 {nessuna è scorsa} one {# è scorsa} other {# sono scorse}} meno di un quarto.",
+        "seeAll": "Vedi tutte le {count} pagine",
+        "empty": "Ancora nessuna pagina."
+      },
+      "groupsChart": {
+        "title": "Quanto viene scorso ogni tipo di pagina",
+        "hint": "I tuoi gruppi di pagine, in media: {span} rispetto ai {days} giorni prima. Tenui: troppe poche visite per giudicare.",
+        "hintAlone": "I tuoi gruppi di pagine, in media, {span}. Tenui: troppe poche visite per giudicare.",
+        "empty": "Ancora nessun gruppo di pagine."
+      },
+      "devicesPanel": {
+        "title": "Telefoni e computer",
+        "description": "Chi visita da telefono scorre il {phones} di una pagina, contro il {computers} da computer.",
+        "plain": "Come si comportano i visitatori su ogni tipo di dispositivo.",
+        "empty": "Ancora nessuna visita."
+      },
+      "sourcesPanel": {
+        "title": "Da dove arrivano i visitatori",
+        "description": "Ogni provenienza su una riga sua, come la chiama Clarity, {span}.",
+        "coming": "La provenienza dei visitatori viene letta da domani mattina.",
+        "empty": "Ancora nessuna visita.",
+        "comingEmpty": "Ogni provenienza compare qui da domani."
+      },
+      "stuckPanel": {
+        "title": "Dove si bloccano i visitatori",
+        "description": "Clarity osserva i clic su cose che non fanno nulla, i clic di rabbia, lo scorrere su e giù cercando qualcosa e i ritorni rapidi.",
+        "dead": "Clic a vuoto",
+        "rage": "Clic di rabbia",
+        "excessive": "Scorrere su e giù",
+        "back": "Tornati subito indietro",
+        "what": "Cosa è successo",
+        "found": "Cosa ha trovato {platformName}",
+        "mostOn": "{count} da {page}",
+        "spread": "{count, plural, one {# visita} other {# visite}}, sparse su tutto il sito"
       }
     },
     "pages": {
       "title": "Pagine",
-      "description": "Il comportamento di ogni pagina: scorrimento, tempo, frustrazioni e uscite rapide. Apri Clarity per la mappa di calore di una pagina.",
-      "search": "Trova una pagina",
-      "download": "Scarica CSV",
-      "noMatch": "Nessuna pagina corrisponde",
-      "empty": "Nessuna pagina ancora letta: i dati di Clarity arrivano ogni mattina una volta collegato.",
-      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Ultimi {days} giorni",
-      "openInClarity": "Apri in Clarity",
+      "description": "Il comportamento su ogni pagina: quanto viene scorsa, quanto restano attivi, chi torna subito indietro e gli errori. Apri una pagina per la sua mappa di calore e le registrazioni.",
+      "search": "Trova una pagina…",
+      "groupFilter": "Gruppo di pagine",
+      "everyGroup": "Tutti i gruppi",
+      "scrolledFilter": "Scorrimento",
+      "scrolledAny": "Qualsiasi",
+      "scrolledLow": "Meno di un quarto",
+      "noMatch": "Nessuna pagina corrisponde.",
+      "empty": "Ancora nessuna pagina: i dati di Clarity arrivano ogni mattina.",
+      "tableNote": "{span} · {device} · i dati da meno di {few} visite sono in grigio: troppe poche per giudicare",
       "sees": {
-        "low": "{count, plural, one {Una pagina perde} other {# pagine perdono}} la maggior parte dei visitatori prima di metà, come {pages}.",
-        "fine": "I visitatori leggono la maggior parte delle tue pagine oltre la metà.",
-        "none": "Nessuna pagina ancora letta."
+        "loading": "Lettura delle pagine…",
+        "none": "Nessuna pagina ha ancora avuto visite in questi giorni.",
+        "count": "{count, plural, one {# pagina ha avuto} other {# pagine hanno avuto}} visite, {span}.",
+        "low": "{count, plural, one {# è scorsa} other {# sono scorse}} in media meno di un quarto, tra cui {pages}.",
+        "noneLow": "Nessuna è scorsa in media meno di un quarto.",
+        "furthest": "{page} è la più scorsa: il {scroll}.",
+        "few": "{count, plural, one {# pagina ha avuto} other {# pagine hanno avuto}} meno di {few} visite: troppe poche per giudicare, quindi i loro dati sono in grigio."
       },
-      "do": "Vedi la revisione di ogni pagina.",
-      "seeReviews": "Vedi le revisioni delle pagine",
-      "columns": {
-        "page": "Pagina",
-        "visits": "Visite",
-        "scroll": "Scorrimento",
-        "time": "Tempo attivo",
-        "dead": "Clic a vuoto",
-        "quickBack": "Uscite rapide",
-        "heatmap": "Mappa di calore"
+      "do": {
+        "startWith": "Comincia da {page}: {visits} visite, scorsa in media il {scroll}.",
+        "startWithChange": "Comincia da {page}: {visits} visite, scorsa in media il {scroll}, {points} punti {way, select, less {in meno} other {in più}} di prima.",
+        "seePage": "Vedi la pagina"
       },
-      "device": "Dispositivo",
-      "everyDevice": "Ogni dispositivo"
+      "chart": {
+        "title": "Quanto vengono scorse le tue pagine più visitate",
+        "hint": "Le tue dieci pagine con più visite, in media. Arancio: meno di un quarto. Tenui: meno di {few} visite, troppe poche per giudicare. Il sito nel suo insieme: {website}.",
+        "empty": "Ancora nessuna pagina."
+      },
+      "emptyDevice": "Nessuna pagina ha avuto visite da {device}, {span}."
     },
-    "devices": {
-      "title": "Dispositivi",
-      "description": "Lo stesso comportamento per dispositivo, così una pagina che funziona su computer e non su telefono si vede.",
-      "search": "Trova un dispositivo",
-      "download": "Scarica CSV",
-      "noMatch": "Nessun dispositivo corrisponde",
-      "empty": "Nessun dispositivo ancora letto: i dati di Clarity arrivano ogni mattina una volta collegato.",
-      "tableTitle": "{count, plural, one {# dispositivo} other {# dispositivi}} · Ultimi {days} giorni",
+    "page": {
+      "back": "Torna a Pagine",
+      "openHeatmap": "Apri la sua mappa di calore in Clarity",
       "sees": {
-        "low": "{count, plural, one {Un dispositivo scorre} other {# dispositivi scorrono}} in media meno di metà: {pages}.",
-        "fine": "I visitatori su ogni dispositivo leggono in media oltre la metà.",
-        "none": "Nessun dispositivo ancora letto."
+        "none": "Nessuna visita a questa pagina, {span}.",
+        "scroll": "I visitatori scorrono in media il {scroll} di {page}{change}. {group}Tutto il sito: {website}.",
+        "change": ", contro il {before} dei giorni prima",
+        "group": "Le tue altre pagine {group} vengono scorse il {scroll}. ",
+        "few": "Solo {count, plural, one {# visita} other {# visite}} finora: troppe poche per giudicare la pagina da sola.",
+        "phonesBack": "{count} delle sue {visits} visite da telefono sono tornate subito indietro in pochi secondi.",
+        "errorsOn": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript qui, soprattutto con {where}.",
+        "errors": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript qui."
       },
-      "do": "Vedi la revisione di ogni pagina.",
-      "seeReviews": "Vedi le revisioni delle pagine",
-      "columns": {
-        "page": "Dispositivo",
+      "do": {
+        "top": "Sposta il messaggio principale della pagina e il suo link di contatto più in alto.",
+        "watchErrors": "Guarda le visite che hanno incontrato l'errore.",
+        "recordingsLink": "Registrazioni"
+      },
+      "figures": {
         "visits": "Visite",
-        "scroll": "Scorrimento",
+        "onPhones": "{count} da telefono",
+        "scroll": "Scorrimento medio",
+        "website": "Il sito: {value}",
         "time": "Tempo attivo",
-        "dead": "Clic a vuoto",
-        "quickBack": "Uscite rapide"
+        "back": "Tornati subito indietro"
+      },
+      "chart": {
+        "title": "Quanto viene scorsa {page}, giorno per giorno",
+        "hint": "La parte della pagina scorsa, in media, rispetto a tutto il sito.",
+        "website": "Il tuo sito",
+        "empty": "Il grafico parte quando la pagina ha due giorni di dati."
+      },
+      "errorsPanel": {
+        "title": "Errori su questa pagina",
+        "description": "{count} delle sue {visits} visite hanno incontrato un errore JavaScript; {clicks, plural, one {# clic ne ha causato uno} other {# clic ne hanno causato uno}}.",
+        "none": "Nessuna visita ha incontrato un errore su questa pagina, {span}.",
+        "coming": "Gli errori per browser vengono letti da domani mattina.",
+        "empty": "Nessun errore."
+      },
+      "recordingsPanel": {
+        "title": "Registrazioni di questa pagina",
+        "description": "Scelte da {platformName} tra le registrazioni di Clarity. Ognuna si guarda in Clarity.",
+        "empty": "Ancora nessuna registrazione scelta per questa pagina."
+      },
+      "devicesPanel": {
+        "title": "Telefoni e computer su questa pagina",
+        "phonesLess": "Chi visita da telefono scorre meno questa pagina: il {phones}, contro il {computers} da computer.",
+        "phonesMore": "Chi visita da telefono scorre di più questa pagina: il {phones}, contro il {computers} da computer.",
+        "plain": "Come si comportano i visitatori su questa pagina, per tipo di dispositivo.",
+        "empty": "Nessuna visita."
+      },
+      "sourcesPanel": {
+        "title": "Da dove arrivano i suoi visitatori",
+        "description": "Ogni provenienza su una riga sua, come la chiama Clarity.",
+        "coming": "La provenienza dei visitatori viene letta da domani mattina.",
+        "empty": "Nessuna visita.",
+        "comingEmpty": "Ogni provenienza compare qui da domani."
+      }
+    },
+    "errors": {
+      "title": "Errori",
+      "description": "Dove le tue pagine si rompono per i visitatori: errori JavaScript e clic su qualcosa che poi non ha funzionato. Ognuno si può guardare in Clarity.",
+      "search": "Trova una pagina…",
+      "everyBrowser": "Tutti i browser",
+      "noMatch": "Nessuna pagina corrisponde.",
+      "empty": "Nessuna pagina ha avuto errori, {span}: buone notizie.",
+      "sees": {
+        "none": "Nessuna visita ha incontrato un errore JavaScript o un clic fallito, {span}: buone notizie.",
+        "count": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript, {span}{change}.",
+        "change": ", {count} {way, select, more {in più} other {in meno}} rispetto ai {days} giorni prima",
+        "top": "{count, plural, one {# era} other {# erano}} su {page}, dove {clicks, plural, =0 {nessun clic è fallito} one {# clic è fallito} other {# clic sono falliti}}.",
+        "topOn": "{count, plural, one {# era} other {# erano}} su {page}, soprattutto con {where}, dove {clicks, plural, =0 {nessun clic è fallito} one {# clic è fallito} other {# clic sono falliti}}.",
+        "browser": "{browser} ha più errori in proporzione alle sue visite: {errors} su {visits}."
+      },
+      "do": {
+        "fix": "Correggi prima l'errore su {page} con {where}.",
+        "fixClicks": "Correggi prima l'errore su {page} con {where}: blocca i clic.",
+        "seePage": "Vedi la pagina"
+      },
+      "figures": {
+        "visits": "Visite con un errore",
+        "ofVisits": "il {share} delle visite",
+        "clicks": "Clic falliti",
+        "clicksDetail": "un clic che ha causato un errore",
+        "pages": "Pagine con un errore",
+        "pagesDetail": "su {count, plural, one {# pagina} other {# pagine}} con visite",
+        "days": "Giorni con un errore",
+        "daysDetail": "su {count, plural, one {# giorno registrato} other {# giorni registrati}} da Clarity"
+      },
+      "dayChart": {
+        "title": "Visite con un errore, giorno per giorno",
+        "hint": "Le visite che hanno incontrato un errore JavaScript, ogni giorno, {span}.",
+        "empty": "Ancora nessun giorno."
+      },
+      "browserChart": {
+        "title": "Errori per browser",
+        "hint": "La quota delle visite di ogni browser che hanno incontrato un errore, {span}. Tenui: troppe poche visite per giudicare.",
+        "coming": "I browser vengono letti da domani mattina.",
+        "empty": "Ancora nessun browser.",
+        "hintPlain": "La quota delle visite di ogni browser che hanno incontrato un errore."
+      }
+    },
+    "recordings": {
+      "title": "Registrazioni",
+      "description": "Le visite da guardare, scelte ogni mattina tra le registrazioni di Clarity: errori, clic falliti o di rabbia, ritorni rapidi e le letture più lunghe. Ognuna si guarda in Clarity.",
+      "search": "Trova una pagina…",
+      "kindFilter": "Cosa mostra",
+      "everyKind": "Tutto",
+      "kindCount": "{kind} ({count})",
+      "noMatch": "Nessuna registrazione corrisponde.",
+      "empty": "Ancora nessuna scelta: ne vengono scelte alcune ogni mattina.",
+      "tableNote": "Scelte in {span} · Clarity conserva una registrazione 30 giorni",
+      "kinds": {
+        "ERRORS": "Errori JavaScript",
+        "ERROR_CLICKS": "Clic falliti",
+        "RAGE": "Clic di rabbia",
+        "DEAD": "Clic a vuoto",
+        "QUICK_BACK": "Tornati subito indietro",
+        "LONGEST": "Visite più lunghe"
+      },
+      "what": {
+        "ERRORS": "Visita che ha incontrato un errore JavaScript su {page}",
+        "ERROR_CLICKS": "Visita che ha cliccato qualcosa su {page} che poi non ha funzionato",
+        "RAGE": "Visita con clic di rabbia su {page}",
+        "DEAD": "Visita con clic a vuoto su {page}",
+        "QUICK_BACK": "Visita tornata subito indietro da {page} dopo {time}",
+        "LONGEST": "Lettura lunga di {page}: {time}",
+        "LONGEST_PAGES": "Visita lunga: {time} su {pages} pagine, la più lunga su {page}"
+      },
+      "sees": {
+        "loading": "Lettura delle registrazioni…",
+        "none": "Ancora nessuna scelta. Ogni mattina vengono scelte alcune registrazioni di Clarity: visite che hanno incontrato un errore, cliccato qualcosa che non ha funzionato o cliccato con rabbia, tornate subito indietro, e le letture più lunghe.",
+        "count": "{count, plural, one {# registrazione scelta} other {# registrazioni scelte}} in {span}: {kinds}.",
+        "how": "Ogni mattina viene prima ciò che i dati di ieri dicono essere successo; le visite più lunghe completano il resto."
+      },
+      "do": {
+        "all": "Tutte le registrazioni, con i filtri di Clarity, sono in Clarity.",
+        "openClarity": "Apri Clarity"
       }
     },
     "connection": {
@@ -21262,38 +21531,8 @@
       "connectedRead": "Clarity è stato letto l'ultima volta {when}.",
       "connectedFirst": "Collegato: i primi dati di Clarity arrivano domattina.",
       "disconnect": "Scollega",
-      "limits": "Clarity consente 10 richieste al giorno per progetto e dà solo gli ultimi tre giorni. Gli si chiede due volte ogni mattina e lo storico è conservato qui."
-    },
-    "frustration": {
-      "title": "Frustrazione",
-      "description": "Dove i visitatori si bloccano: clic su cose che non fanno nulla, clic ripetuti per rabbia, scorrimento su e giù a cercare, e uscite in pochi secondi. Pagina per pagina, prima le più frustranti.",
-      "search": "Trova una pagina",
-      "download": "Scarica CSV",
-      "noMatch": "Nessuna pagina corrisponde",
-      "empty": "Nessuna pagina con abbastanza visite: i dati di Clarity arrivano ogni mattina una volta collegato.",
-      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Ultimi {days} giorni, prima le più frustranti",
-      "sees": {
-        "worst": "Su {page}, il {share}% delle visite clicca qualcosa che non fa nulla o clicca per rabbia: il massimo tra le pagine.",
-        "calm": "Nessuna pagina con abbastanza visite frustra molto i suoi visitatori.",
-        "none": "Nessuna pagina ancora letta."
-      },
-      "do": "Sistema la pagina dove i visitatori si bloccano di più.",
-      "seeReviews": "Vedi le revisioni delle pagine",
-      "chart": {
-        "title": "Visite con una frustrazione, giorno per giorno",
-        "hint": "Clic a vuoto e clic ripetuti, come quota delle visite.",
-        "dead": "Clic a vuoto",
-        "rage": "Clic ripetuti"
-      },
-      "columns": {
-        "page": "Pagina",
-        "visits": "Visite",
-        "frustrated": "Frustrate",
-        "dead": "Clic a vuoto",
-        "rage": "Clic ripetuti",
-        "excessive": "Scorrimento eccessivo",
-        "quickBack": "Uscite rapide"
-      }
+      "limits": "Clarity consente 10 richieste al giorno per progetto e consegna solo i suoi ultimi tre giorni, quindi i suoi dati vengono letti ogni mattina e conservati qui: sei richieste per i dati del giorno, la provenienza dei visitatori e i loro browser, e fino a due per le registrazioni da guardare, tenendone sempre 2 di riserva.",
+      "asksToday": "Oggi sono state usate {used} delle 10 richieste di Clarity per questo progetto, tenendone sempre 2 di riserva. Il Microsoft Clarity: Collector Agent chiede fino a 8 volte ogni mattina."
     }
   }
 }
