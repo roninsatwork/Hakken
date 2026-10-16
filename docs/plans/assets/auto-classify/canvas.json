@@ -1,0 +1,18 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-16T14:30:00Z" },
+  "title": "Page classification — Auto Classify",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 1910, "title": "1 · Before: one button sorts the rest", "expand": "fill" },
+    "Sorting.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 1870, "title": "2 · While Auto Classify sorts: Classification → Sorted by Auto Classify", "expand": "fill" },
+    "Hinges.dc.html": { "x": 3040, "y": 0, "w": 1440, "h": 2735, "title": "3 · A group's own page: the description Auto Classify reads", "expand": "fill" }
+  },
+  "order": ["Main.dc.html", "Sorting.dc.html", "Hinges.dc.html"],
+  "notes": {
+    "heading": { "x": 0, "y": -300, "text": "Page classification — Auto Classify sorts what the rules miss", "kind": "title1", "maxW": 4480 },
+    "about": { "x": 4560, "y": 0, "w": 380, "text": "Drawn from the real screens' code with More Handles' own pages and clicks (16 Oct 2026).\n\nNew on these boards: the Auto Classify button; its progress line in the notice; By Auto Classify: sure / fairly sure under How it's set; Sorted by Auto Classify in the Classification chip; the Description box on a group's page.\n\nBoard 2: the groups are the ones Auto Classify is expected to pick for More Handles' busiest unclassified pages.\n\nBoard 3: the 405 unclassified pages with 'hinge' in their address are counted as sorted by Auto Classify, beside the 163 the rule catches.\n\nkit.css bbf2fe1eb729 · look 149d9f4fb243" }
+  },
+  "designSystems": []
+}

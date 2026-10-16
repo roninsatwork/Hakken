@@ -1855,7 +1855,8 @@
           "BY_HAND": "Set by hand",
           "BY_LINE": "By the rule: {line}",
           "TAKEN_OUT": "Taken out of its rule",
-          "NONE": "—"
+          "NONE": "—",
+          "BY_AUTO": "By Auto Classify: {certainty}"
         },
         "removeBackTo": "Remove — goes back to its rule ({name})",
         "removeNotSorted": "Remove — shows as Unclassified",
@@ -1953,13 +1954,37 @@
           "create": "Add classification",
           "saved": "Saved.",
           "saveFailed": "Could not save the classification. Try again.",
-          "remove": "Remove this classification"
+          "remove": "Remove this classification",
+          "descriptionLabel": "Description",
+          "descriptionHintWritten": "{platformName} wrote this from the classification's name, its rules, its busiest pages and what {host} offers. Auto Classify reads it to sort the pages no rule catches, so it says what belongs here and what doesn't. Change it any time: this classification's pages are then sorted again.",
+          "descriptionHintPerson": "What belongs here, and the nearest thing that doesn't. Auto Classify reads it to sort the pages no rule catches. Leave it empty and {platformName} writes one.",
+          "byAuto": "By Auto Classify: {certainty}"
         },
         "all": {
           "classifications": "Classifications",
           "notSorted": "Unclassified",
           "notSortedOf": "{notSorted} of {pages}"
-        }
+        },
+        "auto": {
+          "button": "Auto Classify",
+          "sorting": "Auto Classify is sorting the unclassified pages, the busiest first: {done} of {total} done. Each page takes its group as it is sorted, and a page it isn't sure about stays Unclassified.",
+          "stopped": "Auto Classify stopped: {reason}",
+          "groupsLeftOut": "Auto Classify offers the first {offered} classifications. {count, plural, one {# more is not offered, so no page is sorted into it automatically.} other {# more are not offered, so no page is sorted into them automatically.}}",
+          "filter": "Sorted by Auto Classify",
+          "outcomes": {
+            "STARTED": "Auto Classify has started.",
+            "GOING": "Auto Classify is already sorting this website.",
+            "NOTHING": "Nothing is left to sort: every page has a classification from a person, a rule or Auto Classify, or was asked already.",
+            "DECISION_OFF": "Auto Classify is switched off. Switch on \"Which group is this page in?\" in Admin → AI → Decisions, then press Auto Classify again.",
+            "AGENT_OFF": "The Auto Classify agent is switched off. Switch it on in Admin → Agents, then press Auto Classify again."
+          },
+          "failed": "Auto Classify could not start. Try again."
+        },
+        "certainty": {
+          "SURE": "sure",
+          "FAIRLY_SURE": "fairly sure"
+        },
+        "removeTakeOutAuto": "Remove — takes this page out of Auto Classify; shows as Unclassified"
       },
       "notFoundTitle": "Website not found"
     },
@@ -9868,6 +9893,40 @@
           "page-l": "Page L answers it",
           "none": "No page answers it",
           "off-topic": "Not about this business",
+          "other": "Cannot tell"
+        }
+      },
+      "sitePageGroup": {
+        "name": "Which group is this page in?",
+        "description": "Auto Classify: for each page of a company's own website that no rule or person has put in a group, picks one of the website's own groups from the words in its address and the search that brings it visitors — or none. Each group's description says what belongs in it.",
+        "rule": "Without it, a page no rule or person has put in a group shows as Unclassified, as before.",
+        "answers": {
+          "group-a": "Group A",
+          "group-b": "Group B",
+          "group-c": "Group C",
+          "group-d": "Group D",
+          "group-e": "Group E",
+          "group-f": "Group F",
+          "group-g": "Group G",
+          "group-h": "Group H",
+          "group-i": "Group I",
+          "group-j": "Group J",
+          "group-k": "Group K",
+          "group-l": "Group L",
+          "group-m": "Group M",
+          "group-n": "Group N",
+          "group-o": "Group O",
+          "group-p": "Group P",
+          "group-q": "Group Q",
+          "group-r": "Group R",
+          "group-s": "Group S",
+          "group-t": "Group T",
+          "group-u": "Group U",
+          "group-v": "Group V",
+          "group-w": "Group W",
+          "group-x": "Group X",
+          "group-y": "Group Y",
+          "none": "No group fits",
           "other": "Cannot tell"
         }
       },

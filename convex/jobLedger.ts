@@ -89,6 +89,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "hakken-task-care": (ctx) => ctx.runAction(internal.hakkenCaretaker.careForTasks, {}),
   // Every hour: the Outbox Queue Processing Agent kept there, and stuck emails told (outbox-and-preferences-plan.md, A4).
   "outbox-watch": (ctx) => ctx.runAction(internal.outboxQueueAgent.watchOutbox, {}),
+  // Every ten minutes: Auto Classify's agent kept there, and a run whose step was lost carried on (auto-classify-plan.md, AC6).
+  "auto-classify-watch": (ctx) => ctx.runAction(internal.autoClassifyStart.watchAutoClassify, {}),
   // Once a day, Google's ranking updates read from its Search Status page into Google updates (search-console-volatility-plan.md, V14).
   "google-updates-feed": (ctx) => ctx.runAction(internal.googleUpdatesFeed.collectGoogleUpdates, {}),
   // Each morning, every connected Microsoft Clarity project's last day, by page and by device (insights-analyst-plan.md §7b).
@@ -134,6 +136,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "hakken-task-reports": 15,
   "hakken-task-care": 1440,
   "outbox-watch": 60,
+  "auto-classify-watch": 10,
   "google-updates-feed": 1440,
   "clarity-morning": 1440,
 };

@@ -17,6 +17,7 @@ import NewClassificationPage from "./classification/new/page";
 
 const nav = vi.hoisted(() => ({ search: "" }));
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/companies/company_1/websites/site/companyWebsite_1",

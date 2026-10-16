@@ -1,5 +1,6 @@
 import type { DecisionAnswer, DecisionMode, DecisionStakes } from "./decisionService";
 import type { TypesafeAnswer, TypesafeQuestion } from "./typesafeProviderService";
+import { AUTO_CLASSIFY_DECISION, GROUP_LABELS } from "./utils/autoClassify";
 
 /**
  * Every Decision the platform can make, declared here and nowhere else.
@@ -290,6 +291,37 @@ export const DECISIONS: readonly DecisionDefinition[] = [
       },
     },
     // A label on a report; acting on it changes nothing and there is nothing to audit.
+    describeAction: () => null,
+  },
+  {
+    // Auto Classify (docs/plans/active/auto-classify-plan.md, AC7): a page no
+    // hand or address line sets, put in one of the website's own groups. The
+    // groups offered are the website's, labelled group-a onwards, each with
+    // the description Hakken or a person wrote for it.
+    key: AUTO_CLASSIFY_DECISION,
+    name: "Which group is this page in?",
+    copyKey: "sitePageGroup",
+    usedIn: "seo",
+    // It sorts a page into a group on the company's own screens. Nothing is
+    // sent or charged on it, and a person or an address line always wins.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "choice",
+      instructions: {
+        task: "Decide which of the business's own page groups this page on its website belongs in, if any.",
+        context:
+          "`business` is the website: its address and, where known, its sector, what it does and where it sells. `page.address` is the page's path on that website, and `page.topSearch`, where known, the search that brings it the most visitors from Google. `groups` are the business's own groups of pages, labelled group-a onwards, each with its `name`, its `type` (product, service, information and so on) and a `description` of what belongs in it and what does not.",
+        guidance:
+          "Read the words in the page's address and its search, and pick the group whose description says it belongs there. A shop's product page goes in the group for what it sells; a service firm's page about one service goes in that service's group; a guide or article goes in the group for articles, whatever it is about. Follow what each description says does not belong. Say none when no group fits, such as a basket, account or legal page with no group for it, and other when there is not enough here to tell.",
+      },
+      criteria: {
+        ...Object.fromEntries(GROUP_LABELS.map((label) => [label, `The group labelled ${label} is where this page belongs.`])),
+        none: "None of the groups listed fits this page.",
+        other: "There is not enough here to tell.",
+      },
+    },
+    // It sorts a row on a report; acting on it changes nothing to audit.
     describeAction: () => null,
   },
   {

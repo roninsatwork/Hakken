@@ -8,6 +8,7 @@ import { ClassificationEditor } from "./ClassificationEditor";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
@@ -153,6 +154,7 @@ describe("a classification's own page", () => {
       classificationId: "class_hub",
       name: "Hub",
       type: "SERVICE",
+      description: "",
       lines: [{ kind: "STARTS_WITH", value: "/hub/" }, { kind: "STARTS_WITH", value: "/guides/" }],
     }));
     expect(await screen.findByText(`${E}.saved`)).toBeInTheDocument();
@@ -199,7 +201,7 @@ describe("a classification's own page", () => {
     fireEvent.click(add);
 
     await waitFor(() => expect(create).toHaveBeenCalledWith({
-      companyWebsiteId: "companyWebsite_1", name: "Journal", type: "OTHER", lines: [{ kind: "SITEMAP_FILE", value: "post-sitemap.xml" }],
+      companyWebsiteId: "companyWebsite_1", name: "Journal", type: "OTHER", description: "", lines: [{ kind: "SITEMAP_FILE", value: "post-sitemap.xml" }],
     }));
     await waitFor(() => expect(push).toHaveBeenCalledWith(listHref));
   });
@@ -210,5 +212,39 @@ describe("a classification's own page", () => {
 
     expect(screen.getByText(`${E}.notFound`)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: `${E}.save` })).not.toBeInTheDocument();
+  });
+
+  // ── Its description (docs/plans/active/auto-classify-plan.md, AC8, approved board 3) ──
+
+  it("shows the description Hakken wrote, says so, and saves a person's own words", async () => {
+    answer({ "pageClassifications:pageClassificationDetail": { ...saved, description: "Pages for guides and articles.", descriptionBy: "HAKKEN" } });
+    renderSaved();
+
+    const box = screen.getByLabelText(`${E}.descriptionLabel`);
+    expect(box).toHaveValue("Pages for guides and articles.");
+    expect(screen.getByText(`${E}.descriptionHintWritten`)).toBeInTheDocument();
+
+    fireEvent.change(box, { target: { value: "Guides, articles and news." } });
+    expect(screen.getByText(`${E}.descriptionHintPerson`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `${E}.save` }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(expect.objectContaining({ description: "Guides, articles and news." })));
+  });
+
+  it("lists the pages Auto Classify sorted into it, and how sure it was", () => {
+    vi.mocked(useQuery).mockImplementation(((reference: unknown, args: unknown) => {
+      if (args === "skip") return undefined;
+      const name = convexPath(reference);
+      if (name.endsWith("pageClassificationPreview")) {
+        return { ...previewOf([{ kind: "STARTS_WITH", value: "/hub/" }]), rows: [{ page: "/hinges.html", clicks: 20, how: "BY_AUTO", line: null, certainty: "SURE" }] };
+      }
+      if (name.endsWith("getSiteHeader")) return ownedHeader;
+      if (name.endsWith("pageClassificationDetail")) return saved;
+      if (name.endsWith("classificationTypeChoices")) return [{ key: "INFORMATIONAL", name: "Informational content" }];
+      return undefined;
+    }) as never);
+    renderSaved();
+
+    expect(screen.getByText("/hinges.html")).toBeInTheDocument();
+    expect(screen.getByText(`${E}.byAuto`)).toBeInTheDocument();
   });
 });

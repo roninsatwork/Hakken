@@ -268,6 +268,9 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   collectionSteps: LATEST,
   pageClassificationLines: RECORD,
   pageClassificationPicks: RECORD,
+  // Auto Classify's answers, a page's written over when it is asked again, and its one row a website (auto-classify-plan.md).
+  pageClassificationAuto: LATEST,
+  autoClassifyRuns: LATEST,
   discoveredCompetitors: RECORD,
 
   // ── AI answers ────────────────────────────────────────────────────────────

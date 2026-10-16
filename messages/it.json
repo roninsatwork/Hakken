@@ -1855,7 +1855,8 @@
           "BY_HAND": "Impostata a mano",
           "BY_LINE": "Dalla regola: {line}",
           "TAKEN_OUT": "Tolta dalla sua regola",
-          "NONE": "—"
+          "NONE": "—",
+          "BY_AUTO": "Dalla classificazione automatica: {certainty}"
         },
         "removeBackTo": "Togli — torna alla sua regola ({name})",
         "removeNotSorted": "Togli — risulta Non classificata",
@@ -1953,13 +1954,37 @@
           "create": "Aggiungi classificazione",
           "saved": "Salvato.",
           "saveFailed": "Impossibile salvare la classificazione. Riprova.",
-          "remove": "Togli questa classificazione"
+          "remove": "Togli questa classificazione",
+          "descriptionLabel": "Descrizione",
+          "descriptionHintWritten": "{platformName} l'ha scritta dal nome della classificazione, dalle sue regole, dalle sue pagine più visitate e da ciò che {host} offre. La classificazione automatica la legge per ordinare le pagine che nessuna regola prende, quindi dice cosa ci va e cosa no. Puoi cambiarla quando vuoi: le pagine di questa classificazione vengono poi ordinate di nuovo.",
+          "descriptionHintPerson": "Cosa ci va, e la cosa più vicina che non ci va. La classificazione automatica la legge per ordinare le pagine che nessuna regola prende. Lasciala vuota e {platformName} ne scrive una.",
+          "byAuto": "Dalla classificazione automatica: {certainty}"
         },
         "all": {
           "classifications": "Classificazioni",
           "notSorted": "Non classificate",
           "notSortedOf": "{notSorted} su {pages}"
-        }
+        },
+        "auto": {
+          "button": "Classificazione automatica",
+          "sorting": "La classificazione automatica sta ordinando le pagine non classificate, a partire dalle più visitate: {done} di {total} fatte. Ogni pagina prende il suo gruppo appena ordinata, e una pagina di cui non è sicura resta Non classificata.",
+          "stopped": "La classificazione automatica si è fermata: {reason}",
+          "groupsLeftOut": "La classificazione automatica propone le prime {offered} classificazioni. {count, plural, one {# altra non è proposta, quindi nessuna pagina vi viene ordinata automaticamente.} other {Altre # non sono proposte, quindi nessuna pagina vi viene ordinata automaticamente.}}",
+          "filter": "Ordinate dalla classificazione automatica",
+          "outcomes": {
+            "STARTED": "La classificazione automatica è partita.",
+            "GOING": "La classificazione automatica sta già ordinando questo sito.",
+            "NOTHING": "Non resta nulla da ordinare: ogni pagina ha una classificazione data da una persona, da una regola o dalla classificazione automatica, oppure è già stata valutata.",
+            "DECISION_OFF": "La classificazione automatica è disattivata. Attiva \"In quale gruppo va questa pagina?\" in Admin → IA → Decisioni, poi premi di nuovo Classificazione automatica.",
+            "AGENT_OFF": "L'agente di classificazione automatica è disattivato. Attivalo in Admin → Agenti, poi premi di nuovo Classificazione automatica."
+          },
+          "failed": "La classificazione automatica non è partita. Riprova."
+        },
+        "certainty": {
+          "SURE": "sicura",
+          "FAIRLY_SURE": "abbastanza sicura"
+        },
+        "removeTakeOutAuto": "Rimuovi: toglie questa pagina dalla classificazione automatica; appare come Non classificata"
       },
       "notFoundTitle": "Sito web non trovato"
     },
@@ -9868,6 +9893,40 @@
           "page-l": "La pagina L risponde",
           "none": "Nessuna pagina risponde",
           "off-topic": "Non riguarda questa attività",
+          "other": "Impossibile dirlo"
+        }
+      },
+      "sitePageGroup": {
+        "name": "In quale gruppo va questa pagina?",
+        "description": "Classificazione automatica: per ogni pagina del sito di un'azienda che nessuna regola o persona ha messo in un gruppo, sceglie uno dei gruppi del sito in base alle parole del suo indirizzo e alla ricerca che le porta visite, oppure nessuno. La descrizione di ogni gruppo dice cosa ci va.",
+        "rule": "Senza questa decisione, una pagina che nessuna regola o persona ha messo in un gruppo appare come Non classificata, come prima.",
+        "answers": {
+          "group-a": "Gruppo A",
+          "group-b": "Gruppo B",
+          "group-c": "Gruppo C",
+          "group-d": "Gruppo D",
+          "group-e": "Gruppo E",
+          "group-f": "Gruppo F",
+          "group-g": "Gruppo G",
+          "group-h": "Gruppo H",
+          "group-i": "Gruppo I",
+          "group-j": "Gruppo J",
+          "group-k": "Gruppo K",
+          "group-l": "Gruppo L",
+          "group-m": "Gruppo M",
+          "group-n": "Gruppo N",
+          "group-o": "Gruppo O",
+          "group-p": "Gruppo P",
+          "group-q": "Gruppo Q",
+          "group-r": "Gruppo R",
+          "group-s": "Gruppo S",
+          "group-t": "Gruppo T",
+          "group-u": "Gruppo U",
+          "group-v": "Gruppo V",
+          "group-w": "Gruppo W",
+          "group-x": "Gruppo X",
+          "group-y": "Gruppo Y",
+          "none": "Nessun gruppo adatto",
           "other": "Impossibile dirlo"
         }
       },

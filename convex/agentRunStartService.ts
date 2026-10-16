@@ -8,6 +8,7 @@ import { TRANSLATOR } from "./utils/contentTranslator";
 import { WATCHER } from "./utils/hakkenWatcher";
 import { STAT_REPORTER } from "./utils/statReporter";
 import { CARETAKER } from "./utils/hakkenCaretaker";
+import { AUTO_CLASSIFIER } from "./utils/autoClassifyAgent";
 
 /**
  * How an agent's run starts, once its run record exists: the one decision the
@@ -36,9 +37,11 @@ import { CARETAKER } from "./utils/hakkenCaretaker";
  *   website the team reads (`insightsRun.ts`); a specialist's Run says it
  *   works inside that run.
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
+ * - Auto Classify starts a run of its own for each website with page groups
+ *   and pages to sort (`autoClassifyStart.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "GOOGLE_ANALYTICS_JOB" | "BING_WEBMASTER_JOB" | "INSIGHTS_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "GOOGLE_ANALYTICS_JOB" | "BING_WEBMASTER_JOB" | "INSIGHTS_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "AUTO_CLASSIFY_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -88,6 +91,12 @@ export async function startAgentRun(
   if (agent.systemKey === OUTBOX_QUEUE_AGENT.systemKey) {
     await ctx.scheduler.runAfter(0, internal.outboxQueueRun.processOutboxNow, { runId, workflowExecutionId });
     return "OUTBOX_ROUND";
+  }
+
+  // Auto Classify: each website with page groups and pages to sort, a run of its own (auto-classify-plan.md, AC6).
+  if (agent.systemKey === AUTO_CLASSIFIER.systemKey) {
+    await ctx.scheduler.runAfter(0, internal.autoClassifyStart.runAutoClassifyNow, { runId, workflowExecutionId });
+    return "AUTO_CLASSIFY_ROUND";
   }
 
   // The Stat Report Agent: every report due now (item 4.1).

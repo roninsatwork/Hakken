@@ -10,6 +10,7 @@ import { Layers, Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { FOLDER_PAGES } from "@/convex/utils/suggestClassifications";
+import { GROUPS_OFFERED } from "@/convex/utils/autoClassify";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -36,9 +37,10 @@ type PagesData = NonNullable<FunctionReturnType<typeof api.pageClassifications.p
 type PageRow = PagesData["rows"][number];
 type ListData = NonNullable<FunctionReturnType<typeof api.pageClassifications.pageClassificationList>>;
 type ListRow = ListData["classifications"][number];
+type AutoStatus = NonNullable<FunctionReturnType<typeof api.autoClassifyStart.autoClassifyStatus>>;
 type ClassificationId = Id<"pageClassifications">;
-/** The Classification chip: every classification (""), one, or the pages none catches. */
-type Filter = "" | "NOT_SORTED" | ClassificationId;
+/** The Classification chip: every classification (""), one, the pages none catches, or those Auto Classify sorted. */
+type Filter = "" | "NOT_SORTED" | "BY_AUTO" | ClassificationId;
 
 /**
  * A website's Page classification (docs/plans/active/page-groups-plan.md,
@@ -84,6 +86,8 @@ export default function PageClassificationPage() {
       : "skip",
   );
   const listData = useQuery(api.pageClassifications.pageClassificationList, owned && view === "classifications" ? { companyWebsiteId } : "skip");
+  // Auto Classify's state for the notice: whether it can run, and how far its run has got (auto-classify-plan.md).
+  const auto = useQuery(api.autoClassifyStart.autoClassifyStatus, owned && view === "pages" ? { companyWebsiteId } : "skip");
   if (!header) return null;
 
   const Icon = SECTION_ICONS.classification;
@@ -130,6 +134,7 @@ export default function PageClassificationPage() {
             <ClassificationPages
               companyWebsiteId={companyWebsiteId}
               data={pagesData ?? undefined}
+              auto={auto ?? undefined}
               search={search}
               onSearch={(next) => {
                 setSearch(next);
@@ -163,9 +168,10 @@ export default function PageClassificationPage() {
  * The Pages view: the notice with its counts, the search and the
  * Classification chip, the bar for the ticked pages, and the pages.
  */
-function ClassificationPages({ companyWebsiteId, data, search, onSearch, filter, onFilter, onPage, onShowNotSorted }: {
+function ClassificationPages({ companyWebsiteId, data, auto, search, onSearch, filter, onFilter, onPage, onShowNotSorted }: {
   companyWebsiteId: Id<"companyWebsites">;
   data: PagesData | undefined;
+  auto: AutoStatus | undefined;
   search: string;
   onSearch: (next: string) => void;
   filter: Filter;
@@ -179,6 +185,8 @@ function ClassificationPages({ companyWebsiteId, data, search, onSearch, filter,
   const action = useAdminAction({ scope: "admin-page-classification" });
   const setClassification = useMutation(api.pageClassifications.setPageClassification);
   const removeFromPage = useMutation(api.pageClassifications.removeClassificationFromPage);
+  const startAuto = useMutation(api.autoClassifyStart.startAutoClassify);
+  const { showToast } = useToast();
   const [ticked, setTicked] = useState<string[]>([]);
   const [bulkChoice, setBulkChoice] = useState("");
   const [error, setError] = useState("");
@@ -208,12 +216,28 @@ function ClassificationPages({ companyWebsiteId, data, search, onSearch, filter,
     setBulkChoice("");
   };
 
+  // Auto Classify sorts what is left now; what it says back is a toast, its progress the notice (auto-classify-plan.md, AC6).
+  const runAuto = async () => {
+    const outcome = await action.run(() => startAuto({ companyWebsiteId }), { key: "auto", suppressErrorToast: true, fallbackMessage: t("auto.failed") });
+    if (!outcome.ok) {
+      if (!outcome.deduplicated) setError(outcome.message);
+      return;
+    }
+    showToast(t(`auto.outcomes.${outcome.data}`), outcome.data === "STARTED" ? "success" : "info");
+  };
+  const sorting = auto?.run?.status === "SORTING" ? auto.run : null;
+
   // What the bin does, said before it is pressed.
   const removeTip = (row: PageRow) => {
     if (row.how === "BY_HAND") return row.underneath ? t("removeBackTo", { name: nameOf(row.underneath) }) : t("removeNotSorted");
+    if (row.how === "BY_AUTO") return t("removeTakeOutAuto");
     return t("removeTakeOut");
   };
-  const how = (row: PageRow) => (row.how === "BY_LINE" && row.line ? t("how.BY_LINE", { line: words.line(row.line) }) : t(`how.${row.how}`));
+  const how = (row: PageRow) => {
+    if (row.how === "BY_LINE" && row.line) return t("how.BY_LINE", { line: words.line(row.line) });
+    if (row.how === "BY_AUTO" && row.certainty) return t("how.BY_AUTO", { certainty: t(`certainty.${row.certainty}`) });
+    return t(`how.${row.how}`);
+  };
 
   return (
     <>
@@ -222,14 +246,21 @@ function ClassificationPages({ companyWebsiteId, data, search, onSearch, filter,
           <Notice>{t("noticeEmpty")}</Notice>
         ) : (
           <Notice
-            action={summary.notSorted > 0 && filter !== "NOT_SORTED" ? (
-              <Button variant="quiet" onClick={onShowNotSorted}>{t("showNotSorted", { count: summary.notSorted })}</Button>
+            action={!sorting && summary.notSorted > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="quiet" disabled={action.isBusy("auto")} onClick={() => void runAuto()}>{t("auto.button")}</Button>
+                {filter !== "NOT_SORTED" ? <Button variant="quiet" onClick={onShowNotSorted}>{t("showNotSorted", { count: summary.notSorted })}</Button> : null}
+              </div>
             ) : undefined}
           >
-            {t("notice", { sorted: summary.sorted, pages: summary.pages, notSorted: summary.notSorted })}
+            {sorting
+              ? t("auto.sorting", { done: format.number(sorting.done), total: format.number(sorting.total) })
+              : t("notice", { sorted: summary.sorted, pages: summary.pages, notSorted: summary.notSorted })}
           </Notice>
         )
       ) : null}
+      {auto?.run?.status === "STOPPED" && auto.run.stopped ? <Notice tone="warning">{t("auto.stopped", { reason: auto.run.stopped })}</Notice> : null}
+      {auto && auto.groupsLeftOut > 0 ? <Notice tone="warning">{t("auto.groupsLeftOut", { offered: GROUPS_OFFERED, count: auto.groupsLeftOut })}</Notice> : null}
       {summary?.cut ? <Notice tone="warning">{t("cut", { count: summary.pagesRead })}</Notice> : null}
 
       {ticked.length > 0 ? (
@@ -266,13 +297,14 @@ function ClassificationPages({ companyWebsiteId, data, search, onSearch, filter,
         search={{ value: search, onChange: onSearch, placeholder: t("searchPlaceholder") }}
         filters={(
           <Select
-            chip={{ label: t("filter"), choice: filter === "" ? null : filter === "NOT_SORTED" ? t("notSorted") : nameOf(filter) }}
+            chip={{ label: t("filter"), choice: filter === "" ? null : filter === "NOT_SORTED" ? t("notSorted") : filter === "BY_AUTO" ? t("auto.filter") : nameOf(filter) }}
             aria-label={t("filter")}
             value={filter}
             onChange={(next) => onFilter(next as Filter)}
           >
             <option value="">{t("filterAll")}</option>
             <option value="NOT_SORTED">{t("notSorted")}</option>
+            <option value="BY_AUTO">{t("auto.filter")}</option>
             {classifications.map((classification) => (
               <option key={classification._id} value={classification._id}>{classification.name}</option>
             ))}

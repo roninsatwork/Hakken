@@ -70,6 +70,7 @@ describe("a website's Page classification", () => {
   const removeFromPage = vi.fn();
   const removeClassification = vi.fn();
   const suggest = vi.fn();
+  const startAuto = vi.fn();
   let queried: Array<{ name: string; args: unknown }> = [];
 
   const answer = (overrides: Record<string, unknown> = {}) => {
@@ -100,12 +101,14 @@ describe("a website's Page classification", () => {
     removeFromPage.mockReset().mockResolvedValue({ classificationId: null, how: "TAKEN_OUT" });
     removeClassification.mockReset().mockResolvedValue({ lines: 1, pagesByHand: 1 });
     suggest.mockReset().mockResolvedValue({ created: 4, names: ["Content hub", "Journal", "Insights", "Case studies"], overLimit: 0 });
+    startAuto.mockReset().mockResolvedValue("STARTED");
     vi.mocked(useMutation).mockImplementation(((reference: unknown) => {
       const name = convexPath(reference);
       if (name.endsWith("setPageClassification")) return setClassification;
       if (name.endsWith("removeClassificationFromPage")) return removeFromPage;
       if (name.endsWith("removePageClassification")) return removeClassification;
       if (name.endsWith("suggestPageClassifications")) return suggest;
+      if (name.endsWith("startAutoClassify")) return startAuto;
       return vi.fn();
     }) as never);
     view("");
@@ -295,5 +298,66 @@ describe("a website's Page classification", () => {
     renderWithProviders(<PageClassificationPage />);
 
     expect(screen.queryByText(`${T}.suggest.notice`)).not.toBeInTheDocument();
+  });
+
+  // ── Auto Classify (docs/plans/active/auto-classify-plan.md, approved boards 1 and 2) ──
+
+  const autoOn = { readiness: "ON", groupsLeftOut: 0, run: null };
+  const sortingRun = { status: "SORTING", total: 8_374, done: 2_140, placed: 1_980, startedAt: 1, lastStepAt: 2, finishedAt: null, stopped: null };
+
+  it("offers Auto Classify beside the unclassified pages, and says what it did", async () => {
+    answer({ "autoClassifyStart:autoClassifyStatus": autoOn });
+    renderWithProviders(<PageClassificationPage />);
+
+    expect(screen.getByRole("button", { name: `${T}.showNotSorted` })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `${T}.auto.button` }));
+    await waitFor(() => expect(startAuto).toHaveBeenCalledWith({ companyWebsiteId: "companyWebsite_1" }));
+    expect(await screen.findByText(`${T}.auto.outcomes.STARTED`)).toBeInTheDocument();
+  });
+
+  it("says where to switch it on when Auto Classify is off", async () => {
+    startAuto.mockResolvedValue("DECISION_OFF");
+    answer({ "autoClassifyStart:autoClassifyStatus": { ...autoOn, readiness: "DECISION_OFF" } });
+    renderWithProviders(<PageClassificationPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: `${T}.auto.button` }));
+    expect(await screen.findByText(`${T}.auto.outcomes.DECISION_OFF`)).toBeInTheDocument();
+  });
+
+  it("while it sorts, the notice says how far it has got and offers no button", () => {
+    answer({ "autoClassifyStart:autoClassifyStatus": { ...autoOn, run: sortingRun } });
+    renderWithProviders(<PageClassificationPage />);
+
+    expect(screen.getByText(`${T}.auto.sorting`)).toBeInTheDocument();
+    expect(screen.queryByText(`${T}.notice`)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: `${T}.auto.button` })).not.toBeInTheDocument();
+  });
+
+  it("says why it stopped, and when a website has more classifications than it offers", () => {
+    answer({ "autoClassifyStart:autoClassifyStatus": { readiness: "ON", groupsLeftOut: 3, run: { ...sortingRun, status: "STOPPED", stopped: "Switched off." } } });
+    renderWithProviders(<PageClassificationPage />);
+
+    expect(screen.getByText(`${T}.auto.stopped`)).toBeInTheDocument();
+    expect(screen.getByText(`${T}.auto.groupsLeftOut`)).toBeInTheDocument();
+  });
+
+  it("shows a page Auto Classify sorted, and its bin takes the page out of Auto Classify", async () => {
+    const sorted = { page: "/venture-studio/", clicks: 62, sitemapFile: null, classificationId: "class_company", how: "BY_AUTO", line: null, certainty: "SURE", underneath: null };
+    answer({ "pageClassifications:pageClassificationPages": { ...pagesData, rows: [...pagesData.rows, sorted] } });
+    renderWithProviders(<PageClassificationPage />);
+
+    expect(within(rowOf("/venture-studio/")).getByText(`${T}.how.BY_AUTO`)).toBeInTheDocument();
+    expect(within(rowOf("/venture-studio/")).getByRole("combobox")).toHaveValue("class_company");
+    fireEvent.click(within(rowOf("/venture-studio/")).getByRole("button", { name: `${T}.removeTakeOutAuto` }));
+    await waitFor(() => expect(removeFromPage).toHaveBeenCalledWith({ companyWebsiteId: "companyWebsite_1", page: "/venture-studio/" }));
+  });
+
+  it("filters to the pages Auto Classify sorted", () => {
+    renderWithProviders(<PageClassificationPage />);
+
+    const chip = screen.getByRole("combobox", { name: `${T}.filter` });
+    expect(within(chip).getByRole("option", { name: `${T}.auto.filter` })).toBeInTheDocument();
+    fireEvent.change(chip, { target: { value: "BY_AUTO" } });
+    expect(lastArgs("pageClassificationPages")).toEqual({ companyWebsiteId: "companyWebsite_1", search: undefined, classification: "BY_AUTO", page: 1, rows: 15 });
   });
 });

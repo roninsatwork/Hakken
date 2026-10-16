@@ -12,7 +12,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
-import { Field } from "@/src/ui/components/screens/Field";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -21,6 +21,8 @@ import { FieldHint, FieldLabel, SettingsCard } from "@/src/ui/components/screens
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { DESCRIPTION_LENGTH } from "@/convex/utils/autoClassify";
 import { SECTION_ICONS } from "../../../_components/websitesSection";
 import { AddBar } from "../../../_components/AddBar";
 import {
@@ -64,6 +66,7 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
   const types = useClassificationTypes();
   const router = useRouter();
   const canWrite = useCanWriteHere();
+  const { platformName } = useSystemSettings();
   const listHref = classificationListHref(companyId, companyWebsiteId);
 
   const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
@@ -76,6 +79,7 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
   const [adopted, setAdopted] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [type, setType] = useState<ClassificationType>("OTHER");
+  const [description, setDescription] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [added, setAdded] = useState(0);
   const [newKind, setNewKind] = useState<LineKind>("STARTS_WITH");
@@ -86,11 +90,12 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
 
   // What is saved is adopted once per saved state, keyed on the values, so an
   // edit in progress survives the query refreshing.
-  const savedKey = saved ? JSON.stringify([saved.name, saved.type, plain(saved.lines)]) : null;
+  const savedKey = saved ? JSON.stringify([saved.name, saved.type, saved.description, plain(saved.lines)]) : null;
   if (saved && savedKey !== adopted) {
     setAdopted(savedKey);
     setName(saved.name);
     setType(saved.type);
+    setDescription(saved.description ?? "");
     setLines(saved.lines.map((line) => ({ key: line._id, kind: line.kind, value: line.value })));
   }
 
@@ -124,7 +129,8 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
 
   const linesMatch = shown !== null && shown.lines.length === lines.length;
   const changed = classificationId === null
-    || (saved !== undefined && saved !== null && (name !== saved.name || type !== saved.type || JSON.stringify(plain(lines)) !== JSON.stringify(plain(saved.lines))));
+    || (saved !== undefined && saved !== null && (name !== saved.name || type !== saved.type || description.trim() !== (saved.description ?? "")
+      || JSON.stringify(plain(lines)) !== JSON.stringify(plain(saved.lines))));
 
   const edited = () => {
     setJustSaved(false);
@@ -148,8 +154,8 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
     setJustSaved(false);
     const outcome = await action.run(
       async () => {
-        if (classificationId) await update({ companyWebsiteId, classificationId, name, type, lines: plain(lines) });
-        else await create({ companyWebsiteId, name, type, lines: plain(lines) });
+        if (classificationId) await update({ companyWebsiteId, classificationId, name, type, description: description.trim(), lines: plain(lines) });
+        else await create({ companyWebsiteId, name, type, description: description.trim(), lines: plain(lines) });
       },
       { key: "save", suppressErrorToast: true, fallbackMessage: t("saveFailed") },
     );
@@ -207,6 +213,21 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
             <FieldHint>{t("typeHint")}</FieldHint>
           </div>
         </div>
+        {/* What Auto Classify reads: the platform writes it when there is none, and a person's own words are kept (auto-classify-plan.md, AC8). */}
+        <TextAreaField
+          id="classification-description"
+          label={t("descriptionLabel")}
+          rows={3}
+          maxLength={DESCRIPTION_LENGTH}
+          value={description}
+          hint={saved?.descriptionBy && saved.descriptionBy !== "PERSON" && description === saved.description
+            ? t("descriptionHintWritten", { platformName, host: header.displayHost })
+            : t("descriptionHintPerson", { platformName })}
+          onChange={(event) => {
+            setDescription(event.target.value);
+            edited();
+          }}
+        />
       </SettingsCard>
 
       <SettingsCard title={t("whichPages")}>
@@ -270,7 +291,13 @@ export function ClassificationEditor({ companyId, companyWebsiteId, classificati
             {
               key: "by",
               header: t("columns.by"),
-              cell: (row) => <span className="text-[12px] text-secondary">{row.how === "BY_HAND" || !row.line ? t("byHand") : words.line(row.line)}</span>,
+              cell: (row) => (
+                <span className="text-[12px] text-secondary">
+                  {row.how === "BY_AUTO" && row.certainty
+                    ? t("byAuto", { certainty: tClassification(`certainty.${row.certainty}`) })
+                    : row.how === "BY_HAND" || !row.line ? t("byHand") : words.line(row.line)}
+                </span>
+              ),
             },
             {
               key: "clicks",

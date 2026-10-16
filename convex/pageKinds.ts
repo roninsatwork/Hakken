@@ -112,6 +112,7 @@ export async function readPageKindSetup(ctx: Reader, holdId: HoldId, options: { 
     classifications: setup.classifications.map((classification) => ({ id: classification._id, name: classification.name, type: classification.type })),
     lines: inputs.lines,
     picks: inputs.picks,
+    autos: inputs.autos,
     sitemap: sitemap.pages,
     sitemapCut: sitemap.cut,
   };
@@ -128,6 +129,7 @@ export const pageKindSetupValidator = v.object({
   classifications: v.array(v.object({ id: v.string(), name: v.string(), type: classificationTypeValidator })),
   lines: v.array(v.object({ classificationId: v.string(), kind: classificationLineKindValidator, value: v.string() })),
   picks: v.array(v.object({ page: v.string(), classificationId: v.union(v.string(), v.null()) })),
+  autos: v.optional(v.array(v.object({ page: v.string(), classificationId: v.string(), certainty: v.union(v.literal("SURE"), v.literal("FAIRLY_SURE")) }))),
   sitemap: v.array(v.object({ page: v.string(), file: v.string() })),
   sitemapCut: v.boolean(),
 });

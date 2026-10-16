@@ -62,6 +62,15 @@ crons.interval(
   { job: "outbox-watch" }
 );
 
+// Auto Classify's watch: its agent and nightly schedule kept there, and a website's run whose step was lost carried on
+// from where it was (auto-classify-plan.md, AC6). The agent's own runs are its schedule and the Auto Classify button.
+crons.interval(
+  "auto-classify-watch",
+  { minutes: 10 },
+  internal.jobLedger.runJob,
+  { job: "auto-classify-watch" }
+);
+
 // The Stat Report Agent's round: each report due on its owner's day, at their time (hakken-tasks-plan.md, 4.1).
 crons.interval(
   "hakken-task-reports",

@@ -16,6 +16,8 @@ import {
   type PageClassification,
 } from "./utils/pageClassification";
 import { suggestClassifications } from "./utils/suggestClassifications";
+import { AUTO_BUCKETS, DESCRIPTION_LENGTH, answersOf, appliedAnswers, type AutoAnswer } from "./utils/autoClassify";
+import { noteGroupsChanged } from "./autoClassifyNote";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
@@ -98,22 +100,29 @@ export type ClassificationSetup = {
   classifications: Doc<"pageClassifications">[];
   lines: Doc<"pageClassificationLines">[];
   picks: Doc<"pageClassificationPicks">[];
+  /** Auto Classify's answers, every one it gave (docs/plans/active/auto-classify-plan.md); absent where a caller made its own setup. */
+  autos?: AutoAnswer<ClassificationId>[];
 };
 
-/** A website's classifications, their lines and its pages set by hand, each in the order added. */
+/** A website's classifications, their lines, its pages set by hand and Auto Classify's answers, each in the order added. */
 export async function readClassificationSetup(ctx: Reader, companyWebsiteId: HoldId): Promise<ClassificationSetup> {
-  const [classifications, lines, picks] = await Promise.all([
+  const [classifications, lines, picks, autoRecords] = await Promise.all([
     ctx.db.query("pageClassifications").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(mostOf("classificationsPerSite")),
     ctx.db.query("pageClassificationLines").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(mostOf("classificationLinesPerSite")),
     ctx.db.query("pageClassificationPicks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(mostOf("classifiedPagesPerSite")),
+    ctx.db.query("pageClassificationAuto").withIndex("by_hold_bucket", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(AUTO_BUCKETS),
   ]);
-  return { classifications, lines, picks };
+  return { classifications, lines, picks, autos: autoRecords.flatMap((record) => answersOf(record)) };
 }
 
 const asLine = (line: Doc<"pageClassificationLines">): ClassificationLine<ClassificationId> =>
   ({ classificationId: line.classificationId, kind: line.kind, value: line.value });
 
-/** The website's lines and picks as the rule reads them, keeping only those of classifications it still has. Shared with the charts' reads (`pageKinds.ts`). */
+/**
+ * The website's lines, picks and Auto Classify's answers as the rule reads
+ * them, keeping only those of classifications it still has. Shared with the
+ * charts' reads (`pageKinds.ts`), so every screen gives a page the same group.
+ */
 export function ruleInputs(setup: ClassificationSetup) {
   const known = new Set<string>(setup.classifications.map((classification) => classification._id));
   return {
@@ -121,11 +130,12 @@ export function ruleInputs(setup: ClassificationSetup) {
     picks: setup.picks
       .filter((pick) => pick.classificationId === undefined || known.has(pick.classificationId))
       .map((pick): ClassificationPick<ClassificationId> => ({ page: pick.page, classificationId: pick.classificationId ?? null })),
+    autos: appliedAnswers(setup.autos ?? []).filter((auto) => known.has(auto.classificationId)),
   };
 }
 
 /** The pages of a website, most clicks first, up to `PAGES_READ`. */
-async function readHoldPages(ctx: Reader, companyWebsiteId: HoldId) {
+export async function readHoldPages(ctx: Reader, companyWebsiteId: HoldId) {
   const rows = await ctx.db
     .query("holdPages")
     .withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", companyWebsiteId))
@@ -139,15 +149,15 @@ export type ClassifiedPage = {
   clicks: number;
   sitemapFile: string | null;
   result: PageClassification<ClassificationId>;
-  /** What its lines give it without its pick: where removing a hand-set classification returns it. */
+  /** What its lines, or Auto Classify, give it without its pick: where removing a hand-set classification returns it. */
   underneath: ClassificationId | null;
 };
 
 /** Every page with its classification and how it was set, most clicks first, then A to Z. */
 export function classifyPages(setup: ClassificationSetup, pages: readonly Pick<Doc<"holdPages">, "page" | "clicks" | "sitemapFile">[]): ClassifiedPage[] {
   const inputs = ruleInputs(setup);
-  const classify = classifierFor(inputs.lines, inputs.picks);
-  const byLines = classifierFor(inputs.lines, []);
+  const classify = classifierFor(inputs.lines, inputs.picks, inputs.autos);
+  const byLines = classifierFor(inputs.lines, [], inputs.autos);
   return pages
     .map((row) => {
       const sitemapFile = row.sitemapFile ?? null;
@@ -273,6 +283,13 @@ function checkedName(raw: string, setup: ClassificationSetup, self: Classificati
   return name;
 }
 
+/** A description as kept: its spaces tidied, within its length; empty means none, for Hakken to write. */
+function checkedDescription(raw: string): string {
+  const description = raw.trim().replace(/[ \t]+/g, " ");
+  if (description.length > DESCRIPTION_LENGTH) throw appError("INVALID_INPUT", `Keep the description to ${DESCRIPTION_LENGTH} characters.`);
+  return description;
+}
+
 function holdToClassifications(count: number, limit: number) {
   if (count < limit) return;
   throw appError(
@@ -323,7 +340,9 @@ const plainLines = (lines: readonly LineInput[]) => lines.map(({ kind, value }) 
 
 // ── Reads ─────────────────────────────────────────────────────────────────
 
-const howValidator = v.union(v.literal("BY_HAND"), v.literal("BY_LINE"), v.literal("TAKEN_OUT"), v.literal("NONE"));
+const howValidator = v.union(v.literal("BY_HAND"), v.literal("BY_LINE"), v.literal("BY_AUTO"), v.literal("TAKEN_OUT"), v.literal("NONE"));
+/** How sure Auto Classify was of a page it sorted; null for every other page. */
+const autoCertaintyValidator = v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.null());
 const lineValueShape = v.object({ kind: classificationLineKindValidator, value: v.string() });
 const savedLineShape = v.object({ _id: v.id("pageClassificationLines"), kind: classificationLineKindValidator, value: v.string() });
 const classificationShape = v.object({ _id: v.id("pageClassifications"), name: v.string(), type: classificationTypeValidator });
@@ -360,8 +379,8 @@ export const pageClassificationPages = superAdminQuery({
   args: {
     companyWebsiteId: v.id("companyWebsites"),
     search: v.optional(v.string()),
-    /** One classification, or the pages none catches. */
-    classification: v.optional(v.union(v.id("pageClassifications"), v.literal("NOT_SORTED"))),
+    /** One classification, the pages none catches, or the pages Auto Classify sorted. */
+    classification: v.optional(v.union(v.id("pageClassifications"), v.literal("NOT_SORTED"), v.literal("BY_AUTO"))),
     page: v.number(),
     rows: v.number(),
   },
@@ -376,6 +395,7 @@ export const pageClassificationPages = superAdminQuery({
         how: howValidator,
         /** The line that caught it, when a line did. */
         line: v.union(lineValueShape, v.null()),
+        certainty: autoCertaintyValidator,
         underneath: v.union(v.id("pageClassifications"), v.null()),
       })),
       page: v.number(),
@@ -400,7 +420,9 @@ export const pageClassificationPages = superAdminQuery({
     const filtered = classified.filter((row) => {
       if (term && !includesSearchTerm(row.page, term)) return false;
       if (wanted === undefined) return true;
-      return wanted === "NOT_SORTED" ? row.result.classificationId === null : row.result.classificationId === wanted;
+      if (wanted === "NOT_SORTED") return row.result.classificationId === null;
+      if (wanted === "BY_AUTO") return row.result.how === "BY_AUTO";
+      return row.result.classificationId === wanted;
     });
     const rows = Math.min(ROWS_MOST, Math.max(1, Math.floor(args.rows) || 1));
     const lastPage = Math.max(1, Math.ceil(filtered.length / rows));
@@ -414,6 +436,7 @@ export const pageClassificationPages = superAdminQuery({
         classificationId: row.result.classificationId,
         how: row.result.how,
         line: row.result.how === "BY_LINE" ? { kind: row.result.line.kind, value: row.result.line.value } : null,
+        certainty: row.result.how === "BY_AUTO" ? row.result.certainty : null,
         underneath: row.underneath,
       })),
       page,
@@ -478,6 +501,9 @@ export const pageClassificationDetail = superAdminQuery({
     _id: v.id("pageClassifications"),
     name: v.string(),
     type: classificationTypeValidator,
+    /** What Auto Classify reads (auto-classify-plan.md, AC8), and who wrote it; null while there is none. */
+    description: v.union(v.string(), v.null()),
+    descriptionBy: v.union(v.literal("HAKKEN"), v.literal("PERSON"), v.null()),
     lines: v.array(savedLineShape),
   })),
   handler: async (ctx, args) => {
@@ -489,7 +515,12 @@ export const pageClassificationDetail = superAdminQuery({
       .query("pageClassificationLines")
       .withIndex("by_hold_classification", (q) => q.eq("companyWebsiteId", hold._id).eq("classificationId", classification._id))
       .take(mostOf("classificationLinesPerSite"));
-    return { ...shapeClassification(classification), lines: lines.map(shapeLine) };
+    return {
+      ...shapeClassification(classification),
+      description: classification.description ?? null,
+      descriptionBy: classification.description ? classification.descriptionBy ?? "PERSON" : null,
+      lines: lines.map(shapeLine),
+    };
   },
 });
 
@@ -514,8 +545,9 @@ export const pageClassificationPreview = superAdminQuery({
     rows: v.array(v.object({
       page: v.string(),
       clicks: v.number(),
-      how: v.union(v.literal("BY_HAND"), v.literal("BY_LINE")),
+      how: v.union(v.literal("BY_HAND"), v.literal("BY_LINE"), v.literal("BY_AUTO")),
       line: v.union(lineValueShape, v.null()),
+      certainty: autoCertaintyValidator,
     })),
     /** Every page it would have. */
     total: v.number(),
@@ -544,10 +576,10 @@ export const pageClassificationPreview = superAdminQuery({
     reviewed.forEach((line, index) => {
       if (line.problem === null) edited.set({ classificationId: self, kind: line.kind, value: line.value }, index);
     });
-    const classify = classifierFor<string>([...inputs.lines, ...edited.keys()], inputs.picks);
+    const classify = classifierFor<string>([...inputs.lines, ...edited.keys()], inputs.picks, inputs.autos);
 
     const catches = reviewed.map(() => 0);
-    const rows: Array<{ page: string; clicks: number; how: "BY_HAND" | "BY_LINE"; line: LineInput | null }> = [];
+    const rows: Array<{ page: string; clicks: number; how: "BY_HAND" | "BY_LINE" | "BY_AUTO"; line: LineInput | null; certainty: "SURE" | "FAIRLY_SURE" | null }> = [];
     let byHand = 0;
     for (const page of held.pages) {
       const result = classify(page.page, page.sitemapFile ?? null);
@@ -555,10 +587,12 @@ export const pageClassificationPreview = superAdminQuery({
       if (result.how === "BY_LINE") {
         const index = edited.get(result.line);
         if (index !== undefined) catches[index] += 1;
-        rows.push({ page: page.page, clicks: page.clicks, how: "BY_LINE", line: { kind: result.line.kind, value: result.line.value } });
+        rows.push({ page: page.page, clicks: page.clicks, how: "BY_LINE", line: { kind: result.line.kind, value: result.line.value }, certainty: null });
       } else if (result.how === "BY_HAND") {
         byHand += 1;
-        rows.push({ page: page.page, clicks: page.clicks, how: "BY_HAND", line: null });
+        rows.push({ page: page.page, clicks: page.clicks, how: "BY_HAND", line: null, certainty: null });
+      } else if (result.how === "BY_AUTO") {
+        rows.push({ page: page.page, clicks: page.clicks, how: "BY_AUTO", line: null, certainty: result.certainty });
       }
     }
     rows.sort((left, right) => right.clicks - left.clicks || left.page.localeCompare(right.page));
@@ -580,6 +614,8 @@ export const createPageClassification = superAdminMutation({
     companyWebsiteId: v.id("companyWebsites"),
     name: v.string(),
     type: classificationTypeValidator,
+    /** Left out or empty: Hakken writes one (auto-classify-plan.md, AC8). */
+    description: v.optional(v.string()),
     lines: v.array(lineValueShape),
   },
   returns: v.id("pageClassifications"),
@@ -592,12 +628,21 @@ export const createPageClassification = superAdminMutation({
     const lines = checkedLines(args.lines, setup.lines, setup);
     holdToLines(setup.lines.length, setup.lines.length + lines.length, limits.classificationLinesPerSite);
 
+    const description = checkedDescription(args.description ?? "");
     const now = Date.now();
-    const classificationId = await ctx.db.insert("pageClassifications", { companyWebsiteId: hold._id, name, type, createdAt: now, updatedAt: now });
+    const classificationId = await ctx.db.insert("pageClassifications", {
+      companyWebsiteId: hold._id,
+      name,
+      type,
+      ...(description ? { description, descriptionBy: "PERSON" as const } : {}),
+      createdAt: now,
+      updatedAt: now,
+    });
     for (const line of lines) {
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: hold._id, classificationId, ...line, createdAt: now });
     }
-    await audit(ctx, hold, "CREATE_PAGE_CLASSIFICATION", { type: "pageClassifications", id: classificationId }, { name, type, lines });
+    await audit(ctx, hold, "CREATE_PAGE_CLASSIFICATION", { type: "pageClassifications", id: classificationId }, { name, type, lines, description: description || null });
+    await noteGroupsChanged(ctx, hold);
     return classificationId;
   },
 });
@@ -613,6 +658,8 @@ export const updatePageClassification = superAdminMutation({
     classificationId: v.id("pageClassifications"),
     name: v.optional(v.string()),
     type: v.optional(classificationTypeValidator),
+    /** Empty clears it, for Hakken to write again. */
+    description: v.optional(v.string()),
     lines: v.optional(v.array(lineValueShape)),
   },
   returns: v.null(),
@@ -635,20 +682,29 @@ export const updatePageClassification = superAdminMutation({
       holdToLines(setup.lines.length, setup.lines.length - removed.length + added.length, limits.classificationLinesPerSite);
     }
 
+    const description = args.description === undefined ? classification.description ?? "" : checkedDescription(args.description);
+    const described = description !== (classification.description ?? "");
     const renamed = name !== classification.name || type !== classification.type;
-    if (!renamed && added.length === 0 && removed.length === 0) return null;
+    if (!renamed && !described && added.length === 0 && removed.length === 0) return null;
     const now = Date.now();
     for (const line of removed) await ctx.db.delete(line._id);
     for (const line of added) {
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: hold._id, classificationId: classification._id, ...line, createdAt: now });
     }
-    await ctx.db.patch(classification._id, { name, type, updatedAt: now });
+    await ctx.db.patch(classification._id, {
+      name,
+      type,
+      // A person's own words are kept as theirs; cleared, Hakken writes one again.
+      ...(described ? (description ? { description, descriptionBy: "PERSON" as const } : { description: undefined, descriptionBy: undefined }) : {}),
+      updatedAt: now,
+    });
     await audit(ctx, hold, "UPDATE_PAGE_CLASSIFICATION", { type: "pageClassifications", id: classification._id }, {
-      before: { name: classification.name, type: classification.type, lines: plainLines(own) },
-      after: { name, type },
+      before: { name: classification.name, type: classification.type, lines: plainLines(own), description: classification.description ?? null },
+      after: { name, type, description: description || null },
       linesAdded: added,
       linesRemoved: plainLines(removed),
     });
+    await noteGroupsChanged(ctx, hold);
     return null;
   },
 });
@@ -724,6 +780,7 @@ export const removePageClassification = superAdminMutation({
       lines: plainLines(lines),
       pagesByHand: picks.length,
     });
+    await noteGroupsChanged(ctx, hold);
     return { lines: lines.length, pagesByHand: picks.length };
   },
 });
@@ -779,8 +836,8 @@ export const removeClassificationFromPage = superAdminMutation({
     ]);
     const sitemapFile = listed?.sitemapFile ?? null;
     const inputs = ruleInputs(setup);
-    const before = classifierFor(inputs.lines, inputs.picks)(page, sitemapFile);
-    const byLines = classifierFor(inputs.lines, [])(page, sitemapFile);
+    const before = classifierFor(inputs.lines, inputs.picks, inputs.autos)(page, sitemapFile);
+    const byLines = classifierFor(inputs.lines, [], inputs.autos)(page, sitemapFile);
     const pick = setup.picks.find((row) => row.page === page);
     const name = (id: ClassificationId | null) => setup.classifications.find((classification) => classification._id === id)?.name ?? null;
 
@@ -796,6 +853,15 @@ export const removeClassificationFromPage = superAdminMutation({
       await ctx.db.insert("pageClassificationPicks", { companyWebsiteId: hold._id, page, updatedAt: Date.now() });
       await audit(ctx, hold, "REMOVE_PAGE_CLASSIFICATION_FROM_PAGE", { type: "companyWebsites", id: hold._id }, {
         page, was: name(before.classificationId), now: null, takenOutOf: { kind: before.line.kind, value: before.line.value },
+      });
+      return { classificationId: null, how: "TAKEN_OUT" as const };
+    }
+    if (before.how === "BY_AUTO") {
+      // Taken out of Auto Classify's answer as out of a line: never asked again, Not sorted until it is set by hand.
+      holdToPicks(setup.picks.length, setup.picks.length + 1, limits.classifiedPagesPerSite);
+      await ctx.db.insert("pageClassificationPicks", { companyWebsiteId: hold._id, page, updatedAt: Date.now() });
+      await audit(ctx, hold, "REMOVE_PAGE_CLASSIFICATION_FROM_PAGE", { type: "companyWebsites", id: hold._id }, {
+        page, was: name(before.classificationId), now: null, takenOutOf: "AUTO_CLASSIFY",
       });
       return { classificationId: null, how: "TAKEN_OUT" as const };
     }
@@ -864,8 +930,16 @@ export const suggestPageClassifications = superAdminMutation({
   },
 });
 
-/** A website's classifications, lines and picks, removed with it. Each is held to its limit's largest choice, so one call clears them. */
+/**
+ * A website's classifications, lines and picks, Auto Classify's answers and
+ * its run's row, removed with it. Each is held to its limit's largest choice,
+ * and the answers to their fixed records, so one call clears them.
+ */
 export async function purgeHoldClassifications(ctx: { db: MutationCtx["db"] }, companyWebsiteId: HoldId): Promise<void> {
-  const setup = await readClassificationSetup(ctx, companyWebsiteId);
-  for (const row of [...setup.picks, ...setup.lines, ...setup.classifications]) await ctx.db.delete(row._id);
+  const [setup, autoRecords, runs] = await Promise.all([
+    readClassificationSetup(ctx, companyWebsiteId),
+    ctx.db.query("pageClassificationAuto").withIndex("by_hold_bucket", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(AUTO_BUCKETS),
+    ctx.db.query("autoClassifyRuns").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(5),
+  ]);
+  for (const row of [...setup.picks, ...setup.lines, ...setup.classifications, ...autoRecords, ...runs]) await ctx.db.delete(row._id);
 }

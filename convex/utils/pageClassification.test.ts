@@ -48,4 +48,24 @@ describe("which classification a page belongs to", () => {
     expect(normalisePage("hub/x")).toBe("/hub/x");
     expect(classifierFor(lines, [])("https://WWW.ronins.co.uk/HUB/x/#part").classificationId).toBe("content");
   });
+
+  test("Auto Classify's answer fills only what no person and no line sets (auto-classify-plan.md, AC1)", () => {
+    const classify = classifierFor(lines, [
+      { page: "/venture-studio/", classificationId: "company" },
+      { page: "/hub/bad-websites/", classificationId: null },
+    ], [
+      { page: "/venture-studio/", classificationId: "ai", certainty: "SURE" },
+      { page: "/hub/bad-websites/", classificationId: "guides", certainty: "SURE" },
+      { page: "/hub/guides/seo/", classificationId: "company", certainty: "SURE" },
+      { page: "https://www.ronins.co.uk/our-work/", classificationId: "company", certainty: "FAIRLY_SURE" },
+    ]);
+    // A person wins, and a page a person took out stays out.
+    expect(classify("/venture-studio/")).toEqual({ classificationId: "company", how: "BY_HAND" });
+    expect(classify("/hub/bad-websites/")).toEqual({ classificationId: null, how: "TAKEN_OUT" });
+    // A line wins.
+    expect(classify("/hub/guides/seo/")).toMatchObject({ classificationId: "guides", how: "BY_LINE" });
+    // What neither sets takes Auto Classify's answer, with how sure it was, its address compared as every page's is.
+    expect(classify("/our-work/")).toEqual({ classificationId: "company", how: "BY_AUTO", certainty: "FAIRLY_SURE" });
+    expect(classify("/author/anthony/")).toEqual({ classificationId: null, how: "NONE" });
+  });
 });

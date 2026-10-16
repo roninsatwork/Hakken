@@ -1,6 +1,7 @@
 import {
   classifierFor,
   normalisePage,
+  type ClassificationAuto,
   type ClassificationLine,
   type ClassificationPick,
 } from "./pageClassification";
@@ -43,6 +44,8 @@ export type PageKindSetup = {
   classifications: KindChoice[];
   lines: ClassificationLine[];
   picks: ClassificationPick[];
+  /** Auto Classify's answers the rule applies (auto-classify-plan.md, AC2); absent before it ran. */
+  autos?: ClassificationAuto[];
   sitemap: Array<{ page: string; file: string }>;
   /** True when the sitemap pages were cut at their read limit: past it, a sitemap-file line catches nothing. */
   sitemapCut: boolean;
@@ -63,7 +66,7 @@ export type PageKinds = {
 export function pageKindsFrom(setup: PageKindSetup): PageKinds {
   const choices = [...setup.classifications].sort((left, right) => left.name.localeCompare(right.name));
   const byId = new Map(choices.map((choice) => [choice.id, choice]));
-  const classify = classifierFor(setup.lines, setup.picks);
+  const classify = classifierFor(setup.lines, setup.picks, setup.autos ?? []);
   const files = new Map(setup.sitemap.map((entry) => [normalisePage(entry.page), entry.file]));
   return {
     choices,

@@ -127,6 +127,14 @@ export const pagesTables = {
     companyWebsiteId: v.id("companyWebsites"),
     name: v.string(),
     type: classificationTypeValidator,
+    /**
+     * What belongs in it, and the nearest thing that doesn't
+     * (docs/plans/active/auto-classify-plan.md, AC8): what Auto Classify
+     * reads to sort the pages no line catches. Hakken writes it when there is
+     * none; a person's own words are never written over (`descriptionBy`).
+     */
+    description: v.optional(v.string()),
+    descriptionBy: v.optional(v.union(v.literal("HAKKEN"), v.literal("PERSON"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -177,6 +185,54 @@ export const pagesTables = {
     .index("by_hold_page", ["companyWebsiteId", "page"])
     // The pages set to one classification by hand, cleared when it is removed (pageClassifications.ts).
     .index("by_hold_classification", ["companyWebsiteId", "classificationId"]),
+
+  /**
+   * Auto Classify's answers for a website's pages
+   * (docs/plans/active/auto-classify-plan.md, AC1–AC5), spread over a fixed
+   * number of records by each page's address (`autoBucketOf`), so a screen
+   * reads a handful of records rather than one a page, and a step rewrites
+   * only the records of the pages it asked about. Per page, in step: the
+   * group chosen (null for none of these, or not sure), how sure, and the
+   * groups' stamp it was asked under — a page asked under other groups is
+   * asked again.
+   */
+  pageClassificationAuto: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    bucket: v.number(),
+    pages: v.array(v.string()),
+    groups: v.array(v.union(v.id("pageClassifications"), v.null())),
+    /** One letter a page: S sure, F fairly sure, N not sure. */
+    certainty: v.string(),
+    stamps: v.array(v.string()),
+    updatedAt: v.number(),
+  }).index("by_hold_bucket", ["companyWebsiteId", "bucket"]),
+
+  /**
+   * A website's Auto Classify run as the Page classification screen shows it
+   * (auto-classify-plan.md, AC6): one row a website, kept between runs. The
+   * run itself is the Auto Classify agent's run (`agentRunId`), where its
+   * steps, costs and answers are seen.
+   */
+  autoClassifyRuns: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    status: v.union(v.literal("SORTING"), v.literal("DONE"), v.literal("STOPPED")),
+    agentRunId: v.optional(v.id("agentRuns")),
+    workflowExecutionId: v.optional(v.id("workflowExecutions")),
+    /** Pages to ask when the run began, and asked so far: "2,140 of 8,374 done". */
+    total: v.number(),
+    done: v.number(),
+    /** Of those asked, how many were given a group. */
+    placed: v.number(),
+    startedAt: v.number(),
+    /** When its last step finished: a run is judged alive by this, never by its start. */
+    lastStepAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    /** Why it stopped, in plain words, when it did. */
+    stopped: v.optional(v.string()),
+  }).index("by_hold", ["companyWebsiteId"])
+    // Runs still sorting, for the watch that carries on one whose step was lost.
+    .index("by_status_step", ["status", "lastStepAt"]),
 
   /**
    * The weekly checks on each money page of a website (insights-analyst-plan.md

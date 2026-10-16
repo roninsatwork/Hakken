@@ -11,7 +11,10 @@
  *   address beats a "starts with", a longer "starts with" beats a shorter one,
  *   any "starts with" beats a "contains" (longer first again), and a sitemap
  *   file comes last.
- * - A page no line catches is Not sorted.
+ * - A page no line catches takes Auto Classify's answer, when it gave one
+ *   it was sure or fairly sure of (docs/plans/active/auto-classify-plan.md,
+ *   AC1): it never beats a person or a line.
+ * - Otherwise the page is Not sorted.
  *
  * Addresses are compared as paths, in lower case, with Google's jump links
  * (`#…`) and any query left off.
@@ -24,9 +27,16 @@ export type ClassificationLine<Id extends string = string> = { classificationId:
 /** A page set by hand: to a classification, or taken out of its line (`null`). */
 export type ClassificationPick<Id extends string = string> = { page: string; classificationId: Id | null };
 
+/** How sure Auto Classify was of a group it gave; a page it wasn't sure of keeps none. */
+export type AutoCertainty = "SURE" | "FAIRLY_SURE";
+
+/** Auto Classify's group for a page (auto-classify-plan.md, AC1), applied only where no hand or line sets one. */
+export type ClassificationAuto<Id extends string = string> = { page: string; classificationId: Id; certainty: AutoCertainty };
+
 export type PageClassification<Id extends string = string> =
   | { classificationId: Id; how: "BY_HAND" }
   | { classificationId: Id; how: "BY_LINE"; line: ClassificationLine<Id> }
+  | { classificationId: Id; how: "BY_AUTO"; certainty: AutoCertainty }
   | { classificationId: null; how: "TAKEN_OUT" | "NONE" };
 
 /** A page's address as classifications compare it: a lower-case path, no host, no `#…`, no query. */
@@ -60,15 +70,18 @@ function catches(line: ClassificationLine, page: string, sitemapFile: string | n
 }
 
 /**
- * A classifier for one website: give it the company's lines and its pages set
- * by hand once, then ask it about each page. Lines are ordered by exactness
- * once, so a page costs one pass over them at most.
+ * A classifier for one website: give it the company's lines, its pages set
+ * by hand and Auto Classify's answers once, then ask it about each page.
+ * Lines are ordered by exactness once, so a page costs one pass over them at
+ * most.
  */
 export function classifierFor<Id extends string>(
   lines: readonly ClassificationLine<Id>[],
   picks: readonly ClassificationPick<Id>[],
+  autos: readonly ClassificationAuto<Id>[] = [],
 ): (page: string, sitemapFile?: string | null) => PageClassification<Id> {
   const byHand = new Map(picks.map((pick) => [normalisePage(pick.page), pick.classificationId]));
+  const byAuto = new Map(autos.map((auto) => [normalisePage(auto.page), auto]));
   // Most exact first; between equals, the order given (which callers keep stable).
   const ordered = lines
     .map((line, index) => ({ line, index, rank: exactness(line) }))
@@ -81,6 +94,8 @@ export function classifierFor<Id extends string>(
       return chosen === null ? { classificationId: null, how: "TAKEN_OUT" } : { classificationId: chosen, how: "BY_HAND" };
     }
     const line = ordered.find((candidate) => catches(candidate, page, sitemapFile));
-    return line ? { classificationId: line.classificationId, how: "BY_LINE", line } : { classificationId: null, how: "NONE" };
+    if (line) return { classificationId: line.classificationId, how: "BY_LINE", line };
+    const auto = byAuto.get(page);
+    return auto ? { classificationId: auto.classificationId, how: "BY_AUTO", certainty: auto.certainty } : { classificationId: null, how: "NONE" };
   };
 }
