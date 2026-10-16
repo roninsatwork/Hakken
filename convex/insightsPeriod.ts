@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { clarityDays, clarityPeriod } from "./clarity";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
@@ -270,15 +271,17 @@ async function pageOneOver(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites
  * everyone. Null until they share a week of days Clarity was recording.
  */
 async function clarityBeside(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">, records: readonly HistoryRecord[]): Promise<{ clarity: number; analytics: number; days: number } | null> {
-  const days = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", holdId).eq("by", "DEVICE")).order("desc").take(CLARITY_DAYS_READ);
+  // The website's visits a day, from the 90 days worked out each morning (agents-and-clarity-plan.md, Part 0): by people, bots left out.
+  const period = await clarityPeriod(ctx, holdId, 90, false);
+  const days = period ? clarityDays(period.first).slice(-CLARITY_DAYS_READ) : [];
   const analytics = new Map((records.find((record) => record.kind === "DAYS")?.rows ?? []).map((row) => [row.key, row.visits ?? 0]));
   let clarity = 0, counted = 0, shared = 0;
-  for (const day of days) {
-    const sessions = day.rows.reduce((sum, row) => sum + row.sessions, 0);
+  for (const { day, totals } of days) {
+    const sessions = totals.visits;
     // A morning Clarity counted nobody it wasn't recording yet (connected that day): not a day it disagrees.
-    if (!analytics.has(day.day) || sessions === 0) continue;
+    if (!analytics.has(day) || sessions === 0) continue;
     clarity += sessions;
-    counted += analytics.get(day.day) ?? 0;
+    counted += analytics.get(day) ?? 0;
     shared += 1;
   }
   return shared >= CLARITY_LEAST_DAYS ? { clarity, analytics: counted, days: shared } : null;

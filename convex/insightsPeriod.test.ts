@@ -1,4 +1,6 @@
 import { convexTest } from "convex-test";
+import { emptyTotals } from "./utils/clarityRows";
+import { packDaily, packTotals } from "./utils/clarityPacks";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import { enquiriesView, enquirySourceView } from "./insightsPeriod";
@@ -125,12 +127,13 @@ describe("the period read", () => {
       const bands = (top: number, rest: number) => ({ p01_03: top, p04_10: rest, p11_20: 40, p21_50: 60, p51_up: 80 });
       await ctx.db.insert("siteDaySummaries", { websiteId, locationCode: 2826, day: "2025-09-28", allBands: bands(5, 20), updatedAt: 1 });
       await ctx.db.insert("siteDaySummaries", { websiteId, locationCode: 2826, day: "2026-09-28", allBands: bands(3, 12), updatedAt: 1 });
-      // Clarity's mornings: nobody on the first, then 20 visits a day for a week, against Analytics' 15.
-      const row = (key: string, sessions: number) => ({ key, sessions, scroll: null, activeSeconds: null, dead: null, rage: null, quickBack: null, excessiveScroll: null });
-      await ctx.db.insert("clarityDays", { companyWebsiteId: holdId, day: "2026-09-14", by: "DEVICE", rows: [row("PC", 0)], createdAt: 1 });
-      for (const day of ["15", "16", "17", "18", "19", "20", "21"]) {
-        await ctx.db.insert("clarityDays", { companyWebsiteId: holdId, day: `2026-09-${day}`, by: "DEVICE", rows: [row("PC", 12), row("Mobile", 8)], createdAt: 1 });
-      }
+      // Clarity's mornings, as its 90 days are kept (agents-and-clarity-plan.md, Part 0): nobody on the first, then 20 visits
+      // a day by people for a week — bots counted apart — against Analytics' 15.
+      const daily = ["14", "15", "16", "17", "18", "19", "20", "21"].map((day) => ({ day: `2026-09-${day}`, totals: { ...emptyTotals(), visits: day === "14" ? 0 : 20, bots: 3 } }));
+      await ctx.db.insert("clarityFigures", {
+        companyWebsiteId: holdId, span: "LAST_90", key: "2026-09-21", part: 0, from: "2026-09-14", to: "2026-09-21", days: 8,
+        pages: packTotals([]), site: packTotals([{ ...emptyTotals(), page: null, device: "PC", visits: 140, bots: 24 }]), daily: packDaily(daily), builtAt: 1,
+      });
       return holdId;
     });
     const view = await t.query(internal.insightsPeriod.runView, { holdId });

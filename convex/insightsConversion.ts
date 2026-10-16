@@ -10,8 +10,9 @@ import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
 import { EVERY_DEVICE, slotKey } from "./googleAnalyticsLists";
 import { conversionValidator, pageReviewValidator, sourceRowValidator, funnelStepValidator } from "./utils/insightConversion";
 import { pageFactsValidator } from "./utils/moneyPageChecks";
-import { addUpClarity, clarityRowValidator, type ClarityRow } from "./utils/clarityRows";
-import { shiftDay } from "./utils/insightFacts";
+import { clarityRowValidator, rowOf, type ClarityRow } from "./utils/clarityRows";
+import { addUpBy } from "./utils/clarityPacks";
+import { clarityPeriod } from "./clarity";
 
 /**
  * The Conversion specialist's reads and writes (docs/plans/active/
@@ -70,13 +71,10 @@ export const reviewInputs = internalQuery({
     const now = await landingByPath(ctx, args.holdId, "365", "NOW");
     const year = await landingByPath(ctx, args.holdId, "365", "YEAR");
     const recent = await landingByPath(ctx, args.holdId, "90", "NOW");
-    // Clarity's last 30 days by page, where the website has it connected (I24).
-    const clarity = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    // Clarity's last 30 days by page, where the website has it connected (I24): its ready-made period, each page across its devices.
     const behaviour = new Map<string, ClarityRow>();
-    if (clarity?.newestDay) {
-      const days = await ctx.db.query("clarityDays").withIndex("by_hold_by_day", (q) => q.eq("companyWebsiteId", args.holdId).eq("by", "PAGE").gte("day", shiftDay(clarity.newestDay!, -29))).take(31);
-      for (const row of addUpClarity(days.map((day) => day.rows))) behaviour.set(row.key, row);
-    }
+    const period = await clarityPeriod(ctx, args.holdId, 30);
+    if (period) for (const [page, totals] of addUpBy(period.pages, (row) => row.page ?? "")) behaviour.set(page, rowOf(page, totals));
     const titles = new Map<string, string | null>();
     for (const check of checks) {
       const held = await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId).eq("page", check.page)).first();

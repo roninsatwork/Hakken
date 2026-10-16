@@ -366,9 +366,11 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   insightConversions: LATEST,
   insightQuickChecks: LATEST,
 
-  // ── Microsoft Clarity (insights-analyst-plan.md §7b): its connections, and its days kept two years, cleared as each day comes ──
+  // ── Microsoft Clarity (insights-analyst-plan.md §7b; agents-and-clarity-plan.md, Part 0): its connections, and its figures —
+  //    a day kept 90 days, a month 13 months, the three ready-made periods redone each morning; the old records until converted ──
   clarityConnections: RECORD,
-  clarityDays: cleared("13 months", "clarity/saveDay"),
+  clarityFigures: thinned("days kept 90 days, months 13 months, the 7, 30 and 90 days redone each morning", "clarity/tidyFigures"),
+  clarityDays: cleared("once converted to clarityFigures", "clarity/convertOldDays"),
   insightExperiments: RECORD,
   insightTally: RECORD,
   insightLearnings: RECORD,
