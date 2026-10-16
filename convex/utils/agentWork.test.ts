@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { ASSIGNABLE_AGENT_ROLES } from "./agentRoles";
 import { AGENT_WORK, agentWorkOf } from "./agentWork";
 import { WIKI_STAFF } from "../wikiStaff";
+import { AUTO_CLASSIFIER } from "./autoClassifyAgent";
 import { repoRoot } from "@/src/test/driftUtils";
 
 /**
@@ -25,8 +26,8 @@ function cronSpec(name: string): string | null {
 }
 
 describe("what each agent does and when it runs", () => {
-  test("every role an agent can be given, and every member of the wiki's staff, is in the map", () => {
-    const missing = [...ASSIGNABLE_AGENT_ROLES, ...WIKI_STAFF.map((member) => member.systemKey)].filter((key) => !(key in AGENT_WORK));
+  test("every role an agent can be given, every member of the wiki's staff, and Auto Classify, is in the map", () => {
+    const missing = [...ASSIGNABLE_AGENT_ROLES, ...WIKI_STAFF.map((member) => member.systemKey), AUTO_CLASSIFIER.systemKey].filter((key) => !(key in AGENT_WORK));
     expect(missing).toEqual([]);
   });
 

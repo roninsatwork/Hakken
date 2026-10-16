@@ -41,6 +41,8 @@ export const AGENT_WORK: Readonly<Record<string, AgentWork>> = {
   GOOGLE_ANALYTICS_COLLECTOR: scheduled("collect"),
   BING_WEBMASTER_COLLECTOR: scheduled("collect"),
   NEWS_COLLECTOR: scheduled("collect"),
+  // Auto Classify (auto-classify-plan.md, AC6): sorts each website's pages into its page groups, on its own row of the Schedules page.
+  AUTO_CLASSIFIER: scheduled("collect"),
   // The Insights team: the Head of Strategy on its schedule, the rest inside its run.
   INSIGHTS_HEAD_OF_STRATEGY: scheduled("insights"),
   INSIGHTS_ANALYST: INSIGHTS_TEAM,
