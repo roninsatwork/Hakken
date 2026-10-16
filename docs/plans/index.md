@@ -23,6 +23,15 @@ completed work.
 - [Search Console — collect on connecting, and fill its 16 months](./active/search-console-first-collection-plan.md)
   — plan only: a website's first 90 days start the moment Search Console is
   connected, and its 16 months fill at night in paced pieces, like Analytics.
+- [Auto Classify — every page sorted into a website's own groups](./active/auto-classify-plan.md)
+  — plan only: one press sorts the pages no rule catches into the website's
+  own groups, each group described by Hakken for any kind of website; drawn
+  and liked 2026-10-16, about 5 man-days, waiting for go.
+- [Agents and Microsoft Clarity — the Agents screen, a Clarity Collector, and Clarity's figures put right](./active/agents-and-clarity-plan.md)
+  — plan only: the Agents screen with filters down the left (drawn and liked
+  2026-10-16), a Clarity Collector agent, every Clarity page filed as itself,
+  and Clarity's screens redrawn to show only what Clarity measures (drawn
+  2026-10-16, under discussion); about 11 man-days, waiting for go.
 - [System Settings → Classification — one list of page types for every company](./active/classification-types-plan.md)
   — the page types every company's classifications pick from, renamed and
   added in System Settings, written once in English; one field, the Type, and
