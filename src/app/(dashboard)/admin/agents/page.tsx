@@ -265,7 +265,7 @@ export default function AgentsPage() {
                   const { model, inherited } = describeAgentModel(row.agent);
                   return (
                     <span className="flex flex-col">
-                      <span className="text-[12px] text-foreground/85">{model}</span>
+                      <span className="whitespace-nowrap text-[12px] text-foreground/85">{model}</span>
                       {inherited ? <span className="text-[11px] text-muted">{t("table.platformDefault")}</span> : null}
                     </span>
                   );
