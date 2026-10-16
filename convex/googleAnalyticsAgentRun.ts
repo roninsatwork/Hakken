@@ -3,7 +3,7 @@ import { collectPageLists, pageListJobs, type PageListsJob } from "./googleAnaly
 import { collectActionFunnels, type FunnelsJob } from "./googleAnalyticsActionFunnels";
 import { v, type ObjectType } from "convex/values";
 import { internal } from "./_generated/api";
-import { memoryNow } from "./utils/stepMemory";
+import { STEP_MEMORY_MB, memoryMb, memoryNow } from "./utils/stepMemory";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { failureSummary, lastMoved, ROLE_RUN_LIVE_MS } from "./roleRuns";
@@ -418,6 +418,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
       runId: args.runId,
       workflowExecutionId: args.workflowExecutionId,
       stepKey: key,
+      ...(args.booking !== undefined ? { booking: args.booking } : {}),
       status,
       summary,
       reached,
@@ -431,18 +432,27 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
     });
   // How far the run got before this step: its days in once `to` is null, some of them once it moved from the top.
   const reachedSoFar = (to: string | null): "DAYS" | "NONE" => (to === null || to !== args.top ? "DAYS" : "NONE");
-  // A run cancelled from Admin asks Google for nothing more, whatever step was waiting.
+  // A run cancelled from Admin asks Google for nothing more, whatever step was waiting: its chain closes and its
+  // collecting mark goes (the run is ended already, so nothing else of the closing runs).
   if (!(await ctx.runQuery(internal.googleAnalyticsAgentRun.runGoing, { runId: args.runId }))) {
-    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+    await close("FAILED", `${args.host}'s run was ended before it finished.`, "NONE");
     return null;
   }
   const handOn = async (next: CollectSiteStepArgs, place: string, delayMs = 0) =>
     await ctx.runMutation(internal.collectionSteps.handOn, { ...memoryNow(),
       key, chain: "GA_RUN", runId: args.runId, args: next, place, delayMs, ...(args.booking !== undefined ? { from: args.booking } : {}),
     });
-  // Its watch gave up carrying it on: what it has is kept, and the run ends saying so.
+  // Its watch gave up carrying it on: what it has is kept, and the run ends saying so — the next night starting from the
+  // list it had reached, so the same lists are never the ones left out.
   if (args.closeOnly) {
-    await close("FAILED", `The platform kept stopping ${args.host}'s run, so it ended with what it had collected; the next run starts again from there.`, reachedSoFar(args.to));
+    const target = args.to === null ? await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId }) : null;
+    const reached = target ? jobsFor(args.weekly, target.others, target.shop, countryDayJobs(args.countryFrom ?? [], args.top), args.listsFrom)[args.jobAt] : undefined;
+    await close(
+      "FAILED",
+      `The platform kept stopping ${args.host}'s run, so it ended with what it had collected; the next run starts again from there.`,
+      reachedSoFar(args.to),
+      reached && !("days" in reached) ? { listsFrom: jobKey(reached) } : {},
+    );
     return null;
   }
   // Waiting for the hour to turn: looks in, so the run reads as going, and asks Google nothing.
@@ -481,10 +491,11 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
     // The place saved as the step goes, at most every `SAVE_EVERY_MS` (RR1): a step the platform stops is started again
     // from within that of where it died, without a write after every one of a run's few hundred small jobs.
     let savedAt = Date.now();
-    const saved = async () => {
-      if (Date.now() - savedAt < SAVE_EVERY_MS) return;
+    // False when this step is no longer the chain's booking — its watch started it again — so it stops at once (RR4).
+    const saved = async (now_ = false): Promise<boolean> => {
+      if (!now_ && Date.now() - savedAt < SAVE_EVERY_MS) return true;
       savedAt = Date.now();
-      await ctx.runMutation(internal.collectionSteps.notePlace, { ...memoryNow(),
+      return await ctx.runMutation(internal.collectionSteps.notePlace, { ...memoryNow(),
         key, ...(args.booking !== undefined ? { booking: args.booking } : {}), args: now(), place: placeOf({ to, jobAt }, jobs),
       });
     };
@@ -528,6 +539,8 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
     };
 
     // Stopped by the platform three times at one place: that place is left out, saying so, and the run goes on (RR1).
+    // At the run's end — the page titles and every address's visits — those are left out, and the run closes.
+    let endLeftOut = false;
     if (begun.skip) {
       if (to !== null) {
         const stepFrom = shiftDay(to, -(DAYS_PER_STEP - 1)) > args.from ? shiftDay(to, -(DAYS_PER_STEP - 1)) : args.from;
@@ -538,16 +551,28 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
         await line("Left out", `${jobName(jobs[jobAt])}: the platform stopped it three times, so it keeps what was built before, and the next run asks it first.`, true);
         skipped.push(jobKey(jobs[jobAt]));
         jobAt += 1;
+      } else {
+        await line("Left out", "The page titles and every address's visits: the platform stopped them three times, so last week's stay.", true);
+        endLeftOut = true;
       }
-      await saved();
+      // Saved at once, past the throttle: stopped again at the next job, its watch starts after the place left out.
+      if (!(await saved(true))) return null;
     }
 
     // The second try at one place: that job alone in this step, so it has the step's memory and time to itself (RR1).
     const careful = begun.careful;
     // The page lists' slots, read once a step for each date range and device's parts.
     const pageSlots = new Map<string, Record<string, { slot: number; hash: string; from: string; to: string }>>();
+    // A big website's groups of pages, likewise: asked once a step for each date range and device's parts.
+    const pageGroups = new Map<string, string[][] | null>();
     let done = 0;
-    while (Date.now() - started < STEP_BUDGET_MS && !(careful && done > 0)) {
+    // A step whose memory has grown by a quarter of what a step may hold hands on to a fresh one between jobs, rather
+    // than slowing as it fills until the platform stops it (the rehearsal at ten times kordatackle.com, 2026-10-15: two
+    // steps so full they ran past an action's ten minutes, each list then done at once in a step of its own). Growth
+    // since the step began, not the whole: the runtime's own share is there before any job.
+    const memoryAtStart = memoryMb() ?? 0;
+    const roomy = () => (memoryMb() ?? 0) - memoryAtStart < STEP_MEMORY_MB / 4;
+    while (Date.now() - started < STEP_BUDGET_MS && !(careful && done > 0) && (done === 0 || roomy())) {
       if (to !== null) {
         const stepFrom = shiftDay(to, -(DAYS_PER_STEP - 1)) > args.from ? shiftDay(to, -(DAYS_PER_STEP - 1)) : args.from;
         const result = await collectDays(ctx, open, args.connectionId, target, { from: stepFrom, to });
@@ -566,12 +591,12 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
         to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
         if (to === null) daysDone();
         done += 1;
-        await saved();
+        if (!(await saved())) return null;
         continue;
       }
       if (jobAt >= jobs.length) {
         // With the weekly lists, each page's title (§18.6.3): a title Google could not give waits for next week.
-        if (weekly) {
+        if (weekly && !endLeftOut) {
           const titles = await collectTitles(ctx, open, args.connectionId, target, args.top);
           await line(
             "Page titles",
@@ -582,7 +607,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
           );
         }
         // With the weekly lists, every address's visits, for tracking health's strangers check (§6, check 8).
-        const hosts = weekly ? await siteAddresses(open.accessToken, args.property, target.addresses[0] ?? args.host, args.top) : null;
+        const hosts = weekly && !endLeftOut ? await siteAddresses(open.accessToken, args.property, target.addresses[0] ?? args.host, args.top) : null;
         await line(
           "Ready-made lists",
           `${jobs.length} lists asked of Google ready-made: the last ${weekly ? "7 and 30 days, 90 days and 12 months" : "7 and 30 days"}, each with the span before${weekly ? ", and the 90 days and 12 months a year before" : ""}. A list whose figures did not move was left as it was.${skipped.length > 0 ? ` ${skipped.length === 1 ? "One was" : `${count(skipped.length)} were`} left out; the next run asks ${skipped.length === 1 ? "it" : "them"} first.` : ""}`,
@@ -614,13 +639,13 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
         rows += result.rows + (pages?.rows ?? 0);
         jobAt += 1;
         done += 1;
-        await saved();
+        if (!(await saved())) return null;
         continue;
       }
       const result = "funnels" in job
         ? await collectActionFunnels(ctx, open, target, args.top)
         : "pages" in job
-          ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top, { careful, slots: pageSlots })
+          ? await collectPageLists(ctx, open, args.connectionId, target, job, args.top, { careful, slots: pageSlots, groups: pageGroups })
           : await collectPeriod(ctx, open, args.connectionId, target, job, args.top, { careful });
       if (!result.ok) {
         await stop(result);
@@ -631,7 +656,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
       rows += result.rows;
       jobAt += 1;
       done += 1;
-      await saved();
+      if (!(await saved())) return null;
     }
     // The step's few minutes are up, or its careful job done: the rest in a step of its own.
     await handOn(now(), placeOf({ to, jobAt }, jobs));

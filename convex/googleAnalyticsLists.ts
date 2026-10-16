@@ -1,6 +1,7 @@
 import { PAGE_FACT_LISTS, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
 import type { ReportRow } from "./googleAnalyticsApi";
 import { PART_ROWS, packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
+import { OTHER_ROWS } from "./utils/analyticsSharedLists";
 
 /**
  * What Google Analytics is asked for each kept list, and how its answers are
@@ -455,36 +456,127 @@ export function packList(list: AnalyticsList, rows: readonly ListRow[], events: 
   const sorted = list === "series"
     || (PAGE_FACT_LISTS as readonly string[]).includes(list)
     // In the database's own order — by code unit, never by locale — so a page's rows are found by `firstKey` (`readPageRows`).
-    ? [...rows].sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0))
+    ? [...rows].sort((left, right) => byCodeUnit(left.key, right.key))
     : [...rows].sort((left, right) => (
       list === "page" || list === "product" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits
     ) || left.key.localeCompare(right.key));
-  const timed = rows.some((row) => row.times !== undefined);
-  const carted = rows.some((row) => row.basket !== undefined);
-  const converts = rows.some((row) => row.converting !== undefined);
+  const columns: PackColumns = {
+    timed: rows.some((row) => row.times !== undefined),
+    carted: rows.some((row) => row.basket !== undefined),
+    converts: rows.some((row) => row.converting !== undefined),
+  };
   const parts: PackedPart[] = [];
-  for (let start = 0; start < Math.max(sorted.length, 1); start += PART_ROWS) {
-    const slice = sorted.slice(start, start + PART_ROWS);
-    parts.push({
-      keys: slice.map((row) => row.key),
-      visits: packNumbers(slice.map((row) => row.visits)),
-      engaged: packNumbers(slice.map((row) => row.engaged)),
-      seconds: packNumbers(slice.map((row) => row.seconds)),
-      views: packNumbers(slice.map((row) => row.views)),
-      purchases: packNumbers(slice.map((row) => row.purchases)),
-      revenue: packNumbers(slice.map((row) => row.revenue)),
-      people: packNumbers(slice.map((row) => row.people)),
-      newPeople: packNumbers(slice.map((row) => row.newPeople)),
-      length: packNumbers(slice.map((row) => row.length)),
-      ...(timed ? { times: packNumbers(slice.map((row) => row.times ?? 0)) } : {}),
-      ...(carted ? { basket: packNumbers(slice.map((row) => row.basket ?? 0)) } : {}),
-      ...(converts ? { converting: packNumbers(slice.map((row) => row.converting ?? 0)) } : {}),
-      events: [...events],
-      counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
-      values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
-    });
-  }
+  for (let start = 0; start < Math.max(sorted.length, 1); start += PART_ROWS) parts.push(packPart(sorted.slice(start, start + PART_ROWS), columns, events));
   return parts;
+}
+
+/** Two keys in the database's own order: by code unit, never by locale. */
+const byCodeUnit = (left: string, right: string) => (left < right ? -1 : left > right ? 1 : 0);
+
+/** The columns only some lists carry, decided over the whole list so each of its parts carries the same. */
+type PackColumns = { timed: boolean; carted: boolean; converts: boolean };
+
+/** One part of a list: its rows, in the order given, packed. */
+function packPart(slice: readonly ListRow[], columns: PackColumns, events: readonly string[]): PackedPart {
+  return {
+    keys: slice.map((row) => row.key),
+    visits: packNumbers(slice.map((row) => row.visits)),
+    engaged: packNumbers(slice.map((row) => row.engaged)),
+    seconds: packNumbers(slice.map((row) => row.seconds)),
+    views: packNumbers(slice.map((row) => row.views)),
+    purchases: packNumbers(slice.map((row) => row.purchases)),
+    revenue: packNumbers(slice.map((row) => row.revenue)),
+    people: packNumbers(slice.map((row) => row.people)),
+    newPeople: packNumbers(slice.map((row) => row.newPeople)),
+    length: packNumbers(slice.map((row) => row.length)),
+    ...(columns.timed ? { times: packNumbers(slice.map((row) => row.times ?? 0)) } : {}),
+    ...(columns.carted ? { basket: packNumbers(slice.map((row) => row.basket ?? 0)) } : {}),
+    ...(columns.converts ? { converting: packNumbers(slice.map((row) => row.converting ?? 0)) } : {}),
+    events: [...events],
+    counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
+    values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
+  };
+}
+
+const FIGURES = ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const;
+
+/**
+ * A shared page list's finished rows held small while a big website's pages
+ * are asked a group at a time (`googleAnalyticsPageLists.ts`, page groups):
+ * each row's key and its figures in columns of numbers, an event's counts and
+ * values by column, rather than a row object with two maps each — at
+ * 14,000 pages a list's 300,000 rows were most of a step's memory (measured
+ * 2026-10-16). Packed at the end into exactly the parts `packList` makes of
+ * the same rows (`toParts`).
+ */
+export class CompactRows {
+  private readonly keys: string[] = [];
+  private readonly figures = FIGURES.map(() => [] as number[]);
+  private readonly times: number[] = [];
+  private readonly basket: number[] = [];
+  private readonly converting: number[] = [];
+  private readonly counts: number[][];
+  private readonly values: number[][];
+  private readonly columns: PackColumns = { timed: false, carted: false, converts: false };
+
+  constructor(readonly events: readonly string[]) {
+    this.counts = events.map(() => []);
+    this.values = events.map(() => []);
+  }
+
+  get size(): number {
+    return this.keys.length;
+  }
+
+  add(rows: Iterable<ListRow>): void {
+    for (const row of rows) {
+      this.keys.push(row.key);
+      FIGURES.forEach((field, at) => this.figures[at].push(row[field]));
+      this.times.push(row.times ?? 0);
+      this.basket.push(row.basket ?? 0);
+      this.converting.push(row.converting ?? 0);
+      this.columns.timed ||= row.times !== undefined;
+      this.columns.carted ||= row.basket !== undefined;
+      this.columns.converts ||= row.converting !== undefined;
+      this.events.forEach((event, at) => {
+        this.counts[at].push(row.counts.get(event) ?? 0);
+        this.values[at].push(row.values.get(event) ?? 0);
+      });
+    }
+  }
+
+  /** One row back, its events' counts and values only for the events held. */
+  private rowAt(at: number): ListRow {
+    const row = { key: this.keys[at] } as ListRow;
+    FIGURES.forEach((field, column) => { row[field] = this.figures[column][at]; });
+    if (this.columns.timed) row.times = this.times[at];
+    if (this.columns.carted) row.basket = this.basket[at];
+    if (this.columns.converts) row.converting = this.converting[at];
+    row.counts = new Map(this.events.map((event, column) => [event, this.counts[column][at]]));
+    row.values = new Map(this.events.map((event, column) => [event, this.values[column][at]]));
+    return row;
+  }
+
+  /** Every row back in key order, a few at a time: never all of them as row objects at once. */
+  *inKeyOrder(): Generator<ListRow> {
+    const order = this.keys.map((_, at) => at).sort((left, right) => byCodeUnit(this.keys[left], this.keys[right]));
+    for (const at of order) yield this.rowAt(at);
+  }
+
+  /** The rows packed as `packList` packs a shared page list: in key order, in parts of `PART_ROWS`. */
+  toParts(): PackedPart[] {
+    const parts: PackedPart[] = [];
+    let slice: ListRow[] = [];
+    for (const row of this.inKeyOrder()) {
+      slice.push(row);
+      if (slice.length === PART_ROWS) {
+        parts.push(packPart(slice, this.columns, this.events));
+        slice = [];
+      }
+    }
+    if (slice.length > 0 || parts.length === 0) parts.push(packPart(slice, this.columns, this.events));
+    return parts;
+  }
 }
 
 /** A kept part's rows, back as numbers. */
@@ -537,6 +629,9 @@ export async function fingerprint(parts: readonly PackedPart[]): Promise<string>
 /** A page's whole address, from the website's own origin and the path Analytics gives (§4.6). */
 export function pageAddress(origin: string, path: string): string {
   if (!path || path === "(not set)") return "(not set)";
+  // A page's other rows added into one — a big website's list cut while read, or Google's own rarest rows — is no
+  // page: never an address, so never numbered (2026-10-16: kordatackle.com's numbering held "/(other)" as a page).
+  if (path === OTHER_ROWS) return OTHER_ROWS;
   const clean = path.split("#")[0].split("?")[0];
   return `${origin.replace(/\/+$/, "")}${clean.startsWith("/") ? clean : `/${clean}`}`;
 }

@@ -1,12 +1,17 @@
 /**
- * How much memory a step holds, as its runtime says (collection-reliability-plan.md, RR5): the
- * Node runtime's resident size in MB, which Convex stops at 512; null in the default runtime,
- * which has no such count.
+ * How much memory a step holds, as its runtime says (collection-reliability-plan.md, RR5): in the
+ * Node runtime, the memory the step's own objects take — the JavaScript heap in use and the
+ * buffers beside it — in MB; null in the default runtime, which has no such count.
+ *
+ * Not the process's resident size, which this read until 2026-10-15: that counts Convex's own
+ * loaded code and whatever an earlier action in the same warm runtime left behind, and stays at its
+ * highest — a 50-page rehearsal's steps read 330 to 410 MB by it, so every website's run said it
+ * was near its limit. What a website's size moves is the heap in use.
  */
 export function memoryMb(): number | null {
   try {
-    const usage = (globalThis as { process?: { memoryUsage?: () => { rss: number } } }).process?.memoryUsage?.();
-    return usage ? Math.round(usage.rss / 1_048_576) : null;
+    const usage = (globalThis as { process?: { memoryUsage?: () => { heapUsed: number; arrayBuffers?: number } } }).process?.memoryUsage?.();
+    return usage ? Math.round((usage.heapUsed + (usage.arrayBuffers ?? 0)) / 1_048_576) : null;
   } catch {
     return null;
   }

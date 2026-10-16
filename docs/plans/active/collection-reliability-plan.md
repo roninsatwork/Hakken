@@ -1,7 +1,9 @@
 # Google Analytics and Search Console — a run that always finishes, on any size of website
 
-**Planned 2026-10-15. Status: being built — Anthony's go 2026-10-15 ("ok build it please and double check it");
-paused at the stopping point below, on dev, uncommitted.** Overtakes
+**Planned 2026-10-15. Status: built — Anthony's go 2026-10-15 ("ok build it please and double check it"), paused
+at the stopping point below, and finished overnight on his word ("can you finish this plan tonight while i sleep
+and test it in chrome"; "you are welcome to make collections from google to test it works"). Phases 1–3 committed in
+3b43c20b; the rest on dev, uncommitted, and live on the dev backend (see "Finished overnight").** Overtakes
 the open items of `ga-big-site-reliability-plan.md` and the adding-up part of
 `search-console-first-collection-plan.md`; neither is edited.
 
@@ -194,7 +196,7 @@ stop in the same place. Nothing already held is lost.
 | 4 | RR3, both collectors: every database call a fixed size | 1 |
 | 5 | RR5: the rehearsal at 10×, the kill tests, the memory lines, the guards; the full gate with GitHub's steps | 1 |
 
-**Total: about 6 man-days.** Overall: 0%.
+**Total: about 6 man-days.** Overall: see "Finished overnight".
 
 ## Stopping point — 2026-10-15, evening
 
@@ -286,7 +288,172 @@ The live dev backend runs this code, so tonight's runs use it. Nothing was commi
 **Found outside this plan, for later:** a Search Console screen's search reads a whole book (`wholeBook`, up to
 4,001 records). That passes a read's 16 MB on a website with ten times kordatackle.com's searches.
 
+## Finished overnight — 2026-10-15
+
+Each item left above, in its order. Nothing committed or pushed; the backend part is live on the dev backend
+(`npx convex dev --once`, 21:21 and after each fix), so the night's real runs use it.
+
+0. **The test-speed check passes** (`npm run test:run`: 7,826 tests, none over 5 s on its own).
+   - The cost was the test database, not the run: `convex-test` read every row of every table on each lookup. The
+     backend tests now load it with each table's ids kept (`src/test/convexTestTables.ts`, `vitest.config.ts`); its
+     own test fails loudly if a `convex-test` upgrade moves the code it changes. The slowest Analytics tests went
+     from 9 s to about 5 alone; a rule in AGENTS.md says never to remove it.
+   - "A website counted the old way" ran three whole collections; its third — the next morning's — is now planned
+     and read, not carried out (what that run asks is the daily run's own test): 9 s to 3.4.
+1. **RR3, the rest:**
+   - Your pages reads Search Console's 90 days two parts a call, of the newest build, the build's book of pages
+     read once a rebuild (`holdPages.consolePagesPart`); its dates come from the build's first part
+     (`newestConsoleBuild`), not the whole period and book.
+   - The rebuild runs in the Node runtime (`holdPagesSteps.rebuildHoldPages`); a booking of the old one hands on.
+   - Each page's daily figures are written at most 100 records and a million characters a call
+     (`googleAnalyticsPageSeries.writeBatches`).
+2. **RR5:**
+   - **The watch's own tests** (`collectionSteps.test.ts`): carried on from the saved place, careful, skipped, only
+     the closing, the closing stopped too, a cancelled run, a superseded step refused, the memory line. They found
+     that the reason a chain was given up was wiped by its closing's booking; it is kept now.
+   - **The kill tests** (`collectionKills.test.ts`, 9): a step stopped where it stands — Google's answer a marker
+     the step's own catch cannot read — at Analytics' days, a ready-made list, a page list, three times at one list,
+     each two-year fill; Search Console's 90 days, its 16 months, an adding-up job. Each run finishes with its
+     closing, its chain closed, "Carried on" on the run.
+   - **The guards** (`src/collection-reliability-drift.test.ts`): only the watch books a collection step, and it
+     books every kind; every Analytics ask passes its sink (two asks on connecting, small by nature, named); a
+     Search Console ask holds at most Google's 50,000 rows; no collector table is read with `.collect()`. Each
+     shown to fail on code that breaks it.
+   - **A step's memory** is the heap in use, not the process's resident size (`utils/stepMemory.ts`): the
+     resident size counts Convex's loaded code and what earlier actions left, and a 50-page rehearsal read 330 to
+     410 MB by it — every website's run would have said it was near its limit.
+   - **The rehearsal** (`collectionRehearsal.ts`, its pretend Google `utils/rehearsalGoogle.ts`): see below.
+
+3. **The double-check:** an independent review of the whole change (a second agent, reading only). What it found,
+   and what was done:
+   - **A step the watch replaced could close the chain that replaced it** — no closing passed its booking — and
+     the run then died silently. Every closing now passes its booking (`closeChain`, `closeSiteRun`), and an
+     Analytics step its watch replaced stops at its next saved place instead of asking Google on.
+   - **Carries were counted for the whole run**, so eight heavy jobs anywhere ended it. They are counted since the
+     chain last moved on (`bookStep`, `notePlace`); a place still costs at most two before it is left out.
+   - **Analytics' skip was not saved** past the ten-second throttle, so a stop at the next job skipped the same job
+     again; saved at once now. **The run's end** — page titles and every address's visits — can be left out too.
+     **A run given up** keeps the list it had reached for the next night (`listsFrom`).
+   - **A run cancelled from Admin**, or given up and stopped in its closing, kept its collecting mark; it goes now
+     (`closeSiteRun`, `googleAnalyticsRunEnd.clearCollecting`).
+   - Left, low: the hourly sweep reads the 500 oldest open runs of every agent, so with more than 500 open a dead
+     collector run would wait; a settle stage left out says so only when it is the chain's last.
+   - Confirmed sound: the watch never runs a booking twice; every step is booked through it; the Your pages read;
+     the rehearsal's sign-in can never be a real one.
+
+### The rehearsal at 10× kordatackle.com
+
+A pretend property answers as Google's Data API and Search Console answer — 14,000 pages, four devices, three
+home countries, 100,000 Search Console rows a day, 800 days of history — worked out from each ask; only a
+rehearsal's own sign-in reaches it (`callGoogle`), which no Google sign-in can give. Run from the command line
+(`collectionRehearsal:startRehearsal`, `rehearsalReport`, `endRehearsal`), under a company of its own, removed
+afterwards; tested end to end at a small size (`collectionRehearsal.test.ts`), the network stubbed to fail.
+
+Run on the dev backend on the night of 15 October, after a small one (50 pages) went through end to end — both
+runs, Analytics' two-year fills, Search Console's 16 months and adding-up — in about four minutes. At 10×:
+
+- **Found and fixed, Search Console:** numbering a website's new pages handed back more than a function's answer may
+  hold (8,845 against 8,192) on its first day of 14,000 pages: the run's list was never read on past what it had
+  added itself (`holdPageRefs.holdSince`, `MOST_RECORDS_SINCE` 28). Any website with more than about 8,000 new pages
+  in a day failed its first collection there.
+- **Found and fixed, every step:** the memory read was the process's resident size (see above).
+- **Held:** Search Console's 90 days at 100,000 rows a day for each home country, a step's memory at most 86 MB;
+  Analytics' days and its first 537 ready-made lists for three home countries, at most 308 MB, with Google's row
+  limit reached — and said — on 30 lists the pretend website makes bigger than a real one would.
+- **The watch, live:** two Analytics steps (lists 536 and 537, a year back, the third country) ran so full they
+  passed an action's ten minutes; each was carried on carefully and finished at once alone. A step whose memory has
+  grown by a quarter of what a step may hold now hands on to a fresh one between jobs instead
+  (`googleAnalyticsAgentRun`).
+- **Did not hold — Analytics' page lists on a 14,000-page website.** One page-list job (a part of one date range
+  and device) needs more than a step's 512 MB, alone or carefully: each page keeps at least 21 rows while its list
+  is read, so its exact top 20 can be stored (ga-big-site-reliability-plan.md BR3) — 294,000 rows at 14,000 pages,
+  past the 100,000 this plan holds a list to. The run leaves the list out after three tries, saying so, and goes
+  on. It bites above about 2,400 pages; kordatackle.com has about 1,400. Two ways to close it, Anthony's to choose:
+  - fewer rows a page while read on such a website (the rest added into its "other" row), so a page there names
+    fewer than 20 sources or pages before it; or
+  - its page lists asked of Google in groups of pages, keeping every page's top 20, for more asks against the
+    property's daily allowance.
+  The rehearsal's Analytics run was stopped from Admin there (23:00), which also proved a cancelled run's closing.
+
+- **Search Console at 10×, run to its end:** the 90 days for each of three home countries (100,000 rows a day,
+  about 4 hours, a step at most 86 MB, no step stopped), the 16 months' day totals, and every list of video results
+  held. **The web lists did not:** each adding-up stage — the 7 and 30 days, built from the 60 days kept; the 90
+  days and the 12 months, asked of Google a week at a time — passed an action's ten minutes, carefully too, and was
+  left out after three tries, saying so on the run (the "Left out" line added tonight). The run then closed —
+  "The days came in, but adding them up stopped … The next run adds them up again" — with its settle ended and every
+  chain closed. This is the measurement the list above asked for: **the web lists need building as a stream** of
+  the kept days and of Google's weeks, so a step never holds a long period's searches whole. morehandles.co.uk,
+  the biggest website collected, is well inside what builds today.
+- **A run always finishes (RR1) held at 10× for both collectors**, through two stopped Analytics steps carried on,
+  three Analytics lists left out after three stops, a cancel from Admin, and nine Search Console stages carried on
+  and left out. What did not hold is RR2 for two kinds of list, Analytics' page lists past about 2,400 pages and
+  Search Console's web lists at 10× — both for Anthony to decide how to close (see the two bullets above).
+- The rehearsal was removed afterwards (`endRehearsal`): its sign-in forgotten first, its figures cleared as a
+  deleted website's are, its company with them. A website removed leaves its chains' rows in `collectionSteps`
+  (closed, one a chain): small, but not yet cleared — for later.
+
+### The night's real runs — 16 October
+
+On this code, live on the dev backend, with Google asked as every night:
+
+- **Google Analytics, 01:00.** ronins.co.uk: 83 minutes, 34,888 rows from 967 asks, success. kordatackle.com:
+  collected again whole by Google's own counts — 18 July to 15 October, 1,345,789 rows from 1,131 asks — in 96
+  minutes, success: the first time it has finished since it was connected. Both waited for the hour's allowance of
+  age, gender and interests at 01:12 and carried on at 02:14, as SF17 has them. No step was stopped; the most a step
+  held was 129 MB. Korda's closing ran whole: its stale "collecting" mark (from the run the platform ended at 14:00)
+  gone, tracking health checked (5 of 12 need a look), and both two-year fills started and finished (02:41,
+  03:11) — its "New and returning visitors a day" chart, empty before, is drawn. Checked in Chrome.
+- **Search Console, 04:00.** conterraops.com (with its two countries kept ready), ronins.co.uk, kordatackle.com and
+  morehandles.co.uk: each its newest days and the last four again, success, inside two and a half minutes all told;
+  no step stopped, at most 30 MB. Checked in Chrome.
+
+## Analytics' page lists on big websites — closed 2026-10-16
+
+Anthony chose the groups of pages the same morning ("Let's cap it at 20" for the top rows each page keeps, then
+"yes" to asking a big website's pages 2,000 at a time).
+
+- **What changed** (`googleAnalyticsPageLists.ts`, `GROUP_PAGES`): a website numbering more than 2,000 pages first
+  asks Google for the pages with any activity in the dates, once a step for each date range, device and country.
+  Past 2,000 of them, each page list is asked a group of 2,000 pages at a time — 1,000 on a careful second try — the
+  addresses of one page always in one group, so each page's top 20 and its "other" row are kept exactly as on a
+  small website. The finished rows are gathered small between groups (`CompactRows`, `googleAnalyticsLists.ts`) and
+  packed into the very parts one ask makes. A page's next pages, asked by the page after, choose their top 20 once
+  every group is in; the flow chart, which shows the busiest pages of the whole website, gathers every group's
+  routes and is worked out once. A website of 2,000 numbered pages or fewer is asked exactly as before, with no
+  extra ask; events' lists, keyed by the event, are never grouped.
+- **At ten times kordatackle.com** (14,000 pages, pretend Google, measured locally): every page list now holds
+  **161 MB at most**, against 516 MB before (pages before and next), 477 MB (pages seen after landing), 291 MB
+  (landing page sources) and 279 MB (the flow); the same rows written for each.
+- **The same lists, proven:** with a small pretend website asked both ways, every page list writes the same parts,
+  part for part (`googleAnalyticsPageGroups.test.ts`); breaking the grouping on purpose fails it. The pretend Google
+  now gives a row the same figures however it is filtered, as Google does (`utils/rehearsalGoogle.ts`).
+- **On kordatackle.com's real 90 days, nothing written:** Google took a filter of 2,000 pages and a "(not set)"
+  landing page alone; every list keyed by page address — 7,851 pages with activity in 90 days, so asked in groups —
+  came out identical both ways, as did the flow chart and every landing page list, which it has fewer than 2,000 of.
+  Asked again in groups of 500 landing pages, four landing page lists were identical; the pages seen after landing
+  and the flow chart differed, because each is trimmed while Google's answer arrives and a smaller group keeps more
+  of each page's rows (the flow then held 167,625 visits against 146,917): the grouped lists are the more exact.
+- **The cost:** about 5 of the day's 200,000 tokens an ask on kordatackle.com; a list keyed by page address asked
+  in its groups took 2 to 4 asks where it took 1 or 2.
+- **Found while proving it, and fixed the same morning** (Anthony: "fix it"): a page list's "(other)" row, made
+  when a big website's list is trimmed while read, was numbered as though it were a page in the pages seen after
+  landing and the events by page — kordatackle.com's page numbering holds `https://kordatackle.com/(other)`, and
+  that row could stand among a landing page's top 20 as a page. "(other)" is now never a page address or a page
+  number, as "(not set)" never was (`pageAddress`, `numberPages`, the page titles): it stays the page's or event's
+  "other" row. Tested by a list cut while read (`googleAnalyticsPageGroups.test.ts`), which fails without the fix.
+  The 7 and 30 days' lists are right from the next night's run, the 90 days' and twelve months' from the next
+  weekly lists; the address stays in kordatackle.com's numbering, named by no list.
+
 ## Change log
+
+- 2026-10-16 — Analytics' page lists past about 2,400 pages closed: a big website's pages asked 2,000 at a time
+  (see "Analytics' page lists on big websites"); and a page list's "(other)" row is no longer numbered as a page.
+  Uncommitted; on the dev backend.
+
+- 2026-10-15, night — Finished on Anthony's word (see "Finished overnight"): the test speed, RR3's rest, the watch
+  and kill tests, the guards, the review and its fixes, and the rehearsal at 10×, which found two limits and fixed
+  them and found one — Analytics' page lists past about 2,400 pages — left for Anthony to choose how to close.
+  Uncommitted; live on the dev backend for the night's runs.
 
 - 2026-10-15 — Paused at the stopping point above (Anthony travelling).
 

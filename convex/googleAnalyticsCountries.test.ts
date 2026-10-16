@@ -219,10 +219,12 @@ describe("home countries", () => {
   test("a home country taken off the website's list goes after the next collection", async () => {
     const t = harness();
     const { siteId, agentId, admin } = await connected(t, ["gbr", "fra"]);
-    fakeGoogle([...history(70), ...fromFrance(70)]);
+    // A fortnight of visits is enough to hold lists and days for each: what goes is the test, not how much.
+    fakeGoogle([...history(14), ...fromFrance(14)]);
     await save(admin, siteId);
     await finishScheduled(t);
     expect((await keysOf(t, siteId)).some((key) => key.endsWith("|fra"))).toBe(true);
+    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsDays").collect()).some((one) => one.device.endsWith("|fra")))).toBe(true);
 
     await t.run(async (ctx) => await ctx.db.patch(siteId, { searchConsoleCountries: ["gbr"] }));
     await dailyRun(t, agentId);

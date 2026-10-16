@@ -119,7 +119,9 @@ export async function bookStep(ctx: MutationCtx, booking: Booking, keepTries = f
     args,
     place: booking.place,
     tries,
-    resumes: fresh ? 0 : held.resumes,
+    // Carries are counted since the chain last moved on (RR1): one that has moved past a stopped place is not
+    // charged for it, so a run of many heavy jobs is not given up after eight carries in all.
+    resumes: fresh || held.place !== booking.place ? 0 : held.resumes,
     peakMb: fresh ? undefined : held.peakMb,
     bookedAt: startsAt,
     startedAt: undefined,
@@ -241,6 +243,8 @@ export const notePlace = internalMutation({
       args: { ...withoutBooking(args.args), booking: args.booking },
       place: args.place,
       tries: args.place === held.place ? held.tries : 1,
+      // Moved on: its carries are counted afresh from here.
+      ...(args.place === held.place ? {} : { resumes: 0 }),
       updatedAt: now,
     });
     await touchRun(ctx, held.runId, now);
@@ -291,11 +295,19 @@ async function stepState(ctx: { db: MutationCtx["db"] }, held: Doc<"collectionSt
 /** A chain whose step died, carried on — or, past `MOST_RESUMES`, ended by its own closing. The hourly sweep calls it too. */
 export async function carryOn(ctx: MutationCtx, held: Doc<"collectionSteps">, now: number): Promise<void> {
   const run = held.runId ? await ctx.db.get(held.runId) : null;
+  const args = withoutBooking(held.args as Record<string, unknown>);
+  // An Analytics run's collecting mark goes when its run ends without its own closing, so its page never says it is
+  // collecting for good: cancelled while its step was stopped, or given up and stopped in its closing.
+  const clearCollecting = async () => {
+    if (held.chain === "GA_RUN" && held.runId && typeof args.connectionId === "string") {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsRunEnd.clearCollecting, { connectionId: args.connectionId as Id<"googleAnalyticsConnections">, runId: held.runId });
+    }
+  };
   if (held.runId && !going(run)) {
+    await clearCollecting();
     await closeStep(ctx, held.key);
     return;
   }
-  const args = withoutBooking(held.args as Record<string, unknown>);
   const line = async (detail: string, failed: boolean) => {
     if (held.runId) await writeRunLine(ctx, { runId: held.runId, ...(run?.companyId ? { companyId: run.companyId } : {}), heading: "Carried on", detail, failed });
   };
@@ -304,14 +316,17 @@ export async function carryOn(ctx: MutationCtx, held: Doc<"collectionSteps">, no
     if (args.closeOnly === true) {
       const why = `The platform stopped this run's steps ${held.resumes + 1} times, the last at ${held.place}. It ended without its closing; the next run starts again from what is held.`;
       if (held.runId) await closeRoleRun(ctx, { runId: held.runId, status: "FAILED", summary: why });
+      await clearCollecting();
       await ctx.db.patch(held._id, { gaveUp: why, updatedAt: now });
       await closeStep(ctx, held.key);
       return;
     }
     const why = `The platform stopped this run's steps ${held.resumes} times, the last at ${held.place}, so it ends here with what it has.`;
     await line(why, true);
-    await ctx.db.patch(held._id, { gaveUp: why, resumes: held.resumes + 1, updatedAt: now });
+    await ctx.db.patch(held._id, { resumes: held.resumes + 1, updatedAt: now });
     await bookStep(ctx, { key: held.key, chain: held.chain, runId: held.runId, args: { ...args, closeOnly: true }, place: held.place }, true);
+    // After the booking, which clears it: why the chain is ending stays on it.
+    await ctx.db.patch(held._id, { gaveUp: why });
     return;
   }
   const next = held.tries + 1;

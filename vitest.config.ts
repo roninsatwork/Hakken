@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import type { ViteUserConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { convexTestTables } from './src/test/convexTestTables'
 import fs from 'fs'
 import path from 'path'
 
@@ -137,6 +138,13 @@ export default defineConfig({
         },
       },
       {
+        /*
+         * The test database reads a table's own records, not every table's
+         * first (`src/test/convexTestTables.ts`): a change to convex-test's
+         * code as it loads, so convex-test is loaded through Vite, not
+         * straight from node_modules.
+         */
+        plugins: [convexTestTables() as unknown as VitestPlugin],
         resolve: {
           alias: rootAlias,
         },
@@ -144,6 +152,7 @@ export default defineConfig({
           name: 'backend',
           globals: true,
           environment: 'node',
+          server: { deps: { inline: ['convex-test'] } },
           env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' },
           include: [
             'convex/**/*.test.{ts,tsx}',

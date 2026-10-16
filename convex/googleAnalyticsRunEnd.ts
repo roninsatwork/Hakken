@@ -39,8 +39,9 @@ export const closeArgs = {
   property: v.string(),
   runId: v.id("agentRuns"),
   workflowExecutionId: v.optional(v.id("workflowExecutions")),
-  /** The run's watched chain (`collectionSteps.ts`), closed with it. */
+  /** The run's watched chain (`collectionSteps.ts`), closed with it: only while the closing step is its booking. */
   stepKey: v.string(),
+  booking: v.optional(v.number()),
   status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
   summary: v.string(),
   reached: reachedValidator,
@@ -79,8 +80,31 @@ export const closeSiteRun = internalMutation({
     if (open) {
       await closeConnection(ctx, args);
       await closeRoleRun(ctx, { runId: args.runId, ...(args.workflowExecutionId ? { workflowExecutionId: args.workflowExecutionId } : {}), status: args.status, summary: args.summary });
+    } else {
+      // Ended already — cancelled from Admin, or by its watch: its collecting mark still goes.
+      await clearCollectingOf(ctx, args.connectionId, args.runId);
     }
-    await closeStep(ctx, args.stepKey);
+    // A step the watch replaced never closes the chain that replaced it.
+    await closeStep(ctx, args.stepKey, args.booking);
+    return null;
+  },
+});
+
+async function clearCollectingOf(ctx: MutationCtx, connectionId: Doc<"googleAnalyticsConnections">["_id"], runId: Doc<"agentRuns">["_id"]): Promise<void> {
+  const connection = await ctx.db.get(connectionId);
+  if (connection?.collecting?.runId === runId) await ctx.db.patch(connection._id, { collecting: undefined, updatedAt: Date.now() });
+}
+
+/**
+ * A run its watch gave up on, whose closing step was stopped too (`collectionSteps.carryOn`): the run is ended
+ * there, and its collecting mark goes here, so its page never says it is collecting for good (kordatackle.com,
+ * 15 October). What it collected stays; the next run carries on from it.
+ */
+export const clearCollecting = internalMutation({
+  args: { connectionId: v.id("googleAnalyticsConnections"), runId: v.id("agentRuns") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await clearCollectingOf(ctx, args.connectionId, args.runId);
     return null;
   },
 });

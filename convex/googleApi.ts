@@ -5,6 +5,8 @@
  * (docs/plans/active/google-analytics-plan.md §4.6). No database here.
  */
 
+import { isRehearsalToken, rehearsalAnswer } from "./utils/rehearsalGoogle";
+
 /**
  * Why Google said no: the token is no good (`EXPIRED` — renew it and ask
  * again), the account cannot read the property (`ACCESS`), Google is busy or
@@ -33,6 +35,9 @@ async function failureOf(response: Response): Promise<GoogleFailure> {
 
 /** GET when there is no body, POST with it as JSON when there is. */
 export async function callGoogle(url: string, accessToken: string, body?: unknown): Promise<{ ok: true; json: unknown } | GoogleFailure> {
+  // The collection's rehearsal (collection-reliability-plan.md, RR5): its own sign-in is answered by a pretend
+  // Google, and nothing reaches Google. No Google sign-in gives such a token (`utils/rehearsalGoogle.ts`).
+  if (isRehearsalToken(accessToken)) return rehearsalAnswer(url, accessToken, body);
   let response: Response;
   try {
     response = await fetch(url, {

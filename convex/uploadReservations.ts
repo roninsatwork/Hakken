@@ -127,8 +127,10 @@ export const cleanup = internalMutation({
     if (!control || control.enforcedSince >= now - ABANDONED_UPLOAD_MS) return null;
     // Also covers a process dying after storage accepted bytes but before finish
     // recorded the returned id. All production uploads must use this gateway;
-    // the one file the server stores itself, DataForSEO's answer, is kept
-    // while an answer names it (`seoPullAnswers.ts`).
+    // of the files the server stores itself, DataForSEO's answer is kept while
+    // an answer names it (`seoPullAnswers.ts`), and a Search Console stage's
+    // carried sums live minutes, far inside the day this sweep waits
+    // (`searchConsoleLongLists.ts`, SL4).
     // A cursor belongs to its original query bounds; keep the upper bound
     // fixed across ticks until this pass finishes.
     const scanBefore = control.storageScanBefore ?? now - ABANDONED_UPLOAD_MS;

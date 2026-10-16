@@ -66,8 +66,14 @@ const RECORDS_PER_DELETE = 40;
  */
 export type PageList = { addresses: string[]; numbers: Map<string, number>; readTo: number };
 
-/** Records past the list read that one placing reads back: a list grown more than this since is read again whole. */
-const MOST_RECORDS_SINCE = 200;
+/**
+ * Records past the list read that one placing reads back: a list grown more than this since is read again whole.
+ * Its answer holds every address read back and the thousand it adds, inside the 8,192 a function's answer may
+ * hold to a list: 28 records of 250 and 1,000 added are 8,000. Until 2026-10-15 it was 200, and the run's list was
+ * never read on past what it had added itself, so a website with more than about 8,000 new pages in one day —
+ * the rehearsal at ten times kordatackle.com — failed its first collection (collection-reliability-plan.md, RR3).
+ */
+const MOST_RECORDS_SINCE = 28;
 
 /** One page of a website's page list, record by record. */
 export const pageListPart = internalQuery({
@@ -232,6 +238,18 @@ export const placePages = internalMutation({
 });
 
 /**
+ * What a placing read back, held in the action's list — and the list read on to
+ * its end, so the next placing reads back only what was added after it.
+ */
+export function holdSince(list: PageList, since: ReadonlyArray<{ address: string; number: number }>): void {
+  for (const { address, number } of since) {
+    list.addresses[number] = address;
+    list.numbers.set(address, number);
+    if (number + 1 > list.readTo) list.readTo = number + 1;
+  }
+}
+
+/**
  * Addresses as references from an action: the website's list read once a run,
  * and the addresses it does not hold put on its end, a thousand a call — with
  * whatever another run added meanwhile read back, never failing on it
@@ -249,10 +267,7 @@ export async function encodePagesFromAction(ctx: ActionCtx, holdId: Id<"companyW
       list = await addressesOf(ctx, holdId, true);
       continue;
     }
-    for (const { address, number } of placed.since) {
-      list.addresses[number] = address;
-      list.numbers.set(address, number);
-    }
+    holdSince(list, placed.since);
   }
   return pages.map((page) => (isPageRef(page) ? page : refOf(list.numbers.get(page)!)));
 }

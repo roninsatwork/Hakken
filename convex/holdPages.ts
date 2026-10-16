@@ -1,9 +1,11 @@
 import { v, type Infer, type Validator } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
-import { readPeriod } from "./searchConsolePeriodReads";
+import { periodFromParts } from "./searchConsolePeriodReads";
+import { wholeBookFromAction } from "./searchConsolePeriodBooks";
+import { tokenPlace } from "./utils/searchConsoleTerms";
 import { dropCopies, writeListCopy } from "./siteListCopies";
 import { claimSchedule, holdPagesKey, noteDataChanged } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
@@ -74,7 +76,7 @@ const HOLD_ROWS_CLEARED = 500;
 /** Ask for a hold's pages to be rebuilt, once, shortly. */
 export async function requestHoldPages(ctx: MutationCtx, holdId: Id<"companyWebsites">, delayMs = REBUILD_DELAY_MS): Promise<void> {
   if (!(await claimSchedule(ctx, holdPagesKey(holdId)))) return;
-  await ctx.scheduler.runAfter(delayMs, internal.holdPages.rebuildHoldPages, { holdId });
+  await ctx.scheduler.runAfter(delayMs, internal.holdPagesSteps.rebuildHoldPages, { holdId });
 }
 
 /**
@@ -154,7 +156,8 @@ export const rebuildHead = internalQuery({
     ]);
     const bing = await ctx.db.query("bingConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     const connected = connection?.status === "CONNECTED" && !connection.clearing && Boolean(connection.newestDay);
-    const period = connected ? await readPeriod(ctx, args.holdId, "web", "page", "90", "NOW") : null;
+    // Its dates are on the newest build's first part: the whole period, and its book, was read here until 2026-10-15 (RR3).
+    const period = connected ? await newestConsoleBuild(ctx, args.holdId) : null;
     return {
       websiteId,
       host: site.website.host,
@@ -247,50 +250,102 @@ export const judgedTypesPage = internalQuery({
 });
 
 /**
- * Pages returned per read: a function's answer holds at most 8,192 to a list.
- * morehandles.co.uk's 90 days showed 13,813, and its Your pages never rebuilt
- * (found 2026-10-06).
+ * Parts of the 90-day page period read a call: 2,000 rows each, inside the
+ * 8,192 a function's answer holds to a list. morehandles.co.uk's 90 days
+ * showed 13,813 pages, and its Your pages never rebuilt (found 2026-10-06).
  */
-const CONSOLE_PAGES_PER_READ = 4_000;
+const CONSOLE_PARTS_PER_READ = 2;
+
+/** Times the period is read again from its start when Search Console swaps in a new build part-way through. */
+const CONSOLE_READ_TRIES = 3;
+
+/** The newest build of the company's own 90-day page period: the one its screens read. Null when there is none. */
+async function newestConsoleBuild(ctx: QueryCtx, holdId: Id<"companyWebsites">): Promise<Doc<"searchConsolePeriods"> | null> {
+  // The first part of each build: an older build is beside the newest only while it is being cleared.
+  const firsts = await ctx.db
+    .query("searchConsolePeriods")
+    .withIndex("by_hold_country_type_list_period", (q) => q
+      .eq("companyWebsiteId", holdId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "90").eq("which", "NOW").eq("part", 0))
+    .take(4);
+  return firsts.reduce<Doc<"searchConsolePeriods"> | null>((newest, part) => (!newest || part.builtAt > newest.builtAt ? part : newest), null);
+}
 
 /**
- * The pages the company's own Search Console shows over the last 90 days,
- * folded to their page with their clicks added up: the ready-made period
- * (`readPeriod`), read by the hold. Only the website's own host and its twin.
- * A part at a time, in page order, from `start`; `next` is where the next
- * part starts, null after the last.
+ * Part of the pages the company's own Search Console shows over the last 90
+ * days, with their clicks, as stored: a few parts of one build a call, from
+ * `start` (collection-reliability-plan.md, RR3). Until 2026-10-15 each call
+ * read the whole period and the whole book of its pages, to hand back 4,000
+ * of them. Pages are left as places in the build's book when it keeps them so
+ * (`tokens`); the rebuild reads the book once. `moved` when the build read
+ * from was replaced since the first part; null when there is none.
  */
-export const consolePages = internalQuery({
-  args: { holdId: v.id("companyWebsites"), host: v.string(), start: v.optional(v.number()) },
-  returns: v.object({ pages: v.array(v.object({ key: v.string(), clicks: v.number() })), next: v.union(v.number(), v.null()) }),
+export const consolePagesPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), builtAt: v.optional(v.number()), start: v.number() },
+  returns: v.union(
+    v.null(),
+    v.object({ moved: v.literal(true) }),
+    v.object({ builtAt: v.number(), tokens: v.boolean(), rows: v.array(v.object({ key: v.string(), clicks: v.number() })), next: v.union(v.number(), v.null()) }),
+  ),
   handler: async (ctx, args) => {
-    const period = await readPeriod(ctx, args.holdId, "web", "page", "90", "NOW");
-    const clicks = new Map<string, number>();
-    for (const row of period?.rows ?? []) {
-      if (!onWebsite(row.key, args.host)) continue;
-      const page = normalisePage(row.key);
-      clicks.set(page, (clicks.get(page) ?? 0) + row.clicks);
-    }
-    const all = [...clicks].sort(([one], [two]) => (one < two ? -1 : one > two ? 1 : 0));
-    const start = args.start ?? 0;
-    const end = start + CONSOLE_PAGES_PER_READ;
+    const newest = await newestConsoleBuild(ctx, args.holdId);
+    if (args.builtAt !== undefined && newest?.builtAt !== args.builtAt) return { moved: true as const };
+    if (!newest) return null;
+    const parts = await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_slot_built", (q) => q
+        .eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "90").eq("which", "NOW")
+        .eq("builtAt", newest.builtAt).gte("part", args.start))
+      .take(CONSOLE_PARTS_PER_READ + 1);
+    const read = await periodFromParts(ctx, args.holdId, "web", "page", parts.slice(0, CONSOLE_PARTS_PER_READ), undefined, false);
     return {
-      pages: all.slice(start, end).map(([key, total]) => ({ key, clicks: total })),
-      next: end < all.length ? end : null,
+      builtAt: newest.builtAt,
+      tokens: read?.book !== null && read?.book !== undefined,
+      rows: (read?.rows ?? []).map((row) => ({ key: row.key, clicks: row.clicks })),
+      next: parts.length > CONSOLE_PARTS_PER_READ ? parts[CONSOLE_PARTS_PER_READ].part : null,
     };
   },
 });
 
-/** Every page the company's own Search Console shows, read a part at a time (`consolePages`). */
+type ConsolePart = { moved: true } | { builtAt: number; tokens: boolean; rows: Array<{ key: string; clicks: number }>; next: number | null } | null;
+
+/**
+ * Every page the company's own Search Console shows over the last 90 days,
+ * folded to its page with its clicks added up: read a few parts at a time
+ * (`consolePagesPart`), all from one build, the build's book of pages read once.
+ * Only the website's own host and its twin.
+ */
 async function allConsolePages(ctx: ActionCtx, holdId: Id<"companyWebsites">, host: string): Promise<Array<{ key: string; clicks: number }>> {
-  const pages: Array<{ key: string; clicks: number }> = [];
-  for (let start: number | null = 0; start !== null;) {
-    const part: { pages: Array<{ key: string; clicks: number }>; next: number | null } =
-      await ctx.runQuery(internal.holdPages.consolePages, { holdId, host, start });
-    pages.push(...part.pages);
-    start = part.next;
+  for (let tries = 1; ; tries += 1) {
+    const rows: Array<{ key: string; clicks: number }> = [];
+    let builtAt: number | undefined;
+    let tokens = false;
+    let moved = false;
+    for (let start: number | null = 0; start !== null;) {
+      const part: ConsolePart = await ctx.runQuery(internal.holdPages.consolePagesPart, { holdId, builtAt, start });
+      if (part === null) return [];
+      if ("moved" in part) {
+        moved = true;
+        break;
+      }
+      builtAt = part.builtAt;
+      tokens ||= part.tokens;
+      rows.push(...part.rows);
+      start = part.next;
+    }
+    // A new build swapped in part-way: read again from its start. Should it keep moving, the rows read stand
+    // until the next rebuild, which the settle that swapped it in asks for.
+    if (moved && tries < CONSOLE_READ_TRIES) continue;
+    const book = tokens && builtAt !== undefined ? await wholeBookFromAction(ctx, { companyWebsiteId: holdId, searchType: "web", builtAt }, "page") : [];
+    const clicks = new Map<string, number>();
+    for (const row of rows) {
+      const at = tokenPlace(row.key);
+      const address = at ? book[at.place] ?? "" : row.key;
+      if (!onWebsite(address, host)) continue;
+      const page = normalisePage(address);
+      clicks.set(page, (clicks.get(page) ?? 0) + row.clicks);
+    }
+    return [...clicks].map(([key, total]) => ({ key, clicks: total }));
   }
-  return pages;
 }
 
 /** Google Analytics' landing pages over the last 90 days, for every device: the ready-made list a collection keeps. */
@@ -584,7 +639,7 @@ async function allBingClicks(ctx: ActionCtx, holdId: Id<"companyWebsites">): Pro
 }
 
 /** What a rebuild changed: pages written (new or changed) and pages removed; null when the hold lists nothing of its own. */
-type Rebuilt = { written: number; removed: number } | null;
+export type Rebuilt = { written: number; removed: number } | null;
 
 async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Rebuilt> {
   const head: Head | null = await ctx.runQuery(internal.holdPages.rebuildHead, { holdId });
@@ -657,27 +712,41 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
   return { written: writes.length, removed: removed.length };
 }
 
+/** What a rebuild answers: what it changed, which says that a page unchanged is not written again. */
+export const rebuiltValidator = v.union(v.null(), v.object({ written: v.number(), removed: v.number() }));
+
 /**
  * Rebuild a hold's pages now, taking the hold's turn; one already running sends this one to wait.
- * Answers what it changed, which says that a page unchanged is not written again.
+ * Run in the Node runtime (`holdPagesSteps.ts`): it holds every source's pages at once to join them,
+ * and a website ten times kordatackle.com's is more than the default runtime's 64 MB
+ * (collection-reliability-plan.md, RR3).
+ */
+export async function rebuildHoldPagesHandler(ctx: ActionCtx, args: { holdId: Id<"companyWebsites"> }): Promise<Rebuilt> {
+  const key = holdPagesKey(args.holdId);
+  if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
+    await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.holdPagesSteps.rebuildHoldPages, args);
+    return null;
+  }
+  let done = false;
+  let rebuilt: Rebuilt = null;
+  try {
+    rebuilt = await rebuildNow(ctx, args.holdId);
+    done = true;
+  } finally {
+    await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
+  }
+  return rebuilt;
+}
+
+/**
+ * A rebuild booked before it moved to the Node runtime (2026-10-15), handed on to it: a booking whose
+ * function had gone would fail, and leave the hold's rebuild claimed. Nothing books this one now.
  */
 export const rebuildHoldPages = internalAction({
   args: { holdId: v.id("companyWebsites") },
-  returns: v.union(v.null(), v.object({ written: v.number(), removed: v.number() })),
+  returns: v.null(),
   handler: async (ctx, args) => {
-    const key = holdPagesKey(args.holdId);
-    if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
-      await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.holdPages.rebuildHoldPages, args);
-      return null;
-    }
-    let done = false;
-    let rebuilt: Rebuilt = null;
-    try {
-      rebuilt = await rebuildNow(ctx, args.holdId);
-      done = true;
-    } finally {
-      await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
-    }
-    return rebuilt;
+    await ctx.scheduler.runAfter(0, internal.holdPagesSteps.rebuildHoldPages, args);
+    return null;
   },
 });

@@ -145,7 +145,7 @@ export async function fillSiteStepHandler(ctx: ActionCtx, args: ObjectType<typeo
     // step, and only then does the fill's chain close (collection-reliability-plan.md, RR1).
     const toEnd = async () => {
       await afterDays(ctx, run);
-      await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+      await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key, ...(args.booking !== undefined ? { booking: args.booking } : {}) });
       return null;
     };
     // Stopped by the platform three times at one place, or given up by its watch: what came in is kept.

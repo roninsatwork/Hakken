@@ -236,6 +236,14 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   find which step costs, and cut what its assertions do not read — the test
   database checks every stored row on each lookup, so rows nobody asserts on
   are the usual cost.
+- **The test database reads a table's own rows** (2026-10-15). `convex-test`
+  went through every row of every table on each lookup; the backend project
+  loads it through Vite with a change that keeps each table's ids
+  (`src/test/convexTestTables.ts`, wired in `vitest.config.ts`), which took
+  the slowest collection tests from nine seconds to five. A `convex-test`
+  upgrade that moves the code it changes fails every backend test at once,
+  naming the place: update the change to the new code, never remove it to make
+  the run pass.
 - **A drift test never reads what a test run writes.** The repo scan
   (`walkRepoFiles`, `src/test/driftUtils.ts`) skips `coverage/`,
   `test-results/` and `playwright-report/`: a drift test reading coverage's

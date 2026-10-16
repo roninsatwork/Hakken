@@ -9,6 +9,7 @@ import schema from "./schema";
 import { packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
 import { writeSitemapPart } from "./sitemapParts";
 import { PAGE_RECORD } from "./holdPageRefs";
+import { bookRecords } from "./searchConsolePeriodBooks";
 import { holdPagesKey } from "./siteRankings";
 import { packList, slotKey, type ListRow } from "./googleAnalyticsLists";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -125,7 +126,7 @@ async function ronins(t: Harness) {
   const owner = await company(t, "Ronins");
   await collected(t, owner.websiteId);
   await console90(t, owner, SHOWN);
-  await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+  await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
   return owner;
 }
 
@@ -217,6 +218,37 @@ describe("every page once", () => {
     expect(rows.find((row) => row.page === "/ai-agency/")?.pageType).toBe("SERVICE");
   });
 
+  test("Search Console's pages kept as places in its build's book are named from the book, read once", async () => {
+    // As a collection keeps them since 2026-10-08: the rebuild reads the book itself, once (collection-reliability-plan.md, RR3).
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    await console90(t, owner, []);
+    await t.run(async (ctx) => {
+      const period = (await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", owner.holdId)).first())!;
+      const { records, places } = bookRecords(SHOWN.map(([address]) => address));
+      for (const { record, terms } of records) {
+        await ctx.db.insert("searchConsolePeriodBooks", { companyWebsiteId: owner.holdId, searchType: "web", builtAt: period.builtAt, kind: "page", record, terms });
+      }
+      await ctx.db.patch(period._id, {
+        keys: packNumbers(SHOWN.map(([address]) => places.get(address)!)),
+        clicks: packNumbers(SHOWN.map(([, clicks]) => clicks)),
+        impressions: packNumbers(SHOWN.map(() => 100)),
+        positionSums: packNumbers(SHOWN.map(() => 500)),
+      });
+    });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
+
+    const rows = await holdRows(t, owner.holdId);
+    expect(rows.filter((row) => row.shown).map((row) => [row.page, row.clicks])).toEqual([
+      ["/", 150],
+      ["/ai-agency", 0],
+      ["/ai-agency/", 453],
+      ["/author/anthony/", 15],
+      ["/hub/bad-websites/", 122],
+    ]);
+  });
+
   test("counts the four figures and the four gaps once, for the screen to read", async () => {
     const t = harness();
     const { holdId, member } = await ronins(t);
@@ -268,7 +300,7 @@ describe("every page once", () => {
       const keys = typeof period!.keys === "string" ? [] : period!.keys;
       await ctx.db.patch(period!._id, { keys: keys.filter((key) => !key.includes("/author/")), clicks: packNumbers(clicks.slice(0, 4).concat(clicks.slice(5))) });
     });
-    const rebuilt = await t.action(internal.holdPages.rebuildHoldPages, { holdId });
+    const rebuilt = await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId });
 
     const after = await holdRows(t, holdId);
     expect(after.some((row) => row.page === "/author/anthony/")).toBe(false);
@@ -288,7 +320,7 @@ describe("every page once", () => {
       await writeSitemapPart(ctx, { websiteId: owner.websiteId, readAt }, pages.slice(1_000));
       await ctx.db.insert("fanOutLimits", { companyId: owner.companyId, companyWebsiteId: owner.holdId, sitemapPagesRead: 1_000, updatedAt: Date.now() } as never);
     });
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
 
     const read = await list(owner.member, owner.holdId);
     expect(read.summary).toMatchObject({ pages: 1_000, sitemap: 1_000, sitemapCut: true, sitemapLimit: 1_000, console: false, crawlDay: null });
@@ -358,7 +390,7 @@ describe("visits", () => {
     await console90(t, owner, SHOWN);
     await analytics(t, owner);
     await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
 
     const rows = await holdRows(t, owner.holdId);
     const row = (page: string) => rows.find((one) => one.page === page);
@@ -391,7 +423,7 @@ describe("visits", () => {
         await ctx.db.insert("googleAnalyticsTitles", { companyWebsiteId: owner.holdId, page: `~${numbers[at].toString(36)}`, title, views: 10, askedAt: 1 });
       }
     });
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
 
     const rows = await holdRows(t, owner.holdId);
     expect(rows.find((one) => one.page === "/ai-agency/")?.title).toBe("AI Agency | Agent Automation Company | London And Surrey");
@@ -406,7 +438,7 @@ describe("visits", () => {
     await collected(t, owner.websiteId);
     await analytics(t, owner, "COUNTING");
     await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
 
     expect((await holdRows(t, owner.holdId)).every((row) => row.visited === false && row.visits === 0)).toBe(true);
   });
@@ -418,14 +450,14 @@ describe("visits", () => {
     await console90(t, owner, SHOWN);
     await analytics(t, owner);
     await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
     const before = new Map((await holdRows(t, owner.holdId)).map((row) => [row.page, row]));
 
-    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 0, removed: 0 });
+    expect(await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 0, removed: 0 });
 
     // The next collection: two more visits landed on the journal.
     await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED.map(([address, visits]) => [address, address === www("/journal/") ? visits + 2 : visits])));
-    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 1, removed: 0 });
+    expect(await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 1, removed: 0 });
     for (const row of await holdRows(t, owner.holdId)) {
       if (row.page === "/journal/") expect(row).toMatchObject({ _id: before.get(row.page)!._id, visits: 6 });
       else expect(row, row.page).toEqual(before.get(row.page));
@@ -442,11 +474,11 @@ describe("visits", () => {
         await ctx.db.replace(_id, rest);
       }
     });
-    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 0, removed: 0 });
+    expect(await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 0, removed: 0 });
 
     await analytics(t, owner);
     await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
-    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 2, removed: 0 });
+    expect(await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 2, removed: 0 });
     const rows = await holdRows(t, owner.holdId);
     expect(rows.filter((row) => row.visited !== undefined).map((row) => [row.page, row.visits])).toEqual([["/ai-agency/", 120], ["/journal/", 4]]);
   });
@@ -498,7 +530,7 @@ describe("when Google Analytics is collected, stopped or switched", () => {
     const asAdmin = t.withIdentity({ subject: admin });
     // Rebuilt, then a minute on: what changes next is after the rebuild began. The clock moves; nothing scheduled runs.
     const rebuilt = async () => {
-      await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+      await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: owner.holdId });
       vi.setSystemTime(Date.now() + 60_000);
     };
 
@@ -529,7 +561,7 @@ describe("only the company's own", () => {
     const ronin = await ronins(t);
     const other = await company(t, "Other", ronin.websiteId);
     await console90(t, other, [[www("/ai-agency/"), 7]]);
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: other.holdId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: other.holdId });
 
     const mine = await list(ronin.member, ronin.holdId);
     const theirs = await list(other.member, other.holdId);
@@ -550,7 +582,7 @@ describe("only the company's own", () => {
       const websiteId = await ctx.db.insert("websites", { host: "rival.example", displayHost: "rival.example", firstSeenAt: Date.now() });
       return await ctx.db.insert("companyWebsites", { companyId: ronin.companyId, websiteId, relationship: "TRACKED", againstWebsiteId: ronin.websiteId, createdAt: Date.now() });
     });
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId: rivalId });
+    await t.action(internal.holdPagesSteps.rebuildHoldPages, { holdId: rivalId });
 
     const read = await list(ronin.member, rivalId);
     expect(read).toMatchObject({ own: false, summary: null, rows: [], total: 0 });
@@ -569,7 +601,7 @@ describe("only the company's own", () => {
     await t.mutation(internal.holdPages.requestWebsiteRebuilds, { websiteId: ronin.websiteId });
 
     const asked = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
-      .filter((job) => job.name === "holdPages:rebuildHoldPages").map((job) => (job.args[0] as { holdId: string }).holdId));
+      .filter((job) => job.name === "holdPagesSteps:rebuildHoldPages").map((job) => (job.args[0] as { holdId: string }).holdId));
     expect(asked.sort()).toEqual([ronin.holdId, other.holdId].sort());
   });
 
@@ -620,12 +652,24 @@ describe("a website Google shows many pages of", () => {
       }
       return holdId;
     });
-    const first = await t.query(internal.holdPages.consolePages, { holdId, host: "acme-shop.test", start: 0 });
-    expect(first.pages).toHaveLength(4_000);
-    expect(first.next).toBe(4_000);
-    const second = await t.query(internal.holdPages.consolePages, { holdId, host: "acme-shop.test", start: first.next! });
-    expect(second.pages).toHaveLength(500);
+    // Two parts a read, of one build (collection-reliability-plan.md, RR3): never the whole period at once.
+    const first = await t.query(internal.holdPages.consolePagesPart, { holdId, start: 0 });
+    if (!first || "moved" in first) throw new Error("expected the first parts");
+    expect(first.rows).toHaveLength(4_000);
+    expect(first.next).toBe(2);
+    const second = await t.query(internal.holdPages.consolePagesPart, { holdId, builtAt: first.builtAt, start: first.next! });
+    if (!second || "moved" in second) throw new Error("expected the last part");
+    expect(second.rows).toHaveLength(500);
     expect(second.next).toBeNull();
-    expect(new Set([...first.pages, ...second.pages].map((page) => page.key)).size).toBe(4_500);
+    expect(new Set([...first.rows, ...second.rows].map((page) => page.key)).size).toBe(4_500);
+
+    // A new build swapped in between reads is noticed, so a rebuild never joins two builds' pages.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsolePeriods", {
+        companyWebsiteId: holdId, searchType: "web", list: "page", period: "90", which: "NOW", part: 0, from: "2026-07-02", to: "2026-09-29",
+        keys: ["https://acme-shop.test/new"], clicks: [1], impressions: [10], positionSums: [30], builtAt: 2,
+      });
+    });
+    expect(await t.query(internal.holdPages.consolePagesPart, { holdId, builtAt: first.builtAt, start: 2 })).toEqual({ moved: true });
   });
 });

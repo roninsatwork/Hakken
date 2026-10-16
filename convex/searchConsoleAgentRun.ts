@@ -362,7 +362,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, watched: ObjectType
     if (!begun.go) return null;
     const finish = async (status: "SUCCESS" | "FAILED", summary: string) => {
       await finishRun(ctx, args.runId, args.workflowExecutionId, status, summary);
-      await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+      await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key, ...(booking !== undefined ? { booking } : {}) });
     };
     const handOn = async (next: SiteStep) => await ctx.runMutation(internal.collectionSteps.handOn, { ...memoryNow(),
       key, chain: "SC_RUN", runId: args.runId, args: next, place: placeOf(next), ...(booking !== undefined ? { from: booking } : {}),
@@ -385,7 +385,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, watched: ObjectType
       await ctx.runMutation(internal.collectionSteps.startChain, {
         key: fillStepKey(args.connectionId), chain: "SC_FILL", runId: args.runId, args: { run, done: [], busy: 0, asks: 0 }, place: "the 16 months, from the start",
       });
-      await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+      await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key, ...(booking !== undefined ? { booking } : {}) });
     };
     let to = args.to;
     if (begun.skip) {

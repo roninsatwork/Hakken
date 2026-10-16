@@ -15,12 +15,18 @@ test("all production storage writes stay behind the registered, bounded gateway"
     if (/\.storage\.generateUploadUrl\s*\(/.test(source)) issuers.push(file);
   }
   expect(issuers).toEqual(["uploadHttp.ts"]);
-  // The one file the server stores itself: DataForSEO's answer, from the action
-  // that bought it — never a person's upload — registered by the answer row that
-  // names it, which the sweep honours (`isAnswerFile`), and removed with it
-  // (core-data-normalisation-plan.md §6.5; Anthony, 2026-10-08: "Allow the
-  // answer files"). Nothing else may store a file but through the gateway.
-  expect(serverStores).toEqual(["seoPullAnswers.ts"]);
+  // The files the server stores itself, never a person's upload:
+  // - DataForSEO's answer, from the action that bought it, registered by the
+  //   answer row that names it, which the sweep honours (`isAnswerFile`), and
+  //   removed with it (core-data-normalisation-plan.md §6.5; Anthony,
+  //   2026-10-08: "Allow the answer files");
+  // - a Search Console long period's running sums, saved between two jobs of
+  //   one settle stage and let go by the job that carries them on, minutes
+  //   later (search-console-streamed-lists-plan.md, SL4; Anthony, 2026-10-16:
+  //   "do it", to allowing them). Younger than a day, the sweep leaves them; a
+  //   stage stalled past that loses them and begins its weeks again.
+  // Nothing else may store a file but through the gateway.
+  expect(serverStores).toEqual(["searchConsoleLongLists.ts", "seoPullAnswers.ts"]);
   for (const file of [
     "chat", "users", "settings", "knowledge", "widgets",
   ]) {

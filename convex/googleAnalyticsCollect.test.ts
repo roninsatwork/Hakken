@@ -12,6 +12,7 @@ import { decodePages } from "./holdPageRefs";
 import { KEPT_BACK, analyticsWindow, dueJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
 import { afterTheHour, jobKey, startGap, startingAt } from "./googleAnalyticsAgentRun";
 import { googleDay, quotaStillSeen } from "./googleAnalyticsBudget";
+import { days } from "./searchConsoleAgentRun";
 import { shiftDay } from "./searchConsoleDays";
 import { NEWEST, PROPERTY, dayOf, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
 import { FUNNEL_ACTIONS, actionsFrom } from "./googleAnalyticsActionFunnels";
@@ -298,12 +299,14 @@ describe("collecting a website's Google Analytics", () => {
     const kinds = await t.run(async (ctx) => (await ctx.db.query("insightHistory").collect()).map((record) => record.kind));
     expect(kinds).toEqual(["GA_SOURCES"]);
 
-    // Once only: the next morning is the usual few days.
+    // Once only: the next morning's run is the usual few days, not the whole again. Its own run is planned and
+    // not carried out: what a run of those days asks of Google is the daily run's test, above, and a third whole
+    // collection here took this test past the five-second budget (2026-10-15).
     vi.setSystemTime(NOW + 2 * 24 * 60 * 60 * 1000);
-    const next = google.calls.length;
     await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId: await daily() });
-    await finishScheduled(t);
-    expect(dayRanges(next)).toEqual(Array(9).fill({ startDate: "2026-10-08", endDate: "2026-10-10" }));
+    const nextMorning = (await runsOf(t)).filter((run) => run.title === "Google Analytics: acme-shop.test").at(-1)!;
+    expect(nextMorning.objective).not.toContain("again, whole");
+    expect(nextMorning.objective).toContain(`its days ${days("2026-10-08", "2026-10-10")}, then its ready-made lists`);
   });
 
   test("a first, weekly-size run keeps inside Google's allowances: never refused, it waits for the hour and carries on", async () => {

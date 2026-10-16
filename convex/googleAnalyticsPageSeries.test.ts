@@ -8,7 +8,7 @@ import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { emptyRow } from "./googleAnalyticsLists";
-import { pointKey, reshaped } from "./googleAnalyticsPageSeries";
+import { pointKey, reshaped, writeBatches } from "./googleAnalyticsPageSeries";
 
 /**
  * Each page over time (docs/plans/active/ga-stored-figures-plan.md SF5): a
@@ -51,6 +51,17 @@ describe("a page's points reshaped to the rule", () => {
       "w:2026-06-29": 5,
       "m:2025-09-01": 4,
     });
+  });
+});
+
+describe("each page's records written in fixed-size writes (collection-reliability-plan.md, RR3)", () => {
+  test("never more than the most records a write, nor past the characters a write, and one record too big still goes alone", () => {
+    const record = (size: number) => ({ part: { keys: "x".repeat(size) } });
+    expect(writeBatches(Array.from({ length: 250 }, () => record(10)), 100, 1_000_000).map((batch) => batch.length)).toEqual([100, 100, 50]);
+    // A big shop's records, each with every event it counts: cut by size before the count.
+    expect(writeBatches(Array.from({ length: 10 }, () => record(300)), 100, 1_000).map((batch) => batch.length)).toEqual([3, 3, 3, 1]);
+    expect(writeBatches([record(5_000), record(10)], 100, 1_000).map((batch) => batch.length)).toEqual([1, 1]);
+    expect(writeBatches([], 100, 1_000)).toEqual([]);
   });
 });
 

@@ -361,7 +361,7 @@ export function fillStops(ctx: ActionCtx, again: (atMs: number) => Promise<unkno
   const started = Date.now();
   let pieces = 0;
   const ended = async (result: FillOutcome): Promise<FillOutcome> => {
-    if (watched) await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key: watched.key });
+    if (watched) await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key: watched.key, ...(watched.booking !== undefined ? { booking: watched.booking } : {}) });
     return result;
   };
   return {
@@ -408,7 +408,7 @@ export async function beginFillStep(
   const nothing = { pieces: 0, rows: 0, requests: 0 };
   if (!begun.go) return { go: false, outcome: { ok: false, ...nothing, problem: "Carried on by a newer step." } };
   if (args.closeOnly || begun.skip) {
-    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key, ...(args.booking !== undefined ? { booking: args.booking } : {}) });
     return { go: false, outcome: { ok: false, ...nothing, problem: "The platform kept stopping this fill, so it stopped for tonight; the next night carries on from where it got." } };
   }
   const again = async (atMs: number) => await ctx.runMutation(internal.collectionSteps.handOn, { ...memoryNow(),
@@ -430,7 +430,7 @@ export async function fillHistoryStep(ctx: ActionCtx, args: FillHistoryArgs): Pr
   const begun = await beginFillStep(ctx, "GA_FILL_DAYS", args);
   if (!begun.go) return begun.outcome;
   const close = async (outcome: FillOutcome) => {
-    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key: begun.watched.key });
+    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key: begun.watched.key, ...(begun.watched.booking !== undefined ? { booking: begun.watched.booking } : {}) });
     return outcome;
   };
   const found = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });

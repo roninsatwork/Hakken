@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { decodePages, isPageRef, PAGE_RECORD } from "./holdPageRefs";
+import { decodePages, holdSince, isPageRef, PAGE_RECORD } from "./holdPageRefs";
 
 /**
  * Each page address kept once per website, the kept lists pointing to it
@@ -89,6 +89,26 @@ describe("a website's page list, 250 addresses a record", () => {
   });
   const records = (t: ReturnType<typeof harness>) => t.run(async (ctx) => (await ctx.db.query("holdPageAddresses").collect())
     .sort((left, right) => left.record - right.record).map((one) => [one.record, one.addresses.length]));
+
+  test("a run numbering 14,000 new pages never hands back more than a function's answer may hold (8,192)", async () => {
+    // The rehearsal at ten times kordatackle.com (collection-reliability-plan.md, RR3): its first day's pages, a thousand a
+    // call, as `encodePagesFromAction` places them, its list read on after each.
+    const t = harness();
+    const holdId = await holdOf(t);
+    const list = { addresses: [] as string[], numbers: new Map<string, number>(), readTo: 0 };
+    const pages = Array.from({ length: 14_000 }, (_, at) => `https://acme-shop.test/p/${at}`);
+    for (let start = 0; start < pages.length; start += 1_000) {
+      const placed = await t.mutation(internal.holdPageRefs.placePages, { holdId, from: list.readTo, pages: pages.slice(start, start + 1_000) });
+      expect(placed).not.toBeNull();
+      expect(placed!.since.length).toBeLessThanOrEqual(1_000);
+      expect(placed!.numbers).toEqual(Array.from({ length: Math.min(1_000, pages.length - start) }, (_, at) => start + at));
+      holdSince(list, placed!.since);
+      expect(list.readTo).toBe(Math.min(pages.length, start + 1_000));
+    }
+    // A list grown by more than one answer can read back since it was read is read again whole, never answered oversize.
+    expect(await t.mutation(internal.holdPageRefs.placePages, { holdId, from: 0, pages: ["https://acme-shop.test/new"] })).toBeNull();
+    expect(list.numbers.get("https://acme-shop.test/p/13999")).toBe(13_999);
+  });
 
   test("new pages go on the end, filling the last record first; a number once given never moves", async () => {
     const t = harness();

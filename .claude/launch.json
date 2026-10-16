@@ -15,6 +15,21 @@
       "autoPort": true
     },
     {
+      "//": "The real app on 3001, for when 3000 is wanted for something else.",
+      "name": "next-dev-3001",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PATH=/Users/ants/.local/nodejs/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
+    },
+    {
       "name": "next-dev-test-auth",
       "runtimeExecutable": "env",
       "runtimeArgs": [

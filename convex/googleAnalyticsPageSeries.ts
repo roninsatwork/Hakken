@@ -28,8 +28,14 @@ type Reader = { db: QueryCtx["db"] };
 export type SeriesList = "landing" | "page";
 const SERIES_LISTS: readonly SeriesList[] = ["landing", "page"];
 
-/** Records written by one call. */
+/** Records written by one call, at most. */
 const RECORDS_PER_WRITE = 100;
+/**
+ * Packed figures written by one call, at most, in characters (collection-reliability-plan.md, RR3): a page's
+ * record holds every event a website counts, for each point, so a record's size grows with the website's
+ * events, and 100 of a big shop's were several megabytes a call — read once and written once.
+ */
+const CHARACTERS_PER_WRITE = 1_000_000;
 /** Records cleared by one call of the sweep. */
 const SWEPT_PER_CALL = 200;
 
@@ -150,14 +156,28 @@ async function askPages(ctx: ActionCtx, session: Session, target: CollectTarget,
 }
 
 async function writeRecords(ctx: ActionCtx, target: CollectTarget, connectionId: Doc<"googleAnalyticsConnections">["_id"], newest: string, records: ReadonlyArray<{ list: SeriesList; page: string; device: string; rows: ListRow[] }>) {
-  for (let first = 0; first < records.length; first += RECORDS_PER_WRITE) {
-    await ctx.runMutation(internal.googleAnalyticsPageSeries.writePageSeries, {
-      connectionId,
-      property: target.property!,
-      newest,
-      records: records.slice(first, first + RECORDS_PER_WRITE).map((record) => ({ list: record.list, page: record.page, device: record.device, part: packList("series", record.rows, target.events)[0] })),
-    });
+  for (const batch of writeBatches(records.map((record) => ({ list: record.list, page: record.page, device: record.device, part: packList("series", record.rows, target.events)[0] })))) {
+    await ctx.runMutation(internal.googleAnalyticsPageSeries.writePageSeries, { connectionId, property: target.property!, newest, records: batch });
   }
+}
+
+/** Records in writes of a fixed size (RR3): at most `RECORDS_PER_WRITE` records, and `CHARACTERS_PER_WRITE` of packed figures. */
+export function writeBatches<Record extends { part: object }>(records: readonly Record[], most = RECORDS_PER_WRITE, characters = CHARACTERS_PER_WRITE): Record[][] {
+  const batches: Record[][] = [];
+  let batch: Record[] = [];
+  let size = 0;
+  for (const record of records) {
+    const length = JSON.stringify(record.part).length;
+    if (batch.length > 0 && (batch.length >= most || size + length > characters)) {
+      batches.push(batch);
+      batch = [];
+      size = 0;
+    }
+    batch.push(record);
+    size += length;
+  }
+  if (batch.length > 0) batches.push(batch);
+  return batches;
 }
 
 /**
@@ -264,7 +284,7 @@ export async function fillPageHistoryStep(ctx: ActionCtx, args: FillArgs): Promi
   const begun = await beginFillStep(ctx, "GA_FILL_PAGES", args);
   if (!begun.go) return begun.outcome;
   const close = async (outcome: FillOutcome) => {
-    await ctx.runMutation(internal.collectionSteps.closeChain, { key: begun.watched.key });
+    await ctx.runMutation(internal.collectionSteps.closeChain, { key: begun.watched.key, ...(begun.watched.booking !== undefined ? { booking: begun.watched.booking } : {}) });
     return outcome;
   };
   const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId });

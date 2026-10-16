@@ -129,7 +129,7 @@ describe("reading a website's sitemap", () => {
     ]);
     expect(pages.every((row) => row.readAt === reading?.readAt)).toBe(true);
     // The company's Your pages is asked for, from the new reading.
-    expect(scheduled).toContainEqual({ name: "holdPages:rebuildHoldPages", args: { holdId } });
+    expect(scheduled).toContainEqual({ name: "holdPagesSteps:rebuildHoldPages", args: { holdId } });
   });
 
   test("another website is never reached — not through robots.txt, not through a redirect — nor a host inside a private network", async () => {

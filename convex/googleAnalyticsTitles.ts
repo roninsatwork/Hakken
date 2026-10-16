@@ -6,6 +6,7 @@ import { encodePagesFromAction } from "./holdPageRefs";
 import { shiftDay } from "./searchConsoleDays";
 import { ask, type CollectTarget, type Session } from "./googleAnalyticsCollect";
 import { pageAddress } from "./googleAnalyticsLists";
+import { OTHER_ROWS } from "./utils/analyticsSharedLists";
 
 /**
  * Each page's title (docs/plans/active/google-analytics-plan.md GA27,
@@ -51,7 +52,7 @@ export async function collectTitles(
     const [path, title] = row.keys;
     const address = pageAddress(target.origin, path ?? "");
     const clean = (title ?? "").trim().slice(0, MOST_TITLE);
-    if (address === NO_TITLE || !clean || clean === NO_TITLE) continue;
+    if (address === NO_TITLE || address === OTHER_ROWS || !clean || clean === NO_TITLE) continue;
     const views = row.values[0] ?? 0;
     const held = best.get(address);
     if (!held || views > held.views) best.set(address, { title: clean, views });

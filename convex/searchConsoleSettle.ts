@@ -13,7 +13,7 @@ import { stageName } from "./searchConsoleSettling";
 import { dropOldLinesOf } from "./searchConsoleRollups";
 import { buildSitePeriods } from "./searchConsolePeriods";
 import { RanLong } from "./utils/searchConsolePacks";
-import { MOST_PAIRS_HELD } from "./searchConsoleLongLists";
+import { MOST_PAIRS_HELD, PairsPaused, type PairsCarry } from "./searchConsoleLongLists";
 
 /**
  * A website's settle: its ready-made periods and the charts' weeks added up
@@ -50,7 +50,11 @@ async function dropOldLinesAll(ctx: ActionCtx, connectionId: Id<"searchConsoleCo
  * Each job has its own budget (`STAGE_BUDGET_MS`). One that still runs past it
  * stops itself between pieces, saying so (`RanLong`), so the run always ends.
  * The periods it didn't reach keep what was built before, and are added up
- * when a screen opens them or the next week.
+ * when a screen opens them or the next week. A long period's pairs asked of
+ * Google pause a little before the budget runs out instead, their running
+ * sums saved, and a job of the same stage carries on from that week
+ * (`PairsPaused`; search-console-streamed-lists-plan.md, SL4): at ten times
+ * kordatackle.com the twelve months outlast one job (2026-10-16).
  */
 
 /** A chain job's own time, well inside the ten minutes Convex gives an action. */
@@ -74,6 +78,8 @@ export const settlePart = internalAction({
     onlyLong: v.optional(v.boolean()),
     /** The chain's job this is, and what the jobs before it wrote and whether the long periods were due (missing: its first). */
     stage: v.optional(stageValidator),
+    /** Where the job before paused this stage's pairs, their sums saved: carried on from there (SL4). */
+    carry: v.optional(v.object({ at: v.number(), of: v.number(), saved: v.id("_storage"), pruned: v.boolean() })),
     writtenBefore: v.optional(v.number()),
     weeklyBefore: v.optional(v.boolean()),
     /** When this job must stop by; missing, its budget from now. A test sets it to see a job stop itself. */
@@ -95,24 +101,33 @@ export const settlePart = internalAction({
     let weekly = args.weeklyBefore ?? false;
     let failed: string | undefined;
     let next: Stage | undefined;
+    let stage: Stage | undefined;
+    let paused: PairsCarry | undefined;
     // Counted already — started again by its watch in the settle's ending: straight to the ending (RR1).
     const counted = await ctx.runQuery(internal.searchConsoleSettling.partCounted, { connectionId: args.connectionId, token: args.token, part: key });
-    if (!counted && args.closeOnly) failed = `${name}: the platform kept stopping this job, so what it didn't reach keeps what was built before, and is added up when a screen opens it.`;
+    if (!counted && args.closeOnly) {
+      failed = `${name}: the platform kept stopping this job, so what it didn't reach keeps what was built before, and is added up when a screen opens it.`;
+      await letGo(ctx, args.carry);
+    }
     if (!counted && !args.closeOnly) {
       try {
         if (args.stage === undefined) weekly = args.long ?? await ctx.runQuery(internal.searchConsoleSettling.longPeriodsDue, { holdId: args.holdId, ...scope, searchType: args.searchType });
         const stages: Stage[] = args.onlyLong ? ["NINETY", "YEAR"] : weekly ? ["SHORT", "NINETY", "YEAR"] : ["SHORT"];
-        const stage = args.stage ?? stages[0];
+        stage = args.stage ?? stages[0];
         next = stages[stages.indexOf(stage) + 1];
         if (begun.skip) {
           // Stopped by the platform three times at this stage: left out, saying so, and the chain goes on (RR1).
           failed = `${name}: ${stageName(part, stage)} was stopped by the platform three times, so it keeps what was built before.`;
+          await letGo(ctx, args.carry);
+          // Said now when a stage follows: only the chain's last job hands its words to the settle's end.
+          const { runId } = await runOf(ctx, args.connectionId, args.token);
+          if (next !== undefined && runId) await ctx.runMutation(internal.roleRuns.logRunLine, { runId, heading: "Left out", detail: failed, failed: true });
         } else {
           const stopAt = args.stopAt ?? Date.now() + STAGE_BUDGET_MS;
           const held = { pruned: false };
           written += await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, stage === "SHORT"
             ? { searchType: args.searchType, long: false, stopAt, careful: begun.careful, held }
-            : { searchType: args.searchType, long: true, onlyLong: true, longPeriod: stage === "NINETY" ? "90" : "365", stopAt, careful: begun.careful, held });
+            : { searchType: args.searchType, long: true, onlyLong: true, longPeriod: stage === "NINETY" ? "90" : "365", stopAt, careful: begun.careful, held, ...(args.carry ? { carry: args.carry } : {}) });
           // A period's pairs past what one job may hold: never in silence (RR2).
           const { runId } = await runOf(ctx, args.connectionId, args.token);
           if (held.pruned && runId) {
@@ -125,19 +140,26 @@ export const settlePart = internalAction({
           }
         }
       } catch (error: unknown) {
-        next = undefined;
-        failed = error instanceof RanLong
-          ? `${name}: ${error.message}; what it didn't reach keeps what was built before, and is added up when a screen opens it.`
-          : `${name}: ${failureSummary(error)}`;
+        // The stage's pairs paused near the end of the job's time: the same stage again, carried on from where they stood.
+        if (error instanceof PairsPaused) {
+          paused = error.carry;
+          next = stage;
+        } else {
+          next = undefined;
+          failed = error instanceof RanLong
+            ? `${name}: ${error.message}; what it didn't reach keeps what was built before, and is added up when a screen opens it.`
+            : `${name}: ${failureSummary(error)}`;
+          await letGo(ctx, args.carry);
+        }
       }
       // The next job of the chain, handed what this one wrote: the settle counts a kind once, at the chain's end.
       if (next !== undefined) {
-        const { stopAt: _stopAt, booking: _booking, ...rest } = args;
+        const { stopAt: _stopAt, booking: _booking, carry: _carry, ...rest } = args;
         await ctx.runMutation(internal.collectionSteps.handOn, { ...memoryNow(),
           key,
           chain: "SC_SETTLE",
-          args: { ...rest, stage: next, writtenBefore: written, weeklyBefore: weekly },
-          place: stageName(part, next),
+          args: { ...rest, stage: next, writtenBefore: written, weeklyBefore: weekly, ...(paused ? { carry: paused } : {}) },
+          place: paused ? `${stageName(part, next)}, from week ${paused.at + 1} of ${paused.of}` : stageName(part, next),
           ...(args.booking !== undefined ? { from: args.booking } : {}),
           ...(await runOf(ctx, args.connectionId, args.token)),
         });
@@ -154,10 +176,20 @@ export const settlePart = internalAction({
       await ctx.runMutation(internal.holdPages.requestRebuild, { holdId: args.holdId });
       await ctx.runMutation(internal.searchConsoleSettling.settleEnded, { connectionId: args.connectionId, token: args.token, newest: args.newest });
     }
-    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key });
+    await ctx.runMutation(internal.collectionSteps.closeChain, { ...memoryNow(), key, ...(args.booking !== undefined ? { booking: args.booking } : {}) });
     return null;
   },
 });
+
+/** Pairs a paused stage saved, let go when its chain ends without carrying them on (SL4). */
+async function letGo(ctx: ActionCtx, carry: PairsCarry | undefined) {
+  if (!carry) return;
+  try {
+    await ctx.storage.delete(carry.saved);
+  } catch {
+    // Let go already, by the job that carried them on.
+  }
+}
 
 /** The run a settle carries, for its jobs' chains: their lines and their liveness are the run's. */
 async function runOf(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">, token: number): Promise<{ runId?: Id<"agentRuns"> }> {

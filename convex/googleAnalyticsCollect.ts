@@ -825,14 +825,15 @@ export async function writeList(
   target: CollectTarget,
   list: AnalyticsList,
   key: string,
-  rows: readonly ListRow[],
+  /** Its rows, or its parts packed already: a big website's page list gathered a group of pages at a time (`CompactRows`). */
+  rows: readonly ListRow[] | { parts: PackedPart[] },
   range: { from: string; to: string },
   flags: { folded: boolean; thresholded: boolean; cut: boolean },
   held: { slot: number; hash: string; from: string; to: string } | undefined,
   /** The events given columns: the key events unless the list asked others. */
   events: readonly string[] = target.events,
 ): Promise<boolean> {
-  const parts = packList(list, rows, events);
+  const parts = "parts" in rows ? rows.parts : packList(list, rows, events);
   const hash = await fingerprint(parts);
   if (held && held.hash === hash && held.from === range.from && held.to === range.to) return true;
   const slot = held ? 1 - held.slot : 0;

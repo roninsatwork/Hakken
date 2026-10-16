@@ -1,7 +1,11 @@
 import type { ActionCtx } from "./_generated/server";
 import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
 import { channelKey, pageAddress, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { OTHER_ROWS } from "./utils/analyticsSharedLists";
 import type { CollectTarget } from "./googleAnalyticsCollect";
+
+/** No page of the website: Google's "(not set)", and a page's other rows added into one (`OTHER_ROWS`), kept as they are. */
+const notPage = (address: string) => address === "(not set)" || address === OTHER_ROWS;
 
 /**
  * A page list's addresses as the website's page numbers (`holdPageRefs.ts`),
@@ -22,21 +26,21 @@ export async function numberPages(
   const landing = list !== "page";
   const addressOf = (path: string) => {
     const address = pageAddress(target.origin, path);
-    if (!landing || address === "(not set)" || address.endsWith("/") || known.has(address)) return address;
+    if (!landing || notPage(address) || address.endsWith("/") || known.has(address)) return address;
     return known.has(`${address}/`) ? `${address}/` : address;
   };
   // A landing page by channel keeps its channel beside the page's number (Insights, §8).
   const keyed = keyedRows;
   const parts = rows.map((row) => (keyed ? splitChannelKey(row.key) : { channel: "", source: "" }));
   const addresses = rows.map((row, index) => addressOf(keyed ? parts[index].channel : row.key));
-  const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => address !== "(not set)"));
+  const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => !notPage(address)));
   const refs = new Map<string, string>();
   let at = 0;
-  for (const address of addresses) if (address !== "(not set)") refs.set(address, numbered[at++]);
+  for (const address of addresses) if (!notPage(address)) refs.set(address, numbered[at++]);
   // Two paths that are one address once cleaned are one row.
   const merged = new Map<string, ListRow>();
   rows.forEach((row, index) => {
-    const page = refs.get(addresses[index]) ?? "(not set)";
+    const page = refs.get(addresses[index]) ?? (addresses[index] === OTHER_ROWS ? OTHER_ROWS : "(not set)");
     const key = keyed ? channelKey(page, parts[index].source) : page;
     const held = merged.get(key);
     if (!held) {

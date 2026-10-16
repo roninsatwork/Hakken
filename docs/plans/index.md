@@ -8,9 +8,18 @@ completed work.
 ## Active Plans
 
 - [Google Analytics and Search Console — a run that always finishes](./active/collection-reliability-plan.md)
-  — being built, paused 2026-10-15 at its "Stopping point": five rules for both
-  collectors (a watch on every step, nothing held whole, fixed-size database
-  calls, one job at a time, a rehearsal at ten times Korda); phases 1–3 done.
+  — five rules for both collectors (a watch on every step, nothing held whole,
+  fixed-size database calls, one job at a time, a rehearsal at ten times Korda).
+  **Finished overnight 2026-10-15**; the night's real runs all succeeded. Of
+  the two gaps at ten times Korda, Analytics' page lists past about 2,400
+  pages were closed on 2026-10-16 (a big website's pages asked 2,000 at a
+  time); Search Console's web lists are the next plan.
+- [Search Console — the web lists built as a stream, on any size of website](./active/search-console-streamed-lists-plan.md)
+  — 2026-10-16: the kept days read a day at a time and added into every
+  period at once, sums held by number; nothing on screen changes. **Built on
+  local dev the same day** and proven equal on three real websites (155
+  checks, no difference); the 90 days at 10× held 119 MB, not 403. One period
+  a settle job waits on the rehearsal at 10× run again.
 - [Search Console — collect on connecting, and fill its 16 months](./active/search-console-first-collection-plan.md)
   — plan only: a website's first 90 days start the moment Search Console is
   connected, and its 16 months fill at night in paced pieces, like Analytics.
