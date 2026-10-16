@@ -3261,7 +3261,13 @@
         "showingLoaded": "Visualizzazione di {count} agent",
         "loadMore": "Carica altri agent",
         "loadingMore": "Caricamento agent...",
-        "working": "Al lavoro"
+        "working": "Al lavoro",
+        "whatItDoes": "Che cosa fa",
+        "runs": "Quando lavora",
+        "platformDefault": "Predefinito della piattaforma",
+        "allAgents": "Tutti gli agenti",
+        "showing": "Da {start} a {end} di {total}",
+        "noneMatch": "Nessun agente corrisponde a queste scelte."
       },
       "modal": {
         "initTitle": "Crea un agente",
@@ -4549,6 +4555,57 @@
           "summary": "Il {share}% di questo lavoro è stato speso su un solo passaggio: {step}.",
           "summaryFailed": "Il {share}% di questo lavoro è stato speso su un passaggio poi non riuscito: {step}."
         }
+      },
+      "filters": {
+        "label": "Scegli quali agenti",
+        "what": "Che cosa fa",
+        "when": "Quando lavora",
+        "status": "Stato",
+        "kept": "Le tue scelte restano nell'indirizzo della pagina, così un link apre lo stesso elenco."
+      },
+      "what": {
+        "all": "Tutti gli agenti",
+        "collect": "Raccolta dati",
+        "insights": "Squadra Insights",
+        "tasks": "Attività e avvisi",
+        "assist": "Assistente e ricerca",
+        "write": "Scrittura e invio",
+        "wiki": "Staff del wiki",
+        "platform": "Piattaforma",
+        "own": "I tuoi agenti"
+      },
+      "when": {
+        "all": "In qualsiasi momento",
+        "schedule": "Secondo una programmazione",
+        "team": "Nel lavoro della squadra Insights",
+        "event": "Quando succede qualcosa",
+        "asked": "Quando qualcuno lo chiede",
+        "never": "Mai da solo"
+      },
+      "statusFilter": {
+        "all": "Qualsiasi stato",
+        "active": "Attivo",
+        "working": "Al lavoro ora",
+        "draft": "Bozza"
+      },
+      "runs": {
+        "team": "Nel lavoro della squadra Insights",
+        "saved": "Quando qualcosa viene salvato",
+        "imported": "Quando un documento viene importato",
+        "answered": "Quando si risponde a una domanda",
+        "sensitive": "Quando si aggiunge qualcosa di riservato",
+        "collected": "Dopo ogni raccolta",
+        "asked": "Quando qualcuno lo chiede",
+        "yes": "Quando qualcuno dice sì",
+        "lookUp": "Quando qualcuno preme Cerca",
+        "never": "Non lavora da solo",
+        "noSchedule": "Nessuna programmazione",
+        "paused": "{schedule}, in pausa",
+        "everyMinutes": "Ogni {minutes} minuti",
+        "everyHour": "Ogni ora",
+        "everyHours": "Ogni {hours} ore",
+        "daily": "Ogni giorno, {time} UTC",
+        "monthly": "Ogni mese, il giorno {day}, {time} UTC"
       }
     },
     "settings": {
@@ -10092,7 +10149,8 @@
       "storiesSoFar": "{count, plural, other {#+ storie}}",
       "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
       "companies": "{count, plural, =1 {# azienda} other {# aziende}}",
-      "peopleRead": "{count, plural, =1 {# persona ha letto} other {# persone hanno letto}}"
+      "peopleRead": "{count, plural, =1 {# persona ha letto} other {# persone hanno letto}}",
+      "agents": "{count, plural, =1 {# agente} other {# agenti}}"
     },
     "chart": {
       "download": "Scarica",

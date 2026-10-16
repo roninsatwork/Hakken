@@ -10,6 +10,11 @@ import { v } from "convex/values";
 import { requireOwnedUpload } from "./uploadReservations";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery } from "./_generated/server";
+import type { DataModel } from "./_generated/dataModel";
+import type { Expression, FilterBuilder, NamedTableInfo } from "convex/server";
+import { AGENT_RUN_KINDS, AGENT_WORK, AGENT_WORK_KINDS, agentWorkOf, type AgentRunKind, type AgentWork, type AgentWorkKind } from "./utils/agentWork";
+import { liveAgentRuns } from "./agentRuns";
+import { startsRuns } from "./seoScheduleService";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
@@ -780,28 +785,136 @@ export const getInheritedAgentModels = superAdminQuery({
   },
 });
 
+/**
+ * The Agents screen's filters (agents-and-clarity-plan.md, Part 5, AG1): what
+ * an agent does and when it runs, read from its role (`utils/agentWork.ts`),
+ * and its status now. Applied on the server, so the list still pages there.
+ */
+const agentInventoryFilters = {
+  what: v.optional(v.union(...AGENT_WORK_KINDS.map((kind) => v.literal(kind)))),
+  when: v.optional(v.union(...AGENT_RUN_KINDS.map((kind) => v.literal(kind)))),
+  status: v.optional(v.union(v.literal("working"), v.literal("active"), v.literal("draft"))),
+};
+type AgentInventoryFilters = { what?: AgentWorkKind; when?: AgentRunKind; status?: "working" | "active" | "draft" };
+
+/** What the filters need beyond an agent's own fields: the agents with a row on the Schedules page, and those at work now. */
+async function agentInventoryFacts(ctx: QueryCtx): Promise<{ scheduled: Set<Id<"agents">>; working: Set<Id<"agents">> }> {
+  const schedules = await ctx.db.query("schedules").withIndex("by_createdAt").filter(startsRuns).take(AGENT_CATALOG_LIMIT);
+  const runs = await liveAgentRuns(ctx);
+  return {
+    scheduled: new Set(schedules.flatMap((schedule) => (schedule.agentId ? [schedule.agentId] : []))),
+    working: new Set(runs.map((run) => run.agentId)),
+  };
+}
+
+type AgentFilterBuilder = FilterBuilder<NamedTableInfo<DataModel, "agents">>;
+
+/** The filters as one expression over an agent's fields, so Convex narrows the list before it pages it. */
+function agentInventoryExpression(q: AgentFilterBuilder, filters: AgentInventoryFilters, facts: { scheduled: Set<Id<"agents">>; working: Set<Id<"agents">> }): Expression<boolean> {
+  const never = q.and(q.eq(q.field("isActive"), true), q.eq(q.field("isActive"), false));
+  const anyOf = (parts: Array<Expression<boolean>>) => (parts.length === 0 ? never : parts.length === 1 ? parts[0] : q.or(...parts));
+  const allOf = (parts: Array<Expression<boolean>>) => (parts.length === 1 ? parts[0] : q.and(...parts));
+  const keysWhere = (pick: (work: AgentWork) => boolean) => Object.entries(AGENT_WORK).filter(([, work]) => pick(work)).map(([key]) => key);
+  const holds = (keys: string[]) => anyOf(keys.map((key) => q.eq(q.field("systemKey"), key)));
+  const own = q.eq(q.field("systemKey"), undefined);
+  // A role the map does not know yet: the platform's, run when asked (`agentWorkOf`).
+  const unknownRole = q.and(q.neq(q.field("systemKey"), undefined), ...Object.keys(AGENT_WORK).map((key) => q.neq(q.field("systemKey"), key)));
+  const among = (ids: Set<Id<"agents">>) => anyOf([...ids].map((id) => q.eq(q.field("_id"), id)));
+  const notAmong = (ids: Set<Id<"agents">>) => (ids.size === 0 ? own : q.and(...[...ids].map((id) => q.neq(q.field("_id"), id))));
+  const parts: Array<Expression<boolean>> = [q.neq(q.field("isGlobal"), false)];
+  if (filters.what) {
+    const what = filters.what;
+    parts.push(what === "own" ? own : what === "platform" ? anyOf([holds(keysWhere((work) => work.what === "platform")), unknownRole]) : holds(keysWhere((work) => work.what === what)));
+  }
+  if (filters.when) {
+    const when = filters.when;
+    const ways = [holds(keysWhere((work) => work.when === when))];
+    if (when === "schedule") ways.push(q.and(own, among(facts.scheduled)));
+    if (when === "asked") ways.push(unknownRole, q.and(own, notAmong(facts.scheduled)));
+    parts.push(anyOf(ways));
+  }
+  if (filters.status === "working") parts.push(among(facts.working));
+  if (filters.status === "active") parts.push(q.eq(q.field("isActive"), true));
+  if (filters.status === "draft") parts.push(q.eq(q.field("isActive"), false));
+  return allOf(parts);
+}
+
 export const getPaginatedAgents = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
+    ...agentInventoryFilters,
   },
   returns: agentShapes.agentPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
+    const facts = await agentInventoryFacts(ctx);
+    const narrow = (q: AgentFilterBuilder) => agentInventoryExpression(q, args, facts);
     const result = searchTerm
       ? await ctx.db
         .query("agents")
         .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .filter(narrow)
         .paginate(args.paginationOpts)
       : await ctx.db
         .query("agents")
         .withIndex("by_workflow_created", (q) => q.eq("workflowId", undefined))
         .order("desc")
+        .filter(narrow)
         .paginate(args.paginationOpts);
 
     return {
       ...result,
       page: result.page.filter(isGlobalAgent),
+    };
+  },
+});
+
+/**
+ * The Agents screen's counts (AG1): how many agents each choice would list,
+ * each group counting what the other groups' choices leave, and the exact
+ * total for the footer — never "1–15 of 15" beside "Page 1 of 2". The
+ * platform's agents are a few dozen: read once, up to the catalogue's limit,
+ * and `capped` says when that limit was reached, so a count never pretends.
+ */
+export const getAgentFilterCounts = superAdminQuery({
+  args: { searchTerm: v.optional(v.string()), ...agentInventoryFilters },
+  returns: v.object({
+    total: v.number(),
+    capped: v.boolean(),
+    what: v.record(v.string(), v.number()),
+    when: v.record(v.string(), v.number()),
+    status: v.record(v.string(), v.number()),
+  }),
+  handler: async (ctx, args) => {
+    const searchTerm = args.searchTerm?.trim();
+    const read = searchTerm
+      ? await ctx.db.query("agents").withSearchIndex("search_name", (q) => q.search("name", searchTerm)).take(AGENT_CATALOG_LIMIT)
+      : await ctx.db.query("agents").withIndex("by_workflow_created", (q) => q.eq("workflowId", undefined)).take(AGENT_CATALOG_LIMIT);
+    const facts = await agentInventoryFacts(ctx);
+    const rows = read.filter(isGlobalAgent).map((agent) => ({
+      work: agentWorkOf(agent.systemKey, facts.scheduled.has(agent._id)),
+      status: facts.working.has(agent._id) ? "working" : agent.isActive ? "active" : "draft",
+    }));
+    const keeps = (row: (typeof rows)[number], skip?: keyof AgentInventoryFilters) =>
+      (skip === "what" || !args.what || row.work.what === args.what)
+      && (skip === "when" || !args.when || row.work.when === args.when)
+      && (skip === "status" || !args.status || (args.status === "active" ? row.status !== "draft" : row.status === args.status));
+    const counted = (skip: keyof AgentInventoryFilters, of: (row: (typeof rows)[number]) => string[]) => {
+      const counts: Record<string, number> = { all: 0 };
+      for (const row of rows.filter((entry) => keeps(entry, skip))) {
+        counts.all += 1;
+        for (const value of of(row)) counts[value] = (counts[value] ?? 0) + 1;
+      }
+      return counts;
+    };
+    return {
+      total: rows.filter((row) => keeps(row)).length,
+      capped: read.length >= AGENT_CATALOG_LIMIT,
+      what: counted("what", (row) => [row.work.what]),
+      when: counted("when", (row) => [row.work.when]),
+      // A working agent is an active one too.
+      status: counted("status", (row) => (row.status === "working" ? ["working", "active"] : [row.status])),
     };
   },
 });

@@ -52,7 +52,9 @@ export type TableNoun =
   // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.
   | "stories" | "storiesSoFar"
   // Admin → Content → Analytics (content-people-knowledge-plan.md, boards 8, 9, 11, 12).
-  | "articlesAndStories" | "companies" | "peopleRead";
+  | "articlesAndStories" | "companies" | "peopleRead"
+  // Admin → Agents (agents-and-clarity-plan.md, AG3).
+  | "agents";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s
