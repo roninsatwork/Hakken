@@ -17,6 +17,7 @@ import type * as agentEvalGradingActions from "../agentEvalGradingActions.js";
 import type * as agentEvalGradingService from "../agentEvalGradingService.js";
 import type * as agentFailureKeyService from "../agentFailureKeyService.js";
 import type * as agentImprovementSuggestions from "../agentImprovementSuggestions.js";
+import type * as agentInventory from "../agentInventory.js";
 import type * as agentLogGroupingService from "../agentLogGroupingService.js";
 import type * as agentLogs from "../agentLogs.js";
 import type * as agentMemories from "../agentMemories.js";
@@ -939,6 +940,7 @@ declare const fullApi: ApiFromModules<{
   agentEvalGradingService: typeof agentEvalGradingService;
   agentFailureKeyService: typeof agentFailureKeyService;
   agentImprovementSuggestions: typeof agentImprovementSuggestions;
+  agentInventory: typeof agentInventory;
   agentLogGroupingService: typeof agentLogGroupingService;
   agentLogs: typeof agentLogs;
   agentMemories: typeof agentMemories;

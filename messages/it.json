@@ -4591,7 +4591,7 @@
       "what": {
         "all": "Tutti gli agenti",
         "collect": "Raccolta dati",
-        "insights": "Squadra Insights",
+        "insights": "Squadra degli analisti",
         "tasks": "Attività e avvisi",
         "assist": "Assistente e ricerca",
         "write": "Scrittura e invio",
@@ -4602,7 +4602,7 @@
       "when": {
         "all": "In qualsiasi momento",
         "schedule": "Secondo una programmazione",
-        "team": "Nel lavoro della squadra Insights",
+        "team": "Nel lavoro della squadra degli analisti",
         "event": "Quando succede qualcosa",
         "asked": "Quando qualcuno lo chiede",
         "never": "Mai da solo"
@@ -4614,7 +4614,7 @@
         "draft": "Bozza"
       },
       "runs": {
-        "team": "Nel lavoro della squadra Insights",
+        "team": "Nel lavoro della squadra degli analisti",
         "saved": "Quando qualcosa viene salvato",
         "imported": "Quando un documento viene importato",
         "answered": "Quando si risponde a una domanda",

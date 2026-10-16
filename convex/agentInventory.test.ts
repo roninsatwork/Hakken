@@ -52,13 +52,13 @@ describe("the Agents screen's list and counts", () => {
     expect(await names({ status: "draft" })).toEqual(["Old draft"]);
     expect(await names({ what: "own", when: "schedule" })).toEqual(["Nightly report"]);
 
-    const counts = await asRoot.query(api.agents.getAgentFilterCounts, { what: "own" });
+    const counts = await asRoot.query(api.agentInventory.getAgentFilterCounts, { what: "own" });
     expect(counts).toMatchObject({ total: 3, capped: false });
     // What it does counts every kind; When it runs and Status count within the agents a person made.
     expect(counts.what).toMatchObject({ all: 7, collect: 1, insights: 1, tasks: 1, platform: 1, own: 3 });
     expect(counts.when).toMatchObject({ all: 3, schedule: 1, asked: 2 });
     expect(counts.status).toMatchObject({ all: 3, active: 2, draft: 1 });
-    const all = await asRoot.query(api.agents.getAgentFilterCounts, {});
+    const all = await asRoot.query(api.agentInventory.getAgentFilterCounts, {});
     expect(all.status).toMatchObject({ all: 7, active: 6, working: 1, draft: 1 });
   });
 });

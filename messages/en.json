@@ -4591,7 +4591,7 @@
       "what": {
         "all": "All agents",
         "collect": "Collecting data",
-        "insights": "Insights team",
+        "insights": "Analyst team",
         "tasks": "Tasks and alerts",
         "assist": "Assistant and research",
         "write": "Writing and sending",
@@ -4602,7 +4602,7 @@
       "when": {
         "all": "Any time",
         "schedule": "On a schedule",
-        "team": "In the Insights team's run",
+        "team": "In the analyst team's run",
         "event": "When something happens",
         "asked": "When someone asks",
         "never": "Never on its own"
@@ -4614,7 +4614,7 @@
         "draft": "Draft"
       },
       "runs": {
-        "team": "In the Insights team's run",
+        "team": "In the analyst team's run",
         "saved": "When something is saved",
         "imported": "When a document is imported",
         "answered": "When a question is answered",

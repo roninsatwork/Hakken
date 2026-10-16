@@ -36,10 +36,10 @@ describe("Agents' approved look", () => {
   it("Agents, filters down the left", async () => {
     vi.mocked(usePaginatedQuery).mockImplementation((() => pagedResult(AGENTS)) as never);
     vi.mocked(useQuery).mockImplementation(answerQueries({
-      "agents:getAgentFilterCounts": { total: 4, capped: false, what: { all: 4, collect: 1, insights: 1, tasks: 1, own: 1 }, when: { all: 4, schedule: 2, team: 1, asked: 1 }, status: { all: 4, active: 4 } },
+      "agentInventory:getAgentFilterCounts": { total: 4, capped: false, what: { all: 4, collect: 1, insights: 1, tasks: 1, own: 1 }, when: { all: 4, schedule: 2, team: 1, asked: 1 }, status: { all: 4, active: 4 } },
       "scheduler:getSchedules": [{ _id: "s1", name: "Search Console", agentId: "a1", intervalStr: "daily", isActive: true, createdAt: 1 }],
       "aiModels:getActiveModels": [],
-      "agents:getInheritedAgentModels": { agent: { modelId: "m", providerKey: "google", displayName: "Gemini 3.8 Flash" }, workflow: null },
+      "agents:getInheritedAgentModels": { agent: { modelId: "m", providerKey: "google", displayName: "Platform Agent Model" }, workflow: null },
       "agentRuns:getWorkingAgentIds": [],
     }));
     const { container } = render(<AgentsPage />);

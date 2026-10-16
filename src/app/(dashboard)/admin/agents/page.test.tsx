@@ -90,7 +90,7 @@ describe("Agents", () => {
     })) as unknown as typeof usePaginatedQuery);
     vi.mocked(useQuery).mockImplementation((...args: Parameters<typeof useQuery>) => {
       const path = getFunctionName(args[0]);
-      if (path === "agents:getAgentFilterCounts") return counts as unknown as ReturnType<typeof useQuery>;
+      if (path === "agentInventory:getAgentFilterCounts") return counts as unknown as ReturnType<typeof useQuery>;
       if (path === "scheduler:getSchedules") return schedules as unknown as ReturnType<typeof useQuery>;
       if (path === "aiModels:getActiveModels") return activeModels as unknown as ReturnType<typeof useQuery>;
       if (path === "agents:getInheritedAgentModels") return inheritedModels as unknown as ReturnType<typeof useQuery>;

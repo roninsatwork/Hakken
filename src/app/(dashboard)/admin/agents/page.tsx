@@ -55,7 +55,7 @@ const chosen = <Value extends string>(raw: string | null, allowed: readonly Valu
  *
  * The list is narrowed and paged on the server (`agents.getPaginatedAgents`),
  * as every admin inventory is; the counts beside each choice and the exact
- * total come from one small query beside it (`agents.getAgentFilterCounts`).
+ * total come from one small query beside it (`agentInventory.getAgentFilterCounts`).
  */
 export default function AgentsPage() {
   const router = useRouter();
@@ -120,7 +120,7 @@ export default function AgentsPage() {
     ...(filters.status !== "all" ? { status: filters.status } : {}),
   };
   const agents = useServerPagedTable(api.agents.getPaginatedAgents, asked, TABLE_PAGE_SIZE, { fill: true });
-  const counts = useQuery(api.agents.getAgentFilterCounts, asked);
+  const counts = useQuery(api.agentInventory.getAgentFilterCounts, asked);
   const pageRows = agents.isLoading ? undefined : agents.rows.map(rowOf);
   const total = counts?.total ?? agents.loadedCount;
   const totalPages = counts ? Math.max(1, Math.ceil(counts.total / TABLE_PAGE_SIZE)) : agents.totalPages;
