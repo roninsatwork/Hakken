@@ -121,6 +121,9 @@ export const listCompanyQuestions = superAdminQuery({
       fanOutSearches: v.number(),
       /** How many of them are ticked: checked on Google every run. */
       fanOutTicked: v.number(),
+      /** Written by Auto Setup, and what it took it from, said under it (auto-setup-plan.md, AS5). */
+      byAutoSetup: v.boolean(),
+      writtenFrom: v.union(v.string(), v.null()),
     })),
     totalCount: v.number(),
     totalPages: v.number(),
@@ -171,6 +174,8 @@ export const listCompanyQuestions = superAdminQuery({
         createdAt: question.createdAt,
         fanOutSearches: queries.length,
         fanOutTicked: queries.filter((query) => ticked.has(query)).length,
+        byAutoSetup: question.addedFrom === "AUTO_SETUP",
+        writtenFrom: question.writtenFrom ?? null,
       };
     }));
     return {
@@ -189,7 +194,8 @@ export const listCompanyQuestions = superAdminQuery({
  * questions.
  */
 async function addedFromOf(ctx: { db: QueryCtx["db"] }, search: Doc<"websiteKeywords">): Promise<"HAND" | "AI_SEARCH"> {
-  if (search.addedFrom) return search.addedFrom;
+  // Auto Setup's searches are the company's own list, as a person's typed-in ones are (auto-setup-plan.md, AS5).
+  if (search.addedFrom) return search.addedFrom === "AI_SEARCH" ? "AI_SEARCH" : "HAND";
   const angles = await ctx.db
     .query("fanOutAngles")
     .withIndex("by_hold_angle", (q) => q.eq("holdId", search.companyWebsiteId).eq("angle", angleOf(search.keyword)))

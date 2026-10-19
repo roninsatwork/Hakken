@@ -14,7 +14,8 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { Select } from "@/src/ui/components/screens/Select";
-import { FieldLabel, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
+import { FieldHint, FieldLabel, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
+import { useAutoSetupWords } from "../../../../_components/useAutoSetupWords";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -61,6 +62,7 @@ export function SiteMarket({
   const locale = useLocale();
 
   const market = useQuery(api.searchConsoleCountries.searchConsoleMarket, { companyWebsiteId });
+  const autoSetup = useAutoSetupWords();
   const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
   const saveCountries = useMutation(api.searchConsoleCountries.setSearchConsoleCountries);
   const setLocation = useMutation(api.websites.setCompanyWebsiteLocation);
@@ -199,6 +201,9 @@ export function SiteMarket({
               },
             ]}
           />
+
+          {/* Chosen by Auto Setup from what the site says, until a person changes them (auto-setup-plan.md, decision 2). */}
+          {market.writtenFrom && !countriesChanged ? <FieldHint>{autoSetup.wroteThese(market.writtenFrom)}</FieldHint> : null}
 
           <AddBar
             label={t("trades.add")}

@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import CompanyOverviewPage from "./page";
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
   useQuery: vi.fn(),

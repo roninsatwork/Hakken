@@ -40,14 +40,16 @@ describe("the Websites section's pages", () => {
 
   it("keeps the company's pages the company's, whichever website is chosen", () => {
     expect(sectionHref("company_1", "runs", own)).toBe(`${base}/runs`);
+    expect(sectionHref("company_1", "autoSetup", own)).toBe(`${base}/auto-setup`);
     expect(sectionHref("company_1", "websites", own)).toBe(base);
   });
 
   it("offers a competitor only what a competitor has", () => {
-    expect(pagesFor("TRACKED").map((page) => page.id)).toEqual(["websites", "names", "market", "rankings", "schedules", "limits", "runs"]);
-    // Fourteen with Page classification (page-groups-plan.md, 2026-10-03), a company's own websites only.
-    expect(pagesFor("OWNED")).toHaveLength(14);
-    expect(pagesFor(null)).toHaveLength(14);
+    // Auto Setup is the company's alone, offered whichever website is chosen (auto-setup-plan.md, 2026-10-19).
+    expect(pagesFor("TRACKED").map((page) => page.id)).toEqual(["websites", "names", "market", "rankings", "autoSetup", "schedules", "limits", "runs"]);
+    // Fourteen with Page classification (page-groups-plan.md, 2026-10-03), a company's own websites only; fifteen with Auto Setup.
+    expect(pagesFor("OWNED")).toHaveLength(15);
+    expect(pagesFor(null)).toHaveLength(15);
   });
 
   it("reads which page an address is, and for which website", () => {

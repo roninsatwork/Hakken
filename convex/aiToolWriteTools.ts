@@ -68,7 +68,9 @@ export const updateCompanyOverview = internalMutation({
     const changed = previousOverview !== overview;
 
     if (changed) {
-      await ctx.db.patch(args.companyId, { overview });
+      const { overview: _wroteOverview, ...otherNotes } = company.hakkenWrote ?? {};
+      // The assistant's new words are not Auto Setup's: its note on the box goes (auto-setup-plan.md, AS5).
+      await ctx.db.patch(args.companyId, { overview, hakkenWrote: Object.keys(otherNotes).length > 0 ? otherNotes : undefined });
     }
 
     await ctx.db.insert("auditLogs", {

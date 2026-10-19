@@ -145,7 +145,6 @@ const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/app/(dashboard)/admin/agents/[id]/runs/_components/RunsTable.tsx', 3],
   ['src/app/(dashboard)/admin/ai/costs/_components/AICostDistributionCharts.tsx', 1],
   ['src/app/(dashboard)/admin/ai/voice/page.tsx', 1],
-  ['src/app/(dashboard)/admin/companies/CompanyDialogs.tsx', 1],
   ['src/app/(dashboard)/admin/companies/[id]/ai/usage/page.tsx', 2],
   ['src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx', 21],
   ['src/app/(dashboard)/admin/companies/[id]/features/CompanyFeaturesContent.tsx', 5],

@@ -20,6 +20,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
 import { SEARCH_TONE } from "../siteView";
+import { useAutoSetupWords } from "../../../../_components/useAutoSetupWords";
 import { RemoveSearchDialog, type SearchToRemove } from "../RemoveSearchDialog";
 import { AddBar } from "../../../_components/AddBar";
 
@@ -51,6 +52,7 @@ export default function CompanySiteSearchesPage() {
   const action = useAdminAction({ scope: "admin-site-searches" });
 
   const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
+  const autoSetup = useAutoSetupWords();
   const rows = useQuery(api.websiteClientView.listTrackedSearches, {
     companyWebsiteId,
     searchTerm: debouncedSearch,
@@ -142,7 +144,13 @@ export default function CompanySiteSearchesPage() {
           {
             key: "search",
             header: t("searchColumn"),
-            cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span>,
+            // Under a search Auto Setup wrote, what it took it from (auto-setup-plan.md, AS5, board 5).
+            cell: (row) => (
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[13px] text-foreground">{row.keyword}</span>
+                {row.writtenFrom ? <span className="text-[12px] text-secondary">{autoSetup.line(row.writtenFrom)}</span> : null}
+              </span>
+            ),
           },
           {
             key: "position",

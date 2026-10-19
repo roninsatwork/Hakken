@@ -17,6 +17,7 @@ import {
 import { isAssignableAgentRole } from "@/convex/utils/agentRoles";
 import { formatModelDisplayName } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
 import { AgentFormSections, parseLimitInput, type AgentFormValues } from "../../_components/AgentFormSections";
+import { AUTO_SETUP } from "@/convex/utils/autoSetupAgent";
 
 
 /** The shared form, plus what only an existing agent carries. */
@@ -175,7 +176,7 @@ export default function AgentOverviewPage() {
         ...(hasFixedRole ? {} : { role: formData.role }),
         ...(formData.role === "DATAFORSEO_PLANNER" || formData.role === "WEEKLY_DIGEST" ? { plannerMode: formData.plannerMode } : {}),
         // A cleared box (0) removes the Collector's ceiling a day.
-        ...(formData.role === "DATAFORSEO_COLLECTOR" ? { maxDailyCostUsd: parseLimitInput(formData.maxDailyCostUsd) ?? 0 } : {}),
+        ...(formData.role === "DATAFORSEO_COLLECTOR" || agent?.systemKey === AUTO_SETUP.systemKey ? { maxDailyCostUsd: parseLimitInput(formData.maxDailyCostUsd) ?? 0 } : {}),
         storageId: formData.storageId
       }),
       { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
@@ -233,6 +234,7 @@ export default function AgentOverviewPage() {
           roleHolders={roleHolders}
           agentId={agentId}
           builtInRoleName={hasFixedRole ? agent.name : undefined}
+          {...(agent.systemKey === AUTO_SETUP.systemKey ? { dailyCap: "AUTO_SETUP" as const } : {})}
           activeDescription={t("sections.engine.status.hintActive")}
           statusExtra={activationWarning ? (
             <div className="mt-3 flex flex-col gap-2 rounded-[10px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-[13px] leading-relaxed text-amber-200 sm:flex-row sm:items-center sm:justify-between">

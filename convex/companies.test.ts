@@ -523,3 +523,50 @@ describe("the plan-grants door nothing was calling", () => {
       .toEqual({ planName: "Growth", grantedModules: ["wiki"] });
   });
 });
+
+describe("Add company names the company's website (add-company-page-plan.md, AC2)", () => {
+  const setUp = async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { name: "Super Admin", email: "super@test.com", role: "SUPER_ADMIN", createdAt: Date.now() }),
+    );
+    return { t, admin: t.withIdentity({ subject: superAdminId }) };
+  };
+
+  test("the company is created holding its website as its own", async () => {
+    const { t, admin } = await setUp();
+    const companyId = await admin.mutation(api.companies.createCompany, { name: "National Extension College", websiteUrl: "https://www.nec.ac.uk/courses" });
+
+    const { holds, websites, audit } = await t.run(async (ctx) => ({
+      holds: await ctx.db.query("companyWebsites").withIndex("by_company_website", (q) => q.eq("companyId", companyId)).collect(),
+      websites: await ctx.db.query("websites").collect(),
+      audit: (await ctx.db.query("auditLogs").collect()).map((row) => row.actionType),
+    }));
+    expect(holds).toHaveLength(1);
+    expect(holds[0]?.relationship).toBe("OWNED");
+    expect(websites.map((website) => website.host)).toEqual(["nec.ac.uk"]);
+    expect(audit).toEqual(expect.arrayContaining(["CREATE_COMPANY", "ADD_COMPANY_WEBSITE"]));
+  });
+
+  test("an address that is not a website leaves no company behind", async () => {
+    const { t, admin } = await setUp();
+    await expect(admin.mutation(api.companies.createCompany, { name: "Nowhere Ltd", websiteUrl: "not a website" })).rejects.toThrow();
+
+    const companies = await t.run(async (ctx) => ctx.db.query("companies").collect());
+    expect(companies).toHaveLength(0);
+  });
+
+  test("a website already in Hakken is joined, never added twice", async () => {
+    const { t, admin } = await setUp();
+    const websiteId = await t.run(async (ctx) => ctx.db.insert("websites", { host: "nec.ac.uk", displayHost: "nec.ac.uk", firstSeenAt: 1 }));
+
+    const companyId = await admin.mutation(api.companies.createCompany, { name: "National Extension College", websiteUrl: "nec.ac.uk" });
+
+    const { holds, websites } = await t.run(async (ctx) => ({
+      holds: await ctx.db.query("companyWebsites").withIndex("by_company_website", (q) => q.eq("companyId", companyId)).collect(),
+      websites: await ctx.db.query("websites").collect(),
+    }));
+    expect(websites).toHaveLength(1);
+    expect(holds.map((hold) => hold.websiteId)).toEqual([websiteId]);
+  });
+});

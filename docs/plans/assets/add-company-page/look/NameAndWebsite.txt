@@ -1,0 +1,9 @@
+# Manage Companies → Add company — the approved look (board "NameAndWebsite" of docs/plans/assets/add-company-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Manage Companies
+  page-header: ‹the record's name›
+field: Company Name
+field: Website address
+save

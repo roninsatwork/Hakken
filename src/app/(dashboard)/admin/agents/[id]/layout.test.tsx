@@ -179,6 +179,21 @@ describe("AgentDashboardLayout navigation", () => {
     expect(screen.queryByRole("button", { name: "headerStop" })).not.toBeInTheDocument();
   });
 
+  it("Auto Setup's page says it starts from a company's Websites tab, with no Run Agent (auto-setup-plan.md, decision 1)", () => {
+    (useQuery as unknown as QueryMock).mockImplementation((_query, args) => {
+      if (args && "paginationOpts" in args) return { page: [], isDone: true, continueCursor: "" };
+      return { _id: "agent_1", name: "Auto Setup", description: "Writes what a company's websites need.", avatar: "", systemKey: "AUTO_SETUP" };
+    });
+    render(
+      <AgentDashboardLayout>
+        <section>Agent body</section>
+      </AgentDashboardLayout>
+    );
+
+    expect(screen.getByText("startHere")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "headerRun" })).not.toBeInTheDocument();
+  });
+
   /**
    * The mocked agent carries no standing job, which is exactly the case that
    * used to open a "what should it do?" form instead of starting anything

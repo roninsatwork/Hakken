@@ -111,8 +111,10 @@ export async function dayCeilingReached(ctx: { db: QueryCtx["db"] }): Promise<st
  * What the Collector has spent since UK midnight: its runs started today. A
  * run is one continuous send, so there are a handful a day; one that started
  * before midnight counts to the day it started.
+ *
+ * Auto Setup's ceiling a day reads it too (auto-setup-plan.md, AS2).
  */
-async function spentToday(ctx: { db: QueryCtx["db"] }, agentId: Id<"agents">): Promise<number> {
+export async function spentToday(ctx: { db: QueryCtx["db"] }, agentId: Id<"agents">): Promise<number> {
   const runs = await ctx.db
     .query("agentRuns")
     .withIndex("by_agent_started", (q) => q.eq("agentId", agentId).gte("startedAt", ukDayStart(Date.now())))

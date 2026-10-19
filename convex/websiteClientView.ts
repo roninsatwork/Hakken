@@ -246,6 +246,8 @@ export const listTrackedSearches = superAdminQuery({
       weeksRunning: v.union(v.number(), v.null()),
       intent: v.union(v.string(), v.null()),
       monthlyUsd: moneyOrNull,
+      /** What Auto Setup took it from, said under it (auto-setup-plan.md, AS5); null for a person's. */
+      writtenFrom: v.union(v.string(), v.null()),
     })),
     totalCount: v.number(),
     totalPages: v.number(),
@@ -268,10 +270,12 @@ export const listTrackedSearches = superAdminQuery({
         .query("seoKeywordIntents")
         .withIndex("by_keyword", (q) => q.eq("keyword", row.keyword))
         .unique();
+      const tracked = await ctx.db.get(row._id);
       return {
         ...row,
         weeksRunning: row.firstCheckedDay ? Math.floor(daysBetween(row.firstCheckedDay, site.today) / 7) : null,
         intent: intent?.intent ?? null,
+        writtenFrom: tracked?.addedFrom === "AUTO_SETUP" ? tracked.writtenFrom ?? null : null,
       };
     }));
     return { ...paged, data };

@@ -12,6 +12,7 @@ import { googleTables } from "./googleSchema";
 import { googleAnalyticsTables } from "./googleAnalyticsSchema";
 import { bingWebmasterTables } from "./bingWebmasterSchema";
 import { pagesTables } from "./pagesSchema";
+import { autoSetupTables } from "./autoSetupSchema";
 import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
 import { seoPullTables } from "./seoPullSchema";
@@ -48,6 +49,7 @@ export default defineSchema({
   ...billingTables,
   ...uploadTables,
   ...siteTables,
+  ...autoSetupTables,
   ...searchConsoleTables,
   ...collectionStepTables,
   ...googleTables,
@@ -82,6 +84,8 @@ export default defineSchema({
     logo: v.optional(v.string()),
     description: v.optional(v.string()),
     overview: v.optional(v.string()),
+    /** Boxes Auto Setup wrote and no person has changed, each with what it wrote them from (auto-setup-plan.md, AS5). */
+    hakkenWrote: v.optional(v.object({ description: v.optional(v.string()), overview: v.optional(v.string()) })),
     systemPrompt: v.optional(v.string()),
     planId: v.optional(v.id("plans")),
     messagesUsedThisPeriod: v.optional(v.number()),
@@ -184,6 +188,8 @@ export default defineSchema({
     engines: v.array(aiEngineValidator),
     isActive: v.boolean(),
     createdAt: v.number(),
+    addedFrom: v.optional(v.literal("AUTO_SETUP")), // Auto Setup's, with what it took it from (auto-setup-plan.md, AS5).
+    writtenFrom: v.optional(v.string()),
   })
     /** Every company's rows, and everyone asking one question: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
@@ -206,7 +212,8 @@ export default defineSchema({
     isActive: v.boolean(),
     createdAt: v.number(),
     /** Typed in, or tracked from a search the AI ran (fan-out-angles-plan.md, FA9); absent before 2026-09-28. */
-    addedFrom: v.optional(v.union(v.literal("HAND"), v.literal("AI_SEARCH"))),
+    addedFrom: v.optional(v.union(v.literal("HAND"), v.literal("AI_SEARCH"), v.literal("AUTO_SETUP"))),
+    writtenFrom: v.optional(v.string()), // Auto Setup's: what it took it from (auto-setup-plan.md, AS5).
   })
     /** Every company's rows, and everyone tracking one phrase: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
@@ -366,6 +373,7 @@ export default defineSchema({
     locationLabel: v.optional(v.string()),
     /** Where it trades, as Google's codes (`gbr`) in the order added: set on the Market page, kept ready in Search Console (search-console-plan.md §16). */
     searchConsoleCountries: v.optional(v.array(v.string())),
+    searchConsoleCountriesBy: v.optional(v.string()), // Auto Setup's choice, until a person changes it (auto-setup-plan.md).
     /**
      * Whether this company owns the site or is watching somebody else's.
      *

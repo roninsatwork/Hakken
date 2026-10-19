@@ -15,6 +15,7 @@ import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls"
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { HoldBrandNames } from "./HoldBrandNames";
+import { useAutoSetupWords } from "../../../../_components/useAutoSetupWords";
 
 /** What the business does, at most: every judgment about the site carries it. */
 const MAX_DESCRIPTION = 600;
@@ -36,6 +37,7 @@ export default function CompanySiteProfilePage() {
   const profile = useQuery(api.holdProfiles.getHoldProfile, { companyWebsiteId });
   const setProfile = useMutation(api.holdProfiles.setHoldBusinessProfile);
   const action = useAdminAction({ scope: "admin-hold-profile" });
+  const autoSetup = useAutoSetupWords();
 
   const [sector, setSector] = useState("");
   const [marketLabel, setMarketLabel] = useState("");
@@ -55,6 +57,9 @@ export default function CompanySiteProfilePage() {
 
   if (profile === undefined) return null;
   if (profile === null) return <p className="text-[13px] text-destructive">{t("notFound")}</p>;
+
+  // A box Auto Setup wrote says so until it is changed (auto-setup-plan.md, AS5, board 4).
+  const wroteUnder = (code: string | null, saved: string | null, now: string) => (code && now === (saved ?? "") ? autoSetup.wroteThis(code) ?? undefined : undefined);
 
   const handleSave = async () => {
     setError("");
@@ -82,7 +87,7 @@ export default function CompanySiteProfilePage() {
 
       <Notice>{t("ownNotice", { host: profile.host })}</Notice>
 
-      <HoldBrandNames companyWebsiteId={companyWebsiteId} saved={profile.brandNames} />
+      <HoldBrandNames companyWebsiteId={companyWebsiteId} saved={profile.brandNames} written={profile.written.brandNames} />
 
       {profile.owned ? (
         <SettingsCard title={t("business.title")}>
@@ -91,6 +96,7 @@ export default function CompanySiteProfilePage() {
             <Field
               id="hold-sector"
               label={t("business.sectorLabel")}
+              hint={wroteUnder(profile.written.sector, profile.sector, sector)}
               value={sector}
               placeholder={t("business.sectorPlaceholder")}
               onChange={(event) => {
@@ -101,6 +107,7 @@ export default function CompanySiteProfilePage() {
             <Field
               id="hold-market"
               label={t("business.marketLabel")}
+              hint={wroteUnder(profile.written.marketLabel, profile.marketLabel, marketLabel)}
               value={marketLabel}
               placeholder={t("business.marketPlaceholder")}
               onChange={(event) => {
@@ -112,7 +119,7 @@ export default function CompanySiteProfilePage() {
           <TextAreaField
             id="hold-description"
             label={t("business.descriptionLabel")}
-            hint={t("business.descriptionHint")}
+            hint={wroteUnder(profile.written.businessDescription, profile.businessDescription, description) ?? t("business.descriptionHint")}
             rows={3}
             maxLength={MAX_DESCRIPTION}
             value={description}

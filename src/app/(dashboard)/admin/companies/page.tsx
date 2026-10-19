@@ -1,15 +1,15 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { lazy, Suspense, useState, type FormEvent } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
   Building2,
   Plus,
   Trash2,
   Edit2,
 } from "lucide-react";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
@@ -28,12 +28,10 @@ import {
 } from "@/src/ui/components/screens/pagination";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
 import { useRunFormat } from "@/src/app/(dashboard)/admin/companies/[id]/websites/runs/runFormat";
-import { COMPANY_MODULES } from "@/convex/utils/companyModules";
-import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 
-const loadCompanyDialogs = () => import("./CompanyDialogs");
-const CompanyDialogs = lazy(() =>
-  loadCompanyDialogs().then((module) => ({ default: module.CompanyDialogs })),
+const loadDeleteCompanyDialog = () => import("./DeleteCompanyDialog");
+const DeleteCompanyDialog = lazy(() =>
+  loadDeleteCompanyDialog().then((module) => ({ default: module.DeleteCompanyDialog })),
 );
 
 /**
@@ -51,12 +49,6 @@ type CompanyCollection = {
 };
 
 type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean; collection: CompanyCollection };
-type CompanyFormData = {
-  name: string;
-  systemPrompt: string;
-  planId: string;
-  enabledModules: string[];
-};
 
 export default function CompaniesPage() {
   const router = useRouter();
@@ -66,20 +58,12 @@ export default function CompaniesPage() {
   const scheduleSummary = useScheduleSummary();
   const { when } = useRunFormat();
   const action = useAdminAction({ scope: "admin-companies" });
-  const createCompany = useMutation(api.companies.createCompany);
-  const updateCompany = useMutation(api.companies.updateCompany);
   const deleteCompany = useMutation(api.companies.deleteCompany);
-  const assignPlanToCompany = useMutation(api.companies.assignPlanToCompany);
-  const activePlans = (useQuery(api.plans.getActivePlans) || []) as Doc<"plans">[];
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<CompanyRow | null>(null);
-
-  const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
   const [submitError, setSubmitError] = useState("");
-  const [dialogsActivated, setDialogsActivated] = useState(false);
+  const [dialogActivated, setDialogActivated] = useState(false);
   const isSubmitting = action.isBusy();
 
   const itemsPerPage = TABLE_PAGE_SIZE;
@@ -95,70 +79,6 @@ export default function CompaniesPage() {
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
-  };
-
-  const activateDialogs = () => {
-    void loadCompanyDialogs();
-    setDialogsActivated(true);
-  };
-
-  const handleOpenAdd = () => {
-    activateDialogs();
-    setFormData({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
-    setEditingCompany(null);
-    setSubmitError("");
-    setIsAddModalOpen(true);
-  };
-
-  const handleOpenEdit = (company: CompanyRow) => {
-    activateDialogs();
-    setFormData({
-      name: company.name,
-      systemPrompt: company.systemPrompt || "",
-      planId: company.planId || "",
-      enabledModules: company.enabledModules ?? [],
-    });
-    setEditingCompany(company);
-    setSubmitError("");
-    setIsAddModalOpen(true);
-  };
-
-  const toggleModule = (key: string) => {
-    setFormData((previous) => ({
-      ...previous,
-      enabledModules: previous.enabledModules.includes(key)
-        ? previous.enabledModules.filter((enabled) => enabled !== key)
-        : [...previous.enabledModules, key],
-    }));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setSubmitError("");
-    const outcome = await action.run(
-      async () => {
-        if (editingCompany) {
-          await updateCompany({
-            id: editingCompany._id,
-            name: formData.name,
-            systemPrompt: formData.systemPrompt,
-            enabledModules: formData.enabledModules,
-          });
-          if (formData.planId) await assignPlanToCompany({ id: editingCompany._id, planId: formData.planId as Id<"plans"> });
-          else await assignPlanToCompany({ id: editingCompany._id, planId: undefined });
-        } else {
-          const newCompanyId = await createCompany({
-            name: formData.name,
-            systemPrompt: formData.systemPrompt,
-            enabledModules: formData.enabledModules,
-          });
-          if (formData.planId) await assignPlanToCompany({ id: newCompanyId, planId: formData.planId as Id<"plans"> });
-        }
-      },
-      { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") }
-    );
-    if (outcome.ok) setIsAddModalOpen(false);
-    else setSubmitError(outcome.message);
   };
 
   const confirmDelete = async () => {
@@ -180,7 +100,7 @@ export default function CompaniesPage() {
         title={t('title')}
         description={t('subtitle')}
         action={
-          <PagePrimaryAction variant="brand" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+          <PagePrimaryAction variant="brand" icon={<Plus className="w-4 h-4" />} onClick={() => router.push("/admin/companies/new")}>
             {t('newCompany')}
           </PagePrimaryAction>
         }
@@ -272,11 +192,13 @@ export default function CompaniesPage() {
             align: "right",
             cell: (company) => (
               <RowActions>
-                <RowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
+                {/* Its Overview tab edits its name and plan (add-company-page-plan.md, AC5). */}
+                <RowIconButton label={t('editTitle')} onClick={() => router.push(`/admin/companies/${company._id}/overview`)}>
                   <Edit2 className="w-4 h-4" />
                 </RowIconButton>
                 <RowIconButton label={t('deleteAndWipe')} tone="danger" onClick={() => {
-                  activateDialogs();
+                  void loadDeleteCompanyDialog();
+                  setDialogActivated(true);
                   setDeletingCompany(company);
                 }}>
                   <Trash2 className="w-4 h-4" />
@@ -287,49 +209,17 @@ export default function CompaniesPage() {
         ]}
       />
 
-      {dialogsActivated ? (
+      {dialogActivated ? (
         <Suspense fallback={null}>
-          <CompanyDialogs
-            isFormOpen={isAddModalOpen}
-            onCloseForm={() => setIsAddModalOpen(false)}
-            isEditing={editingCompany !== null}
-            formData={formData}
-            onFormDataChange={setFormData}
-            onSubmit={handleSubmit}
-            activePlans={activePlans}
-            renderModuleOptions={() => COMPANY_MODULES.length > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
-                {COMPANY_MODULES.map((module) => (
-                  <label
-                    key={module.key}
-                    className="flex items-start gap-3 px-3 py-2.5 rounded-[10px] border border-border-dim bg-background cursor-pointer hover:border-brand/40 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.enabledModules.includes(module.key)}
-                      onChange={() => toggleModule(module.key)}
-                      className="mt-0.5 accent-brand"
-                    />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-[14px] text-foreground">
-                        {t(`modules.${module.key}.name`)}
-                      </span>
-                      <span className="text-[12px] text-secondary">
-                        {t(`modules.${module.key}.description`)}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            ) : null}
+          <DeleteCompanyDialog
+            companyName={deletingCompany?.name ?? null}
             isSubmitting={isSubmitting}
-            submitError={submitError}
-            deletingCompanyName={deletingCompany?.name ?? null}
-            onCloseDelete={() => {
+            error={submitError}
+            onClose={() => {
               setDeletingCompany(null);
               setSubmitError("");
             }}
-            onConfirmDelete={confirmDelete}
+            onConfirm={confirmDelete}
           />
         </Suspense>
       ) : null}

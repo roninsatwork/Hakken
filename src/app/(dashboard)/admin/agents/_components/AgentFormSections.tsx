@@ -88,6 +88,7 @@ export function AgentFormSections({
   roleHolders,
   agentId,
   builtInRoleName,
+  dailyCap,
   placeholders,
   activeDescription,
   statusExtra,
@@ -106,6 +107,11 @@ export function AgentFormSections({
   agentId?: string;
   /** Set when the agent holds a built-in role, which is shown and never changed. */
   builtInRoleName?: string;
+  /**
+   * A built-in agent with a ceiling a day of its own, beside the Collector's:
+   * Auto Setup's runs together (auto-setup-plan.md, AS2).
+   */
+  dailyCap?: "AUTO_SETUP";
   placeholders?: { name?: string; description?: string };
   /** What the Active switch says while it is on — creating warns, editing does not. */
   activeDescription: string;
@@ -291,9 +297,9 @@ export function AgentFormSections({
         ) : null}
         {/* Anthony, 2026-10-05: $100 a day for everything the Collector sends,
             beside its limit per website (collection-progress-plan.md). */}
-        {values.role === "DATAFORSEO_COLLECTOR" ? (
+        {values.role === "DATAFORSEO_COLLECTOR" || dailyCap === "AUTO_SETUP" ? (
           <div className="border-t border-border-dim/40">
-            <SettingRow label={t("sections.role.daily.label")} description={t("sections.role.daily.hint")}>
+            <SettingRow label={t("sections.role.daily.label")} description={dailyCap === "AUTO_SETUP" ? t("sections.role.daily.autoSetupHint") : t("sections.role.daily.hint")}>
               <Field
                 label={t("sections.role.daily.label")}
                 labelHidden

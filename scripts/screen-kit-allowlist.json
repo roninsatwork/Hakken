@@ -23,7 +23,6 @@
     "src/app/(dashboard)/admin/ai/tools/new/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/ai/skills/page.tsx",
-    "src/app/(dashboard)/admin/companies/page.tsx",
     "src/app/(dashboard)/admin/settings/plans/page.tsx"
   ],
   "shadows": [],

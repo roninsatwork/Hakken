@@ -19,7 +19,7 @@ export const AGENT_RUN_KINDS = ["schedule", "team", "event", "asked", "never"] a
 export type AgentRunKind = (typeof AGENT_RUN_KINDS)[number];
 
 /** What sets off an agent that runs when something happens or someone asks. */
-export type AgentTrigger = "saved" | "imported" | "answered" | "sensitive" | "collected" | "asked" | "yes" | "lookUp" | "autoClassify";
+export type AgentTrigger = "saved" | "imported" | "answered" | "sensitive" | "collected" | "asked" | "yes" | "lookUp" | "autoClassify" | "autoSetup";
 
 /** A timer in `crons.ts`, as written there. */
 export type AgentTimer =
@@ -45,6 +45,8 @@ export const AGENT_WORK: Readonly<Record<string, AgentWork>> = {
   MICROSOFT_CLARITY_COLLECTOR: scheduled("collect"),
   // Auto Classify (auto-classify-plan.md, AC6): sorts a website's pages into its page groups only when someone presses Auto Classify — no schedule (Anthony, 2026-10-16).
   AUTO_CLASSIFIER: { what: "collect", when: "asked", trigger: "autoClassify" },
+  // Auto Setup (auto-setup-plan.md, AS3): writes a company's empty setup boxes only when someone presses Auto Setup on its Websites tab — no schedule.
+  AUTO_SETUP: { what: "collect", when: "asked", trigger: "autoSetup" },
   // The Insights team: the Head of Strategy on its schedule, the rest inside its run.
   INSIGHTS_HEAD_OF_STRATEGY: scheduled("insights"),
   INSIGHTS_ANALYST: INSIGHTS_TEAM,

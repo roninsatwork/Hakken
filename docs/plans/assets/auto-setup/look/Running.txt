@@ -1,0 +1,10 @@
+# Company → Websites → Auto Setup, running — the approved look (board "Running" of docs/plans/assets/auto-setup/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Auto Setup
+  primary-action: Working: # of # done
+notice (info)
+page-header: What it fills
+search: Search websites...
+table: Website | Names | Profile | Google searches | AI questions | Home countries
+  table-footer

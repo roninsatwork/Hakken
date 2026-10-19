@@ -176,7 +176,14 @@ export const listWebsiteQuestions = superAdminQuery({
  */
 export async function addWebsiteQuestionCore(
   ctx: MutationCtx,
-  args: { companyWebsiteId: Id<"companyWebsites">; prompt: string; engines?: string[]; userId?: Id<"users"> },
+  args: {
+    companyWebsiteId: Id<"companyWebsites">;
+    prompt: string;
+    engines?: string[];
+    userId?: Id<"users">;
+    /** Written by Auto Setup, with where it took it from (auto-setup-plan.md, AS5). */
+    autoSetup?: { writtenFrom: string };
+  },
 ): Promise<Id<"websiteQuestions">> {
   const hold = await requireListHold(ctx, args.companyWebsiteId);
   await requireWebsite(ctx, hold.websiteId);
@@ -209,6 +216,7 @@ export async function addWebsiteQuestionCore(
     engines,
     isActive: true,
     createdAt: Date.now(),
+    ...(args.autoSetup ? { addedFrom: "AUTO_SETUP" as const, writtenFrom: args.autoSetup.writtenFrom } : {}),
   });
 
   // The answers others' asking already filed count from the start
@@ -426,8 +434,10 @@ export async function addWebsiteKeywordCore(
     keyword: string;
     /** Absent when no person did it: the lists' automatic tracking of 2026-09-28, since undone (`promptFanOut.ts`). */
     userId?: Id<"users">;
-    /** Typed in by hand, or ticked on a prompt's fan-out queries — the AI's, or one the company added there. */
-    addedFrom: "HAND" | "AI_SEARCH";
+    /** Typed in by hand, ticked on a prompt's fan-out queries — the AI's, or one the company added there — or written by Auto Setup. */
+    addedFrom: "HAND" | "AI_SEARCH" | "AUTO_SETUP";
+    /** Auto Setup's: where it took it from (auto-setup-plan.md, AS5). */
+    writtenFrom?: string;
     /** How long the list is, when the caller has just read it: adding many then reads it once, not once each. */
     listSize?: number;
   },
@@ -454,6 +464,7 @@ export async function addWebsiteKeywordCore(
     isActive: true,
     createdAt: Date.now(),
     addedFrom: args.addedFrom,
+    ...(args.writtenFrom ? { writtenFrom: args.writtenFrom } : {}),
   });
 
   await ctx.db.insert("auditLogs", {

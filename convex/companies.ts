@@ -23,6 +23,8 @@ import { appError } from "./utils/appError";
 import * as companyShapes from "./utils/companyShapes";
 import { collectionTimetable, companyCollectionState } from "./seoScheduleService";
 import { rowShape } from "./utils/rowShape";
+import { holdOwnWebsite } from "./websites";
+import type { Doc } from "./_generated/dataModel";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
 const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
@@ -206,6 +208,12 @@ export const createCompany = superAdminMutation({
     name: v.string(),
     systemPrompt: v.optional(v.string()),
     enabledModules: v.optional(v.array(v.string())),
+    /**
+     * The company's own website, held as it is created: Add company asks for
+     * it (docs/plans/active/add-company-page-plan.md, AC2). One mutation, so an
+     * address that is not a website leaves no company behind.
+     */
+    websiteUrl: v.optional(v.string()),
   },
   returns: v.id("companies"),
   handler: async (ctx, args) => {
@@ -227,6 +235,10 @@ export const createCompany = superAdminMutation({
       metadata: buildCreateCompanyAuditMetadata(args.name),
       timestamp: now
     });
+
+    if (args.websiteUrl !== undefined) {
+      await holdOwnWebsite(ctx, { companyId: newCompanyId, url: args.websiteUrl, actorId: adminId, now });
+    }
 
     return newCompanyId;
   },
@@ -336,6 +348,11 @@ export const deleteCompany = superAdminMutation({
     // watched by others, and even if not, its data was paid for.
     await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: args.id });
 
+    // Its Auto Setup row, one a company, goes with it (auto-setup-plan.md); its runs stay in Agents' history.
+    for (const row of await ctx.db.query("autoSetupRuns").withIndex("by_company", (q) => q.eq("companyId", args.id)).take(5)) {
+      await ctx.db.delete(row._id);
+    }
+
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);
     if (company) {
@@ -386,6 +403,20 @@ export const updateCompanyDescription = superAdminMutation({
   },
 });
 
+/**
+ * Auto Setup's notes on the company's description and About, less any box
+ * whose words have just changed (auto-setup-plan.md, AS5).
+ */
+export function companyNotesAfterChange(
+  previous: Pick<Doc<"companies">, "description" | "overview" | "hakkenWrote"> | null,
+  next: { description?: string; overview?: string },
+): Doc<"companies">["hakkenWrote"] {
+  const notes = { ...(previous?.hakkenWrote ?? {}) };
+  if ("description" in next && (next.description ?? "") !== (previous?.description ?? "")) delete notes.description;
+  if ("overview" in next && (next.overview ?? "") !== (previous?.overview ?? "")) delete notes.overview;
+  return Object.keys(notes).length > 0 ? notes : undefined;
+}
+
 export const updateCompanyProfile = superAdminMutation({
   args: { 
     id: v.id("companies"), 
@@ -399,11 +430,15 @@ export const updateCompanyProfile = superAdminMutation({
 
     const previous = await ctx.db.get(args.id);
     const now = Date.now();
-    await ctx.db.patch(args.id, buildCompanyProfilePatch({
-      name: args.name, 
-      description: args.description,
-      overview: args.overview,
-    }));
+    await ctx.db.patch(args.id, {
+      ...buildCompanyProfilePatch({
+        name: args.name,
+        description: args.description,
+        overview: args.overview,
+      }),
+      // A box a person changes is theirs: Auto Setup's note under it goes (auto-setup-plan.md, AS5).
+      hakkenWrote: companyNotesAfterChange(previous, { description: args.description, overview: args.overview }),
+    });
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId,

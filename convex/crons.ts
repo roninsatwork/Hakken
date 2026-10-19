@@ -65,6 +65,15 @@ crons.interval(
   { job: "auto-classify-watch" }
 );
 
+// Auto Setup's watch: its agent kept there, and a company's run whose step was lost carried on from where it was
+// (auto-setup-plan.md, AS11). It never starts a run: only the Auto Setup button does.
+crons.interval(
+  "auto-setup-watch",
+  { minutes: 10 },
+  internal.jobLedger.runJob,
+  { job: "auto-setup-watch" }
+);
+
 // The Stat Report Agent's round: each report due on its owner's day, at their time (hakken-tasks-plan.md, 4.1).
 crons.interval(
   "hakken-task-reports",

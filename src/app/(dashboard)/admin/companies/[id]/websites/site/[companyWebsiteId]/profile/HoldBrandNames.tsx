@@ -10,9 +10,10 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
-import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
+import { FieldHint, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_BRAND_NAMES } from "@/convex/utils/websiteBrands";
+import { useAutoSetupWords } from "../../../../_components/useAutoSetupWords";
 
 type Kind = "NAME" | "MISSPELLING";
 type Draft = { name: string; isPrimary: boolean; kind: Kind };
@@ -31,15 +32,19 @@ type Draft = { name: string; isPrimary: boolean; kind: Kind };
 export function HoldBrandNames({
   companyWebsiteId,
   saved,
+  written,
 }: {
   companyWebsiteId: Id<"companyWebsites">;
   /** Empty means no names yet, never that they have not loaded. */
   saved: ReadonlyArray<{ name: string; isPrimary: boolean; kind?: Kind }>;
+  /** What Auto Setup wrote these from, while no person has changed them (auto-setup-plan.md, AS5). */
+  written?: string | null;
 }) {
   const t = useTranslations("admin.siteView.profile.brands");
   const tCommon = useTranslations("common");
   const setBrandNames = useMutation(api.holdProfiles.setHoldBrandNames);
   const action = useAdminAction({ scope: "admin-hold-brands" });
+  const autoSetup = useAutoSetupWords();
 
   const [draft, setDraft] = useState<Draft[]>([]);
   const [error, setError] = useState("");
@@ -140,6 +145,10 @@ export function HoldBrandNames({
             </Button>
           </div>
         ))}
+        {/* Auto Setup's names say so until they are changed (auto-setup-plan.md, AS5, board 4). */}
+        {written && JSON.stringify(draft.filter((row) => row.name.trim()).map((row) => row.name.trim())) === JSON.stringify(saved.map((entry) => entry.name))
+          ? <FieldHint>{autoSetup.wroteThese(written)}</FieldHint>
+          : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

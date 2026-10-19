@@ -15,10 +15,12 @@ import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/components/screens/Button";
+import { AUTO_SETUP } from "@/convex/utils/autoSetupAgent";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
   const t = useTranslations("admin.agents.details");
+  const tAutoSetup = useTranslations("admin.autoSetup");
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as Id<"agents">;
@@ -147,6 +149,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const hasActiveRun = activeRun !== undefined && activeRun !== null;
   const isStoppingAgent = action.isBusy("stop");
   const isPrimaryActionBusy = action.isBusy() || isRunStateLoading;
+  const startsElsewhere = agent.systemKey === AUTO_SETUP.systemKey;
 
   return (
     <DetailLayout
@@ -175,7 +178,11 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       rootHref={`/admin/agents/${agentId}`}
       actions={
         <>
-            {/* Raw: run/stop swaps solid brand for rose with its state — no kit variant is stateful. */}
+            {/* Auto Setup starts only from a company's Websites tab (auto-setup-plan.md, decision 1): its page says so, and keeps Stop for a run under way. */}
+            {startsElsewhere && !hasActiveRun ? (
+              <p className="max-w-[280px] text-[12px] leading-relaxed text-secondary">{tAutoSetup("startHere")}</p>
+            ) : (
+            /* Raw: run/stop swaps solid brand for rose with its state — no kit variant is stateful. */
             <button
               onClick={() => {
                 if (hasActiveRun) {
@@ -202,6 +209,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
               )}
               {hasActiveRun ? t("headerStop") : t("headerRun")}
             </button>
+            )}
             <Link
               href="/admin/agents"
               className="px-5 py-2 rounded-[10px] bg-foreground/5 text-foreground font-medium hover:bg-foreground/10 transition-all text-[13px] flex items-center gap-2 border border-border-dim/50"

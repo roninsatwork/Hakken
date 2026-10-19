@@ -6,6 +6,7 @@ import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { answerQueries, ownedHeader } from "@/src/test/siteViewFixtures";
 import CompanySiteQuestionsPage from "./page";
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());

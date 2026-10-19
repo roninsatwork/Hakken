@@ -600,6 +600,48 @@ export const getWebsiteById = superAdminQuery({
 // ---------------------------------------------------------------------------
 
 /** Add one of a company's own websites. */
+/**
+ * Hold a website as a company's own: the Websites tab's Add website, and Add
+ * company, which names the company's website as it creates it
+ * (docs/plans/active/add-company-page-plan.md, AC2). One path, so the two
+ * cannot drift apart.
+ */
+export async function holdOwnWebsite(
+  ctx: MutationCtx,
+  args: { companyId: Id<"companies">; url: string; actorId: Id<"users">; now: number },
+): Promise<Id<"companyWebsites">> {
+  const identity = requireHost(args.url);
+  const { websiteId, created } = await findOrCreateWebsite(ctx, identity, args.now);
+
+  const existing = await ctx.db
+    .query("companyWebsites")
+    .withIndex("by_company_website", (q) =>
+      q.eq("companyId", args.companyId).eq("websiteId", websiteId),
+    )
+    .first();
+  if (existing) throw appError("CONFLICT", "This company already has that website.");
+
+  const companyWebsiteId = await ctx.db.insert("companyWebsites", {
+    companyId: args.companyId,
+    websiteId,
+    relationship: "OWNED",
+    createdAt: args.now,
+  });
+
+  await ctx.db.insert("auditLogs", {
+    actorId: args.actorId,
+    actionType: "ADD_COMPANY_WEBSITE",
+    entityId: companyWebsiteId,
+    entityType: "companyWebsites",
+    companyId: args.companyId,
+    // Whether this is new spend or joins a host already being fetched.
+    metadata: JSON.stringify({ host: identity.host, websiteCreated: created }),
+    timestamp: args.now,
+  });
+
+  return companyWebsiteId;
+}
+
 export const addCompanyWebsite = superAdminMutation({
   args: { companyId: v.id("companies"), url: v.string() },
   returns: v.id("companyWebsites"),
@@ -607,37 +649,7 @@ export const addCompanyWebsite = superAdminMutation({
     const company = await ctx.db.get(args.companyId);
     if (!company) throw appError("NOT_FOUND", "Company not found");
 
-    const identity = requireHost(args.url);
-    const now = Date.now();
-    const { websiteId, created } = await findOrCreateWebsite(ctx, identity, now);
-
-    const existing = await ctx.db
-      .query("companyWebsites")
-      .withIndex("by_company_website", (q) =>
-        q.eq("companyId", args.companyId).eq("websiteId", websiteId),
-      )
-      .first();
-    if (existing) throw appError("CONFLICT", "This company already has that website.");
-
-    const companyWebsiteId = await ctx.db.insert("companyWebsites", {
-      companyId: args.companyId,
-      websiteId,
-      relationship: "OWNED",
-      createdAt: now,
-    });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "ADD_COMPANY_WEBSITE",
-      entityId: companyWebsiteId,
-      entityType: "companyWebsites",
-      companyId: args.companyId,
-      // Whether this is new spend or joins a host already being fetched.
-      metadata: JSON.stringify({ host: identity.host, websiteCreated: created }),
-      timestamp: now,
-    });
-
-    return companyWebsiteId;
+    return await holdOwnWebsite(ctx, { companyId: args.companyId, url: args.url, actorId: ctx.userId, now: Date.now() });
   },
 });
 

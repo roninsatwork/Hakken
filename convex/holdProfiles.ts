@@ -21,10 +21,10 @@ import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
  */
 
 /** A sector or a market: a few words, not a sentence. */
-const MAX_PROFILE_LABEL = 120;
+export const MAX_PROFILE_LABEL = 120;
 
 /** What the business does: a sentence or two — every judgment about the site carries it. */
-const MAX_BUSINESS_DESCRIPTION = 600;
+export const MAX_BUSINESS_DESCRIPTION = 600;
 
 type Reader = { db: QueryCtx["db"] };
 
@@ -161,12 +161,20 @@ export const getHoldProfile = superAdminQuery({
     sector: v.union(v.string(), v.null()),
     marketLabel: v.union(v.string(), v.null()),
     businessDescription: v.union(v.string(), v.null()),
+    /** What Auto Setup wrote each box from, while no person has changed it: said under the box (auto-setup-plan.md, AS5). */
+    written: v.object({
+      brandNames: v.union(v.string(), v.null()),
+      sector: v.union(v.string(), v.null()),
+      marketLabel: v.union(v.string(), v.null()),
+      businessDescription: v.union(v.string(), v.null()),
+    }),
   })),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.companyWebsiteId);
     if (!hold) return null;
     const website = await ctx.db.get(hold.websiteId);
     const profile = await holdProfileOf(ctx, hold._id);
+    const wrote = profile?.hakkenWrote;
     return {
       host: website?.displayHost ?? "",
       owned: !isTrackedHold(hold),
@@ -174,16 +182,46 @@ export const getHoldProfile = superAdminQuery({
       sector: profile?.sector ?? null,
       marketLabel: profile?.marketLabel ?? null,
       businessDescription: profile?.businessDescription ?? null,
+      written: {
+        brandNames: wrote?.brandNames ?? null,
+        sector: wrote?.sector ?? null,
+        marketLabel: wrote?.marketLabel ?? null,
+        businessDescription: wrote?.businessDescription ?? null,
+      },
     };
   },
 });
 
-async function writeProfile(
+type ProfileField = "brandNames" | "sector" | "marketLabel" | "businessDescription";
+
+/**
+ * Who wrote each box now: Auto Setup's note kept on the boxes it wrote
+ * (`wrote`, with what it wrote them from), and dropped from any box a person
+ * changes — so "Hakken wrote this" never sits under a person's words
+ * (auto-setup-plan.md, AS5).
+ */
+function hakkenWroteAfter(
+  held: Doc<"holdProfiles"> | null,
+  fields: Partial<Pick<Doc<"holdProfiles">, ProfileField>>,
+  wrote: Partial<Record<ProfileField, string>> | undefined,
+): Doc<"holdProfiles">["hakkenWrote"] {
+  const next: Partial<Record<ProfileField, string>> = { ...(held?.hakkenWrote ?? {}) };
+  for (const key of Object.keys(fields) as ProfileField[]) {
+    if (wrote?.[key]) next[key] = wrote[key];
+    else if (JSON.stringify(fields[key] ?? null) !== JSON.stringify(held?.[key] ?? null)) delete next[key];
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+export async function writeProfile(
   ctx: MutationCtx,
   hold: Doc<"companyWebsites">,
-  fields: Partial<Pick<Doc<"holdProfiles">, "brandNames" | "sector" | "marketLabel" | "businessDescription">>,
+  fields: Partial<Pick<Doc<"holdProfiles">, ProfileField>>,
+  /** Auto Setup's writes: what it wrote each of these boxes from. A person's save leaves this out. */
+  wrote?: Partial<Record<ProfileField, string>>,
 ) {
   const held = await holdProfileOf(ctx, hold._id);
+  const hakkenWrote = hakkenWroteAfter(held, fields, wrote);
   const brandNames = fields.brandNames ?? held?.brandNames ?? [];
   // A field passed as undefined is cleared; one left out keeps what it was.
   const sector = "sector" in fields ? fields.sector : held?.sector;
@@ -198,6 +236,7 @@ async function writeProfile(
     ...(sector ? { sector } : {}),
     ...(marketLabel ? { marketLabel } : {}),
     ...(businessDescription ? { businessDescription } : {}),
+    ...(hakkenWrote ? { hakkenWrote } : {}),
     updatedAt: Date.now(),
   };
   if (held) await ctx.db.replace(held._id, next);

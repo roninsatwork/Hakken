@@ -43,8 +43,10 @@ describe("the Websites section's menu", () => {
     const menu = screen.getByRole("navigation", { name: "admin.websitesSection.label" });
     // Twelve since Schedule and limits became Schedules and Limits (2026-09-28);
     // thirteen with Market (search-console-plan.md §16, 2026-10-03); fourteen
-    // with Page classification (page-groups-plan.md, 2026-10-03).
-    expect(within(menu).getAllByRole("link")).toHaveLength(14);
+    // with Page classification (page-groups-plan.md, 2026-10-03); fifteen with
+    // Auto Setup under Setup (auto-setup-plan.md, 2026-10-19).
+    expect(within(menu).getAllByRole("link")).toHaveLength(15);
+    expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.autoSetup" })).toHaveAttribute("href", `${base}/auto-setup`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.market" }))
       .toHaveAttribute("href", `${base}/market`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.classification" }))
@@ -79,6 +81,7 @@ describe("the Websites section's menu", () => {
       "admin.websitesSection.pages.names",
       "admin.websitesSection.pages.market",
       "admin.websitesSection.pages.rankings",
+      "admin.websitesSection.pages.autoSetup",
       "admin.websitesSection.pages.schedules",
       "admin.websitesSection.pages.limits",
       "admin.websitesSection.pages.runs",

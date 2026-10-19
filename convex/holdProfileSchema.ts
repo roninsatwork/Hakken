@@ -36,6 +36,16 @@ export const holdProfileTables = {
     sector: v.optional(v.string()),
     marketLabel: v.optional(v.string()),
     businessDescription: v.optional(v.string()),
+    /**
+     * The boxes Auto Setup wrote and no person has changed since, each with what
+     * it wrote them from, said under the box (auto-setup-plan.md, AS5).
+     */
+    hakkenWrote: v.optional(v.object({
+      brandNames: v.optional(v.string()),
+      sector: v.optional(v.string()),
+      marketLabel: v.optional(v.string()),
+      businessDescription: v.optional(v.string()),
+    })),
     updatedAt: v.number(),
   })
     .index("by_hold", ["companyWebsiteId"])

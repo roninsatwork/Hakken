@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Save, Loader2, PoundSterling } from "lucide-react";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { useAutoSetupWords } from "../_components/useAutoSetupWords";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { CompanyBillingCard } from "@/src/ui/components/billing/CompanyBillingCard";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -32,6 +33,7 @@ export default function CompanyOverviewContent({
   activePlans,
 }: CompanyOverviewContentProps) {
   const t = useTranslations("admin.companyDetails.profile");
+  const autoSetup = useAutoSetupWords();
   const updateProfile = useMutation(api.companies.updateCompanyProfile);
   const assignPlanToCompany = useMutation(api.companies.assignPlanToCompany);
   const action = useAdminAction({ scope: "admin-company-profile" });
@@ -107,6 +109,7 @@ export default function CompanyOverviewContent({
 
             <Field
               label={t("descriptionLabel")}
+              hint={company.hakkenWrote?.description && descVal === (company.description || "") ? autoSetup.wroteThis(company.hakkenWrote.description) ?? undefined : undefined}
               value={descVal}
               onChange={(event) => setDescVal(event.target.value)}
               placeholder={t("descriptionPlaceholder")}
@@ -115,7 +118,7 @@ export default function CompanyOverviewContent({
 
           <TextAreaField
             label={t("aboutLabel")}
-            hint={t("aboutHint")}
+            hint={(company.hakkenWrote?.overview && overviewVal === (company.overview || "") ? autoSetup.wroteThis(company.hakkenWrote.overview) : null) ?? t("aboutHint")}
             value={overviewVal}
             onChange={(event) => setOverviewVal(event.target.value)}
             className="min-h-[220px] resize-y"

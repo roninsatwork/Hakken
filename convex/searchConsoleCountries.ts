@@ -36,7 +36,7 @@ export function mainConsoleCountry(hold: Pick<Doc<"companyWebsites">, "searchCon
 }
 
 /** Google's "we could not tell" — never a country a website trades in. */
-const UNKNOWN_COUNTRY = "zzz";
+export const UNKNOWN_COUNTRY = "zzz";
 /** Packed records — lists and ready-made periods — are large, so fewer go at a time than rows. */
 const CLEAR_RECORDS = 5;
 const CLEAR_ROWS = 500;
@@ -162,13 +162,20 @@ export const searchConsoleMarket = superAdminQuery({
       countries: v.array(v.string()),
       /** `consoleCountriesPerSite` for this website; past it, the countries added first are kept ready. */
       limit: v.number(),
+      /** What Auto Setup read that said where it trades, while no person has changed its choice (auto-setup-plan.md, decision 2). */
+      writtenFrom: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.companyWebsiteId);
     if (!hold) return null;
     const limits = await readFanOutLimits(ctx, hold.companyId, hold._id);
-    return { owned: !isTrackedHold(hold), countries: hold.searchConsoleCountries ?? [], limit: limits.consoleCountriesPerSite };
+    return {
+      owned: !isTrackedHold(hold),
+      countries: hold.searchConsoleCountries ?? [],
+      limit: limits.consoleCountriesPerSite,
+      writtenFrom: hold.searchConsoleCountriesBy ?? null,
+    };
   },
 });
 
@@ -204,7 +211,13 @@ export const setSearchConsoleCountries = superAdminMutation({
       );
     }
 
-    await ctx.db.patch(args.companyWebsiteId, { searchConsoleCountries: countries.length > 0 ? countries : undefined, updatedAt: Date.now() });
+    const changed = countries.join(",") !== before.join(",");
+    await ctx.db.patch(args.companyWebsiteId, {
+      searchConsoleCountries: countries.length > 0 ? countries : undefined,
+      // A person's change makes the choice theirs: Auto Setup's note under it goes.
+      ...(changed ? { searchConsoleCountriesBy: undefined } : {}),
+      updatedAt: Date.now(),
+    });
     // A country no longer kept ready beside the main one goes; a main country
     // that changes is cleared whole by the next collection (`switchMainCountry`).
     for (const country of before.slice(1).filter((code) => !countries.slice(1).includes(code))) {

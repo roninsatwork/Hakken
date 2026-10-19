@@ -13,6 +13,7 @@ import {
   Search,
   Sparkles,
   Swords,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ export type SectionPageId =
   | "rankings"
   | "answers"
   | "fanOut"
+  | "autoSetup"
   | "schedules"
   | "limits"
   | "runs";
@@ -81,6 +83,9 @@ export const SECTION_PAGES: readonly SectionPage[] = [
   // Schedule and limits until 2026-09-28, then two screens (Anthony: "This
   // should be two screens / Schedules / Limits"); the old addresses, `data`
   // and a website's `settings`, redirect to Schedules.
+  // Auto Setup, the company's alone: one press sets up all its websites and rivals (auto-setup-plan.md;
+  // Anthony, 2026-10-19: "add this to the left hand nav under collection", the group since headed Setup).
+  { id: "autoSetup", group: "collection", icon: Wand2, all: "auto-setup", site: null, owners: "ANY" },
   { id: "schedules", group: "collection", icon: CalendarClock, all: "schedules", site: "schedules", owners: "ANY" },
   { id: "limits", group: "collection", icon: Gauge, all: "limits", site: "limits", owners: "ANY" },
   { id: "runs", group: "collection", icon: Receipt, all: "runs", site: null, owners: "ANY" },

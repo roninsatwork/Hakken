@@ -9,6 +9,7 @@ import { WATCHER } from "./utils/hakkenWatcher";
 import { STAT_REPORTER } from "./utils/statReporter";
 import { CARETAKER } from "./utils/hakkenCaretaker";
 import { AUTO_CLASSIFIER } from "./utils/autoClassifyAgent";
+import { AUTO_SETUP } from "./utils/autoSetupAgent";
 import { CLARITY_COLLECTOR } from "./utils/clarityCollectorAgent";
 
 /**
@@ -40,9 +41,11 @@ import { CLARITY_COLLECTOR } from "./utils/clarityCollectorAgent";
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Auto Classify starts a run of its own for each website with page groups
  *   and pages to sort (`autoClassifyStart.ts`).
+ * - Auto Setup does nothing here and says so: it starts from a company's
+ *   Websites tab (`autoSetupStart.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "GOOGLE_ANALYTICS_JOB" | "BING_WEBMASTER_JOB" | "INSIGHTS_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "AUTO_CLASSIFY_ROUND" | "CLARITY_JOB" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "GOOGLE_ANALYTICS_JOB" | "BING_WEBMASTER_JOB" | "INSIGHTS_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "AUTO_CLASSIFY_ROUND" | "AUTO_SETUP_FROM_COMPANY" | "CLARITY_JOB" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -103,6 +106,12 @@ export async function startAgentRun(
   if (agent.systemKey === AUTO_CLASSIFIER.systemKey) {
     await ctx.scheduler.runAfter(0, internal.autoClassifyStart.runAutoClassifyNow, { runId, workflowExecutionId });
     return "AUTO_CLASSIFY_ROUND";
+  }
+
+  // Auto Setup starts only from a company's Websites tab (auto-setup-plan.md, decision 1): here its run says so and does nothing.
+  if (agent.systemKey === AUTO_SETUP.systemKey) {
+    await ctx.scheduler.runAfter(0, internal.autoSetupStart.answerAgentsRun, { runId, workflowExecutionId });
+    return "AUTO_SETUP_FROM_COMPANY";
   }
 
   // The Stat Report Agent: every report due now (item 4.1).

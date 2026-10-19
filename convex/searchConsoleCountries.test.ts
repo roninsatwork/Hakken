@@ -42,7 +42,7 @@ describe("where a website trades", () => {
     await asSuper.mutation(api.searchConsoleCountries.setSearchConsoleCountries, { companyWebsiteId: siteId, countries: ["GBR", "irl", "gbr"] });
 
     expect(await asSuper.query(api.searchConsoleCountries.searchConsoleMarket, { companyWebsiteId: siteId }))
-      .toEqual({ owned: true, countries: ["gbr", "irl"], limit: 3 });
+      .toEqual({ owned: true, countries: ["gbr", "irl"], limit: 3, writtenFrom: null });
   });
 
   test("a company admin cannot set them: countries are set only in admin", async () => {

@@ -271,6 +271,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   // Auto Classify's answers, a page's written over when it is asked again, and its one row a website (auto-classify-plan.md).
   pageClassificationAuto: LATEST,
   autoClassifyRuns: LATEST,
+  // Auto Setup's one row a company, written over by each run (auto-setup-plan.md, AS11).
+  autoSetupRuns: LATEST,
   discoveredCompetitors: RECORD,
 
   // ── AI answers ────────────────────────────────────────────────────────────

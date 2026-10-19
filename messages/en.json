@@ -888,6 +888,12 @@
       "title": "Manage Companies",
       "subtitle": "Manage company settings.",
       "newCompany": "Add Company",
+      "add": {
+        "title": "Add company",
+        "subtitle": "Give it a name and its website. Adding it opens the company, where its people, plan, features and any more websites each have their own tab.",
+        "save": "Add company",
+        "saveFailed": "The company could not be added. Please try again."
+      },
       "searchPlaceholder": "Search by company name...",
       "tenantName": "Company",
       "collection": "Collection",
@@ -908,31 +914,21 @@
       "to": "to",
       "of": "of",
       "companies": "companies",
-      "createTitle": "Add Company",
-      "createSubtitle": "Add a new company structure to the platform.",
       "editTitle": "Edit Company",
-      "editSubtitle": "Modify settings and profile for this company.",
       "nameLabel": "Company Name",
       "namePlaceholder": "e.g. ACME Corp",
-      "promptLabel": "Company System Directives",
-      "promptOptional": "Override system-level defaults",
-      "promptPlaceholder": "Enter specialized directives for this organization...",
-      "provisionTenant": "Save Company",
       "deleteTitle": "Delete Company",
       "deleteConfirm": "Are you sure you want to permanently erase <highlight>{name}</highlight> and all associated protocol data?",
       "warningCascade": "Permanent Data Deletion",
       "warningDesc": "This action will purge all agents, messages, and configurations for this company. This cannot be undone.",
       "deleteTenant": "Delete Company",
       "deleteAndWipe": "Delete Company & Wipe Data",
-      "planLabel": "Subscription Plan",
       "featuresTitle": "Features",
       "featuresSearchPlaceholder": "Search features...",
       "featuresEmptyState": "No features match that search.",
       "featuresOnColumn": "Switched on",
       "featuresNameColumn": "Feature",
       "featuresDescriptionColumn": "What it does",
-      "modulesLabel": "Optional Modules",
-      "modulesHint": "Extra sections only this workspace can see",
       "modules": {
         "tasks": {
           "name": "Tasks",
@@ -956,7 +952,6 @@
         }
       },
       "errors": {
-        "saveFailed": "Failed to sync tenant directives.",
         "deleteFailed": "Failed to purge tenant from protocol."
       },
       "featuresIntro": "What this workspace can reach. Switching one off removes it from their menu and closes the section — typing the address will not get them in. Nobody else is affected.",
@@ -3540,7 +3535,8 @@
               },
               "daily": {
                 "label": "Spend a day ($)",
-                "hint": "Everything the Collector sends in a UK day. Once it is reached, sending waits until midnight, or carries on as soon as you raise it here. Empty means no ceiling."
+                "hint": "Everything the Collector sends in a UK day. Once it is reached, sending waits until midnight, or carries on as soon as you raise it here. Empty means no ceiling.",
+                "autoSetupHint": "Everything Auto Setup's runs spend in a UK day, together. Once it is reached, Auto Setup does not start until midnight, or as soon as you raise it here. Empty means $10."
               }
             },
             "status": {
@@ -4624,6 +4620,7 @@
         "yes": "When someone says yes",
         "lookUp": "When someone presses Look up",
         "autoClassify": "When someone presses Auto Classify",
+        "autoSetup": "When someone presses Auto Setup",
         "never": "Not run on its own",
         "noSchedule": "No schedule yet",
         "paused": "{schedule}, paused",
@@ -6874,7 +6871,7 @@
         "websites": "Websites",
         "track": "What we track",
         "results": "What came back",
-        "collection": "Collection"
+        "collection": "Setup"
       },
       "pages": {
         "websites": "All websites",
@@ -6888,6 +6885,7 @@
         "rankings": "Rankings",
         "answers": "AI answers",
         "fanOut": "AI searches",
+        "autoSetup": "Auto Setup",
         "schedules": "Schedules",
         "limits": "Limits",
         "runs": "Runs and cost"
@@ -7832,6 +7830,97 @@
         "last": "Last week",
         "empty": "No pattern has fired yet.",
         "noMatch": "No pattern matches that search."
+      }
+    },
+    "autoSetup": {
+      "parts": {
+        "names": "names",
+        "profile": "profile",
+        "searches": "Google searches",
+        "questions": "AI questions",
+        "countries": "home countries"
+      },
+      "left": "Still for a person: {items}.",
+      "forPerson": {
+        "COLLECTION": "switch collection on in Schedules",
+        "SEARCH_CONSOLE": "connect Search Console",
+        "ANALYTICS": "connect Google Analytics",
+        "COUNTRIES": "check where it trades on Market"
+      },
+      "seeRun": "See its run",
+      "stopped": "Auto Setup stopped: {reason}",
+      "agentOff": "Auto Setup is switched off in Agents, so it can't start. Switch it on there to use it.",
+      "dayCap": "Auto Setup has reached its spend cap for today. It can start again after midnight, or as soon as the cap is raised on its Settings in Agents.",
+      "failed": "Auto Setup could not start. Try again.",
+      "outcomes": {
+        "STARTED": "Auto Setup has started.",
+        "GOING": "Auto Setup is already working on this company.",
+        "NOTHING": "Nothing is empty: every box is filled.",
+        "AGENT_OFF": "Auto Setup is switched off in Agents.",
+        "DAY_CAP": "Auto Setup has reached its spend cap for today."
+      },
+      "from": {
+        "PAGES": "from {host}'s pages",
+        "PAGES_WEB": "from {host}'s pages and a web search",
+        "HOME": "from {host}'s home page",
+        "WEB": "from a web search",
+        "RIVALS": "rivals rank for it: {hosts}",
+        "RIVALS_MORE": "rivals rank for it: {hosts} and {more} more",
+        "OWN_NAME": "its own name"
+      },
+      "writtenLine": "Written by {platformName} · {from}",
+      "wroteThis": "{platformName} wrote this {from}. Change it any time.",
+      "wroteThese": "{platformName} wrote these {from}. Change them any time.",
+      "byAutoSetup": "by Auto Setup",
+      "startHere": "Auto Setup starts from a company's Websites tab: one press there sets up that company's websites and rivals.",
+      "pageSubtitle": "Writes {company}'s empty setup boxes from its own pages, its rivals' pages, the web and what the rivals rank for. It fills only empty boxes, never changes what a person wrote, and never switches collection on.",
+      "nothingEmpty": "Every setup box is filled, so there is nothing for Auto Setup to write. Press it again after adding a website or a rival.",
+      "run": "Run Auto Setup",
+      "working": "Working: {done} of {total} done",
+      "emptySummary": "{count, plural, one {# box is empty} other {# boxes are empty}}: {list}.",
+      "emptyOwn": "{host}'s {parts}",
+      "emptyCompany": "the company's description",
+      "emptyRivals": "{count, plural, one {a rival's names} other {# rivals' names}}",
+      "limits": "Each run reads up to {pages} pages of each of the company's websites and each rival's home page, makes up to {webSearches} web searches, and writes up to {searches} Google searches and {questions} AI questions a website. It stops at {runCap} a run and {dayCap} a day, set in Agents.",
+      "runningLine": "Auto Setup is working: {done} of {total} websites done. Each box below changes as it is written.",
+      "now": "Now: {doing}.",
+      "doing": {
+        "READ_PAGES": "reading {host}'s pages",
+        "SEARCH_NAMES": "searching the web for what people call {host}",
+        "SEARCH_ASKS": "searching the web for what {host}'s customers ask",
+        "WRITE_PROFILE": "writing {host}'s names, profile and home countries",
+        "RANKINGS": "looking up {host}'s Google rankings ({at} of {of})",
+        "WRITE_LISTS": "writing {host}'s Google searches and AI questions",
+        "READ_RIVALS": "reading {count, plural, one {a rival's home page} other {# rivals' home pages}}",
+        "NAME_RIVALS": "naming {count, plural, one {a rival} other {# rivals}}"
+      },
+      "doneLine": "Finished at {time} for {cost}.",
+      "table": {
+        "title": "What it fills",
+        "subtitle": "Every setup box for the company and each of its websites: empty, filled by a person, or written by {platformName}.",
+        "search": "Search websites...",
+        "empty": "No websites yet.",
+        "columns": {
+          "website": "Website",
+          "names": "Names",
+          "profile": "Profile",
+          "searches": "Google searches",
+          "questions": "AI questions",
+          "countries": "Home countries"
+        },
+        "kind": {
+          "COMPANY": "The company: its description and About",
+          "OWN": "Its own website",
+          "RIVAL": "A rival",
+          "RIVAL_OF": "Rival of {host}"
+        }
+      },
+      "box": {
+        "EMPTY": "Empty",
+        "PERSON": "Filled",
+        "HAKKEN": "By {platformName}",
+        "HAKKEN_COUNT": "{count} by {platformName}",
+        "WRITING": "Writing"
       }
     }
   },

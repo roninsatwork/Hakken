@@ -1,0 +1,136 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-19T16:30:00Z"
+  },
+  "title": "Auto Setup",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1372,
+      "title": "1 · Websites: Auto Setup's line and button",
+      "expand": "fill"
+    },
+    "Running.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1329,
+      "title": "2 · While it runs: its progress line",
+      "expand": "fill"
+    },
+    "Done.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1372,
+      "title": "3 · When it's done: what it wrote, what's left for a person",
+      "expand": "fill"
+    },
+    "Profile.dc.html": {
+      "x": 0,
+      "y": 1772,
+      "w": 1440,
+      "h": 1381,
+      "title": "4 · Names and profile: each box says Hakken wrote it, and from what",
+      "expand": "fill"
+    },
+    "Searches.dc.html": {
+      "x": 1520,
+      "y": 1772,
+      "w": 1440,
+      "h": 1981,
+      "title": "5 · Tracked keywords: 25 written, each saying where it came from",
+      "expand": "fill"
+    },
+    "Questions.dc.html": {
+      "x": 3040,
+      "y": 1772,
+      "w": 1440,
+      "h": 2008,
+      "title": "6 · Your prompts: 10 AI questions, added by Auto Setup",
+      "expand": "fill"
+    },
+    "Agents.dc.html": {
+      "x": 0,
+      "y": 4180,
+      "w": 1440,
+      "h": 1058,
+      "title": "7 · Agents: Auto Setup under Collecting data",
+      "expand": "fill"
+    },
+    "AgentRun.dc.html": {
+      "x": 1520,
+      "y": 4180,
+      "w": 1440,
+      "h": 1808,
+      "title": "8 · A run: what it read, searched, wrote and spent",
+      "expand": "fill"
+    },
+    "AgentSettings.dc.html": {
+      "x": 3040,
+      "y": 4180,
+      "w": 1440,
+      "h": 2292,
+      "title": "9 · Its settings: web search on, $2 a run, no approval wait",
+      "expand": "fill"
+    },
+    "Overview.dc.html": {
+      "x": 4560,
+      "y": 1772,
+      "w": 1440,
+      "h": 1325,
+      "title": "10 · Overview: its one-line description and About, each saying Hakken wrote it",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Running.dc.html",
+    "Done.dc.html",
+    "Overview.dc.html",
+    "Profile.dc.html",
+    "Searches.dc.html",
+    "Questions.dc.html",
+    "Agents.dc.html",
+    "AgentRun.dc.html",
+    "AgentSettings.dc.html"
+  ],
+  "notes": {
+    "rowCompany": {
+      "x": 0,
+      "y": -300,
+      "text": "On the company's Websites tab",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "rowBoxes": {
+      "x": 0,
+      "y": 1472,
+      "text": "What it fills in, each marked as Hakken's",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "rowAgents": {
+      "x": 0,
+      "y": 3880,
+      "text": "In Agents: its runs, costs and settings",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "about": {
+      "x": 4560,
+      "y": 0,
+      "w": 380,
+      "text": "Drawn from the real screens' code, with National Extension College's real websites and rivals from your local data (19 Oct 2026).\n\nThe wording Auto Setup writes on boards 3 to 6 and 8 (names, profile, searches, questions, costs) is my example of what it would write, not its output; so are the costs on board 8. Board 10's company description and About are examples too.\n\nNew on these boards: Auto Setup's line and button above the websites (1 to 3); the 'Hakken wrote this from…' line under each box it filled, in the words Auto Classify already uses (4, 10); the 'Written by Hakken · from…' line under each search and question (5, 6); 'by Auto Setup' under a question's date (6); and the Auto Setup agent itself (7 to 9).\n\nNot drawn: a spend cap per day. Today only the DataForSEO Collector has one; board 9 shows the cap per run.\n\nkit.css 9200a2ba8a26 · look 149d9f4fb243"
+    }
+  },
+  "designSystems": []
+}

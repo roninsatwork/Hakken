@@ -888,6 +888,12 @@
       "title": "Protocollo Tenant",
       "subtitle": "Gestisci gli ambienti di lavoro isolati e le direttive a livello di sistema.",
       "newCompany": "Attiva Tenant",
+      "add": {
+        "title": "Aggiungi azienda",
+        "subtitle": "Dagli un nome e il suo sito web. Aggiungendola si apre l'azienda, dove persone, piano, funzionalità e altri siti web hanno ciascuno la propria scheda.",
+        "save": "Aggiungi azienda",
+        "saveFailed": "Non è stato possibile aggiungere l'azienda. Riprova."
+      },
       "searchPlaceholder": "Cerca per nome workspace...",
       "tenantName": "Identità Workspace",
       "collection": "Raccolta",
@@ -908,26 +914,16 @@
       "to": "a",
       "of": "di",
       "companies": "workspace",
-      "createTitle": "Inizializza Workspace",
-      "createSubtitle": "Attiva un nuovo ambiente tenant isolato per un'organizzazione.",
       "editTitle": "Aggiorna Direttive",
-      "editSubtitle": "Modifica le direttive core e l'identità del workspace per questo tenant.",
       "nameLabel": "Nome Workspace",
       "namePlaceholder": "es. ACME Corp",
-      "promptLabel": "Matrice Sistema Tenant",
-      "promptOptional": "Sovrascrivi i default di sistema",
-      "promptPlaceholder": "Inserisci direttive specializzate per questa organizzazione...",
-      "provisionTenant": "Attiva Workspace",
       "deleteTitle": "Disattiva Workspace",
       "deleteConfirm": "Sei sicuro di voler eliminare permanentemente <highlight>{name}</highlight> e tutti i dati di protocollo associati?",
       "warningCascade": "Eliminazione Permanente Dati",
       "warningDesc": "Questa azione cancellerà tutti gli agent, i messaggi e le configurazioni per questo tenant. L'azione non può essere annullata.",
       "deleteTenant": "Purga Tenant",
       "deleteAndWipe": "Elimina l'azienda e cancella i dati",
-      "planLabel": "Piano di abbonamento",
       "featuresTitle": "Funzionalità",
-      "modulesLabel": "Moduli opzionali",
-      "modulesHint": "Sezioni aggiuntive visibili solo a questo spazio di lavoro",
       "modules": {
         "tasks": {
           "name": "Attività",
@@ -951,7 +947,6 @@
         }
       },
       "errors": {
-        "saveFailed": "Impossibile sincronizzare le direttive tenant.",
         "deleteFailed": "Impossibile purgare il tenant dal protocollo."
       },
       "featuresNameColumn": "Funzionalità",
@@ -3540,7 +3535,8 @@
               },
               "daily": {
                 "label": "Spesa al giorno ($)",
-                "hint": "Tutto ciò che il Collector invia in un giorno (ora del Regno Unito). Raggiunto il limite, l'invio attende la mezzanotte, o riprende appena lo alzi qui. Vuoto significa nessun limite."
+                "hint": "Tutto ciò che il Collector invia in un giorno (ora del Regno Unito). Raggiunto il limite, l'invio attende la mezzanotte, o riprende appena lo alzi qui. Vuoto significa nessun limite.",
+                "autoSetupHint": "Tutto ciò che le esecuzioni di Configurazione automatica spendono in un giorno nel Regno Unito, insieme. Una volta raggiunto, Configurazione automatica non parte fino a mezzanotte, o appena lo alzi qui. Vuoto significa 10 $."
               }
             },
             "status": {
@@ -4624,6 +4620,7 @@
         "yes": "Quando qualcuno dice sì",
         "lookUp": "Quando qualcuno preme Cerca",
         "autoClassify": "Quando qualcuno preme Classificazione automatica",
+        "autoSetup": "Quando qualcuno preme Configurazione automatica",
         "never": "Non lavora da solo",
         "noSchedule": "Nessuna programmazione",
         "paused": "{schedule}, in pausa",
@@ -6874,7 +6871,7 @@
         "websites": "Siti",
         "track": "Cosa seguiamo",
         "results": "Cosa è tornato",
-        "collection": "Raccolta"
+        "collection": "Configurazione"
       },
       "pages": {
         "websites": "Tutti i siti",
@@ -6888,6 +6885,7 @@
         "rankings": "Posizionamenti",
         "answers": "Risposte IA",
         "fanOut": "Ricerche IA",
+        "autoSetup": "Configurazione automatica",
         "schedules": "Programmi",
         "limits": "Limiti",
         "runs": "Raccolte e costi"
@@ -7832,6 +7830,97 @@
         "last": "Ultima settimana",
         "empty": "Nessuno schema è ancora emerso.",
         "noMatch": "Nessuno schema corrisponde alla ricerca."
+      }
+    },
+    "autoSetup": {
+      "parts": {
+        "names": "nomi",
+        "profile": "profilo",
+        "searches": "ricerche Google",
+        "questions": "domande per l'IA",
+        "countries": "paesi in cui opera"
+      },
+      "left": "Resta da fare per una persona: {items}.",
+      "forPerson": {
+        "COLLECTION": "attivare la raccolta in Pianificazioni",
+        "SEARCH_CONSOLE": "collegare Search Console",
+        "ANALYTICS": "collegare Google Analytics",
+        "COUNTRIES": "controllare dove opera in Mercato"
+      },
+      "seeRun": "Vedi l'esecuzione",
+      "stopped": "Configurazione automatica si è fermata: {reason}",
+      "agentOff": "Configurazione automatica è disattivata in Agenti, quindi non può partire. Attivala lì per usarla.",
+      "dayCap": "Configurazione automatica ha raggiunto il limite di spesa di oggi. Può ripartire dopo mezzanotte, o appena il limite viene alzato nelle sue Impostazioni in Agenti.",
+      "failed": "Configurazione automatica non è riuscita a partire. Riprova.",
+      "outcomes": {
+        "STARTED": "Configurazione automatica è partita.",
+        "GOING": "Configurazione automatica sta già lavorando su questa azienda.",
+        "NOTHING": "Niente è vuoto: ogni casella è compilata.",
+        "AGENT_OFF": "Configurazione automatica è disattivata in Agenti.",
+        "DAY_CAP": "Configurazione automatica ha raggiunto il limite di spesa di oggi."
+      },
+      "from": {
+        "PAGES": "dalle pagine di {host}",
+        "PAGES_WEB": "dalle pagine di {host} e da una ricerca sul web",
+        "HOME": "dalla home page di {host}",
+        "WEB": "da una ricerca sul web",
+        "RIVALS": "i concorrenti si posizionano per questa: {hosts}",
+        "RIVALS_MORE": "i concorrenti si posizionano per questa: {hosts} e altri {more}",
+        "OWN_NAME": "il suo stesso nome"
+      },
+      "writtenLine": "Scritto da {platformName} · {from}",
+      "wroteThis": "{platformName} ha scritto questo {from}. Puoi cambiarlo quando vuoi.",
+      "wroteThese": "{platformName} ha scritto questi {from}. Puoi cambiarli quando vuoi.",
+      "byAutoSetup": "da Configurazione automatica",
+      "startHere": "Configurazione automatica parte dalla scheda Siti web di un'azienda: una pressione lì configura i siti e i concorrenti di quell'azienda.",
+      "pageSubtitle": "Compila le caselle di configurazione vuote di {company} dalle sue pagine, dalle pagine dei concorrenti, dal web e da ciò per cui si posizionano i concorrenti. Riempie solo le caselle vuote, non cambia mai ciò che ha scritto una persona e non attiva mai la raccolta.",
+      "nothingEmpty": "Ogni casella di configurazione è compilata, quindi Configurazione automatica non ha nulla da scrivere. Premila di nuovo dopo aver aggiunto un sito o un concorrente.",
+      "run": "Avvia Configurazione automatica",
+      "working": "In corso: {done} di {total} fatti",
+      "emptySummary": "{count, plural, one {# casella è vuota} other {# caselle sono vuote}}: {list}.",
+      "emptyOwn": "{parts} di {host}",
+      "emptyCompany": "la descrizione dell'azienda",
+      "emptyRivals": "{count, plural, one {i nomi di un concorrente} other {i nomi di # concorrenti}}",
+      "limits": "Ogni esecuzione legge fino a {pages} pagine di ciascun sito dell'azienda e la home page di ogni concorrente, fa fino a {webSearches} ricerche sul web e scrive fino a {searches} ricerche Google e {questions} domande per l'IA per sito. Si ferma a {runCap} per esecuzione e {dayCap} al giorno, impostati in Agenti.",
+      "runningLine": "Configurazione automatica è in corso: {done} di {total} siti fatti. Ogni casella qui sotto cambia appena viene scritta.",
+      "now": "Ora: {doing}.",
+      "doing": {
+        "READ_PAGES": "lettura delle pagine di {host}",
+        "SEARCH_NAMES": "ricerca sul web di come viene chiamato {host}",
+        "SEARCH_ASKS": "ricerca sul web di cosa chiedono i clienti di {host}",
+        "WRITE_PROFILE": "scrittura di nomi, profilo e paesi in cui opera {host}",
+        "RANKINGS": "lettura dei posizionamenti Google di {host} ({at} di {of})",
+        "WRITE_LISTS": "scrittura delle ricerche Google e delle domande per l'IA di {host}",
+        "READ_RIVALS": "lettura {count, plural, one {della home page di un concorrente} other {delle home page di # concorrenti}}",
+        "NAME_RIVALS": "scrittura dei nomi {count, plural, one {di un concorrente} other {di # concorrenti}}"
+      },
+      "doneLine": "Finita alle {time} per {cost}.",
+      "table": {
+        "title": "Cosa compila",
+        "subtitle": "Ogni casella di configurazione dell'azienda e di ciascun sito: vuota, compilata da una persona o scritta da {platformName}.",
+        "search": "Cerca siti...",
+        "empty": "Ancora nessun sito.",
+        "columns": {
+          "website": "Sito",
+          "names": "Nomi",
+          "profile": "Profilo",
+          "searches": "Ricerche Google",
+          "questions": "Domande per l'IA",
+          "countries": "Paesi in cui opera"
+        },
+        "kind": {
+          "COMPANY": "L'azienda: descrizione e presentazione",
+          "OWN": "Il suo sito",
+          "RIVAL": "Un concorrente",
+          "RIVAL_OF": "Concorrente di {host}"
+        }
+      },
+      "box": {
+        "EMPTY": "Vuota",
+        "PERSON": "Compilata",
+        "HAKKEN": "Da {platformName}",
+        "HAKKEN_COUNT": "{count} da {platformName}",
+        "WRITING": "In scrittura"
       }
     }
   },

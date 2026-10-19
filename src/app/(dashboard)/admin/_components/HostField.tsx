@@ -5,6 +5,7 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { CheckCircle2, Info } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
+import { Field } from "@/src/ui/components/screens/Field";
 import { ModalField } from "@/src/ui/components/screens/ModalForm";
 
 type HostFieldProps = {
@@ -19,6 +20,12 @@ type HostFieldProps = {
     /** What attaching to a host Hakken already tracks brings with it. */
     inherits: (counts: { weeks: number }) => string;
   };
+  /**
+   * Where it sits: in a pop-up (the default), or on a page, where it is the
+   * page's own `Field` with the same lines under it — Add company
+   * (docs/plans/active/add-company-page-plan.md, AC1).
+   */
+  look?: "modal" | "page";
 };
 
 /**
@@ -35,14 +42,14 @@ type HostFieldProps = {
  * was a footnote about not fetching twice until the host gained lists of its
  * own.
  *
- * Shared between the two add forms because they ask the same question and a
- * second copy would drift; the only difference between them is the wording,
- * which is passed in.
+ * Shared between the add forms because they ask the same question and a
+ * second copy would drift; the only differences between them are the wording,
+ * which is passed in, and whether the field is a pop-up's or a page's.
  */
 /** How long typing must pause before the address is checked. */
 const PREVIEW_DELAY_MS = 300;
 
-export function HostField({ label, placeholder, value, onChange, labels }: HostFieldProps) {
+export function HostField({ label, placeholder, value, onChange, labels, look = "modal" }: HostFieldProps) {
   // Asked once typing pauses rather than on every keystroke: each keystroke
   // was a new subscription and a server read of up to six hundred rows, twenty
   // of them to type one address. And only once there is something to read, so
@@ -54,6 +61,51 @@ export function HostField({ label, placeholder, value, onChange, labels }: HostF
     settled.trim().length > 2 ? { url: settled } : "skip",
   );
 
+  const lines = preview ? (
+    preview.ok ? (
+      <div className="mt-2 flex flex-col gap-1">
+        <p className="flex items-center gap-1.5 text-[12px] text-foreground">
+          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+          {labels.savedAs(preview.displayHost)}
+        </p>
+        <p className="flex items-start gap-1.5 text-[11px] text-muted">
+          <Info className="mt-0.5 h-3 w-3 shrink-0" />
+          {preview.alreadyKnown ? labels.alreadyKnown : labels.newWebsite}
+        </p>
+        {/*
+          Only when there is something to inherit. A host that is known but
+          has nothing on it yet would otherwise announce zeroes, which reads
+          as a fault rather than as "new".
+        */}
+        {preview.inherits && preview.inherits.weeksOfHistory > 0 ? (
+          <p className="flex items-start gap-1.5 text-[11px] text-success">
+            <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
+            {labels.inherits({ weeks: preview.inherits.weeksOfHistory })}
+          </p>
+        ) : null}
+      </div>
+    ) : (
+      <p className="mt-2 text-[12px] text-destructive">{preview.message}</p>
+    )
+  ) : null;
+
+  if (look === "page") {
+    return (
+      <div className="flex flex-col">
+        <Field
+          label={label}
+          type="text"
+          inputMode="url"
+          required
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+        {lines}
+      </div>
+    );
+  }
+
   return (
     <ModalField
       label={label}
@@ -64,33 +116,7 @@ export function HostField({ label, placeholder, value, onChange, labels }: HostF
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
     >
-      {preview ? (
-        preview.ok ? (
-          <div className="mt-2 flex flex-col gap-1">
-            <p className="flex items-center gap-1.5 text-[12px] text-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-              {labels.savedAs(preview.displayHost)}
-            </p>
-            <p className="flex items-start gap-1.5 text-[11px] text-muted">
-              <Info className="mt-0.5 h-3 w-3 shrink-0" />
-              {preview.alreadyKnown ? labels.alreadyKnown : labels.newWebsite}
-            </p>
-            {/*
-              Only when there is something to inherit. A host that is known but
-              has nothing on it yet would otherwise announce zeroes, which reads
-              as a fault rather than as "new".
-            */}
-            {preview.inherits && preview.inherits.weeksOfHistory > 0 ? (
-              <p className="flex items-start gap-1.5 text-[11px] text-success">
-                <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
-                {labels.inherits({ weeks: preview.inherits.weeksOfHistory })}
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          <p className="mt-2 text-[12px] text-destructive">{preview.message}</p>
-        )
-      ) : null}
+      {lines}
     </ModalField>
   );
 }

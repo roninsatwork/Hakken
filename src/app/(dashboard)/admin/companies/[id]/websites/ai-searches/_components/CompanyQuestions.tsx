@@ -27,6 +27,7 @@ import { WebsitePicker, chosenWebsite, useAiLists } from "./AiLists";
 import { PromptAllowance } from "./PromptAllowance";
 import { sectionBase } from "../../_components/websitesSection";
 import { AddBar } from "../../_components/AddBar";
+import { useAutoSetupWords } from "../../../_components/useAutoSetupWords";
 
 type Row = FunctionReturnType<typeof api.companyAiLists.listCompanyQuestions>["data"][number];
 
@@ -49,6 +50,7 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
   const tq = useTranslations("admin.companyAiLists.questions");
   const tSection = useTranslations("admin.websitesSection");
   const tCommon = useTranslations("common");
+  const tAuto = useTranslations("admin.autoSetup");
   const { companyId, counts, base } = useAiLists();
   const router = useRouter();
 
@@ -67,6 +69,7 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
   const removeQuestion = useMutation(api.websiteCanonical.removeWebsiteQuestion);
   const editQuestion = useMutation(api.websiteCanonical.editWebsiteQuestion);
   const action = useAdminAction({ scope: "admin-company-ai-questions" });
+  const autoSetup = useAutoSetupWords();
 
   const questions = useQuery(api.companyAiLists.listCompanyQuestions, {
     companyId,
@@ -253,13 +256,17 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
                 className="h-[38px] text-[13px]"
               />
             ) : (
-              <Link
-                href={promptHref(row)}
-                onClick={(event) => event.stopPropagation()}
-                className="text-[13px] text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
-              >
-                {row.prompt}
-              </Link>
+              // Under a question Auto Setup wrote, what it took it from (auto-setup-plan.md, AS5, board 6).
+              <span className="flex flex-col gap-0.5">
+                <Link
+                  href={promptHref(row)}
+                  onClick={(event) => event.stopPropagation()}
+                  className="text-[13px] text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
+                >
+                  {row.prompt}
+                </Link>
+                {row.writtenFrom ? <span className="text-[12px] text-secondary">{autoSetup.line(row.writtenFrom)}</span> : null}
+              </span>
             ),
           },
           ...(companyWebsiteId ? [] : [{
@@ -296,7 +303,12 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
           {
             key: "added",
             header: tq("columns.added"),
-            cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatDate(row.createdAt)}</span>,
+            cell: (row) => (
+              <span className="flex flex-col gap-0.5">
+                <span className="font-mono text-[12px] text-secondary">{formatDate(row.createdAt)}</span>
+                {row.byAutoSetup ? <span className="text-[11px] text-muted">{tAuto("byAutoSetup")}</span> : null}
+              </span>
+            ),
           },
           {
             key: "state",
