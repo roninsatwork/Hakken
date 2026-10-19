@@ -11,10 +11,11 @@ import { HEALTH_CHECKS, type HealthCheck } from "./googleAnalyticsSchema";
 import { decodePages } from "./holdPageRefs";
 import { NEVER_TICKED, readsAsEnquiry } from "./utils/analyticsEvents";
 import { COUNTED_AGAIN } from "./utils/sees/analytics";
+import { conversionAddressesOf, isCopyAddress, plainHost } from "./utils/analyticsAddresses";
 
 /**
  * Whether Google Analytics is counting a website properly
- * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): twelve checks,
+ * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): thirteen checks,
  * run when the first collection finishes and with every weekly one, each
  * saying what is wrong, why it matters and how to fix it on the Tracking
  * health page. When a check starts failing the platform's super admins get
@@ -220,10 +221,33 @@ export function copiesAmong(listed: readonly string[], series: ReadonlyMap<strin
   return copies;
 }
 
-/** The twelve checks, worked out from what is kept. */
+/** Conversions in 30 days on an address left out before it is named (check 13): one could be a test. */
+export const ELSEWHERE_FLOOR = 3;
+
+/**
+ * Check 13 (conversion-addresses-plan.md): addresses with listed events or
+ * sales in the last 30 days whose conversions don't count — neither the
+ * website's own, nor one Hakken or an admin picked, nor a copy of the website
+ * — the most first. A shop or a booking page Hakken didn't pick is one.
+ */
+export function conversionsElsewhere(
+  hostConversions: ReadonlyArray<{ host: string; conversions: number }>,
+  site: string,
+  counting: readonly string[],
+): Array<{ host: string; conversions: number }> {
+  const read = new Set([plainHost(site), ...counting.map(plainHost)]);
+  return hostConversions
+    .filter((entry) => entry.conversions >= ELSEWHERE_FLOOR && !read.has(plainHost(entry.host)) && !isCopyAddress(entry.host, site))
+    .sort((left, right) => right.conversions - left.conversions);
+}
+
+/** The thirteen checks, worked out from what is kept. */
 export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">): Promise<Result[]> {
   const website = await ctx.db.get(connection.websiteId);
   const site = bareHost(website?.host ?? "");
+  // The other addresses whose conversions count (conversion-addresses-plan.md): the website's own for checks 5, 8 and 13.
+  const counting = conversionAddressesOf(connection.addressesRead);
+  const countingHosts = new Set(counting.map(plainHost));
   const events = connection.events ?? [];
   const counted = events.filter((event) => event.counted);
   const results: Result[] = [];
@@ -278,7 +302,8 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   const channels = await slotRows(ctx, connection, slotKey("channel", "30", "NOW", "")) ?? [];
   const totalVisits = channels.reduce((sum, row) => sum + row.visits, 0);
   const referrals = channels.map((row) => ({ ...splitChannelKey(row.key), visits: row.visits })).filter((row) => row.channel === "Referral");
-  const self = referrals.filter((row) => site && bareHost(row.source) === site);
+  // A visit started again from the shop is the website's own too: its sale loses where the visitor came from.
+  const self = referrals.filter((row) => (site && bareHost(row.source) === site) || countingHosts.has(plainHost(row.source)));
   results.push({ check: "SELF_REFERRAL", passing: self.length === 0, names: self.map((row) => row.source), count: self.reduce((sum, row) => sum + row.visits, 0) });
   const payments = referrals.filter((row) => PAYMENT_SOURCES.some((payment) => row.source.toLowerCase() === payment || row.source.toLowerCase().endsWith(`.${payment}`) || row.source.toLowerCase().includes(payment)));
   results.push({ check: "PAYMENT_REFERRALS", passing: payments.length === 0, names: payments.map((row) => row.source), count: payments.reduce((sum, row) => sum + row.visits, 0) });
@@ -288,8 +313,8 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   const unknownShare = totalVisits > 0 ? Math.max(unassigned, notSet) / totalVisits : 0;
   results.push({ check: "TOO_MUCH_UNKNOWN", passing: unknownShare <= UNKNOWN_SHARE, share: unknownShare, count: Math.max(unassigned, notSet) });
 
-  // 8. Strangers: visits recorded on other addresses — a staging site, spam.
-  const strangers = (connection.hostVisits ?? []).filter((entry) => entry.visits > 0 && bareHost(entry.host) !== site && entry.host !== "(not set)");
+  // 8. Strangers: visits recorded on other addresses — a staging site, spam — but not a shop whose conversions count.
+  const strangers = (connection.hostVisits ?? []).filter((entry) => entry.visits > 0 && bareHost(entry.host) !== site && entry.host !== "(not set)" && !countingHosts.has(plainHost(entry.host)));
   results.push({ check: "STRANGERS", passing: strangers.length === 0, names: strangers.map((entry) => entry.host), count: strangers.reduce((sum, entry) => sum + entry.visits, 0) });
 
   // 9. Counted again: a page Google counts 1.5 times or more a visit that saw it — its contents links taken as new views —
@@ -338,6 +363,15 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   );
   results.push({ check: "NEVER_HAPPENS", passing: silent.names.length === 0, names: silent.names, count: silent.days });
 
+  // 13. Conversions on an address whose conversions don't count, from the weekly ask of every address.
+  const elsewhere = site ? conversionsElsewhere(connection.hostConversions ?? [], site, counting) : [];
+  results.push({
+    check: "CONVERSIONS_ELSEWHERE",
+    passing: elsewhere.length === 0,
+    names: elsewhere.map((entry) => entry.host),
+    count: elsewhere.reduce((sum, entry) => sum + entry.conversions, 0),
+  });
+
   return HEALTH_CHECKS.map((check) => results.find((result) => result.check === check)!);
 }
 
@@ -358,6 +392,10 @@ const BELL: Partial<Record<HealthCheck, (result: Result, host: string) => { titl
   ENQUIRY_UNCOUNTED: (result, host) => ({
     title: `${host}: an enquiry isn't counted`,
     body: `${(result.names ?? []).join(", ")} happened ${result.count ?? 0} times in 12 months, but nothing counts it as a conversion. Tracking health says how to fix it.`,
+  }),
+  CONVERSIONS_ELSEWHERE: (result, host) => ({
+    title: `${host}: conversions on another address`,
+    body: `${result.count ?? 0} conversions in the last 30 days happened on ${(result.names ?? []).join(", ")}, which isn't counted. If it's part of the website — a shop, a booking page — tick it on the Connection page.`,
   }),
   NEVER_HAPPENS: (result, host) => ({
     title: `${host}: a conversion never happens`,

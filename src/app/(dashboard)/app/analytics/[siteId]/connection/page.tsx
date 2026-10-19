@@ -18,6 +18,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { NEVER_TICKED } from "@/convex/utils/analyticsEvents";
+import { eventsWithAddresses } from "@/convex/utils/analyticsAddresses";
 import { chooseEventsSees, connectionSees } from "@/convex/utils/sees/analytics";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
@@ -63,12 +64,14 @@ function ConnectionBody({ status }: { status: AnalyticsStatus }) {
   const changing = useSearchParams().get("change") === "1";
   const currency = connection?.currency ?? null;
   const choosing = connection !== null && (connection.status === "COUNTING" || (changing && status.canManage && connection.status === "CONNECTED"));
+  // Each event's last 30 days on every address whose conversions count (conversion-addresses-plan.md), as saved.
+  const counts = connection?.events ? eventsWithAddresses(connection.events, connection.addressesRead) : null;
   return (
     <>
       {connection && choosing ? (
-        <AnalyticsSees screen="chooseEvents" seen={chooseEventsSees(status.host, connection.events, new Set(connection.copies.filter((copy) => NEVER_TICKED.has(copy.of)).map((copy) => copy.eventName)))} currency={currency} />
+        <AnalyticsSees screen="chooseEvents" seen={chooseEventsSees(status.host, counts, new Set(connection.copies.filter((copy) => NEVER_TICKED.has(copy.of)).map((copy) => copy.eventName)))} currency={currency} />
       ) : connection ? (
-        <AnalyticsSees screen="connection" seen={connectionSees(status.host, connection.status, connection.events)} currency={currency} />
+        <AnalyticsSees screen="connection" seen={connectionSees(status.host, connection.status, counts)} currency={currency} />
       ) : null}
       {connection?.attempt ? <AttemptNote status={status} /> : null}
       {!connection || connection.status === "CONNECTING" ? (
@@ -214,6 +217,8 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
   const events = connection.events;
   const sign = currencySign(connection.currency);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  // The other addresses' ticks, before they are saved: whether each one's conversions and sales count.
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
   // Changing what counts on a connected website reads the property's key events again, once.
   const asked = useRef(false);
   useEffect(() => {
@@ -241,6 +246,10 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
   };
   const set = (eventName: string, change: Partial<Draft>) => setDrafts((before) => ({ ...before, [eventName]: { ...draftOf(eventName), ...change } }));
   const counted = events.filter((event) => draftOf(event.eventName).counted).length;
+  const held = connection.addressesRead;
+  const tickOf = (address: (typeof held)[number]) => ticks[address.host] ?? address.counted;
+  // Each event's last 30 days on the website's own address and every other address ticked now.
+  const shown = new Map(eventsWithAddresses(events, held, tickOf).map((event) => [event.eventName, event.lastThirtyDays]));
   // Two ticked events that count the same day for day (conversions-back-in-time-plan.md BT5): said on the second in the
   // list. A key event matching one that is not is very likely built from it in Google Analytics: a copy of it.
   const copyNote = (eventName: string): string | null => {
@@ -265,7 +274,9 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
 
   return (
     <div className="flex flex-col gap-4">
-      {others.length > 0 ? (
+      {held.length > 0 ? (
+        <WhereConversionsCount status={status} tickOf={tickOf} onTick={(host, checked) => setTicks((before) => ({ ...before, [host]: checked }))} />
+      ) : others.length > 0 ? (
         <Notice>{t("addresses", { count: connection.addresses.length + others.length, property: connection.propertyName ?? "", host: status.host, read: connection.addresses.join(", "), others: others.join(", "), platformName })}</Notice>
       ) : null}
       <div className={`${PANEL} flex flex-col gap-4`}>
@@ -285,7 +296,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="text-[13px] text-foreground">{name}</span>
                     <span className="text-[12px] text-secondary">
-                      <span className="font-mono">{event.eventName}</span> · {t("lastThirty", { count: formatNumber(event.lastThirtyDays) })}
+                      <span className="font-mono">{event.eventName}</span> · {t("lastThirty", { count: formatNumber(shown.get(event.eventName) ?? event.lastThirtyDays) })}
                     </span>
                   </span>
                   <span className="text-[12px] text-secondary">
@@ -343,6 +354,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                     const value = draft.value.trim() === "" ? null : Number(draft.value);
                     return { eventName: event.eventName, counted: draft.counted, hakkenValue: value };
                   }),
+                  addresses: held.map((address) => ({ host: address.host, counted: tickOf(address) })),
                 }), { fallbackMessage: t("failed") });
                 if (outcome.ok) router.push(changing ? hrefFor("connection") : hrefFor(""));
               }}
@@ -354,6 +366,61 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
         ) : null}
         {!changing ? <p className="text-[12px] text-muted">{t("startsAtOnce")}</p> : null}
       </div>
+    </div>
+  );
+}
+
+type HeldAddress = NonNullable<AnalyticsStatus["connection"]>["addressesRead"][number];
+
+/** Why an address's conversions count or not, in the words beside it. */
+function whyOf(address: HeldAddress): "SAME_DOMAIN" | "REACHED" | "NOT_REACHED" | "COPY" {
+  if (address.kind === "OTHER_DOMAIN") return address.reached ? "REACHED" : "NOT_REACHED";
+  return address.kind;
+}
+
+/**
+ * Where conversions count (conversion-addresses-plan.md): the property's other
+ * addresses, each ticked where its conversions and sales count beside the
+ * website's own — a shop, a booking page — as Hakken chose them, for the admin
+ * to change. Visits and pages are only ever the website's own.
+ */
+function WhereConversionsCount({ status, tickOf, onTick }: {
+  status: AnalyticsStatus;
+  tickOf: (address: HeldAddress) => boolean;
+  onTick: (host: string, checked: boolean) => void;
+}) {
+  const t = useTranslations("googleAnalytics.counts");
+  const { platformName } = useSystemSettings();
+  const connection = status.connection!;
+  const held = connection.addressesRead;
+  const listed = new Set(held.map((address) => address.host));
+  const leftOut = connection.otherAddresses.filter((host) => !listed.has(host.toLowerCase()));
+  return (
+    <div className={`${PANEL} flex flex-col gap-4`}>
+      <div className="flex flex-col gap-1">
+        <h2 className="text-[15px] font-medium text-foreground">{t("whereTitle")}</h2>
+        <p className="text-[13px] text-secondary">{t("whereDescription", { property: connection.propertyName ?? "", read: connection.addresses.join(", "), platformName })}</p>
+      </div>
+      <div className="flex flex-col divide-y divide-border-dim/50 overflow-hidden rounded-xl border border-border-dim">
+        {held.map((address) => {
+          const ticked = tickOf(address);
+          const month = address.events.reduce((sum, event) => sum + event.month, 0);
+          return (
+            <div key={address.host} className="flex flex-col gap-1 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <Checkbox label={address.host} labelHidden checked={ticked} disabled={!status.canManage} onChange={(checked) => onTick(address.host, checked)} />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="break-all font-mono text-[13px] text-foreground">{address.host}</span>
+                  <span className="text-[12px] text-secondary">{t(`whereWhy.${whyOf(address)}`, { host: status.host })}</span>
+                </span>
+                <span className="shrink-0 text-[12px] text-secondary">{t("whereMonth", { count: formatNumber(month) })}</span>
+              </div>
+              {ticked !== address.hakken ? <p className="pl-7 text-[12px] text-muted">{t(address.hakken ? "whereHakkenIn" : "whereHakkenOut", { platformName })}</p> : null}
+            </div>
+          );
+        })}
+      </div>
+      {leftOut.length > 0 ? <p className="text-[12px] text-muted">{t("whereLeftOut", { count: leftOut.length, others: leftOut.join(", ") })}</p> : null}
     </div>
   );
 }
@@ -371,6 +438,9 @@ function ConnectionDetails({ status }: { status: AnalyticsStatus }) {
   const [confirming, setConfirming] = useState(false);
   const connection = status.connection!;
   const account = connection.googleAccount ?? t("someone");
+  // The other addresses whose conversions and sales count beside the website's own (conversion-addresses-plan.md).
+  const converting = connection.addressesRead.filter((address) => address.counted).map((address) => address.host);
+  const leftOut = new Set([...connection.otherAddresses.map((host) => host.toLowerCase()), ...connection.addressesRead.map((address) => address.host)].filter((host) => !converting.includes(host))).size;
   const facts = [
     {
       key: "property",
@@ -380,7 +450,13 @@ function ConnectionDetails({ status }: { status: AnalyticsStatus }) {
     {
       key: "address",
       label: t("address"),
-      value: <span><span className="font-mono">{connection.addresses.join(", ") || "–"}</span>{connection.otherAddresses.length > 0 ? ` · ${t("othersLeftOut", { count: connection.otherAddresses.length })}` : ""}</span>,
+      value: (
+        <span>
+          <span className="font-mono">{connection.addresses.join(", ") || "–"}</span>
+          {converting.length > 0 ? <> · {t("alsoConverting")} <span className="font-mono">{converting.join(", ")}</span></> : null}
+          {leftOut > 0 ? ` · ${t("othersLeftOut", { count: leftOut })}` : ""}
+        </span>
+      ),
     },
     { key: "account", label: t("account"), value: connection.sharedWithSearchConsole ? t("sameSignIn", { account }) : account },
     { key: "connected", label: t("connected"), value: connection.connectedAt ? formatDate(connection.connectedAt) : "–" },

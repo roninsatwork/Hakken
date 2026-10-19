@@ -1,4 +1,4 @@
-import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
+import { cleanup, fireEvent, renderWithProviders as render, screen, waitFor } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 
@@ -309,6 +309,42 @@ describe("Google Analytics' approved looks", () => {
     render(<AnalyticsConnectionPage />);
     await screen.findByText("Choose what counts as a conversion");
     expect(screen.getAllByText("Form sent counts the same as Clicked a link to another website, day for day: it isn't an enquiry, so don't count it.")).toHaveLength(1);
+  });
+
+  it("13 · choose what counts: a shop on its own address ticked, its sales beside Purchase; a copy left out (conversion-addresses-plan.md)", async () => {
+    // National Extension College on 2026-10-19: every course is bought on store.nec.ac.uk, and Purchase read 0.
+    at("/app/analytics/site_1/connection");
+    answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({
+        status: "COUNTING",
+        events: [
+          { eventName: "purchase", counted: true, analyticsValue: 140, hakkenValue: null, lastThirtyDays: 0, keyEvent: true, perVisit: false },
+          { eventName: "contact", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 157, keyEvent: false, perVisit: false },
+        ] as never,
+        otherAddresses: ["store.acme-shop.test", "staging.acme-shop.test", "www-acme--shop-test.translate.goog"],
+        addressesRead: [
+          { host: "store.acme-shop.test", kind: "SAME_DOMAIN", reached: true, events: [{ eventName: "purchase", year: 2400, month: 210 }], counted: true, hakken: true },
+          { host: "staging.acme-shop.test", kind: "COPY", reached: false, events: [{ eventName: "purchase", year: 12, month: 1 }], counted: false, hakken: false },
+        ],
+      }),
+    });
+    const save = vi.fn(async () => null);
+    vi.mocked(useMutation).mockImplementation((() => save) as never);
+    render(<AnalyticsConnectionPage />);
+    await screen.findByText("Where conversions count");
+    screen.getByText("Part of acme-shop.test, on an address of its own, such as a shop.");
+    screen.getByText("A copy of the website: a test or staging site, or Google Translate.");
+    screen.getByText("Also left out, with no conversions or sales: www-acme--shop-test.translate.goog.");
+    // Purchase reads the shop's sales; unticked, the shop's go, and Hakken says it would count it.
+    screen.getByText(/· 210 in the last 30 days$/);
+    fireEvent.click(screen.getByRole("checkbox", { name: "store.acme-shop.test" }));
+    expect(screen.queryByText(/· 210 in the last 30 days$/)).toBeNull();
+    screen.getByText("Hakken would count it: unticked, its conversions and sales are left out.");
+    fireEvent.click(screen.getByRole("checkbox", { name: "store.acme-shop.test" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save/ }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      addresses: [{ host: "store.acme-shop.test", counted: true }, { host: "staging.acme-shop.test", counted: false }],
+    })));
   });
 
   it("14 · Connection", async () => {

@@ -15926,7 +15926,8 @@
       "disconnectTitle": "Disconnettere Google Analytics?",
       "keep": "Lascialo collegato",
       "confirmDisconnect": "Disconnetti",
-      "confirm": "Non si raccoglie più nulla di nuovo, e ciò che è stato raccolto resta, con la data di oggi. Search Console resta collegato."
+      "confirm": "Non si raccoglie più nulla di nuovo, e ciò che è stato raccolto resta, con la data di oggi. Search Console resta collegato.",
+      "alsoConverting": "conversioni e vendite anche su"
     },
     "gate": {
       "chooseTitle": "Scegli la proprietà",
@@ -17092,7 +17093,19 @@
       "failed": "Impossibile salvare cosa conta. Riprova.",
       "save": "Salva · {count} contate",
       "back": "Indietro",
-      "startsAtOnce": "Salvando parte subito la raccolta degli ultimi 90 giorni, dalla settimana più recente; poi il Google Analytics: Collector Agent raccoglie ogni mattina alle 04:00."
+      "startsAtOnce": "Salvando parte subito la raccolta degli ultimi 90 giorni, dalla settimana più recente; poi il Google Analytics: Collector Agent raccoglie ogni mattina alle 04:00.",
+      "whereTitle": "Dove contano le conversioni",
+      "whereDescription": "La proprietà {property} registra visite su più indirizzi oltre a quello del sito. {platformName} legge visite e pagine solo su {read}, e conta anche le conversioni e le vendite su ogni indirizzo spuntato qui — un negozio, una pagina di prenotazione — attribuite alla visita arrivata dal sito. {platformName} li ha già spuntati per te.",
+      "whereWhy": {
+        "SAME_DOMAIN": "Parte di {host}, su un indirizzo proprio, come un negozio.",
+        "REACHED": "Un altro dominio che i visitatori raggiungono da {host}, come una pagina di prenotazione o di pagamento.",
+        "NOT_REACHED": "I visitatori non ci arrivano da {host}: molto probabilmente è il sito di qualcun altro con una copia del tag di monitoraggio.",
+        "COPY": "Una copia del sito: un sito di prova o di staging, oppure Google Traduttore."
+      },
+      "whereMonth": "{count} conversioni e vendite negli ultimi 30 giorni",
+      "whereHakkenIn": "{platformName} lo conterebbe: senza spunta, le sue conversioni e vendite restano fuori.",
+      "whereHakkenOut": "{platformName} lo lascerebbe fuori: con la spunta, le sue conversioni e vendite contano.",
+      "whereLeftOut": "Restano fuori anche, senza conversioni né vendite: {others}."
     },
     "health": {
       "title": "Salute del tracciamento",
@@ -17155,7 +17168,8 @@
           "title": "Gli indirizzi",
           "note": "Ogni indirizzo che il controllo ha trovato.",
           "address": "Indirizzo",
-          "visits": "Visite, ultimi 30 giorni"
+          "visits": "Visite, ultimi 30 giorni",
+          "conversions": "Conversioni e vendite, ultimi 30 giorni"
         },
         "pages": {
           "title": "Le pagine",
@@ -17272,6 +17286,16 @@
           "fix": "{kinds, plural, one {sceglilo} other {sceglili}} nella pagina Connessione: {platformName} {kinds, plural, one {lo} other {li}} conta dai dati di Google, per tutto l'anno.",
           "short": "{names} non è contato.",
           "about": "Se ogni evento che sembra una richiesta conta come conversione.",
+          "affects": "Conversioni"
+        },
+        "CONVERSIONS_ELSEWHERE": {
+          "title": "Le conversioni su altri indirizzi sono contate",
+          "passing": "Nessuna conversione avviene su un indirizzo che {platformName} lascia fuori.",
+          "failing": "{count} conversioni e vendite negli ultimi 30 giorni sono avvenute su {names}, che {platformName} lascia fuori.",
+          "why": "Un negozio o una pagina di prenotazione su un indirizzo proprio è dove avvengono vendite e richieste: lasciate fuori, mancano da ogni dato, e le pagine che hanno portato i visitatori sembrano peggiori di quanto siano.",
+          "fix": "se {addresses, plural, one {fa} other {fanno}} parte del sito — un negozio, una pagina di prenotazione — {addresses, plural, one {spuntalo} other {spuntali}} in Dove contano le conversioni nella pagina Connessione. Altrimenti, togli il tag di monitoraggio.",
+          "short": "{count} conversioni sono avvenute su {addresses, plural, =1 {{first}} other {# altri indirizzi, come {first}}}.",
+          "about": "Se ci sono conversioni su un indirizzo che non viene contato.",
           "affects": "Conversioni"
         },
         "NEVER_HAPPENS": {
@@ -17631,6 +17655,7 @@
           "COUNTED_AGAIN": "Una pagina contata di nuovo ogni volta che qualcuno clicca un link del suo indice fa sembrare le visite più profonde di quanto siano, e nasconde quante persone se ne vanno dopo una pagina.",
           "SOMETHING_ELSE": "Ogni conversione, e il suo valore, conta qualcosa che non è mai una richiesta, quindi pagine e canali vengono pesati sulla cosa sbagliata.",
           "ENQUIRY_UNCOUNTED": "Le richieste non contate mancano da conversioni e valore, quindi le pagine e i canali che le hanno portate sembrano peggiori di quanto siano.",
+          "CONVERSIONS_ELSEWHERE": "Un negozio o una pagina di prenotazione su un indirizzo proprio è dove avvengono vendite e richieste: lasciate fuori, mancano da ogni dato, e le pagine che hanno portato i visitatori sembrano peggiori di quanto siano.",
           "NEVER_HAPPENS": "Una conversione che non scatta mai nasconde ogni richiesta fatta in quel modo: chi ha chiamato, scritto o chattato manca da ogni dato."
         },
         "passing": {
@@ -17645,6 +17670,7 @@
           "COUNTED_AGAIN": "Nessuna pagina è contata più di una volta a visita.",
           "SOMETHING_ELSE": "Nessuna conversione coincide giorno per giorno con un altro tipo di evento.",
           "ENQUIRY_UNCOUNTED": "Nessun evento che sembra una richiesta resta escluso dal conteggio.",
+          "CONVERSIONS_ELSEWHERE": "Nessuna conversione avviene su un indirizzo che non viene contato.",
           "NEVER_HAPPENS": "Ogni conversione contata è avvenuta di recente."
         },
         "step": {
@@ -17688,6 +17714,10 @@
           "ENQUIRY_UNCOUNTED": {
             "s1": "Scegli {event} nella pagina Connessione: vengono poi contati dai dati di Google stessi, per tutto l'anno."
           },
+          "CONVERSIONS_ELSEWHERE": {
+            "s1": "Se {text} fa parte del sito — un negozio, una pagina di prenotazione — spuntalo in Dove contano le conversioni nella pagina Connessione: le sue conversioni e vendite vengono contate per tutto l'anno.",
+            "s2": "Se non è tuo, togli il tag di monitoraggio, oppure dagli una proprietà Google Analytics tutta sua."
+          },
           "NEVER_HAPPENS": {
             "s1": "Apri il sito in una finestra privata e prova tu stesso ciascuno: {event}.",
             "s2": "In Google Analytics, apri Rapporti, poi In tempo reale, e controlla che ciascuno arrivi.",
@@ -17711,6 +17741,7 @@
           "COUNTED_AGAIN": "{countB, plural, =1 {Una pagina è contata} other {# pagine sono contate}} più di una volta a visita, quindi le pagine per visita e la frequenza di rimbalzo sembrano migliori di quanto siano.",
           "SOMETHING_ELSE": "{event} coincidono in ciascuno degli ultimi {b} giorni in cui sono avvenuti, quindi una conversione conta qualcosa che non è mai una richiesta.",
           "ENQUIRY_UNCOUNTED": "{event} {countC, plural, =1 {è avvenuto {b} volte in 12 mesi ma non è contato} other {avvengono spesso ma non sono contati}}, quindi quelle richieste mancano da ogni dato.",
+          "CONVERSIONS_ELSEWHERE": "{b} conversioni e vendite negli ultimi 30 giorni sono avvenute su {text}, che non viene contato.",
           "NEVER_HAPPENS": "{event} non {countC, plural, =1 {è avvenuto} other {sono avvenuti}} nemmeno una volta {countB, plural, =365 {in 12 mesi} other {negli ultimi # giorni}}, quindi ogni richiesta fatta in quel modo è invisibile."
         },
         "fix": {
@@ -17725,6 +17756,7 @@
           "COUNTED_AGAIN": "Fai smettere Google Analytics di contare di nuovo una pagina quando si cliccano i link del suo indice.",
           "SOMETHING_ELSE": "Ricostruisci la conversione in Google Analytics sulla richiesta vera.",
           "ENQUIRY_UNCOUNTED": "Conta come conversioni le richieste rimaste escluse.",
+          "CONVERSIONS_ELSEWHERE": "Conta le conversioni sul negozio o sulla pagina di prenotazione rimasti fuori.",
           "NEVER_HAPPENS": "Prova tu stesso ogni modo di contattarti, in una finestra privata, e verifica che Google Analytics lo registri."
         }
       },

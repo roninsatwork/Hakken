@@ -86,6 +86,29 @@ export const countedEventValidator = v.object({
 export const COUNTED_WITH = "EVENT_COUNT";
 
 /**
+ * How a connection's events are listed (`listedWith`): with the events that
+ * read as enquiries beside the key events (BT2), and with the property's other
+ * addresses read for conversions (conversion-addresses-plan.md). A connection
+ * listed before has them read again on its next run, which then goes on.
+ */
+export const LISTED_WITH = "EVENT_COUNT_ADDRESSES";
+
+/**
+ * One of the property's other addresses, as last read
+ * (conversion-addresses-plan.md, `utils/analyticsAddresses.ts`): what it is to
+ * the website, whether visitors reached it from the website, the listed events
+ * and sales that happened on it, and the admin's tick when it differs from
+ * Hakken's choice.
+ */
+export const heldAddressValidator = v.object({
+  host: v.string(),
+  kind: v.union(v.literal("SAME_DOMAIN"), v.literal("OTHER_DOMAIN"), v.literal("COPY")),
+  reached: v.boolean(),
+  events: v.array(v.object({ eventName: v.string(), year: v.number(), month: v.number() })),
+  counted: v.optional(v.boolean()),
+});
+
+/**
  * What a kept list is of (§4.2, GA20, GA23): the website's totals and its
  * channels with each source — the two small lists, kept by day and by device
  * for the charts — and its landing pages and all its pages, the two big ones,
@@ -268,6 +291,8 @@ export const HEALTH_CHECKS = [
   "SOMETHING_ELSE",
   "ENQUIRY_UNCOUNTED",
   "NEVER_HAPPENS",
+  // Conversions on an address whose conversions don't count: a shop or booking page Hakken didn't pick (conversion-addresses-plan.md).
+  "CONVERSIONS_ELSEWHERE",
 ] as const;
 export type HealthCheck = (typeof HEALTH_CHECKS)[number];
 export const healthCheckValidator = v.union(...HEALTH_CHECKS.map((check) => v.literal(check)));
@@ -308,13 +333,23 @@ export const googleAnalyticsTables = {
     /** The addresses read (`hostName`), and the property's others, left out of every figure (§3, step 4). */
     addresses: v.optional(v.array(v.string())),
     otherAddresses: v.optional(v.array(v.string())),
+    /**
+     * The other addresses read with the events (conversion-addresses-plan.md): those whose conversions and sales count
+     * (`conversionAddressesOf`) are read beside the website's own for them; visits and pages never are.
+     */
+    addressesRead: v.optional(v.array(heldAddressValidator)),
+    /**
+     * When the addresses whose conversions count last moved: a run that began before it collected some figures the
+     * old way, so it never marks them counted (`countedWith`) — the next run collects them again, whole.
+     */
+    addressesMovedAt: v.optional(v.number()),
     timeZone: v.optional(v.string()),
     currency: v.optional(v.string()),
     /** The property's key events and the events that read as enquiries, which count, and what each is worth. */
     events: v.optional(v.array(countedEventValidator)),
     /** When the key events were last read from Google: absent while they are read. */
     eventsReadAt: v.optional(v.number()),
-    /** How the events were last listed (`COUNTED_WITH`): with the events that read as enquiries beside the key events. */
+    /** How the events were last listed (`LISTED_WITH`): with the events that read as enquiries, and the other addresses. */
     listedWith: v.optional(v.string()),
     /** How the figures held were counted (`COUNTED_WITH`); otherwise the next run collects them again, whole (BT4). */
     countedWith: v.optional(v.string()),
@@ -398,6 +433,8 @@ export const googleAnalyticsTables = {
     collecting: v.optional(v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
     /** Visits on each of the property's addresses over the last 30 days, asked weekly: the strangers check (§6, check 8). */
     hostVisits: v.optional(v.array(v.object({ host: v.string(), visits: v.number() }))),
+    /** The listed events and sales on each of the property's addresses over the last 30 days, asked weekly with them (CONVERSIONS_ELSEWHERE). */
+    hostConversions: v.optional(v.array(v.object({ host: v.string(), conversions: v.number() }))),
     /** The tracking health checks' last results (§6): when a check starts failing, the company's admins are told once. */
     health: v.optional(v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
     /** What stopped the connection or its last collection; cleared when a collection goes right. */

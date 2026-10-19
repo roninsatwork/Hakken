@@ -15926,7 +15926,8 @@
       "disconnectTitle": "Disconnect Google Analytics?",
       "keep": "Keep it connected",
       "confirmDisconnect": "Disconnect",
-      "confirm": "Nothing new is collected, and what was collected stays, marked with today's date. Search Console stays connected."
+      "confirm": "Nothing new is collected, and what was collected stays, marked with today's date. Search Console stays connected.",
+      "alsoConverting": "conversions and sales also on"
     },
     "gate": {
       "chooseTitle": "Choose the property",
@@ -17092,7 +17093,19 @@
       "failed": "Couldn't save what counts. Try again.",
       "save": "Save · {count} counted",
       "back": "Back",
-      "startsAtOnce": "Saving starts collecting the last 90 days at once, newest week first; after that the Google Analytics: Collector Agent collects every morning at 04:00."
+      "startsAtOnce": "Saving starts collecting the last 90 days at once, newest week first; after that the Google Analytics: Collector Agent collects every morning at 04:00.",
+      "whereTitle": "Where conversions count",
+      "whereDescription": "The property {property} records visits on more addresses than the website's own. {platformName} reads visits and pages on {read} alone, and counts the conversions and sales on each address ticked here too — a shop, a booking page — credited to the visit that came from the website. {platformName} has ticked them for you.",
+      "whereWhy": {
+        "SAME_DOMAIN": "Part of {host}, on an address of its own, such as a shop.",
+        "REACHED": "Another domain visitors reach from {host}, such as a booking or checkout page.",
+        "NOT_REACHED": "Visitors don't reach it from {host}: very likely someone else's website with a copy of the tracking tag.",
+        "COPY": "A copy of the website: a test or staging site, or Google Translate."
+      },
+      "whereMonth": "{count} conversions and sales in the last 30 days",
+      "whereHakkenIn": "{platformName} would count it: unticked, its conversions and sales are left out.",
+      "whereHakkenOut": "{platformName} would leave it out: ticked, its conversions and sales count.",
+      "whereLeftOut": "Also left out, with no conversions or sales: {others}."
     },
     "health": {
       "title": "Tracking health",
@@ -17155,7 +17168,8 @@
           "title": "The addresses",
           "note": "Each address the check found.",
           "address": "Address",
-          "visits": "Visits, last 30 days"
+          "visits": "Visits, last 30 days",
+          "conversions": "Conversions and sales, last 30 days"
         },
         "pages": {
           "title": "The pages",
@@ -17272,6 +17286,16 @@
           "fix": "choose {kinds, plural, one {it} other {them}} on the Connection page: {platformName} counts {kinds, plural, one {it} other {them}} from Google's own figures, for the whole year.",
           "short": "{names} isn't counted.",
           "about": "Whether every event that reads as an enquiry counts as a conversion.",
+          "affects": "Conversions"
+        },
+        "CONVERSIONS_ELSEWHERE": {
+          "title": "Conversions on other addresses are counted",
+          "passing": "No conversion happens on an address {platformName} leaves out.",
+          "failing": "{count} conversions and sales in the last 30 days happened on {names}, which {platformName} leaves out.",
+          "why": "A shop or a booking page on an address of its own is where sales and enquiries happen: left out, they're missing from every figure, and the pages that sent the visitors look worse than they are.",
+          "fix": "if {addresses, plural, one {it's} other {they're}} part of the website — a shop, a booking page — tick {addresses, plural, one {it} other {them}} under Where conversions count on the Connection page. If not, take the tracking tag off.",
+          "short": "{count} conversions happened on {addresses, plural, =1 {{first}} other {# other addresses, such as {first}}}.",
+          "about": "Whether conversions happen on an address that isn't counted.",
           "affects": "Conversions"
         },
         "NEVER_HAPPENS": {
@@ -17631,6 +17655,7 @@
           "COUNTED_AGAIN": "A page counted again each time someone clicks one of its contents links makes visits look deeper than they are, and hides how many people leave after one page.",
           "SOMETHING_ELSE": "Every conversion, and its value, is counting something that is never an enquiry, so pages and channels are weighed by the wrong thing.",
           "ENQUIRY_UNCOUNTED": "Enquiries left uncounted are missing from conversions and value, so the pages and channels that brought them look worse than they are.",
+          "CONVERSIONS_ELSEWHERE": "A shop or a booking page on an address of its own is where sales and enquiries happen: left out, they're missing from every figure, and the pages that sent the visitors look worse than they are.",
           "NEVER_HAPPENS": "A conversion that never fires hides every enquiry made that way: the people who called, emailed or chatted are missing from every figure."
         },
         "passing": {
@@ -17645,6 +17670,7 @@
           "COUNTED_AGAIN": "No page is counted more than once a visit.",
           "SOMETHING_ELSE": "No conversion matches another kind of event day for day.",
           "ENQUIRY_UNCOUNTED": "No event that reads as an enquiry goes uncounted.",
+          "CONVERSIONS_ELSEWHERE": "No conversion happens on an address that isn't counted.",
           "NEVER_HAPPENS": "Every conversion counted has happened recently."
         },
         "step": {
@@ -17688,6 +17714,10 @@
           "ENQUIRY_UNCOUNTED": {
             "s1": "Choose {event} on the Connection page: they are then counted from Google's own figures, for the whole year."
           },
+          "CONVERSIONS_ELSEWHERE": {
+            "s1": "If {text} is part of the website — a shop, a booking page — tick it under Where conversions count on the Connection page: its conversions and sales are then counted for the whole year.",
+            "s2": "If it isn't yours, take the tracking tag off it, or give it a Google Analytics property of its own."
+          },
           "NEVER_HAPPENS": {
             "s1": "Open the website in a private window and try each one yourself: {event}.",
             "s2": "In Google Analytics, open Reports, then Realtime, and check each one arrives.",
@@ -17711,6 +17741,7 @@
           "COUNTED_AGAIN": "{countB, plural, =1 {One page is} other {# pages are}} counted more than once a visit, so pages a visit and bounce rate read better than they are.",
           "SOMETHING_ELSE": "{event} match on each of the last {b} days they happened, so a conversion is counting something that's never an enquiry.",
           "ENQUIRY_UNCOUNTED": "{event} {countC, plural, =1 {happened {b} times in 12 months but isn't counted} other {happen often but aren't counted}}, so those enquiries are missing from every figure.",
+          "CONVERSIONS_ELSEWHERE": "{b} conversions and sales in the last 30 days happened on {text}, which isn't counted.",
           "NEVER_HAPPENS": "{event} {countC, plural, =1 {hasn't} other {haven't}} happened once in {countB, plural, =365 {12 months} other {the last # days}}, so any enquiry made that way is invisible."
         },
         "fix": {
@@ -17725,6 +17756,7 @@
           "COUNTED_AGAIN": "Stop Google Analytics counting a page again when its contents links are clicked.",
           "SOMETHING_ELSE": "Rebuild the conversion in Google Analytics from the real enquiry.",
           "ENQUIRY_UNCOUNTED": "Count the enquiries that are left out as conversions.",
+          "CONVERSIONS_ELSEWHERE": "Count the conversions on the shop or booking page that's left out.",
           "NEVER_HAPPENS": "Try each way to enquire yourself, in a private window, and check Google Analytics records it."
         }
       },

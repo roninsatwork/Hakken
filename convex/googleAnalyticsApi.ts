@@ -205,6 +205,11 @@ export type ReportAsk = {
   /** Only these addresses' visits (`hostName`), and only these events (`eventName`), when given. */
   hostNames?: string[];
   eventNames?: string[];
+  /**
+   * Only what came from a page on one of these addresses (`pageReferrer`): which other addresses visitors reach
+   * from the website (conversion-addresses-plan.md).
+   */
+  referredBy?: string[];
   /** Only this device (`deviceCategory`), when a page list is asked for one. */
   device?: string;
   /**
@@ -266,6 +271,12 @@ export type Report = {
   quota: QuotaLeft | null;
 };
 
+/** A page on one of these addresses, as Google writes a referrer: `https://www.nec.ac.uk/course/…`. */
+export function referrerPattern(hosts: readonly string[]): string {
+  const escaped = [...new Set(hosts.map((host) => host.trim().toLowerCase()).filter(Boolean))].map((host) => host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return `https?://(${escaped.join("|")})([/:?#].*)?`;
+}
+
 function filterOf(ask: ReportAsk) {
   const filters: unknown[] = [];
   if (ask.hostNames?.length) {
@@ -273,6 +284,9 @@ function filterOf(ask: ReportAsk) {
   }
   if (ask.eventNames?.length) {
     filters.push({ filter: { fieldName: "eventName", inListFilter: { values: ask.eventNames, caseSensitive: true } } });
+  }
+  if (ask.referredBy?.length) {
+    filters.push({ filter: { fieldName: "pageReferrer", stringFilter: { matchType: "FULL_REGEXP", value: referrerPattern(ask.referredBy), caseSensitive: false } } });
   }
   if (ask.device) {
     filters.push({ filter: { fieldName: "deviceCategory", stringFilter: { matchType: "EXACT", value: ask.device, caseSensitive: false } } });
@@ -378,10 +392,15 @@ export async function runRealtimeReport(accessToken: string, property: string, a
 /** Google's funnel report: still in its `v1alpha` (§18.6.5). */
 const FUNNEL = "https://analyticsdata.googleapis.com/v1alpha";
 
-/** Who did one event and, any time after, one of a set of others: an event's screen's "people who converted after it". */
-export type FunnelAsk = Pick<ReportAsk, "startDate" | "endDate" | "hostNames" | "device" | "countries"> & { first: string; then: string[] };
+/**
+ * Who did one event and, any time after, one of a set of others: an event's screen's "people who converted after it".
+ * `thenHostNames`: the conversion on these addresses too (the website's own and its conversion addresses,
+ * conversion-addresses-plan.md), the first event still on `hostNames` alone.
+ */
+export type FunnelAsk = Pick<ReportAsk, "startDate" | "endDate" | "hostNames" | "device" | "countries"> & { first: string; then: string[]; thenHostNames?: string[] };
 
 const eventStep = (eventName: string) => ({ funnelEventFilter: { eventName } });
+const hostStep = (hostNames: readonly string[]) => ({ funnelFieldFilter: { fieldName: "hostName", inListFilter: { values: [...hostNames], caseSensitive: false } } });
 
 /**
  * The people who did one event, and of them the people who did one of the
@@ -390,17 +409,36 @@ const eventStep = (eventName: string) => ({ funnelEventFilter: { eventName } });
  * directly after the first. Google cannot join an event to conversions in the
  * same visit, so this counts people, not visits.
  */
-export async function runFunnelReport(accessToken: string, property: string, ask: FunnelAsk): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
-  const filter = filterOf({ ...ask, dimensions: [], metrics: [] });
+export async function runFunnelReport(
+  accessToken: string,
+  property: string,
+  ask: FunnelAsk,
+): Promise<{ ok: true; did: number; then: number; narrowed?: true } | GoogleFailure> {
+  // With conversion addresses, each step holds to its own addresses and the whole funnel to none.
+  const apart = ask.thenHostNames !== undefined && ask.hostNames !== undefined && ask.hostNames.length > 0;
+  const answer = await askFunnelOnce(accessToken, property, ask, apart);
+  // Google refusing a step held to its own addresses (its funnel report is still in its alpha): asked again at once the
+  // way it always was, on the website's own address, so the figure is never missing — said with it (`narrowed`).
+  if (apart && !answer.ok && answer.reason === "REFUSED") {
+    const plain = await askFunnelOnce(accessToken, property, ask, false);
+    return plain.ok ? { ...plain, narrowed: true } : plain;
+  }
+  return answer;
+}
+
+/** One funnel ask of Google: each step held to its own addresses (`apart`), or the whole funnel to the website's. */
+async function askFunnelOnce(accessToken: string, property: string, ask: FunnelAsk, apart: boolean): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
+  const filter = filterOf({ ...ask, ...(apart ? { hostNames: undefined } : {}), dimensions: [], metrics: [] });
+  const then = ask.then.length === 1 ? eventStep(ask.then[0]) : { orGroup: { expressions: ask.then.map(eventStep) } };
   const answer = await callGoogle(`${FUNNEL}/${property}:runFunnelReport`, accessToken, {
     dateRanges: [{ startDate: ask.startDate, endDate: ask.endDate }],
     funnel: {
       steps: [
-        { name: "did", filterExpression: eventStep(ask.first) },
+        { name: "did", filterExpression: apart ? { andGroup: { expressions: [eventStep(ask.first), hostStep(ask.hostNames!)] } } : eventStep(ask.first) },
         {
           name: "then",
           isDirectlyFollowedBy: false,
-          filterExpression: ask.then.length === 1 ? eventStep(ask.then[0]) : { orGroup: { expressions: ask.then.map(eventStep) } },
+          filterExpression: apart ? { andGroup: { expressions: [then, hostStep(ask.thenHostNames!)] } } : then,
         },
       ],
     },
@@ -424,6 +462,40 @@ export type SiteAddresses = {
   /** Every address's visits over the 30 days, busiest first. */
   visits: { host: string; visits: number }[];
 };
+
+/**
+ * The listed events and sales on each of a property's addresses over the last
+ * 30 days to `newest`, the most first: asked weekly with every address's
+ * visits, for tracking health's "conversions elsewhere" (conversion-addresses-plan.md).
+ */
+export async function addressConversions(
+  accessToken: string,
+  property: string,
+  eventNames: string[],
+  newest: string,
+  countries: string[],
+): Promise<{ ok: true; found: Array<{ host: string; conversions: number }> } | GoogleFailure> {
+  const days = lastThirtyDays(newest);
+  const found = new Map<string, number>();
+  const report = await runReport(accessToken, property, {
+    startDate: days.from,
+    endDate: days.to,
+    dimensions: ["hostName"],
+    metrics: ["eventCount"],
+    eventNames,
+    countries,
+  }, (rows) => {
+    for (const row of rows) {
+      const host = (row.keys[0] ?? "").toLowerCase();
+      if (host && host !== "(not set)" && row.values[0] > 0) found.set(host, (found.get(host) ?? 0) + row.values[0]);
+    }
+  });
+  if (!report.ok) return report;
+  return {
+    ok: true,
+    found: [...found].map(([host, conversions]) => ({ host, conversions })).sort((left, right) => right.conversions - left.conversions),
+  };
+}
 
 /** The 30 days to a newest day: what the address and key event asks read. */
 export function lastThirtyDays(newest: string): { from: string; to: string } {

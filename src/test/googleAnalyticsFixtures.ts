@@ -29,6 +29,15 @@ export const CONNECTION = {
   stream: "https://www.acme-shop.test",
   addresses: ["www.acme-shop.test"],
   otherAddresses: ["staging.acme-shop.test", "localhost"],
+  /** The other addresses read for conversions (conversion-addresses-plan.md): none counting. */
+  addressesRead: [] as Array<{
+    host: string;
+    kind: "SAME_DOMAIN" | "OTHER_DOMAIN" | "COPY";
+    reached: boolean;
+    events: Array<{ eventName: string; year: number; month: number }>;
+    counted: boolean;
+    hakken: boolean;
+  }>,
   timeZone: "Europe/London",
   currency: "GBP",
   events: EVENTS as typeof EVENTS | null,
@@ -60,6 +69,8 @@ export const CONNECTION = {
   } as { checkedAt: number; checks: Array<{ check: string; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number }> } | null,
   /** Visits on each of the property's addresses over the last 30 days (ga-tracking-health-plan.md TH2). */
   hostVisits: [{ host: "www.acme-shop.test", visits: 2_400 }, { host: "staging.acme-shop.test", visits: 61 }] as Array<{ host: string; visits: number }> | null,
+  /** Listed events and sales on each address over the last 30 days (conversion-addresses-plan.md). */
+  hostConversions: null as Array<{ host: string; conversions: number }> | null,
 };
 
 export const STATUS = {

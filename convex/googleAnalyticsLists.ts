@@ -43,6 +43,9 @@ export const EVENT_METRICS = ["eventCount", "eventValue", "sessions"] as const;
  */
 export const EVENT_LIST_METRICS = ["eventCount", "totalUsers", "sessions"] as const;
 
+/** Google's sales figures, asked apart when they are read on a website's conversion addresses too (conversion-addresses-plan.md). */
+export const SALES_METRICS = ["ecommercePurchases", "purchaseRevenue"] as const;
+
 /** The lists of events: one ask each, with their own figures, never joined to the key events. */
 export function isEventList(list: AnalyticsList): list is "event" {
   return list === "event";
@@ -318,8 +321,12 @@ export function joinAsks(
  * main ask's rows, then the converting visits, then the key events', each as
  * Google's answers arrive, with `trim` cutting each group's rows down as they
  * go — so a big website's list is never held whole while it is read.
+ *
+ * `salesApart`: the sales and revenue come from their own ask (`addSales`),
+ * read on the website's conversion addresses too, and the main ask's — the
+ * website's own address alone — are passed over (conversion-addresses-plan.md).
  */
-export function listJoiner(list: AnalyticsList, lead: readonly Lead[], perVisit: ReadonlySet<string> = new Set()) {
+export function listJoiner(list: AnalyticsList, lead: readonly Lead[], perVisit: ReadonlySet<string> = new Set(), how: { salesApart?: boolean } = {}) {
   const width = LIST_DIMENSIONS[list].length;
   const deviceAt = lead.indexOf("deviceCategory");
   const groups = new Map<string, Map<string, ListRow>>();
@@ -371,13 +378,47 @@ export function listJoiner(list: AnalyticsList, lead: readonly Lead[], perVisit:
           target.engaged += row.values[1] ?? 0;
           target.seconds += row.values[2] ?? 0;
           target.views += row.values[3] ?? 0;
-          target.purchases += row.values[4] ?? 0;
-          target.revenue += hundredths(row.values[5] ?? 0);
+          if (!how.salesApart) {
+            target.purchases += row.values[4] ?? 0;
+            target.revenue += hundredths(row.values[5] ?? 0);
+          }
           target.people += row.values[6] ?? 0;
           target.newPeople += row.values[7] ?? 0;
           target.length += Math.round((row.values[8] ?? 0) * (row.values[0] ?? 0));
         }
       }
+    },
+    /** Sales and revenue (`SALES_METRICS`), asked apart on the website's conversion addresses too: added to each row. */
+    addSales(sales: readonly ReportRow[]) {
+      for (const row of sales) {
+        for (const target of targets(row.keys)) {
+          target.purchases += row.values[0] ?? 0;
+          target.revenue += hundredths(row.values[1] ?? 0);
+        }
+      }
+    },
+    /**
+     * An event list's rows asked again on the website's conversion addresses too, for the listed events and a shop's
+     * steps: each row the answer names has its times, people and visits replaced by it — once, however many pieces
+     * the answer arrives in, so the main ask's figures for the website alone are never added twice.
+     */
+    replaceEvents() {
+      const cleared = new Set<ListRow>();
+      return (rows: readonly ReportRow[]) => {
+        for (const row of rows) {
+          for (const target of targets(row.keys)) {
+            if (!cleared.has(target)) {
+              cleared.add(target);
+              target.times = 0;
+              target.people = 0;
+              target.visits = 0;
+            }
+            target.times = (target.times ?? 0) + (row.values[0] ?? 0);
+            target.people += row.values[1] ?? 0;
+            target.visits += row.values[2] ?? 0;
+          }
+        }
+      };
     },
     /** The visits that made any listed event: every row gets the figure, nought where none did, so the list says it was asked. */
     addConverting(converting: readonly ReportRow[]) {

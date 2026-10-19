@@ -11,10 +11,11 @@ import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
 import { KEPT_BACK, analyticsWindow, dueJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
 import { afterTheHour, jobKey, startGap, startingAt } from "./googleAnalyticsAgentRun";
+import { closeConnection } from "./googleAnalyticsRunEnd";
 import { googleDay, quotaStillSeen } from "./googleAnalyticsBudget";
 import { days } from "./searchConsoleAgentRun";
 import { shiftDay } from "./searchConsoleDays";
-import { NEWEST, PROPERTY, dayOf, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
+import { NEWEST, PROPERTY, dayOf, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 import { FUNNEL_ACTIONS, actionsFrom } from "./googleAnalyticsActionFunnels";
 import { funnelAsk } from "./googleAnalyticsLive";
 
@@ -42,7 +43,7 @@ async function connected(t: Harness, withAgent = true) {
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "COUNTING", property: PROPERTY, propertyName: "Acme",
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: ["staging.acme-shop.test"],
-      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT",
+      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [
         { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14 },
         { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 6 },
@@ -144,6 +145,35 @@ describe("which days and lists a run asks for", () => {
   });
 });
 
+/**
+ * A website whose shop sits on an address of its own (conversion-addresses-plan.md): each day a visit that landed on
+ * /ai-agency/ from Google buys on the shop, the sale recorded on the shop's address; saved, and its first run collected.
+ */
+async function shopCollected(t: Harness, how: { refuseFunnelFields?: boolean } = {}) {
+  const ids = await connected(t);
+  await t.run(async (ctx) => {
+    await ctx.db.patch(ids.connectionId, {
+      events: [
+        { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14 },
+        { eventName: "purchase", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
+      ],
+      addressesRead: [{ host: "store.acme-shop.test", kind: "SAME_DOMAIN", reached: true, events: [{ eventName: "purchase", year: 70, month: 30 }] }],
+    });
+  });
+  const sale = (date: string): Visit => ({
+    date, device: "desktop", channel: "Organic Search", source: "google", landing: "/ai-agency/", page: "/checkout/", host: "store.acme-shop.test",
+    sessions: 0, engaged: 0, seconds: 0, views: 2, purchases: 1, revenue: 150, events: { purchase: [1, 150] },
+  });
+  const google = fakeGoogle([...history(70), ...Array.from({ length: 70 }, (_, at) => sale(shiftDay(NEWEST, -at)))]);
+  google.refuseFunnelFields = how.refuseFunnelFields;
+  await ids.admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
+    siteId: ids.siteId,
+    events: [{ eventName: "generate_lead", counted: true, hakkenValue: 250 }, { eventName: "purchase", counted: true, hakkenValue: null }],
+  });
+  await finishScheduled(t);
+  return { ...ids, google };
+}
+
 describe("collecting a website's Google Analytics", () => {
   test("saving what counts starts its first collection at once: the 90 days by device, then the ready-made lists", async () => {
     const t = harness();
@@ -200,6 +230,84 @@ describe("collecting a website's Google Analytics", () => {
     expect(await periodRows(t, siteId, "firstChannel|7|NOW|mobile")).toBeNull();
     // The 12 months' chart, a day a row.
     expect((await periodRows(t, siteId, "series|365|NOW|"))!.rows.length).toBe(70);
+  });
+
+  test("a shop on its own address: each sale credited to the visit's landing page and channel; visits, pages and other events the website's own", async () => {
+    // conversion-addresses-plan.md: National Extension College's courses are bought on store.nec.ac.uk (2026-10-19).
+    const t = harness();
+    const { siteId, connectionId, google } = await shopCollected(t);
+    expect((await runsOf(t)).map((run) => run.status)).toEqual(["SUCCESS"]);
+
+    // The day: the website's own visits and views, the shop's sale and its revenue beside them.
+    const every = (await dayRows(t, siteId, "total", "", NEWEST))[0];
+    expect(every).toMatchObject({ visits: 16, views: 32, purchases: 1, revenue: 15_000 });
+    expect(every.counts).toEqual({ generate_lead: 1, purchase: 1 });
+    // The 30 days' landing pages: the sale credited to the page the visit landed on, its visits unmoved; no shop page.
+    const landing = (await periodRows(t, siteId, "landing|30|NOW|"))!;
+    const pages = await t.run(async (ctx) => await decodePages(ctx, siteId, landing.rows.map((row) => row.key)));
+    const agency = landing.rows[pages.indexOf("https://www.acme-shop.test/ai-agency/")];
+    expect(agency).toMatchObject({ visits: 120, purchases: 30, revenue: 450_000 });
+    expect(agency.counts).toMatchObject({ purchase: 30 });
+    expect(pages.some((page) => page.includes("checkout"))).toBe(false);
+    // The channel too: the sale is Google's.
+    const channels = (await periodRows(t, siteId, "channel|30|NOW|"))!.rows;
+    expect(channels.find((row) => splitChannelKey(row.key).channel === "Organic Search")).toMatchObject({ visits: 300, purchases: 30 });
+    // A page's own figures are what happened on it: the shop's checkout is never one of the website's pages.
+    const allPages = (await periodRows(t, siteId, "page|30|NOW|"))!;
+    const pageAddresses = await t.run(async (ctx) => await decodePages(ctx, siteId, allPages.rows.map((row) => row.key)));
+    expect(pageAddresses.some((page) => page.includes("checkout"))).toBe(false);
+    expect(allPages.rows.every((row) => (row.counts.purchase ?? 0) === 0)).toBe(true);
+    // Every event: the sales on the shop counted, the website's page views its own.
+    const events = (await periodRows(t, siteId, "event|30|NOW|"))!.rows;
+    expect(events.find((row) => row.key === "purchase")).toMatchObject({ times: 30 });
+    expect(events.find((row) => row.key === "page_view")).toMatchObject({ times: 960 });
+    // The shop's sales are asked apart, on both addresses; no visits are ever asked of the shop.
+    const asks = google.calls.filter((call) => call.url.endsWith(":runReport")).map((call) => JSON.parse(call.body) as { metrics: { name: string }[]; dimensionFilter?: unknown });
+    const onShop = asks.filter((ask) => JSON.stringify(ask.dimensionFilter ?? "").includes("store.acme-shop.test"));
+    expect(onShop.some((ask) => ask.metrics.map((metric) => metric.name).join() === "ecommercePurchases,purchaseRevenue")).toBe(true);
+    expect(onShop.some((ask) => ask.metrics.some((metric) => metric.name === "screenPageViews"))).toBe(false);
+    // "People who converted after it": the conversion step on the shop too, the first step on the website alone.
+    const funnels = google.calls.filter((call) => call.url.endsWith(":runFunnelReport")).map((call) => JSON.parse(call.body) as { funnel: { steps: { filterExpression: unknown }[] } });
+    expect(funnels.length).toBeGreaterThan(0);
+    expect(JSON.stringify(funnels[0].funnel.steps[0])).not.toContain("store.acme-shop.test");
+    expect(JSON.stringify(funnels[0].funnel.steps[1])).toContain("store.acme-shop.test");
+    // The shop is the website's own: never a stranger in tracking health.
+    expect((await connectionOf(t, connectionId))?.health?.checks.find((check) => check.check === "STRANGERS")?.names ?? []).not.toContain("store.acme-shop.test");
+  });
+
+  test("Google refusing a funnel held to the shop's address: asked the old way at once, the figure kept, and the run says so", async () => {
+    const t = harness();
+    const { google } = await shopCollected(t, { refuseFunnelFields: true });
+    const run = (await runsOf(t))[0];
+    expect(run.status).toBe("SUCCESS");
+    const funnels = google.calls.filter((call) => call.url.endsWith(":runFunnelReport")).map((call) => call.body);
+    // Each funnel asked held to its addresses, refused, then asked on the website's own address.
+    expect(funnels.length).toBeGreaterThanOrEqual(2);
+    expect(funnels[0]).toContain("funnelFieldFilter");
+    expect(funnels[1]).not.toContain("funnelFieldFilter");
+    expect(funnels[1]).toContain("www.acme-shop.test");
+    const live = await t.run(async (ctx) => await ctx.db.query("googleAnalyticsLive").collect());
+    expect(JSON.stringify(live)).not.toContain("refused");
+    const lines = await t.run(async (ctx) => (await ctx.db.query("agentRunSteps").collect()).filter((step) => step.runId === run._id).map((step) => step.output ?? ""));
+    expect(lines.some((line) => line.includes("conversions on store.acme-shop.test") && line.includes("website's own address"))).toBe(true);
+  });
+
+  test("a run that began before the counted addresses moved never marks its figures counted: the next run collects them again, whole", async () => {
+    const t = harness();
+    const { connectionId, companyId, agentId } = await connected(t);
+    const runAt = async (startedAt: number) => await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId: agentId!, triggerType: "EVENT", objective: "Collect", title: "Google Analytics: acme-shop.test", status: "RUNNING", companyId, startedAt, updatedAt: startedAt,
+    }));
+    const close = async (runId: Id<"agentRuns">) => await t.run(async (ctx) => {
+      await closeConnection(ctx, { connectionId, property: PROPERTY, reached: "WHOLE", weekly: false, recount: true, fills: false, runId });
+    });
+    await t.run(async (ctx) => { await ctx.db.patch(connectionId, { status: "CONNECTED", addressesMovedAt: NOW - 60_000 }); });
+    // Begun before the move: its days were collected the old way.
+    await close(await runAt(NOW - 120_000));
+    expect((await connectionOf(t, connectionId))?.countedWith).toBeUndefined();
+    // Begun after it: every figure counted the new way.
+    await close(await runAt(NOW - 30_000));
+    expect((await connectionOf(t, connectionId))?.countedWith).toBe("EVENT_COUNT");
   });
 
   test("without the agent nothing starts, and the website waits for its first run", async () => {

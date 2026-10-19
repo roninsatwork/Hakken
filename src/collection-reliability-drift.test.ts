@@ -84,13 +84,13 @@ describe('a step is booked with its watch (RR1)', () => {
 describe("Google's answers are added up as they arrive (RR2)", () => {
   /**
    * Analytics asks read whole, each for a reason that does not grow with the
-   * website: what counts, read once on connecting (its events, a year of
-   * them, by name), and every address's visits for the strangers check (fifty
-   * kept). May shrink, never grow: a new ask passes its sink.
+   * website: every address's visits for the strangers check (fifty kept).
+   * What counts, read on connecting, adds its answers up as they arrive since
+   * it reads them by address (conversion-addresses-plan.md). May shrink, never
+   * grow: a new ask passes its sink.
    */
   const WHOLE_ASKS = new Map([
     ['convex/googleAnalyticsApi.ts', 1],
-    ['convex/googleAnalyticsConnect.ts', 2],
   ]);
 
   test('every Google Analytics ask in a collection passes the sink its rows are added up in', () => {

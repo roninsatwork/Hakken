@@ -7,7 +7,7 @@ import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { appError } from "./utils/appError";
-import { askFunnel, countryIdOf, openSession, perVisitOf, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { askFunnel, conversionTargetOf, countryIdOf, openSession, perVisitOf, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
 import { LIVE_PARTS, emptyRow, packList } from "./googleAnalyticsLists";
 import { analyticsPackedRows, analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -43,6 +43,7 @@ export const liveTarget = internalQuery({
     if (!slot) return null;
     const website = await ctx.db.get(hold.websiteId);
     const addresses = connection.addresses ?? (website ? [website.host] : []);
+    const conversion = conversionTargetOf(connection);
     const target: CollectTarget = {
       status: connection.status,
       clearing: false,
@@ -55,6 +56,7 @@ export const liveTarget = internalQuery({
       events: (connection.events ?? []).map((event) => event.eventName),
       counted: (connection.events ?? []).filter((event) => event.counted).map((event) => event.eventName),
       perVisit: perVisitOf(connection),
+      ...conversion,
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
       pagesHeld: connection.pageHistoryFrom !== undefined,
@@ -63,7 +65,8 @@ export const liveTarget = internalQuery({
       others: [],
       countryHistory: [],
       untitled: false,
-      shop: connection.shop === true,
+      shop: connection.shop === true || conversion.salesElsewhere,
+      shopNoted: connection.shop === true,
       fillsReached: [],
       eventless: false,
     };
@@ -141,6 +144,8 @@ export const askEventFunnel = tenantAction({
     const funnel = await askFunnel(opened.session, found.target.property!, {
       startDate: found.from, endDate: found.to, first: args.event, then: conversions,
       hostNames: found.target.addresses, countries: [found.target.country], ...(args.device ? { device: args.device } : {}),
+      // The conversion on the shop too (conversion-addresses-plan.md), the event itself on the website's own address.
+      ...(found.target.alsoConverting.length > 0 ? { thenHostNames: [...found.target.addresses, ...found.target.alsoConverting] } : {}),
     });
     const rows = funnel.ok ? [{ ...emptyRow("did"), people: funnel.did }, { ...emptyRow("then"), people: funnel.then }] : [emptyRow("refused")];
     await ctx.runMutation(internal.googleAnalyticsLive.putLive, {

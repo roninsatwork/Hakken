@@ -593,8 +593,8 @@ type Check = { check: string; passing: boolean; names?: string[]; others?: strin
  * or wrong.
  */
 const CHECK_ORDER = [
-  "TRACKING_STOPPED", "NOTHING_COUNTED", "SOMETHING_ELSE", "TOO_MUCH_UNKNOWN", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS", "SUDDEN_FALL",
-  "NO_VALUE", "PAYMENT_REFERRALS", "SELF_REFERRAL", "STRANGERS", "COUNTED_AGAIN",
+  "TRACKING_STOPPED", "NOTHING_COUNTED", "SOMETHING_ELSE", "TOO_MUCH_UNKNOWN", "ENQUIRY_UNCOUNTED", "CONVERSIONS_ELSEWHERE", "NEVER_HAPPENS",
+  "SUDDEN_FALL", "NO_VALUE", "PAYMENT_REFERRALS", "SELF_REFERRAL", "STRANGERS", "COUNTED_AGAIN",
 ];
 
 /** Checks the costliest first, as What Hakken sees names them and the Tracking health page lists them (Anthony, 2026-10-13). */
@@ -610,6 +610,7 @@ const CHECK_FIX: Record<string, { link: string; to: SeenTarget }> = {
   SOMETHING_ELSE: { link: "conversions", to: toPage("conversions") },
   TOO_MUCH_UNKNOWN: { link: "landingPages", to: toPage("funnel") },
   ENQUIRY_UNCOUNTED: { link: "chooseWhatCounts", to: CHOOSE },
+  CONVERSIONS_ELSEWHERE: { link: "changeWhatCounts", to: CHOOSE },
   NEVER_HAPPENS: { link: "conversions", to: toPage("conversions") },
   SUDDEN_FALL: { link: "conversions", to: toPage("conversions") },
   NO_VALUE: { link: "changeWhatCounts", to: CHOOSE },
@@ -621,6 +622,8 @@ const CHECK_FIX: Record<string, { link: string; to: SeenTarget }> = {
 
 /** The checks whose names are conversions or events, named in the reader's words (`{event}`). */
 const NAMES_EVENTS = new Set(["NO_VALUE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
+/** The checks whose names are addresses, said as they are (`{text}`). */
+const NAMES_ADDRESSES = new Set(["CONVERSIONS_ELSEWHERE"]);
 
 /**
  * One failing check in a sentence: its share (or count) and count, which way
@@ -631,7 +634,8 @@ function checkSays(check: Check): SeenPhrase {
   const fell = check.check === "SUDDEN_FALL" ? `.${check.names?.[0] === "conversions" ? "conversions" : "visits"}` : "";
   const named = check.check === "SOMETHING_ELSE" && check.names?.length
     ? { text: [check.names[0], check.others?.[0] ?? ""].filter(Boolean).join(","), c: check.names.length }
-    : NAMES_EVENTS.has(check.check) && check.names?.length ? { text: check.names.join(","), c: check.names.length } : {};
+    : NAMES_EVENTS.has(check.check) && check.names?.length ? { text: check.names.join(","), c: check.names.length }
+      : NAMES_ADDRESSES.has(check.check) && check.names?.length ? { text: check.names.join(", "), c: check.names.length } : {};
   return {
     code: `check.${check.check}${fell}`,
     a: check.share ?? check.count ?? 0,
@@ -666,6 +670,7 @@ const CHECK_STEPS: Record<string, (host: string) => Array<{ link: string; to: Se
   SOMETHING_ELSE: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "conversions", to: toPage("conversions") }],
   TOO_MUCH_UNKNOWN: () => [{ link: "campaigns", to: toPage("campaigns") }, { link: "landingPages", to: toPage("funnel") }],
   ENQUIRY_UNCOUNTED: () => [{ link: "chooseWhatCounts", to: CHOOSE }],
+  CONVERSIONS_ELSEWHERE: () => [{ link: "changeWhatCounts", to: CHOOSE }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }],
   NEVER_HAPPENS: (host) => [
     { link: "yourWebsite", to: theWebsite(host) }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "conversions", to: toPage("conversions") },
   ],

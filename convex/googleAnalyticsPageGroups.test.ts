@@ -99,7 +99,7 @@ const TOP = "2026-09-28";
 const target = {
   status: "CONNECTED", clearing: false, owned: true, companyWebsiteId: "hold", property: "properties/rehearsal",
   addresses: [`www.${REHEARSAL_HOST}`, REHEARSAL_HOST], origin: `https://www.${REHEARSAL_HOST}`, timeZone: "Europe/London",
-  events: ["generate_lead", "click_tel"], counted: ["generate_lead"], perVisit: [], newestDay: TOP, oldestDay: "2025-01-01",
+  events: ["generate_lead", "click_tel"], counted: ["generate_lead"], perVisit: [], alsoConverting: [], salesElsewhere: false, newestDay: TOP, oldestDay: "2025-01-01",
   pagesHeld: true, weeklyPeriodsAt: undefined, country: "GB", others: [], countryHistory: [],
 };
 

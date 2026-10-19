@@ -8,7 +8,8 @@ import { internalAction, internalMutation, internalQuery, type ActionCtx, type M
 import type { Doc, Id } from "./_generated/dataModel";
 import { failureSummary, lastMoved, ROLE_RUN_LIVE_MS } from "./roleRuns";
 import { shiftDay } from "./searchConsoleDays";
-import { siteAddresses } from "./googleAnalyticsApi";
+import { addressConversions, siteAddresses } from "./googleAnalyticsApi";
+import { SALE_EVENT } from "./utils/analyticsAddresses";
 import { prepareAnalyticsCountry } from "./googleAnalyticsCountries";
 import { collectTitles } from "./googleAnalyticsTitles";
 import { count, days, finishRun } from "./searchConsoleAgentRun";
@@ -25,7 +26,7 @@ import {
   type PeriodJob,
   type StepResult,
 } from "./googleAnalyticsCollect";
-import { COUNTED_WITH } from "./googleAnalyticsSchema";
+import { COUNTED_WITH, LISTED_WITH } from "./googleAnalyticsSchema";
 import { NIGHT_MS, afterTheHour } from "./googleAnalyticsBudget";
 import { countriesKeptReady } from "./searchConsoleCountries";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -214,10 +215,12 @@ async function beginSiteRun(
   if (!connection || connection.status !== "CONNECTED" || connection.property !== site.property || connection.switchedOff) return null;
   // Its figures must be its main home country's: when not, they are cleared and this run waits for the clearing's (§18.6.1).
   if (connection.clearing || (await prepareAnalyticsCountry(ctx, connection)) === "SWITCHING") return "CLEARING";
-  // Figures counted another way are collected again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4):
-  // its events listed afresh first, with those that read as enquiries, which then starts this run again.
+  // Figures counted another way are collected again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4).
+  // Events listed before Hakken listed as it does now — with those that read as enquiries, and the other addresses a
+  // conversion counts on (conversion-addresses-plan.md) — are listed afresh first, which then starts this run again:
+  // whole only when the addresses whose conversions count moved.
   const recount = connection.countedWith !== COUNTED_WITH;
-  if (recount && connection.listedWith !== COUNTED_WITH) {
+  if (connection.listedWith !== LISTED_WITH) {
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsConnect.readWhatCounts, { connectionId: connection._id, thenCollect: true });
     return "LISTING";
   }
@@ -411,7 +414,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
   const begun = await ctx.runMutation(internal.collectionSteps.stepStarted, { key, ...(args.booking !== undefined ? { booking: args.booking } : {}) });
   if (!begun.go) return null;
   const skipped = [...(args.skipped ?? [])];
-  const close = async (status: "SUCCESS" | "FAILED", summary: string, reached: "WHOLE" | "DAYS" | "NONE", more: { weekly?: boolean; hostVisits?: Array<{ host: string; visits: number }>; listsFrom?: string; fills?: boolean } = {}) =>
+  const close = async (status: "SUCCESS" | "FAILED", summary: string, reached: "WHOLE" | "DAYS" | "NONE", more: { weekly?: boolean; hostVisits?: Array<{ host: string; visits: number }>; hostConversions?: Array<{ host: string; conversions: number }>; listsFrom?: string; fills?: boolean } = {}) =>
     await ctx.runMutation(internal.googleAnalyticsRunEnd.closeSiteRun, {
       connectionId: args.connectionId,
       property: args.property,
@@ -425,6 +428,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
       weekly: more.weekly ?? args.weekly,
       recount: args.recount === true,
       ...(more.hostVisits ? { hostVisits: more.hostVisits } : {}),
+      ...(more.hostConversions ? { hostConversions: more.hostConversions } : {}),
       // The night's run: the two-year fills follow it, inside the same night (BR7).
       ...(args.night ? { nightFrom: args.begunAt ?? Date.now() } : {}),
       ...(more.listsFrom ?? skipped[0] ? { listsFrom: more.listsFrom ?? skipped[0] } : {}),
@@ -608,6 +612,10 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
         }
         // With the weekly lists, every address's visits, for tracking health's strangers check (§6, check 8).
         const hosts = weekly && !endLeftOut ? await siteAddresses(open.accessToken, args.property, target.addresses[0] ?? args.host, args.top) : null;
+        // And the listed events and sales on every address, for its conversions elsewhere check (conversion-addresses-plan.md).
+        const conversions = weekly && !endLeftOut && target.events.length > 0
+          ? await addressConversions(open.accessToken, args.property, [...new Set([...target.events, SALE_EVENT])], args.top, [target.country])
+          : null;
         await line(
           "Ready-made lists",
           `${jobs.length} lists asked of Google ready-made: the last ${weekly ? "7 and 30 days, 90 days and 12 months" : "7 and 30 days"}, each with the span before${weekly ? ", and the 90 days and 12 months a year before" : ""}. A list whose figures did not move was left as it was.${skipped.length > 0 ? ` ${skipped.length === 1 ? "One was" : `${count(skipped.length)} were`} left out; the next run asks ${skipped.length === 1 ? "it" : "them"} first.` : ""}`,
@@ -617,7 +625,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
           "SUCCESS",
           `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(args.requests + open.requests)} asks to Google. ${NOT_HISTORY}`,
           "WHOLE",
-          { weekly, ...(hosts?.ok ? { hostVisits: hosts.found.visits.slice(0, 50) } : {}) },
+          { weekly, ...(hosts?.ok ? { hostVisits: hosts.found.visits.slice(0, 50) } : {}), ...(conversions?.ok ? { hostConversions: conversions.found.slice(0, 50) } : {}) },
         );
         return null;
       }
@@ -653,6 +661,8 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
       }
       // Google's row limit is never passed in silence (RR2): the list keeps what came, and the run says so.
       if (result.cut) await line("Google's row limit", `${jobName(job)}: Google's answer reached the most rows it gives at once, so the smallest rows past it are not in this list.`, true);
+      // A funnel Google would not hold to the conversion addresses was asked the old way: said, never silent.
+      if (result.narrowed) await line("Conversions on other addresses", `Google refused "People who converted after it" with conversions on ${result.narrowed.join(", ")}, so it was asked on the website's own address: conversions there aren't in it.`, true);
       rows += result.rows;
       jobAt += 1;
       done += 1;

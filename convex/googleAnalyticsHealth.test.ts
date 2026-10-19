@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { DAY_JOIN, emptyRow } from "./googleAnalyticsLists";
-import { copiesAmong, daysAlike, enquiriesUncounted, lookalikeOf, neverHappening, somethingElse, timesByDay } from "./googleAnalyticsHealth";
+import { ELSEWHERE_FLOOR, conversionsElsewhere, copiesAmong, daysAlike, enquiriesUncounted, lookalikeOf, neverHappening, somethingElse, timesByDay } from "./googleAnalyticsHealth";
 
 /**
  * Tracking health's bell alerts (docs/plans/active/google-analytics-plan.md
@@ -28,7 +28,7 @@ async function seeded(t: Harness) {
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "properties/1", propertyName: "Acme",
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [],
-      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT",
+      timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [{ eventName: "generate_lead", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 }],
       createdAt: 1, updatedAt: 1,
     });
@@ -87,6 +87,24 @@ describe("tracking health's bell alerts", () => {
  * built from its link clicks, its real forms (`contact`) uncounted, its chat,
  * phone and email never arriving — and after the fix.
  */
+describe("conversions on an address whose conversions don't count (conversion-addresses-plan.md)", () => {
+  const week = [
+    { host: "www.nec.ac.uk", conversions: 157 },
+    { host: "store.nec.ac.uk", conversions: 210 },
+    { host: "book.example-bookings.com", conversions: 12 },
+    { host: "nec.staging.cm-hosting.com", conversions: 9 },
+    { host: "spam.example.org", conversions: ELSEWHERE_FLOOR - 1 },
+  ];
+
+  test("a booking page Hakken didn't pick is named, the most first; the website's own, its shop, a copy and a stray test never are", () => {
+    expect(conversionsElsewhere(week, "nec.ac.uk", ["store.nec.ac.uk"])).toEqual([{ host: "book.example-bookings.com", conversions: 12 }]);
+  });
+
+  test("before the shop counts, it is named first", () => {
+    expect(conversionsElsewhere(week, "nec.ac.uk", []).map((entry) => entry.host)).toEqual(["store.nec.ac.uk", "book.example-bookings.com"]);
+  });
+});
+
 describe("what each conversion really is", () => {
   /** Each event's times a day, as the 30 days' list of each event a day keeps them. */
   const seriesOf = (days: Record<string, Record<string, number>>) =>

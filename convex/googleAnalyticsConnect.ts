@@ -19,18 +19,21 @@ import {
   isGoogleConfigured,
   newSignInState,
 } from "./googleConnection";
-import { lastThirtyDays, listKeyEvents, propertyDetails, runReport, siteAddresses, yesterdayUtc } from "./googleAnalyticsApi";
+import { listKeyEvents, propertyDetails, siteAddresses, yesterdayUtc } from "./googleAnalyticsApi";
 import { countryIdOf, newestWholeDayIn } from "./googleAnalyticsCollect";
 import {
-  COUNTED_WITH,
+  LISTED_WITH,
   analyticsAttemptValidator,
   analyticsProblemValidator,
   analyticsStatusValidator,
   countedEventValidator,
   healthResultValidator,
+  heldAddressValidator,
   propertyChoiceValidator,
 } from "./googleAnalyticsSchema";
-import { readsAsEnquiry, tickedAtFirst } from "./utils/analyticsEvents";
+import { tickedAtFirst } from "./utils/analyticsEvents";
+import { conversionAddressesOf, countsConversions, hakkenCounts } from "./utils/analyticsAddresses";
+import { readEventsByAddress } from "./googleAnalyticsAddressReads";
 import { forgetCountedHistory } from "./insightHistoryForget";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { tellSuperAdmins } from "./googleAnalyticsHealth";
@@ -286,11 +289,13 @@ export const countingTarget = internalQuery({
     const hold = await ctx.db.get(connection.companyWebsiteId);
     return {
       property: connection.property,
-      // Its events still to be read (BR1): chosen and not read yet, or listed before Hakken counted as it does now.
+      // Its events still to be read (BR1): chosen and not read yet, or listed before Hakken listed as it does now.
       waiting: (connection.status === "COUNTING" || connection.status === "CONNECTED")
-        && (connection.eventsReadAt === undefined || connection.listedWith !== COUNTED_WITH),
+        && (connection.eventsReadAt === undefined || connection.listedWith !== LISTED_WITH),
       host: website.host,
       addresses: connection.addresses ?? null,
+      // The other addresses as last read: an admin's tick on one stays (conversion-addresses-plan.md).
+      held: connection.addressesRead ?? [],
       googleConnectionId: connection.googleConnectionId ?? null,
       // Counted in the main home country, as every figure is (google-analytics-plan.md §18.6.1).
       country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
@@ -298,8 +303,7 @@ export const countingTarget = internalQuery({
   },
 });
 
-/** Events that read as enquiries listed beside the key events, the most seen first (conversions-back-in-time-plan.md BT2). */
-export const MOST_ENQUIRY_EVENTS = 20;
+export { MOST_ENQUIRY_EVENTS } from "./googleAnalyticsAddressReads";
 
 /**
  * When reading a property's events fails, Hakken asks again by itself
@@ -366,55 +370,29 @@ export const readWhatCounts = internalAction({
       if (!refused || refused.ok) return null;
       return await failedWith(refused.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY", googleWords(refused));
     }
-    // The events that read as enquiries, seen in the last 12 months, beside the key events: Hakken counts them from
-    // Google's own counts, marked as key events or not (BT2).
+    // Every address's events, and the other addresses visitors reach from the website (conversion-addresses-plan.md).
     const keyNames = new Set(keyEvents.events.map((event) => event.eventName));
-    const year = await runReport(token.accessToken, target.property, {
-      startDate: shiftDay(newest, -364),
-      endDate: newest,
-      dimensions: ["eventName"],
-      metrics: ["eventCount"],
-      hostNames: addresses.found.addresses,
-      countries: [target.country],
-    });
-    if (!year.ok) return await failedWith(year.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY", googleWords(year));
-    const enquiries = year.rows
-      .filter((row) => !keyNames.has(row.keys[0]) && readsAsEnquiry(row.keys[0]) && row.values[0] > 0)
-      .sort((left, right) => right.values[0] - left.values[0])
-      .slice(0, MOST_ENQUIRY_EVENTS)
-      .map((row) => row.keys[0]);
-    const names = [...keyNames, ...enquiries];
-    const counts = new Map<string, { count: number; value: number }>();
-    if (names.length > 0) {
-      const report = await runReport(token.accessToken, target.property, {
-        startDate: lastThirtyDays(newest).from,
-        endDate: newest,
-        dimensions: ["eventName"],
-        metrics: ["eventCount", "eventValue"],
-        hostNames: addresses.found.addresses,
-        eventNames: names,
-        countries: [target.country],
-      });
-      if (report.ok) {
-        for (const row of report.rows) counts.set(row.keys[0], { count: row.values[0], value: row.values[1] });
-      }
-    }
+    const own = addresses.found.addresses;
+    const read = await readEventsByAddress(token.accessToken, target.property, { own, site: target.host, country: target.country, newest, keyNames, before: target.held });
+    if (!read.ok) return await failedWith(read.reason === "ACCESS" ? "NO_ACCESS" : "GOOGLE_BUSY", googleWords(read));
+    const { enquiries, held } = read;
     await ctx.runMutation(internal.googleAnalyticsConnect.writeWhatCounts, {
       connectionId: args.connectionId,
       property: target.property,
       propertyName: details.details.displayName,
       timeZone: details.details.timeZone,
       currency: details.details.currencyCode,
-      addresses: addresses.found.addresses,
+      addresses: own,
       ...(addresses.found.others ? { otherAddresses: addresses.found.others } : {}),
+      addressesRead: held,
       events: [
         ...keyEvents.events.map((event) => ({ eventName: event.eventName, defaultValue: event.defaultValue, keyEvent: true, perVisit: event.perVisit })),
         ...enquiries.map((eventName) => ({ eventName, defaultValue: null, keyEvent: false, perVisit: false })),
       ].map(({ defaultValue, ...event }) => {
-        const seen = counts.get(event.eventName);
+        const { times, value } = read.counting(event.eventName);
         // Analytics' own value: the event's default, or the average of the values sent with it.
-        const sent = seen && seen.count > 0 && seen.value > 0 ? Math.round((seen.value / seen.count) * 100) / 100 : null;
-        return { ...event, analyticsValue: defaultValue ?? sent, lastThirtyDays: seen?.count ?? 0 };
+        const sent = times > 0 && value > 0 ? Math.round((value / times) * 100) / 100 : null;
+        return { ...event, analyticsValue: defaultValue ?? sent, lastThirtyDays: read.ownCount(event.eventName) };
       }),
       ...(args.thenCollect ? { thenCollect: true } : {}),
     });
@@ -443,6 +421,7 @@ export const writeWhatCounts = internalMutation({
     currency: v.string(),
     addresses: v.array(v.string()),
     otherAddresses: v.optional(v.array(v.string())),
+    addressesRead: v.optional(v.array(heldAddressValidator)),
     events: v.array(v.object({
       eventName: v.string(),
       analyticsValue: v.union(v.number(), v.null()),
@@ -461,6 +440,8 @@ export const writeWhatCounts = internalMutation({
     const firstTime = connection.events === undefined;
     const keyTicked = args.events.some((event) => event.keyEvent && tickedAtFirst(event.eventName));
     const grew = !firstTime && args.events.some((event) => !before.has(event.eventName));
+    // The addresses whose conversions count moved (conversion-addresses-plan.md): the figures are collected again, whole.
+    const moved = args.addressesRead !== undefined && !sameHosts(conversionAddressesOf(connection.addressesRead), conversionAddressesOf(args.addressesRead));
     const connected = connection.status === "CONNECTED";
     await ctx.db.patch(connection._id, {
       propertyName: args.propertyName,
@@ -468,6 +449,8 @@ export const writeWhatCounts = internalMutation({
       currency: args.currency,
       addresses: args.addresses,
       ...(args.otherAddresses ? { otherAddresses: args.otherAddresses } : {}),
+      ...(args.addressesRead ? { addressesRead: args.addressesRead } : {}),
+      ...(moved ? { addressesMovedAt: Date.now() } : {}),
       events: args.events.map((event) => {
         const held = before.get(event.eventName);
         return {
@@ -481,17 +464,23 @@ export const writeWhatCounts = internalMutation({
         };
       }),
       eventsReadAt: Date.now(),
-      listedWith: COUNTED_WITH,
+      listedWith: LISTED_WITH,
       // Read at last (BR1): no read waiting, and a connection still choosing has nothing wrong left to say.
       readAgainAt: undefined,
       ...(connection.status === "COUNTING" ? { problem: undefined, problemAt: undefined, problemDetail: undefined } : {}),
-      ...(grew && connected ? { countedWith: undefined } : {}),
+      ...((grew || moved) && connected ? { countedWith: undefined } : {}),
       updatedAt: Date.now(),
     });
-    if (connected && (args.thenCollect || (grew && !connection.collecting))) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
+    if (connected && (args.thenCollect || ((grew || moved) && !connection.collecting))) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
     return null;
   },
 });
+
+/** Whether two lists name the same addresses, in any order. */
+function sameHosts(left: readonly string[], right: readonly string[]): boolean {
+  const before = new Set(left.map((host) => host.toLowerCase()));
+  return left.length === right.length && right.every((host) => before.has(host.toLowerCase()));
+}
 
 /**
  * Save what counts and what each is worth (§3, step 5; GA5, GA6). The first
@@ -503,6 +492,8 @@ export const saveWhatCounts = adminMutation({
   args: {
     siteId: v.id("companyWebsites"),
     events: v.array(v.object({ eventName: v.string(), counted: v.boolean(), hakkenValue: v.union(v.number(), v.null()) })),
+    /** The other addresses' ticks: whether each one's conversions and sales count (conversion-addresses-plan.md). */
+    addresses: v.optional(v.array(v.object({ host: v.string(), counted: v.boolean() }))),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -520,9 +511,24 @@ export const saveWhatCounts = adminMutation({
         throw appError("INVALID_INPUT", `A value must be between 0 and ${MOST_VALUE.toLocaleString("en-GB")}.`);
       }
     }
+    const ticks = new Map((args.addresses ?? []).map((address) => [address.host, address.counted]));
+    for (const host of ticks.keys()) {
+      if (!(connection.addressesRead ?? []).some((address) => address.host === host)) {
+        throw appError("NOT_FOUND", `${host} is not one of the addresses this property's connection lists.`);
+      }
+    }
+    // An address's tick is held only where it differs from Hakken's own choice, so Hakken's next reading can move the rest.
+    const addressesRead = connection.addressesRead?.map((address) => {
+      const tick = ticks.get(address.host);
+      if (tick === undefined) return address;
+      const { counted: _held, ...rest } = address;
+      return tick === hakkenCounts(address) ? rest : { ...rest, counted: tick };
+    });
     const now = Date.now();
     const first = connection.status === "COUNTING";
     const another = first && connection.dataProperty !== undefined && connection.dataProperty !== connection.property;
+    // Another address counting on a connected website: its figures are collected again, whole (conversion-addresses-plan.md).
+    const moved = !first && !sameHosts(conversionAddressesOf(connection.addressesRead), conversionAddressesOf(addressesRead));
     // What counts changed: Insights' months counted the old way are asked again on its next run (BT3, BT6).
     const countedBefore = new Set(connection.events.filter((event) => event.counted).map((event) => event.eventName));
     const countedNow = new Set(connection.events.filter((held) => chosen.get(held.eventName)?.counted ?? held.counted).map((held) => held.eventName));
@@ -534,6 +540,8 @@ export const saveWhatCounts = adminMutation({
         const event = chosen.get(held.eventName);
         return event ? { ...held, counted: event.counted, hakkenValue: event.hakkenValue } : held;
       }),
+      ...(addressesRead ? { addressesRead } : {}),
+      ...(moved ? { countedWith: undefined, addressesMovedAt: now } : {}),
       ...(first
         ? {
           status: "CONNECTED" as const,
@@ -561,11 +569,12 @@ export const saveWhatCounts = adminMutation({
         account: await accountOf(ctx, connection.googleConnectionId),
         property: connection.property,
         counted: args.events.filter((event) => event.counted).map((event) => event.eventName),
+        addresses: conversionAddressesOf(addressesRead),
       }),
     });
     // Another property's figures go first; collecting starts at once, for this website alone (§10, Q15).
     if (another) await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.clearFigures, { companyWebsiteId: connection.companyWebsiteId });
-    else if (first) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
+    else if (first || (moved && !connection.collecting)) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
     if (first) {
       const website = await ctx.db.get(connection.websiteId);
       const host = website?.displayHost ?? website?.host ?? "";
@@ -801,6 +810,18 @@ export const statusConnectionValidator = v.object({
   stream: orNull(v.string()),
   addresses: v.array(v.string()),
   otherAddresses: v.array(v.string()),
+  /**
+   * The other addresses read with the events (conversion-addresses-plan.md): each one's conversions counting or not,
+   * and Hakken's own choice beside it.
+   */
+  addressesRead: v.array(v.object({
+    host: v.string(),
+    kind: heldAddressValidator.fields.kind,
+    reached: v.boolean(),
+    events: heldAddressValidator.fields.events,
+    counted: v.boolean(),
+    hakken: v.boolean(),
+  })),
   timeZone: orNull(v.string()),
   currency: orNull(v.string()),
   /** Null while the key events are read from Google. */
@@ -823,6 +844,8 @@ export const statusConnectionValidator = v.object({
   health: v.union(v.null(), v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
   /** Visits on each of the property's addresses over the last 30 days: the other addresses a check names (ga-tracking-health-plan.md TH2). */
   hostVisits: v.union(v.null(), v.array(v.object({ host: v.string(), visits: v.number() }))),
+  /** Listed events and sales on each address over the last 30 days: the addresses "conversions elsewhere" names (conversion-addresses-plan.md). */
+  hostConversions: v.union(v.null(), v.array(v.object({ host: v.string(), conversions: v.number() }))),
   /** A shop, as its last 90 days' events say: the Products page shows only for one (§18.6.6). */
   shop: v.boolean(),
 });
@@ -900,6 +923,14 @@ async function asStatus(
     stream: connection.stream ?? null,
     addresses: connection.addresses ?? [],
     otherAddresses: connection.otherAddresses ?? [],
+    addressesRead: (connection.addressesRead ?? []).map((address) => ({
+      host: address.host,
+      kind: address.kind,
+      reached: address.reached,
+      events: address.events,
+      counted: countsConversions(address),
+      hakken: hakkenCounts(address),
+    })),
     timeZone: connection.timeZone ?? null,
     currency: connection.currency ?? null,
     events: connection.eventsReadAt !== undefined ? connection.events ?? [] : null,
@@ -921,5 +952,6 @@ async function asStatus(
       : null,
     health: connection.health ?? null,
     hostVisits: connection.hostVisits ?? null,
+    hostConversions: connection.hostConversions ?? null,
   };
 }

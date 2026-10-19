@@ -6,7 +6,7 @@ import { appError } from "./utils/appError";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { GOOGLE_ANALYTICS_ROLE } from "./googleAnalyticsAgentRun";
 import { fillStepKey } from "./googleAnalyticsFillAfter";
-import { COUNTED_WITH } from "./googleAnalyticsSchema";
+import { COUNTED_WITH, LISTED_WITH } from "./googleAnalyticsSchema";
 import { REHEARSAL_HOST, TEN_TIMES_KORDA, rehearsalToken } from "./utils/rehearsalGoogle";
 
 /**
@@ -64,7 +64,7 @@ export const seedRehearsal = internalMutation({
     const analyticsId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: PROPERTY, propertyName: "Rehearsal",
       stream: `https://www.${REHEARSAL_HOST}`, addresses: [`www.${REHEARSAL_HOST}`], otherAddresses: [], timeZone: "Europe/London", currency: "GBP",
-      eventsReadAt: now, listedWith: COUNTED_WITH, countedWith: COUNTED_WITH,
+      eventsReadAt: now, listedWith: LISTED_WITH, countedWith: COUNTED_WITH,
       events: [
         { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: 250, lastThirtyDays: 0 },
         { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },

@@ -37,7 +37,7 @@ async function collected(t: Harness, visits: Visit[]) {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "COUNTING", property: PROPERTY, propertyName: "Acme",
-      stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [], timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT",
+      stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [], timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [
         { eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
         { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
@@ -690,7 +690,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
-    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 12 });
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 13 });
     const connected = await user.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
     expect(connected?.searchConsole).toBeNull();
     await t.run(async (ctx) => {

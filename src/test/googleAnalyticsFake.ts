@@ -122,6 +122,8 @@ export type Google = {
   /** Each hour's asks of age, gender or interests and tokens, and the asks refused for the allowance. */
   spent: Map<number, { thresholded: number; tokens: number }>;
   refused: number;
+  /** Google refusing a funnel step held to its own addresses (`funnelFieldFilter`), as its alpha may (conversion-addresses-plan.md). */
+  refuseFunnelFields?: boolean;
   calls: { url: string; body: string; at: number }[];
 };
 
@@ -294,17 +296,37 @@ export function fakeGoogle(visits: Visit[]): Google {
     }
     // Google's funnel report (§18.6.5): the people of each line with the first event, and of those lines the ones with a later one too.
     if (url === `https://analyticsdata.googleapis.com/v1alpha/${PROPERTY}:runFunnelReport`) {
-      type Step = { filterExpression: { funnelEventFilter?: { eventName: string }; orGroup?: { expressions: { funnelEventFilter: { eventName: string } }[] } } };
+      if (google.refuseFunnelFields && body.includes("funnelFieldFilter")) {
+        return Response.json({ error: { code: 400, message: "Field hostName is not a valid funnel step filter.", status: "INVALID_ARGUMENT" } }, { status: 400 });
+      }
+      type Expression = {
+        funnelEventFilter?: { eventName: string };
+        funnelFieldFilter?: { fieldName: string; inListFilter: { values: string[] } };
+        orGroup?: { expressions: Expression[] };
+        andGroup?: { expressions: Expression[] };
+      };
+      type Step = { filterExpression: Expression };
       const ask = JSON.parse(body) as { dateRanges: { startDate: string; endDate: string }[]; funnel: { steps: Step[] }; dimensionFilter?: Filter };
       const { startDate, endDate } = ask.dateRanges[0];
-      const namesOf = (step: Step) => step.filterExpression.funnelEventFilter
-        ? [step.filterExpression.funnelEventFilter.eventName]
-        : (step.filterExpression.orGroup?.expressions ?? []).map((one) => one.funnelEventFilter.eventName);
-      const [first, then] = ask.funnel.steps.map(namesOf);
+      // A step's events, and the addresses it holds to when it names any (conversion-addresses-plan.md).
+      const namesOf = (expression: Expression): string[] => expression.funnelEventFilter
+        ? [expression.funnelEventFilter.eventName]
+        : [...(expression.orGroup?.expressions ?? []), ...(expression.andGroup?.expressions ?? [])].flatMap(namesOf);
+      const hostsOf = (expression: Expression): string[] | null => expression.funnelFieldFilter?.fieldName === "hostName"
+        ? expression.funnelFieldFilter.inListFilter.values
+        : (expression.andGroup?.expressions ?? []).map(hostsOf).find((hosts) => hosts !== null) ?? null;
+      const [first, then] = ask.funnel.steps.map((step) => namesOf(step.filterExpression));
+      const [firstHosts, thenHosts] = ask.funnel.steps.map((step) => hostsOf(step.filterExpression));
+      const on = (visit: Visit, hosts: string[] | null) => !hosts || hosts.includes(FIELD.hostName(visit));
       let did = 0;
       let after = 0;
       for (const visit of google.visits) {
         if (visit.date < startDate || visit.date > endDate || !passes(visit, ask.dimensionFilter)) continue;
+        // A conversion on another address after the first event (conversion-addresses-plan.md): the visit's own sale.
+        if (!on(visit, firstHosts)) {
+          if (on(visit, thenHosts) && then.some((name) => (visit.events?.[name]?.[0] ?? 0) > 0)) after += 1;
+          continue;
+        }
         // Every visit starts one, and its views are page views: as the events list counts them.
         const own = (name: string) => (name === "session_start" ? visit.sessions : name === "page_view" ? visit.views : visit.events?.[name]?.[0] ?? 0);
         const count = first.reduce((sum, name) => sum + own(name), 0);

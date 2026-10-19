@@ -25,7 +25,7 @@ type Check = NonNullable<NonNullable<AnalyticsStatus["connection"]>["health"]>["
 
 /** The checks whose names are conversions or events; those whose names are addresses; the one whose names are pages. */
 const NAMES_EVENTS = new Set(["NEVER_HAPPENS", "ENQUIRY_UNCOUNTED", "NO_VALUE", "SOMETHING_ELSE"]);
-const NAMES_ADDRESSES = new Set(["STRANGERS", "SELF_REFERRAL", "PAYMENT_REFERRALS"]);
+const NAMES_ADDRESSES = new Set(["STRANGERS", "SELF_REFERRAL", "PAYMENT_REFERRALS", "CONVERSIONS_ELSEWHERE"]);
 const NAMES_PAGES = new Set(["COUNTED_AGAIN"]);
 
 /**
@@ -117,9 +117,12 @@ function WhatItNames({ check, status }: { check: Check; status: AnalyticsStatus 
     );
   }
   if (NAMES_ADDRESSES.has(check.check)) {
-    // Each other address's visits, as the weekly run counted them for the check.
-    const visits = new Map((status.connection?.hostVisits ?? []).map((one) => [one.host, one.visits]));
-    const counted = check.check === "STRANGERS";
+    // Each other address's visits — or, for conversions elsewhere, its conversions — as the weekly run counted them for the check.
+    const elsewhere = check.check === "CONVERSIONS_ELSEWHERE";
+    const visits = new Map(elsewhere
+      ? (status.connection?.hostConversions ?? []).map((one) => [one.host, one.conversions])
+      : (status.connection?.hostVisits ?? []).map((one) => [one.host, one.visits]));
+    const counted = check.check === "STRANGERS" || elsewhere;
     return (
       <AnalyticsPanel title={t("addresses.title")} description={t("addresses.note")}>
         <CompactList
@@ -130,7 +133,7 @@ function WhatItNames({ check, status }: { check: Check; status: AnalyticsStatus 
             { key: "address", header: t("addresses.address"), cell: (row) => <span className="text-[13px] text-foreground">{row.name}</span> },
             ...(counted ? [{
               key: "visits",
-              header: t("addresses.visits"),
+              header: elsewhere ? t("addresses.conversions") : t("addresses.visits"),
               align: "right" as const,
               cell: (row: Named) => (visits.has(row.name) ? <span className="font-mono text-[12px] text-foreground">{formatNumber(visits.get(row.name) ?? 0)}</span> : <NoFigure />),
             }] : []),

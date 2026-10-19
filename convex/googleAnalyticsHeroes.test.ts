@@ -54,7 +54,7 @@ async function connected(t: Harness, withConsole = true) {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "properties/1", addresses: ["www.acme.test"],
-      currency: "GBP", newestDay: "2026-10-09", oldestDay: "2026-08-11", eventsReadAt: 1, listedWith: "EVENT_COUNT",
+      currency: "GBP", newestDay: "2026-10-09", oldestDay: "2026-08-11", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [{ eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: 20, lastThirtyDays: 7 }],
       createdAt: 1, updatedAt: 1,
     });

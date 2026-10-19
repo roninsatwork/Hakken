@@ -62,12 +62,16 @@ export async function collectActionFunnels(ctx: ActionCtx, session: Session, tar
   if (target.counted.length === 0) return { ok: true, rows: 0, requests: session.requests };
   const actions: string[] = await ctx.runQuery(internal.googleAnalyticsActionFunnels.actionsOf, { companyWebsiteId: target.companyWebsiteId, counted: target.counted });
   const range = periodRange("365", "NOW", top);
+  let narrowed = false;
   for (const action of [WEBSITE_FUNNEL, ...actions]) {
     const funnel = await askFunnel(session, target.property!, {
       startDate: range.from, endDate: range.to, first: action, then: target.counted.filter((name) => name !== action),
       hostNames: target.addresses, countries: [target.country],
+      // The conversion on the shop too (conversion-addresses-plan.md), the action itself on the website's own address.
+      ...(target.alsoConverting.length > 0 ? { thenHostNames: [...target.addresses, ...target.alsoConverting] } : {}),
     }, true);
     if (!funnel.ok && funnel.reason !== "REFUSED") return failed(session, funnel);
+    if (funnel.ok && funnel.narrowed) narrowed = true;
     const rows = funnel.ok ? [{ ...emptyRow("did"), people: funnel.did }, { ...emptyRow("then"), people: funnel.then }] : [emptyRow("refused")];
     await ctx.runMutation(internal.googleAnalyticsLive.putLive, {
       companyWebsiteId: target.companyWebsiteId,
@@ -78,5 +82,5 @@ export async function collectActionFunnels(ctx: ActionCtx, session: Session, tar
       cut: false,
     });
   }
-  return { ok: true, rows: actions.length + 1, requests: session.requests };
+  return { ok: true, rows: actions.length + 1, requests: session.requests, ...(narrowed ? { narrowed: target.alsoConverting } : {}) };
 }

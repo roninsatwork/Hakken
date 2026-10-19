@@ -11,14 +11,14 @@ import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
 import { closeConnection } from "./googleAnalyticsRunEnd";
 import { shiftDay } from "./searchConsoleDays";
 import { numberPages } from "./googleAnalyticsPageNumbers";
-import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
-import { THRESHOLDED_DIMENSIONS, runFunnelReport, runRealtimeReport, runReport, type FunnelAsk, type QuotaLeft, type RealtimeAsk, type ReportAsk, type ReportRow, type ReportSink, type Report } from "./googleAnalyticsApi";
+import type { ReportRow, Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
   EVENT_LIST_METRICS,
   EVENT_METRICS,
   EVERY_DEVICE,
+  SALES_METRICS,
   KEPT_BY_DEVICE,
   LIST_DIMENSIONS,
   MAIN_METRICS,
@@ -46,6 +46,7 @@ import {
   type AnalyticsList,
 } from "./googleAnalyticsSchema";
 import { AI_SOURCE_VALUES } from "./utils/aiAssistants";
+import { SALE_EVENT, conversionAddressesOf, countsConversions } from "./utils/analyticsAddresses";
 import { READ_EVENTS } from "./utils/analyticsPageStory";
 
 /**
@@ -73,9 +74,6 @@ export const DAYS_PER_STEP = 7;
 
 /** How long a step works before it hands on: an action stops at ten minutes. */
 export const STEP_BUDGET_MS = 4 * 60 * 1000;
-
-/** Waits before asking a busy Google again. */
-const BUSY_WAITS_MS = [2_000, 8_000];
 
 /** Ready-made parts written a call: each up to 2,000 rows. */
 const PARTS_PER_WRITE = 4;
@@ -122,6 +120,14 @@ export type CollectTarget = {
   counted: string[];
   /** Those Google counts once a visit: counted by the visits they happened in (conversions-back-in-time-plan.md BT1). */
   perVisit: string[];
+  /**
+   * The property's other addresses whose conversions and sales count (conversion-addresses-plan.md): a shop, a
+   * booking page. A list's conversions, sales and products are read on them beside `addresses`; its visits and its
+   * pages never are.
+   */
+  alsoConverting: string[];
+  /** Sales happen on one of them: Google's sales figures are read on them too, and the website is a shop from its first run. */
+  salesElsewhere: boolean;
   newestDay: string | undefined;
   oldestDay: string | undefined;
   /** Each page is held over time (ga-stored-figures-plan.md SF5): the run then adds each new day to it. */
@@ -139,8 +145,10 @@ export type CollectTarget = {
    * round's figures are collected, and a new one at once.
    */
   untitled: boolean;
-  /** A shop (§18.6.6): its products are asked beside the other lists. */
+  /** A shop (§18.6.6): its products are asked beside the other lists. Sales on a conversion address make one too. */
   shop: boolean;
+  /** The connection's own note that it is a shop (`noteShop`), read from its 90 days' events. */
+  shopNoted: boolean;
   /** How far each two-year fill has got (ga-big-site-reliability-plan.md BR6). */
   fillsReached: Array<{ country: string; fill: string; to: string }>;
   /**
@@ -161,6 +169,15 @@ export function perVisitOf(connection: Pick<Doc<"googleAnalyticsConnections">, "
   return (connection.events ?? []).filter((event) => event.perVisit === true).map((event) => event.eventName);
 }
 
+/** The other addresses a connection's conversions and sales are read on, and whether sales happen on any (conversion-addresses-plan.md). */
+export function conversionTargetOf(connection: Pick<Doc<"googleAnalyticsConnections">, "addressesRead">): Pick<CollectTarget, "alsoConverting" | "salesElsewhere"> {
+  const counting = (connection.addressesRead ?? []).filter((address) => countsConversions(address));
+  return {
+    alsoConverting: conversionAddressesOf(counting),
+    salesElsewhere: counting.some((address) => address.events.some((event) => event.eventName === SALE_EVENT && event.year > 0)),
+  };
+}
+
 export const collectTarget = internalQuery({
   args: { connectionId: v.id("googleAnalyticsConnections") },
   handler: async (ctx, args): Promise<CollectTarget | null> => {
@@ -169,6 +186,7 @@ export const collectTarget = internalQuery({
     const hold = await ctx.db.get(connection.companyWebsiteId);
     const website = await ctx.db.get(connection.websiteId);
     const addresses = connection.addresses ?? (website ? [website.host] : []);
+    const converting = conversionTargetOf(connection);
     return {
       status: connection.status,
       clearing: connection.clearing === true,
@@ -181,6 +199,7 @@ export const collectTarget = internalQuery({
       events: (connection.events ?? []).map((event) => event.eventName),
       counted: (connection.events ?? []).filter((event) => event.counted).map((event) => event.eventName),
       perVisit: perVisitOf(connection),
+      ...converting,
       newestDay: connection.newestDay,
       oldestDay: connection.oldestDay,
       pagesHeld: connection.pageHistoryFrom !== undefined,
@@ -189,7 +208,8 @@ export const collectTarget = internalQuery({
       others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
       countryHistory: (connection.countryHistory ?? []).map((one) => ({ country: one.country, newestDay: one.newestDay, oldestDay: one.oldestDay, pagesHeld: one.pageHistoryFrom !== undefined })),
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
-      shop: connection.shop === true,
+      shop: connection.shop === true || converting.salesElsewhere,
+      shopNoted: connection.shop === true,
       fillsReached: connection.fillsReached ?? [],
       // A shop's first products are asked at once too, as every new list was.
       eventless: (await ctx.db
@@ -205,107 +225,26 @@ export const collectTarget = internalQuery({
   },
 });
 
-/** A step's hold on Google: the token, renewed once when it has just expired. */
-export type Session = {
-  ctx: ActionCtx;
-  connectionId: Id<"googleAnalyticsConnections">;
-  accessToken: string;
-  requests: number;
-  /** Set when renewing the token failed; the problem is already noted on the connection. */
-  stopped: string | null;
-  /** What is left of the website's allowances, as Google counted them on its last answer (SF18); null before one. */
-  quota: QuotaLeft | null;
-};
+// A step's hold on Google — its sign-in, its asks, waiting when Google is busy — in its own module, named here as before.
+export { ask, askFunnel, askRealtime, openSession, type Session } from "./googleAnalyticsSession";
+import { ask, type Session } from "./googleAnalyticsSession";
 
 // Each run's budget for the hour, and Google's refusals that refresh within it (ga-stored-figures-plan.md SF17, SF20).
 export { HOURLY_REFUSAL, KEPT_BACK, overBudget } from "./googleAnalyticsBudget";
-import { HOURLY_REFUSAL, overBudget, quotaStillSeen } from "./googleAnalyticsBudget";
-
-/** A session's start: its sign-in, and what Google last said is left while it holds (`googleAnalyticsQuota.ts`). */
-export async function openSession(
-  ctx: ActionCtx,
-  connectionId: Id<"googleAnalyticsConnections">,
-): Promise<{ ok: true; session: Session } | { ok: false; problem: string }> {
-  const token = await accessTokenFor(ctx, connectionId);
-  if (!token.ok) return { ok: false, problem: token.problem };
-  const seen = await ctx.runQuery(internal.googleAnalyticsQuota.quotaSeenOf, { connectionId });
-  return { ok: true, session: { ctx, connectionId, accessToken: token.accessToken, requests: 0, stopped: null, quota: quotaStillSeen(seen, Date.now()) } };
-}
-
-/**
- * One report, renewing the token once if it has just expired and waiting a
- * little when Google is busy — and not asked at all once the run's budget
- * for the hour is spent (SF17).
- */
-export async function ask(session: Session, property: string, report: ReportAsk, sink?: ReportSink): Promise<({ ok: true } & Report) | GoogleFailure> {
-  // Asked again after a failure part-way: with a sink, from the page Google reached (ga-big-site-reliability-plan.md BR2).
-  let fromPage = 0;
-  return await retried(session, async (token) => {
-    const answer = await runReport(token, property, report, sink, fromPage);
-    if (!answer.ok) fromPage = answer.pagesRead;
-    if (answer.ok && answer.quota) session.quota = answer.quota;
-    if (answer.ok && answer.quota) await session.ctx.runMutation(internal.googleAnalyticsQuota.noteQuota, { connectionId: session.connectionId, quota: answer.quota });
-    return { answer, requests: answer.ok ? answer.requests : 1 };
-  }, { budgeted: true, thresholded: report.dimensions.some((dimension) => THRESHOLDED_DIMENSIONS.has(dimension)) });
-}
-
-/** Google's live figures (§18.6.7), asked as every report is; nothing is kept. */
-export async function askRealtime(session: Session, property: string, live: RealtimeAsk): Promise<{ ok: true; rows: ReportRow[] } | GoogleFailure> {
-  return await retried(session, async (token) => ({ answer: await runRealtimeReport(token, property, live), requests: 1 }));
-}
-
-/**
- * Who did an event and then one of others (§18.6.5), asked as every report is: its sign-in renewed, Google waited for
- * when busy. A collection's funnel (`budgeted`, ga-conversions-visitors-plan.md CV4) keeps to the run's budget; one
- * asked from an event's screen does not: what is kept back is for it (SF17).
- */
-export async function askFunnel(session: Session, property: string, funnel: FunnelAsk, budgeted = false): Promise<{ ok: true; did: number; then: number } | GoogleFailure> {
-  return await retried(session, async (token) => ({ answer: await runFunnelReport(token, property, funnel), requests: 1 }), { budgeted });
-}
-
-/**
- * One ask of Google, its sign-in renewed once when it ran out and asked again
- * a little later when Google was busy. A collection's ask (`budgeted`) is not
- * made once its budget for the hour is spent (`BUDGET`); a refusal for an
- * allowance that refreshes within the hour is not asked again a few seconds
- * later — the run waits for the hour (SF20).
- */
-async function retried<Answer extends { ok: true } | GoogleFailure>(
-  session: Session,
-  call: (accessToken: string) => Promise<{ answer: Answer; requests: number }>,
-  budget: { budgeted: boolean; thresholded?: boolean } = { budgeted: false },
-): Promise<Answer> {
-  let renewed = false;
-  for (let wait = 0; ;) {
-    const spent = budget.budgeted ? overBudget(session.quota, budget.thresholded === true) : null;
-    if (spent) return { ok: false, reason: "BUDGET", status: 0, detail: spent } as Answer;
-    const { answer, requests } = await call(session.accessToken);
-    session.requests += requests;
-    if (answer.ok) return answer;
-    if (answer.reason === "EXPIRED" && !renewed) {
-      renewed = true;
-      const token = await accessTokenFor(session.ctx, session.connectionId, true);
-      if (!token.ok) {
-        session.stopped = token.problem;
-        return answer;
-      }
-      session.accessToken = token.accessToken;
-      continue;
-    }
-    if ((answer.reason === "BUSY" || answer.reason === "UNREACHABLE") && wait < BUSY_WAITS_MS.length && !HOURLY_REFUSAL.test(answer.detail)) {
-      await new Promise((resolve) => setTimeout(resolve, BUSY_WAITS_MS[wait]));
-      wait += 1;
-      continue;
-    }
-    return answer;
-  }
-}
+import { HOURLY_REFUSAL } from "./googleAnalyticsBudget";
 
 export type Asked = { ok: true; groups: Map<string, ListRow[]>; flags: { folded: boolean; thresholded: boolean; cut: boolean } } | GoogleFailure;
+
+/** Dimensions that place a figure on a page: a list split by one keeps every figure to the website's own address. */
+const ON_A_PAGE: ReadonlySet<string> = new Set(["pagePath", "pageReferrer", "linkUrl"]);
 
 /**
  * A list's two asks — its figures and its key events — joined (`joinAsks`):
  * for one device, or one landing page, when a screen asks live (GA20, GA22).
+ * A website with conversion addresses (conversion-addresses-plan.md) reads a
+ * list's key events, converting visits, products and an event list's listed
+ * events on them too, and its sales in an ask of their own when sales happen
+ * there.
  */
 export async function askList(
   session: Session,
@@ -323,6 +262,11 @@ export async function askList(
   also: { converting?: boolean; trim?: (rows: ListRow[]) => ListRow[]; hold?: number } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
+  // Conversions, sales and products read on the website's conversion addresses too (conversion-addresses-plan.md): a
+  // sale on the shop credited to the visit's landing page and source. Never a list split by page: a page's own figures
+  // are what happened on it.
+  const wide = target.alsoConverting.length > 0 && only.pagePath === undefined && !dimensions.some((dimension) => ON_A_PAGE.has(dimension));
+  const converting = wide ? [...target.addresses, ...target.alsoConverting] : target.addresses;
   const base = {
     startDate: range.from,
     endDate: range.to,
@@ -335,8 +279,10 @@ export async function askList(
         : list === "landingAssistant" ? { only: { dimension: "sessionSource", values: [...AI_SOURCE_VALUES] } } : {}),
   };
   const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
+  // Sales asked apart only where they happen on another address: a booking page's list asks nothing more.
+  const salesApart = wide && target.salesElsewhere && !isEventList(list) && !isItemList(list);
   // Each answer joined as it arrives, and a page list trimmed while it is read (BR2, BR3).
-  const joined = listJoiner(list, lead, new Set(target.perVisit));
+  const joined = listJoiner(list, lead, new Set(target.perVisit), { salesApart });
   const due = trimDue(also.hold);
   const trimmed = (add: (rows: ReportRow[]) => void) => (rows: ReportRow[]) => {
     add(rows);
@@ -345,13 +291,33 @@ export async function askList(
       due.after(joined.size());
     }
   };
-  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...metrics] }, trimmed((rows) => joined.addMain(rows)));
+  // A product list is the shop's: every address whose sales count.
+  const main = await ask(session, target.property!, { ...base, ...(wide && isItemList(list) ? { hostNames: converting } : {}), dimensions, metrics: [...metrics] }, trimmed((rows) => joined.addMain(rows)));
   if (!main.ok) return main;
+  const answers: Report[] = [main];
+  if (wide && isEventList(list)) {
+    // The listed events and a shop's steps on every address that counts; every other event the website's own.
+    const answer = await ask(session, target.property!, {
+      ...base,
+      hostNames: converting,
+      dimensions,
+      metrics: [...EVENT_LIST_METRICS],
+      eventNames: [...new Set([...target.events, ...SHOP_STEPS])],
+    }, trimmed(joined.replaceEvents()));
+    if (!answer.ok) return answer;
+    answers.push(answer);
+  }
+  if (salesApart) {
+    const answer = await ask(session, target.property!, { ...base, hostNames: converting, dimensions, metrics: [...SALES_METRICS] }, trimmed((rows) => joined.addSales(rows)));
+    if (!answer.ok) return answer;
+    answers.push(answer);
+  }
   let events: ({ ok: true } & Report) | null = null;
   // An event list counts every event itself, and a product list cannot be split by event: no key events to join (§18.6.5, §18.6.6).
   if (target.events.length > 0 && !isEventList(list) && !isItemList(list)) {
     const answer = await ask(session, target.property!, {
       ...base,
+      hostNames: converting,
       dimensions: [...dimensions, "eventName"],
       metrics: [...EVENT_METRICS],
       eventNames: target.events,
@@ -360,7 +326,7 @@ export async function askList(
     events = answer;
   }
   if (also.converting && target.events.length > 0) {
-    const answer = await ask(session, target.property!, { ...base, dimensions, metrics: ["sessions"], eventNames: target.events }, trimmed((rows) => joined.addConverting(rows)));
+    const answer = await ask(session, target.property!, { ...base, hostNames: converting, dimensions, metrics: ["sessions"], eventNames: target.events }, trimmed((rows) => joined.addConverting(rows)));
     if (!answer.ok) return answer;
   }
   if (also.trim) joined.trim(also.trim);
@@ -368,9 +334,9 @@ export async function askList(
     ok: true,
     groups: joined.groups(),
     flags: {
-      folded: main.folded || (events?.folded ?? false),
-      thresholded: main.thresholded || (events?.thresholded ?? false),
-      cut: main.cut || (events?.cut ?? false),
+      folded: answers.some((answer) => answer.folded) || (events?.folded ?? false),
+      thresholded: answers.some((answer) => answer.thresholded) || (events?.thresholded ?? false),
+      cut: answers.some((answer) => answer.cut) || (events?.cut ?? false),
     },
   };
 }
@@ -402,6 +368,11 @@ export type StepResult =
       requests: number;
       /** An answer reached Google's row limit, and the rows past it are not in what was kept: said on the run (RR2). */
       cut?: boolean;
+      /**
+       * Google refused a funnel held to the conversion addresses, so it was asked on the website's own address
+       * (conversion-addresses-plan.md): said on the run, with those addresses.
+       */
+      narrowed?: string[];
     }
   | { ok: false; reason: string; access: boolean; busy: boolean; wait: boolean; requests: number };
 
@@ -811,7 +782,7 @@ export const SPLIT_ROWS = 25_000;
 async function noteShopFrom(ctx: ActionCtx, connectionId: Id<"googleAnalyticsConnections">, target: CollectTarget, job: PeriodJob, asked: Extract<Asked, { ok: true }>) {
   if (job.period !== "90" || job.which !== "NOW" || job.country) return;
   const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
-  if (shop !== target.shop) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
+  if (shop !== target.shopNoted) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
 }
 
 /**

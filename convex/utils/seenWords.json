@@ -1118,6 +1118,7 @@
           "COUNTED_AGAIN": "A page counted again each time someone clicks one of its contents links makes visits look deeper than they are, and hides how many people leave after one page.",
           "SOMETHING_ELSE": "Every conversion, and its value, is counting something that is never an enquiry, so pages and channels are weighed by the wrong thing.",
           "ENQUIRY_UNCOUNTED": "Enquiries left uncounted are missing from conversions and value, so the pages and channels that brought them look worse than they are.",
+          "CONVERSIONS_ELSEWHERE": "A shop or a booking page on an address of its own is where sales and enquiries happen: left out, they're missing from every figure, and the pages that sent the visitors look worse than they are.",
           "NEVER_HAPPENS": "A conversion that never fires hides every enquiry made that way: the people who called, emailed or chatted are missing from every figure."
         },
         "passing": {
@@ -1132,6 +1133,7 @@
           "COUNTED_AGAIN": "No page is counted more than once a visit.",
           "SOMETHING_ELSE": "No conversion matches another kind of event day for day.",
           "ENQUIRY_UNCOUNTED": "No event that reads as an enquiry goes uncounted.",
+          "CONVERSIONS_ELSEWHERE": "No conversion happens on an address that isn't counted.",
           "NEVER_HAPPENS": "Every conversion counted has happened recently."
         },
         "step": {
@@ -1175,6 +1177,10 @@
           "ENQUIRY_UNCOUNTED": {
             "s1": "Choose {event} on the Connection page: they are then counted from Google's own figures, for the whole year."
           },
+          "CONVERSIONS_ELSEWHERE": {
+            "s1": "If {text} is part of the website — a shop, a booking page — tick it under Where conversions count on the Connection page: its conversions and sales are then counted for the whole year.",
+            "s2": "If it isn't yours, take the tracking tag off it, or give it a Google Analytics property of its own."
+          },
           "NEVER_HAPPENS": {
             "s1": "Open the website in a private window and try each one yourself: {event}.",
             "s2": "In Google Analytics, open Reports, then Realtime, and check each one arrives.",
@@ -1198,6 +1204,7 @@
           "COUNTED_AGAIN": "{countB, plural, =1 {One page is} other {# pages are}} counted more than once a visit, so pages a visit and bounce rate read better than they are.",
           "SOMETHING_ELSE": "{event} match on each of the last {b} days they happened, so a conversion is counting something that's never an enquiry.",
           "ENQUIRY_UNCOUNTED": "{event} {countC, plural, =1 {happened {b} times in 12 months but isn't counted} other {happen often but aren't counted}}, so those enquiries are missing from every figure.",
+          "CONVERSIONS_ELSEWHERE": "{b} conversions and sales in the last 30 days happened on {text}, which isn't counted.",
           "NEVER_HAPPENS": "{event} {countC, plural, =1 {hasn't} other {haven't}} happened once in {countB, plural, =365 {12 months} other {the last # days}}, so any enquiry made that way is invisible."
         },
         "fix": {
@@ -1212,6 +1219,7 @@
           "COUNTED_AGAIN": "Stop Google Analytics counting a page again when its contents links are clicked.",
           "SOMETHING_ELSE": "Rebuild the conversion in Google Analytics from the real enquiry.",
           "ENQUIRY_UNCOUNTED": "Count the enquiries that are left out as conversions.",
+          "CONVERSIONS_ELSEWHERE": "Count the conversions on the shop or booking page that's left out.",
           "NEVER_HAPPENS": "Try each way to enquire yourself, in a private window, and check Google Analytics records it."
         }
       },
@@ -2605,6 +2613,7 @@
           "COUNTED_AGAIN": "Una pagina contata di nuovo ogni volta che qualcuno clicca un link del suo indice fa sembrare le visite più profonde di quanto siano, e nasconde quante persone se ne vanno dopo una pagina.",
           "SOMETHING_ELSE": "Ogni conversione, e il suo valore, conta qualcosa che non è mai una richiesta, quindi pagine e canali vengono pesati sulla cosa sbagliata.",
           "ENQUIRY_UNCOUNTED": "Le richieste non contate mancano da conversioni e valore, quindi le pagine e i canali che le hanno portate sembrano peggiori di quanto siano.",
+          "CONVERSIONS_ELSEWHERE": "Un negozio o una pagina di prenotazione su un indirizzo proprio è dove avvengono vendite e richieste: lasciate fuori, mancano da ogni dato, e le pagine che hanno portato i visitatori sembrano peggiori di quanto siano.",
           "NEVER_HAPPENS": "Una conversione che non scatta mai nasconde ogni richiesta fatta in quel modo: chi ha chiamato, scritto o chattato manca da ogni dato."
         },
         "passing": {
@@ -2619,6 +2628,7 @@
           "COUNTED_AGAIN": "Nessuna pagina è contata più di una volta a visita.",
           "SOMETHING_ELSE": "Nessuna conversione coincide giorno per giorno con un altro tipo di evento.",
           "ENQUIRY_UNCOUNTED": "Nessun evento che sembra una richiesta resta escluso dal conteggio.",
+          "CONVERSIONS_ELSEWHERE": "Nessuna conversione avviene su un indirizzo che non viene contato.",
           "NEVER_HAPPENS": "Ogni conversione contata è avvenuta di recente."
         },
         "step": {
@@ -2662,6 +2672,10 @@
           "ENQUIRY_UNCOUNTED": {
             "s1": "Scegli {event} nella pagina Connessione: vengono poi contati dai dati di Google stessi, per tutto l'anno."
           },
+          "CONVERSIONS_ELSEWHERE": {
+            "s1": "Se {text} fa parte del sito — un negozio, una pagina di prenotazione — spuntalo in Dove contano le conversioni nella pagina Connessione: le sue conversioni e vendite vengono contate per tutto l'anno.",
+            "s2": "Se non è tuo, togli il tag di monitoraggio, oppure dagli una proprietà Google Analytics tutta sua."
+          },
           "NEVER_HAPPENS": {
             "s1": "Apri il sito in una finestra privata e prova tu stesso ciascuno: {event}.",
             "s2": "In Google Analytics, apri Rapporti, poi In tempo reale, e controlla che ciascuno arrivi.",
@@ -2685,6 +2699,7 @@
           "COUNTED_AGAIN": "{countB, plural, =1 {Una pagina è contata} other {# pagine sono contate}} più di una volta a visita, quindi le pagine per visita e la frequenza di rimbalzo sembrano migliori di quanto siano.",
           "SOMETHING_ELSE": "{event} coincidono in ciascuno degli ultimi {b} giorni in cui sono avvenuti, quindi una conversione conta qualcosa che non è mai una richiesta.",
           "ENQUIRY_UNCOUNTED": "{event} {countC, plural, =1 {è avvenuto {b} volte in 12 mesi ma non è contato} other {avvengono spesso ma non sono contati}}, quindi quelle richieste mancano da ogni dato.",
+          "CONVERSIONS_ELSEWHERE": "{b} conversioni e vendite negli ultimi 30 giorni sono avvenute su {text}, che non viene contato.",
           "NEVER_HAPPENS": "{event} non {countC, plural, =1 {è avvenuto} other {sono avvenuti}} nemmeno una volta {countB, plural, =365 {in 12 mesi} other {negli ultimi # giorni}}, quindi ogni richiesta fatta in quel modo è invisibile."
         },
         "fix": {
@@ -2699,6 +2714,7 @@
           "COUNTED_AGAIN": "Fai smettere Google Analytics di contare di nuovo una pagina quando si cliccano i link del suo indice.",
           "SOMETHING_ELSE": "Ricostruisci la conversione in Google Analytics sulla richiesta vera.",
           "ENQUIRY_UNCOUNTED": "Conta come conversioni le richieste rimaste escluse.",
+          "CONVERSIONS_ELSEWHERE": "Conta le conversioni sul negozio o sulla pagina di prenotazione rimasti fuori.",
           "NEVER_HAPPENS": "Prova tu stesso ogni modo di contattarti, in una finestra privata, e verifica che Google Analytics lo registri."
         }
       },

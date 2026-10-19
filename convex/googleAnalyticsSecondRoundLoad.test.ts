@@ -48,7 +48,7 @@ async function bigWebsite() {
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
     await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "properties/1", addresses: ["www.big.co.uk"],
-      currency: "GBP", newestDay: NEWEST, oldestDay: historyFloors(NEWEST).day, eventsReadAt: 1, listedWith: "EVENT_COUNT", shop: true,
+      currency: "GBP", newestDay: NEWEST, oldestDay: historyFloors(NEWEST).day, eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES", shop: true,
       // Its two years filled (ga-stored-figures-plan.md SF9): each event, new and returning, and products a day, week and month.
       historyFrom: historyFloors(NEWEST).month, historyFilled: ["total", "channel", "event", "campaign", "visitorType", "product"],
       events: EVENTS.map((eventName) => ({ eventName, counted: true, analyticsValue: null, hakkenValue: 100, lastThirtyDays: 0 })),

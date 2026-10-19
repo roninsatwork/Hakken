@@ -49,6 +49,8 @@ export const closeArgs = {
   recount: v.boolean(),
   /** Every address's visits over the 30 days, asked with the weekly lists: the strangers check. */
   hostVisits: v.optional(v.array(v.object({ host: v.string(), visits: v.number() }))),
+  /** The listed events and sales on every address over the 30 days, asked with them: tracking health's conversions elsewhere. */
+  hostConversions: v.optional(v.array(v.object({ host: v.string(), conversions: v.number() }))),
   /** When the night's run began (ga-big-site-reliability-plan.md BR7): the two-year fills follow a night's run only. */
   nightFrom: v.optional(v.number()),
   /** The list the next run starts from: where this one stopped, or the first it left out. */
@@ -64,6 +66,7 @@ type CloseArgs = {
   weekly: boolean;
   recount: boolean;
   hostVisits?: Array<{ host: string; visits: number }>;
+  hostConversions?: Array<{ host: string; conversions: number }>;
   nightFrom?: number;
   listsFrom?: string;
   fills: boolean;
@@ -123,11 +126,16 @@ export async function closeConnection(ctx: MutationCtx, args: CloseArgs): Promis
   }
   const whole = args.reached === "WHOLE";
   const first = connection.backfilledAt === undefined;
+  // The addresses whose conversions count moved while this run was collecting (conversion-addresses-plan.md): what it
+  // collected before then was counted the old way, so the figures stay to be collected again, whole, by the next run.
+  const run = args.runId ? await ctx.db.get(args.runId) : null;
+  const movedSince = connection.addressesMovedAt !== undefined && (run?.startedAt ?? 0) < connection.addressesMovedAt;
   // Insights' months counted the old way are asked again on its next run (BT6).
   if (whole && args.recount) await forgetCountedHistory(ctx, connection.companyWebsiteId);
   await ctx.db.patch(connection._id, {
     ...(args.hostVisits ? { hostVisits: args.hostVisits } : {}),
-    ...(whole && args.recount ? { countedWith: COUNTED_WITH } : {}),
+    ...(args.hostConversions ? { hostConversions: args.hostConversions } : {}),
+    ...(whole && args.recount && !movedSince ? { countedWith: COUNTED_WITH } : {}),
     lastCollectedAt: now,
     ...(whole ? { dailyPeriodsAt: now } : {}),
     ...(whole && args.weekly ? { weeklyPeriodsAt: now } : {}),

@@ -40,6 +40,10 @@ type Google = {
   eventFigures: Record<string, [number, number]>;
   /** The next times the key events are asked for, Google's answer instead: busy (503) or not allowed (403). */
   keyEventsFail?: { times: number; status: number };
+  /** Each other address's events, as `eventFigures` (conversion-addresses-plan.md): a shop's sales, a copy's. */
+  elsewhere?: Record<string, Record<string, [number, number]>>;
+  /** The other addresses visitors reach from the website: a page on them has the website as its referrer. */
+  reached?: string[];
   calls: { url: string; body: string }[];
 };
 
@@ -96,8 +100,25 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
     if (details) return Response.json({ displayName: "Acme", timeZone: "Europe/London", currencyCode: "GBP" });
     const report = /analyticsdata\.googleapis\.com\/v1beta\/(properties\/\d+):runReport$/.exec(url);
     if (report) {
-      const ask = JSON.parse(body) as { dimensions: { name: string }[] };
+      const ask = JSON.parse(body) as { dimensions: { name: string }[]; metrics: { name: string }[] };
       const entry = google.properties.find((candidate) => candidate.property === report[1]);
+      // Each address's events (conversion-addresses-plan.md): the website's own, then each other address's.
+      if (ask.dimensions[0].name === "hostName" && ask.dimensions[1]?.name === "eventName") {
+        const named = /"fieldName":"eventName","inListFilter":\{"values":(\[[^\]]*\])/.exec(body);
+        const only = named ? new Set(JSON.parse(named[1]) as string[]) : null;
+        const rows = Object.entries({ "www.acme-shop.test": google.eventFigures, ...google.elsewhere }).flatMap(([host, figures]) => Object.entries(figures)
+          .filter(([name]) => !only || only.has(name))
+          .map(([name, [count, value]]) => ({
+            dimensionValues: [{ value: host }, { value: name }],
+            metricValues: ask.metrics.map((metric) => ({ value: String(metric.name === "eventValue" ? value : count) })),
+          })));
+        return Response.json({ rows, rowCount: rows.length });
+      }
+      // The other addresses reached from the website: a page there with the website as its referrer.
+      if (ask.dimensions[0].name === "hostName" && body.includes("pageReferrer")) {
+        const rows = ["www.acme-shop.test", ...(google.reached ?? [])].map((host) => ({ dimensionValues: [{ value: host }], metricValues: [{ value: "25" }] }));
+        return Response.json({ rows, rowCount: rows.length });
+      }
       if (ask.dimensions[0].name === "hostName") {
         const rows = Object.entries(entry?.hosts ?? {}).map(([host, visits]) => ({ dimensionValues: [{ value: host }], metricValues: [{ value: String(visits) }] }));
         return Response.json({ rows, rowCount: rows.length });
@@ -232,7 +253,7 @@ describe("connecting a website's Google Analytics", () => {
     await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
     await finishScheduled(t);
     const listed = (await analyticsOf(t, siteId))!;
-    expect(listed.listedWith).toBe("EVENT_COUNT");
+    expect(listed.listedWith).toBe("EVENT_COUNT_ADDRESSES");
     expect(listed.events?.map((event) => [event.eventName, event.keyEvent, event.perVisit, event.counted])).toEqual([
       ["generate_lead", true, true, true],
       ["scroll", true, false, false],
@@ -296,6 +317,59 @@ describe("connecting a website's Google Analytics", () => {
     const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
     expect(audit.map((entry) => entry.actionType)).toContain("GOOGLE_ANALYTICS_CONNECTED");
     expect(JSON.stringify(audit)).not.toContain("ya29");
+  });
+
+  test("a shop on its own address: its sales count, credited beside the website's; a staging copy and a copy of the tag elsewhere never do", async () => {
+    // conversion-addresses-plan.md: National Extension College sells every course on store.nec.ac.uk (2026-10-19).
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({
+      keyEvents: [{ eventName: "purchase" }, { eventName: "generate_lead" }],
+      eventFigures: { generate_lead: [14, 0], page_view: [5000, 0] },
+      elsewhere: {
+        "store.acme-shop.test": { purchase: [40, 4000], add_to_cart: [300, 0] },
+        "staging.acme-shop.test": { purchase: [2, 0] },
+        "copied-theme.example.org": { generate_lead: [5, 0] },
+      },
+      reached: ["store.acme-shop.test"],
+    });
+    await signIn(t, admin, siteId);
+    await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
+    await finishScheduled(t);
+
+    const counting = (await admin.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId }))!.connection!;
+    expect(counting.addressesRead.map((address) => [address.host, address.kind, address.reached, address.counted])).toEqual([
+      ["store.acme-shop.test", "SAME_DOMAIN", true, true],
+      ["copied-theme.example.org", "OTHER_DOMAIN", false, false],
+      ["staging.acme-shop.test", "COPY", false, false],
+    ]);
+    // The website's own count beside each event, the shop's kept with the shop; Analytics' value from where sales count.
+    const purchase = counting.events!.find((event) => event.eventName === "purchase")!;
+    expect(purchase).toMatchObject({ lastThirtyDays: 0, analyticsValue: 100, counted: true });
+    expect(counting.addressesRead[0].events).toEqual([{ eventName: "purchase", year: 40, month: 40 }]);
+
+    // Saved with the shop unticked: held as the admin's own choice, and nothing else counts.
+    await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
+      siteId,
+      events: [{ eventName: "purchase", counted: true, hakkenValue: null }],
+      addresses: [{ host: "store.acme-shop.test", counted: false }],
+    });
+    const saved = (await analyticsOf(t, siteId))!;
+    expect(saved.status).toBe("CONNECTED");
+    expect(saved.addressesRead?.find((address) => address.host === "store.acme-shop.test")?.counted).toBe(false);
+    await expect(admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
+      siteId, events: [], addresses: [{ host: "elsewhere.test", counted: true }],
+    })).rejects.toThrow("not one of the addresses");
+
+    // Ticked again on the connected website: the figures are collected again, whole, with the shop's.
+    await t.run(async (ctx) => { await ctx.db.patch(saved._id, { countedWith: "EVENT_COUNT", collecting: undefined }); });
+    await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
+      siteId,
+      events: [{ eventName: "purchase", counted: true, hakkenValue: null }],
+      addresses: [{ host: "store.acme-shop.test", counted: true }],
+    });
+    const ticked = (await analyticsOf(t, siteId))!;
+    expect(ticked.countedWith).toBeUndefined();
+    expect(ticked.addressesRead?.find((address) => address.host === "store.acme-shop.test")?.counted).toBeUndefined();
   });
 
   test("Google failing to list the events: the screen says so and when it asks again, and it asks again by itself until it reads", async () => {
