@@ -255,6 +255,8 @@ import type * as googleAnalyticsJobs from "../googleAnalyticsJobs.js";
 import type * as googleAnalyticsLists from "../googleAnalyticsLists.js";
 import type * as googleAnalyticsLive from "../googleAnalyticsLive.js";
 import type * as googleAnalyticsOverviewReads from "../googleAnalyticsOverviewReads.js";
+import type * as googleAnalyticsPageChannels from "../googleAnalyticsPageChannels.js";
+import type * as googleAnalyticsPageConversions from "../googleAnalyticsPageConversions.js";
 import type * as googleAnalyticsPageLists from "../googleAnalyticsPageLists.js";
 import type * as googleAnalyticsPageMoves from "../googleAnalyticsPageMoves.js";
 import type * as googleAnalyticsPageNumbers from "../googleAnalyticsPageNumbers.js";
@@ -1190,6 +1192,8 @@ declare const fullApi: ApiFromModules<{
   googleAnalyticsLists: typeof googleAnalyticsLists;
   googleAnalyticsLive: typeof googleAnalyticsLive;
   googleAnalyticsOverviewReads: typeof googleAnalyticsOverviewReads;
+  googleAnalyticsPageChannels: typeof googleAnalyticsPageChannels;
+  googleAnalyticsPageConversions: typeof googleAnalyticsPageConversions;
   googleAnalyticsPageLists: typeof googleAnalyticsPageLists;
   googleAnalyticsPageMoves: typeof googleAnalyticsPageMoves;
   googleAnalyticsPageNumbers: typeof googleAnalyticsPageNumbers;

@@ -203,6 +203,17 @@ export const CHART = {
   events: ["generate_lead", "click_tel", "click_email"],
 };
 
+/**
+ * The 30 days before, laid over CHART's days (Conversions' "Visits needed for one conversion"): 70 visits a day, a
+ * contact form every other day.
+ */
+export const DAYS_BEFORE = {
+  held: true,
+  shift: 30,
+  points: CHART.points.map((point, index) => ({ day: point.day, visits: 70, conversions: index % 2 === 0 ? 1 : 0, events: [index % 2 === 0 ? 1 : 0, 0, 0] })),
+  events: ["generate_lead", "click_tel", "click_email"],
+};
+
 const CONVERSION_KINDS = {
   preparing: false,
   from: "2026-09-09",

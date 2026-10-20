@@ -17,6 +17,10 @@ chart-card: How visits reached a conversion, by page classification
 page-flow
 chart-card: Conversions by page classification
 channel-map
+chart-card: Visits needed for one conversion
+  checkbox: Contact form sent
+  checkbox: Phone number clicked
+  checkbox: Email address clicked
 chart-card: What people did before converting
 search: Find an event…
 filter: Kind

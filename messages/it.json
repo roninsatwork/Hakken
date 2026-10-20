@@ -10173,6 +10173,26 @@
     "saveFailed": "Impossibile salvare le ipotesi. Riprova."
   },
   "ui": {
+    "chartExplorer": {
+      "scoreLine": "Meglio o peggio",
+      "latest": "{step, select, day {Ultimo giorno} week {Ultima settimana} other {Ultimo mese}}",
+      "previous": "Rispetto al precedente",
+      "last3": "{step, select, day {Ultimi 3 giorni} week {Ultime 3 settimane} other {Ultimi 3 mesi}}",
+      "previous3": "Rispetto ai 3 prima",
+      "yearAgo": "Rispetto a un anno prima",
+      "better": "{by}% meglio",
+      "worse": "{by}% peggio",
+      "same": "Più o meno uguale",
+      "was": "era <figure>{value}</figure>",
+      "against": "{dates}, rispetto a {before}",
+      "all": "{count, plural, =2 {Entrambi} =3 {Tutti e tre} =4 {Tutti e quattro} =5 {Tutti e cinque} =6 {Tutti e sei} =7 {Tutti e sette} =8 {Tutti e otto} =9 {Tutti e nove} =10 {Tutti e dieci} other {Tutti e #}}"
+    },
+    "tickSelect": {
+      "selectAll": "Seleziona tutto",
+      "deselectAll": "Deseleziona tutto",
+      "none": "Nessuno",
+      "some": "{count} di {total}"
+    },
     "table": {
       "noEntries": "Nessuna voce trovata",
       "previous": "Precedente",
@@ -17825,6 +17845,111 @@
         "channel": "Vedi il canale"
       }
     },
+    "pageVisitors": {
+      "title": "{show, select, visits {Visite} share {Quota di visite} back {Di ritorno} pages {Pagine per visita} read {Letto fino in fondo} views {Visualizzazioni} other {Quota di visualizzazioni}}, {by, select, channel {per canale} source {per fonte} returning {per prima visita o di ritorno} before {per il luogo appena prima} other {per la pagina successiva}}",
+      "titleSplit": ": prima visita o di ritorno",
+      "titleAgainst": ", rispetto all'intero sito",
+      "hintVisits": "{period}: le visite iniziate su questa pagina.",
+      "hintViews": "{period}: ogni visualizzazione di questa pagina.",
+      "heading": "{name}, nel periodo {period}",
+      "byLabel": "Per",
+      "by": {
+        "channel": "Canale",
+        "source": "Fonte",
+        "returning": "Prima visita o di ritorno",
+        "before": "Luogo appena prima",
+        "next": "Pagina successiva"
+      },
+      "show": "Mostra",
+      "shows": {
+        "visits": "Visite",
+        "share": "Quota di visite",
+        "back": "Di ritorno",
+        "pages": "Pagine per visita",
+        "read": "Letto fino in fondo",
+        "views": "Visualizzazioni",
+        "viewsShare": "Quota di visualizzazioni"
+      },
+      "ticks": {
+        "channels": "Canali",
+        "sources": "Fonti",
+        "kinds": "Tipi",
+        "places": "Luoghi"
+      },
+      "every": {
+        "channels": "Ogni canale",
+        "sources": "Ogni fonte",
+        "kinds": "Ogni tipo",
+        "places": "Ogni luogo"
+      },
+      "split": "Dividi",
+      "splits": {
+        "none": "Niente",
+        "returning": "Prima visita o di ritorno"
+      },
+      "against": "Rispetto a",
+      "againsts": {
+        "none": "Niente",
+        "website": "L'intero sito"
+      },
+      "columns": {
+        "visits": "Visite",
+        "views": "Visualizzazioni",
+        "share": "Quota",
+        "back": "Di ritorno",
+        "pages": "Pagine per visita",
+        "read": "Letto fino in fondo"
+      },
+      "thisPage": "Questa pagina",
+      "website": "Intero sito",
+      "everyVisit": "Ogni visita",
+      "nothingTicked": "Niente selezionato: seleziona almeno {what, select, channels {un canale} sources {una fonte} kinds {un tipo} other {un luogo}} per disegnare una barra."
+    },
+    "conversionExplorer": {
+      "title": "{measure, select, perOne {Visite necessarie per una conversione} conversions {Conversioni} visits {Visite} other {Tasso di conversione}}{lines, select, channel {, per canale} kind {, per tipo di conversione} other {}}",
+      "hint": "{period}: le visite iniziate su questa pagina e le conversioni che hanno poi fatto, {step, select, day {giorno per giorno} week {settimana per settimana} other {mese per mese}}, dalle date in alto nella pagina.",
+      "fewerBetter": "Meno è meglio.",
+      "everyDevice": "Tutti i dispositivi: i canali di questa pagina sono conservati per tutti i dispositivi.",
+      "heldFrom": "Conservati per canale dal {date}.",
+      "collecting": "In raccolta: i canali di questa pagina sono conservati dalla prossima raccolta.",
+      "none": "Niente di quanto spuntato è avvenuto in queste date.",
+      "show": "Mostra",
+      "measures": {
+        "perOne": "Visite per una conversione",
+        "conversions": "Conversioni",
+        "visits": "Visite",
+        "rate": "Tasso di conversione"
+      },
+      "conversions": "Conversioni",
+      "everyConversion": "Tutte",
+      "channels": "Canali",
+      "everyChannel": "Tutti i canali",
+      "lines": "Linee",
+      "linesBy": {
+        "channel": "Una linea per canale",
+        "kind": "Una linea per conversione",
+        "one": "Una linea"
+      },
+      "against": "Confronta con",
+      "againstChoice": {
+        "none": "Niente",
+        "before": "Il periodo prima",
+        "year": "Le stesse date l'anno scorso"
+      },
+      "lineAll": "Tutto ciò che è spuntato",
+      "comparedBefore": "{name}, il periodo prima",
+      "comparedYear": "{name}, un anno prima",
+      "rateValue": "{value}%",
+      "readoutVisits": "Visite",
+      "readoutConversions": "Conversioni",
+      "readoutForOne": "Per una",
+      "readoutRate": "Tasso",
+      "readoutVisitsNote": "<figure>{visits}</figure> visite dai canali selezionati",
+      "readoutCounting": "Solo {kinds}",
+      "readoutEverything": "Tutto ciò che è selezionato",
+      "readoutOneNote": "{channels, plural, one {# canale} other {# canali}}, {kinds, plural, one {# tipo di conversione} other {# tipi di conversione}}",
+      "nothingTicked": "Niente selezionato: seleziona almeno {what, select, channel {un canale} other {un tipo di conversione}} per disegnare una linea."
+    },
     "conversionFlow": {
       "unclassified": "Non classificate",
       "title": "Come le visite sono arrivate a una conversione, per classificazione di pagina",
@@ -17872,6 +17997,16 @@
       "byKindShades": "da una quota minore a una maggiore della conversione",
       "byKindEmpty": "nessuna",
       "byKindNone": "Nessuna conversione in queste date.",
+      "byChannelTitle": "Conversioni per canale",
+      "byChannelHint": "{period}. Ogni quadrato è le conversioni fatte dalle visite arrivate da quel canale e iniziate su questa pagina, più chiaro per una quota maggiore di quella conversione.",
+      "byChannelHover": "{event} da {channel}: {count, plural, =1 {una volta} other {# volte}}",
+      "byChannelLegend": "3 · conversioni dalle visite arrivate da quel canale e iniziate su questa pagina",
+      "byChannelNone": "Nessuna visita è iniziata su questa pagina in queste date.",
+      "visitsByChannelTitle": "Visite iniziate qui, per canale",
+      "visitsByChannelHint": "{period}: le visite di ogni canale iniziate su questa pagina, le conversioni che hanno poi fatto e le visite per una conversione, con quelle dell'intero sito dallo stesso canale tra parentesi.",
+      "visitsByChannelLabel": "{visits, plural, one {# visita} other {# visite}} · {conversions, plural, =0 {nessuna conversione} one {# conversione} other {# conversioni}}",
+      "visitsByChannelForOne": "{per} per una",
+      "visitsByChannelWebsite": "sito: {per}",
       "beforeTitle": "Cosa hanno fatto le persone prima di convertire",
       "beforeHint": "Gli ultimi 12 mesi, tutti i dispositivi, così le azioni più piccole hanno abbastanza persone da giudicare. La barra è la quota delle persone che l'hanno fatta e poi hanno convertito (passa sopra per i dati). In arancione chi converte meglio del {siteRate} di tutti, su {few} persone o più. Pagina vista e Visita iniziata sono escluse: ogni visita le ha.",
       "beforeHintWaiting": "Gli ultimi 12 mesi, tutti i dispositivi: la quota delle persone che hanno fatto ogni azione e poi hanno convertito, contro quella di tutti.",
@@ -17879,7 +18014,23 @@
       "beforeReadout": "Il {rate} di {people} persone ha poi convertito · tutti {siteRate}",
       "beforeReadoutFew": "Il {rate} di {people} persone ha poi convertito · meno di {few} persone: troppo poche per giudicare",
       "beforeCollecting": "Ancora in raccolta: la prossima raccolta chiede gli ultimi 12 mesi di ogni azione.",
-      "beforeEmpty": "Nessuna azione da valutare negli ultimi 12 mesi, per ora."
+      "beforeEmpty": "Nessuna azione da valutare negli ultimi 12 mesi, per ora.",
+      "perConversionTitle": "Visite necessarie per una conversione",
+      "perConversionPageScope": "Contando le visite iniziate su questa pagina e le conversioni che hanno poi fatto.",
+      "perConversionOverall": "{period}: {per} visite per ogni conversione ({visits, plural, one {# visita} other {# visite}}, {conversions, plural, one {# conversione} other {# conversioni}}).",
+      "perConversionNoneOverall": "{period}: nessuna conversione, quindi non c'è un dato per queste date.",
+      "perConversionOverallSome": "{period}, contando {kinds}: {per} visite per ognuna ({visits, plural, one {# visita} other {# visite}}, {conversions, plural, one {# conversione} other {# conversioni}}).",
+      "perConversionNoneOverallSome": "{period}: nessuna conversione tra {kinds}, quindi non c'è un dato per queste date.",
+      "perConversionRead": "Meno è meglio. {step, select, day {Un giorno} week {Una settimana} other {Un mese}} senza conversioni non ha un dato, quindi la linea lo salta.",
+      "perConversionCoarse": "Prima degli ultimi 90 giorni i dati sono conservati per settimana, quindi lì ogni punto è una settimana intera.",
+      "perConversionRow": "{visits, plural, one {# visita} other {# visite}}, {conversions, plural, =0 {nessuna conversione} one {# conversione} other {# conversioni}}",
+      "perConversionBeforeOverall": "{before}: {per} ({visits, plural, one {# visita} other {# visite}}, {conversions, plural, one {# conversione} other {# conversioni}}).",
+      "perConversionBeforeNone": "{before} non hanno avuto conversioni.",
+      "perConversionBeforeNoneSome": "Nessuna conversione tra {kinds} ({before}).",
+      "perConversionBeforeLineShort": "La linea dei giorni precedenti è disegnata solo per 7 e 30 giorni, dove ogni giorno è conservato.",
+      "perConversionRowDated": "{date}: {visits, plural, one {# visita} other {# visite}}, {conversions, plural, =0 {nessuna conversione} one {# conversione} other {# conversioni}}",
+      "perConversionNone": "Nessuna delle conversioni spuntate è avvenuta in queste date, quindi non c'è un dato da disegnare.",
+      "perConversionCsv": "Visite per una conversione"
     }
   },
   "bingWebmaster": {

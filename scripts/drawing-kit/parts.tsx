@@ -6,7 +6,8 @@
 // stand-ins in ./stubs (no database, no router) and writes parts.html.
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ArrowUpRight, Globe, ListChecks, Pencil, Plus, Search, TextSearch, Trash2 } from "lucide-react";
+import { ArrowUpRight, Globe, ListChecks, Pencil, Plus, Search, Target, TextSearch, Trash2 } from "lucide-react";
+import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL } from "@/src/ui/components/charts/chartPalette";
 import { ToastProvider } from "@/src/context/ToastContext";
 import { UIProvider } from "@/src/context/UIContext";
 import Header from "@/src/ui/components/layout/Header";
@@ -34,6 +35,8 @@ import { PageFlowChart } from "@/src/ui/components/screens/PageFlowChart";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldHint, FieldLabel, SegmentedChoice, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TickSelect } from "@/src/ui/components/screens/TickSelect";
+import { ChartReadoutTable } from "@/src/ui/components/charts/ChartReadoutTable";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
@@ -258,13 +261,51 @@ const PARTS: Part[] = [
   {
     id: "filter-chips",
     name: "Filters beside a search box",
-    source: "src/ui/components/screens/Select.tsx (chip), Table.tsx (SearchBar)",
-    use: "Grey, never the brand colour. A chosen filter dims its label and names its choice.",
+    source: "src/ui/components/screens/Select.tsx (chip), TickSelect.tsx, Table.tsx (SearchBar)",
+    use: "Grey, never the brand colour. A chosen filter dims its label and names its choice. TickSelect is the same chip opening tick boxes, for any mix (a chart's conversions and channels).",
     render: () => (
       <div className="flex flex-wrap items-center gap-3">
         <Select value="" onChange={noop} chip={{ label: "Intent" }}><option value="">Every intent</option></Select>
         <Select value="hard" onChange={noop} chip={{ label: "Difficulty", choice: "Hard, 50 and over" }}><option value="hard">Hard, 50 and over</option></Select>
+        <TickSelect label="Channels" everyWord="Every channel" choices={[{ key: "o", label: "Organic Search" }, { key: "p", label: "Paid Search" }, { key: "a", label: "AI assistants" }]} ticked={["o", "p"]} onChange={noop} />
       </div>
+    ),
+  },
+  {
+    id: "chart-toolbar",
+    name: "A configurable chart's toolbar",
+    source: "src/ui/components/screens/ChartExplorer.tsx (Select chips and TickSelects, changed={false})",
+    use: "Every chip looks the same whatever is picked — no grey state; the words say the choice. Tick boxes open with Select all and Deselect all. Configurable Charts in screen-kit.md.",
+    render: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value="conversions" onChange={noop} chip={{ label: "Show", choice: "Conversions", changed: false }}><option value="conversions">Conversions</option></Select>
+        <TickSelect label="Conversions" everyWord="Every one" choices={[{ key: "p", label: "Prospectus form" }, { key: "v", label: "Book a visit" }]} ticked={["p", "v"]} onChange={noop} changed={false} />
+        <TickSelect label="Channels" everyWord="Every channel" choices={[{ key: "o", label: "Organic Search" }, { key: "p", label: "Paid Search" }, { key: "d", label: "Direct" }, { key: "r", label: "Referral" }, { key: "a", label: "AI assistants" }]} ticked={["o", "p", "d", "r"]} onChange={noop} changed={false} />
+        <Select value="channel" onChange={noop} chip={{ label: "Lines", choice: "A line per channel", changed: false }}><option value="channel">A line per channel</option></Select>
+        <Select value="none" onChange={noop} chip={{ label: "Against", choice: "Nothing", changed: false }}><option value="none">Nothing</option></Select>
+      </div>
+    ),
+  },
+  {
+    id: "chart-readout",
+    name: "A chart's hover as a small table",
+    source: "src/ui/components/charts/ChartReadoutTable.tsx",
+    use: "A row for every line, noughts shown, and their total; the figure the chart is about on its band with an icon; the drawn column marked; 13px throughout. 0 is none, – is nothing to divide.",
+    render: () => (
+      <ChartReadoutTable
+        heading="21 Sept – 27 Sept"
+        columns={[
+          { key: "visits", label: "Visits" },
+          { key: "conversions", label: "Conversions", tone: "band", drawn: true, icon: <Target aria-hidden className="h-3.5 w-3.5 shrink-0" /> },
+          { key: "one", label: "For one", tone: "quiet" },
+        ]}
+        rows={[
+          { key: "o", name: "Organic Search", colour: CHART_SERIES_ORANGE, cells: { visits: { text: "456" }, conversions: { text: "14" }, one: { text: "33" } } },
+          { key: "p", name: "Paid Search", colour: CHART_SERIES_BLUE, cells: { visits: { text: "187" }, conversions: { text: "4" }, one: { text: "47" } } },
+          { key: "r", name: "Referral", colour: CHART_SERIES_TEAL, cells: { visits: { text: "29" }, conversions: { text: "0", quiet: true }, one: { text: "–", quiet: true } } },
+        ]}
+        total={{ visits: { text: "672" }, conversions: { text: "18" }, one: { text: "37" } }}
+      />
     ),
   },
   {

@@ -9,12 +9,12 @@ import type { DayFactList } from "./googleAnalyticsSchema";
  */
 
 /** Where a home country's days, history and pages stand (SF7): the main one's on the connection, another's beside it. */
-export type Coverage = { newestDay?: string; oldestDay?: string; historyFrom?: string; historyFilled?: DayFactList[]; pageHistoryFrom?: string };
+export type Coverage = { newestDay?: string; oldestDay?: string; historyFrom?: string; historyFilled?: DayFactList[]; pageHistoryFrom?: string; pageChannelsFrom?: string };
 
 export function coverageOf(connection: Doc<"googleAnalyticsConnections">, country = ""): Coverage {
   if (!country) {
-    const { newestDay, oldestDay, historyFrom, historyFilled, pageHistoryFrom } = connection;
-    return { newestDay, oldestDay, historyFrom, historyFilled, pageHistoryFrom };
+    const { newestDay, oldestDay, historyFrom, historyFilled, pageHistoryFrom, pageChannelsFrom } = connection;
+    return { newestDay, oldestDay, historyFrom, historyFilled, pageHistoryFrom, pageChannelsFrom };
   }
   return connection.countryHistory?.find((one) => one.country === country) ?? {};
 }

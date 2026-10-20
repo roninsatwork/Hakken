@@ -66,13 +66,38 @@ export const CHART_ACTIVE_BAR = {
  * render into this rather than restating the border, surface and shadow, so
  * one change moves every tooltip in the platform at once.
  */
-export function ChartTooltipSurface({ heading, children }: { heading?: ReactNode; children: ReactNode }) {
+export function ChartTooltipSurface({ heading, children, wide = false }: {
+  heading?: ReactNode;
+  children: ReactNode;
+  /**
+   * Room for a readout of several figures a line, at the app's standard 13px:
+   * a page's "Visits needed for one conversion, by channel" (Anthony,
+   * 2026-10-20, Hover B on the page-conversion canvas; "not a fan of the super
+   * small fonts", then "why is the font not our standard size … this is
+   * huge"). Every other chart keeps the narrow panel.
+   */
+  wide?: boolean;
+}) {
   return (
-    <div className="pointer-events-none min-w-[8rem] max-w-[16rem] rounded-[10px] border border-border-dim bg-card px-3 py-2 shadow-lg">
-      {heading ? <div className="text-[11px] font-medium text-secondary">{heading}</div> : null}
+    <div className={`pointer-events-none rounded-[10px] border border-border-dim bg-card shadow-lg ${wide ? "min-w-[14rem] max-w-[26rem] px-3.5 py-2.5" : "min-w-[8rem] max-w-[16rem] px-3 py-2"}`}>
+      {heading ? <div className={`font-medium text-secondary ${wide ? "text-[13px]" : "text-[11px]"}`}>{heading}</div> : null}
       <div className={`flex flex-col gap-1 ${heading ? "mt-1.5" : ""}`}>{children}</div>
     </div>
   );
+}
+
+/**
+ * A chart's own readout in place of the rows (`SiteLineChart`'s `readout`):
+ * handed the hovered point's row and the heading the chart gives it — its
+ * dates, a part-week's days — and drawn by the chart, on `ChartTooltipSurface`.
+ */
+export function ChartReadoutTooltip({ active, payload, label, title, render }: Pick<ChartTooltipProps, "active" | "payload" | "label" | "title"> & {
+  render: (point: { row: Record<string, unknown>; heading: ReactNode }) => ReactNode;
+}) {
+  const row = payload?.[0]?.payload;
+  if (!active || !row) return null;
+  const rawLabel = label === undefined || label === null ? "" : String(label);
+  return <>{render({ row, heading: title ? title(rawLabel, payload ?? []) : rawLabel })}</>;
 }
 
 /**

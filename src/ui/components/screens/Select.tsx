@@ -69,13 +69,18 @@ export function Select({
   /**
    * Draw it as a compact chip: `label` is what it says, and `choice` — the
    * chosen option's words, or nothing — follows the label, in grey.
-   * `icon` sits before the words.
+   * `icon` sits before the words. `changed` says whether the chip is drawn
+   * grey, for a setting that always has a choice: a chart's toolbar passes
+   * false, so its chips look the same whatever is picked and the words say the
+   * choice (Anthony, 2026-10-20: "I don't understand how these button colours
+   * are supposed to work"; "same"). Without it, a chip with a choice is grey.
    */
-  chip?: { label: string; choice?: string | null; icon?: ReactNode };
+  chip?: { label: string; choice?: string | null; icon?: ReactNode; changed?: boolean };
   "aria-label"?: string;
 }) {
   if (chip) {
-    const chosen = Boolean(chip.choice);
+    const named = Boolean(chip.choice);
+    const chosen = chip.changed ?? named;
     return (
       <div
         data-part="filter"
@@ -91,7 +96,7 @@ export function Select({
         {/* Hidden from a screen reader, which reads the select's own name and value instead. */}
         {/* Cut short with "…" when the chip is given a width to keep to. */}
         <span aria-hidden="true" className="min-w-0 truncate">
-          {chosen ? <><span className="text-secondary">{chip.label}:</span> {chip.choice}</> : chip.label}
+          {named ? <><span className="text-secondary">{chip.label}:</span> {chip.choice}</> : chip.label}
         </span>
         <ChevronDown className={cn("pointer-events-none h-4 w-4", chosen ? "text-foreground" : "text-muted")} aria-hidden="true" />
         <select

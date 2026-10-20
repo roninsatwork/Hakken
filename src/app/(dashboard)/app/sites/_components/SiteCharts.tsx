@@ -29,7 +29,7 @@ import {
 } from "recharts";
 import { useMemo, useState, type ReactNode } from "react";
 import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
-import { CHART_ACTIVE_BAR, CHART_CROSSHAIR, CHART_CURSOR, ChartTooltip, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
+import { CHART_ACTIVE_BAR, CHART_CROSSHAIR, CHART_CURSOR, ChartReadoutTooltip, ChartTooltip, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import {
   CHART_SERIES_AMBER,
   CHART_SERIES_BLUE,
@@ -120,8 +120,9 @@ const isPart = (row: Record<string, unknown> | undefined) => row?.part === true;
  * kept apart from the ring. The other points draw nothing, or the usual dot
  * on a line too short to read.
  */
-function PartDot({ cx, cy, stroke, payload, index, solid, marks }: { cx?: number; cy?: number; stroke?: string; payload?: Record<string, unknown>; index?: number; solid: boolean; marks?: string }) {
-  if (cx === undefined || cy === undefined) return <g key={index} />;
+function PartDot({ cx, cy, stroke, payload, index, solid, marks }: { cx?: number | null; cy?: number | null; stroke?: string; payload?: Record<string, unknown>; index?: number; solid: boolean; marks?: string }) {
+  // A point with no figure has no height: nothing to draw.
+  if (cx === undefined || cx === null || cy === undefined || cy === null) return <g key={index} />;
   if (isPart(payload)) return <circle key={index} cx={cx} cy={cy} r={4} stroke={stroke} strokeWidth={2} className="fill-background" />;
   // A count marks bigger the more it holds (a day's conversions, ga-channel-pages-plan.md CH4); a flag, the usual dot.
   if (marks && payload?.[marks]) {
@@ -170,10 +171,37 @@ export function SiteLineChart({
   updateKey = true,
   markLabel,
   formatValue,
+  seriesLabel,
+  keepEmptyRows = false,
+  breakGaps = false,
+  readout,
   formatScale = formatCompact,
 }: {
   /** How the readout's numbers read, when a whole number is not enough: a time a visit, "1m 04s" (ga-channel-pages-plan.md CH4). */
   formatValue?: (value: number, entry: ChartTooltipEntry) => ReactNode;
+  /** What the readout calls a line, when its name needs the point's own figures beneath it: Conversions' visits for one conversion. */
+  seriesLabel?: (entry: ChartTooltipEntry) => ReactNode;
+  /**
+   * Keep a line's row in the readout on a point it has no figure for, so the
+   * readout always names every line and says why one is empty (Anthony,
+   * 2026-10-20: "there should always be 2"). Off, Recharts drops the row.
+   */
+  keepEmptyRows?: boolean;
+  /**
+   * Break a line where a point has no figure, rather than joining across it,
+   * and dot a point standing alone between two gaps so it still shows
+   * (Anthony, 2026-10-20: a page's visits for one conversion joined across days
+   * with no conversion, "the chart looks like it has numbers"). Off, a line
+   * runs through its gaps.
+   */
+  breakGaps?: boolean;
+  /**
+   * The chart's own hover readout in place of a row a line: handed the hovered
+   * point's row and its heading. A page's "Visits needed for one conversion, by
+   * channel" draws a table that follows its dropdowns (Anthony, 2026-10-20:
+   * Hover B, "it should adapt for drop down selection").
+   */
+  readout?: (point: { row: Record<string, unknown>; heading: ReactNode }) => ReactNode;
   /** How the scale's marks read, as `SiteBarChart`'s. */
   formatScale?: (value: number) => string;
   data: Array<Record<string, unknown>>;
@@ -208,6 +236,9 @@ export function SiteLineChart({
   const marking = series.filter((entry) => entry.marks);
   const marked = markLabel && marking.length > 0 ? { label: markLabel, colour: marking.length === 1 ? marking[0].colour : "var(--color-secondary)" } : null;
   const axisOf = (entry: SiteSeries) => (scaleOf ? scaleOf(entry) : sharedScale ? "shared" : entry.key);
+  // A point with a figure between two without: with its line broken at gaps, only a dot shows it.
+  const figureAt = (key: string, at: number) => data[at]?.[key] !== null && data[at]?.[key] !== undefined;
+  const alone = (key: string, index: unknown) => typeof index === "number" && figureAt(key, index) && !figureAt(key, index - 1) && !figureAt(key, index + 1);
   // Each scale once, coloured as its line when it holds only one.
   const axes = [...new Map(series.map((entry) => [axisOf(entry), entry])).entries()]
     .map(([id, entry]) => ({ id, entry, alone: series.filter((other) => axisOf(other) === id).length === 1 }));
@@ -234,7 +265,12 @@ export function SiteLineChart({
                 {...(alone ? { stroke: entry.colour } : {})}
               />
             ))}
-            <Tooltip active={google.open ? false : undefined} cursor={CHART_CROSSHAIR} content={<ChartTooltip title={google.readoutTitle} formatValue={formatValue} />} />
+            <Tooltip
+              active={google.open ? false : undefined}
+              cursor={CHART_CROSSHAIR}
+              filterNull={!keepEmptyRows}
+              content={readout ? <ChartReadoutTooltip title={google.readoutTitle} render={readout} /> : <ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />}
+            />
             <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={lineLegend(google, updateKey, marked)} />
             {series.map((entry) => (
               <Line
@@ -246,8 +282,8 @@ export function SiteLineChart({
                 stroke={entry.colour}
                 strokeWidth={entry.dashed ? 1.5 : 2.25}
                 strokeDasharray={entry.dashed ? "5 4" : undefined}
-                dot={entry.marks || data.some(isPart) ? (props: Record<string, unknown>) => <PartDot {...props} solid={data.length < 3} marks={entry.marks} /> : data.length < 3}
-                connectNulls
+                dot={entry.marks || breakGaps || data.some(isPart) ? (props: Record<string, unknown>) => <PartDot {...props} solid={data.length < 3 || (breakGaps && alone(entry.key, props.index))} marks={entry.marks} /> : data.length < 3}
+                connectNulls={!breakGaps}
                 isAnimationActive={false}
               />
             ))}
@@ -330,6 +366,7 @@ export function SiteBarChart({
   divided = false,
   updateKey = true,
   faded,
+  readout,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
@@ -341,6 +378,11 @@ export function SiteBarChart({
    * chart — a channel's key events a day (ga-channel-pages-plan.md CH7).
    */
   faded?: (row: Record<string, unknown>) => boolean;
+  /**
+   * The chart's own hover readout in place of a row a series, as `SiteLineChart`'s: handed the hovered bar's row and
+   * its heading. A page's "Visitors to this page" draws its table (page-visitors-explorer-plan.md).
+   */
+  readout?: (point: { row: Record<string, unknown>; heading: ReactNode }) => ReactNode;
   /**
    * Each bar's figure written on it, so no figure needs a hover (Anthony,
    * 2026-10-12, of Insights' charts: "you have to hover to see the
@@ -460,7 +502,7 @@ export function SiteBarChart({
             <Tooltip
               active={google.open ? false : undefined}
               cursor={CHART_CURSOR}
-              content={<ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />}
+              content={readout ? <ChartReadoutTooltip title={google.readoutTitle} render={readout} /> : <ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />}
             />
             {series.length > 1 || (google.shown && updateKey) ? (
               <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={updateKey ? googleLegend(google, { seriesShown: series.length > 1 }) : undefined} />

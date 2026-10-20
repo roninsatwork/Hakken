@@ -48,7 +48,7 @@ function useStoryWords() {
 }
 
 /** A source by the name people know it by, or typed in, or a channel's other sources added up, or not known. */
-function useSourceName() {
+export function useSourceName() {
   const { t } = useStoryWords();
   return (row: Source) => row.name ?? (row.source === "(direct)" ? t("typedIn") : row.source === OTHER_ROWS ? t("otherSources") : t("notKnown"));
 }
@@ -124,7 +124,6 @@ function StoryChart({ title, hint, exportName, csv, host, shown, collecting, chi
   );
 }
 
-const SOURCE_ROWS = 12;
 
 /**
  * The story's charts (§2, sections 6–12), each full width with its figures
@@ -137,7 +136,6 @@ export function PageStoryCharts({ story, host }: { story: PageStory; host: strin
   const { t, period } = useStoryWords();
   const tf = useTranslations("googleAnalytics.filters");
   const locale = useLocale();
-  const sourceName = useSourceName();
   const waiting = story.live;
   const countries = useMemo(() => {
     try {
@@ -149,26 +147,14 @@ export function PageStoryCharts({ story, host }: { story: PageStory; host: strin
   const weekday = useMemo(() => new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { weekday: "short", timeZone: "UTC" }), [locale]);
   // 2024-01-07 was a Sunday: Google's day 0.
   const dayName = (day: string) => weekday.format(new Date(Date.UTC(2024, 0, 7 + Number(day))));
-  const visitsWords = (visits: number, conversions: number) => t("visitsLabel", { visits, conversions });
   const percent = (value: number) => `${Math.round(value)}%`;
 
-  const sources = story.sources.slice(0, SOURCE_ROWS).map((row) => ({ label: sourceName(row), value: row.visits, conversions: row.conversions }));
-  const next = story.next.map((row) => ({
-    label: row.kind === "again" ? t("thisPageAgain") : row.kind === "left" ? t("leftWebsite") : row.kind === "others" ? t("otherPages") : pathOf(row.address),
-    value: row.views,
-    share: row.share,
-  }));
-  const returning = story.returning
-    ? [{ label: t("firstVisit"), value: story.returning.first }, { label: t("backAgain"), value: story.returning.back }, { label: t("notKnown"), value: story.returning.unknown }].filter((row) => row.value > 0)
-    : [];
-  const returningVisits = returning.reduce((sum, row) => sum + row.value, 0);
   const devices = story.devices.map((row) => ({ label: tf(`devices.${row.device}`), page: row.share * 100, website: (row.websiteShare ?? 0) * 100 }));
   const countryRows = story.countries.map((row) => ({ label: countries?.of(row.code) ?? row.code, value: row.people }));
   const who = (rows: PageStory["ages"]["rows"], name: (key: string) => string) => rows.map((row) => ({ label: name(row.key), page: row.share * 100, website: (row.websiteShare ?? 0) * 100, conversions: row.conversions }));
   const ages = who(story.ages.rows, (key) => key.replace("-", "–"));
   const genders = who(story.genders.rows, (key) => (key === "female" ? t("female") : key === "male" ? t("male") : key));
   const weekdays = story.weekdays.map((row) => ({ label: dayName(row.day), views: row.views }));
-  const league = story.league.map((row) => ({ label: row.title ?? pathOf(row.address), value: row.visits, conversions: row.conversions, isThis: row.isThis }));
   const whoLabels = (value: number, key: string, row: Record<string, unknown>) => (key === "page" && Number(row.conversions) > 0
     ? t("shareConversions", { share: percent(value), conversions: Number(row.conversions) })
     : percent(value));
@@ -176,22 +162,6 @@ export function PageStoryCharts({ story, host }: { story: PageStory; host: strin
 
   return (
     <>
-      <StoryChart title={t("sourcesTitle")} hint={t("sourcesHint", { period })} exportName="google-analytics-page-sources" host={host} shown={sources.length > 0} collecting={waiting}
-        csv={() => toCsv([t("source"), t("visits"), t("conversions")], sources.map((row) => [row.label, row.value, row.conversions]))}>
-        <SiteBarChart horizontal data={sources} series={[{ key: "value", name: t("visits"), colour: CHART_SERIES_ORANGE }]} labels={(value, _key, row) => visitsWords(value, Number(row.conversions))} />
-      </StoryChart>
-
-      <StoryChart title={t("nextTitle")} hint={t("nextHint", { period })} exportName="google-analytics-page-next" host={host} shown={next.length > 0} collecting={waiting}
-        csv={() => toCsv([t("nextTitle"), t("views")], next.map((row) => [row.label, row.value]))}>
-        <SiteBarChart horizontal data={next} series={[{ key: "value", name: t("views"), colour: CHART_SERIES_ORANGE }]} labels={(value, _key, row) => `${formatNumber(value)} · ${formatPercent(Number(row.share))}`} />
-      </StoryChart>
-
-      <StoryChart title={t("returningTitle")} exportName="google-analytics-page-returning" host={host} shown={returning.length > 0} collecting={waiting}
-        hint={story.returning?.websiteBack !== null && story.returning?.websiteBack !== undefined ? t("returningHint", { period, share: formatPercent(story.returning.websiteBack) }) : t("returningHintAlone", { period })}
-        csv={() => toCsv([t("returningTitle"), t("visits")], returning.map((row) => [row.label, row.value]))}>
-        <SiteBarChart horizontal data={returning} series={[{ key: "value", name: t("visits"), colour: CHART_SERIES_ORANGE }]} labels={(value) => t("visitsShare", { visits: value, share: formatPercent(returningVisits > 0 ? value / returningVisits : null) })} />
-      </StoryChart>
-
       <StoryChart title={t("devicesTitle")} hint={t("devicesHint", { period })} exportName="google-analytics-page-devices" host={host} shown={devices.length > 0} collecting={waiting}
         csv={() => toCsv([t("devicesTitle"), t("thisPage"), t("yourWebsite")], devices.map((row) => [row.label, Math.round(row.page), Math.round(row.website)]))}>
         <SiteBarChart horizontal data={devices} series={pairSeries} labels={(value) => percent(value)} formatScale={percent} />
@@ -219,18 +189,6 @@ export function PageStoryCharts({ story, host }: { story: PageStory; host: strin
         <SiteBarChart data={weekdays} series={[{ key: "views", name: t("views"), colour: CHART_SERIES_ORANGE }]} labels={(value) => formatNumber(value)} />
       </StoryChart>
 
-      {story.group ? (
-        <StoryChart title={t("leagueTitle", { group: story.group })} hint={t("leagueHint", { period })} exportName="google-analytics-page-group" host={host} shown={league.length > 0} collecting={false}
-          csv={() => toCsv([t("leagueTitle", { group: story.group ?? "" }), t("visits"), t("conversions")], league.map((row) => [row.label, row.value, row.conversions]))}>
-          <SiteBarChart
-            horizontal
-            data={league}
-            series={[{ key: "value", name: t("visits"), colour: CHART_SERIES_SLATE }]}
-            highlight={{ colour: CHART_SERIES_ORANGE, rows: (row) => row.isThis === true }}
-            labels={(value, _key, row) => visitsWords(value, Number(row.conversions))}
-          />
-        </StoryChart>
-      ) : null}
     </>
   );
 }

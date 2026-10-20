@@ -17,16 +17,24 @@ figures
   figure: Read to the end
 notice (info)
 chart-card: Views a day
-chart-card: Where visitors were just before
-chart-card: Visits that started here, by where they came from
-chart-card: Where visitors went next
-chart-card: First visit or back again
+chart-card: Conversions, by channel
+filter: Show
+filter: Conversions
+filter: Channels
+filter: Lines
+filter: Against
+compact-list: Better or worse | Latest day | Against the one before | Last # days | Against the # before
+chart-card: Conversions by channel
+channel-map
+chart-card: Visits, by channel
+filter: By
+filter: Show
+filter: Channels
 chart-card: Phone or computer
 chart-card: Where its readers are
 chart-card: Their age
 chart-card: Their gender
 chart-card: When they read
-chart-card: Against the other pages in Content hub
 search: Find a source…
 table: Source | Kind | Visits | Pages | Time | Read to end | Back again | Conversions
   table-bar: Each source's visits

@@ -7,7 +7,7 @@ import { NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
 import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
-import { emptyRow } from "./googleAnalyticsLists";
+import { channelKey, emptyRow } from "./googleAnalyticsLists";
 import { pointKey, reshaped, writeBatches } from "./googleAnalyticsPageSeries";
 
 /**
@@ -50,6 +50,23 @@ describe("a page's points reshaped to the rule", () => {
       "2026-10-08": 1,
       "w:2026-06-29": 5,
       "m:2025-09-01": 4,
+    });
+  });
+});
+
+describe("a page's points by channel reshaped to the same rule (page-conversion-explorer-plan.md)", () => {
+  test("each point keeps its channel: two channels' days past 90 land in their own week, added up", () => {
+    const row = (key: string, visits: number) => ({ ...emptyRow(key), visits });
+    const out = reshaped([
+      row(channelKey("2026-07-01", "Organic Search"), 2),
+      row(channelKey("2026-07-02", "Organic Search"), 3),
+      row(channelKey("2026-07-02", "Paid Search"), 4),
+      row(channelKey("2026-10-08", "Organic Search"), 1),
+    ], NEWEST);
+    expect(Object.fromEntries(out.map((one) => [one.key, one.visits]))).toEqual({
+      [channelKey("w:2026-06-29", "Organic Search")]: 5,
+      [channelKey("w:2026-06-29", "Paid Search")]: 4,
+      [channelKey("2026-10-08", "Organic Search")]: 1,
     });
   });
 });

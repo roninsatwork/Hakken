@@ -29,7 +29,7 @@ import { changeOf, formatMoney, formatPercent } from "../../_components/analytic
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
 import { ConversionsChart } from "../../_components/AnalyticsChart";
-import { BeforeConvertingCard, ConversionFlowCard, ConversionsByKind, useFlowKindName } from "../../_components/ConversionParts";
+import { BeforeConvertingCard, ConversionFlowCard, ConversionsByKind, VisitsPerConversionCard, useFlowKindName } from "../../_components/ConversionParts";
 
 /**
  * Conversions, with Events merged in (docs/plans/active/ga-conversions-visitors-plan.md
@@ -37,8 +37,9 @@ import { BeforeConvertingCard, ConversionFlowCard, ConversionsByKind, useFlowKin
  * conversions, value, conversion rate and the key events not counted (the
  * kinds that happened when every key event counts); Conversions over time
  * (GA35); how visits reached a conversion, by page classification;
- * conversions by page classification; what people did before converting;
- * then every event, the conversions first. A shop keeps its revenue,
+ * conversions by page classification; the visits needed for one conversion
+ * over time, against the days just before (Anthony, 2026-10-20); what
+ * people did before converting; then every event, the conversions first. A shop keeps its revenue,
  * purchases and average order first (GA7, board 8 as locked). Nothing
  * counted yet says how to choose, under its own box (screen 16), with every
  * event below it.
@@ -174,6 +175,13 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
       />
       <ConversionFlowCard flow={flow} currency={currency} />
       <ConversionsByKind flow={flow} />
+      <VisitsPerConversionCard
+        days={chart?.points ?? []}
+        events={chart?.events ?? []}
+        figures={answer ? { visits: answer.visits, visitsBefore: answer.visitsBefore, kinds: answer.kinds } : null}
+        from={answer?.from ?? null}
+        to={answer?.to ?? null}
+      />
       <BeforeConvertingCard before={answer?.before ?? null} />
       <EventsTable status={status} />
     </div>

@@ -10173,6 +10173,26 @@
     "saveFailed": "The assumptions could not be saved. Try again."
   },
   "ui": {
+    "chartExplorer": {
+      "scoreLine": "Better or worse",
+      "latest": "{step, select, day {Latest day} week {Latest week} other {Latest month}}",
+      "previous": "Against the one before",
+      "last3": "{step, select, day {Last 3 days} week {Last 3 weeks} other {Last 3 months}}",
+      "previous3": "Against the 3 before",
+      "yearAgo": "Against a year before",
+      "better": "{by}% better",
+      "worse": "{by}% worse",
+      "same": "About the same",
+      "was": "was <figure>{value}</figure>",
+      "against": "{dates}, against {before}",
+      "all": "{count, plural, =2 {Both} =3 {All three} =4 {All four} =5 {All five} =6 {All six} =7 {All seven} =8 {All eight} =9 {All nine} =10 {All ten} other {All #}}"
+    },
+    "tickSelect": {
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all",
+      "none": "None",
+      "some": "{count} of {total}"
+    },
     "table": {
       "noEntries": "No entries found",
       "previous": "Previous",
@@ -17825,6 +17845,111 @@
         "channel": "See the channel"
       }
     },
+    "pageVisitors": {
+      "title": "{show, select, visits {Visits} share {Share of visits} back {Back again} pages {Pages a visit} read {Read to the end} views {Views} other {Share of views}}, {by, select, channel {by channel} source {by source} returning {by first visit or back again} before {by the place just before} other {by the page next}}",
+      "titleSplit": ": first visit or back again",
+      "titleAgainst": ", against the whole website",
+      "hintVisits": "{period}: the visits that began on this page.",
+      "hintViews": "{period}: each view of this page.",
+      "heading": "{name}, {period}",
+      "byLabel": "By",
+      "by": {
+        "channel": "Channel",
+        "source": "Source",
+        "returning": "First visit or back again",
+        "before": "Place just before",
+        "next": "Page next"
+      },
+      "show": "Show",
+      "shows": {
+        "visits": "Visits",
+        "share": "Share of visits",
+        "back": "Back again",
+        "pages": "Pages a visit",
+        "read": "Read to the end",
+        "views": "Views",
+        "viewsShare": "Share of views"
+      },
+      "ticks": {
+        "channels": "Channels",
+        "sources": "Sources",
+        "kinds": "Kinds",
+        "places": "Places"
+      },
+      "every": {
+        "channels": "Every channel",
+        "sources": "Every source",
+        "kinds": "Every kind",
+        "places": "Every place"
+      },
+      "split": "Split",
+      "splits": {
+        "none": "Nothing",
+        "returning": "First visit or back again"
+      },
+      "against": "Against",
+      "againsts": {
+        "none": "Nothing",
+        "website": "The whole website"
+      },
+      "columns": {
+        "visits": "Visits",
+        "views": "Views",
+        "share": "Share",
+        "back": "Back again",
+        "pages": "Pages a visit",
+        "read": "Read to the end"
+      },
+      "thisPage": "This page",
+      "website": "Whole website",
+      "everyVisit": "Every visit",
+      "nothingTicked": "Nothing ticked: tick at least one {what, select, channels {channel} sources {source} kinds {kind} other {place}} to draw a bar."
+    },
+    "conversionExplorer": {
+      "title": "{measure, select, perOne {Visits needed for one conversion} conversions {Conversions} visits {Visits} other {Conversion rate}}{lines, select, channel {, by channel} kind {, by kind of conversion} other {}}",
+      "hint": "{period}: the visits that started on this page and the conversions they went on to make, {step, select, day {day by day} week {week by week} other {month by month}}, from the dates at the top of the page.",
+      "fewerBetter": "Fewer is better.",
+      "everyDevice": "Every device's: this page's channels are kept for every device.",
+      "heldFrom": "Kept by channel from {date}.",
+      "collecting": "Still being collected: this page's channels are kept from the next collection.",
+      "none": "Nothing ticked happened in these dates.",
+      "show": "Show",
+      "measures": {
+        "perOne": "Visits for one conversion",
+        "conversions": "Conversions",
+        "visits": "Visits",
+        "rate": "Conversion rate"
+      },
+      "conversions": "Conversions",
+      "everyConversion": "Every one",
+      "channels": "Channels",
+      "everyChannel": "Every channel",
+      "lines": "Lines",
+      "linesBy": {
+        "channel": "A line per channel",
+        "kind": "A line per conversion",
+        "one": "One line"
+      },
+      "against": "Against",
+      "againstChoice": {
+        "none": "Nothing",
+        "before": "The period before",
+        "year": "The same dates last year"
+      },
+      "lineAll": "Everything ticked",
+      "comparedBefore": "{name}, the period before",
+      "comparedYear": "{name}, a year before",
+      "rateValue": "{value}%",
+      "readoutVisits": "Visits",
+      "readoutConversions": "Conversions",
+      "readoutForOne": "For one",
+      "readoutRate": "Rate",
+      "readoutVisitsNote": "<figure>{visits}</figure> visits from the channels ticked",
+      "readoutCounting": "Counting {kinds} only",
+      "readoutEverything": "Everything ticked",
+      "readoutOneNote": "{channels, plural, one {# channel} other {# channels}}, {kinds, plural, one {# kind of conversion} other {# kinds of conversion}}",
+      "nothingTicked": "Nothing ticked: tick at least one {what, select, channel {channel} other {kind of conversion}} to draw a line."
+    },
     "conversionFlow": {
       "unclassified": "Unclassified",
       "title": "How visits reached a conversion, by page classification",
@@ -17872,6 +17997,16 @@
       "byKindShades": "a smaller to a bigger share of the conversion",
       "byKindEmpty": "none",
       "byKindNone": "Nothing converted in these dates.",
+      "byChannelTitle": "Conversions by channel",
+      "byChannelHint": "{period}. Each square is the conversions made by visits that came from that channel and started on this page, brighter for a bigger share of that conversion.",
+      "byChannelHover": "{event} from {channel}: {count, plural, =1 {once} other {# times}}",
+      "byChannelLegend": "3 · conversions from visits that came from that channel and started on this page",
+      "byChannelNone": "No visits started on this page in these dates.",
+      "visitsByChannelTitle": "Visits that started here, by channel",
+      "visitsByChannelHint": "{period}: each channel's visits that began on this page, the conversions they went on to make and the visits for one conversion, with the whole website's from the same channel in brackets.",
+      "visitsByChannelLabel": "{visits, plural, one {# visit} other {# visits}} · {conversions, plural, =0 {no conversion} one {# conversion} other {# conversions}}",
+      "visitsByChannelForOne": "{per} for one",
+      "visitsByChannelWebsite": "website: {per}",
       "beforeTitle": "What people did before converting",
       "beforeHint": "The last 12 months, every device, so the smaller actions have enough people to judge. The bar is the share of the people who did it that went on to convert (hover for the figures). Orange converts better than everyone's {siteRate}, on {few} people or more. Page viewed and Visit started are left off: every visit has them.",
       "beforeHintWaiting": "The last 12 months, every device: the share of the people who did each action that went on to convert, against everyone's.",
@@ -17879,7 +18014,23 @@
       "beforeReadout": "{rate} of {people} people went on to convert · everyone {siteRate}",
       "beforeReadoutFew": "{rate} of {people} people went on to convert · under {few} people: too few to judge",
       "beforeCollecting": "Still being collected: the next collection asks each action's last 12 months.",
-      "beforeEmpty": "No actions to weigh over the last 12 months yet."
+      "beforeEmpty": "No actions to weigh over the last 12 months yet.",
+      "perConversionTitle": "Visits needed for one conversion",
+      "perConversionPageScope": "Counting the visits that started on this page, and the conversions they went on to make.",
+      "perConversionOverall": "{period}: {per} visits for each conversion ({visits, plural, one {# visit} other {# visits}}, {conversions, plural, one {# conversion} other {# conversions}}).",
+      "perConversionNoneOverall": "{period}: no conversions, so there is no figure for these dates.",
+      "perConversionOverallSome": "{period}, counting {kinds}: {per} visits for each one ({visits, plural, one {# visit} other {# visits}}, {conversions, plural, one {# conversion} other {# conversions}}).",
+      "perConversionNoneOverallSome": "{period}: {kinds} never happened, so there is no figure for these dates.",
+      "perConversionRead": "Fewer is better. {step, select, day {A day} week {A week} other {A month}} with no conversion has no figure, so the line skips it.",
+      "perConversionCoarse": "Before the last 90 days, figures are kept by the week, so each point there is a whole week's.",
+      "perConversionRow": "{visits, plural, one {# visit} other {# visits}}, {conversions, plural, =0 {no conversion} one {# conversion} other {# conversions}}",
+      "perConversionBeforeOverall": "{before}: {per} ({visits, plural, one {# visit} other {# visits}}, {conversions, plural, one {# conversion} other {# conversions}}).",
+      "perConversionBeforeNone": "{before} had no conversions.",
+      "perConversionBeforeNoneSome": "{kinds} never happened in {before}.",
+      "perConversionBeforeLineShort": "The line for the days before is drawn for 7 and 30 days only, where every day is kept.",
+      "perConversionRowDated": "{date}: {visits, plural, one {# visit} other {# visits}}, {conversions, plural, =0 {no conversion} one {# conversion} other {# conversions}}",
+      "perConversionNone": "None of the ticked conversions happened in these dates, so there is no figure to draw.",
+      "perConversionCsv": "Visits for one conversion"
     }
   },
   "bingWebmaster": {

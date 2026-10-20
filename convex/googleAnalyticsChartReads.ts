@@ -13,8 +13,8 @@ import { dayDevice } from "./utils/analyticsHistory";
 
 /**
  * What the Google Analytics charts read (docs/plans/active/google-analytics-plan.md
- * §5, GA35, §18.2): the website's figures a day, and each channel's visits a
- * day. Apart from `googleAnalyticsReads.ts` to keep each module inside its
+ * §5, GA35, §18.2): the website's figures a day, the same over the days
+ * just before, and each channel's visits a day. Apart from `googleAnalyticsReads.ts` to keep each module inside its
  * size. Only the caller's own website (`requireMySite`).
  */
 
@@ -82,6 +82,62 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   // Past what is held: the minutes before a new website's two years are filled.
   return { points: [], events };
 }
+
+/** The periods whose span before is held a day at a time (the 90 days kept), and so drawn day for day. */
+const PERIODS_DRAWN_BEFORE = new Set(["7", "30"]);
+
+/**
+ * Conversions' "Visits needed for one conversion" (Anthony, 2026-10-20): the
+ * website's visits and counted conversions a day over the span just before
+ * the dates chosen — the 7 or 30 days before, as the figures at the top
+ * compare with — each day dated forward onto the day it is laid over, so the
+ * two lines share the chart's days. Only for 7 and 30 days, whose span before
+ * is held as days ("only keep the second line for another 30 days or below");
+ * `held` is false for the longer periods and while those days are not held.
+ * Each counted kind's own count beside them, for the chart's tick boxes.
+ * Nothing is asked of Google.
+ */
+export const analyticsPeriodBeforeChart = tenantQuery({
+  args: analyticsChartArgs,
+  returns: v.object({
+    held: v.boolean(),
+    /** The days each point is moved forward by: the period's length. */
+    shift: v.number(),
+    points: v.array(v.object({ day: v.string(), visits: v.number(), conversions: v.number(), events: v.array(v.number()) })),
+    /** The counted events, in the order of each point's `events`: the chart's own order. */
+    events: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
+    const connection = await connectionOf(ctx, holdId);
+    const counted = connection ? countedOf(connection) : [];
+    const events = counted.map((event) => event.eventName);
+    const shift = Number(args.period);
+    const none = { held: false, shift, points: [], events };
+    if (!connection?.newestDay || !PERIODS_DRAWN_BEFORE.has(args.period)) return none;
+    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+    if (!total) return none;
+    const held = await readDayPoints(ctx, connection, "total", args.device, shiftDay(total.from, -shift), shiftDay(total.to, -shift), country);
+    // Every point a day: anything coarser is not the day-for-day line this is.
+    if (!held || held.some((point) => point.grain !== "day")) return none;
+    return {
+      held: true,
+      shift,
+      points: held.map((point) => {
+        const row = merged(point.rows)[0] ?? blank("");
+        return {
+          day: shiftDay(point.start, shift),
+          visits: row.visits,
+          conversions: conversionsOf(row, counted).conversions,
+          events: events.map((event) => row.counts.get(event) ?? 0),
+        };
+      }),
+      events,
+    };
+  },
+});
 
 /** Channels drawn as lines of their own on Channels' chart; the rest are one line, "everything else" (§18.2 board 16). */
 const CHANNEL_LINES = 4;

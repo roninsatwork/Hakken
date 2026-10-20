@@ -21,18 +21,18 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../../sites/_comp
 import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { PageLink } from "../../../_components/AnalyticsCells";
-import { TopBars, VisitsChart } from "../../../_components/AnalyticsChart";
+import { VisitsChart } from "../../../_components/AnalyticsChart";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "../../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
 import { backTarget } from "../../../_components/analyticsBack";
 import { PageStoryCharts, PageStoryFigures, PageStoryNotices, useStoryClicksTable, useStorySourcesTable } from "../../../_components/PageStory";
+import { PageConversionsByChannel } from "../../../_components/ConversionParts";
+import { ConversionExplorerCard } from "../../../_components/ConversionExplorer";
+import { PageVisitorsCard } from "../../../_components/PageVisitors";
 
 type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsPageReads.analyticsPage>>;
 type BeforeRow = Answer["before"][number];
-
-/** The bars' eight biggest, as drawn. */
-const BARS = 8;
 
 const SORTS: SiteSortColumns<BeforeRow, "name" | "views" | "share"> = {
   name: { value: (row) => row.title ?? row.label, first: "asc" },
@@ -54,6 +54,13 @@ const SORTS: SiteSortColumns<BeforeRow, "name" | "views" | "share"> = {
  * different pages a visit and how far it is read; each source on its own
  * line; where its views went next; who reads it; and its page group beside
  * it — asked of Google in a second ask, so the kept figures show at once.
+ *
+ * Under its views a day, Conversions' "Visits needed for one conversion" and
+ * its squares for this page alone (Anthony, 2026-10-20): the visits that
+ * started here for one conversion, by channel and kind of conversion, set
+ * against the period before or a year before (page-conversion-explorer-plan.md), their
+ * conversions by the channel they came from, and each channel's visits that
+ * started here beside the website's.
  */
 export default function AnalyticsPageScreen() {
   const status = useAnalyticsStatus();
@@ -145,17 +152,14 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
 
       {answer ? <PageStoryNotices story={answer.story} /> : null}
       <VisitsChart days={answer && !answer.live ? answer.points : []} host={status.host} from={null} to={null} exportName="google-analytics-page" viewsOnly />
-      <TopBars
-        title={t("beforeTitle")}
-        hint={t("barsHint", { count: BARS })}
-        rows={rows?.slice(0, BARS).map((entry) => ({ label: entry.kind === "page" ? pathOf(entry.label) : nameOf(entry), value: entry.views }))}
-        measure={t("views")}
-        exportName="google-analytics-page-before"
-        host={status.host}
-        from={null}
-        to={null}
-        labels={(value) => formatNumber(value)}
-      />
+      {/* Conversions for this page alone (Anthony, 2026-10-20): configurable by channel and conversion
+          (page-conversion-explorer-plan.md), then their conversions by channel. The earlier "Visits needed for one
+          conversion" went once this covered it ("remove the redundant charts"). */}
+      {answer ? <ConversionExplorerCard page={page} /> : null}
+      {answer ? <PageConversionsByChannel page={page} /> : null}
+      {/* Its visitors, one chart in place of five — by channel, source, first visit or back again, the place just
+          before and the page next (page-visitors-explorer-plan.md). */}
+      {answer ? <PageVisitorsCard page={page} story={answer.story} before={answer.before} /> : null}
       {answer ? <PageStoryCharts story={answer.story} host={status.host} /> : null}
       {answer ? <DataTable {...sourcesTable} /> : null}
 

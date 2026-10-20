@@ -64,7 +64,7 @@ function displayOf(key: string): string {
 }
 
 /** A landing list's channel as the screens show it: only Google's own AI Assistant channel can be named there. */
-function landingChannelOf(raw: string): string {
+export function landingChannelOf(raw: string): string {
   return raw === GOOGLE_AI_CHANNEL ? AI_ASSISTANTS_CHANNEL : raw;
 }
 
@@ -110,8 +110,8 @@ export function landingOf(rows: readonly ListRow[] | null, channel: string): Lis
   });
 }
 
-/** A row less another's figures, none below nought: a channel's visits on a page without its assistants'. */
-function less(row: ListRow, taken: ListRow): ListRow {
+/** A row less another's figures, none below nought: a channel's visits on a page without its assistants'. Shared with each page's channels over time (`googleAnalyticsPageChannels.ts`). */
+export function less(row: ListRow, taken: ListRow): ListRow {
   const out = blank(row.key);
   const minus = (key: "visits" | "engaged" | "seconds" | "views" | "purchases" | "revenue" | "people" | "newPeople" | "length") => Math.max(0, row[key] - taken[key]);
   for (const key of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) out[key] = minus(key);

@@ -36,7 +36,10 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/DetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
 - `src/ui/components/screens/PageHeader.tsx`: list-page title/description/action header and primary action button.
 - `src/ui/components/screens/TitleSwitch.tsx`: a page title that opens the list of records of its kind — the name, a quiet arrow, the native select laid invisibly over it. Added 2026-10-15 for a website in Google Analytics (`ga-header-plan.md`); it goes in a `DetailHeader`'s `title`.
-- `src/ui/components/screens/Select.tsx`: styled select control; with `chip`, a compact filter that names itself ("Position", then "Position: 1–3" in grey behind a lighter border) and is as wide as its words.
+- `src/ui/components/screens/Select.tsx`: styled select control; with `chip`, a compact filter that names itself ("Position", then "Position: 1–3" in grey behind a lighter border) and is as wide as its words. `changed` says whether the chip is drawn grey: a chart's toolbar of settings passes false (and so does its `TickSelect`), so every chip looks the same and the words say the choice.
+- `src/ui/components/screens/ChartExplorer.tsx`: a configurable chart — a toolbar of dropdowns, the line chart, its hover table and "Better or worse" under it, in one card. Every chart a reader can explore is built on it; see Configurable Charts below. Its rule (steps from the dates, whole steps, a year before, better or worse) is `chartExplorerRule.ts` beside it.
+- `src/ui/components/charts/ChartReadoutTable.tsx`: a chart's hover as a small table — a row a line with their total, a column a figure, the figure the chart is about on its own band — on the wide hover panel. `ChartExplorer` draws its hover with it; any chart whose hover has several figures a line may too.
+- `src/ui/components/screens/TickSelect.tsx`: `Select`'s chip opening a panel of tick boxes, for any mix of choices — a chart's conversions and channels (page-conversion-explorer-plan.md, approved 2026-10-20). Says "Every channel", up to two names, "3 of 10" or "None"; "Select all" and "Deselect all" head its panel (nothing ticked is allowed — the screen says what to tick); closes on Escape or a click outside.
 - `src/ui/components/screens/Field.tsx`: labelled field wrapper for typed form controls that must carry an accessible label.
 - `src/ui/components/screens/Checkbox.tsx`: shared checkbox/tick-box control, including hidden-label table-cell use.
 - `src/ui/components/screens/Leaderboard.tsx`: ranked or unranked compact lists for repeated "who used the most" panels.
@@ -438,6 +441,42 @@ The wrapper is `flex flex-col gap-5`, or `flex w-full flex-col gap-6 pb-12` for 
 **`cardHeader` is not where a screen's title goes.** It names a table that sits inside a page which already has its own header — a usage log on a person's record, say. `TableShell` renders whatever it is given without padding, so a title placed there sits flush against the card edge while the columns stay indented, and the screen reads as broken. The build enforces this: see the anatomy rule below.
 
 This order was a habit copied between screens and written down nowhere until 2026-08-22, when the workspace Features screen was rebuilt onto `DataTable`, drew nothing by hand, passed every check of the day, and still came out wrong — its title inside the table rather than above the search box. Anthony: *"why are you guessing when we have standards and rules — that's the gap we need to close."* This section and the anatomy rule are that gap closed.
+
+## Configurable Charts
+
+A chart a reader can explore — pick what it shows, tick what counts, choose what each line is, set it against
+another span — is a `ChartExplorer`. It was built for a page's "Visits needed for one conversion, by channel" and
+locked in as the style on 2026-10-20 (Anthony: "I think this is great, let's lock this in as a component style").
+A screen supplies only its own figures and words; the kit draws the rest, the same way every time:
+
+- **The card, in this order**: title, hint, the toolbar, the chart (or words in its place), "Better or worse".
+- **The title says what the chart shows and what each line is**, from the dropdowns: "Conversions, by channel",
+  "Visits needed for one conversion, by kind of conversion", "Conversion rate".
+- **The toolbar**: each dropdown a chip saying its label and choice ("Show: Conversions"). Every chip looks the same
+  whatever is picked — no grey or highlighted state; the words say the choice ("I don't understand how these button
+  colours are supposed to work"). One choice is a `Select` chip; any mix is a `TickSelect`, opening with "Select all"
+  and "Deselect all". A dropdown with nothing ticked puts words in place of the chart and the scorecard, saying what
+  to tick.
+- **It opens on a whole line**: start on a measure that has a figure every step (conversions, not visits for one,
+  which has none on a day without a conversion — "default this to conversions so we always show a full graph").
+- **The step follows the dates at the top of the page**: days for 7 and 30 days, weeks for 90, months for 12 months.
+  The chart has no dates or step of its own, and no chart-type switch.
+- **The lines**: each keeps its colour whatever else is ticked; a line breaks where a step has no figure, a step alone
+  between two gaps drawn as a dot; a week or month the dates cut is an open ring, its hover naming its days.
+- **Against**: nothing, the period before, or — for 12 months only — the same dates a year before, dashed. A year ago
+  only weeks and months are kept, so shorter dates a year before would be read from steps that miss them.
+- **The hover is a `ChartReadoutTable`**: a row for every line drawn with their total under them ("All four"), every
+  row kept and its noughts shown — never folded away; a column a figure, the one the chart is about on its own band
+  with an icon, figures worked out from others (visits for one, a rate) in the quieter ink, and the column the lines
+  draw marked with a short line; against a span, "was …" under each figure and the span's dates in the heading. The
+  app's standard 13px throughout — not 11px, not bigger.
+- **0 and –**: 0 is a count of none; – is a figure that cannot be worked out (nothing to divide by).
+- **Better or worse** (`CompactList`): each line's latest whole step against the one before, the last three against
+  the three before, and, for 12 months, against the same three a year before. A step still going is left out.
+
+The approved look is the page screen's (`docs/plans/assets/analytics-page-screen/look/Page.txt`); the drawings are
+on the canvas "Hakken — a page's channels, alternatives", rows "Visits for one conversion: one chart, every
+dimension" and "Hover B, following the dropdowns".
 
 ## Google Update Markers
 

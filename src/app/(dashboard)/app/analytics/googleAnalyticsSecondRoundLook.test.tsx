@@ -1,4 +1,4 @@
-import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
+import { cleanup, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 
@@ -146,6 +146,30 @@ describe("Google Analytics' second-round looks", () => {
     };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
+      // Conversions' two pictures for this page alone (Anthony, 2026-10-20), under its views a day.
+      "googleAnalyticsPageChannels:analyticsPageChannelExplorer": {
+        heldFrom: "2024-10-01",
+        everyDevice: false,
+        events: ["generate_lead", "click_tel", "click_email"],
+        channels: ["Organic Search", "Direct"],
+        from: "2026-09-09",
+        to: "2026-10-08",
+        now: DAYS.map((day, at) => ({ day, lastDay: day, rows: [{ channel: "Organic Search", visits: 20, counts: [at === 1 ? 1 : 0, 0, 0] }, { channel: "Direct", visits: 5, counts: [0, 0, 0] }] })),
+        before: DAYS.map((day) => ({ day, lastDay: day, rows: [{ channel: "Organic Search", visits: 18, counts: [1, 0, 0] }] })),
+        year: [],
+      },
+      "googleAnalyticsPageConversions:analyticsPageConversionGrid": {
+        everyDevice: false,
+        channels: [
+          { channel: "Organic Search", visits: 452, conversions: 0, websiteVisits: 3100, websiteConversions: 40 },
+          { channel: "Direct", visits: 141, conversions: 1, websiteVisits: 900, websiteConversions: 20 },
+        ],
+        rows: [
+          { eventName: "generate_lead", counted: true, count: 1, cells: [0, 1] },
+          { eventName: "click_tel", counted: true, count: 0, cells: [0, 0] },
+          { eventName: "click_email", counted: true, count: 0, cells: [0, 0] },
+        ],
+      },
       "googleAnalyticsPageReads:analyticsPage": {
         address: "https://www.acme-shop.test/ai-agency/", title: "AI Agency | Agent Automation Company", path: "/ai-agency/", group: "Service",
         row: { ...ROW, people: 241, newPeople: 200, bounceRate: 0.3, pagesPerVisit: 2.1, lengthPerVisit: 95 }, viewsBefore: 320, live: false,
@@ -167,6 +191,65 @@ describe("Google Analytics' second-round looks", () => {
     await screen.findByText("Typed in, a bookmark or an app");
     await screen.findByText("Typed in or a bookmark");
     await screen.findByText(/593 visits started on this page/);
+    // The visits needed for one conversion, by channel and conversion (page-conversion-explorer-plan.md): its toolbar, and a channel ticked off.
+    screen.getByText(/^Last 30 days: the visits that started on this page and the conversions they went on to make, day by day, from the dates at the top of the page\.$/);
+    // Both charts have their own toolbar: each is read within its card.
+    const cardOf = (title: string) => screen.getByText(title).closest("[data-part='chart-card']")!.parentElement as HTMLElement;
+    // It opens on conversions, a whole line every day (Anthony, 2026-10-20: "default this to conversions").
+    const explorer = within(cardOf("Conversions, by channel"));
+    const channels = explorer.getByRole("button", { name: /Channels: Every channel/ });
+    fireEvent.click(channels);
+    fireEvent.click(within(explorer.getByRole("group", { name: "Channels" })).getByLabelText("Direct"));
+    explorer.getByRole("button", { name: /Channels: Organic Search/ });
+    // Deselect all, then Select all (Anthony, 2026-10-20): nothing ticked says what to tick, rather than drawing nothing.
+    fireEvent.click(within(explorer.getByRole("group", { name: "Channels" })).getByRole("button", { name: "Deselect all" }));
+    explorer.getByRole("button", { name: /Channels: None/ });
+    explorer.getByText("Nothing ticked: tick at least one channel to draw a line.");
+    fireEvent.click(within(explorer.getByRole("group", { name: "Channels" })).getByRole("button", { name: "Select all" }));
+    explorer.getByRole("button", { name: /Channels: Every channel/ });
+    expect(explorer.queryByText(/^Nothing ticked/)).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(explorer.queryByRole("group", { name: "Channels" })).toBeNull();
+    // A year before only for 12 months (the audit, 2026-10-20): 30 days a year ago are kept only as weeks and months.
+    const against = explorer.getByRole("combobox", { name: "Against" });
+    expect(within(against).getAllByRole("option").map((option) => option.textContent)).toEqual(["Nothing", "The period before"]);
+    expect(explorer.queryByText("Against a year before")).toBeNull();
+    // The title follows Show and Lines (Anthony, 2026-10-20: "is the component name correct"), and the toolbar's chips
+    // look the same whatever is picked ("same").
+    const greyChips = () => [...document.querySelectorAll("[data-part='filter']")].filter((chip) => chip.className.split(" ").includes("bg-hover"));
+    fireEvent.change(explorer.getByRole("combobox", { name: "Lines" }), { target: { value: "kind" } });
+    explorer.getByText("Conversions, by kind of conversion");
+    expect(greyChips()).toEqual([]);
+    fireEvent.change(explorer.getByRole("combobox", { name: "Lines" }), { target: { value: "one" } });
+    expect([...document.querySelectorAll("[data-part-title]")].map((title) => title.textContent)).toContain("Conversions");
+    fireEvent.change(explorer.getByRole("combobox", { name: "Show" }), { target: { value: "perOne" } });
+    fireEvent.change(explorer.getByRole("combobox", { name: "Lines" }), { target: { value: "channel" } });
+    explorer.getByText("Visits needed for one conversion, by channel");
+    fireEvent.change(explorer.getByRole("combobox", { name: "Show" }), { target: { value: "conversions" } });
+    // Their conversions by the channel the visits came from.
+    // The card's heading part, and the squares beside it in the same card.
+    const byChannel = screen.getByText("Conversions by channel").closest("[data-part='chart-card']")!.parentElement as HTMLElement;
+    within(byChannel).getByText("Organic Search");
+    within(byChannel).getByText("Direct");
+    // Its visitors, one chart in place of five (page-visitors-explorer-plan.md): By picks what the bars are, and the
+    // title, Show's choices and Split follow it.
+    const visitorsCard = cardOf("Visits, by channel");
+    const visitors = within(visitorsCard);
+    const byChoices = within(visitors.getByRole("combobox", { name: "By" })).getAllByRole("option").map((option) => option.textContent);
+    expect(byChoices).toEqual(["Channel", "Source", "First visit or back again", "Place just before", "Page next"]);
+    expect(within(visitors.getByRole("combobox", { name: "Show" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["Visits", "Share of visits", "Back again", "Pages a visit", "Read to the end"]);
+    fireEvent.change(visitors.getByRole("combobox", { name: "By" }), { target: { value: "source" } });
+    visitors.getByText("Visits, by source");
+    visitors.getByRole("combobox", { name: "Split" });
+    fireEvent.change(visitors.getByRole("combobox", { name: "By" }), { target: { value: "before" } });
+    visitors.getByText("Views, by the place just before");
+    expect(within(visitors.getByRole("combobox", { name: "Show" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["Views", "Share of views"]);
+    expect(visitors.queryByRole("combobox", { name: "Split" })).toBeNull();
+    fireEvent.change(visitors.getByRole("combobox", { name: "By" }), { target: { value: "channel" } });
+    // The five charts it replaces are gone, and the earlier visits needed for one conversion with them.
+    for (const gone of ["Visits that started here, by channel", "Visits that started here, by where they came from", "Where visitors went next", "First visit or back again", "Visits needed for one conversion"]) {
+      expect([...document.querySelectorAll("[data-part-title]")].map((title) => title.textContent)).not.toContain(gone);
+    }
     await expectApprovedLook(container, "analytics-page-screen", "Page", "Google Analytics → a page's own screen, with its story");
   });
 

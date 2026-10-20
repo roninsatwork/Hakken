@@ -240,8 +240,12 @@ export function TopBars({ title, hint, rows, measure, exportName, host, from, to
   );
 }
 
-/** The channels' colours, the busiest first, and everything else grey (chartPalette.ts). */
-const CHANNEL_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_AMBER];
+/**
+ * The channels' colours, the busiest first, and everything else grey (chartPalette.ts). Teal fourth, not amber, which
+ * read as the busiest channel's orange (Anthony, 2026-10-20: Referral beside Organic Search; "fix all"). A page's
+ * "Visits needed for one conversion, by channel" draws its channels in the same colours.
+ */
+export const CHANNEL_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL];
 
 /**
  * Channels' chart (GA35; §18.2 board 16): each of the four busiest channels'

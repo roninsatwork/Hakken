@@ -942,7 +942,7 @@ export const clearFigures = internalMutation({
       .first();
     if (connection?.clearing) {
       await ctx.db.patch(connection._id, {
-        clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyFrom: undefined, historyFilled: undefined, pageHistoryFrom: undefined, countryHistory: undefined, listsFrom: undefined, quotaSeen: undefined, fillsReached: undefined,
+        clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyFrom: undefined, historyFilled: undefined, pageHistoryFrom: undefined, pageChannelsFrom: undefined, countryHistory: undefined, listsFrom: undefined, quotaSeen: undefined, fillsReached: undefined,
         dailyPeriodsAt: undefined, weeklyPeriodsAt: undefined, updatedAt: Date.now(),
       });
       // The new property's figures start coming in at once (§10, Q15).

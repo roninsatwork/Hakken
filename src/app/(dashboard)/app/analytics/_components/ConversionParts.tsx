@@ -1,7 +1,8 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
@@ -9,22 +10,28 @@ import { FLOW_LEFT, FLOW_MORE } from "@/convex/utils/conversionFlow";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
 import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "@/src/ui/components/screens/PageFlowChart";
-import { SiteBarChart } from "../../sites/_components/SiteCharts";
-import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
-import { SearchConsoleChartCard } from "../../search-console/_components/SearchConsoleChartCard";
+import type { ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
+import { SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
+import { formatNumber, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
+import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
 import { useKindName } from "../[siteId]/channels/_components/ChannelParts";
-import { formatMoney, formatPercent } from "./analyticsFormat";
+import { formatMoney, formatPercent, formatPerConversion } from "./analyticsFormat";
+import { eventList } from "./AnalyticsSees";
 import { useEventName } from "./useEventName";
-import { useAnalyticsStatus, usePeriod } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
+import { visitsPerConversion, type CostPoint, type CostRow } from "./visitsPerConversion";
+import { shiftDays } from "./stepScale";
 
 /**
  * Conversions' pictures (docs/plans/active/ga-conversions-visitors-plan.md
  * CV3, CV4; drawn and approved 2026-10-14): how visits reached a conversion,
  * by page classification (`PageFlowChart`, its last column how visits ended);
  * conversions by page classification (`ChannelMap`, Anthony: "maybe in this
- * style"); and what people did before converting, over 12 months, as
- * Channels' "What a visit is worth" is drawn. Read from Conversions' own
- * answer: nothing is asked of Google.
+ * style"); the visits needed for one conversion over time, against the days
+ * just before (Anthony, 2026-10-20); and what people did before
+ * converting, over 12 months, as Channels' "What a visit is worth" is drawn.
+ * Read from Conversions' own answers and what Hakken holds: nothing is asked
+ * of Google.
  */
 
 type ConversionsAnswer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsReads.analyticsConversions>>;
@@ -158,6 +165,220 @@ export function ConversionsByKind({ flow }: { flow: Flow | null }) {
           legend={{ visits: t("byKindLegend"), shades: t("byKindShades"), empty: t("byKindEmpty") }}
         />
       ) : <p className="py-10 text-center text-[12px] text-muted">{t("byKindNone")}</p>}
+    </SearchConsoleChartCard>
+  );
+}
+
+/**
+ * A page's own conversions by channel, Conversions' squares "aligned to this
+ * page" (Anthony, 2026-10-20): each counted kind and each key event not
+ * counted down the side, each channel whose visits started on the page
+ * across, each square that event's count from visits that came from that
+ * channel and started there (`analyticsPageConversionGrid`).
+ */
+export function PageConversionsByChannel({ page }: { page: string }) {
+  const t = useTranslations("googleAnalytics.conversionFlow");
+  const tc = useTranslations("googleAnalytics.chart");
+  const tf = useTranslations("googleAnalytics.filters");
+  const tp = useTranslations("googleAnalytics.page");
+  const args = useAnalyticsArgs();
+  const [period] = usePeriod();
+  const status = useAnalyticsStatus();
+  const nameOf = useEventName();
+  const grid = useQuery(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, status?.connection?.newestDay && page ? { ...args, page } : "skip");
+  const columns = (grid?.channels ?? []).map((entry) => entry.channel || tc("noChannel"));
+  const rows: ChannelMapRow[] = (grid?.rows ?? []).map((row) => ({
+    key: row.eventName,
+    label: nameOf(row.eventName),
+    total: !row.counted ? t("byKindNotCounted", { count: formatNumber(row.count) }) : row.count === 0 ? t("byKindNever") : t("byKindCounted", { count: row.count }),
+    cells: row.cells.map((count, at) => ({ visits: count, conversions: 0, hover: t("byChannelHover", { event: nameOf(row.eventName), channel: columns[at] ?? "", count }) })),
+  }));
+  const csv = () => toCsv(["event", ...columns], (grid?.rows ?? []).map((row) => [row.eventName, ...row.cells]));
+  return (
+    <SearchConsoleChartCard
+      title={t("byChannelTitle")}
+      hint={`${t("byChannelHint", { period: tf(`periods.${period}`) })}${grid?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      exportName="google-analytics-page-conversions-by-channel"
+      csv={csv}
+      host={status?.host ?? ""}
+      from={null}
+      to={null}
+    >
+      {grid === undefined ? null
+        : grid === null ? <p className="py-10 text-center text-[12px] text-muted">{tp("collecting")}</p>
+          : columns.length === 0 ? <p className="py-10 text-center text-[12px] text-muted">{t("byChannelNone")}</p>
+            : (
+              <ChannelMap
+                columns={columns}
+                rows={rows}
+                rowVisits={(row) => grid.rows.find((one) => one.eventName === row.key)?.count ?? 0}
+                conversionsWord={() => ""}
+                legend={{ visits: t("byChannelLegend"), shades: t("byKindShades"), empty: t("byKindEmpty") }}
+              />
+            )}
+    </SearchConsoleChartCard>
+  );
+}
+
+
+/** The periods drawn with the days just before beside them: those held a day at a time (`analyticsPeriodBeforeChart`). */
+const DRAWN_BEFORE: ReadonlySet<string> = new Set(["7", "30"]);
+
+/** A point of the chart's figures, each counted kind's own count in its `events`' order. */
+type KindPoint = CostPoint & { events?: readonly number[] };
+/** The days just before, each dated onto the day it is laid over, `shift` days later. */
+type DaysBefore = { shift: number; events: readonly string[]; points: readonly KindPoint[] };
+/** The period's visits and each counted kind's count, now and before, as the figures at the top count them. */
+type CostFigures = { visits: number; visitsBefore: number | null; kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null }> };
+
+/** Conversions' "Visits needed for one conversion": the website's figures, and the days just before for 7 and 30 days. */
+export function VisitsPerConversionCard({ days, events, figures, from, to }: {
+  days: readonly KindPoint[];
+  events: readonly string[];
+  figures: CostFigures | null;
+  from: string | null;
+  to: string | null;
+}) {
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const [period] = usePeriod();
+  const lined = DRAWN_BEFORE.has(period);
+  const daysBefore = useQuery(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, status?.connection?.newestDay && lined ? args : "skip");
+  return (
+    <VisitsPerConversionChart
+      days={days}
+      events={events}
+      figures={figures}
+      before={lined && daysBefore?.held ? daysBefore : null}
+      from={from}
+      to={to}
+      exportName="google-analytics-visits-per-conversion"
+    />
+  );
+}
+
+
+/**
+ * "Visits needed for one conversion" (Anthony, 2026-10-20: "number of visits
+ * required to get a conversion over time"): visits over the counted
+ * conversions they made, each day, week or month as the chart steps — fewer
+ * is better. For 7 and 30 days, the days just before laid over them day for
+ * day as a dashed grey line ("only keep the second line for another 30 days
+ * or below": past 90 days only weeks and months are kept, so nothing compares
+ * a day with a day). A tick box for each kind of conversion, all ticked at
+ * first ("can we add filters … such as click to apply now"): the lines and
+ * the figures count only the kinds ticked, one or several. The hint leads
+ * with the period's own figure and the period before's, from the same visits
+ * and conversions as the figures at the top. Each point's readout names its
+ * visits and conversions under the line's name, and the day it is laid over.
+ * Drawn for the whole website on Conversions, and for one page on its own
+ * screen (`page`), counting the visits that started there.
+ */
+function VisitsPerConversionChart({ days, events, figures, before, from, to, exportName, page = false, empty }: {
+  days: readonly KindPoint[];
+  events: readonly string[];
+  /** Null while they load. */
+  figures: CostFigures | null;
+  /** Null for 90 days and 12 months, and while the days before are not held. */
+  before: DaysBefore | null;
+  from: string | null;
+  to: string | null;
+  exportName: string;
+  /** One page's: its visits as a landing page, said in the hint. */
+  page?: boolean;
+  /** What shows in place of the chart with no days: "Still being collected…" while a page's days are not held. */
+  empty?: string;
+}) {
+  const t = useTranslations("googleAnalytics.conversionFlow");
+  const tc = useTranslations("googleAnalytics.chart");
+  const tf = useTranslations("googleAnalytics.filters");
+  const locale = useLocale();
+  const nameOf = useEventName();
+  const status = useAnalyticsStatus();
+  const [step] = useStep();
+  const [period] = usePeriod();
+  const lined = DRAWN_BEFORE.has(period);
+  const { shown, controls } = useSeriesTicks(events.map((eventName) => ({ key: eventName, name: nameOf(eventName) })));
+  const ticked = new Set(shown.map((kind) => kind.key));
+  const every = shown.length === events.length;
+  // Each point's conversions, counting only the kinds ticked; the days before's matched to them by name.
+  const tickedOf = (names: readonly string[], counts: readonly number[] | undefined, all: number) => (every ? all
+    : names.reduce((sum, name, at) => sum + (ticked.has(name) ? counts?.[at] ?? 0 : 0), 0));
+  const now = days.map((point) => ({ ...point, conversions: tickedOf(events, point.events, point.conversions) }));
+  const held = before ? before.points.map((point) => ({ ...point, conversions: tickedOf(before.events, point.events, point.conversions) })) : null;
+  const shift = before?.shift ?? 0;
+  const rows = visitsPerConversion(now, held, step);
+  const periodName = tf(`periods.${period}`);
+  // "the 30 days before", as the figures at the top word it; at a sentence's start, "The 30 days before".
+  const beforeName = tf(`before.${period}`);
+  const BeforeName = beforeName.charAt(0).toLocaleUpperCase(locale) + beforeName.slice(1);
+  const kinds = eventList(shown.map((kind) => kind.key).join(","), nameOf, locale);
+  const series: SiteSeries[] = [
+    { key: "perConversion", name: periodName, colour: CHART_SERIES_ORANGE },
+    ...(held ? [{ key: "perConversionBefore", name: BeforeName, colour: CHART_COMPARATOR_GREY, dashed: true }] : []),
+  ];
+  const counted = figures ? figures.kinds.filter((kind) => every || ticked.has(kind.eventName)) : [];
+  const conversions = counted.reduce((sum, kind) => sum + kind.count, 0);
+  const conversionsBefore = counted.every((kind) => kind.countBefore !== null) ? counted.reduce((sum, kind) => sum + (kind.countBefore ?? 0), 0) : null;
+  const hint = [
+    page ? t("perConversionPageScope") : null,
+    figures === null ? null
+      : conversions > 0
+        ? t(every ? "perConversionOverall" : "perConversionOverallSome", { period: periodName, kinds, per: formatPerConversion(figures.visits / conversions), visits: figures.visits, conversions })
+        : every ? t("perConversionNoneOverall", { period: periodName }) : t("perConversionNoneOverallSome", { period: periodName, kinds }),
+    figures === null || figures.visitsBefore === null || conversionsBefore === null ? null
+      : conversionsBefore > 0
+        ? t("perConversionBeforeOverall", { before: BeforeName, per: formatPerConversion(figures.visitsBefore / conversionsBefore), visits: figures.visitsBefore, conversions: conversionsBefore })
+        : every ? t("perConversionBeforeNone", { before: BeforeName }) : t("perConversionBeforeNoneSome", { kinds, before: beforeName }),
+    t("perConversionRead", { step }),
+    rows.some((row) => row.coarse) ? t("perConversionCoarse") : null,
+    lined ? null : t("perConversionBeforeLineShort"),
+  ].filter(Boolean).join(" ");
+  const beforeLine = (entry: ChartTooltipEntry) => entry.dataKey === "perConversionBefore";
+  // The point's figure, read from its row: a step with no conversion reads as a dash, never as nought.
+  const formatValue = (_value: number, entry: ChartTooltipEntry) => {
+    const row = entry.payload as CostRow | undefined;
+    return formatPerConversion(row ? (beforeLine(entry) ? row.perConversionBefore : row.perConversion) : null);
+  };
+  // The day, or days, the grey line's point was laid over from: "13 Sept".
+  const dayBefore = (row: CostRow) => {
+    const first = shiftDays(row.first, -shift);
+    const last = shiftDays(row.lastDay, -shift);
+    return first === last ? formatShortDay(first) : `${formatShortDay(first)} – ${formatShortDay(last)}`;
+  };
+  const seriesLabel = (entry: ChartTooltipEntry) => {
+    const row = entry.payload as CostRow | undefined;
+    const details = !row ? null
+      : beforeLine(entry) ? t("perConversionRowDated", { date: dayBefore(row), visits: row.visitsBefore ?? 0, conversions: row.conversionsBefore ?? 0 })
+        : t("perConversionRow", { visits: row.visits, conversions: row.conversions });
+    return (
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate">{entry.name}</span>
+        {details ? <span className="truncate text-[11px] text-muted">{details}</span> : null}
+      </span>
+    );
+  };
+  const drawn = rows.some((row) => row.perConversion !== null || row.perConversionBefore !== null);
+  const csv = () => toCsv(
+    ["day", tc("visits"), every ? tc("conversions") : `${tc("conversions")}: ${kinds}`, t("perConversionCsv"), ...(held ? [`${t("perConversionCsv")}, ${beforeName}`] : [])],
+    rows.map((row) => [row.day, row.visits, row.conversions, row.perConversion, ...(held ? [row.perConversionBefore] : [])]),
+  );
+  return (
+    <SearchConsoleChartCard
+      title={t("perConversionTitle")}
+      hint={hint}
+      // One kind alone has nothing to choose between.
+      controls={events.length > 1 ? controls : undefined}
+      exportName={exportName}
+      csv={csv}
+      host={status?.host ?? ""}
+      from={from}
+      to={to}
+      step={step}
+    >
+      {rows.length === 0 ? <p className="py-10 text-center text-[12px] text-muted">{empty ?? tc("empty")}</p>
+        : !drawn ? <p className="py-10 text-center text-[12px] text-muted">{t("perConversionNone")}</p>
+          : <SiteLineChart data={rows} series={series} sharedScale formatValue={formatValue} seriesLabel={seriesLabel} keepEmptyRows />}
     </SearchConsoleChartCard>
   );
 }

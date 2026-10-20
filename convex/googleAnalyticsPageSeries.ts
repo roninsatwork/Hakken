@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
-import { analyticsPackedRows } from "./googleAnalyticsSchema";
+import { analyticsPackedRows, pageSeriesListValidator, type PageSeriesList } from "./googleAnalyticsSchema";
 import { EVERY_DEVICE, channelKey, groupKeys, packList, slotKey, splitChannelKey, unpackPart, type Lead, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { addInto, blank } from "./googleAnalyticsRows";
 import { askList, countryIdOf, failed, openSession, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
@@ -27,6 +27,12 @@ import { monthStart, weekStart } from "./utils/searchConsolePacks";
 type Reader = { db: QueryCtx["db"] };
 export type SeriesList = "landing" | "page";
 const SERIES_LISTS: readonly SeriesList[] = ["landing", "page"];
+/**
+ * Each page as a landing page by channel, every device (page-conversion-explorer-plan.md): Google's channel, and the
+ * AI assistants' visits by their source beside it, so a page's chart can draw each channel over time.
+ */
+export type ChannelSeriesList = "landingChannel" | "landingAssistant";
+export const CHANNEL_SERIES_LISTS: readonly ChannelSeriesList[] = ["landingChannel", "landingAssistant"];
 
 /** Records written by one call, at most. */
 const RECORDS_PER_WRITE = 100;
@@ -53,19 +59,21 @@ export function pointOf(key: string): { grain: Grain; start: string } {
 /**
  * A page's points reshaped to the rule as of `newest`: a day past 90 into its
  * week, a week past a year into the month it starts in, anything past two
- * years gone; points that land on one key added up.
+ * years gone; points that land on one key added up. A point keyed with more
+ * beside it — a channel, by channel (`CHANNEL_SERIES_LISTS`) — keeps it.
  */
 export function reshaped(rows: readonly ListRow[], newest: string): ListRow[] {
   const floors = historyFloors(newest);
   const by = new Map<string, ListRow>();
   for (const row of rows) {
-    const point = pointOf(row.key);
+    const { channel: when, source: beside } = splitChannelKey(row.key);
+    const point = pointOf(when);
     let home: { grain: Grain; start: string } | null;
     if (point.grain === "day") home = homeOf(point.start, newest);
     else if (point.grain === "week") home = point.start >= floors.week ? point : monthOfWeek(point.start) >= floors.month ? { grain: "month", start: monthOfWeek(point.start) } : null;
     else home = point.start >= floors.month ? point : null;
     if (!home) continue;
-    const key = pointKey(home.grain, home.start);
+    const key = beside ? channelKey(pointKey(home.grain, home.start), beside) : pointKey(home.grain, home.start);
     const into = by.get(key) ?? blank(key);
     addInto(into, row);
     by.set(key, into);
@@ -75,14 +83,14 @@ export function reshaped(rows: readonly ListRow[], newest: string): ListRow[] {
 
 /** The last day a point stands for, to say when a page was last seen. */
 function lastDayOf(key: string): string {
-  const point = pointOf(key);
+  const point = pointOf(splitChannelKey(key).channel);
   if (point.grain === "day") return point.start;
   if (point.grain === "week") return shiftDay(point.start, 6);
   return shiftDay(`${shiftDay(point.start, 32).slice(0, 7)}-01`, -1);
 }
 
 const recordValidator = v.object({
-  list: v.union(v.literal("landing"), v.literal("page")),
+  list: pageSeriesListValidator,
   page: v.string(),
   device: v.string(),
   part: v.object(analyticsPackedRows),
@@ -155,7 +163,37 @@ async function askPages(ctx: ActionCtx, session: Session, target: CollectTarget,
   return { ok: true as const, records: [...records.values()] };
 }
 
-async function writeRecords(ctx: ActionCtx, target: CollectTarget, connectionId: Doc<"googleAnalyticsConnections">["_id"], newest: string, records: ReadonlyArray<{ list: SeriesList; page: string; device: string; rows: ListRow[] }>) {
+/**
+ * Each page's points by channel from one list asked of Google, led by `lead`: rows keyed page, then the point and
+ * the channel (`landingAssistant`'s, Google's channel and the assistant's source), every device only — a page's
+ * records by device times its channels would be the store's biggest (page-conversion-explorer-plan.md).
+ */
+async function askPageChannels(ctx: ActionCtx, session: Session, target: CollectTarget, list: ChannelSeriesList, lead: Lead, range: { from: string; to: string }, country?: string) {
+  const asked = await askList(session, country ? { ...target, country: countryIdOf(country) } : target, list, [lead], range);
+  if (!asked.ok) return asked;
+  const grain: Grain = lead === "isoYearIsoWeek" ? "week" : lead === "yearMonth" ? "month" : "day";
+  const rows: ListRow[] = [];
+  for (const [group, groupRows] of asked.groups) {
+    const [when] = groupKeys(group);
+    for (const row of groupRows) {
+      const { channel: page, source: channel } = splitChannelKey(row.key);
+      rows.push({ ...row, key: channelKey(page, channelKey(pointKey(grain, when), channel)) });
+    }
+  }
+  const numbered = await numberPages(ctx, target, rows, list, true);
+  const device = dayDevice(EVERY_DEVICE, country);
+  const records = new Map<string, { list: PageSeriesList; page: string; device: string; rows: ListRow[] }>();
+  for (const row of numbered) {
+    const { channel: page, source: rest } = splitChannelKey(row.key);
+    if (page === "(not set)") continue;
+    const record = records.get(page) ?? { list, page, device, rows: [] };
+    record.rows.push({ ...row, key: rest });
+    records.set(page, record);
+  }
+  return { ok: true as const, records: [...records.values()] };
+}
+
+async function writeRecords(ctx: ActionCtx, target: CollectTarget, connectionId: Doc<"googleAnalyticsConnections">["_id"], newest: string, records: ReadonlyArray<{ list: PageSeriesList; page: string; device: string; rows: ListRow[] }>) {
   for (const batch of writeBatches(records.map((record) => ({ list: record.list, page: record.page, device: record.device, part: packList("series", record.rows, target.events)[0] })))) {
     await ctx.runMutation(internal.googleAnalyticsPageSeries.writePageSeries, { connectionId, property: target.property!, newest, records: batch });
   }
@@ -189,14 +227,23 @@ export async function collectPageDays(ctx: ActionCtx, session: Session, connecti
   const newestDay = country ? target.countryHistory.find((one) => one.country === country)?.newestDay : target.newestDay;
   // As many days an ask as keep the answer small: a big website's a day at a time (ga-big-site-reliability-plan.md BR5).
   const pages = await ctx.runQuery(internal.googleAnalyticsPageSeries.pagesSeenOf, { companyWebsiteId: target.companyWebsiteId, ...(country ? { country } : {}) });
+  const newest = range.to > (newestDay ?? "") ? range.to : newestDay!;
   for (const piece of spans(range.from, shiftDay(range.to, 1), nextDay, unitsPerAsk(pages))) {
     for (const list of SERIES_LISTS) {
       const asked = await askPages(ctx, session, target, list, "date", piece, country);
       if (!asked.ok) return failed(session, asked);
       rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
-      await writeRecords(ctx, target, connectionId, range.to > (newestDay ?? "") ? range.to : newestDay!, asked.records);
+      await writeRecords(ctx, target, connectionId, newest, asked.records);
+    }
+    // Each page by channel too, every device (page-conversion-explorer-plan.md): from the first night it is kept.
+    for (const list of CHANNEL_SERIES_LISTS) {
+      const asked = await askPageChannels(ctx, session, target, list, "date", piece, country);
+      if (!asked.ok) return failed(session, asked);
+      rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
+      await writeRecords(ctx, target, connectionId, newest, asked.records);
     }
   }
+  await ctx.runMutation(internal.googleAnalyticsPageSeries.notePageChannelsFrom, { connectionId, property: target.property!, from: range.from, ...(country ? { country } : {}) });
   return { ok: true, rows, requests: session.requests };
 }
 
@@ -273,14 +320,23 @@ export const pagesSeenOf = internalQuery({
 });
 
 /**
+ * A page fill's arguments: the fill's own, and `channelsOnly` for a website whose pages were filled before they were
+ * kept by channel (page-conversion-explorer-plan.md) — only the lists by channel, from their own place. The validator
+ * is built where the step is (`googleAnalyticsSteps.ts`): built here, it would spread the fill's before that module
+ * has loaded.
+ */
+export type PageFillArgs = FillArgs & { channelsOnly?: boolean };
+
+/**
  * Each page's two years asked of Google once (SF5, SF9): months, weeks and
  * days, as many an ask as keep the answer small (BR5). A step of the fill
  * (`googleAnalyticsSteps.fillPageHistory`): each piece's place is noted once
  * both lists are written, so a fill stopped part-way starts after it (BR6).
  * Run by hand only when Anthony says:
- * `npx convex run googleAnalyticsSteps:fillPageHistory '{"connectionId": "…"}'`.
+ * `npx convex run googleAnalyticsSteps:fillPageHistory '{"connectionId": "…"}'`; a website filled before its pages
+ * were kept by channel takes `"channelsOnly": true`, which asks only the lists by channel.
  */
-export async function fillPageHistoryStep(ctx: ActionCtx, args: FillArgs): Promise<FillOutcome> {
+export async function fillPageHistoryStep(ctx: ActionCtx, args: PageFillArgs): Promise<FillOutcome> {
   const begun = await beginFillStep(ctx, "GA_FILL_PAGES", args);
   if (!begun.go) return begun.outcome;
   const close = async (outcome: FillOutcome) => {
@@ -307,25 +363,57 @@ export async function fillPageHistoryStep(ctx: ActionCtx, args: FillArgs): Promi
     () => ({ pieces: pieces.length, rows, requests: opened.session.requests }),
     begun.watched,
   );
-  const reached = fillReachedOf(target, country, PAGES_FILL);
+  // A page fill asks both lists and each by channel; a channels-only fill, the lists by channel from its own place.
+  const fill = args.channelsOnly ? PAGE_CHANNELS_FILL : PAGES_FILL;
+  const reached = fillReachedOf(target, country, fill);
   for (const piece of pieces) {
     if (piece.from > piece.to || (reached && piece.to <= reached)) continue;
     if (step.timeUp()) return await step.handOn();
-    for (const list of SERIES_LISTS) {
+    for (const list of args.channelsOnly ? [] : SERIES_LISTS) {
       const asked = await askPages(ctx, opened.session, target, list, piece.lead, piece, args.country);
       if (!asked.ok) return await step.stopped(failed(opened.session, asked));
       rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
       await writeRecords(ctx, target, args.connectionId, newest, asked.records);
     }
-    await ctx.runMutation(internal.googleAnalyticsFillAfter.noteFillReached, { connectionId: args.connectionId, property: target.property, country, fill: PAGES_FILL, to: piece.to });
-    await step.piece(`each page, to ${piece.to}`, args);
+    for (const list of CHANNEL_SERIES_LISTS) {
+      const asked = await askPageChannels(ctx, opened.session, target, list, piece.lead, piece, args.country);
+      if (!asked.ok) return await step.stopped(failed(opened.session, asked));
+      rows += asked.records.reduce((sum, record) => sum + record.rows.length, 0);
+      await writeRecords(ctx, target, args.connectionId, newest, asked.records);
+    }
+    await ctx.runMutation(internal.googleAnalyticsFillAfter.noteFillReached, { connectionId: args.connectionId, property: target.property, country, fill, to: piece.to });
+    await step.piece(`each page${args.channelsOnly ? " by channel" : ""}, to ${piece.to}`, args);
   }
-  await ctx.runMutation(internal.googleAnalyticsPageSeries.notePagesHeld, { connectionId: args.connectionId, property: target.property, from: floors.month, ...(args.country ? { country: args.country } : {}) });
+  const held = { connectionId: args.connectionId, property: target.property, from: floors.month, ...(args.country ? { country: args.country } : {}) };
+  if (!args.channelsOnly) await ctx.runMutation(internal.googleAnalyticsPageSeries.notePagesHeld, held);
+  await ctx.runMutation(internal.googleAnalyticsPageSeries.notePageChannelsFrom, { ...held, filled: true });
   return await step.done({ ok: true, pieces: pieces.length, rows, requests: opened.session.requests });
 }
 
-/** The page fill's name among the fills' places (BR6). */
+/** The page fill's name among the fills' places (BR6), and the channels-only fill's. */
 export const PAGES_FILL = "pages";
+export const PAGE_CHANNELS_FILL = "pageChannels";
+
+/**
+ * The first day each page is held from by channel (page-conversion-explorer-plan.md): the earliest a night's
+ * collection kept, or the start of the two years once a fill has run (`filled`), when its place is no longer needed.
+ */
+export const notePageChannelsFrom = internalMutation({
+  args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), from: v.string(), country: v.optional(v.string()), filled: v.optional(v.boolean()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.property !== args.property) return null;
+    const held = coverageOf(connection, args.country ?? "").pageChannelsFrom;
+    const from = held && held < args.from ? held : args.from;
+    if (from === held && !args.filled) return null;
+    const fillsReached = args.filled ? withoutReached(connection, args.country ?? "", [PAGE_CHANNELS_FILL]) : connection.fillsReached;
+    await ctx.db.patch(connection._id, args.country
+      ? { countryHistory: withCoverage(connection, args.country, { pageChannelsFrom: from }), fillsReached, updatedAt: Date.now() }
+      : { pageChannelsFrom: from, fillsReached, updatedAt: Date.now() });
+    return null;
+  },
+});
 
 export const notePagesHeld = internalMutation({
   args: { connectionId: v.id("googleAnalyticsConnections"), property: v.string(), from: v.string(), country: v.optional(v.string()) },

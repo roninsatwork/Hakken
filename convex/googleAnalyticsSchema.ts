@@ -205,6 +205,11 @@ export const analyticsListValidator = v.union(
  * from it — the website's totals, its channels, each event, each campaign,
  * new and returning people, and a shop's products.
  */
+/** Each page over time (ga-stored-figures-plan.md SF5): as a landing page and a page viewed, and as a landing page by channel. */
+export const PAGE_SERIES_LISTS = ["landing", "page", "landingChannel", "landingAssistant"] as const;
+export type PageSeriesList = (typeof PAGE_SERIES_LISTS)[number];
+export const pageSeriesListValidator = v.union(v.literal("landing"), v.literal("page"), v.literal("landingChannel"), v.literal("landingAssistant"));
+
 export const DAY_FACT_LISTS = ["total", "channel", "event", "campaign", "visitorType", "product"] as const;
 export type DayFactList = (typeof DAY_FACT_LISTS)[number];
 export const dayFactListValidator = v.union(
@@ -413,6 +418,11 @@ export const googleAnalyticsTables = {
      */
     pageHistoryFrom: v.optional(v.string()),
     /**
+     * The first day each page is held from by channel, every device (page-conversion-explorer-plan.md): the first
+     * night's collection that kept it, or the start of the two years once its fill has run.
+     */
+    pageChannelsFrom: v.optional(v.string()),
+    /**
      * Each other home country's days, and its history and pages filled, as the
      * main country's fields above (ga-stored-figures-plan.md SF7): its records
      * are kept beside the main one's, their device `mobile|fra` (`dayDevice`).
@@ -424,6 +434,7 @@ export const googleAnalyticsTables = {
       historyFrom: v.optional(v.string()),
       historyFilled: v.optional(v.array(dayFactListValidator)),
       pageHistoryFrom: v.optional(v.string()),
+      pageChannelsFrom: v.optional(v.string()),
     }))),
     lastCollectedAt: v.optional(v.number()),
     /** When the 7 and 30 days were last asked of Google (daily), and the 90 days and 12 months (weekly). */
@@ -516,7 +527,11 @@ export const googleAnalyticsTables = {
    */
   googleAnalyticsPageSeries: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
-    list: v.union(v.literal("landing"), v.literal("page")),
+    /**
+     * `landing` and `page` by point and device; `landingChannel` and `landingAssistant` by point and channel — the
+     * assistants' by Google's channel and their source — every device only (page-conversion-explorer-plan.md).
+     */
+    list: pageSeriesListValidator,
     /** The page's number on the website (`holdPageRefs`). */
     page: v.string(),
     device: v.string(),

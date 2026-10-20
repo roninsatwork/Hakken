@@ -31,9 +31,15 @@ export const fillHistory = internalAction({
   handler: async (ctx, args): Promise<FillOutcome> => await fillHistoryStep(ctx, args),
 });
 
-/** A step of each page's two-year fill (`fillPageHistoryStep`). */
+/**
+ * A page fill's arguments: the fill's own, and `channelsOnly` for a website filled before its pages were kept by
+ * channel (page-conversion-explorer-plan.md).
+ */
+const pageFillArgs = { ...fillArgs, channelsOnly: v.optional(v.boolean()) };
+
+/** A step of each page's two-year fill (`fillPageHistoryStep`), or of its lists by channel alone (`channelsOnly`). */
 export const fillPageHistory = internalAction({
-  args: fillArgs,
+  args: pageFillArgs,
   returns: fillOutcomeValidator,
   handler: async (ctx, args): Promise<FillOutcome> => await fillPageHistoryStep(ctx, args),
 });

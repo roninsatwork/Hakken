@@ -110,6 +110,30 @@ describe("channels over time", () => {
     expect(visitsOf(ninety.now)).toBe(900);
   });
 
+  test("the days just before, day for day: 7 and 30 days only, each day laid over the one its period length later, never asking Google", async () => {
+    const t = harness();
+    // Before the last 30 days, the lead from organic search never came: 16 visits for each conversion, against 8 since.
+    const visits = twoYears().map((visit) => (visit.date < shiftDay(NEWEST, -29) && visit.events?.generate_lead ? { ...visit, events: { generate_lead: [0, 0] as [number, number] } } : visit));
+    const { siteId, user, google } = await collectedWebsite(t, visits, encryptConnectorToken, { firstNight: false });
+    const asked = google.calls.length;
+    const before = (period: "7" | "30" | "90") => user.query(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, { siteId, period, device: "" });
+    const month = await before("30");
+    expect(month).toMatchObject({ held: true, shift: 30, events: ["generate_lead", "click_tel", "sign_up"] });
+    // Days 31 to 60 back, each dated onto the day 30 later: one a day across the last 30 days.
+    expect(month.points.map((point) => point.day)).toEqual(Array.from({ length: 30 }, (_, at) => shiftDay(NEWEST, at - 29)));
+    expect(month.points.every((point) => point.visits === 16 && point.conversions === 1)).toBe(true);
+    // Each kind's own count, for the tick boxes: only the call clicked then.
+    expect(month.points.every((point) => point.events[0] === 0 && point.events[1] === 1 && point.events[2] === 0)).toBe(true);
+    // The 7 days before are inside the last 30: both leads.
+    const week = await before("7");
+    expect(week).toMatchObject({ held: true, shift: 7 });
+    expect(week.points.map((point) => point.day)).toEqual(Array.from({ length: 7 }, (_, at) => shiftDay(NEWEST, at - 6)));
+    expect(week.points.every((point) => point.visits === 16 && point.conversions === 2)).toBe(true);
+    // Past 90 days only weeks and months are kept: no line for the longer periods.
+    expect(await before("90")).toEqual({ held: false, shift: 90, points: [], events: ["generate_lead", "click_tel", "sign_up"] });
+    expect(google.calls.length).toBe(asked);
+  });
+
   test("rolling on: every day fact's day past 90 goes into its week, a week past a year into its month, the figures kept whole", async () => {
     const t = harness();
     const { siteId } = await collectedWebsite(t, twoYears(), encryptConnectorToken);

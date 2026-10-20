@@ -42,6 +42,12 @@ export function formatPerVisit(value: number | null | undefined): string {
   return value.toFixed(1);
 }
 
+/** Visits for one conversion: whole from ten up ("44"), to one decimal below it ("3.2"), or a dash with no conversion. */
+export function formatPerConversion(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return value >= 10 ? Math.round(value).toLocaleString("en-GB") : String(Math.round(value * 10) / 10);
+}
+
 /** Seconds engaged a visit as "1m 05s". */
 export function formatTime(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "–";

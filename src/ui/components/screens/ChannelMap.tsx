@@ -51,7 +51,7 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend }
         const total = rowVisits(row);
         return (
           <div key={row.key} className="grid items-stretch gap-1" style={template}>
-            <span className="flex flex-col items-end justify-center pr-3 leading-tight">
+            <span className="flex flex-col items-end justify-center pr-3 text-right leading-tight">
               {row.href ? <Link href={row.href} className="text-[12px] text-foreground hover:underline">{row.label}</Link> : <span className="text-[12px] text-foreground">{row.label}</span>}
               <span className="text-[11px] text-muted">{row.total}</span>
             </span>
