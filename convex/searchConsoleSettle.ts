@@ -127,7 +127,7 @@ export const settlePart = internalAction({
           const held = { pruned: false };
           written += await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, stage === "SHORT"
             ? { searchType: args.searchType, long: false, stopAt, careful: begun.careful, held }
-            : { searchType: args.searchType, long: true, onlyLong: true, longPeriod: stage === "NINETY" ? "90" : "365", stopAt, careful: begun.careful, held, ...(args.carry ? { carry: args.carry } : {}) });
+            : { searchType: args.searchType, long: true, onlyLong: true, longGroup: stage === "NINETY" ? "QUARTERS" : "YEAR", stopAt, careful: begun.careful, held, ...(args.carry ? { carry: args.carry } : {}) });
           // A period's pairs past what one job may hold: never in silence (RR2).
           const { runId } = await runOf(ctx, args.connectionId, args.token);
           if (held.pruned && runId) {

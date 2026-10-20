@@ -10,9 +10,11 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
+import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
 import { SiteDateRange } from "../../sites/_components/SiteDateRange";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
+import { OpeningPeriodContext } from "../../sites/_components/useCalendarPeriod";
 import { sharedSiteQuery } from "../../sites/_components/useSiteParam";
 import { SearchConsoleCountryPicker } from "../_components/SearchConsoleCountryPicker";
 import { SearchConsoleMenu } from "../_components/SearchConsoleMenu";
@@ -69,7 +71,8 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
   const shown = connection?.property && state !== "CHOOSING" ? connection.property : null;
 
   return (
-    <>
+    // A website whose days begin this month opens on This month until the 1st (agreed 2026-10-20).
+    <OpeningPeriodContext.Provider value={openingPeriod(connection?.daysFrom, ukDay())}>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
@@ -100,8 +103,8 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
           action={
             <div className="flex flex-wrap items-end gap-3">
               <SearchConsoleCountryPicker />
-              {/* As far back as Google keeps, sixteen months (insights-intelligence-plan.md phase 9). */}
-              <SiteDateRange oldest={status.historyFrom} />
+              {/* The date menu's seven calendar periods (calendar-periods-plan.md, phase 4). */}
+              <SiteDateRange />
             </div>
           }
           note={connection?.newestDay && state !== "CHOOSING" ? t("figuresTo", { day: formatDay(connection.newestDay) }) : null}
@@ -119,6 +122,6 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
           </section>
         </div>
       </div>
-    </>
+    </OpeningPeriodContext.Provider>
   );
 }

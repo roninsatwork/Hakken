@@ -113,7 +113,7 @@ describe("tidying the figures kept before 2026-10-05", () => {
 
     // The 90 days: "almost there" at position 12, "deep and lonely" at 35 on one page, neither clicked.
     await t.run(async (ctx) => await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: holdId, searchType: "web", list: "query", period: "90", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
+      companyWebsiteId: holdId, searchType: "web", list: "query", period: "thisQuarter", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
       keys: ["almost there", "deep and lonely"], clicks: [0, 0], impressions: [10, 10], positionSums: [120, 350], counts: [1, 1], builtAt: 1,
     }));
     // "deep and lonely", and the setup's "plumber leeds", missing from the 90 days: each a line and a register row.
@@ -129,18 +129,18 @@ describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
     const { t, holdId } = await setup();
     await t.run(async (ctx) => {
       await ctx.db.insert("searchConsolePeriods", {
-        companyWebsiteId: holdId, searchType: "web", list: "query", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
+        companyWebsiteId: holdId, searchType: "web", list: "query", period: "thisMonth", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
         keys: ["plumber leeds", "boiler repair"], clicks: [3, 0], impressions: [40, 2], positionSums: [120, 18], counts: [2, 1], volumes: [-1, 90], builtAt: 1,
         tops: ["https://acme-shop.test/", "https://acme-shop.test/"], kinds: ["BUYING", "BUYING"],
       });
       // A page list: its tops are its top keywords, never booked, so once its kinds are it is done.
       await ctx.db.insert("searchConsolePeriods", {
-        companyWebsiteId: holdId, searchType: "web", list: "page", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
+        companyWebsiteId: holdId, searchType: "web", list: "page", period: "thisMonth", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
         keys: ["https://acme-shop.test/"], tops: ["plumber leeds"], kinds: ["HOME"], ...packedColumns({ clicks: [3], impressions: [40], positionSums: [120], counts: [1] }), builtAt: 1,
       });
       // Pages competing, its numbers already packed (part 8.1) and its pages kept in full: booked (part 8.2).
       await ctx.db.insert("searchConsolePeriods", {
-        companyWebsiteId: holdId, searchType: "web", list: "competing", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
+        companyWebsiteId: holdId, searchType: "web", list: "competing", period: "thisMonth", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
         keys: ["plumber leeds", "plumber leeds"], pages: ["https://acme-shop.test/", "https://acme-shop.test/plumbers/"],
         ...packedColumns({ clicks: [3, 1], impressions: [30, 10], positionSums: [90, 50] }), builtAt: 1,
       });

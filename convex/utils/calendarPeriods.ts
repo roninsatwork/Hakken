@@ -101,6 +101,16 @@ export function periodBounds(period: CalendarPeriod, today: string): { from: str
 }
 
 /**
+ * What a website's screens open on: Last month, unless the website holds nothing of it yet — its first day held
+ * falls after last month ended — when it opens on This month until the 1st, so a new website never opens empty
+ * (agreed 2026-10-20). With nothing held at all, Last month, which says so.
+ */
+export function openingPeriod(heldFrom: string | null | undefined, today: string): CalendarPeriod {
+  if (heldFrom && heldFrom > periodBounds(OPENING_PERIOD, today).to) return "thisMonth";
+  return OPENING_PERIOD;
+}
+
+/**
  * The days of a period, or of the span before one: inclusive `from` and `to`, and whether they are the whole period
  * (false for one still going, and for one whose last days its source hasn't sent yet).
  */

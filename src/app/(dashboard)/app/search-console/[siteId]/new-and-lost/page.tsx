@@ -31,6 +31,7 @@ import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { newLostSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const FIRSTS = { key: "asc", status: "asc", when: "desc", clicks: "desc", impressions: "desc", position: "asc" } as const;
 
@@ -59,6 +60,7 @@ export default function SearchConsoleNewLostPage() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const periodWords = useSearchConsolePeriodWords(range.period);
   const [country] = useSearchConsoleCountry();
   const [search, setSearch, term] = useSiteSearch();
   const [what, setWhat] = useSiteParam<"" | "new" | "lost">("what", "", ["", "new", "lost"]);
@@ -73,6 +75,7 @@ export default function SearchConsoleNewLostPage() {
       searchType: kind,
       from: range.from,
       to: range.to,
+      period: range.period,
       step: range.step,
       ...countryArg(country),
       ...(term ? { q: term } : {}),
@@ -84,7 +87,6 @@ export default function SearchConsoleNewLostPage() {
     : null;
   const list = useSiteListPage(api.searchConsoleChanges.searchConsoleNewLost, ask ?? "skip");
   const counts = list.result?.counts ?? null;
-  const days = range.days;
   const host = status?.host ?? "";
   const periods = list.result?.periods ?? [];
   // Each day, week or month dated by its days, so the chart marks the Google updates inside them.
@@ -104,14 +106,14 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description", { days: status?.limits.lostAfterDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="newLost" seen={counts ? newLostSees(counts, days) : null} />
+          <SearchConsoleSees screen="newLost" seen={counts ? newLostSees(counts, range.period) : null} />
           <ResultKindSwitch />
           {list.result?.notKept ? <p className="text-[13px] text-secondary">{t("newLost.notKept")}</p> : country && list.result?.notReady ? <CountryNotReady country={country} /> : (
             <>
               {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
               <FigureRow>
-                <Figure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-                <Figure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+                <Figure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
+                <Figure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
                 <Figure label={t("newLost.newPages")} value={counts ? formatNumber(counts.newPages) : "…"} detail={<span className="text-secondary">{t("newLost.firstTime")}</span>} />
                 <Figure label={t("newLost.lostPages")} value={counts ? formatNumber(counts.lostPages) : "…"} detail={<span className="text-secondary">{t("newLost.notIn14", { days: status?.limits.lostAfterDays ?? "…" })}</span>} />
               </FigureRow>

@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { readList } from "./searchConsoleLists";
@@ -8,6 +8,7 @@ import { bookRecords } from "./searchConsolePeriodBooks";
 import { inBook, termsOf, type PartToWrite } from "./searchConsolePeriods";
 import { metered } from "@/src/test/readMeter";
 import { heldBy } from "@/src/test/heapMeter";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Search Console at five times morehandles.co.uk's size
@@ -59,11 +60,14 @@ const keyword = (index: number) => `${WORDS[index % 16]} ${WORDS[(index >> 4) % 
 /** A page address of about its length. */
 const page = (index: number) => `https://www.big-shop.co.uk/${WORDS[index % 16]}-${WORDS[(index >> 4) % 16]}/${WORDS[(index >> 8) % 16]}-${index}.html`;
 
-type Slot = { list: "query" | "page" | "competing"; period: "30" | "90"; which: "NOW" | "BEFORE"; from: string; to: string };
+type Slot = { list: "query" | "page" | "competing"; period: "thisMonth" | "thisYear"; which: "NOW" | "BEFORE"; from: string; to: string };
 
 describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () => {
   const t = convexTest(schema, import.meta.glob("./**/*.*s"));
   let siteId: Id<"companyWebsites">;
+  // The day after Google's newest: this year holds the big lists, this month the short ones (calendar-periods-plan.md, phase 4).
+  beforeEach(() => useFixedDay("2026-10-07"));
+  afterEach(() => vi.useRealTimers());
 
   beforeAll(async () => {
     siteId = await t.run(async (ctx) => {
@@ -101,12 +105,12 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
         lists.push({ slot, parts });
       };
       const keywordRow = (index: number) => ({ key: keyword(index), top: page(index % PAGES) });
-      make({ list: "query", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, KEYWORDS_90, keywordRow);
-      make({ list: "query", period: "30", which: "NOW", from: "2026-09-07", to: NEWEST }, KEYWORDS_30, keywordRow);
-      make({ list: "query", period: "30", which: "BEFORE", from: "2026-08-08", to: "2026-09-06" }, KEYWORDS_30_BEFORE, keywordRow);
-      make({ list: "page", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, PAGES_90, (index) => ({ key: page(index), top: keyword(index) }));
+      make({ list: "query", period: "thisYear", which: "NOW", from: "2026-07-09", to: NEWEST }, KEYWORDS_90, keywordRow);
+      make({ list: "query", period: "thisMonth", which: "NOW", from: "2026-09-07", to: NEWEST }, KEYWORDS_30, keywordRow);
+      make({ list: "query", period: "thisMonth", which: "BEFORE", from: "2026-08-08", to: "2026-09-06" }, KEYWORDS_30_BEFORE, keywordRow);
+      make({ list: "page", period: "thisYear", which: "NOW", from: "2026-07-09", to: NEWEST }, PAGES_90, (index) => ({ key: page(index), top: keyword(index) }));
       // Pages competing: each keyword shown with two or three pages.
-      make({ list: "competing", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, COMPETING_90, (index) => ({
+      make({ list: "competing", period: "thisYear", which: "NOW", from: "2026-07-09", to: NEWEST }, COMPETING_90, (index) => ({
         key: keyword(Math.floor(index / 2.35)), page: page((index * 7) % PAGES),
       }));
       const places = { query: new Map<string, number>(), page: new Map<string, number>() };
@@ -152,32 +156,32 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
   // Before part 1 (2026-10-08, lists holding every row's text): Keywords for 90 days read 19.4 MiB, for 30 days compared
   // 16.3, searched 19.4, Pages competing 40.1 — each past Convex's whole 16 MiB, so each screen would fail; Pages 3.2.
   // With each keyword and page once in the build's book (§5.1), each within rule 4's share.
-  test("Keywords for 90 days — within half the limit", async () => {
-    const read = await reads({ dimension: "query", from: "2026-07-09" });
+  test("Keywords for this year — within half the limit", async () => {
+    const read = await reads({ dimension: "query", from: "2026-01-01" });
     expect(read.bytes).toBeLessThan(HALF);
     expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
-  test("Keywords for 30 days, compared with the 30 before — within half the limit", async () => {
-    const read = await reads({ dimension: "query", from: "2026-09-07" });
+  test("Keywords for this month, compared with the same days last month — within half the limit", async () => {
+    const read = await reads({ dimension: "query", from: "2026-10-01" });
     expect(read.bytes).toBeLessThan(HALF);
     expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
-  test("Keywords for 90 days with a search — within three quarters", async () => {
-    const read = await reads({ dimension: "query", from: "2026-07-09", q: "door brass" });
+  test("Keywords for this year with a search — within three quarters", async () => {
+    const read = await reads({ dimension: "query", from: "2026-01-01", q: "door brass" });
     expect(read.bytes).toBeLessThan(THREE_QUARTERS);
     expect(read.holds).toBeLessThan(THREE_QUARTERS_MEMORY);
   });
 
-  test("Pages competing for 90 days — within half the limit", async () => {
-    const read = await reads({ dimension: "query", from: "2026-07-09", view: "competing" });
+  test("Pages competing for this year — within half the limit", async () => {
+    const read = await reads({ dimension: "query", from: "2026-01-01", view: "competing" });
     expect(read.bytes).toBeLessThan(HALF);
     expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
-  test("Pages for 90 days — within half the limit", async () => {
-    const read = await reads({ dimension: "page", from: "2026-07-09" });
+  test("Pages for this year — within half the limit", async () => {
+    const read = await reads({ dimension: "page", from: "2026-01-01" });
     expect(read.bytes).toBeLessThan(HALF);
     expect(read.holds).toBeLessThan(HALF_MEMORY);
   });

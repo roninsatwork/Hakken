@@ -97,8 +97,8 @@ export const WEEKS_IN: Record<BingPeriod, number> = { "7": 1, "30": 4, "90": 13,
 /** The periods built with the period before them, as Search Console's 7, 30 and 90 days are. */
 export const WITH_BEFORE: ReadonlySet<BingPeriod> = new Set(["7", "30", "90"]);
 
-/** Search Console's ready-made period of the same length, for Google's column; none for six months. */
-export const GOOGLE_PERIOD_OF: Partial<Record<BingPeriod, "7" | "30" | "90" | "365">> = { "7": "7", "30": "30", "90": "90", "365": "365" };
+/** Search Console's ready-made period nearest in length, for Google's column; none for six months (calendar periods for Bing follow in its own phase). */
+export const GOOGLE_PERIOD_OF: Partial<Record<BingPeriod, "lastWeek" | "lastMonth" | "lastQuarter" | "thisYear">> = { "7": "lastWeek", "30": "lastMonth", "90": "lastQuarter", "365": "thisYear" };
 
 const DAY_MS = 86_400_000;
 

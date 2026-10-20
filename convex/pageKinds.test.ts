@@ -64,7 +64,7 @@ const PAGES: Array<[string, number, string]> = [
 
 async function pagesPeriod(t: Harness, holdId: Id<"companyWebsites">) {
   await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
-    companyWebsiteId: holdId, searchType: "web", list: "page", period: "7", which: "NOW", from: "2026-09-20", to: "2026-09-26", part: 0,
+    companyWebsiteId: holdId, searchType: "web", list: "page", period: "lastWeek", which: "NOW", from: "2026-09-14", to: "2026-09-20", part: 0,
     keys: PAGES.map(([page]) => url(page)),
     clicks: PAGES.map(([, clicks]) => clicks),
     impressions: PAGES.map(([, clicks]) => clicks * 10),
@@ -90,7 +90,8 @@ async function classify(t: Harness, holdId: Id<"companyWebsites">, prefix = "") 
   });
 }
 
-const week = { searchType: "web" as const, dimension: "page" as const, from: "2026-09-20", to: "2026-09-26", page: 1, rows: 25 };
+/** Last week on Sunday 27 September: Monday 14 to Sunday 20. */
+const week = { searchType: "web" as const, dimension: "page" as const, from: "2026-09-14", to: "2026-09-20", page: 1, rows: 25 };
 const kindsOf = (rows: Array<{ key: string; kind: string | null }>) => Object.fromEntries(rows.map((row) => [row.key.replace(url(""), ""), row.kind]));
 
 beforeEach(() => {

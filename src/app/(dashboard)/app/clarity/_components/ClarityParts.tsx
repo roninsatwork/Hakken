@@ -193,7 +193,9 @@ export function useBeforeName(): (chosen: CalendarPeriod, capital?: boolean) => 
 /** Clarity has sent none of the period yet (rule 9): one line, with its newest day, in place of empty figures. */
 export function useWaitingWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod) => string | null {
   const tp = useTranslations("common.periods");
-  return (period, chosen) => (period?.waiting && period.newest ? tp("noDaysYet", { source: "Microsoft Clarity", unit: unitOf(chosen), day: formatDay(period.newest) }) : null);
+  // The product's name as the menu names it.
+  const source = useTranslations("sidebar")("clarity");
+  return (period, chosen) => (period?.waiting && period.newest ? tp("noDaysYet", { source, unit: unitOf(chosen), day: formatDay(period.newest) }) : null);
 }
 
 /**

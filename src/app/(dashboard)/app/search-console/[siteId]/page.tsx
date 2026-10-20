@@ -27,7 +27,7 @@ export default function SearchConsolePerformancePage() {
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const { figures: performance, problem, retry } = useSiteFiguresFor(
-    status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to } : null,
+    status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to, period: range.period } : null,
   );
   const totals = performance?.totals ?? null;
   // Google's sixteen months still coming in for the country read, and where its days start until then
@@ -42,7 +42,7 @@ export default function SearchConsolePerformancePage() {
       <PageHeader icon={<LineChart className="h-5 w-5 text-brand" />} title={t("performance.title")} description={t("performance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="performance" seen={performance && !problem ? performanceSees(totals, performance.previous, range.days) : null} />
+          <SearchConsoleSees screen="performance" seen={performance && !problem ? performanceSees(totals, performance.previous, range.period) : null} />
           <ResultKindSwitch />
           {problem ? (
             <LiveProblem problem={problem} retry={retry} />

@@ -9,6 +9,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
+import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
 import { SiteDateRange } from "../_components/SiteDateRange";
 import { formatDay } from "../_components/siteFormat";
 import { heldIcon } from "../_components/siteGroups";
@@ -17,6 +18,7 @@ import { SiteMenu } from "../_components/SiteMenu";
 import { isSiteMenuPath, setupMet, setupPaused, showsDates, sitePageForPath, switchHref } from "../_components/sitePages";
 import { SiteSwitcher } from "../_components/SiteSwitcher";
 import { useListBack } from "../_components/siteRecordLinks";
+import { OpeningPeriodContext } from "../_components/useCalendarPeriod";
 import { useSite, useSiteId } from "../_components/useSite";
 import { sharedSiteQuery } from "../_components/useSiteParam";
 
@@ -67,7 +69,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <>
+    // A website first checked this month opens on This month until the 1st (agreed 2026-10-20).
+    <OpeningPeriodContext.Provider value={openingPeriod(site.heldFrom, ukDay())}>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
@@ -100,7 +103,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               )}
             </>
           }
-          action={showsDates(pathname, siteId) ? <SiteDateRange calendar /> : undefined}
+          action={showsDates(pathname, siteId) ? <SiteDateRange /> : undefined}
         />
 
         {!site.checked && (
@@ -131,6 +134,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </section>
         </div>
       </div>
-    </>
+    </OpeningPeriodContext.Provider>
   );
 }

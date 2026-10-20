@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { canExecuteTool, type ToolHandlerExecutionInput } from "./aiToolExecutionService";
@@ -7,6 +7,7 @@ import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
 import schema from "./schema";
 import { proposalFromToolCalls } from "./utils/hakkenTaskProposals";
 import { weekdayIn } from "./utils/hakkenTaskTiming";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Setting a Hakken task up in Ask Hakken, item 1.2 of
@@ -184,12 +185,17 @@ describe("who may have the Assistant propose", () => {
 });
 
 describe("a weekly report, proposed for a yes", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Last week and the week before, as the Pages list keeps them ready: on Sunday 27 September, 14–20 and 7–13 September. */
   async function withPages(t: Harness, siteId: Id<"companyWebsites">) {
     await t.run(async (ctx) => {
       const pages = ["https://ronins.test/a/", "https://ronins.test/b/", "https://ronins.test/c/"];
-      for (const [which, clicks, from, to] of [["NOW", [412, 188, 50], "2026-09-20", "2026-09-26"], ["BEFORE", [508, 249, 20], "2026-09-13", "2026-09-19"]] as const) {
+      for (const [which, clicks, from, to] of [["NOW", [412, 188, 50], "2026-09-14", "2026-09-20"], ["BEFORE", [508, 249, 20], "2026-09-07", "2026-09-13"]] as const) {
         await ctx.db.insert("searchConsolePeriods", {
-          companyWebsiteId: siteId, searchType: "web", list: "page", period: "7", which, part: 0, from, to,
+          companyWebsiteId: siteId, searchType: "web", list: "page", period: "lastWeek", which, part: 0, from, to,
           keys: pages, clicks: [...clicks], impressions: clicks.map((count) => count * 20), positionSums: clicks.map((count) => count * 80),
           counts: pages.map(() => 1), tops: pages, builtAt: 1,
         });
@@ -198,6 +204,7 @@ describe("a weekly report, proposed for a yes", () => {
   }
 
   test("is written out with what this week's would hold, and a yes sets it up for its day", async () => {
+    useFixedDay("2026-09-27");
     const t = harness();
     const seeded = await seed(t);
     await withPages(t, seeded.siteId);

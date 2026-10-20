@@ -140,7 +140,7 @@ describe("fan-out searches as angles", () => {
       } as never);
       // The ready-made thirty days, as the collection adds them up: two days, at 12 for 10 impressions and 14 for 30.
       await ctx.db.insert("searchConsolePeriods", {
-        companyWebsiteId: site.holdId, searchType: "web", list: "query", period: "30", which: "NOW", part: 0,
+        companyWebsiteId: site.holdId, searchType: "web", list: "query", period: "lastMonth", which: "NOW", part: 0,
         from: "2026-08-29", to: DAY, keys: ["barbless hooks for carp"], clicks: [0], impressions: [40], positionSums: [10 * 12 + 30 * 14],
         builtAt: Date.now(),
       });

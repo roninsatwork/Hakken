@@ -84,7 +84,7 @@ async function connected(t: Harness) {
     });
     // Google's 90 days for the same website, as Search Console keeps them ready-made.
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: siteId, searchType: "web", list: "query", period: "90", which: "NOW", part: 0, from: "2026-07-15", to: "2026-10-11",
+      companyWebsiteId: siteId, searchType: "web", list: "query", period: "lastQuarter", which: "NOW", part: 0, from: "2026-07-01", to: "2026-09-30",
       keys: ["ronins", "what is a brand audit", "ai agency"], clicks: [45, 1, 106], impressions: [2129, 1509, 3848], positionSums: [14264, 15845, 9620], builtAt: 1,
     });
     for (const page of ["/", "/venture-studio/"]) {

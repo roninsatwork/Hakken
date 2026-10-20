@@ -7,7 +7,7 @@ import { readMySite } from "./sites";
 import { readMentions } from "./siteAi";
 import { readPerformance } from "./searchConsoleReads";
 import { readList } from "./searchConsoleLists";
-import { shiftDay } from "./searchConsoleDays";
+import { calendarPeriodValidator, periodSpan, ukDay } from "./utils/calendarPeriods";
 import { readWebsiteHost } from "./websiteIdentity";
 import { isTrackedHold } from "./utils/websitePairing";
 import { competingForAssistant } from "./utils/insightCompeting";
@@ -33,8 +33,6 @@ import { boxesOf } from "./insightBoxes";
 
 const companyArg = { companyId: v.id("companies") };
 
-/** The days the Assistant reads Search Console over: the screens' ready-made periods. */
-export const ASSISTANT_PERIODS = [7, 30, 90] as const;
 
 /**
  * A website as written — `https://www.Example.co.uk/page`, `example.co.uk` —
@@ -195,15 +193,16 @@ export const siteOverviewInternal = internalQuery({
 });
 
 /**
- * A website's Search Console figures over the last 7, 30 or 90 days held,
- * with the same days before — the whole website from Performance's read, or
- * one page from the Pages list's.
+ * A website's Search Console figures over one of the screens' calendar periods
+ * (docs/plans/active/calendar-periods-plan.md), set against what the screens
+ * set it against — the whole website from Performance's read, or one page
+ * from the Pages list's.
  */
 export const searchConsoleInternal = internalQuery({
   args: {
     ...companyArg,
     website: v.string(),
-    days: v.union(v.literal(7), v.literal(30), v.literal(90)),
+    period: calendarPeriodValidator,
     page: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -226,12 +225,16 @@ export const searchConsoleInternal = internalQuery({
     if (!connection?.newestDay) {
       return { ok: false, problem: `${found.held.summary.host} has no Search Console figures yet: it is not connected, or its first collection has not finished.` };
     }
-    const to = connection.newestDay;
-    const from = shiftDay(to, -(args.days - 1));
+    const span = periodSpan(args.period, ukDay(), connection.newestDay);
+    if (!span) {
+      return { ok: false, problem: `Search Console hasn't sent any of this period's days yet for ${found.held.summary.host}; its newest is ${connection.newestDay}. Ask about the period before.` };
+    }
+    const { from, to } = span;
+    const period = args.period;
     const link = `/app/search-console/${hold._id}${args.page ? "/pages" : ""}`;
 
     if (args.page) {
-      const list = await readList(ctx, hold._id, { searchType: "web", dimension: "page", from, to, q: args.page });
+      const list = await readList(ctx, hold._id, { searchType: "web", dimension: "page", from, to, period, q: args.page });
       const rows = list.rows.slice(0, 5).map((row) => ({
         page: row.key,
         clicks: row.clicks,
@@ -251,7 +254,7 @@ export const searchConsoleInternal = internalQuery({
       };
     }
 
-    const performance = await readPerformance(reader(ctx, args.companyId), { siteId: hold._id, searchType: "web", from, to });
+    const performance = await readPerformance(reader(ctx, args.companyId), { siteId: hold._id, searchType: "web", from, to, period });
     return {
       ok: true,
       website: found.held.summary.host,

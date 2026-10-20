@@ -10,10 +10,12 @@ import { formatNumber } from "../../sites/_components/siteFormat";
 import { LiveProblem, type LiveProblemKind } from "./SearchConsoleNotices";
 import { formatPosition, formatRate } from "./searchConsoleFormat";
 import { useLiveAsk } from "./searchConsoleRecords";
+import type { CalendarPeriod } from "@/convex/utils/calendarPeriods";
 import {
   countryArg,
   useResultKind,
   useSearchConsoleCountry,
+  useSearchConsolePeriodWords,
   useSearchConsoleRange,
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
@@ -35,7 +37,7 @@ const NO_FIGURES: SiteFigures = { days: [], totals: null, previous: null, named:
  * Google (`searchConsoleLiveDays`), which names no clicks. Undefined while
  * loading; `problem` when Google could not answer, and `retry` to ask again.
  */
-export function useSiteFiguresFor(ask: { siteId: Id<"companyWebsites">; searchType: ResultKind; from: string; to: string } | null): {
+export function useSiteFiguresFor(ask: { siteId: Id<"companyWebsites">; searchType: ResultKind; from: string; to: string; period?: CalendarPeriod } | null): {
   figures: SiteFigures | undefined;
   problem: LiveProblemKind | null;
   retry: () => void;
@@ -61,9 +63,10 @@ export function useSiteFiguresFor(ask: { siteId: Id<"companyWebsites">; searchTy
  * good news; `isNew` for one Google did not show at all in the days before —
  * a rise from nothing.
  */
-export function DaysBeforeChange({ by, days, write, neutral = false, still = 0, isNew = false }: {
+export function DaysBeforeChange({ by, write, neutral = false, still = 0, isNew = false }: {
   by: number | null;
-  days: number;
+  /** The days shown, as callers still pass them: the line now says what the date menu's period is set against instead (calendar-periods-plan.md). */
+  days?: number;
   write: (change: number) => string;
   neutral?: boolean;
   still?: number;
@@ -72,12 +75,13 @@ export function DaysBeforeChange({ by, days, write, neutral = false, still = 0, 
   const t = useTranslations("searchConsole.figures");
   const status = useSearchConsoleStatus();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  // The days before older than Google keeps say so, not that Hakken hasn't collected them (phase 9).
-  const beforeFrom = new Date(Date.parse(`${range.from}T00:00:00Z`) - range.days * 86_400_000).toISOString().slice(0, 10);
+  const { versus } = useSearchConsolePeriodWords(range.period);
+  // What the period is set against, older than Google keeps, says so, not that Hakken hasn't collected it (phase 9).
+  const beforeFrom = range.before.from;
   if (isNew) return <ChangeLine by={1}>{t("new")}</ChangeLine>;
   if (by === null) return <ChangeLine by={null}>{t(status && beforeFrom < status.historyFrom ? "beforeTooOld" : "noBefore")}</ChangeLine>;
-  if (by === 0 || Math.abs(by) < still) return <ChangeLine by={0}>{t("same", { days })}</ChangeLine>;
-  return <ChangeLine by={by} neutral={neutral}>{t(by > 0 ? "up" : "down", { change: write(Math.abs(by)), days })}</ChangeLine>;
+  if (by === 0 || Math.abs(by) < still) return <ChangeLine by={0}>{t("same", { versus })}</ChangeLine>;
+  return <ChangeLine by={by} neutral={neutral}>{t(by > 0 ? "up" : "down", { change: write(Math.abs(by)), versus })}</ChangeLine>;
 }
 
 /** A move too small to be one, after the sums of rates. */
@@ -97,6 +101,8 @@ export function SearchConsoleFigures({ totals, previous, days, isNew = false }: 
   isNew?: boolean;
 }) {
   const t = useTranslations("searchConsole.figures");
+  const status = useSearchConsoleStatus();
+  const { versus } = useSearchConsolePeriodWords(useSearchConsoleRange(status?.connection?.newestDay).period);
   const growth = (before: number) => (change: number) => (before > 0 ? formatRate(change / before) : formatNumber(change));
   const against = (now: number, before: number | undefined) => (before === undefined ? null : now - before);
   const positionChange = () => {
@@ -104,10 +110,10 @@ export function SearchConsoleFigures({ totals, previous, days, isNew = false }: 
     if (!previous || !totals) return <ChangeLine by={null}>{t("positionNote")}</ChangeLine>;
     // Lower is better: the change is how many places it rose.
     const change = previous.position - totals.position;
-    if (Math.abs(change) < 0.05) return <ChangeLine by={0}>{t("same", { days })} · {t("positionNote")}</ChangeLine>;
+    if (Math.abs(change) < 0.05) return <ChangeLine by={0}>{t("same", { versus })} · {t("positionNote")}</ChangeLine>;
     return (
       <ChangeLine by={change}>
-        {t(change > 0 ? "better" : "worse", { change: formatPosition(Math.abs(change)), days })} · {t("positionNote")}
+        {t(change > 0 ? "better" : "worse", { change: formatPosition(Math.abs(change)) })} · {t("positionNote")}
       </ChangeLine>
     );
   };
@@ -152,7 +158,7 @@ export function SearchConsoleSiteFigures() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const { figures, problem, retry } = useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to } : null);
+  const { figures, problem, retry } = useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to, period: range.period } : null);
   if (problem) return <LiveProblem problem={problem} retry={retry} />;
   if (figures === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   return <SearchConsoleFigures totals={figures.totals} previous={figures.previous} days={range.days} />;

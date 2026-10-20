@@ -1,6 +1,9 @@
 # Calendar periods in every date menu
 
-Agreed with Anthony on 2026-10-20, point by point in conversation. Nothing is built yet.
+Agreed with Anthony on 2026-10-20, point by point in conversation. Built on `dev`, not pushed: the rules (phase 1),
+Sites (2), Clarity (3) and Search Console (4), with rule 6's This-month fallback. Still to build: Bing (5), Google
+Analytics (6), Settings and Governance (7), the start-up fill (8) and the full check (9). Until the start-up fill runs,
+a Search Console list for a period not yet built says it is being added up.
 
 He asked: "i want to change the options in the data picker across the entire user frontend — This week, Last Week,
 This Month, Last Month, This Quarter, Last Quarter, This Year, Custom Date Range." Custom was then removed ("Ok remove
@@ -44,7 +47,9 @@ sections as the shared keys are now (`useSiteParam.ts:29`). The words are in `me
    at its end (This Month on 31 October against 1–30 September); a week, the same weekdays.
 5. **The same period a year before** only on the quarters and This Year, as only 90 days and 12 months have it today.
    For This Year it is the period before itself (the same days last year).
-6. **Screens open on Last Month**: whole, final, comparable, and Insights' choice too.
+6. **Screens open on Last Month**: whole, final, comparable, and Insights' choice too. A website holding nothing for last
+   month yet — one added, or a Clarity connected, this month — opens on This Month instead, so its screens never open
+   empty; from the 1st it opens on Last Month like every other (Anthony, 2026-10-20: "Ok agree").
 7. **The section front pages** (the Google Analytics, Search Console, Bing and Clarity lists, today fixed at 30 or 90
    days) show the opening period, Last Month, so their numbers match the screens behind them.
 8. **The step (Daily / Weekly / Monthly) follows the period**: days for weeks and months, weeks for quarters, months

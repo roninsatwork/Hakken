@@ -28,6 +28,7 @@ import { seenValidator } from "./utils/hakkenSees";
 import { newestUpdateFacts, updatesSees } from "./utils/sees/searchConsole";
 import { completeDays } from "./utils/searchConsoleVolatility";
 import { DAYS_READ, dayRowsOf, updateVolatility } from "./searchConsoleVolatilityDays";
+import { calendarPeriodValidator, ukDay } from "./utils/calendarPeriods";
 
 /**
  * Search Console's Changes pages that read more than one list
@@ -168,6 +169,7 @@ export const searchConsoleNewLost = tenantQuery({
     searchType: searchTypeValidator,
     from: v.string(),
     to: v.string(),
+    period: v.optional(calendarPeriodValidator),
     /** The chart's step: its bars are the days, weeks or months of the dates. */
     step: chartStepValidator,
     country: v.optional(v.string()),
@@ -230,8 +232,9 @@ export const searchConsoleNewLost = tenantQuery({
     const keywords = await read("query");
     const pages = await read("page");
 
-    // Each keyword's figures: the ready-made 90 days hold every one shown in them, read a keyword at a time (step 4b).
-    const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, "90", country);
+    // Each keyword's figures over the date menu's period (calendar-periods-plan.md, phase 4), read a keyword at a time
+    // (step 4b): other dates read last quarter, which holds every keyword shown in it.
+    const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "lastQuarter", country);
     // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
     // lost keyword looked up by its text, the book's records read once however many ask.
     const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;

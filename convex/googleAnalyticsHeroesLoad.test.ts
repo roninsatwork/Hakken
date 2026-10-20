@@ -114,7 +114,7 @@ async function bigWebsite() {
       for (const [part, made] of parts.entries()) {
         const stored = inBook(slot.list, made, places, []);
         await ctx.db.insert("searchConsolePeriods", {
-          companyWebsiteId: siteId, searchType: "web", list: slot.list, period: "30", which: slot.which, part, from: slot.from, to: slot.to,
+          companyWebsiteId: siteId, searchType: "web", list: slot.list, period: "lastMonth", which: slot.which, part, from: slot.from, to: slot.to,
           ...stored, ...packedColumns(stored), ...bookedColumns({ ...stored, list: slot.list }), builtAt: 1,
         });
       }

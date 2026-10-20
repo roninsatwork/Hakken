@@ -8,6 +8,7 @@ import { positionLookups } from "./fanOutPositions";
 import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
+import type { SearchConsolePeriod } from "./searchConsoleSchema";
 
 /**
  * What the Search Console section reads (docs/plans/active/
@@ -99,15 +100,16 @@ describe("the section's list", () => {
     await connected(t, companyId, shop, { oldestDay: "2026-08-01", newestDay: "2026-09-26" }, [
       { day: "2026-09-26", clicks: 10, impressions: 100, position: 4 },
       { day: "2026-09-01", clicks: 30, impressions: 300, position: 8 },
-      // Before the thirty days.
+      // Last month.
       { day: "2026-08-20", clicks: 99, impressions: 990, position: 1 },
     ]);
 
     const sites = await (await person(t, companyId)).query(api.searchConsoleReads.listSearchConsoleSites, {});
     expect(sites.map((site) => site.host).sort()).toEqual(["acme-blog.test", "acme-shop.test"]);
     const connectedSite = sites.find((site) => site.siteId === shop)!;
-    expect(connectedSite).toMatchObject({ status: "CONNECTED", from: "2026-08-28", to: "2026-09-26" });
-    expect(connectedSite.figures).toEqual({ clicks: 40, impressions: 400, ctr: 0.1, position: 7 });
+    // Last month, as every section's front page shows it (calendar-periods-plan.md, rule 7).
+    expect(connectedSite).toMatchObject({ status: "CONNECTED", from: "2026-08-01", to: "2026-08-31" });
+    expect(connectedSite.figures).toEqual({ clicks: 99, impressions: 990, ctr: 0.1, position: 1 });
     expect(sites.find((site) => site.siteId === blog)).toMatchObject({ status: "NOT_CONNECTED", figures: null });
   });
 });
@@ -139,6 +141,26 @@ describe("performance", () => {
     const otherReader = await person(t, await company(t, "Rival"));
     await expect(otherReader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-09-25", to: "2026-09-26" }))
       .rejects.toThrow("not one your company holds");
+  });
+
+  test("a period still going is set against the same days of the one before, never the days between (calendar-periods-plan.md, rule 4)", async () => {
+    vi.setSystemTime(Date.parse("2026-10-20T12:00:00Z"));
+    const t = harness();
+    const companyId = await company(t, "Acme");
+    const siteId = await hold(t, companyId, "acme-shop.test");
+    await connected(t, companyId, siteId, { oldestDay: "2026-06-01", newestDay: "2026-10-19" }, [
+      { day: "2026-07-05", clicks: 3, impressions: 30, position: 5 },
+      { day: "2026-07-25", clicks: 50, impressions: 500, position: 5 },
+      { day: "2026-09-15", clicks: 80, impressions: 800, position: 5 },
+      { day: "2026-10-05", clicks: 9, impressions: 90, position: 5 },
+    ]);
+    const reader = await person(t, companyId);
+    // This Quarter on 20 October is 1–19 October, against 1–19 July: 25 July and September are neither.
+    const quarter = await reader.query(api.searchConsoleReads.searchConsolePerformance, {
+      siteId, searchType: "web", from: "2026-10-01", to: "2026-10-19", period: "thisQuarter",
+    });
+    expect(quarter.totals?.clicks).toBe(9);
+    expect(quarter.previous?.clicks).toBe(3);
   });
 
   test("reads back to Google's sixteen-month line once the days before collection are fetched, never stopping where collection began", async () => {
@@ -174,7 +196,7 @@ async function period(
   t: Harness,
   siteId: Id<"companyWebsites">,
   list: "query" | "page" | "country",
-  span: { period: "7" | "30" | "90" | "365"; which: "NOW" | "BEFORE"; from: string; to: string },
+  span: { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; from: string; to: string },
   rows: PeriodRow[],
 ) {
   const counted = rows.some((row) => row[4] !== undefined);
@@ -194,11 +216,11 @@ async function period(
 }
 
 describe("the tables", () => {
-  // The last seven days, ending on the newest day held: a ready-made period.
-  const range = { searchType: "web" as const, dimension: "query" as const, from: "2026-09-20", to: "2026-09-26" };
+  // This week, Sunday 27 September, to the newest day held: a ready-made period (calendar-periods-plan.md, phase 4).
+  const range = { searchType: "web" as const, dimension: "query" as const, from: "2026-09-21", to: "2026-09-26" };
   const page = { page: 1, rows: 25 };
-  const now = { period: "7" as const, which: "NOW" as const, from: "2026-09-20", to: "2026-09-26" };
-  const before = { period: "7" as const, which: "BEFORE" as const, from: "2026-09-13", to: "2026-09-19" };
+  const now = { period: "thisWeek" as const, which: "NOW" as const, from: "2026-09-21", to: "2026-09-26" };
+  const before = { period: "thisWeek" as const, which: "BEFORE" as const, from: "2026-09-14", to: "2026-09-19" };
 
   async function withSearches() {
     const t = harness();
@@ -219,7 +241,7 @@ describe("the tables", () => {
   test("a ready-made period is read by index, then searched, filtered, ordered and paged on the server", async () => {
     const { siteId, reader } = await withSearches();
     const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, ...page });
-    expect(list).toMatchObject({ preparing: false, live: false, total: 3, named: 12, comparable: true, from: "2026-09-20", to: "2026-09-26" });
+    expect(list).toMatchObject({ preparing: false, live: false, total: 3, named: 12, comparable: true, from: "2026-09-21", to: "2026-09-26" });
     expect(list.rows.map((row) => [row.key, row.clicks, row.impressions, row.position, row.change, row.count, row.top])).toEqual([
       ["plumber leeds", 8, 100, 3, 6, 2, "https://acme-shop.test/plumbers/"],
       ["emergency plumber", 3, 100, 6, 3, 1, "https://acme-shop.test/"],
@@ -281,9 +303,9 @@ describe("the tables", () => {
     expect(otherDates.rows.flat().map((row) => row.count)).toEqual([null, null]);
   });
 
-  test("Pages competing over 12 months reads its own ready-made list, with how many pages Google showed (drift fixes, 2026-10-03)", async () => {
+  test("Pages competing over this year reads its own ready-made list, with how many pages Google showed (drift fixes, 2026-10-03)", async () => {
     const { t, siteId, reader } = await withSearches();
-    const year = { period: "365" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
+    const year = { period: "thisYear" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
     await period(t, siteId, "query", year, [
       ["plumber leeds", 10, 200, 3, 2, "https://acme-shop.test/plumbers/"],
       ["boiler repair", 1, 10, 9, 1, "https://acme-shop.test/boilers/"],
@@ -303,7 +325,7 @@ describe("the tables", () => {
       builtAt: Date.now(),
     });
     const competing = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
-      siteId, ...range, view: "competing", from: "2025-09-27", ...page,
+      siteId, ...range, view: "competing", from: "2026-01-01", ...page,
     });
     expect(competing).toMatchObject({ live: false, preparing: false, total: 1 });
     expect(competing.rows[0]).toMatchObject({ key: "plumber leeds", count: 2, top: "https://acme-shop.test/plumbers/", next: "https://acme-shop.test/" });
@@ -311,13 +333,13 @@ describe("the tables", () => {
     expect(competing.summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 4 });
   });
 
-  test("Fan-out's 14 and 28 days read their own ready-made lists, the 30 days until they are built (§15, decision 4)", async () => {
+  test("Fan-out's 14 and 28 days read their own ready-made lists, last month until they are built (§15, decision 4)", async () => {
     const { t, siteId } = await withSearches();
     await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
       companyWebsiteId: siteId, searchType: "web", list: "query", period: "28", which: "NOW", from: "2026-08-30", to: "2026-09-26", part: 0,
       keys: ["plumber leeds"], clicks: [8], impressions: [100], positionSums: [400], builtAt: Date.now(),
     });
-    await period(t, siteId, "query", { period: "30", which: "NOW", from: "2026-08-28", to: "2026-09-26" }, [["plumber leeds", 9, 110, 6]]);
+    await period(t, siteId, "query", { period: "lastMonth", which: "NOW", from: "2026-08-01", to: "2026-08-31" }, [["plumber leeds", 9, 110, 6]]);
     const positions = await t.run(async (ctx) => {
       const site = (await ctx.db.get(siteId))!;
       return {
@@ -357,10 +379,10 @@ describe("the tables", () => {
 
   test("with the period before not held, no change is claimed", async () => {
     const { t, siteId, reader } = await withSearches();
-    const ninety = { period: "90" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
+    const ninety = { period: "thisQuarter" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
     await period(t, siteId, "query", ninety, [["plumber leeds", 20, 300, 4, 2, "https://acme-shop.test/plumbers/"]]);
-    const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, from: "2026-06-29", ...page });
-    // The 90 days count only what is held, and say so.
+    const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, from: "2026-07-01", ...page });
+    // This quarter counts only what is held, and says so.
     expect(list).toMatchObject({ comparable: false, from: "2026-09-01", to: "2026-09-26" });
     expect(list.rows.every((row) => row.change === null && row.previousClicks === null)).toBe(true);
   });
@@ -439,7 +461,7 @@ describe("the tables", () => {
     const file = await reader.action(api.searchConsoleLists.exportSearchConsoleList, {
       siteId, ...range, headers: ["Keyword", "Clicks", "Change", "Impressions", "CTR", "Position"], fields: ["key", "clicks", "change", "impressions", "ctr", "position"],
     });
-    expect(file.fileName).toBe("acme-shop.test-search-console-query-2026-09-20-2026-09-26.csv");
+    expect(file.fileName).toBe("acme-shop.test-search-console-query-2026-09-21-2026-09-26.csv");
     expect(file.csv.split("\n")).toEqual([
       "Keyword,Clicks,Change,Impressions,CTR,Position",
       "plumber leeds,8,6,100,8,3",
@@ -496,7 +518,7 @@ describe("the tables", () => {
       const file = await reader.action(api.searchConsoleLists.exportSearchConsoleList, {
         siteId, ...tracked, headers: ["Keyword", "Clicks", "Change"], fields: ["key", "clicks", "change"],
       });
-      expect(file.fileName).toBe("acme-shop.test-search-console-tracked-query-2026-09-20-2026-09-26.csv");
+      expect(file.fileName).toBe("acme-shop.test-search-console-tracked-query-2026-09-21-2026-09-26.csv");
       expect(file.csv.split("\n")).toEqual(["Keyword,Clicks,Change", "plumber leeds,8,6", "never shown,0,0"]);
     });
 

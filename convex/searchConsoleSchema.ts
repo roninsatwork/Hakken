@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import { CALENDAR_PERIODS, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * The tables behind Search Console for a company's own websites
@@ -121,8 +122,15 @@ export const periodListValidator = v.union(
 );
 export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competing" | "page" | "country" | "device" | "appearance";
 
-/** The ready-made periods (plan §14.3, item 4): days, ending on Google's newest day held. */
-export const SEARCH_CONSOLE_PERIODS = ["7", "30", "90", "365"] as const;
+/**
+ * The ready-made periods (plan §14.3, item 4): the date menu's seven calendar
+ * periods, each to Google's newest day held (calendar-periods-plan.md, phase
+ * 4). The 7, 30 and 90 days and 12 months they replaced (`RETIRED_PERIODS`)
+ * are no longer built; those kept wait to be cleared on Anthony's word, and
+ * then leave the validator.
+ */
+export const SEARCH_CONSOLE_PERIODS = CALENDAR_PERIODS;
+export const RETIRED_PERIODS = ["7", "30", "90", "365"] as const;
 /**
  * Fan-out's own periods (§15, decision 4): its "Days of Search Console
  * averaged" setting offers 14 and 28 days, so each is kept ready too — the
@@ -137,7 +145,7 @@ export const FAN_OUT_PERIODS = ["14", "28"] as const;
  * every Search Console table does. Not a period any date range asks for.
  */
 export const VOLATILITY_PERIOD = "1" as const;
-export type SearchConsolePeriod = (typeof SEARCH_CONSOLE_PERIODS)[number] | (typeof FAN_OUT_PERIODS)[number] | typeof VOLATILITY_PERIOD;
+export type SearchConsolePeriod = CalendarPeriod | (typeof FAN_OUT_PERIODS)[number] | typeof VOLATILITY_PERIOD;
 /**
  * The Search Console screens' limits as stored (search-console-plan.md §17.5),
  * one field each, on the platform's row and on a company's or a website's —
@@ -166,7 +174,12 @@ export const consoleScreenLimitFields = {
 /** The kind of result as the first- and last-seen register files it: web results carry none, as every row held before they all did. */
 export const seenType = (type: SearchType): SearchType | undefined => (type === "web" ? undefined : type);
 
-export const periodValidator = v.union(v.literal("1"), v.literal("7"), v.literal("14"), v.literal("28"), v.literal("30"), v.literal("90"), v.literal("365"));
+export const periodValidator = v.union(
+  v.literal("1"), v.literal("14"), v.literal("28"),
+  v.literal("thisWeek"), v.literal("lastWeek"), v.literal("thisMonth"), v.literal("lastMonth"), v.literal("thisQuarter"), v.literal("lastQuarter"), v.literal("thisYear"),
+  // Retired (`RETIRED_PERIODS`): read by nothing, kept only so the rows still held stay valid until cleared.
+  v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365"),
+);
 
 /**
  * One list's rows, packed: one record for a whole day (or week, or month)

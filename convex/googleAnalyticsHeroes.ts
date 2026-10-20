@@ -58,6 +58,8 @@ import {
 
 /** The days every figure here covers: a month, so a fix's worth reads "a month". */
 const DAYS = "30";
+/** Search Console's lists are calendar periods (calendar-periods-plan.md, phase 4): last month stands for the 30 days. */
+const CONSOLE_PERIOD = "lastMonth" as const;
 
 /** Google's own search, as Analytics names its visits: Organic Search from google. */
 function fromGoogle(key: string): boolean {
@@ -168,7 +170,7 @@ async function consolePages(
   which: "NOW" | "BEFORE",
   pick: { all: true } | { tokensOf: (names: BookNames) => Promise<Set<string>> },
 ) {
-  const period = await readPeriodUnnamed(ctx, holdId, "web", "page", DAYS, which);
+  const period = await readPeriodUnnamed(ctx, holdId, "web", "page", CONSOLE_PERIOD, which);
   const pages = new Map<string, { shown: number; clicks: number; positionSum: number; address: string }>();
   if (!period) return { pages, to: null };
   const names = period.book ? new BookNames(ctx, period.book) : null;
@@ -265,7 +267,7 @@ export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host
   const website = visitFigures(channels.rows, counted);
   const google = visitFigures(channels.rows.filter((row) => fromGoogle(row.key)), counted);
   // The click rate at each position from the website's searches, as Search Console's Click rate by position reads it.
-  const searches = consoleConnected ? await keywordFiguresOf(ctx, holdId, "web", DAYS, undefined) : null;
+  const searches = consoleConnected ? await keywordFiguresOf(ctx, holdId, "web", CONSOLE_PERIOD, undefined) : null;
   const rates = websiteRatesOf(website, curveRows(searches), totalValue);
   return {
     state: "READY",

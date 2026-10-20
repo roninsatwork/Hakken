@@ -43,9 +43,9 @@ export const hakkenTaskTargetValidator = v.object({
 
 /**
  * What a report sends (The Stat Report Agent, item 4.1): the pages of the
- * website that lost, or gained, the most of its measure over the newest 7
- * days held against the 7 before — Search Console's own Pages list — every
- * week on `weekday` (1 Monday … 7 Sunday) at the owner's time.
+ * website that lost, or gained, the most of its measure over last week,
+ * Monday to Sunday, against the week before — Search Console's own Pages
+ * list — every week on `weekday` (1 Monday … 7 Sunday) at the owner's time.
  */
 export const hakkenTaskReportValidator = v.object({
   look: v.literal("pagesChange"),

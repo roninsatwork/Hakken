@@ -537,7 +537,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Search Console",
         description:
-          "One of the company's own websites' Google Search Console figures — clicks, impressions, click-through rate and average position — over its last 7, 30 or 90 days held, with the same number of days before, for the whole website or the pages whose address contains `page`. Search Console's newest day is about three days behind, and Google gives these figures to a website's owner only, so a competitor has none: read its Sites overview instead. Give the figures with the link returned.",
+          "One of the company's own websites' Google Search Console figures — clicks, impressions, click-through rate and average position — over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, thisQuarter, lastQuarter or thisYear, weeks Monday to Sunday — set against the period before as the screens set it, for the whole website or the pages whose address contains `page`. Search Console's newest day is about three days behind, and Google gives these figures to a website's owner only, so a competitor has none: read its Sites overview instead. Give the figures with the link returned.",
         handlerMapping: "assistant.searchConsole",
         modelName: "read_search_console",
         requiredRole: "ADMIN",
@@ -545,10 +545,10 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         confirmationRequired: false,
         inputSchema: JSON.stringify({
           type: "object",
-          required: ["website", "days"],
+          required: ["website", "period"],
           properties: {
             website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
-            days: { type: "number", description: "7, 30 or 90." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"], description: "lastMonth when the question names no time." },
             page: { type: "string", description: "Part of a page's address, e.g. /boiler-repair. Leave out for the whole website." },
           },
         }),
@@ -812,7 +812,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Propose a weekly report",
         description:
-          "When someone asks to be sent something regularly — every Monday, the pages that lost the most visitors from Google — propose it with this. It reads this week's figures and writes the report out under your reply with “Yes, send it” and “Not now”: nothing is sent until they tap yes. It compares the newest 7 days Search Console holds against the 7 before, once a week on the day they choose, at their time, by email and here. Visitors only for now. Never promise to send it yourself.",
+          "When someone asks to be sent something regularly — every Monday, the pages that lost the most visitors from Google — propose it with this. It reads this week's figures and writes the report out under your reply with “Yes, send it” and “Not now”: nothing is sent until they tap yes. It compares last week, Monday to Sunday as far as Search Console has sent it, against the week before, once a week on the day they choose, at their time, by email and here. Visitors only for now. Never promise to send it yourself.",
         handlerMapping: "assistant.tasks.proposeReport",
         modelName: "propose_report",
         requiredRole: "ADMIN",

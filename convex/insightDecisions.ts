@@ -141,8 +141,8 @@ export const decisionSources = internalQuery({
       views = [...byKey].map(([key, count]) => ({ key, views: count }));
     }
 
-    // Search Console's showings and clicks of each page over 90 days.
-    const pages = await readPeriod(ctx, hold._id, "web", "page", "90", "NOW");
+    // Search Console's showings and clicks of each page over last quarter.
+    const pages = await readPeriod(ctx, hold._id, "web", "page", "lastQuarter", "NOW");
     const consoleBy = new Map<string, { shown: number; clicks: number }>();
     for (const row of pages?.rows ?? []) {
       const key = keyOf(row.key);

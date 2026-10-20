@@ -88,7 +88,7 @@ export type EmailWording = {
     subject: (args: { weekday: number; total: string; pages: number; direction: "lost" | "gained" }) => string;
     /** Under the total: "visitors from Google, across these 5 pages". */
     across: (args: { pages: number }) => string;
-    /** "28 September to 4 October, against the 7 days before." */
+    /** "28 September to 4 October, against the week before." */
     span: (args: { from: string; to: string }) => string;
     noneMoved: (args: { direction: "lost" | "gained" }) => string;
     visitorsThen: (args: { count: string }) => string;
@@ -244,9 +244,9 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       subject: ({ weekday, total, pages, direction }) =>
         `Your ${EN_WEEKDAYS[weekday - 1] ?? "weekly"} report: ${total} ${direction === "lost" ? "fewer" : "more"} visitors on ${pages} ${pages === 1 ? "page" : "pages"}`,
       across: ({ pages }) => `visitors from Google, across ${pages === 1 ? "this page" : `these ${pages} pages`}`,
-      span: ({ from, to }) => `${from} to ${to}, against the 7 days before.`,
+      span: ({ from, to }) => `${from} to ${to}, against the week before.`,
       noneMoved: ({ direction }) => (direction === "lost" ? "None of your pages lost visitors from Google" : "None of your pages gained visitors from Google"),
-      visitorsThen: ({ count }) => `${count} visitors in these 7 days`,
+      visitorsThen: ({ count }) => `${count} visitors that week`,
       seeAll: "See all your pages",
       youAsked: ({ weekday, time, platformName }) =>
         `You asked ${platformName} for this report every ${EN_WEEKDAYS[weekday - 1] ?? "week"} at ${time}. Pause or stop it any time in ${platformName} tasks.`,
@@ -375,9 +375,9 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       subject: ({ weekday, total, pages, direction }) =>
         `Il tuo report ${itOfWeekday(weekday)}: ${total} visitatori ${direction === "lost" ? "in meno" : "in più"} su ${pages} ${pages === 1 ? "pagina" : "pagine"}`,
       across: ({ pages }) => `visitatori da Google, ${pages === 1 ? "su questa pagina" : `su queste ${pages} pagine`}`,
-      span: ({ from, to }) => `Dal ${from} al ${to}, rispetto ai 7 giorni prima.`,
+      span: ({ from, to }) => `Dal ${from} al ${to}, rispetto alla settimana precedente.`,
       noneMoved: ({ direction }) => (direction === "lost" ? "Nessuna delle tue pagine ha perso visitatori da Google" : "Nessuna delle tue pagine ha guadagnato visitatori da Google"),
-      visitorsThen: ({ count }) => `${count} visitatori in questi 7 giorni`,
+      visitorsThen: ({ count }) => `${count} visitatori quella settimana`,
       seeAll: "Vedi tutte le tue pagine",
       youAsked: ({ weekday, time, platformName }) =>
         `Hai chiesto a ${platformName} questo report ogni ${IT_WEEKDAYS[weekday - 1] ?? "settimana"} alle ${time}. Puoi metterlo in pausa o fermarlo quando vuoi in Attività di ${platformName}.`,

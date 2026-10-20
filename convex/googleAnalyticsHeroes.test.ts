@@ -38,7 +38,7 @@ async function slot(t: Harness, siteId: Id<"companyWebsites">, list: "landing" |
 async function consoleList(t: Harness, siteId: Id<"companyWebsites">, list: "page" | "query", which: "NOW" | "BEFORE", rows: Array<[string, number, number, number]>) {
   await t.run(async (ctx) => {
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: siteId, searchType: "web", list, period: "30", which, part: 0, from: "2026-09-09", to: "2026-10-08",
+      companyWebsiteId: siteId, searchType: "web", list, period: "lastMonth", which, part: 0, from: "2026-09-09", to: "2026-10-08",
       keys: rows.map(([key]) => key), clicks: rows.map(([, clicks]) => clicks), impressions: rows.map(([, , shown]) => shown),
       positionSums: rows.map(([, , shown, position]) => shown * position), counts: rows.map(() => 1), tops: rows.map(([key]) => key), builtAt: 1,
     });

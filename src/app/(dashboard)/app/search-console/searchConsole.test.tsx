@@ -10,6 +10,7 @@ import SearchConsoleConnectionPage from "./[siteId]/connection/page";
 import SearchConsoleWinsPage from "./[siteId]/wins-and-losses/page";
 import SearchConsoleTypesPage from "./[siteId]/types/page";
 import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
+import { useScreenDay } from "@/src/test/realTime";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
 
@@ -94,13 +95,18 @@ function at(path: string, search = "") {
 }
 
 beforeEach(() => {
+  // Sunday 27 September: Google's newest day the Saturday before; the date menu opens on last month (calendar-periods-plan.md).
+  useScreenDay("2026-09-27");
   vi.mocked(useQuery).mockReset();
   vi.mocked(useMutation).mockReset();
   nav.replace.mockClear();
   nav.push.mockClear();
   for (const fn of Object.values(mutations)) fn.mockReset().mockResolvedValue(null);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("the Search Console section", () => {
   it("lists the company's own websites, each with its connection and last thirty days", () => {
@@ -161,12 +167,12 @@ describe("Performance", () => {
     render(<SearchConsolePerformancePage />);
     expect(screen.getByText("1,284")).toBeInTheDocument();
     expect(screen.getByText("61,920")).toBeInTheDocument();
-    expect(screen.getByText(/searchConsole\.figures\.up 9\.0% 30/)).toBeInTheDocument();
+    expect(screen.getByText(/searchConsole\.figures\.up 9\.0% common\.periods\.versus\.lastMonth/)).toBeInTheDocument();
     expect(screen.getByText("searchConsole.named 1,041 1,284 243")).toBeInTheDocument();
     expect(screen.getByText("searchConsole.chart.title")).toBeInTheDocument();
     // A quick pick ends on Google's newest day, not today.
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsolePerformance")).at(-1)?.[1];
-    expect(asked).toMatchObject({ searchType: "web", from: "2026-08-28", to: "2026-09-26" });
+    expect(asked).toMatchObject({ searchType: "web", from: "2026-08-01", to: "2026-08-31", period: "lastMonth" });
     // Its sixteen months are all in: nothing more to say.
     expect(screen.queryByText(/searchConsole\.historyFilling/)).not.toBeInTheDocument();
   });
@@ -230,7 +236,7 @@ describe("Keywords", () => {
     expect(screen.getByText(/searchConsole\.track\.count 1 200/)).toBeInTheDocument();
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
     // The last thirty days, ending on Google's newest: a ready-made period, read on the server.
-    expect(asked).toMatchObject({ dimension: "query", from: "2026-08-28", to: "2026-09-26", sort: "clicks", direction: "desc", page: 1, rows: 25 });
+    expect(asked).toMatchObject({ dimension: "query", from: "2026-08-01", to: "2026-08-31", sort: "clicks", direction: "desc", page: 1, rows: 25 });
 
     fireEvent.click(screen.getByRole("button", { name: /searchConsole\.table\.position/ }));
     expect(new URLSearchParams(String(nav.replace.mock.calls.at(-1)?.[0]).split("?")[1]).get("sort")).toBe("position");

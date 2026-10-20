@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  openingPeriod,
   CALENDAR_PERIODS,
   isCalendarPeriod,
   periodBounds,
@@ -90,5 +91,16 @@ describe("calendar periods (calendar-periods-plan.md, rules 1–9)", () => {
     expect(stepsOf({ from: "2026-10-01", to: "2026-10-19" }, "week").at(-1)).toEqual({ key: "2026-10-19", from: "2026-10-19", to: "2026-10-19" });
     expect(stepsOf({ from: "2026-01-01", to: "2026-10-19" }, "month").map((one) => one.key)).toHaveLength(10);
     expect(stepsOf({ from: "2026-09-01", to: "2026-09-30" }, "day")).toHaveLength(30);
+  });
+
+  it("opens on Last month, or This month for a website holding nothing of last month yet (agreed 2026-10-20)", () => {
+    expect(openingPeriod("2025-06-01", "2026-10-20")).toBe("lastMonth");
+    // Some of last month held: Last month, even in part.
+    expect(openingPeriod("2026-09-25", "2026-10-20")).toBe("lastMonth");
+    // First held this month: This month, until the 1st.
+    expect(openingPeriod("2026-10-03", "2026-10-20")).toBe("thisMonth");
+    expect(openingPeriod("2026-10-03", "2026-11-01")).toBe("lastMonth");
+    // Nothing held at all: Last month, which says so.
+    expect(openingPeriod(null, "2026-10-20")).toBe("lastMonth");
   });
 });

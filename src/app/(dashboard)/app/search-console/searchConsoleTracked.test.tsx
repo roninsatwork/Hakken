@@ -8,6 +8,7 @@ import SearchConsoleTrackedKeywordsPage from "./[siteId]/tracked/keywords/page";
 import SearchConsoleTrackedPagesPage from "./[siteId]/tracked/pages/page";
 import SearchConsoleKeywordPage from "./[siteId]/keywords/keyword/page";
 import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
+import { useScreenDay } from "@/src/test/realTime";
 
 /**
  * Tracked keywords and Tracked pages (drawn and approved 2026-10-03): a
@@ -103,6 +104,8 @@ function at(path: string, search = "") {
 }
 
 beforeEach(() => {
+  // Sunday 27 September: Google's newest day the Saturday before; the date menu opens on last month (calendar-periods-plan.md).
+  useScreenDay("2026-09-27");
   vi.mocked(useQuery).mockReset();
   vi.mocked(useMutation).mockReset();
   vi.mocked(useAction).mockReset();
@@ -111,13 +114,16 @@ beforeEach(() => {
   track.mockReset().mockResolvedValue(null);
   actions = {};
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("the menu's Tracked group", () => {
   it("comes first and open wherever you arrive, holding Tracked keywords and Tracked pages with their counts", () => {
     // Arriving on Performance: Tracked is open from the start, not only because the page read is in it.
     nav.pathname = "/app/search-console/site_1";
-    nav.search = "range=30";
+    nav.search = "period=lastQuarter";
     answer({ "searchConsoleTracking:searchConsoleTracking": TRACKING });
     render(<SearchConsoleMenu siteId="site_1" />);
     const menu = screen.getByRole("navigation", { name: "searchConsole.menu.label" });
@@ -134,9 +140,9 @@ describe("the menu's Tracked group", () => {
 
     const items = within(menu).getAllByRole("link");
     expect(items.slice(0, 3).map((item) => item.getAttribute("href"))).toEqual([
-      "/app/search-console/site_1/tracked/keywords?range=30",
-      "/app/search-console/site_1/tracked/pages?range=30",
-      "/app/search-console/site_1?range=30",
+      "/app/search-console/site_1/tracked/keywords?period=lastQuarter",
+      "/app/search-console/site_1/tracked/pages?period=lastQuarter",
+      "/app/search-console/site_1?period=lastQuarter",
     ]);
     expect(items[0]).toHaveTextContent(/^searchConsole\.menu\.trackedKeywords8$/);
     expect(items[1]).toHaveTextContent(/^searchConsole\.menu\.trackedPages6$/);
@@ -174,12 +180,12 @@ describe("Tracked keywords", () => {
     });
     render(<SearchConsoleTrackedKeywordsPage />);
     expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({
-      dimension: "query", view: "tracked", from: "2026-08-28", to: "2026-09-26", sort: "clicks", direction: "desc",
+      dimension: "query", view: "tracked", from: "2026-08-01", to: "2026-08-31", sort: "clicks", direction: "desc",
     });
     expect(screen.getByText("searchConsole.tracked.keywords.title")).toBeInTheDocument();
     // Clicks with its change on the days before; impressions, click-through rate and position with their notes.
     expect(screen.getByText("118")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.figures.up 19 30")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.figures.up 19 common.periods.versus.lastMonth")).toBeInTheDocument();
     expect(screen.getByText("7,603")).toBeInTheDocument();
     expect(screen.getByText("searchConsole.tracked.figures.shown")).toBeInTheDocument();
     expect(screen.getByText("1.6%")).toBeInTheDocument();
@@ -232,7 +238,7 @@ describe("Tracked keywords", () => {
 
   it("opens a keyword's own screen, whose way back names Tracked keywords and returns to the list as it was left", () => {
     nav.pathname = "/app/search-console/site_1/tracked/keywords";
-    nav.search = "range=90&q=agency&sort=position&direction=asc";
+    nav.search = "period=lastQuarter&q=agency&sort=position&direction=asc";
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleListPage": LIST,
@@ -244,10 +250,10 @@ describe("Tracked keywords", () => {
     expect(path).toBe("/app/search-console/site_1/keywords/keyword");
     const address = new URLSearchParams(query);
     expect(address.get("key")).toBe("ai agency");
-    expect(address.get("range")).toBe("90");
+    expect(address.get("period")).toBe("lastQuarter");
     const back = address.get("back") ?? "";
     expect(back.split("?")[0]).toBe("/app/search-console/site_1/tracked/keywords");
-    expect(Object.fromEntries(new URLSearchParams(back.split("?")[1]))).toEqual({ range: "90", q: "agency", sort: "position", direction: "asc" });
+    expect(Object.fromEntries(new URLSearchParams(back.split("?")[1]))).toEqual({ period: "lastQuarter", q: "agency", sort: "position", direction: "asc" });
     fireEvent.click(screen.getByText("bad websites").closest("tr")!);
     expect(nav.push).toHaveBeenCalledWith(expect.stringContaining("/app/search-console/site_1/keywords/keyword?"));
     unmount();
@@ -293,7 +299,7 @@ describe("Tracked keywords", () => {
     expect(screen.queryByText("bad websites")).not.toBeInTheDocument();
     // The figures are the one row left's: 44 clicks, 38 the days before.
     expect(screen.getByText("44", { selector: "div" })).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.figures.up 6 30")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.figures.up 6 common.periods.versus.lastMonth")).toBeInTheDocument();
     expect(screen.getByText("1,564", { selector: "div" })).toBeInTheDocument();
   });
 });

@@ -5,9 +5,10 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
-import { useDaysRange } from "../../sites/_components/SiteDateRange";
-import { shiftDay } from "../../sites/_components/siteRange";
+import { periodBounds, periodSpan, spanBefore, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { useSiteRange } from "../../sites/_components/SiteDateRange";
 import { SITE_SHARED_KEYS, useSiteParam } from "../../sites/_components/useSiteParam";
+import { useTranslations } from "next-intl";
 
 /**
  * The Search Console section's own address and reads
@@ -136,44 +137,58 @@ export function useResultKind(): [ResultKind, (next: ResultKind) => void] {
 }
 
 /**
- * The dates the pages read. A quick pick ("Last 30 days") ends on Google's
- * newest day rather than today, as Search Console's own reports do — its
- * figures run two or three days behind, and a range ending today would read
- * as a fall; dates chosen by hand are read as chosen.
+ * The dates the pages read: the date menu's calendar period, from its first
+ * day to Google's newest — never past it, as Search Console's own reports
+ * end — its figures run two or three days behind, and a period ending today
+ * would read as a fall (calendar-periods-plan.md, phase 4). `waiting` while
+ * Google has sent none of the period yet (rule 9): This week on a Monday.
+ * `before` is what it is set against.
  */
 export function useSearchConsoleRange(newestDay: string | null | undefined): {
   from: string;
   to: string;
   days: number;
   step: "day" | "week" | "month";
-  chosen: boolean;
-  /** The newest day the quick picks end on: a country kept ready has its own (§16). */
+  period: CalendarPeriod;
+  waiting: boolean;
+  before: { from: string; to: string };
+  /** The newest day the periods end on: a country kept ready has its own (§16). */
   newest: string | null;
 } {
-  const range = useDaysRange();
+  const range = useSiteRange();
   const status = useSearchConsoleStatus();
   const [country] = useSearchConsoleCountry();
-  // A country kept ready may be a day behind all countries: its quick picks end on its own newest day, so they read its ready-made figures.
+  // A country kept ready may be a day behind all countries: its periods end on its own newest day, so they read its ready-made figures.
   const newest = (country ? status?.connection?.countriesNewest.find((held) => held.country === country)?.newestDay : undefined) ?? newestDay ?? null;
-  if (range.preset === "custom" || !newest) {
-    const days = Math.round((Date.parse(`${range.to}T00:00:00Z`) - Date.parse(`${range.from}T00:00:00Z`)) / 86_400_000) + 1;
-    return { from: range.from, to: range.to, days, step: range.step, chosen: range.preset === "custom", newest };
+  const today = ukDay();
+  const span = newest ? periodSpan(range.period, today, newest) : null;
+  if (!span) {
+    const first = periodBounds(range.period, today).from;
+    return { from: first, to: first, days: 0, step: range.step, period: range.period, waiting: newest !== null, before: { from: first, to: first }, newest };
   }
-  const days = Number(range.preset);
-  return { from: shiftDay(newest, -(days - 1)), to: newest, days, step: range.step, chosen: false, newest };
+  const days = Math.round((Date.parse(`${span.to}T00:00:00Z`) - Date.parse(`${span.from}T00:00:00Z`)) / 86_400_000) + 1;
+  const before = spanBefore(range.period, span);
+  return { from: span.from, to: span.to, days, step: range.step, period: range.period, waiting: false, before: { from: before.from, to: before.to }, newest };
 }
 
-/** The ready-made periods' lengths in days (search-console-plan.md §14.3, item 4), as the server's `periodOf` reads them. */
-const READY_MADE_DAYS: readonly number[] = [7, 30, 90, 365];
-
 /**
- * Whether the dates chosen are a ready-made period — ending on Google's
- * newest day held, 7, 30 or 90 days or 12 months long — read from the server
- * a page at a time; any other dates are asked of Google. Worked out here from
- * the dates alone, so a search, an order or a filter never asks Google again.
+ * Whether the dates chosen are a ready-made period — every calendar period is,
+ * to Google's newest day held — read from the server a page at a time; any
+ * other dates are asked of Google. Worked out here from the dates alone, so a
+ * search, an order or a filter never asks Google again.
  */
-export function isReadyMade(range: { to: string; days: number; newest?: string | null }, newestDay: string | null | undefined): boolean {
+export function isReadyMade(range: { to: string; days: number; waiting?: boolean; newest?: string | null }, newestDay: string | null | undefined): boolean {
   // The range's own newest day first: a country kept ready reads its ready-made figures to its own newest day.
   const newest = range.newest ?? newestDay;
-  return Boolean(newest) && range.to === newest && READY_MADE_DAYS.includes(range.days);
+  return Boolean(newest) && !range.waiting && range.days > 0;
+}
+
+/**
+ * The date menu's period in a sentence's words (calendar-periods-plan.md, phase 4): "last month" (`period`), its name
+ * ("Last month", `name`), what it is set against ("the month before", `before`), and the change line's ending ("on the
+ * month before", `versus`).
+ */
+export function useSearchConsolePeriodWords(period: CalendarPeriod): { period: string; name: string; before: string; versus: string } {
+  const tp = useTranslations("common.periods");
+  return { period: tp(`inline.${period}`), name: tp(period), before: tp(`before.${period}`), versus: tp(`versus.${period}`) };
 }

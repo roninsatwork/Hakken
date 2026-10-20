@@ -8216,7 +8216,7 @@
           "send": "I’ll send you",
           "pages": "{direction, select, gained {The {count} pages that gained the most visitors from Google} other {The {count} pages that lost the most visitors from Google}}",
           "every": "Every {weekday} at {time}",
-          "compares": "Each one compares the newest 7 days in Search Console with the 7 before",
+          "compares": "Each one compares last week in Search Console, Monday to Sunday, with the week before",
           "yes": "Yes, send it",
           "hint": "Want something different? Just tell me, like “make it Fridays” or “the ten pages that gained the most”.",
           "set": "You’re all set: your first report is on its way",
@@ -10841,15 +10841,6 @@
       }
     },
     "range": {
-      "label": "Dates",
-      "last7": "Last 7 days",
-      "last30": "Last 30 days",
-      "last90": "Last 90 days",
-      "last365": "Last year",
-      "last730": "Last 2 years",
-      "custom": "Custom range",
-      "from": "From",
-      "to": "To",
       "stepLabel": "Step",
       "daily": "Daily",
       "weekly": "Weekly",
@@ -14848,7 +14839,7 @@
       "searchPlaceholder": "Find a website…",
       "empty": "Your company has no websites of its own yet.",
       "noMatch": "No website matches that search.",
-      "period": "The last 30 days to Google's newest day",
+      "period": "Last month",
       "columns": {
         "website": "Website",
         "status": "Search Console",
@@ -14938,9 +14929,9 @@
       "positionNote": "Google's own average",
       "shown": "Times Google showed it",
       "ctrNote": "Clicks for each time shown",
-      "up": "▲ {change} on the {days} days before",
-      "down": "▼ {change} on the {days} days before",
-      "same": "The same as the {days} days before",
+      "up": "▲ {change} {versus}",
+      "down": "▼ {change} {versus}",
+      "same": "No change {versus}",
       "better": "▲ {change} places better",
       "worse": "▼ {change} places worse",
       "points": "{change} points",
@@ -14964,7 +14955,7 @@
       "week": "Week",
       "preparing": "This country's weeks are being added up. The chart appears after its first collection.",
       "month": "Month",
-      "byWeek": "Shown by week: days are kept for 90 days, and these dates reach further back.",
+      "byWeek": "Shown by week: days are kept for 60 days, and these dates reach further back.",
       "byMonth": "Shown by month: weeks are kept for 6 months, and these dates reach further back.",
       "noSearches": "Searches aren't kept for {kind, select, discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
       "reach": "Showing the last {weeks} weeks, from {from}: the most the charts keep, set in Limits.",
@@ -15010,7 +15001,7 @@
       "ctr": "CTR",
       "position": "Position",
       "share": "Share of clicks",
-      "versus": "Change against the {days} days before",
+      "versus": "Change {versus}",
       "noVersus": "No change shown: the days before aren't held",
       "preparing": "Adding these dates up. The list appears as soon as it's ready.",
       "noSearches": "Searches aren't kept for {kind, select, discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
@@ -15212,9 +15203,7 @@
       "wayUp": "Up",
       "wayDown": "Down"
     },
-    "common": {
-      "inLast": "In the last {days} days"
-    },
+    "common": {},
     "almost": {
       "title": "Almost there",
       "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Visibility. These are the ones closest to the top three.",
@@ -15251,10 +15240,10 @@
     },
     "moves": {
       "title": "Wins and losses",
-      "description": "The keywords whose clicks changed most. Clicks and position read the {days} days before → the last {days} days.",
+      "description": "The keywords whose clicks changed most. Clicks and position read {before} → {period}.",
       "gaining": "Keywords gaining clicks",
       "losing": "Keywords losing clicks",
-      "against": "Against the {days} days before",
+      "against": "Against {before}",
       "gained": "Clicks gained",
       "byGaining": "By the keywords gaining",
       "lost": "Clicks lost",
@@ -15350,7 +15339,7 @@
     },
     "ctrCurve": {
       "title": "Click rate by position",
-      "description": "How often people click your website at each of Google's positions, over the last {days} days. Shown but not clicked uses this as your yardstick.",
+      "description": "How often people click your website at each of Google's positions, {period}. Shown but not clicked uses this as your yardstick.",
       "chartTitle": "Your click rate at each position",
       "chartHint": "Clicks for each time Google showed you, at positions 1 to {positions}.",
       "rate": "Click rate",
@@ -15377,9 +15366,9 @@
     },
     "estimates": {
       "title": "Real against estimated",
-      "description": "Clicks are what Google counted; Estimate is the visits Visibility estimated for the same {days} days. Where they differ a lot, trust Google's.",
+      "description": "Clicks are what Google counted; Estimate is the visits Visibility estimated for the same dates. Where they differ a lot, trust Google's.",
       "sites": "Visibility's estimate",
-      "visitsIn": "Visits in the last {days} days",
+      "visitsIn": "Visits, {period}",
       "google": "Google's clicks",
       "high": "Pages estimated too high",
       "low": "Pages estimated too low",
@@ -15498,19 +15487,19 @@
         "openSearchConsole": "Open Search Console"
       },
       "keywords": {
-        "noKeywords": "Google showed your website for no keywords in the last {c} days.",
-        "shown": "Google showed your website for {count, plural, one {one keyword} other {# keywords}} in the last {c} days, bringing {b} clicks.",
-        "clicksUp": "That is {a}% more clicks than the {c} days before.",
-        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "noKeywords": "Google showed your website for no keywords {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "shown": "Google showed your website for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, bringing {b} clicks.",
+        "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
+        "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "checkGoogle": "See whether Google moved, or your pages did.",
         "topThree": "{count, plural, =0 {None of them is} one {One of them is} other {# of them are}} in Google's top three.",
         "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
       },
       "pages": {
-        "noPages": "Google showed none of your pages in the last {c} days.",
-        "shown": "{count, plural, one {One of your pages was} other {# of your pages were}} shown in Google in the last {c} days, bringing {b} clicks.",
-        "clicksUp": "That is {a}% more clicks than the {c} days before.",
-        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "noPages": "Google showed none of your pages {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "shown": "{count, plural, one {One of your pages was} other {# of your pages were}} shown in Google {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, bringing {b} clicks.",
+        "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
+        "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "checkGoogle": "See whether Google moved, or your pages did.",
         "seeLowCtr": "Look at the pages Google shows but people rarely click."
       },
@@ -15521,8 +15510,8 @@
         "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
       },
       "moves": {
-        "noMoves": "No keyword's clicks changed in the last {c} days.",
-        "gainingLosing": "{count, plural, one {One keyword} other {# keywords}} gained clicks and {countB, plural, one {one} other {#}} lost them in the last {c} days.",
+        "noMoves": "No keyword's clicks changed {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "gainingLosing": "{count, plural, one {One keyword} other {# keywords}} gained clicks and {countB, plural, one {one} other {#}} lost them {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
         "netUp": "Between them, clicks rose by {a}.",
         "netDown": "Between them, clicks fell by {a}.",
         "seeLosing": "Start with the keywords losing the most clicks.",
@@ -15565,30 +15554,30 @@
       "trackedKeywords": {
         "noneKeywords": "You track no keywords on this website yet.",
         "trackKeywords": "Tick the keywords that matter on Keywords, and they are watched every day.",
-        "trackedKeywords": "You track {count, plural, one {one keyword} other {# keywords}}; together they brought {b} clicks in the last {c} days.",
-        "clicksUp": "That is {a}% more clicks than the {c} days before.",
-        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "trackedKeywords": "You track {count, plural, one {one keyword} other {# keywords}}; together they brought {b} clicks {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
+        "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "checkGoogle": "See whether Google moved, or your pages did."
       },
       "trackedPages": {
         "nonePages": "You track no pages on this website yet.",
         "trackPages": "Tick the pages that matter on Pages, and they are watched every day.",
-        "trackedPages": "You track {count, plural, one {one page} other {# pages}}; together they brought {b} clicks in the last {c} days.",
-        "clicksUp": "That is {a}% more clicks than the {c} days before.",
-        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "trackedPages": "You track {count, plural, one {one page} other {# pages}}; together they brought {b} clicks {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
+        "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "checkGoogle": "See whether Google moved, or your pages did."
       },
       "performance": {
-        "nothingShown": "Google did not show your website in the last {c} days.",
-        "performance": "Google showed your website {a} times in the last {c} days, and people clicked {b} times.",
-        "clicksUp": "That is {a}% more clicks than the {c} days before.",
-        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "nothingShown": "Google did not show your website {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "performance": "Google showed your website {a} times {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, and people clicked {b} times.",
+        "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
+        "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "checkGoogle": "See whether Google moved, or your pages did.",
         "position": "Your average position was {a}.",
         "seeWins": "See which keywords gained and lost clicks."
       },
       "newLost": {
-        "keywordsNewLost": "{count, plural, one {One keyword is} other {# keywords are}} new in the last {c} days, and {countB, plural, one {one was} other {# were}} lost.",
+        "keywordsNewLost": "{count, plural, one {One keyword is} other {# keywords are}} new {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, and {countB, plural, one {one was} other {# were}} lost.",
         "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
         "checkGoogle": "See whether Google moved, or your pages did."
       },
@@ -15613,10 +15602,10 @@
         "seeLowCtr": "Look at the pages Google shows but people rarely click."
       },
       "record": {
-        "notShown": "Google did not show “{text}” in the last {c} days.",
-        "recordFigures": "“{text}” brought {b} clicks in the last {c} days, at an average position of {a}.",
-        "clicksUp": "That is {a}% more clicks than the {c} days before.",
-        "clicksDown": "That is {a}% fewer clicks than the {c} days before.",
+        "notShown": "Google did not show “{text}” {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
+        "recordFigures": "“{text}” brought {b} clicks {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, at an average position of {a}.",
+        "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
+        "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "rose": "Its average position rose from {a} to {b}.",
         "fell": "Its average position fell from {a} to {b}."
       },
@@ -15626,7 +15615,7 @@
         "topWebsite": "{text} brings the most clicks: {a}.",
         "notConnected": "{text} has no Search Console yet, so its clicks cannot be seen here.",
         "connect": "Connect Search Console for {text}.",
-        "oneWebsite": "{text} brought {a} clicks in the last 30 days."
+        "oneWebsite": "{text} brought {a} clicks last month."
       },
       "services": {
         "noDemand": "Google hasn't shown your pages in these dates.",
@@ -15647,7 +15636,7 @@
     "pageGap": {
       "homeCountry": "your home country",
       "total": "Clicks in {place}",
-      "totalDetail": "last {days} days, every search",
+      "totalDetail": "{period}, every search",
       "tied": "Tied to a page",
       "tiedDetail": "{share}%: the pages below add up to this",
       "untied": "Not tied to a page",
@@ -15658,10 +15647,10 @@
     },
     "services": {
       "title": "Demand by service",
-      "description": "How often Google showed you for each of your services in the last {days} days against the {days} before, and what buyers clicked.",
-      "readyMade": "Demand by service reads Google's ready-made figures: choose the last 7, 30 or 90 days, or the last year.",
+      "description": "How often Google showed you for each of your services {period} against {before}, and what buyers clicked.",
+      "readyMade": "Demand by service shows once Google has sent some of the period's days.",
       "search": "Find a service",
-      "tableTitle": "{count, plural, one {# service} other {# services}} · The last {days} days against the {days} before",
+      "tableTitle": "{count, plural, one {# service} other {# services}} · {name} against {before}",
       "download": "Download CSV",
       "noMatch": "No service matches",
       "empty": "Google hasn't shown your pages in these dates.",
@@ -15678,7 +15667,7 @@
       },
       "chart": {
         "title": "How often Google showed you, by service",
-        "hint": "The last {days} days against the {days} before.",
+        "hint": "{name} against {before}.",
         "before": "The days before",
         "now": "The last days"
       },

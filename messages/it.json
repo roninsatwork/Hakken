@@ -8216,7 +8216,7 @@
           "send": "Ti manderò",
           "pages": "{direction, select, gained {Le {count} pagine che hanno guadagnato più visitatori da Google} other {Le {count} pagine che hanno perso più visitatori da Google}}",
           "every": "Ogni {weekday} alle {time}",
-          "compares": "Ogni report confronta gli ultimi 7 giorni in Search Console con i 7 precedenti",
+          "compares": "Ogni report confronta la settimana scorsa in Search Console, da lunedì a domenica, con la settimana precedente",
           "yes": "Sì, mandamelo",
           "hint": "Vuoi qualcosa di diverso? Dimmelo, per esempio “il venerdì” o “le dieci pagine che hanno guadagnato di più”.",
           "set": "Tutto pronto: il primo report è in arrivo",
@@ -10841,15 +10841,6 @@
       }
     },
     "range": {
-      "label": "Date",
-      "last7": "Ultimi 7 giorni",
-      "last30": "Ultimi 30 giorni",
-      "last90": "Ultimi 90 giorni",
-      "last365": "Ultimo anno",
-      "last730": "Ultimi 2 anni",
-      "custom": "Intervallo personalizzato",
-      "from": "Dal",
-      "to": "Al",
       "stepLabel": "Passo",
       "daily": "Giornaliero",
       "weekly": "Settimanale",
@@ -14848,7 +14839,7 @@
       "searchPlaceholder": "Trova un sito…",
       "empty": "La tua azienda non ha ancora siti propri.",
       "noMatch": "Nessun sito corrisponde alla ricerca.",
-      "period": "Gli ultimi 30 giorni fino al giorno più recente di Google",
+      "period": "Il mese scorso",
       "columns": {
         "website": "Sito",
         "status": "Search Console",
@@ -14938,9 +14929,9 @@
       "positionNote": "La media di Google",
       "shown": "Volte in cui Google l'ha mostrata",
       "ctrNote": "Clic per ogni volta che è mostrata",
-      "up": "▲ {change} rispetto ai {days} giorni precedenti",
-      "down": "▼ {change} rispetto ai {days} giorni precedenti",
-      "same": "Come nei {days} giorni precedenti",
+      "up": "▲ {change} {versus}",
+      "down": "▼ {change} {versus}",
+      "same": "Nessuna variazione {versus}",
       "better": "▲ {change} posizioni meglio",
       "worse": "▼ {change} posizioni peggio",
       "points": "{change} punti",
@@ -14964,7 +14955,7 @@
       "week": "Settimana",
       "preparing": "Le settimane di questo paese sono in preparazione. Il grafico appare dopo la sua prima raccolta.",
       "month": "Mese",
-      "byWeek": "Mostrato per settimana: i giorni si tengono per 90 giorni e queste date vanno più indietro.",
+      "byWeek": "Mostrato per settimana: i giorni si tengono per 60 giorni e queste date vanno più indietro.",
       "byMonth": "Mostrato per mese: le settimane si tengono per 6 mesi e queste date vanno più indietro.",
       "noSearches": "Le ricerche non si tengono per {kind, select, discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
       "reach": "Mostra le ultime {weeks} settimane, dal {from}: il massimo che i grafici tengono, impostato in Limiti.",
@@ -15010,7 +15001,7 @@
       "ctr": "CTR",
       "position": "Posizione",
       "share": "Quota dei clic",
-      "versus": "Variazione rispetto ai {days} giorni precedenti",
+      "versus": "Variazione {versus}",
       "noVersus": "Nessuna variazione: i giorni precedenti non sono disponibili",
       "preparing": "Sto sommando queste date. L'elenco appare appena è pronto.",
       "noSearches": "Le ricerche non si tengono per {kind, select, discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
@@ -15212,9 +15203,7 @@
       "wayUp": "Su",
       "wayDown": "Giù"
     },
-    "common": {
-      "inLast": "Negli ultimi {days} giorni"
-    },
+    "common": {},
     "almost": {
       "title": "Quasi in cima",
       "description": "Parole chiave per cui Google ti mostra già nelle posizioni da 4 a 20, con quante persone le cercano ogni mese, da Visibilità. Sono le più vicine alle prime tre.",
@@ -15251,10 +15240,10 @@
     },
     "moves": {
       "title": "Guadagni e perdite",
-      "description": "Le parole chiave i cui clic sono cambiati di più. Clic e posizione si leggono: i {days} giorni prima → gli ultimi {days} giorni.",
+      "description": "Le parole chiave i cui clic sono cambiati di più. Clic e posizione si leggono: {before} → {period}.",
       "gaining": "Parole chiave che guadagnano clic",
       "losing": "Parole chiave che perdono clic",
-      "against": "Rispetto ai {days} giorni prima",
+      "against": "Contro {before}",
       "gained": "Clic guadagnati",
       "byGaining": "Dalle parole chiave in crescita",
       "lost": "Clic persi",
@@ -15350,7 +15339,7 @@
     },
     "ctrCurve": {
       "title": "Tasso di clic per posizione",
-      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, negli ultimi {days} giorni. Mostrate ma non cliccate lo usa come tuo metro.",
+      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, {period}. Mostrate ma non cliccate lo usa come tuo metro.",
       "chartTitle": "Il tuo tasso di clic in ogni posizione",
       "chartHint": "Clic per ogni volta che Google ti ha mostrato, nelle posizioni da 1 a {positions}.",
       "rate": "Tasso di clic",
@@ -15377,9 +15366,9 @@
     },
     "estimates": {
       "title": "Reali contro stimati",
-      "description": "I clic sono quelli contati da Google; la Stima sono le visite stimate da Visibilità per gli stessi {days} giorni. Dove differiscono molto, fidati di Google.",
+      "description": "I clic sono quelli contati da Google; la Stima sono le visite stimate da Visibilità per le stesse date. Dove differiscono molto, fidati di Google.",
       "sites": "Stima di Visibilità",
-      "visitsIn": "Visite negli ultimi {days} giorni",
+      "visitsIn": "Visite, {period}",
       "google": "Clic di Google",
       "high": "Pagine stimate troppo in alto",
       "low": "Pagine stimate troppo in basso",
@@ -15498,19 +15487,19 @@
         "openSearchConsole": "Apri Search Console"
       },
       "keywords": {
-        "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
-        "shown": "Google ha mostrato il tuo sito per {count, plural, one {una parola chiave} other {# parole chiave}} negli ultimi {c} giorni, portando {b} clic.",
-        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
-        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "shown": "Google ha mostrato il tuo sito per {count, plural, one {una parola chiave} other {# parole chiave}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, portando {b} clic.",
+        "clicksUp": "Sono il {a}% di clic in più {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
+        "clicksDown": "Sono il {a}% di clic in meno {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
         "topThree": "{count, plural, =0 {Nessuna è} one {Una è} other {# sono}} tra i primi tre risultati di Google.",
         "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
       },
       "pages": {
-        "noPages": "Google non ha mostrato nessuna delle tue pagine negli ultimi {c} giorni.",
-        "shown": "{count, plural, one {Una delle tue pagine è stata mostrata} other {# delle tue pagine sono state mostrate}} su Google negli ultimi {c} giorni, portando {b} clic.",
-        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
-        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "noPages": "Google non ha mostrato nessuna delle tue pagine {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "shown": "{count, plural, one {Una delle tue pagine è stata mostrata} other {# delle tue pagine sono state mostrate}} su Google {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, portando {b} clic.",
+        "clicksUp": "Sono il {a}% di clic in più {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
+        "clicksDown": "Sono il {a}% di clic in meno {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
         "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
       },
@@ -15521,8 +15510,8 @@
         "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
       },
       "moves": {
-        "noMoves": "I clic di nessuna parola chiave sono cambiati negli ultimi {c} giorni.",
-        "gainingLosing": "{count, plural, one {Una parola chiave ha guadagnato} other {# parole chiave hanno guadagnato}} clic e {countB, plural, one {una li ha persi} other {# li hanno persi}} negli ultimi {c} giorni.",
+        "noMoves": "I clic di nessuna parola chiave sono cambiati {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "gainingLosing": "{count, plural, one {Una parola chiave ha guadagnato} other {# parole chiave hanno guadagnato}} clic e {countB, plural, one {una li ha persi} other {# li hanno persi}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
         "netUp": "Nel complesso, i clic sono aumentati di {a}.",
         "netDown": "Nel complesso, i clic sono calati di {a}.",
         "seeLosing": "Inizia dalle parole chiave che perdono più clic.",
@@ -15565,30 +15554,30 @@
       "trackedKeywords": {
         "noneKeywords": "Non segui ancora nessuna parola chiave su questo sito.",
         "trackKeywords": "Spunta le parole chiave che contano in Parole chiave, e verranno seguite ogni giorno.",
-        "trackedKeywords": "Segui {count, plural, one {una parola chiave} other {# parole chiave}}; insieme hanno portato {b} clic negli ultimi {c} giorni.",
-        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
-        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "trackedKeywords": "Segui {count, plural, one {una parola chiave} other {# parole chiave}}; insieme hanno portato {b} clic {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "clicksUp": "Sono il {a}% di clic in più {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
+        "clicksDown": "Sono il {a}% di clic in meno {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
       },
       "trackedPages": {
         "nonePages": "Non segui ancora nessuna pagina su questo sito.",
         "trackPages": "Spunta le pagine che contano in Pagine, e verranno seguite ogni giorno.",
-        "trackedPages": "Segui {count, plural, one {una pagina} other {# pagine}}; insieme hanno portato {b} clic negli ultimi {c} giorni.",
-        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
-        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "trackedPages": "Segui {count, plural, one {una pagina} other {# pagine}}; insieme hanno portato {b} clic {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "clicksUp": "Sono il {a}% di clic in più {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
+        "clicksDown": "Sono il {a}% di clic in meno {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
       },
       "performance": {
-        "nothingShown": "Google non ha mostrato il tuo sito negli ultimi {c} giorni.",
-        "performance": "Google ha mostrato il tuo sito {a} volte negli ultimi {c} giorni, e le persone hanno cliccato {b} volte.",
-        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
-        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "nothingShown": "Google non ha mostrato il tuo sito {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "performance": "Google ha mostrato il tuo sito {a} volte {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, e le persone hanno cliccato {b} volte.",
+        "clicksUp": "Sono il {a}% di clic in più {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
+        "clicksDown": "Sono il {a}% di clic in meno {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine.",
         "position": "La tua posizione media è stata {a}.",
         "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
       },
       "newLost": {
-        "keywordsNewLost": "{count, plural, one {Una parola chiave è nuova} other {# parole chiave sono nuove}} negli ultimi {c} giorni, e {countB, plural, one {una è stata persa} other {# sono state perse}}.",
+        "keywordsNewLost": "{count, plural, one {Una parola chiave è nuova} other {# parole chiave sono nuove}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, e {countB, plural, one {una è stata persa} other {# sono state perse}}.",
         "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
       },
@@ -15613,10 +15602,10 @@
         "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
       },
       "record": {
-        "notShown": "Google non ha mostrato “{text}” negli ultimi {c} giorni.",
-        "recordFigures": "“{text}” ha portato {b} clic negli ultimi {c} giorni, con una posizione media di {a}.",
-        "clicksUp": "Sono il {a}% di clic in più rispetto ai {c} giorni prima.",
-        "clicksDown": "Sono il {a}% di clic in meno rispetto ai {c} giorni prima.",
+        "notShown": "Google non ha mostrato “{text}” {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}.",
+        "recordFigures": "“{text}” ha portato {b} clic {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, con una posizione media di {a}.",
+        "clicksUp": "Sono il {a}% di clic in più {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
+        "clicksDown": "Sono il {a}% di clic in meno {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} thisQuarter {rispetto agli stessi giorni del trimestre scorso} lastQuarter {rispetto al trimestre precedente} other {rispetto agli stessi giorni dell'anno scorso}}.",
         "rose": "La sua posizione media è salita da {a} a {b}.",
         "fell": "La sua posizione media è scesa da {a} a {b}."
       },
@@ -15626,7 +15615,7 @@
         "topWebsite": "{text} porta più clic: {a}.",
         "notConnected": "{text} non ha ancora Search Console, quindi i suoi clic non si vedono qui.",
         "connect": "Collega Search Console per {text}.",
-        "oneWebsite": "{text} ha portato {a} clic negli ultimi 30 giorni."
+        "oneWebsite": "{text} ha portato {a} clic il mese scorso."
       },
       "services": {
         "noDemand": "Google non ha mostrato le tue pagine in queste date.",
@@ -15647,7 +15636,7 @@
     "pageGap": {
       "homeCountry": "il tuo paese principale",
       "total": "Clic in {place}",
-      "totalDetail": "ultimi {days} giorni, ogni ricerca",
+      "totalDetail": "{period}, ogni ricerca",
       "tied": "Legati a una pagina",
       "tiedDetail": "{share}%: le pagine qui sotto sommano a questo",
       "untied": "Non legati a una pagina",
@@ -15658,10 +15647,10 @@
     },
     "services": {
       "title": "Domanda per servizio",
-      "description": "Quante volte Google ti ha mostrato per ognuno dei tuoi servizi negli ultimi {days} giorni rispetto ai {days} precedenti, e cosa hanno cliccato i clienti.",
-      "readyMade": "La domanda per servizio legge i dati già pronti di Google: scegli gli ultimi 7, 30 o 90 giorni, o l'ultimo anno.",
+      "description": "Quante volte Google ti ha mostrato per ognuno dei tuoi servizi {period} contro {before}, e cosa hanno cliccato i clienti.",
+      "readyMade": "La domanda per servizio compare quando Google ha inviato alcuni giorni del periodo.",
       "search": "Trova un servizio",
-      "tableTitle": "{count, plural, one {# servizio} other {# servizi}} · Gli ultimi {days} giorni rispetto ai {days} precedenti",
+      "tableTitle": "{count, plural, one {# servizio} other {# servizi}} · {name} contro {before}",
       "download": "Scarica CSV",
       "noMatch": "Nessun servizio corrisponde",
       "empty": "Google non ha mostrato le tue pagine in queste date.",
@@ -15678,7 +15667,7 @@
       },
       "chart": {
         "title": "Quante volte Google ti ha mostrato, per servizio",
-        "hint": "Gli ultimi {days} giorni rispetto ai {days} precedenti.",
+        "hint": "{name} contro {before}.",
         "before": "I giorni precedenti",
         "now": "Gli ultimi giorni"
       },

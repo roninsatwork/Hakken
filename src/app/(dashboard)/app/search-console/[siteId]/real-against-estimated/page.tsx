@@ -11,6 +11,7 @@ import { KindText, figureColumns, useSearchConsoleList, type ChipId, type ListRo
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { estimatesSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["verdict", "pageType"];
 
@@ -25,22 +26,22 @@ export default function SearchConsoleEstimatesPage() {
   const t = useTranslations("searchConsole");
   const tc = useTranslations("sites.common");
   const list = useSearchConsoleList({ dimension: "page", view: "estimates", opening: "gap", chips: CHIPS });
+  const periodWords = useSearchConsolePeriodWords(list.range.period);
   // Once the website has classifications of its own, the Type column is the page's classification.
   const typeHeader = list.pageKinds.classified ? tc("classification") : t("table.type");
   const recordHref = useRecordHref(list.siteId);
   const host = list.status?.host ?? "";
   const summary = list.summary;
-  const days = list.range.days;
   return (
     <SearchConsoleListScreen
       sees={<SearchConsoleSees screen="estimates" seen={list.summary ? estimatesSees(list.summary) : null} />}
       icon={<Scale className="h-5 w-5 text-brand" />}
       title={t("estimates.title")}
-      description={t("estimates.description", { days })}
+      description={t("estimates.description")}
       heroes={
         <FigureRow>
-          <Figure label={t("estimates.sites")} value={summary ? formatNumber(summary.estimate) : "…"} detail={<span className="text-secondary">{t("estimates.visitsIn", { days })}</span>} />
-          <Figure label={t("estimates.google")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure label={t("estimates.sites")} value={summary ? formatNumber(summary.estimate) : "…"} detail={<span className="text-secondary">{t("estimates.visitsIn", { period: periodWords.period })}</span>} />
+          <Figure label={t("estimates.google")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           <Figure label={t("estimates.high")} value={summary ? formatNumber(summary.high) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter", { percent: list.status?.limits.estimateOff ?? "…" })}</span>} />
           <Figure label={t("estimates.low")} value={summary ? formatNumber(summary.low) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter", { percent: list.status?.limits.estimateOff ?? "…" })}</span>} />
         </FigureRow>

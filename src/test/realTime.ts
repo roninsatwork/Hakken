@@ -113,6 +113,18 @@ export function useFixedDay(day: string = FIXED_DAY): void {
 }
 
 /**
+ * A screen test on a fixed day: only `Date` faked, at midday UTC on `day`,
+ * moving on with real time, so a screen's own waits still run. The date
+ * menu's calendar periods turn on the day (calendar-periods-plan.md), so a
+ * screen test reading dates runs on one, as `useFixedDay` does for the
+ * backend; `vi.useRealTimers()` after each test.
+ */
+export function useScreenDay(day: string = FIXED_DAY): void {
+  vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+  vi.setSystemTime(Date.parse(`${day}T12:00:00Z`));
+}
+
+/**
  * Keep a test about days away from midnight: the date set to midday UTC on
  * today's date, moving on with real time from there. A test that works out
  * "today" or "yesterday" itself, beside code that works it out again a moment

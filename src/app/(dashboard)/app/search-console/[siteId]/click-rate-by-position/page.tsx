@@ -31,6 +31,7 @@ import {
 } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { curveSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["device"];
 
@@ -59,6 +60,7 @@ export default function SearchConsoleCtrCurvePage() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const periodWords = useSearchConsolePeriodWords(range.period);
   const [search, setSearch, term] = useSiteSearch();
   const [country] = useSearchConsoleCountry();
   const [device] = useSiteParam<string>("device", "", ["", "DESKTOP", "MOBILE", "TABLET"]);
@@ -86,7 +88,7 @@ export default function SearchConsoleCtrCurvePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Percent className="h-5 w-5 text-brand" />} title={t("ctrCurve.title")} description={t("ctrCurve.description", { days: range.days })} />
+      <PageHeader icon={<Percent className="h-5 w-5 text-brand" />} title={t("ctrCurve.title")} description={t("ctrCurve.description", { period: periodWords.period })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           <SearchConsoleSees screen="ctrCurve" seen={points ? curveSees(points) : null} />

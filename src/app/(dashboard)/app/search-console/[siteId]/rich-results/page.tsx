@@ -31,6 +31,7 @@ import {
 } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { appearanceSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["device"];
 
@@ -67,6 +68,7 @@ export default function SearchConsoleAppearancePage() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const periodWords = useSearchConsolePeriodWords(range.period);
   const [search, setSearch, term] = useSiteSearch();
   const held = Boolean(status?.connection?.newestDay);
   const [country] = useSearchConsoleCountry();
@@ -119,9 +121,9 @@ export default function SearchConsoleAppearancePage() {
           <SearchConsoleSees screen="appearance" seen={rows ? appearanceSees(rows.length, [...rows].sort((left, right) => right.clicks - left.clicks)[0] ? { name: [...rows].sort((left, right) => right.clicks - left.clicks)[0].key } : null) : null} />
           <ResultKindSwitch />
           <FigureRow columns={3}>
-            <Figure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
+            <Figure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
             <Figure label={t("appearance.clicks")} value={rows ? formatNumber(clicks) : "…"} detail={<span className="text-secondary">{t("appearance.ofAll", { share: all > 0 ? formatRate(clicks / all) : "–" })}</span>} />
-            <Figure label={t("appearance.impressions")} value={rows ? formatNumber(impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
+            <Figure label={t("appearance.impressions")} value={rows ? formatNumber(impressions) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           </FigureRow>
           <DataTable
             rows={pager.pageRows}

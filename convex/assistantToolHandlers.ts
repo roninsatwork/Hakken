@@ -2,6 +2,7 @@ import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
 import { BING_SCREENS } from "./utils/bingScreens";
+import { OPENING_PERIOD, isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * The Assistant's company-figure reads, as tool handlers
@@ -16,10 +17,17 @@ const NO_COMPANY_FIGURES = {
   problem: "This conversation belongs to no company, so there are no company figures to read.",
 };
 
-/** Search Console is read over its ready-made periods only: 7, 30 or 90 days, the nearest asked for. */
-function nearestPeriod(days: number | undefined): 7 | 30 | 90 {
-  if (days === undefined || days <= 7) return 7;
-  return days <= 30 ? 30 : 90;
+/**
+ * Search Console is read over the screens' calendar periods. A conversation
+ * set up before they came may still ask in days: the nearest period stands in
+ * — last week, last month or last quarter.
+ */
+function consolePeriod(args: Record<string, unknown>): CalendarPeriod {
+  const period = optionalStringArg(args, "period");
+  if (period && isCalendarPeriod(period)) return period;
+  const days = numberArg(args, "days");
+  if (days === undefined) return OPENING_PERIOD;
+  return days <= 7 ? "lastWeek" : days <= 31 ? "lastMonth" : "lastQuarter";
 }
 
 /** Google Analytics is read over its ready-made periods: 7, 30 or 90 days, or 12 months, the nearest asked for. */
@@ -69,7 +77,7 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     return await input.ctx.runQuery(internal.assistantReads.searchConsoleInternal, {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
-      days: nearestPeriod(numberArg(input.args, "days")),
+      period: consolePeriod(input.args),
       ...(page ? { page } : {}),
     });
   },

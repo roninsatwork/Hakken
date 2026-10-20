@@ -6,6 +6,7 @@ import { checkedCountry } from "./searchConsoleCountries";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { classifyPages, readClassificationSetup } from "./pageClassifications";
 import { pagePath } from "./utils/siteShapes";
+import { calendarPeriodValidator } from "./utils/calendarPeriods";
 
 /** The pages read to name and sort a website's pages: its pages, most clicks first. */
 const PAGES_READ = 900;
@@ -36,7 +37,7 @@ const serviceRow = v.object({
 export const searchConsoleDemand = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    period: v.union(v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365")),
+    period: calendarPeriodValidator,
     country: v.optional(v.string()),
   },
   returns: v.union(v.null(), v.object({

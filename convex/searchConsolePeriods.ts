@@ -7,7 +7,6 @@ import { LISTS_OF } from "./searchConsoleApi";
 import {
   FAN_OUT_PERIODS,
   VOLATILITY_PERIOD,
-  SEARCH_CONSOLE_PERIODS,
   periodListValidator,
   periodValidator,
   searchTypeValidator,
@@ -49,15 +48,17 @@ import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
 import { requireMySite } from "./siteAccess";
 import { keywordsOnDay, spanKey, streamList, streamPairs } from "./searchConsoleKeptSums";
 import { chartPeriods, chartReach, daysBetween, daysFrom, lastDayOf, type ChartGrain, type ChartPeriod } from "./utils/searchConsoleChartDays";
+import { CALENDAR_PERIODS, periodSpan as calendarSpan, spanBefore as calendarBefore, ukDay } from "./utils/calendarPeriods";
 
 export { chartReach, daysBetween } from "./utils/searchConsoleChartDays";
 
 /**
  * The ready-made periods every Search Console list reads
- * (docs/plans/active/search-console-plan.md §14.3, item 4): for the last 7,
- * 30 and 90 days and 12 months ending on the newest day held, and the same
- * span before each where it is held, each list added up once after every
- * collection — so a screen reads one record or a few, never a day at a time.
+ * (docs/plans/active/search-console-plan.md §14.3, item 4): the date menu's
+ * seven calendar periods, each to the newest day held, and what each is set
+ * against where it is held (calendar-periods-plan.md, phase 4), each list
+ * added up once after every collection — so a screen reads one record or a
+ * few, never a day at a time.
  *
  * A search's list is added up from the pairs, with how many of the
  * website's pages it brought people to and the top one; a page's list is
@@ -69,30 +70,15 @@ export { chartReach, daysBetween } from "./utils/searchConsoleChartDays";
  * the hold's index, country second.
  */
 
-/** The periods with a period before them held for the change: twelve months has none (§14.3, item 7). */
-const WITH_BEFORE: readonly SearchConsolePeriod[] = ["7", "30", "90"];
-
-/** Days a ready-made period spans. */
-export const periodDays = (period: SearchConsolePeriod): number => Number(period);
-
 export type PeriodSpan = { from: string; to: string };
 
 /**
- * A period's days, ending on the newest day held: never before the oldest
- * day held, so a website connected last week has a 12-month period of the
- * days it holds, and says so.
+ * Fan-out's own days (14 or 28), ending on the newest day held: never before
+ * the oldest day held.
  */
-export function periodSpan(period: SearchConsolePeriod, newest: string, oldest: string): PeriodSpan {
-  const from = shiftDay(newest, 1 - periodDays(period));
+export function daysSpan(period: (typeof FAN_OUT_PERIODS)[number], newest: string, oldest: string): PeriodSpan {
+  const from = shiftDay(newest, 1 - Number(period));
   return { from: from < oldest ? oldest : from, to: newest };
-}
-
-/** The same span just before, when every day of it is held; null otherwise. */
-export function spanBefore(period: SearchConsolePeriod, newest: string, oldest: string): PeriodSpan | null {
-  if (!WITH_BEFORE.includes(period)) return null;
-  const to = shiftDay(newest, -periodDays(period));
-  const from = shiftDay(to, 1 - periodDays(period));
-  return from < oldest ? null : { from, to };
 }
 
 export type Kept = { grain: "DAY" | "WEEK" | "MONTH"; start: string; packed: Packed };
@@ -385,43 +371,102 @@ export const searchConsoleChartFigures = tenantQuery({
     return { periods, step, byWeek, byMonth, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0, noSearches: false };
   },
 });
-type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan };
+/**
+ * A period's slot: what it is (`NOW`) or is set against (`BEFORE`), its days
+ * held (null when none are, or — before — when not every one is), and whether
+ * those days reach back past the 60 kept day by day, so are asked of Google a
+ * week at a time (`long`).
+ */
+type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan; long: boolean };
 
 /**
- * Every period and the period before it, as spans of days: null where the
- * days before are not held. The long periods are asked of Google a week at a
- * time, so they reach back to Google's sixteen-month line (`googleFrom`;
- * insights-intelligence-plan.md phase 9) — twelve months whole, and the 90
- * days set against the 90 before — while the short ones are added up from the
- * days collected and stop where collection began.
+ * Every calendar period and what it is set against, as spans of days, on the
+ * UK day `today` (calendar-periods-plan.md, phase 4). A span reaching past
+ * the days kept (`dayLine`) is asked of Google a week at a time, so reaches
+ * back to Google's sixteen-month line (`googleFrom`; insights-intelligence-
+ * plan.md phase 9); one inside them is added up from the days collected and
+ * stops where collection began. A period Google has sent none of yet — This
+ * week on a Monday — has no span, so its lists are emptied; what it is set
+ * against is held only when every day of it is.
  */
-export function slotsOf(newest: string, oldest: string, googleFrom: string = oldest): Slot[] {
-  return SEARCH_CONSOLE_PERIODS.flatMap((period) => {
-    const floor = LONG_PERIODS.includes(period) && googleFrom < oldest ? googleFrom : oldest;
-    const now = periodSpan(period, newest, floor);
+export function slotsOf(newest: string, oldest: string, googleFrom: string = oldest, today: string = ukDay(), dayLine: string = firstDayKeptFor("web", newest)): Slot[] {
+  const floorOf = (from: string) => (from < dayLine && googleFrom < oldest ? googleFrom : oldest);
+  return CALENDAR_PERIODS.flatMap((period): Slot[] => {
+    const whole = calendarSpan(period, today, newest);
+    const nowFrom = whole ? (whole.from < floorOf(whole.from) ? floorOf(whole.from) : whole.from) : null;
+    if (!whole || nowFrom === null || nowFrom > whole.to) {
+      const none = { from: newest, to: newest };
+      return [
+        { period, which: "NOW", span: null, now: none, long: false },
+        { period, which: "BEFORE", span: null, now: none, long: false },
+      ];
+    }
+    const now = { from: nowFrom, to: whole.to };
+    const before = calendarBefore(period, whole);
+    const beforeHeld = before.from >= floorOf(before.from);
     return [
-      { period, which: "NOW" as const, span: now, now },
-      { period, which: "BEFORE" as const, span: spanBefore(period, newest, floor), now },
+      { period, which: "NOW", span: now, now, long: now.from < dayLine },
+      { period, which: "BEFORE", span: beforeHeld ? { from: before.from, to: before.to } : null, now, long: beforeHeld && before.from < dayLine },
     ];
   });
 }
 
 const slotKey = (slot: Slot) => `${slot.period}|${slot.which}`;
 
-/** The periods added up once a week, not every night (cost review 1). */
-export const LONG_PERIODS: readonly SearchConsolePeriod[] = ["90", "365"];
+/** A long slot's group, each a settle stage of its own: This year's (`YEAR`), and every other period's (`QUARTERS`). */
+export type LongGroup = "QUARTERS" | "YEAR";
+const groupOf = (slot: Slot): LongGroup => (slot.period === "thisYear" ? "YEAR" : "QUARTERS");
 
 /**
- * Twelve months holding exactly the 90 days' days — every website, until it
- * has held more than 90 days — is the 90 days again: kept once (finish-off
- * plan item 2E, 2026-10-05: a third of morehandles.co.uk's ready-made
- * periods, 138 MB, were the 90 days twice). Its slot keeps one empty part
- * saying its days, and the readers read the 90 days (`periodToRead`).
+ * The period whose identical days a NOW slot repeats — This month and This
+ * quarter in a quarter's first month, This quarter and This year in its first
+ * quarter — or null: kept once, under the first of them in the menu's order
+ * (finish-off plan item 2E, 2026-10-05: a third of morehandles.co.uk's
+ * ready-made periods, 138 MB, were the 90 days twice). Its slot keeps one
+ * empty part saying its days, and the readers read the other (`partsToRead`).
  */
-function sameAsNinety(slot: Slot, ninety: PeriodSpan | null): boolean {
-  return slot.period === "365" && slot.which === "NOW" && ninety !== null && slot.span !== null
-    && slot.span.from === ninety.from && slot.span.to === ninety.to;
+function sameDaysAs(slot: Slot, slots: readonly Slot[]): SearchConsolePeriod | null {
+  if (slot.which !== "NOW" || !slot.span) return null;
+  const first = slots.find((other) => other.which === "NOW" && other.span !== null && other.span.from === slot.span!.from && other.span.to === slot.span!.to);
+  return first && first.period !== slot.period ? first.period : null;
 }
+
+/** Google settles a day's figures within three days: a finished period built this long after its last day is final. */
+const SETTLED_AFTER_MS = 4 * 86_400_000;
+
+/**
+ * A long slot of a finished period already built once its days settled, for
+ * the same days: kept as it is, never asked of Google again (calendar-periods-
+ * plan.md: "the finished periods once") — Last quarter, and what it and Last
+ * month are set against.
+ */
+export const settledSlots = internalQuery({
+  args: {
+    companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
+    searchType: searchTypeValidator,
+    slots: v.array(v.object({ period: periodValidator, which: v.union(v.literal("NOW"), v.literal("BEFORE")), from: v.string(), to: v.string() })),
+  },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const settled: string[] = [];
+    for (const slot of args.slots) {
+      for (const list of ["page", "query"] as const) {
+        const first = await ctx.db
+          .query("searchConsolePeriods")
+          .withIndex("by_hold_country_type_list_period", (q) => q
+            .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType)
+            .eq("list", list).eq("period", slot.period).eq("which", slot.which).eq("part", 0))
+          .first();
+        if (first && first.from === slot.from && first.to === slot.to && first.builtAt >= Date.parse(`${slot.to}T00:00:00Z`) + SETTLED_AFTER_MS) {
+          settled.push(`${slot.period}|${slot.which}`);
+          break;
+        }
+      }
+    }
+    return settled;
+  },
+});
 
 /** A part as written: its rows, and what each row carries beside them. */
 export type PartToWrite = Packed & {
@@ -539,31 +584,31 @@ export async function buildSitePeriods(
    * and whether its 90 days and twelve months are added up too: weekly, the
    * 7 and 30 days nightly (cost review 1 and 4, `searchConsoleSettling.ts`).
    */
-  // `longPeriod`, with `onlyLong`: one long period alone, a job of its own; `stopAt`: past it the job stops itself (`RanLong`),
+  // `longGroup`, with `onlyLong`: one group of long periods alone, a job of its own; `stopAt`: past it the job stops itself (`RanLong`),
   // its long periods' pairs pausing for the next job a little before (`PairsPaused`); `carry`: where a job before paused them.
-  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean; longPeriod?: "90" | "365"; stopAt?: number; careful?: boolean; held?: { pruned: boolean }; carry?: PairsCarry } = {},
+  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean; longGroup?: LongGroup; stopAt?: number; careful?: boolean; held?: { pruned: boolean }; carry?: PairsCarry } = {},
 ): Promise<number> {
   let written = 0;
   const builtAt = Date.now();
   const long = options.long ?? true;
   // Caught up when a screen asks (`searchConsoleCatchUp.ts`): the 90 days and twelve months alone, nothing nightly.
   const onlyLong = options.onlyLong === true;
-  const allSlots = slotsOf(newest, oldest, historyLimitDay(builtAt));
+  const allSlots = slotsOf(newest, oldest, historyLimitDay(builtAt), ukDay(builtAt), firstDayKeptFor("web", newest));
   const slots = onlyLong
-    ? allSlots.filter((slot) => LONG_PERIODS.includes(slot.period) && (options.longPeriod === undefined || slot.period === options.longPeriod))
-    : long ? allSlots : allSlots.filter((slot) => !LONG_PERIODS.includes(slot.period));
+    ? allSlots.filter((slot) => slot.long && (options.longGroup === undefined || groupOf(slot) === options.longGroup))
+    : long ? allSlots : allSlots.filter((slot) => !slot.long);
   const inTime = (what: string) => { if (options.stopAt !== undefined && Date.now() > options.stopAt) throw new RanLong(what); };
   // The long periods alone read only whether a line is kept: their rows are asked of Google (the adding-up that hands on).
   const anyKeptOf = async (searchType: SearchType, list: SearchConsoleList): Promise<boolean> =>
     await ctx.runQuery(internal.searchConsoleRollups.anyKept, { companyWebsiteId, ...scope, searchType, list });
   const scope = country === undefined ? {} : { country };
-  const ninety = allSlots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
-  const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
+  // A period on another's very days, kept once under the first (`sameDaysAs`).
+  const asNinety = (slot: Slot) => sameDaysAs(slot, allSlots) !== null;
   // A kind of result's lists, held until all are worked out: then its book, then each list holding places in it
   // (core-data-normalisation-plan.md §5.1, `searchConsolePeriodBooks.ts`).
   const waiting: Array<{ searchType: SearchType; list: SearchConsolePeriodList; slot: Slot; parts: PartToWrite[] }> = [];
   const writeParts = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, given: PartToWrite[] | null) => {
-    // Twelve months on the 90 days' own days: one empty part saying its days, the 90 days read instead (`sameAsNinety`).
+    // A period on another's very days: one empty part saying its days, the other read instead (`sameDaysAs`).
     const parts = given !== null && asNinety(slot) ? [] : given;
     // Not held, or a list this kind of result does not have: the slot is only emptied.
     if (parts === null) {
@@ -632,13 +677,25 @@ export async function buildSitePeriods(
   // The 90 days, the 90 days before and twelve months asked of Google, a week at a time: the days are
   // kept 60 days (`searchConsoleLongLists.ts`; keep-less-history-plan.md, part 3). Asked of nobody when
   // the website is not connected, or Google will not answer: the long periods built before then stay.
-  const isLong = (slot: Slot) => LONG_PERIODS.includes(slot.period) && !asNinety(slot);
-  // The periods added up from the days kept: the 7 and 30 days and the spans before (SL1).
+  const isLong = (slot: Slot) => slot.long && !asNinety(slot);
+  // The periods added up from the days kept: those inside the 60 days and the spans before them (SL1).
   const shortSpans = uniqueSpans(slots.filter((slot) => !isLong(slot) && !asNinety(slot) && slot.span).map((slot) => slot.span!));
-  const longSpans = slots.filter((slot) => isLong(slot) && slot.span !== null).map((slot) => slot.span!);
-  const tracked = google && longSpans.length > 0 ? await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId: companyWebsiteId }) : [];
-  const askedOf = async (searchType: SearchType, list: SearchConsoleList) =>
-    google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked, options.stopAt, options.held, list === "pair" ? options.carry : undefined) : null;
+  // A finished period's long slot, built once its days settled, is kept as it is: never asked of Google again.
+  const settledOf = async (searchType: SearchType): Promise<Set<string>> => {
+    const finished = slots.filter((slot) => isLong(slot) && slot.span !== null && slot.span.to < newest);
+    if (finished.length === 0) return new Set();
+    return new Set(await ctx.runQuery(internal.searchConsolePeriods.settledSlots, {
+      companyWebsiteId, ...scope, searchType,
+      slots: finished.map((slot) => ({ period: slot.period, which: slot.which, from: slot.span!.from, to: slot.span!.to })),
+    }));
+  };
+  let settled = new Set<string>();
+  const longSpansOf = () => uniqueSpans(slots.filter((slot) => isLong(slot) && slot.span !== null && !settled.has(slotKey(slot))).map((slot) => slot.span!));
+  const tracked = google && slots.some((slot) => isLong(slot) && slot.span !== null) ? await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId: companyWebsiteId }) : [];
+  const askedOf = async (searchType: SearchType, list: SearchConsoleList) => {
+    const longSpans = longSpansOf();
+    return google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked, options.stopAt, options.held, list === "pair" ? options.carry : undefined) : null;
+  };
   const keysAsked = (asked: Map<string, Row[]> | null, side: "key" | "page") =>
     [...(asked?.values() ?? [])].flatMap((rows) => rows.map((row) => (side === "key" ? row.key : row.page ?? "")));
   // Sites' facts for each keyword and page, looked up once for every kind of result.
@@ -651,6 +708,7 @@ export async function buildSitePeriods(
   };
   for (const searchType of types) {
     const lists = LISTS_OF[searchType];
+    settled = await settledOf(searchType);
     // Each search added up from the pairs, and each page's searches counted from them.
     const pageCounts = new Map<string, Counts>();
     // The days kept read once, a day at a time, into every period they count for (search-console-streamed-lists-plan.md,
@@ -659,7 +717,7 @@ export async function buildSitePeriods(
       newest,
       oldest,
       pairSpans: shortSpans,
-      keywordSpans: searchType === "web" && country === undefined ? FAN_OUT_PERIODS.map((period) => periodSpan(period, newest, oldest)) : [],
+      keywordSpans: searchType === "web" && country === undefined ? FAN_OUT_PERIODS.map((period) => daysSpan(period, newest, oldest)) : [],
       chart: { chartWeeks, brandWords: target?.brandWords ?? [], dayLine: firstDayKeptFor(searchType, newest) },
     }) : null;
     const anyPairs = streamed !== null || (lists.includes("pair") && onlyLong && await anyKeptOf(searchType, "pair"));
@@ -684,6 +742,8 @@ export async function buildSitePeriods(
     }
     for (const slot of slots) {
       inTime(`Adding up the ${searchType} searches`);
+      // A finished period settled and kept: left as it is.
+      if (settled.has(slotKey(slot))) continue;
       if (!anyPairs || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);
         continue;
@@ -729,11 +789,11 @@ export async function buildSitePeriods(
     // Fan-out's 14 and 28 days (§15, decision 4): web keywords for all countries, no period before.
     if (searchType === "web" && country === undefined && !onlyLong) {
       for (const period of FAN_OUT_PERIODS) {
-        const span = periodSpan(period, newest, oldest);
+        const span = daysSpan(period, newest, oldest);
         const rows = streamed
           ? [...(streamed.keywords.get(spanKey(span))?.summed() ?? [])].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
           : null;
-        await write(searchType, "query", { period, which: "NOW", span, now: span }, rows);
+        await write(searchType, "query", { period, which: "NOW", span, now: span, long: false }, rows);
       }
     }
     // Volatility's day (search-console-volatility-plan.md §2.1, V7): the web keywords counted on the newest day and the
@@ -752,7 +812,7 @@ export async function buildSitePeriods(
             .filter((summed) => summed.impressions >= VOLATILITY_IMPRESSIONS)
             .map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
           : null;
-        await write(searchType, "query", { period: VOLATILITY_PERIOD, which, span, now }, rows);
+        await write(searchType, "query", { period: VOLATILITY_PERIOD, which, span, now, long: false }, rows);
       }
     }
     // Pages, countries, devices and kinds of search appearance: Google's own totals, one list at a time.
@@ -767,6 +827,7 @@ export async function buildSitePeriods(
       const asked = anyKept ? await askedOf(searchType, list) : null;
       const pageFacts = list === "page" && anyKept ? await factsOf("page", [...(listed?.keys.texts ?? []), ...keysAsked(asked, "key")]) : undefined;
       for (const slot of slots) {
+        if (settled.has(slotKey(slot))) continue;
         // Countries, devices and rich results show no change on the period before: none is kept for them (5.3).
         const before = slot.which === "BEFORE" && list !== "page";
         const rows = anyKept && slot.span && !before ? (isLong(slot) ? rowsFor(asked, slot.span) : listed?.sums.get(spanKey(slot.span))?.rows() ?? []) : null;
@@ -842,7 +903,8 @@ export const clearPeriodSlot = internalMutation({
     for (const part of old) await ctx.db.delete(part._id);
     // Emptied whole: the list names no build any more.
     if (args.before === undefined && old.length < CLEAR_SLOT_PARTS) {
-      await forgetListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period, which: args.which });
+      // A retired period's rows (`RETIRED_PERIODS`) are cleared by the same step, named as the stored rows name them.
+      await forgetListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period as SearchConsolePeriod, which: args.which });
     }
     return old.length === CLEAR_SLOT_PARTS;
   },
@@ -891,7 +953,7 @@ export const writePeriodPart = internalMutation({
         .take(FIRST_PARTS_READ);
       for (const old of firsts) if (old.builtAt <= args.builtAt) await ctx.db.delete(old._id);
       // The list is read from this build now: its book stays while it is (`searchConsolePeriodBooks.ts`).
-      await noteListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period, which: args.which }, args.builtAt);
+      await noteListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period as SearchConsolePeriod, which: args.which }, args.builtAt);
     }
     // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`), and its
     // page addresses once each in its own book (`bookPages`): a keyword's top page, Pages competing's pages.

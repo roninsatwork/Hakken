@@ -9,11 +9,12 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
+import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
-import { useCalendarPeriod, useCalendarPeriodChoices } from "../../sites/_components/useCalendarPeriod";
+import { OpeningPeriodContext, useCalendarPeriod, useCalendarPeriodChoices } from "../../sites/_components/useCalendarPeriod";
 import { formatWhen, useDeviceName } from "../_components/ClarityParts";
 import { CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
 
@@ -35,7 +36,9 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const query = useClarityQuery();
   const deviceName = useDeviceName();
   const tp = useTranslations("common.periods");
-  const [period, setPeriod] = useCalendarPeriod();
+  // A website whose Clarity days begin this month opens on This month until the 1st (agreed 2026-10-20).
+  const opening = openingPeriod(status?.connection?.oldestDay, ukDay());
+  const [period, setPeriod] = useCalendarPeriod(opening);
   const periods = useCalendarPeriodChoices();
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...CLARITY_DEVICES]);
   if (status === undefined) return <><Header /><div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
@@ -45,7 +48,7 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const current = clarityPageForPath(pathname, siteId);
   const href = (segment: string) => `/app/clarity/${siteId}${segment ? `/${segment}` : ""}${query}`;
   return (
-    <>
+    <OpeningPeriodContext.Provider value={opening}>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
@@ -99,6 +102,6 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
           </section>
         </div>
       </div>
-    </>
+    </OpeningPeriodContext.Provider>
   );
 }

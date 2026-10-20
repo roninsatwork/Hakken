@@ -49,6 +49,8 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['clarity.common.secondsOn', 'an arrow, seconds and the comparison\'s own words, filled in: nothing of its own to translate (Clarity\'s change lines)'],
     ['clarity.common.plainOn', 'an arrow, a number and the comparison\'s own words, filled in: nothing of its own to translate (Clarity\'s change lines)'],
     ['clarity.recordings.kindCount', 'a kind of recording, already translated, and its count in brackets'],
+    ['searchConsole.figures.up', 'an arrow, a change and the comparison\'s own words, filled in: nothing of its own to translate (Search Console\'s change lines, calendar-periods-plan.md)'],
+    ['searchConsole.figures.down', 'an arrow, a change and the comparison\'s own words, filled in: nothing of its own to translate (Search Console\'s change lines, calendar-periods-plan.md)'],
     ['googleAnalytics.seen.links.googleAnalytics', 'Product name (Google Analytics): a tracking health step\'s link to it'],
     ['googleAnalytics.channelsPage.map.conversions', '"conv." is the short form in both languages, under a square of Channels\' map'],
     ['googleAnalytics.menu.landingPages', '"Funnel" is the word Italian marketing uses too (Anthony, 2026-10-14: Landing pages renamed Funnel)'],

@@ -249,9 +249,10 @@ describe("collecting the main country and a country kept ready", () => {
 
     const gbr = await keptOf(t, siteId, "gbr");
     const period = (list: string, which: string, span: string) => gbr.periods.find((part) => part.list === list && part.which === which && part.period === span);
-    expect(period("query", "NOW", "30")).toMatchObject({ from: "2026-08-28", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [5, 3], counts: [1, 1] });
-    expect(period("query", "NOW", "90")).toMatchObject({ from: WINDOW_FROM, keys: ["plumber leeds", "emergency plumber", "boiler repair"] });
-    expect(period("device", "NOW", "30")).toMatchObject({ keys: ["MOBILE", "DESKTOP"], clicks: [6, 2] });
+    // This month and this quarter on Sunday 27 September (calendar-periods-plan.md, phase 4).
+    expect(period("query", "NOW", "thisMonth")).toMatchObject({ from: "2026-09-01", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [5, 3], counts: [1, 1] });
+    expect(period("query", "NOW", "thisQuarter")).toMatchObject({ from: "2026-07-01", keys: ["plumber leeds", "emergency plumber", "boiler repair"] });
+    expect(period("device", "NOW", "thisMonth")).toMatchObject({ keys: ["MOBILE", "DESKTOP"], clicks: [6, 2] });
     expect(gbr.periods.some((part) => part.list === "country")).toBe(false);
     expect(gbr.weeks.filter((week) => week.grain === "WEEK" && week.otherClicks > 0).map((week) => [week.week, week.otherClicks])).toEqual([["2026-07-27", 2], ["2026-09-21", 8]]);
     // New and lost, kept for every home country.
@@ -259,7 +260,7 @@ describe("collecting the main country and a country kept ready", () => {
     expect(gbr.seenDays.length).toBeGreaterThan(0);
     // The main country's periods stand apart: Mozambique's searches only.
     const main = await keptOf(t, siteId, undefined);
-    expect(main.periods.find((part) => part.list === "query" && part.which === "NOW" && part.period === "30")?.keys).toEqual(["ai agency"]);
+    expect(main.periods.find((part) => part.list === "query" && part.which === "NOW" && part.period === "thisMonth")?.keys).toEqual(["ai agency"]);
     expect(main.seen.map((row) => row.key)).toContain("ai agency");
   });
 });
@@ -270,7 +271,7 @@ describe("reading the home countries", () => {
     const asks = fakeGoogle(figures());
     await collect(t);
     asks.length = 0;
-    const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 };
+    const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-09-01", to: NEWEST, page: 1, rows: 25 };
 
     expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ main: "gbr", ready: ["moz"] });
     // Only the kinds of result the website was shown in are its tabs: here web alone, so no switch.
@@ -401,7 +402,7 @@ describe("a country past the limit", () => {
       const packed = { keys: ["plumber dublin"], clicks: [1], impressions: [10], positionSums: [30] };
       await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, country: "irl", searchType: "web", day: "2026-09-20", clicks: 1, impressions: 10, ctr: 0.1, position: 3, fetchedAt: 1 });
       await ctx.db.insert("searchConsoleLists", { companyWebsiteId: siteId, country: "irl", searchType: "web", list: "page", grain: "DAY", start: "2026-09-20", part: 0, ...packed, fetchedAt: 1 });
-      await ctx.db.insert("searchConsolePeriods", { companyWebsiteId: siteId, country: "irl", searchType: "web", list: "query", period: "30", which: "NOW", part: 0, from: "2026-08-27", to: "2026-09-25", ...packed, builtAt: 1 });
+      await ctx.db.insert("searchConsolePeriods", { companyWebsiteId: siteId, country: "irl", searchType: "web", list: "query", period: "thisMonth", which: "NOW", part: 0, from: "2026-09-01", to: "2026-09-25", ...packed, builtAt: 1 });
       await ctx.db.insert("searchConsoleWeeks", { companyWebsiteId: siteId, country: "irl", searchType: "web", week: "2026-09-14", top3: 1, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 1, builtAt: 1 });
       await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, country: "irl", kind: "query", key: "plumber dublin", firstDay: "2026-09-20", lastDay: "2026-09-20" });
       await ctx.db.insert("searchConsoleSeenDays", { companyWebsiteId: siteId, country: "irl", kind: "query", day: "2026-09-20", first: 1, last: 1, builtAt: 1 });

@@ -8,8 +8,9 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from './test/driftUti
  * "a check that fails a screen cut at the first collection").
  *
  * The website's day totals are fetched back to Google's line once
- * (`daysFrom`), its long lists are asked of Google, and the date picker stops
- * at the line (`historyFrom`). `oldestDay` stays where collection began — what
+ * (`daysFrom`), and its long lists are asked of Google. The date menu offers
+ * the seven calendar periods, with no dates of its own to choose
+ * (calendar-periods-plan.md, phase 4). `oldestDay` stays where collection began — what
  * New and lost and Volatility count from — so a screen starting its days
  * there is cut at the first collection. Only the connection page, which says
  * both, reads it.
@@ -33,8 +34,9 @@ describe('Search Console screens reach back sixteen months', () => {
     expect(cut).toEqual([]);
   });
 
-  test('the date picker stops at Google\'s line', () => {
-    expect(readRepoFile(`${SCREENS}/[siteId]/layout.tsx`)).toMatch(/<SiteDateRange[^>]*\boldest=\{status\.historyFrom\}/);
+  test('the date menu offers the calendar periods, with no dates of its own', () => {
+    expect(readRepoFile(`${SCREENS}/[siteId]/layout.tsx`)).toMatch(/<SiteDateRange \/>/);
+    expect(readRepoFile("src/app/(dashboard)/app/sites/_components/SiteDateRange.tsx")).not.toMatch(/type="date"|custom/i);
   });
 
   test('the backend reads the days from where they begin, not where collection began', () => {

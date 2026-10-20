@@ -29,12 +29,12 @@ import { count, days } from "./searchConsoleAgentRun";
  * old (cost review 1): they barely change from one day to the next.
  */
 
-/** A website's figures added up whole: one kind of result's 7-day page list's first part — web search's unless named — all countries unless named. */
+/** A website's figures added up whole: one kind of result's Last week page list's first part — web search's unless named — all countries unless named (calendar-periods-plan.md: last week is always inside the days kept, so every build writes it). */
 async function lastBuilt(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, country?: string, searchType: SearchType = "web"): Promise<number | null> {
   const seven = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period", (q) => q
-      .eq("companyWebsiteId", holdId).eq("country", country).eq("searchType", searchType).eq("list", "page").eq("period", "7").eq("which", "NOW").eq("part", 0))
+      .eq("companyWebsiteId", holdId).eq("country", country).eq("searchType", searchType).eq("list", "page").eq("period", "lastWeek").eq("which", "NOW").eq("part", 0))
     .first();
   return seven?.builtAt ?? null;
 }
@@ -135,7 +135,7 @@ export const afterCompanyCollection = internalMutation({
 /** How old the 90 days may be before a night adds them up again: a week, less a little so the same night each week does. */
 export const LONG_EVERY_MS = 7 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000;
 
-/** Whether a kind of result's 90 days and twelve months are due tonight: never built, or a week old. */
+/** Whether a kind of result's long periods — those asked of Google — are due tonight: This year never built, or a week old. */
 export const longPeriodsDue = internalQuery({
   args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator },
   returns: v.boolean(),
@@ -143,7 +143,7 @@ export const longPeriodsDue = internalQuery({
     const ninety = await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q
-        .eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "page").eq("period", "90").eq("which", "NOW").eq("part", 0))
+        .eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "page").eq("period", "thisYear").eq("which", "NOW").eq("part", 0))
       .first();
     return !ninety || Date.now() - ninety.builtAt >= LONG_EVERY_MS;
   },
@@ -254,7 +254,7 @@ export const startSettleParts = internalMutation({
 
 /** A settle job's stage, in plain words: the place its watch names. */
 export function stageName(part: { searchType: string; country?: string }, stage: "SHORT" | "NINETY" | "YEAR"): string {
-  const what = stage === "SHORT" ? "the 7 and 30 days" : stage === "NINETY" ? "the 90 days" : "the 12 months";
+  const what = stage === "SHORT" ? "the weeks and months held day by day" : stage === "NINETY" ? "the months and quarters asked of Google" : "this year";
   return `adding up ${part.searchType}${part.country ? ` (${part.country.toUpperCase()})` : ""}, ${what}`;
 }
 

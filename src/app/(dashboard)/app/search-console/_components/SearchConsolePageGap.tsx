@@ -8,7 +8,8 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { countryName } from "./countries";
 import { useSiteFiguresFor } from "./SearchConsoleFigures";
-import { useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { useResultKind, useSearchConsoleCountry, useSearchConsolePeriodWords,
+  useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 /**
  * The clicks Google doesn't tie to a page (insights-analyst-plan.md §7, S2,
@@ -28,6 +29,7 @@ export function SearchConsolePageGap({ tied }: { tied: number | null }) {
   const [kind] = useResultKind();
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const periodWords = useSearchConsolePeriodWords(range.period);
   const held = Boolean(status?.connection?.newestDay);
   const ask = held ? { siteId, searchType: kind, from: range.from, to: range.to } : null;
   const { figures } = useSiteFiguresFor(ask);
@@ -43,7 +45,7 @@ export function SearchConsolePageGap({ tied }: { tied: number | null }) {
   return (
     <div className="flex flex-col gap-3">
       <FigureRow>
-        <Figure label={t("total", { place })} value={formatNumber(total)} detail={<span className="text-secondary">{t("totalDetail", { days: range.days })}</span>} />
+        <Figure label={t("total", { place })} value={formatNumber(total)} detail={<span className="text-secondary">{t("totalDetail", { period: periodWords.period })}</span>} />
         <Figure label={t("tied")} value={formatNumber(tied)} detail={<span className="text-secondary">{t("tiedDetail", { share: Math.round((tied / total) * 100) })}</span>} />
         <Figure label={t("untied")} value={formatNumber(untied)} emphasis detail={<span className="text-secondary">{t("untiedDetail")}</span>} />
         <Figure label={t("worldwide")} value={worldwide === null ? "–" : formatNumber(worldwide)} detail={<span className="text-secondary">{t("worldwideDetail")}</span>} />

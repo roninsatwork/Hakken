@@ -27,6 +27,7 @@ import {
 import { wholeBingBook } from "./bingWebmasterBook";
 import { addressesOf } from "./holdPageRefs";
 import { requestHoldPages } from "./holdPages";
+import { calendarPeriodValidator } from "./utils/calendarPeriods";
 
 /**
  * What Bing's collection writes, and the ready-made lists it builds
@@ -210,7 +211,7 @@ export const dropOldWeeks = internalMutation({
  * no such period.
  */
 export const googleFigures = internalQuery({
-  args: { holdId: v.id("companyWebsites"), list: bingListValidator, period: v.union(v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365")) },
+  args: { holdId: v.id("companyWebsites"), list: bingListValidator, period: calendarPeriodValidator },
   handler: async (ctx, args): Promise<(Google & { from: string; to: string }) | null> => {
     const read = await readPeriod(ctx, args.holdId, "web", args.list, args.period, "NOW");
     if (!read) return null;

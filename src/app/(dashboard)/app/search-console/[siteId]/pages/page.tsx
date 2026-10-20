@@ -37,7 +37,7 @@ export default function SearchConsolePagesPage() {
 
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="pages" seen={list.summary ? pagesSees(list.summary, list.range.days) : null} />}
+      sees={<SearchConsoleSees screen="pages" seen={list.summary ? pagesSees(list.summary, list.range.period) : null} />}
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("pages.title")}
       description={t("pages.description")}

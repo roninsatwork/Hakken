@@ -115,7 +115,7 @@ async function console90(t: Harness, at: { companyId: Id<"companies">; websiteId
       createdAt: Date.now(), updatedAt: Date.now(),
     } as never);
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: at.holdId, searchType: "web", list: "page", period: "90", which: "NOW", part: 0, from: "2026-07-04", to: "2026-10-01",
+      companyWebsiteId: at.holdId, searchType: "web", list: "page", period: "thisQuarter", which: "NOW", part: 0, from: "2026-07-04", to: "2026-10-01",
       keys: shown.map(([key]) => key), clicks: shown.map(([, clicks]) => clicks), impressions: shown.map(() => 100), positionSums: shown.map(() => 500),
       builtAt: Date.now(),
     } as never);
@@ -646,18 +646,18 @@ describe("a website Google shows many pages of", () => {
       for (let part = 0; part * 2_000 < pages.length; part += 1) {
         const keys = pages.slice(part * 2_000, (part + 1) * 2_000);
         await ctx.db.insert("searchConsolePeriods", {
-          companyWebsiteId: holdId, searchType: "web", list: "page", period: "90", which: "NOW", part, from: "2026-07-01", to: "2026-09-28",
+          companyWebsiteId: holdId, searchType: "web", list: "page", period: "thisQuarter", which: "NOW", part, from: "2026-07-01", to: "2026-09-28",
           keys, clicks: keys.map(() => 1), impressions: keys.map(() => 10), positionSums: keys.map(() => 30), builtAt: 1,
         });
       }
       return holdId;
     });
     // Two parts a read, of one build (collection-reliability-plan.md, RR3): never the whole period at once.
-    const first = await t.query(internal.holdPages.consolePagesPart, { holdId, start: 0 });
+    const first = await t.query(internal.holdPages.consolePagesPart, { holdId, period: "thisQuarter", start: 0 });
     if (!first || "moved" in first) throw new Error("expected the first parts");
     expect(first.rows).toHaveLength(4_000);
     expect(first.next).toBe(2);
-    const second = await t.query(internal.holdPages.consolePagesPart, { holdId, builtAt: first.builtAt, start: first.next! });
+    const second = await t.query(internal.holdPages.consolePagesPart, { holdId, period: "thisQuarter", builtAt: first.builtAt, start: first.next! });
     if (!second || "moved" in second) throw new Error("expected the last part");
     expect(second.rows).toHaveLength(500);
     expect(second.next).toBeNull();
@@ -666,10 +666,10 @@ describe("a website Google shows many pages of", () => {
     // A new build swapped in between reads is noticed, so a rebuild never joins two builds' pages.
     await t.run(async (ctx) => {
       await ctx.db.insert("searchConsolePeriods", {
-        companyWebsiteId: holdId, searchType: "web", list: "page", period: "90", which: "NOW", part: 0, from: "2026-07-02", to: "2026-09-29",
+        companyWebsiteId: holdId, searchType: "web", list: "page", period: "thisQuarter", which: "NOW", part: 0, from: "2026-07-02", to: "2026-09-29",
         keys: ["https://acme-shop.test/new"], clicks: [1], impressions: [10], positionSums: [30], builtAt: 2,
       });
     });
-    expect(await t.query(internal.holdPages.consolePagesPart, { holdId, builtAt: first.builtAt, start: 2 })).toEqual({ moved: true });
+    expect(await t.query(internal.holdPages.consolePagesPart, { holdId, period: "thisQuarter", builtAt: first.builtAt, start: 2 })).toEqual({ moved: true });
   });
 });

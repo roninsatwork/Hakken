@@ -13,7 +13,8 @@ import { appError } from "./utils/appError";
 import { accessTokenFor } from "./searchConsoleConnect";
 import { queryAnalytics, type AnalyticsRow } from "./searchConsoleApi";
 import { connectionStatusValidator, searchTypeValidator, type SearchType } from "./searchConsoleSchema";
-import { addUp, daysIn, historyLimitDay, isDay, periodBefore, shiftDay } from "./searchConsoleDays";
+import { addUp, beforeOf, daysIn, historyLimitDay, isDay } from "./searchConsoleDays";
+import { OPENING_PERIOD, calendarPeriodValidator, periodSpan as calendarSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 
 /**
@@ -101,8 +102,10 @@ export const listSearchConsoleSites = tenantQuery({
     const holds = (await companyHolds(ctx, ctx.companyId)).filter((entry) => entry.summary.relationship === "OWNED");
     return await Promise.all(holds.map(async (entry) => {
       const connection = await connectionOf(ctx, entry.hold._id);
-      const to = connection?.newestDay ?? null;
-      const from = to ? shiftDay(to, -29) : null;
+      // The opening period, as every section's front page shows it (calendar-periods-plan.md, rule 7): last month.
+      const span = connection?.newestDay ? calendarSpan(OPENING_PERIOD, ukDay(), connection.newestDay) : null;
+      const to = span?.to ?? null;
+      const from = span?.from ?? null;
       const figures = from && to ? addUp(await daysOf(ctx, entry.hold._id, "web", from, to)) : null;
       return {
         siteId: entry.summary.siteId,
@@ -133,7 +136,7 @@ export const listSearchConsoleSites = tenantQuery({
  * with nothing read: the page asks Google instead (`searchConsoleLiveDays`).
  */
 export const searchConsolePerformance = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), country: v.optional(v.string()) },
+  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), period: v.optional(calendarPeriodValidator), country: v.optional(v.string()) },
   returns: v.object({
     days: v.array(dayValidator),
     totals: v.union(figuresValidator, v.null()),
@@ -152,7 +155,7 @@ export const searchConsolePerformance = tenantQuery({
  */
 export async function readPerformance(
   ctx: SiteReader,
-  args: { siteId: Id<"companyWebsites">; searchType: SearchType; from: string; to: string; country?: string },
+  args: { siteId: Id<"companyWebsites">; searchType: SearchType; from: string; to: string; period?: CalendarPeriod; country?: string },
 ) {
   checkedRange(args.from, args.to);
   const site = await requireMySite(ctx, args.siteId);
@@ -163,16 +166,20 @@ export async function readPerformance(
   const country = scope.read === "KEPT" ? scope.country : undefined;
   // The days begin at Google's sixteen-month line once fetched back (phase 9; a country kept ready's too, SF3), else where collection began.
   const oldestDay = scope.read === "KEPT" ? scope.daysFrom ?? scope.oldestDay : connection?.daysFrom ?? connection?.oldestDay;
-  const before = periodBefore(args.from, args.to);
-  const rows = await daysOf(ctx, site.hold._id, args.searchType, before.from, args.to, country);
-  const inRange = rows.filter((row) => row.day >= args.from);
+  // The span before is the period before, or the same days of it (rule 4): read on its own, so the days between —
+  // 20 July to 30 September beside This Quarter's 1–19 October — are never counted as "before".
+  const before = beforeOf(args.from, args.to, args.period);
+  const [inRange, beforeRows] = await Promise.all([
+    daysOf(ctx, site.hold._id, args.searchType, args.from, args.to, country),
+    daysOf(ctx, site.hold._id, args.searchType, before.from, before.to, country),
+  ]);
   // The change only when the days before are all held; otherwise it would compare with a part.
   const previousHeld = Boolean(oldestDay && oldestDay <= before.from);
   const namedKnown = inRange.every((row) => row.clicks === 0 || row.namedClicks !== undefined);
   return {
     days: inRange.map((row) => ({ day: row.day, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position })),
     totals: addUp(inRange),
-    previous: previousHeld ? addUp(rows.filter((row) => row.day < args.from)) : null,
+    previous: previousHeld ? addUp(beforeRows) : null,
     named: inRange.length > 0 && namedKnown ? inRange.reduce((sum, row) => sum + (row.namedClicks ?? 0), 0) : null,
     live: false,
   };
@@ -189,7 +196,7 @@ const problemValidator = v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_R
  * Google still keeps them, sixteen months.
  */
 export const searchConsoleLiveDays = tenantAction({
-  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), country: v.string() },
+  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), period: v.optional(calendarPeriodValidator), country: v.string() },
   returns: v.union(
     v.object({
       ok: v.literal(true),
@@ -208,7 +215,7 @@ export const searchConsoleLiveDays = tenantAction({
     const target = await ctx.runQuery(internal.searchConsoleReads.liveDaysTarget, { companyId, siteId: args.siteId });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     checkedLongest(args.from, args.to, target.limits);
-    const before = periodBefore(args.from, args.to);
+    const before = beforeOf(args.from, args.to, args.period);
     const beforeHeld = before.from >= historyLimitDay(Date.now());
     const answer = await askLive(ctx, target, {
       startDate: beforeHeld ? before.from : args.from,
@@ -222,7 +229,8 @@ export const searchConsoleLiveDays = tenantAction({
       .map((row) => ({ day: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))
       .sort((left, right) => left.day.localeCompare(right.day));
     const days = all.filter((day) => day.day >= args.from);
-    return { ok: true as const, days, totals: addUp(days), previous: beforeHeld ? addUp(all.filter((day) => day.day < args.from)) : null, named: null };
+    const earlier = all.filter((day) => day.day >= before.from && day.day <= before.to);
+    return { ok: true as const, days, totals: addUp(days), previous: beforeHeld ? addUp(earlier) : null, named: null };
   },
 });
 

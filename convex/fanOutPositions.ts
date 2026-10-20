@@ -40,16 +40,16 @@ export type Lookups = {
   consoleNames: BookNames | null;
 };
 
-/** The ready-made keyword list each "Days of Search Console averaged" setting reads. */
-const CONSOLE_PERIOD: Record<number, "7" | "14" | "28"> = { 7: "7", 14: "14", 28: "28" };
+/** The ready-made keyword list each "Days of Search Console averaged" setting reads: 7 days reads Last week's (calendar-periods-plan.md). */
+const CONSOLE_PERIOD: Record<number, "lastWeek" | "14" | "28"> = { 7: "lastWeek", 14: "14", 28: "28" };
 
 /**
  * Search Console's position for a search reads its ready-made list
  * (search-console-plan.md §14.3, item 4), once for the website: the list of
  * the days the setting names — 7, 14 or 28, each kept ready since the drift
  * fixes of 2026-10-03 (§15, decision 4), where 14 and 28 had read the 30
- * days. A website whose 14 or 28 days are not built yet reads its 30 days
- * until its next run.
+ * days. A website whose list is not built yet reads its Last month until its
+ * next run.
  */
 export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">, consoleDays: number): Promise<Lookups> {
   const connection = await ctx.db
@@ -62,7 +62,7 @@ export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">,
   if (consoleTo) {
     const own = CONSOLE_PERIOD[consoleDays];
     // A keyword at a time, never a row object for each of a busy website's (core-data plan, step 4b).
-    const list = (own ? await keywordFiguresOf(ctx, hold._id, "web", own, undefined) : null) ?? await keywordFiguresOf(ctx, hold._id, "web", "30", undefined);
+    const list = (own ? await keywordFiguresOf(ctx, hold._id, "web", own, undefined) : null) ?? await keywordFiguresOf(ctx, hold._id, "web", "lastMonth", undefined);
     consoleNames = list?.book ? new BookNames(ctx, list.book) : null;
     if (list) {
       consolePosition = (key) => {

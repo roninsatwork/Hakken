@@ -1,8 +1,9 @@
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The company's own figures, as the Assistant reads them
@@ -28,6 +29,10 @@ vi.mock("./vertexProviderService", async (importOriginal) => {
 
 beforeEach(() => {
   agentTurnMock.mockReset();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -86,6 +91,8 @@ async function connected(t: Harness, companyId: Id<"companies">, siteId: Id<"com
 
 describe("the Assistant's company figures", () => {
   test("each is the figure its screen shows, with the screen's address", async () => {
+    // A Wednesday: last week is Monday 14 to Sunday 20 September, all of it held.
+    useFixedDay("2026-09-23");
     const t = harness();
     const companyId = await company(t, "Figures Ltd");
     const userId = await admin(t, companyId);
@@ -93,15 +100,15 @@ describe("the Assistant's company figures", () => {
     await connected(t, companyId, siteId);
     const asOwner = t.withIdentity({ subject: userId });
 
-    const read = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "https://www.figures.test/", days: 7 });
+    const read = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "https://www.figures.test/", period: "lastWeek" });
     const screen = await asOwner.query(api.searchConsoleReads.searchConsolePerformance, {
-      siteId, searchType: "web", from: "2026-09-20", to: "2026-09-26",
+      siteId, searchType: "web", from: "2026-09-14", to: "2026-09-20", period: "lastWeek",
     });
-    expect(read).toMatchObject({ ok: true, website: "figures.test", from: "2026-09-20", to: "2026-09-26", link: `/app/search-console/${siteId}` });
+    expect(read).toMatchObject({ ok: true, website: "figures.test", from: "2026-09-14", to: "2026-09-20", link: `/app/search-console/${siteId}` });
     if (!read.ok || !("totals" in read)) throw new Error("expected the website's totals");
     expect(read.totals).toEqual(screen.totals);
     expect(read.theDaysBefore).toEqual(screen.previous);
-    expect(read.totals?.clicks).toBe(23 + 22 + 21 + 20 + 19 + 18 + 17);
+    expect(read.totals?.clicks).toBe(11 + 12 + 13 + 14 + 15 + 16 + 17);
 
     const overview = await t.query(internal.assistantReads.siteOverviewInternal, { companyId, website: "figures.test" });
     const header = await asOwner.query(api.sites.getMySite, { siteId });
@@ -131,7 +138,7 @@ describe("the Assistant's company figures", () => {
     const listed = await t.query(internal.assistantReads.websitesInternal, { companyId: mine });
     expect(listed.websites.map((entry) => entry.website)).toEqual(["mine.test"]);
     for (const read of [
-      await t.query(internal.assistantReads.searchConsoleInternal, { companyId: mine, website: "theirs.test", days: 30 }),
+      await t.query(internal.assistantReads.searchConsoleInternal, { companyId: mine, website: "theirs.test", period: "lastMonth" }),
       await t.query(internal.assistantReads.siteOverviewInternal, { companyId: mine, website: "theirs.test" }),
       await t.query(internal.assistantReads.aiMentionsInternal, { companyId: mine, website: "theirs.test" }),
     ]) {
@@ -143,7 +150,7 @@ describe("the Assistant's company figures", () => {
     const t = harness();
     const companyId = await company(t, "Unconnected Ltd");
     await hold(t, companyId, "quiet.test");
-    const read = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "quiet.test", days: 7 });
+    const read = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "quiet.test", period: "lastWeek" });
     expect(read).toMatchObject({ ok: false });
     if (read.ok) throw new Error("expected a problem");
     expect(read.problem).toContain("no Search Console figures yet");
@@ -254,7 +261,7 @@ describe("the Assistant's company figures", () => {
     expect(await t.query(internal.assistantReads.aiMentionsInternal, { companyId, website: "rival.test" })).toMatchObject({
       ok: true, website: "rival.test",
     });
-    const console = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "rival.test", days: 7 });
+    const console = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "rival.test", period: "lastWeek" });
     expect(console).toMatchObject({ ok: false });
     if (console.ok) throw new Error("expected a problem");
     expect(console.problem).toContain("Search Console covers the company's own websites only");

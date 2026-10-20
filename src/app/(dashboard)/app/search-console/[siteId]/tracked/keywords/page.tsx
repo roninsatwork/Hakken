@@ -31,7 +31,7 @@ export default function SearchConsoleTrackedKeywordsPage() {
 
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="trackedKeywords" seen={list.summary ? trackedSees(list.summary, list.range.days, "keywords") : null} />}
+      sees={<SearchConsoleSees screen="trackedKeywords" seen={list.summary ? trackedSees(list.summary, list.range.period, "keywords") : null} />}
       icon={<Search className="h-5 w-5 text-brand" />}
       title={t("tracked.keywords.title")}
       description={t("tracked.keywords.description")}

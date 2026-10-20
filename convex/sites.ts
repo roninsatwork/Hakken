@@ -231,6 +231,11 @@ export const getMySite = tenantQuery({
     rivals: v.array(holdSummaryValidator),
     /** Days with a ranking check, newest first: what "compare with" can offer. */
     checkDays: v.array(v.string()),
+    /**
+     * The first day anything was filed for the website, while that is within the days read; null for one filed longer
+     * ago, or never. Its screens open on This month while it holds nothing of last month (calendar-periods-plan.md).
+     */
+    heldFrom: v.union(v.string(), v.null()),
     counts: v.object({
       keywords: numberOrNull,
       keywordsStored: numberOrNull,
@@ -346,6 +351,7 @@ export async function readMySite(ctx: SiteReader, siteId: Id<"companyWebsites">)
     holds: await Promise.all(holds.map((entry) => withIcon(ctx, entry))),
     rivals: rivals.map((entry) => entry.summary),
     checkDays: days.filter((row) => row.keywords !== undefined).map((row) => row.day),
+    heldFrom: days.length < CHECK_DAYS ? days.at(-1)?.day ?? null : null,
     counts: {
       // DataForSEO's own count of what the site ranks for; `keywordsStored`
       // is how many of them the Keywords page can list, which a pull capped

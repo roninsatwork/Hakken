@@ -6,6 +6,6 @@ settings-card: What Hakken sees
 chart-card: How often Google showed you, by service
 search: Find a service
 table: Service | Times shown | Change | Clicks | Change
-  table-bar: # services · The last # days against the # before
+  table-bar: # services · Last month against the month before
     download: Download CSV
   table-footer

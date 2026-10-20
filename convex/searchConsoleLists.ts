@@ -8,10 +8,11 @@ import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite } from "./siteAccess";
 import { listPageArgs, pageOfList, sortDirectionArg } from "./siteListPages";
-import { SEARCH_CONSOLE_PERIODS, VOLATILITY_PERIOD, searchTypeValidator, type SearchConsolePeriod, type SearchType } from "./searchConsoleSchema";
+import { VOLATILITY_PERIOD, searchTypeValidator, type SearchType } from "./searchConsoleSchema";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
-import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
+import { beforeOf, daysIn, historyLimitDay, periodOf } from "./searchConsoleDays";
+export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
 import { curveRows, keywordFiguresOf, keywordListOf, type KeywordParts } from "./searchConsoleKeywordList";
 import type { ListRows } from "./searchConsoleKeywordTable";
@@ -50,6 +51,7 @@ import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsol
 import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
 import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
 import { withTitles } from "./pageTitles";
+import { calendarPeriodValidator, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * What the Search Console lists read (docs/plans/active/search-console-plan.md
@@ -184,6 +186,7 @@ const listArgs = {
   within: withinValidator,
   from: v.string(),
   to: v.string(),
+  period: v.optional(calendarPeriodValidator),
   /** One country, Google's `gbr`; missing for all countries. */
   country: v.optional(v.string()),
   ...filterArgs,
@@ -196,6 +199,7 @@ type Ask = {
   dimension: ListKind;
   view?: View;
   within?: { kind: "query" | "page"; key: string };
+  period?: CalendarPeriod;
   from: string;
   to: string;
   country?: string;
@@ -209,13 +213,6 @@ async function connectionOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"c
     .query("searchConsoleConnections")
     .withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .first();
-}
-
-/** The ready-made period the dates are, or null when they are other dates (asked of Google instead). */
-export function periodOf(from: string, to: string, newestDay: string | undefined): SearchConsolePeriod | null {
-  if (!newestDay || to !== newestDay) return null;
-  const days = String(daysIn(from, to));
-  return (SEARCH_CONSOLE_PERIODS as readonly string[]).includes(days) ? (days as SearchConsolePeriod) : null;
 }
 
 /** The company's tracked searches or pages on this website, read by its hold. */
@@ -289,7 +286,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const country = scope.read === "KEPT" ? scope.country : undefined;
   const view = args.view ?? "all";
   // Volatility lists its own ready-made day, whatever the dates (search-console-volatility-plan.md §2.1).
-  const period = view === "volatility" ? VOLATILITY_PERIOD : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection.newestDay);
+  const period = view === "volatility" ? VOLATILITY_PERIOD : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection.newestDay, ukDay(), args.period);
   if (!period) return live;
   const within = args.within;
   // One keyword's pages are rows keyed by page, one page's keywords by keyword.
@@ -713,6 +710,7 @@ export const searchConsoleLiveList = tenantAction({
     missed: v.optional(v.union(v.literal("searched"), v.literal("untracked"))),
     from: v.string(),
     to: v.string(),
+    period: v.optional(calendarPeriodValidator),
     country: v.optional(v.string()),
     device: v.optional(v.string()),
   },
@@ -744,7 +742,7 @@ export const searchConsoleLiveList = tenantAction({
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     const { limits } = target;
     checkedLongest(args.from, args.to, limits);
-    const before = periodBefore(args.from, args.to);
+    const before = beforeOf(args.from, args.to, args.period);
     // Google keeps sixteen months: days before it would read as nothing, not as a fall.
     const [now, earlier] = await Promise.all([
       liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within),
@@ -967,6 +965,7 @@ export const searchConsoleKeySeries = tenantAction({
     key: v.string(),
     from: v.string(),
     to: v.string(),
+    period: v.optional(calendarPeriodValidator),
     country: v.optional(v.string()),
   },
   returns: v.union(
@@ -981,7 +980,7 @@ export const searchConsoleKeySeries = tenantAction({
     const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     checkedLongest(args.from, args.to, target.limits);
-    const before = periodBefore(args.from, args.to);
+    const before = beforeOf(args.from, args.to, args.period);
     const answer = await askLive(ctx, target, {
       startDate: before.from,
       endDate: args.to,
@@ -993,7 +992,7 @@ export const searchConsoleKeySeries = tenantAction({
     const all = answer.rows
       .map((row) => ({ day: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))
       .sort((left, right) => left.day.localeCompare(right.day));
-    const [days, earlier] = [all.filter((day) => day.day >= args.from), all.filter((day) => day.day < args.from)];
+    const [days, earlier] = [all.filter((day) => day.day >= args.from), all.filter((day) => day.day >= before.from && day.day <= before.to)];
     const previousHeld = before.from >= historyLimitDay(Date.now());
     return { ok: true as const, days, totals: totalsOf(days), previous: previousHeld ? totalsOf(earlier) : null, previousHeld };
   },

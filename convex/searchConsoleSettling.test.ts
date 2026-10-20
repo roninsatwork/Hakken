@@ -59,7 +59,7 @@ async function days(t: Harness, holdId: Id<"companyWebsites">, country: string |
 async function built(t: Harness, holdId: Id<"companyWebsites">, country: string | undefined, searchType: SearchType) {
   await t.run(async (ctx) => {
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: holdId, ...(country ? { country } : {}), searchType, list: "page", period: "7", which: "NOW", part: 0,
+      companyWebsiteId: holdId, ...(country ? { country } : {}), searchType, list: "page", period: "lastWeek", which: "NOW", part: 0,
       from: DAYS[0], to: DAYS.at(-1)!, keys: [], clicks: [], impressions: [], positionSums: [], builtAt: Date.now(),
     });
   });

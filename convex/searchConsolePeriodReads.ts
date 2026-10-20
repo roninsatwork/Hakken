@@ -6,6 +6,7 @@ import { termToken, tokenPlace, type BookKind } from "./utils/searchConsoleTerms
 import { textsFrom, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
 import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN } from "./searchConsoleFacts";
+import { CALENDAR_PERIODS, isCalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * Reading the ready-made periods (search-console-plan.md §14.3): a list
@@ -54,7 +55,7 @@ async function storedParts(
   return parts.filter((part) => part.builtAt === built).sort((left, right) => left.part - right.part);
 }
 
-/** A period's parts as a list reads them: twelve months kept as the 90 days (`sameAsNinety`) read as the 90 days. */
+/** A period's parts as a list reads them: one kept on another period's very days (`sameDaysAs`) read as that period. */
 export async function partsToRead(
   ctx: { db: QueryCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
@@ -66,9 +67,8 @@ export async function partsToRead(
 ): Promise<Doc<"searchConsolePeriods">[]> {
   const parts = await storedParts(ctx, companyWebsiteId, country, searchType, list, period, which);
   if (parts.length === 0) return parts;
-  if (await ninetyInstead(ctx, { companyWebsiteId, country, searchType, list }, period, which, parts[0], parts.length)) {
-    return await storedParts(ctx, companyWebsiteId, country, searchType, list, "90", "NOW");
-  }
+  const instead = await sameDaysInstead(ctx, { companyWebsiteId, country, searchType, list }, period, which, parts[0], parts.length);
+  if (instead) return await storedParts(ctx, companyWebsiteId, country, searchType, list, instead.period as SearchConsolePeriod, "NOW");
   return parts;
 }
 
@@ -124,13 +124,13 @@ export async function firstPartOf(
 }
 
 /**
- * Twelve months kept as the 90 days (`sameAsNinety`): given the first part
- * read for a period, the 90 days' first part when the period is twelve
- * months, its slot holds only the empty part saying its days, and the 90
- * days are those days. Null otherwise — the period is read as it is, with no
- * read more than before.
+ * A period kept on another's very days (`sameDaysAs`, calendar-periods-plan.md
+ * phase 4): given the first part read for a period, when its slot holds only
+ * the empty part saying its days, the first part of the period before it in
+ * the menu's order holding those same days. Null otherwise — the period is
+ * read as it is, with no read more than before.
  */
-async function ninetyInstead(
+async function sameDaysInstead(
   ctx: { db: QueryCtx["db"] },
   scope: { companyWebsiteId: Id<"companyWebsites">; country: string | undefined; searchType: SearchType; list: SearchConsolePeriodList },
   period: SearchConsolePeriod,
@@ -138,9 +138,12 @@ async function ninetyInstead(
   first: { keys: string | string[]; from: string; to: string; part: number } | null,
   parts: number,
 ) {
-  if (period !== "365" || which !== "NOW" || !first || first.keys.length > 0 || parts > 1) return null;
-  const ninety = await firstPartOf(ctx, scope.companyWebsiteId, scope.country, scope.searchType, scope.list, "90", "NOW");
-  return ninety && ninety.from === first.from && ninety.to === first.to ? ninety : null;
+  if (!isCalendarPeriod(period) || which !== "NOW" || !first || first.keys.length > 0 || parts > 1) return null;
+  for (const other of CALENDAR_PERIODS.slice(0, CALENDAR_PERIODS.indexOf(period))) {
+    const held = await firstPartOf(ctx, scope.companyWebsiteId, scope.country, scope.searchType, scope.list, other, "NOW");
+    if (held && held.from === first.from && held.to === first.to && held.keys.length > 0) return held;
+  }
+  return null;
 }
 
 /**
@@ -255,4 +258,23 @@ export async function periodPartAsText(ctx: { db: QueryCtx["db"] }, part: Doc<"s
     ...(Array.isArray(tokened.tops) ? { tops: tokened.tops.map(text) } : {}),
     ...(Array.isArray(tokened.pages) ? { pages: tokened.pages.map(text) } : {}),
   };
+}
+
+/**
+ * The periods the background reads judge "lately" by, in place of the 90 days
+ * they read until the calendar periods (calendar-periods-plan.md, phase 4):
+ * this quarter and last together, always reaching 90 days back or more — the
+ * keep rule, and Your pages' clicks.
+ */
+export const RECENT_PERIODS = ["thisQuarter", "lastQuarter"] as const;
+
+/** The period whose parts hold a period's rows: itself, or the one it repeats when kept on its very days (`sameDaysAs`). */
+export async function holdingPeriod(
+  ctx: { db: QueryCtx["db"] },
+  scope: { companyWebsiteId: Id<"companyWebsites">; country: string | undefined; searchType: SearchType; list: SearchConsolePeriodList },
+  period: SearchConsolePeriod,
+): Promise<SearchConsolePeriod> {
+  const first = await firstPartOf(ctx, scope.companyWebsiteId, scope.country, scope.searchType, scope.list, period, "NOW");
+  const instead = await sameDaysInstead(ctx, scope, period, "NOW", first, first ? 1 : 0);
+  return instead ? (instead.period as SearchConsolePeriod) : period;
 }

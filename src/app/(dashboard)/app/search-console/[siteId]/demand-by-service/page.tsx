@@ -23,6 +23,7 @@ import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard
 import { SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { countryArg, isReadyMade, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 /** Below this many before, a change is said as a count, not a share. */
 const SHARE_FROM = 10;
@@ -51,9 +52,10 @@ export default function SearchConsoleDemandPage() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const periodWords = useSearchConsolePeriodWords(range.period);
   const [country] = useSearchConsoleCountry();
   const readyMade = isReadyMade(range, status?.connection?.newestDay);
-  const period = String(range.days) as "7" | "30" | "90" | "365";
+  const period = range.period;
   const data = useQuery(api.searchConsoleDemand.searchConsoleDemand, status?.connection?.newestDay && readyMade ? { siteId, period, ...countryArg(country) } : "skip");
   const [search, setSearch, term] = useSiteSearch();
   // A service by its page's title before any "|", as Insights' Strategy names it; the home page by name.
@@ -78,14 +80,14 @@ export default function SearchConsoleDemandPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Layers className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { days: range.days })} />
+      <PageHeader icon={<Layers className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { period: periodWords.period, before: periodWords.before })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           {!readyMade ? <Notice>{t("readyMade")}</Notice> : null}
           <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} />
           <SearchConsoleChartCard
             title={t("chart.title")}
-            hint={t("chart.hint", { days: range.days })}
+            hint={t("chart.hint", { name: periodWords.name, before: periodWords.before })}
             exportName={`${host}-search-console-demand-by-service`}
             csv={csv}
             host={host}
@@ -98,7 +100,7 @@ export default function SearchConsoleDemandPage() {
             rows={pages.pageRows}
             rowKey={(row) => row.id}
             search={{ value: search, onChange: setSearch, placeholder: t("search") }}
-            cardHeader={<TableBar footer={pages.footer} noun="results" title={t("tableTitle", { count: rows?.length ?? 0, days: range.days })} actions={<ListDownload label={t("download")} fileName={`${host}-demand-by-service`} rows={rows} columns={[{ header: t("columns.service"), value: nameOf }, { header: t("columns.shown"), value: (row) => row.shown }, { header: t("chart.before"), value: (row) => row.shownBefore ?? "" }, { header: t("columns.clicks"), value: (row) => row.clicks }, { header: t("columns.clicksBefore"), value: (row) => row.clicksBefore ?? "" }]} />} />}
+            cardHeader={<TableBar footer={pages.footer} noun="results" title={t("tableTitle", { count: rows?.length ?? 0, name: periodWords.name, before: periodWords.before })} actions={<ListDownload label={t("download")} fileName={`${host}-demand-by-service`} rows={rows} columns={[{ header: t("columns.service"), value: nameOf }, { header: t("columns.shown"), value: (row) => row.shown }, { header: t("chart.before"), value: (row) => row.shownBefore ?? "" }, { header: t("columns.clicks"), value: (row) => row.clicks }, { header: t("columns.clicksBefore"), value: (row) => row.clicksBefore ?? "" }]} />} />}
             empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
             footer={pages.footer}
             sort={tableSort}

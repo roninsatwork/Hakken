@@ -1,31 +1,20 @@
 import { describe, expect, test } from "vitest";
-import { chartFigures, keptIn, periodSpan, slotsOf, spanBefore, type Kept } from "./searchConsolePeriods";
+import { chartFigures, daysSpan, keptIn, slotsOf, type Kept } from "./searchConsolePeriods";
 import { pack, type Packed } from "./utils/searchConsolePacks";
 
 /**
  * The ready-made periods' days (docs/plans/active/search-console-plan.md
- * §14.3, item 4): each ends on the newest day held, never reaches before the
- * oldest, and counts each day once — days, then the weeks and months they
- * were rolled into.
+ * §14.3, item 4; calendar-periods-plan.md, phase 4): each calendar period ends
+ * on the newest day held, never reaches before the oldest, and counts each
+ * day once — days, then the weeks and months they were rolled into.
  */
 
 const NEWEST = "2026-09-26";
 
-describe("a period's days", () => {
-  test("ends on the newest day held, never before the oldest", () => {
-    expect(periodSpan("7", NEWEST, "2026-06-29")).toEqual({ from: "2026-09-20", to: NEWEST });
-    expect(periodSpan("90", NEWEST, "2026-06-29")).toEqual({ from: "2026-06-29", to: NEWEST });
-    // Twelve months of a website held for 90 days: the 90 days.
-    expect(periodSpan("365", NEWEST, "2026-06-29")).toEqual({ from: "2026-06-29", to: NEWEST });
-    expect(periodSpan("365", NEWEST, "2024-01-01")).toEqual({ from: "2025-09-27", to: NEWEST });
-  });
-
-  test("the period before is the same days just before, only when every one is held; twelve months has none", () => {
-    expect(spanBefore("7", NEWEST, "2026-06-29")).toEqual({ from: "2026-09-13", to: "2026-09-19" });
-    expect(spanBefore("30", NEWEST, "2026-06-29")).toEqual({ from: "2026-07-29", to: "2026-08-27" });
-    expect(spanBefore("90", NEWEST, "2026-06-29")).toBeNull();
-    expect(spanBefore("90", NEWEST, "2026-03-31")).toEqual({ from: "2026-03-31", to: "2026-06-28" });
-    expect(spanBefore("365", NEWEST, "2024-01-01")).toBeNull();
+describe("fan-out's days", () => {
+  test("end on the newest day held, never before the oldest", () => {
+    expect(daysSpan("14", NEWEST, "2026-06-29")).toEqual({ from: "2026-09-13", to: NEWEST });
+    expect(daysSpan("28", NEWEST, "2026-09-20")).toEqual({ from: "2026-09-20", to: NEWEST });
   });
 });
 
@@ -44,18 +33,16 @@ describe("what counts towards a period", () => {
     // Monday to Thursday of that week were rolled into the week of 2026-06-29.
     const newest = "2026-09-30";
     const records = [kept("WEEK", "2026-06-22"), kept("WEEK", "2026-06-29"), kept("DAY", "2026-07-03"), kept("DAY", newest)];
-    const ninety = periodSpan("90", newest, "2026-01-01");
-    expect(ninety.from).toBe("2026-07-03");
+    const ninety = { from: "2026-07-03", to: newest };
     expect(keptIn(records, ninety, newest).map((part) => part.keys[0])).toEqual(["DAY 2026-07-03", `DAY ${newest}`]);
-    const before = spanBefore("90", newest, "2026-01-01")!;
-    expect(before).toEqual({ from: "2026-04-04", to: "2026-07-02" });
+    const before = { from: "2026-04-04", to: "2026-07-02" };
     expect(keptIn(records, before, newest).map((part) => part.keys[0])).toEqual(["WEEK 2026-06-22", "WEEK 2026-06-29"]);
   });
 
   test("every kind of result reads its days, image search's too: a week rolled up before 2026-10-07 is not counted", () => {
     // Newest Saturday 2026-09-26: the days kept run back 60, to 29 July (keep-less-history-plan.md, part 3).
     const records = [kept("WEEK", "2026-09-14"), kept("DAY", "2026-09-21"), kept("DAY", NEWEST)];
-    const month = periodSpan("30", NEWEST, "2026-06-29");
+    const month = { from: "2026-08-28", to: NEWEST };
     for (const kind of ["image", "web"]) {
       expect(keptIn(records, month, NEWEST, kind).map((part) => part.keys[0])).toEqual(["DAY 2026-09-21", `DAY ${NEWEST}`]);
     }
@@ -137,15 +124,29 @@ describe("the days, weeks and months the charts read", () => {
   });
 });
 
-describe("how far the ready-made periods reach (insights-intelligence-plan.md phase 9)", () => {
-  test("the long periods reach back to Google's line; the short ones stop where collection began", () => {
-    const slots = slotsOf("2026-09-26", "2026-07-08", "2025-05-26");
-    const span = (period: string, which: "NOW" | "BEFORE") => slots.find((slot) => slot.period === period && slot.which === which)?.span ?? null;
-    // Twelve months whole, and the 90 days set against the 90 before: asked of Google a week at a time.
-    expect(span("365", "NOW")).toEqual({ from: "2025-09-27", to: "2026-09-26" });
-    expect(span("90", "BEFORE")).toEqual({ from: "2026-03-31", to: "2026-06-28" });
-    // The 30 days before are added up from the days collected: before collection began, nothing to set against.
-    expect(span("30", "BEFORE")).toEqual({ from: "2026-07-29", to: "2026-08-27" });
-    expect(slotsOf("2026-08-15", "2026-07-08", "2025-05-26").find((slot) => slot.period === "30" && slot.which === "BEFORE")?.span).toBeNull();
+describe("how far the ready-made periods reach (insights-intelligence-plan.md phase 9; calendar-periods-plan.md, phase 4)", () => {
+  test("a span past the 60 days kept is asked of Google, back to its line; one inside them stops where collection began", () => {
+    // Tuesday 29 September; Google's newest the Saturday before; days kept from 29 July; collection began 8 July.
+    const slots = slotsOf("2026-09-26", "2026-07-08", "2025-05-26", "2026-09-29", "2026-07-29");
+    const slot = (period: string, which: "NOW" | "BEFORE") => slots.find((one) => one.period === period && one.which === which);
+    // Last quarter and the quarter before it: asked of Google a week at a time.
+    expect(slot("lastQuarter", "NOW")).toMatchObject({ span: { from: "2026-04-01", to: "2026-06-30" }, long: true });
+    expect(slot("lastQuarter", "BEFORE")).toMatchObject({ span: { from: "2026-01-01", to: "2026-03-31" }, long: true });
+    // This quarter to Google's newest day, set against the same days of the quarter before.
+    expect(slot("thisQuarter", "NOW")).toMatchObject({ span: { from: "2026-07-01", to: "2026-09-26" }, long: true });
+    expect(slot("thisQuarter", "BEFORE")).toMatchObject({ span: { from: "2026-04-01", to: "2026-06-26" }, long: true });
+    // Last month inside the days kept; the month before it past them.
+    expect(slot("lastMonth", "NOW")).toMatchObject({ span: { from: "2026-08-01", to: "2026-08-31" }, long: false });
+    expect(slot("lastMonth", "BEFORE")).toMatchObject({ span: { from: "2026-07-01", to: "2026-07-31" }, long: true });
+    // Last week to Google's newest day, against the same days of the week before; this week not sent yet.
+    expect(slot("lastWeek", "NOW")).toMatchObject({ span: { from: "2026-09-21", to: "2026-09-26" }, long: false });
+    expect(slot("lastWeek", "BEFORE")).toMatchObject({ span: { from: "2026-09-14", to: "2026-09-19" }, long: false });
+    expect(slot("thisWeek", "NOW")?.span).toBeNull();
+    // This year against the same days last year: past Google's sixteen months, so nothing to set against.
+    expect(slot("thisYear", "NOW")).toMatchObject({ span: { from: "2026-01-01", to: "2026-09-26" }, long: true });
+    expect(slot("thisYear", "BEFORE")?.span).toBeNull();
+    // Inside the days kept, before collection began: nothing to set against.
+    const early = slotsOf("2026-08-15", "2026-07-08", "2025-05-26", "2026-08-17", "2026-06-17");
+    expect(early.find((one) => one.period === "thisMonth" && one.which === "BEFORE")?.span).toBeNull();
   });
 });

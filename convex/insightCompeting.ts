@@ -246,9 +246,9 @@ async function placesFor(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">
  * as they are held. Null when Search Console has built no competing list yet.
  */
 export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, host: string): Promise<{ from: string; to: string; groups: KeptGroup[]; websiteRate: number | null } | null> {
-  const competing = await readPeriod(ctx, hold._id, "web", "competing", "90", "NOW");
+  const competing = await readPeriod(ctx, hold._id, "web", "competing", "lastQuarter", "NOW");
   if (!competing || competing.rows.length === 0) return null;
-  const searches = await readPeriod(ctx, hold._id, "web", "query", "90", "NOW");
+  const searches = await readPeriod(ctx, hold._id, "web", "query", "lastQuarter", "NOW");
   // Both lists come from one build, so a search is the same token in each; named only for the competing rows.
   const sameBook = Boolean(competing.book && searches?.book && competing.book.builtAt === searches.book.builtAt);
   const names = competing.book ? await new BookNames(ctx, competing.book).textsOf(competing.rows.flatMap((row) => [row.key, row.page ?? ""])) : new Map<string, string>();
@@ -272,7 +272,7 @@ export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"company
   const whole = monthsOf(records, kindOf).filter((month) => month.whole).map((month) => month.month);
   const visitsOf = pageFiguresFrom(records, whole);
   // Each page's showings for every search over the same 90 days, to tell a page living off the owner's searches from one with its own.
-  const pageList = await readPeriod(ctx, hold._id, "web", "page", "90", "NOW");
+  const pageList = await readPeriod(ctx, hold._id, "web", "page", "lastQuarter", "NOW");
   const shownAll = new Map<string, number>();
   for (const row of pageList?.rows ?? []) {
     const path = pathKey(pathOfPage(row.key));

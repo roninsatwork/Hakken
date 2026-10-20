@@ -1,11 +1,12 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { readList } from "./searchConsoleLists";
 import { PART_ROWS, pack, type Row } from "./utils/searchConsolePacks";
 import { metered, type MeteredRead } from "@/src/test/readMeter";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The Search Console lists stay quick on a large website
@@ -37,6 +38,9 @@ const periodRows = (count: number, offset: number) => Array.from({ length: count
 }));
 
 describe("a large website's Search Console", () => {
+  // The day after Google's newest: this month and this year to it (calendar-periods-plan.md, phase 4).
+  beforeEach(() => useFixedDay("2026-09-27"));
+  afterEach(() => vi.useRealTimers());
   test("a list's page reads only its period and the tracked list, by index, however many days are kept", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { siteId, userId } = await t.run(async (ctx) => {
@@ -60,7 +64,7 @@ describe("a large website's Search Console", () => {
         for (let part = 0; part * PART_ROWS < rows.length; part += 1) {
           const slice = rows.slice(part * PART_ROWS, (part + 1) * PART_ROWS);
           await ctx.db.insert("searchConsolePeriods", {
-            companyWebsiteId: siteId, searchType: "web", list: "query", period: "30", which, part, from, to,
+            companyWebsiteId: siteId, searchType: "web", list: "query", period: "thisMonth", which, part, from, to,
             keys: slice.map((row) => row.key), clicks: slice.map((row) => row.clicks), impressions: slice.map((row) => row.impressions),
             positionSums: slice.map((row) => row.positionSum), counts: slice.map(() => 2), tops: slice.map(() => "https://big.co.uk/"), builtAt: 1,
           });
@@ -72,7 +76,7 @@ describe("a large website's Search Console", () => {
       return { siteId, userId };
     });
 
-    const ask = { searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST };
+    const ask = { searchType: "web" as const, dimension: "query" as const, from: "2026-09-01", to: NEWEST };
     for (const filters of [{}, { sort: "position" as const }, { q: "search 12" }, { tracked: "yes" as const }, { band: "4-10" as const, direction: "asc" as const }]) {
       const { list, reads } = await t.run(async (ctx) => {
         const { db, reads } = metered(ctx.db, { gets: false });
@@ -122,7 +126,7 @@ describe("a large website's Search Console", () => {
         for (let part = 0; part * PART_ROWS < rows.length; part += 1) {
           const slice = rows.slice(part * PART_ROWS, (part + 1) * PART_ROWS);
           await ctx.db.insert("searchConsolePeriods", {
-            companyWebsiteId: siteId, country: "gbr", searchType: "web", list: "query", period: "30", which, part, from, to,
+            companyWebsiteId: siteId, country: "gbr", searchType: "web", list: "query", period: "thisMonth", which, part, from, to,
             keys: slice.map((row) => row.key), clicks: slice.map((row) => row.clicks), impressions: slice.map((row) => row.impressions),
             positionSums: slice.map((row) => row.positionSum), builtAt: 1,
           });
@@ -165,7 +169,7 @@ describe("a large website's Search Console", () => {
       };
     });
     const competing = pairs.filter((pair) => pair.key < "search 02000");
-    const year = { period: "365" as const, which: "NOW" as const, from: "2025-09-27", to: NEWEST };
+    const year = { period: "thisYear" as const, which: "NOW" as const, from: "2026-01-01", to: NEWEST };
     const siteId = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Co", createdAt: Date.now() });
       const websiteId = await ctx.db.insert("websites", { host: "big.co.uk", displayHost: "big.co.uk", firstSeenAt: Date.now() });

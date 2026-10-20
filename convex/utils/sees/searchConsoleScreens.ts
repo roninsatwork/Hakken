@@ -1,4 +1,5 @@
 import { seen, toPage, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
+import type { CalendarPeriod } from "../calendarPeriods";
 
 /**
  * What Hakken sees on the rest of Search Console's screens
@@ -10,7 +11,8 @@ import { seen, toPage, type Seen, type SeenPhrase, type SeenStep } from "../hakk
  * AI model, never a purchase — run on screen over the same answer the screen
  * shows (`SearchConsoleSees`), most important first, sent as codes with
  * their numbers for the screen's words (`searchConsole.seen.<screen>`).
- * Shares go as whole percentages; days as the dates' length (`c`).
+ * Shares go as whole percentages; the date menu's period as `period`, worded
+ * by the sentence (calendar-periods-plan.md, phase 4).
  */
 
 type Maybe<T> = T | null | undefined | false;
@@ -45,11 +47,11 @@ export type ListFigures = {
 const changeOf = (now: number, before: number | null): number | null => (before === null || before <= 0 ? null : (now - before) / before);
 const percent = (share: number) => Math.round(Math.abs(share) * 100);
 
-/** "That is 21% fewer clicks than the 30 days before", when the change is worth saying. */
-function clicksChange(now: number, before: number | null, days: number): Maybe<SeenPhrase> {
+/** "That is 21% fewer clicks than the month before", when the change is worth saying. */
+function clicksChange(now: number, before: number | null, period: CalendarPeriod): Maybe<SeenPhrase> {
   const change = changeOf(now, before);
   if (change === null || Math.abs(change) < WORTH_SAYING) return null;
-  return { code: change > 0 ? "clicksUp" : "clicksDown", a: percent(change), c: days };
+  return { code: change > 0 ? "clicksUp" : "clicksDown", a: percent(change), period };
 }
 
 /** Clicks fell enough to ask whether it was Google: Volatility answers. */
@@ -63,12 +65,12 @@ const pushNear = (bands: Record<string, number>): Maybe<SeenStep> =>
   near(bands) > 0 && { code: "pushNear", a: near(bands), link: "seeAlmost", to: toPage("almost-there") };
 
 /** Keywords. */
-export function keywordsSees(list: ListFigures, days: number): Seen {
-  if (list.rows === 0) return seen([{ code: "noKeywords", c: days }]);
+export function keywordsSees(list: ListFigures, period: CalendarPeriod): Seen {
+  if (list.rows === 0) return seen([{ code: "noKeywords", period }]);
   return seen(
     [
-      { code: "shown", a: list.rows, b: list.clicks, c: days },
-      clicksChange(list.clicks, list.previousClicks, days),
+      { code: "shown", a: list.rows, b: list.clicks, period },
+      clicksChange(list.clicks, list.previousClicks, period),
       { code: "topThree", a: list.bands["1-3"] ?? 0 },
     ],
     [checkGoogle(list.clicks, list.previousClicks), pushNear(list.bands)],
@@ -76,10 +78,10 @@ export function keywordsSees(list: ListFigures, days: number): Seen {
 }
 
 /** Pages. */
-export function pagesSees(list: ListFigures, days: number): Seen {
-  if (list.rows === 0) return seen([{ code: "noPages", c: days }]);
+export function pagesSees(list: ListFigures, period: CalendarPeriod): Seen {
+  if (list.rows === 0) return seen([{ code: "noPages", period }]);
   return seen(
-    [{ code: "shown", a: list.rows, b: list.clicks, c: days }, clicksChange(list.clicks, list.previousClicks, days)],
+    [{ code: "shown", a: list.rows, b: list.clicks, period }, clicksChange(list.clicks, list.previousClicks, period)],
     [checkGoogle(list.clicks, list.previousClicks), { code: "seeLowCtr", link: "seeLowCtr", to: toPage("shown-but-not-clicked") }],
   );
 }
@@ -98,12 +100,12 @@ export function bandsSees(list: ListFigures): Seen {
 }
 
 /** Wins and losses. */
-export function movesSees(list: ListFigures, days: number): Seen {
-  if (list.gaining === 0 && list.losing === 0) return seen([{ code: "noMoves", c: days }]);
+export function movesSees(list: ListFigures, period: CalendarPeriod): Seen {
+  if (list.gaining === 0 && list.losing === 0) return seen([{ code: "noMoves", period }]);
   const net = list.gained - Math.abs(list.lost);
   return seen(
     [
-      { code: "gainingLosing", a: list.gaining, b: list.losing, c: days },
+      { code: "gainingLosing", a: list.gaining, b: list.losing, period },
       net !== 0 && { code: net > 0 ? "netUp" : "netDown", a: Math.abs(net) },
     ],
     [
@@ -173,22 +175,22 @@ export function brandSees(list: ListFigures): Seen {
 }
 
 /** Tracked keywords and tracked pages. */
-export function trackedSees(list: ListFigures, days: number, kind: "keywords" | "pages"): Seen {
+export function trackedSees(list: ListFigures, period: CalendarPeriod, kind: "keywords" | "pages"): Seen {
   if (list.rows === 0) return seen([{ code: `none${kind === "keywords" ? "Keywords" : "Pages"}` }], [{ code: `track${kind === "keywords" ? "Keywords" : "Pages"}`, link: kind === "keywords" ? "seeKeywords" : "seePages", to: toPage(kind) }]);
   return seen(
-    [{ code: kind === "keywords" ? "trackedKeywords" : "trackedPages", a: list.rows, b: list.clicks, c: days }, clicksChange(list.clicks, list.previousClicks, days)],
+    [{ code: kind === "keywords" ? "trackedKeywords" : "trackedPages", a: list.rows, b: list.clicks, period }, clicksChange(list.clicks, list.previousClicks, period)],
     [checkGoogle(list.clicks, list.previousClicks)],
   );
 }
 
 /** Performance: the website's totals against the days before. */
-export function performanceSees(totals: { clicks: number; impressions: number; position: number } | null, previous: { clicks: number; position: number } | null, days: number): Seen {
-  if (!totals) return seen([{ code: "nothingShown", c: days }]);
+export function performanceSees(totals: { clicks: number; impressions: number; position: number } | null, previous: { clicks: number; position: number } | null, period: CalendarPeriod): Seen {
+  if (!totals) return seen([{ code: "nothingShown", period }]);
   const fell = changeOf(totals.clicks, previous ? previous.clicks : null);
   return seen(
     [
-      { code: "performance", a: totals.impressions, b: totals.clicks, c: days },
-      clicksChange(totals.clicks, previous ? previous.clicks : null, days),
+      { code: "performance", a: totals.impressions, b: totals.clicks, period },
+      clicksChange(totals.clicks, previous ? previous.clicks : null, period),
       { code: "position", a: Math.round(totals.position * 10) / 10 },
     ],
     [fell !== null && fell <= -WORTH_SAYING
@@ -198,10 +200,10 @@ export function performanceSees(totals: { clicks: number; impressions: number; p
 }
 
 /** New and lost. */
-export function newLostSees(counts: { newKeywords: number; lostKeywords: number; newPages: number; lostPages: number }, days: number): Seen {
+export function newLostSees(counts: { newKeywords: number; lostKeywords: number; newPages: number; lostPages: number }, period: CalendarPeriod): Seen {
   return seen(
     [
-      { code: "keywordsNewLost", a: counts.newKeywords, b: counts.lostKeywords, c: days },
+      { code: "keywordsNewLost", a: counts.newKeywords, b: counts.lostKeywords, period },
       (counts.newPages > 0 || counts.lostPages > 0) && { code: "pagesNewLost", a: counts.newPages, b: counts.lostPages },
     ],
     [counts.lostKeywords > counts.newKeywords && { code: "checkGoogle", link: "seeVolatility", to: toPage("volatility") }],
@@ -250,13 +252,13 @@ export function recordSees(
   name: string,
   totals: { clicks: number; position: number } | null,
   previous: { clicks: number; position: number } | null,
-  days: number,
+  period: CalendarPeriod,
 ): Seen {
-  if (!totals) return seen([{ code: "notShown", text: name, c: days }]);
+  if (!totals) return seen([{ code: "notShown", text: name, period }]);
   const moved = previous ? Math.round((previous.position - totals.position) * 10) / 10 : 0;
   return seen([
-    { code: "recordFigures", text: name, a: Math.round(totals.position * 10) / 10, b: totals.clicks, c: days },
-    clicksChange(totals.clicks, previous ? previous.clicks : null, days),
+    { code: "recordFigures", text: name, a: Math.round(totals.position * 10) / 10, b: totals.clicks, period },
+    clicksChange(totals.clicks, previous ? previous.clicks : null, period),
     previous && Math.abs(moved) >= 1 && { code: moved > 0 ? "rose" : "fell", a: Math.round(previous.position * 10) / 10, b: Math.round(totals.position * 10) / 10 },
   ]);
 }

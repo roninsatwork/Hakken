@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
-import { periodFromParts } from "./searchConsolePeriodReads";
+import { RECENT_PERIODS, holdingPeriod, periodFromParts } from "./searchConsolePeriodReads";
 import { wholeBookFromAction } from "./searchConsolePeriodBooks";
 import { tokenPlace } from "./utils/searchConsoleTerms";
 import { dropCopies, writeListCopy } from "./siteListCopies";
@@ -156,8 +156,10 @@ export const rebuildHead = internalQuery({
     ]);
     const bing = await ctx.db.query("bingConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     const connected = connection?.status === "CONNECTED" && !connection.clearing && Boolean(connection.newestDay);
-    // Its dates are on the newest build's first part: the whole period, and its book, was read here until 2026-10-15 (RR3).
-    const period = connected ? await newestConsoleBuild(ctx, args.holdId) : null;
+    // Its dates are on the newest builds' first parts — last quarter's first day to this quarter's last — the whole period,
+    // and its book, read here until 2026-10-15 (RR3).
+    const [latest, earlier] = connected ? [await newestConsoleBuild(ctx, args.holdId, "thisQuarter"), await newestConsoleBuild(ctx, args.holdId, "lastQuarter")] : [null, null];
+    const period = latest || earlier ? { from: (earlier ?? latest)!.from, to: (latest ?? earlier)!.to } : null;
     return {
       websiteId,
       host: site.website.host,
@@ -259,13 +261,17 @@ const CONSOLE_PARTS_PER_READ = 2;
 /** Times the period is read again from its start when Search Console swaps in a new build part-way through. */
 const CONSOLE_READ_TRIES = 3;
 
-/** The newest build of the company's own 90-day page period: the one its screens read. Null when there is none. */
-async function newestConsoleBuild(ctx: QueryCtx, holdId: Id<"companyWebsites">): Promise<Doc<"searchConsolePeriods"> | null> {
+/**
+ * The newest build of one of the company's own recent page periods — this quarter or last (`RECENT_PERIODS`, in place
+ * of the 90 days until the calendar periods) — as its screens read it, or the period it repeats. Null when there is none.
+ */
+async function newestConsoleBuild(ctx: QueryCtx, holdId: Id<"companyWebsites">, recent: (typeof RECENT_PERIODS)[number]): Promise<Doc<"searchConsolePeriods"> | null> {
+  const period = await holdingPeriod(ctx, { companyWebsiteId: holdId, country: undefined, searchType: "web", list: "page" }, recent);
   // The first part of each build: an older build is beside the newest only while it is being cleared.
   const firsts = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period", (q) => q
-      .eq("companyWebsiteId", holdId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "90").eq("which", "NOW").eq("part", 0))
+      .eq("companyWebsiteId", holdId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", period).eq("which", "NOW").eq("part", 0))
     .take(4);
   return firsts.reduce<Doc<"searchConsolePeriods"> | null>((newest, part) => (!newest || part.builtAt > newest.builtAt ? part : newest), null);
 }
@@ -280,20 +286,20 @@ async function newestConsoleBuild(ctx: QueryCtx, holdId: Id<"companyWebsites">):
  * from was replaced since the first part; null when there is none.
  */
 export const consolePagesPart = internalQuery({
-  args: { holdId: v.id("companyWebsites"), builtAt: v.optional(v.number()), start: v.number() },
+  args: { holdId: v.id("companyWebsites"), period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")), builtAt: v.optional(v.number()), start: v.number() },
   returns: v.union(
     v.null(),
     v.object({ moved: v.literal(true) }),
     v.object({ builtAt: v.number(), tokens: v.boolean(), rows: v.array(v.object({ key: v.string(), clicks: v.number() })), next: v.union(v.number(), v.null()) }),
   ),
   handler: async (ctx, args) => {
-    const newest = await newestConsoleBuild(ctx, args.holdId);
+    const newest = await newestConsoleBuild(ctx, args.holdId, args.period);
     if (args.builtAt !== undefined && newest?.builtAt !== args.builtAt) return { moved: true as const };
     if (!newest) return null;
     const parts = await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_slot_built", (q) => q
-        .eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "90").eq("which", "NOW")
+        .eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", newest.period).eq("which", "NOW")
         .eq("builtAt", newest.builtAt).gte("part", args.start))
       .take(CONSOLE_PARTS_PER_READ + 1);
     const read = await periodFromParts(ctx, args.holdId, "web", "page", parts.slice(0, CONSOLE_PARTS_PER_READ), undefined, false);
@@ -315,13 +321,23 @@ type ConsolePart = { moved: true } | { builtAt: number; tokens: boolean; rows: A
  * Only the website's own host and its twin.
  */
 async function allConsolePages(ctx: ActionCtx, holdId: Id<"companyWebsites">, host: string): Promise<Array<{ key: string; clicks: number }>> {
+  // This quarter's and last quarter's pages, each page's clicks added together (calendar-periods-plan.md, phase 4).
+  const clicks = new Map<string, number>();
+  for (const period of RECENT_PERIODS) {
+    for (const row of await consolePagesOf(ctx, holdId, host, period)) clicks.set(row.key, (clicks.get(row.key) ?? 0) + row.clicks);
+  }
+  return [...clicks].map(([key, total]) => ({ key, clicks: total }));
+}
+
+/** One recent period's pages on the website, each with its clicks: all from one build, its book of pages read once. */
+async function consolePagesOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, host: string, period: (typeof RECENT_PERIODS)[number]): Promise<Array<{ key: string; clicks: number }>> {
   for (let tries = 1; ; tries += 1) {
     const rows: Array<{ key: string; clicks: number }> = [];
     let builtAt: number | undefined;
     let tokens = false;
     let moved = false;
     for (let start: number | null = 0; start !== null;) {
-      const part: ConsolePart = await ctx.runQuery(internal.holdPages.consolePagesPart, { holdId, builtAt, start });
+      const part: ConsolePart = await ctx.runQuery(internal.holdPages.consolePagesPart, { holdId, period, builtAt, start });
       if (part === null) return [];
       if ("moved" in part) {
         moved = true;

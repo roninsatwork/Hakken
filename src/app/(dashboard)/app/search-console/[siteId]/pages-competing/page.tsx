@@ -11,6 +11,7 @@ import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords
 import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { competingSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["intent", "band"];
 
@@ -23,10 +24,10 @@ const CHIPS: readonly ChipId[] = ["intent", "band"];
 export default function SearchConsoleCompetingPage() {
   const t = useTranslations("searchConsole");
   const list = useSearchConsoleList({ dimension: "query", view: "competing", chips: CHIPS });
+  const periodWords = useSearchConsolePeriodWords(list.range.period);
   const recordHref = useRecordHref(list.siteId);
   const host = list.status?.host ?? "";
   const summary = list.summary;
-  const days = list.range.days;
   const page = (value: string | null) => <span className="block truncate text-[12px] text-secondary">{value === null ? "–" : pageLabel(value, host)}</span>;
   return (
     <SearchConsoleListScreen
@@ -37,7 +38,7 @@ export default function SearchConsoleCompetingPage() {
       heroes={
         <FigureRow columns={3}>
           <Figure label={t("competing.split")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("competing.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
-          <Figure label={t("competing.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure label={t("competing.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           <Figure
             label={t("competing.pages")}
             value={summary?.pagesInvolved === null || summary === null ? "…" : formatNumber(summary.pagesInvolved)}

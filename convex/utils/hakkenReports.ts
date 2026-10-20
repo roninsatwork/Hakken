@@ -3,16 +3,17 @@ import type { TaskMeasure } from "./hakkenTaskRules";
 /**
  * A Hakken report (docs/plans/active/hakken-tasks-plan.md, item 4.1, board
  * EmailReportB): "every Monday, the five pages that lost the most visitors".
- * Its pages are Search Console's own Pages list over the newest 7 days held
- * against the 7 before — the list "See all your pages" opens — and which go
- * in is plain code. Free of any Convex function, so the proposal, The Stat
+ * Its pages are Search Console's own Pages list over Last Week, Monday to
+ * Sunday, against the week before — the list "See all your pages" opens on
+ * that period (docs/plans/active/calendar-periods-plan.md) — and which go in
+ * is plain code. Free of any Convex function, so the proposal, The Stat
  * Report Agent and the screens agree.
  */
 
 export type ReportSpec = { look: "pagesChange"; direction: "lost" | "gained"; count: number; every: "week"; weekday: number };
 
-/** The report's days: Search Console's ready-made 7. */
-export const REPORT_DAYS = 7;
+/** The report's period: last week, Monday to Sunday, as far as Search Console has sent it. */
+export const REPORT_PERIOD = "lastWeek" as const;
 
 /** How many pages a report may hold. */
 export const REPORT_PAGES = { fewest: 3, most: 10, usual: 5 } as const;

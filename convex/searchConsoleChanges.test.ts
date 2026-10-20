@@ -56,7 +56,7 @@ async function setup(role: "USER" | "SUPER_ADMIN" = "USER") {
 const seen = (t: Harness, siteId: Id<"companyWebsites">, kind: "query" | "page", key: string, firstDay: string, lastDay: string) =>
   t.run(async (ctx) => await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, kind, key, firstDay, lastDay }));
 
-async function period(t: Harness, siteId: Id<"companyWebsites">, period: "30" | "90", rows: [string, number, number, number][]) {
+async function period(t: Harness, siteId: Id<"companyWebsites">, period: "thisMonth" | "lastQuarter", rows: [string, number, number, number][]) {
   await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
     companyWebsiteId: siteId, searchType: "web", list: "query", period, which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
     keys: rows.map((row) => row[0]), clicks: rows.map((row) => row[1]), impressions: rows.map((row) => row[2]),
@@ -73,7 +73,8 @@ describe("New and lost", () => {
     await seen(t, siteId, "query", "boiler repair", "2026-07-20", "2026-09-05");
     await seen(t, siteId, "query", "still around", "2026-07-20", "2026-09-20");
     await seen(t, siteId, "page", "https://acme-shop.test/drains/", "2026-09-20", NEWEST);
-    await period(t, siteId, "90", [["drain unblocking", 6, 200, 4.5], ["boiler repair", 3, 90, 12]]);
+    // Dates not a calendar period read last quarter's figures, which hold every keyword shown in it (calendar-periods-plan.md, phase 4).
+    await period(t, siteId, "lastQuarter", [["drain unblocking", 6, 200, 4.5], ["boiler repair", 3, 90, 12]]);
 
     const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
     expect(answer.counts).toEqual({ newKeywords: 1, lostKeywords: 1, newPages: 1, lostPages: 0 });
@@ -292,8 +293,9 @@ describe("Position bands and Brand charts, in the dates and step chosen (2026-10
 describe("Click rate by position and brand words", () => {
   test("the website's own rate at each whole position, from a ready-made period; other dates are the page's to work out", async () => {
     const { t, siteId, reader } = await setup();
-    await period(t, siteId, "30", [["a", 18, 100, 1.2], ["b", 2, 100, 0.9], ["c", 1, 50, 7.4], ["far", 0, 500, 44]]);
-    const curve = await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST });
+    await period(t, siteId, "thisMonth", [["a", 18, 100, 1.2], ["b", 2, 100, 0.9], ["c", 1, 50, 7.4], ["far", 0, 500, 44]]);
+    // This month on Monday 28 September, to Google's newest day: a ready-made period.
+    const curve = await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-09-01", to: NEWEST });
     expect(curve).toEqual({
       live: false,
       preparing: false,

@@ -6,10 +6,10 @@ import { chargeTaskWork } from "./hakkenTaskCredits";
 import { queueOutboxMessage } from "./outbox";
 import { appUrl } from "./outboxTemplates";
 import { ensureReaderPreferences } from "./readerPreferences";
-import { shiftDay } from "./searchConsoleDays";
+import { periodSpan, ukDay } from "./utils/calendarPeriods";
 import { readList } from "./searchConsoleLists";
 import { emailWording } from "./utils/emailWording";
-import { REPORT_DAYS, pickPages, signed, type PageChange } from "./utils/hakkenReports";
+import { REPORT_PERIOD, pickPages, signed, type PageChange } from "./utils/hakkenReports";
 import { pathOf } from "./utils/hakkenTaskRules";
 import { nextRunOf } from "./utils/hakkenTaskTiming";
 import { REPORT_STEP, STAT_REPORTER } from "./utils/statReporter";
@@ -17,8 +17,8 @@ import { REPORT_STEP, STAT_REPORTER } from "./utils/statReporter";
 /**
  * The Stat Report Agent (docs/plans/active/hakken-tasks-plan.md, item 4.1):
  * every quarter of an hour, each report whose owner's day and time have come
- * — its pages read from Search Console's own Pages list over the newest 7 days
- * held against the 7 before, the ones that moved its way picked in plain
+ * — its pages read from Search Console's own Pages list over last week against
+ * the week before, the ones that moved its way picked in plain
  * code — sent to its owner by email and in the bell, then set for next week.
  * A busy morning hands itself on in steps, so nothing waits on a person.
  */
@@ -82,8 +82,8 @@ export const dueReportsInternal = internalQuery({
 type ReportPages = { from: string; to: string; pages: PageChange[]; total: number } | null;
 
 /**
- * A report's pages as they stand: the website's Pages list over the newest 7
- * days held against the 7 before, sorted by change its way, and those that
+ * A report's pages as they stand: the website's Pages list over last week
+ * against the week before, sorted by change its way, and those that
  * moved that way picked. Nothing while the website's figures are not ready.
  * What a report sends, and what the Assistant shows before anyone says yes.
  */
@@ -97,10 +97,11 @@ export async function readReportPages(
     .withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .first();
   if (!connection?.newestDay) return null;
-  const to = connection.newestDay;
-  const from = shiftDay(to, -(REPORT_DAYS - 1));
+  const span = periodSpan(REPORT_PERIOD, ukDay(), connection.newestDay);
+  if (!span) return null;
+  const { from, to } = span;
   const list = await readList(ctx, companyWebsiteId, {
-    searchType: "web", dimension: "page", from, to, sort: "change", direction: report.direction === "lost" ? "asc" : "desc",
+    searchType: "web", dimension: "page", from, to, period: REPORT_PERIOD, sort: "change", direction: report.direction === "lost" ? "asc" : "desc",
   });
   if (list.live || list.preparing || !list.comparable) return null;
   const pages = pickPages(
@@ -125,7 +126,7 @@ const sendOutcomeValidator = v.union(v.literal("SENT"), v.literal("NOTHING_YET")
 type SendOutcome = typeof sendOutcomeValidator.type;
 
 /**
- * One report: its pages from the newest 7 days held, the ones that moved its
+ * One report: its pages from last week, the ones that moved its
  * way, to its owner — an email through the outbox, once for each newest day,
  * and the bell — then set for its next week. A website whose figures are not
  * ready yet waits for next week rather than sending nothing.

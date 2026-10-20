@@ -1,3 +1,6 @@
+import { CALENDAR_PERIODS, periodBounds, periodSpan as calendarSpan, spanBefore as calendarBefore, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
+import type { SearchConsolePeriod } from "./searchConsoleSchema";
+
 /**
  * Search Console's days (docs/plans/active/search-console-plan.md §4).
  *
@@ -55,6 +58,18 @@ export function periodBefore(from: string, to: string): { from: string; to: stri
   return { from: shiftDay(from, -daysIn(from, to)), to: shiftDay(from, -1) };
 }
 
+/**
+ * What a range is set against: for the date menu's calendar period, the
+ * period before — whole once the period is over, its same dates while it is
+ * still going (calendar-periods-plan.md, rule 4); for other dates, the same
+ * number of days just before.
+ */
+export function beforeOf(from: string, to: string, period?: CalendarPeriod, today: string = ukDay()): { from: string; to: string } {
+  if (!period) return periodBefore(from, to);
+  const before = calendarBefore(period, { from, to, whole: to === periodBounds(period, today).to });
+  return { from: before.from, to: before.to };
+}
+
 /** Clicks, impressions, click-through rate and position, as figures. */
 export type Figures = { clicks: number; impressions: number; ctr: number; position: number };
 
@@ -75,4 +90,21 @@ export function addUp(rows: ReadonlyArray<{ clicks: number; impressions: number;
   }
   if (impressions === 0) return null;
   return { clicks, impressions, ctr: clicks / impressions, position: weighted / impressions };
+}
+
+/**
+ * The ready-made period the dates are — the calendar period whose days, to
+ * Google's newest, they are on the UK's today (calendar-periods-plan.md,
+ * phase 4) — or null when they are other dates (asked of Google instead). Two
+ * periods on the same days are one list (`sameDaysAs`): the first is named.
+ */
+export function periodOf(from: string, to: string, newestDay: string | undefined, today: string = ukDay(), chosen?: CalendarPeriod): SearchConsolePeriod | null {
+  if (!newestDay) return null;
+  const matches = (period: CalendarPeriod) => {
+    const span = calendarSpan(period, today, newestDay);
+    return span !== null && span.from === from && span.to === to;
+  };
+  // The period chosen when the dates are its days: This quarter in its first month is This month's days, set against last quarter's.
+  if (chosen && matches(chosen)) return chosen;
+  return CALENDAR_PERIODS.find(matches) ?? null;
 }

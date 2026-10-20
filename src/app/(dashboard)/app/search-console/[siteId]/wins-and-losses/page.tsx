@@ -11,6 +11,7 @@ import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { BeforeAfter, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { movesSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["move", "band", "device"];
 
@@ -23,19 +24,19 @@ const CHIPS: readonly ChipId[] = ["move", "band", "device"];
 export default function SearchConsoleWinsPage() {
   const t = useTranslations("searchConsole");
   const list = useSearchConsoleList({ dimension: "query", view: "moves", opening: "change", chips: CHIPS });
+  const periodWords = useSearchConsolePeriodWords(list.range.period);
   const recordHref = useRecordHref(list.siteId);
   const summary = list.summary;
-  const days = list.range.days;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="moves" seen={list.summary ? movesSees(list.summary, list.range.days) : null} />}
+      sees={<SearchConsoleSees screen="moves" seen={list.summary ? movesSees(list.summary, list.range.period) : null} />}
       icon={<ArrowUpDown className="h-5 w-5 text-brand" />}
       title={t("moves.title")}
-      description={t("moves.description", { days })}
+      description={t("moves.description", { period: periodWords.period, before: periodWords.before })}
       heroes={
         <FigureRow>
-          <Figure label={t("moves.gaining")} value={summary ? formatNumber(summary.gaining) : "…"} detail={<span className="text-secondary">{t("moves.against", { days })}</span>} />
-          <Figure label={t("moves.losing")} value={summary ? formatNumber(summary.losing) : "…"} detail={<span className="text-secondary">{t("moves.against", { days })}</span>} />
+          <Figure label={t("moves.gaining")} value={summary ? formatNumber(summary.gaining) : "…"} detail={<span className="text-secondary">{t("moves.against", { before: periodWords.before })}</span>} />
+          <Figure label={t("moves.losing")} value={summary ? formatNumber(summary.losing) : "…"} detail={<span className="text-secondary">{t("moves.against", { before: periodWords.before })}</span>} />
           <Figure label={t("moves.gained")} value={summary ? `+${formatNumber(summary.gained)}` : "…"} detail={<span className="text-success">{t("moves.byGaining")}</span>} />
           <Figure label={t("moves.lost")} value={summary ? formatNumber(summary.lost) : "…"} detail={<span className="text-destructive">{t("moves.byLosing")}</span>} />
         </FigureRow>

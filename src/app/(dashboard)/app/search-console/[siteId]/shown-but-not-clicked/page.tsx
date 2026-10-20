@@ -11,6 +11,7 @@ import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords
 import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { lowCtrSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["pageType", "band", "device"];
 
@@ -23,10 +24,10 @@ const CHIPS: readonly ChipId[] = ["pageType", "band", "device"];
 export default function SearchConsoleLowCtrPage() {
   const t = useTranslations("searchConsole");
   const list = useSearchConsoleList({ dimension: "page", view: "lowCtr", opening: "impressions", chips: CHIPS });
+  const periodWords = useSearchConsolePeriodWords(list.range.period);
   const recordHref = useRecordHref(list.siteId);
   const host = list.status?.host ?? "";
   const summary = list.summary;
-  const days = list.range.days;
   return (
     <SearchConsoleListScreen
       sees={<SearchConsoleSees screen="lowCtr" seen={list.summary ? lowCtrSees(list.summary) : null} />}
@@ -36,8 +37,8 @@ export default function SearchConsoleLowCtrPage() {
       heroes={
         <FigureRow>
           <Figure label={t("lowCtr.below")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("lowCtr.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
-          <Figure label={t("lowCtr.impressions")} value={summary ? formatNumber(summary.impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-          <Figure label={t("lowCtr.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure label={t("lowCtr.impressions")} value={summary ? formatNumber(summary.impressions) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
+          <Figure label={t("lowCtr.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           <Figure label={t("lowCtr.atUsual")} value={summary ? formatNumber(summary.expected) : "…"} detail={<span className="text-secondary">{t("lowCtr.wouldHave")}</span>} />
         </FigureRow>
       }

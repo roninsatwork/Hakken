@@ -7,7 +7,8 @@ import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { periodOf } from "./searchConsoleLists";
 import { firstPartOf } from "./searchConsolePeriodReads";
-import { LONG_PERIODS } from "./searchConsolePeriods";
+import { slotsOf } from "./searchConsolePeriods";
+import { calendarPeriodValidator, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 import { settlingNow } from "./searchConsoleSettling";
 
 /**
@@ -17,31 +18,32 @@ import { settlingNow } from "./searchConsoleSettling";
  * someone opens if it's stale"). Search Console is fetched every night but
  * added up only weekly and after the company's own collection, so a screen's
  * lists may end days before the newest day collected; the screen then shows
- * what is held at once, asks for them to be added up — the 7 and 30 days with
- * the charts, or the 90 days and twelve months — and shows how far along that
- * is until the new lists are swapped in.
+ * what is held at once, asks for them to be added up — the periods inside the
+ * days kept with the charts, or those asked of Google — and shows how far
+ * along that is until the new lists are swapped in.
  */
 
 /** A catch-up asked for is not asked for again within this, however many screens open; nor while one is being added up. */
 const ASKED_WITHIN_MS = 2 * 60 * 1000;
 
-const datesArgs = { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() };
+const datesArgs = { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), period: v.optional(calendarPeriodValidator) };
 
 type Behind = { connection: Doc<"searchConsoleConnections">; heldTo: string; newest: string; long: boolean } | null;
 
 /** Whether the dates on screen read a ready-made list ending before the newest day collected. */
-async function behindOf(ctx: { db: QueryCtx["db"] }, holdId: Doc<"companyWebsites">["_id"], from: string, to: string): Promise<Behind> {
+async function behindOf(ctx: { db: QueryCtx["db"] }, holdId: Doc<"companyWebsites">["_id"], from: string, to: string, chosen?: CalendarPeriod): Promise<Behind> {
   const connection = await ctx.db
     .query("searchConsoleConnections")
     .withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId))
     .first();
   const newest = connection?.newestDay;
   if (!connection || !newest) return null;
-  const period = periodOf(from, to, newest);
+  const period = periodOf(from, to, newest, ukDay(), chosen);
   if (!period) return null;
-  const long = LONG_PERIODS.includes(period);
-  // The period's own page list says what it holds to; twelve months is built with the 90 days.
-  const list = await firstPartOf(ctx, holdId, undefined, "web", "page", period === "365" ? "90" : period, "NOW");
+  // Asked of Google when its days reach past the 60 kept day by day (calendar-periods-plan.md, phase 4).
+  const long = slotsOf(newest, connection.oldestDay ?? newest).find((slot) => slot.period === period && slot.which === "NOW")?.long ?? false;
+  // The period's own page list says what it holds to — one kept on another's days holds the empty part saying them.
+  const list = await firstPartOf(ctx, holdId, undefined, "web", "page", period, "NOW");
   if (!list || list.to >= newest) return null;
   return { connection, heldTo: list.to, newest, long };
 }
@@ -57,7 +59,7 @@ export const searchConsoleCatchUp = tenantQuery({
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const behind = await behindOf(ctx, site.hold._id, args.from, args.to);
+    const behind = await behindOf(ctx, site.hold._id, args.from, args.to, args.period);
     if (!behind) return { behind: false, heldTo: null, newest: null, progress: null };
     const settling = settlingNow(behind.connection) ? behind.connection.settling : undefined;
     return {
@@ -75,7 +77,7 @@ export const requestSearchConsoleCatchUp = tenantMutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const behind = await behindOf(ctx, site.hold._id, args.from, args.to);
+    const behind = await behindOf(ctx, site.hold._id, args.from, args.to, args.period);
     if (!behind) return false;
     const { connection } = behind;
     if (settlingNow(connection) || (connection.catchUpAt !== undefined && Date.now() - connection.catchUpAt < ASKED_WITHIN_MS)) return false;

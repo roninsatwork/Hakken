@@ -1,26 +1,32 @@
 import { convexTest } from "convex-test";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { renderOutboxRow } from "./outboxTemplates";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The Stat Report Agent's round (docs/plans/active/hakken-tasks-plan.md, item
  * 4.1, board EmailReportB): each report whose owner's day and time have come
- * reads the website's Pages list over the newest 7 days against the 7 before,
+ * reads the website's Pages list over last week against the week before,
  * picks the pages that moved its way, and sends them to its owner.
  */
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
+// A Tuesday: last week is Monday 21 to Sunday 27 September, all of it sent.
+beforeEach(() => {
+  useFixedDay("2026-09-29");
+});
+
 afterEach(() => {
   vi.useRealTimers();
 });
 
-const NEWEST = "2026-09-26";
+const NEWEST = "2026-09-27";
 
 async function seed(t: Harness) {
   return await t.run(async (ctx) => {
@@ -33,11 +39,11 @@ async function seed(t: Harness) {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "sc-domain:ronins.test", dataProperty: "sc-domain:ronins.test",
       oldestDay: "2026-06-01", newestDay: NEWEST, createdAt: now, updatedAt: now,
     });
-    // The newest 7 days and the 7 before, as the Pages list keeps them ready.
+    // Last week and the week before, as the Pages list keeps them ready.
     const pages = ["https://ronins.test/a/", "https://ronins.test/b/", "https://ronins.test/c/", "https://ronins.test/d/"];
-    for (const [which, clicks, from, to] of [["NOW", [412, 188, 50, 141], "2026-09-20", NEWEST], ["BEFORE", [508, 249, 20, 171], "2026-09-13", "2026-09-19"]] as const) {
+    for (const [which, clicks, from, to] of [["NOW", [412, 188, 50, 141], "2026-09-21", NEWEST], ["BEFORE", [508, 249, 20, 171], "2026-09-14", "2026-09-20"]] as const) {
       await ctx.db.insert("searchConsolePeriods", {
-        companyWebsiteId: siteId, searchType: "web", list: "page", period: "7", which, part: 0, from, to,
+        companyWebsiteId: siteId, searchType: "web", list: "page", period: "lastWeek", which, part: 0, from, to,
         keys: pages, clicks: [...clicks], impressions: clicks.map((count) => count * 20), positionSums: clicks.map((count) => count * 20 * 4),
         counts: pages.map(() => 1), tops: pages, builtAt: 1,
       });
@@ -58,10 +64,8 @@ async function mondayReport(t: Harness, seeded: Awaited<ReturnType<typeof seed>>
 }
 
 async function round(t: Harness) {
-  vi.useFakeTimers();
   await t.action(internal.hakkenStatReporter.reportDue, {});
   await finishScheduled(t);
-  vi.useRealTimers();
 }
 
 describe("The Stat Report Agent's round", () => {
@@ -77,11 +81,11 @@ describe("The Stat Report Agent's round", () => {
     const rendered = await t.run((ctx) => renderOutboxRow(ctx, email));
     if (!("email" in rendered)) throw new Error(rendered.skip);
     expect(rendered.email.subject).toBe("Your Monday report: 157 fewer visitors on 2 pages");
-    for (const said of [">MONDAY REPORT · RONINS.TEST<", ">−157<", ">visitors from Google, across these 2 pages<", ">/a/", ">−96<", ">412 visitors in these 7 days<", ">/b/", ">−61<", ">See all your pages<"]) {
+    for (const said of [">MONDAY REPORT · RONINS.TEST<", ">−157<", ">visitors from Google, across these 2 pages<", ">/a/", ">−96<", ">412 visitors that week<", ">/b/", ">−61<", ">See all your pages<"]) {
       expect(rendered.email.html).toContain(said);
     }
     expect(rendered.email.html).not.toContain(">/c/");
-    expect(rendered.email.html).toContain(">20 September to 26 September, against the 7 days before.<");
+    expect(rendered.email.html).toContain(">21 September to 27 September, against the week before.<");
 
     const [notification] = await t.run((ctx) => ctx.db.query("notifications").collect());
     expect(notification).toMatchObject({ kind: "HAKKEN_TASK_REPORT", title: "Your Monday report is ready", href: `/app/search-console/${seeded.siteId}/pages` });
@@ -97,10 +101,8 @@ describe("The Stat Report Agent's round", () => {
     const t = harness();
     const seeded = await seed(t);
     const taskId = await mondayReport(t, seeded);
-    vi.useFakeTimers();
     await t.action(internal.hakkenWatcherActions.watchDue, {});
     await finishScheduled(t);
-    vi.useRealTimers();
     expect(await t.run((ctx) => ctx.db.query("outboxMessages").collect())).toEqual([]);
 
     await t.run((ctx) => ctx.db.patch(taskId as Id<"hakkenTasks">, { state: "PAUSED" }));

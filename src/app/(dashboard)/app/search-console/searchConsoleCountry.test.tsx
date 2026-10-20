@@ -13,6 +13,7 @@ import SearchConsoleNewLostPage from "./[siteId]/new-and-lost/page";
 import SearchConsoleBandsPage from "./[siteId]/position-bands/page";
 import SearchConsolePlacesPage from "./[siteId]/countries-and-devices/page";
 import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
+import { useScreenDay } from "@/src/test/realTime";
 
 /**
  * The country choice beside the date boxes (docs/plans/active/
@@ -135,6 +136,8 @@ function at(path: string, search = "") {
 }
 
 beforeEach(() => {
+  // Sunday 27 September: Google's newest day the Saturday before; the date menu opens on last month (calendar-periods-plan.md).
+  useScreenDay("2026-09-27");
   vi.mocked(useQuery).mockReset();
   vi.mocked(useMutation).mockReset();
   vi.mocked(useAction).mockReset();
@@ -142,7 +145,10 @@ beforeEach(() => {
   nav.push.mockClear();
   actions = {};
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("the country choice", () => {
   it("offers the website's home countries only: its main one first, which every page opens on, then those kept ready beside it (2026-10-06)", () => {
@@ -182,7 +188,7 @@ describe("the country choice", () => {
     });
     render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
     expect(screen.getByRole("combobox", { name: "searchConsole.country.label" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "sites.range.label" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "common.periods.label" })).toBeInTheDocument();
   });
 });
 
@@ -197,13 +203,13 @@ describe("a country the website keeps ready", () => {
     });
     render(<SearchConsoleKeywordsPage />);
     expect(screen.getByText("plumber leeds")).toBeInTheDocument();
-    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ dimension: "query", country: "gbr", from: "2026-08-28", to: "2026-09-26" });
+    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ dimension: "query", country: "gbr", from: "2026-08-01", to: "2026-08-31" });
     expect(askedOf("searchConsolePerformance").at(-1)).toMatchObject({ country: "gbr" });
     expect(askedOfGoogle()).toEqual([]);
   });
 
-  it("a day behind all countries, reads its own ready-made figures: the quick picks end on its own newest day (drift fixes, 2026-10-03)", () => {
-    at("/app/search-console/site_1/keywords", "country=gbr");
+  it("a day behind all countries, reads its own ready-made figures: a period still going ends on its own newest day (drift fixes, 2026-10-03)", () => {
+    at("/app/search-console/site_1/keywords", "country=gbr&period=thisMonth");
     answer({
       "searchConsoleConnect:searchConsoleStatus": { ...STATUS, connection: { ...STATUS.connection, countriesNewest: [{ country: "gbr", newestDay: "2026-09-25", daysFrom: "2025-05-26", historyWhole: true }] } },
       "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
@@ -211,7 +217,7 @@ describe("a country the website keeps ready", () => {
       "searchConsoleTracking:searchConsoleTracking": TRACKING,
     });
     render(<SearchConsoleKeywordsPage />);
-    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ country: "gbr", from: "2026-08-27", to: "2026-09-25" });
+    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ country: "gbr", from: "2026-09-01", to: "2026-09-25" });
     expect(askedOfGoogle()).toEqual([]);
   });
 
@@ -244,7 +250,7 @@ describe("a country the website does not keep ready", () => {
     render(<SearchConsolePerformancePage />);
     expect(await screen.findByText("1,284")).toBeInTheDocument();
     expect(askedOf("searchConsolePerformance").at(-1)).toMatchObject({ country: "moz" });
-    expect(actions.searchConsoleLiveDays).toHaveBeenCalledWith({ siteId: "site_1", searchType: "web", from: "2026-08-28", to: "2026-09-26", country: "moz" });
+    expect(actions.searchConsoleLiveDays).toHaveBeenCalledWith({ siteId: "site_1", searchType: "web", from: "2026-08-01", to: "2026-08-31", period: "lastMonth", country: "moz" });
   });
 
   it("asks Google for a list when the server says the country is not kept ready, once, whatever the search", async () => {
@@ -261,7 +267,7 @@ describe("a country the website does not keep ready", () => {
     });
     render(<SearchConsoleKeywordsPage />);
     expect(await screen.findByText("plumber maputo")).toBeInTheDocument();
-    expect(actions.searchConsoleLiveList).toHaveBeenCalledWith(expect.objectContaining({ dimension: "query", country: "moz", from: "2026-08-28", to: "2026-09-26" }));
+    expect(actions.searchConsoleLiveList).toHaveBeenCalledWith(expect.objectContaining({ dimension: "query", country: "moz", from: "2026-08-01", to: "2026-08-31" }));
     expect(screen.getByText("searchConsole.table.asked")).toBeInTheDocument();
     await waitFor(() => expect(actions.searchConsoleLiveDays).toHaveBeenCalledWith(expect.objectContaining({ country: "moz" })));
 
@@ -351,7 +357,7 @@ describe("one country choice per page", () => {
 
 describe("charts in the dates and step chosen (2026-10-04)", () => {
   it("Position bands asks for the dates and step chosen, and says when days are drawn by week", () => {
-    at("/app/search-console/site_1/position-bands", "from=2026-03-01&to=2026-09-26&step=day");
+    at("/app/search-console/site_1/position-bands", "period=thisYear&step=day");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleListPage": LIST,
@@ -361,12 +367,12 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
       },
     });
     render(<SearchConsoleBandsPage />);
-    expect(askedOf("searchConsoleChartFigures").at(-1)).toMatchObject({ from: "2026-03-01", to: "2026-09-26", step: "day" });
+    expect(askedOf("searchConsoleChartFigures").at(-1)).toMatchObject({ from: "2026-01-01", to: "2026-09-26", step: "day" });
     expect(screen.getByText("searchConsole.chart.byWeek")).toBeInTheDocument();
   });
 
   it("Position bands says how far the charts reach when the dates go further", () => {
-    at("/app/search-console/site_1/position-bands", "from=2026-01-05&to=2026-09-26&step=week");
+    at("/app/search-console/site_1/position-bands", "period=thisYear&step=week");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleListPage": LIST,
@@ -380,7 +386,7 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
   });
 
   it("New and lost asks for the step chosen", () => {
-    at("/app/search-console/site_1/new-and-lost", "from=2026-03-01&to=2026-09-26&step=month");
+    at("/app/search-console/site_1/new-and-lost", "period=thisYear&step=month");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleChanges:searchConsoleNewLost": {
@@ -390,6 +396,6 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
       },
     });
     render(<SearchConsoleNewLostPage />);
-    expect(askedOf("searchConsoleNewLost").at(-1)).toMatchObject({ from: "2026-03-01", to: "2026-09-26", step: "month" });
+    expect(askedOf("searchConsoleNewLost").at(-1)).toMatchObject({ from: "2026-01-01", to: "2026-09-26", step: "month" });
   });
 });
