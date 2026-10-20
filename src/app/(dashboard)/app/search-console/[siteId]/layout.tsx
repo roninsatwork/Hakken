@@ -1,16 +1,16 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Globe } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CalendarClock, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
-import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
+import { openingPeriod, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
 import { SiteDateRange } from "../../sites/_components/SiteDateRange";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
@@ -19,7 +19,14 @@ import { sharedSiteQuery } from "../../sites/_components/useSiteParam";
 import { SearchConsoleCountryPicker } from "../_components/SearchConsoleCountryPicker";
 import { SearchConsoleMenu } from "../_components/SearchConsoleMenu";
 import { ConnectionBanner } from "../_components/SearchConsoleNotices";
-import { searchConsoleQuery, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
+import {
+  pageForPath,
+  searchConsoleQuery,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+  type SearchConsolePageId,
+} from "../_components/useSearchConsole";
 
 /**
  * One website in the Search Console section: its header, the switch between
@@ -118,10 +125,33 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             <SearchConsoleMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            {children}
+            <PeriodDays siteId={siteId} newestDay={connection?.newestDay ?? null}>{children}</PeriodDays>
           </section>
         </div>
       </div>
     </OpeningPeriodContext.Provider>
+  );
+}
+
+/** The pages that keep days of their own rather than the menu's: the latest inspection, Volatility's newest days, Google updates' windows, the connection. */
+const OWN_DAYS: ReadonlySet<SearchConsolePageId> = new Set(["indexing", "volatility", "updates", "connection"]);
+
+/**
+ * A page reading the date menu, or — while Google has sent none of a period still going, This week on a Monday — its
+ * title and one plain line in place of an empty page (calendar-periods-plan.md, rule 9), so nothing is asked of
+ * Google for days it does not have yet.
+ */
+function PeriodDays({ siteId, newestDay, children }: { siteId: string; newestDay: string | null; children: React.ReactNode }) {
+  const tm = useTranslations("searchConsole.menu");
+  const tp = useTranslations("common.periods");
+  const source = useTranslations("sidebar")("searchConsole");
+  const page = pageForPath(usePathname(), siteId);
+  const range = useSearchConsoleRange(newestDay);
+  if (!range.waiting || !range.newest || OWN_DAYS.has(page)) return <>{children}</>;
+  return (
+    <>
+      <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={tm(page)} />
+      <Notice>{tp("noDaysYet", { source, unit: unitOf(range.period), day: formatDay(range.newest) })}</Notice>
+    </>
   );
 }

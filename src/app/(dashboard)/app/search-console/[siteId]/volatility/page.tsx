@@ -54,6 +54,8 @@ export default function SearchConsoleVolatilityPage() {
   const ticks = useSeriesTicks(series);
   const latest = facts?.latest ?? null;
   const update = facts?.update ?? null;
+  // Its figures keep the newest seven days whatever the menu says, so they name the day they end on (calendar-periods-plan.md).
+  const newestWords = facts?.newestDay ? formatShortDay(facts.newestDay) : "…";
   const clickChange = facts && facts.clicks.before !== null && facts.clicks.before > 0 ? (facts.clicks.now - facts.clicks.before) / facts.clicks.before : null;
   return (
     <SearchConsoleListScreen
@@ -78,7 +80,7 @@ export default function SearchConsoleVolatilityPage() {
             />
           ) : (
             <Figure
-              label={tv("lastWeek")}
+              label={tv("lastWeek", { day: newestWords })}
               value={score(facts?.week.now)}
               detail={<span className="text-secondary">{facts?.week.before === null || !facts ? tv("noBefore") : tv("weekBefore", { score: score(facts.week.before) })}</span>}
             />
@@ -89,7 +91,7 @@ export default function SearchConsoleVolatilityPage() {
             detail={<span className="text-secondary">{latest ? tv("downUp", { down: latest.movedDown5, up: latest.movedUp5, day: formatShortDay(latest.day) }) : ""}</span>}
           />
           <Figure
-            label={tv("clicks7")}
+            label={tv("clicks7", { day: newestWords })}
             value={facts ? formatNumber(facts.clicks.now) : "…"}
             detail={clickChange === null ? <span className="text-secondary">{tv("noBefore")}</span> : (
               <span className="inline-flex items-center gap-1.5">

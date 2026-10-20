@@ -192,6 +192,27 @@ describe("the country choice", () => {
   });
 });
 
+describe("a period Google has sent none of yet", () => {
+  it("shows the page's title and one plain line in place of the page, but leaves pages with days of their own alone (rule 9)", () => {
+    // Monday 28 September: This week has begun, and Google's newest day is the Saturday before.
+    useScreenDay("2026-09-28");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: [] },
+    });
+    at("/app/search-console/site_1/keywords", "period=thisWeek");
+    nav.pathname = "/app/search-console/site_1/keywords";
+    const { unmount } = render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
+    expect(screen.queryByText("the page")).not.toBeInTheDocument();
+    expect(screen.getByText(/common\.periods\.noDaysYet/)).toBeInTheDocument();
+    unmount();
+
+    nav.pathname = "/app/search-console/site_1/volatility";
+    render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
+    expect(screen.getByText("the page")).toBeInTheDocument();
+  });
+});
+
 describe("a country the website keeps ready", () => {
   it("is passed to the figures and the list, read from what is kept, never asked of Google", () => {
     at("/app/search-console/site_1/keywords", "country=gbr");

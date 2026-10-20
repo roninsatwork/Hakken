@@ -1,8 +1,10 @@
 # Calendar periods in every date menu
 
 Agreed with Anthony on 2026-10-20, point by point in conversation. Built on `dev`, not pushed: the rules (phase 1),
-Sites (2), Clarity (3) and Search Console (4), with rule 6's This-month fallback. Still to build: Bing (5), Google
-Analytics (6), Settings and Governance (7), the start-up fill (8) and the full check (9). Until the start-up fill runs,
+Sites (2), Clarity (3) and Search Console (4), with rule 6's This-month fallback. Search Console's "no days yet" line
+and Volatility's dated labels were found unbuilt after its first commit and finished in a second; its charts' 52 weeks
+moved to the start-up fill (8), because raising the setting is what starts their download. Still to build: Bing (5), Google Analytics (6), Settings and Governance (7), the start-up fill (8), the full
+check (9) and the audit (10). Until the start-up fill runs,
 a Search Console list for a period not yet built says it is being added up.
 
 He asked: "i want to change the options in the data picker across the entire user frontend — This week, Last Week,
@@ -249,14 +251,15 @@ only when the old rows are gone — Convex refuses a schema that existing rows b
 | 1 | One period list and its rules (rules 1–9), the kit `Select` menu, the `period` key, English and Italian; a drift test that every user-frontend date menu uses the one list | 2 |
 | 2 | Sites: the 18 screens, the 6 that join, the menu hidden elsewhere, Years tab, rivals' moves | 3½–4 |
 | 3 | Clarity | 1–1½ |
-| 4 | Bing | 1½–2 |
-| 5 | Search Console: lists for the seven, what reads the old ones, charts to 52 weeks, Volatility's labels, the "no days yet" line | 5–6 |
+| 4 | Search Console: lists for the seven, what reads the old ones, charts to 52 weeks, Volatility's labels, the "no days yet" line | 5–6 |
+| 5 | Bing (after Search Console, whose periods its Google column reads) | 1½–2 |
 | 6 | Google Analytics: collection, comparisons, screens, front page, health checks, whole-year figures, Insights' reads, Ask Hakken | 6–8 |
 | 7 | Settings overview, Governance | 1 |
-| 8 | Switch-over: the start-up fill for every connected website, run on Anthony's go and watched | 1 |
+| 8 | Switch-over: the start-up fill for every connected website, run on Anthony's go and watched; Search Console's charts raised to 52 weeks in the same go (`consoleChartWeeks`), since that fetches their older weeks | 1 |
 | 9 | The full check and GitHub's own steps, fixes | 1½ |
+| 10 | The audit Anthony asked for ("When your done with the plan can you perform a full audit and double check the data", 2026-10-20): every screen with a date menu, in every section, on every period, its figures and its comparison checked against the stored days and Google's own answers; Insights, Ask Hakken, the weekly report and the front pages read the same; faults fixed, and a written record of what was checked and found | 1½–2 |
 
-**About 23–27 working days.** Up 2–3 if Phase 0 shows a large website's night won't fit its allowance.
+**About 25–29 working days.** Up 2–3 if Phase 0 shows a large website's night won't fit its allowance.
 
 ### Phase 0, measured — 2026-10-20
 

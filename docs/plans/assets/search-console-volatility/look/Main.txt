@@ -7,7 +7,7 @@ figures
   figure: Latest day, # Oct
   figure: During Google's update
   figure: Moved # places or more
-  figure: Clicks, last # days
+  figure: Clicks, last # days to # Oct
 chart-card: Volatility, day by day
   checkbox: Volatility
 search: Search keywords…
