@@ -12,8 +12,9 @@ import { SiteChartCard } from "../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart, SiteStackedAreaChart } from "../_components/SiteCharts";
 import { useSiteRange } from "../_components/SiteDateRange";
 import { datedRow } from "../_components/datedRows";
-import { formatDay, formatMonthName, toCsv } from "../_components/siteFormat";
-import { shiftDay, shiftMonth } from "../_components/siteRange";
+import { formatMonthName, toCsv } from "../_components/siteFormat";
+import { shiftMonth } from "../_components/siteRange";
+import { ukDay } from "@/convex/utils/calendarPeriods";
 import { useSite, useSiteId } from "../_components/useSite";
 import { overviewSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../_components/SiteSees";
@@ -95,7 +96,9 @@ export default function SiteOverviewPage() {
 
   const own = useSeries(range.from, range.to, range.step, false);
   const everyone = useSeries(range.from, range.to, range.step, true, tab !== "competitors");
-  const twoYears = useSeries(shiftDay(range.to, -729), range.to, "month", false, tab !== "years");
+  // The Years tab is this year against last year, January to December, whatever the menu says (calendar-periods-plan.md, item 11.2).
+  const year = Number(ukDay().slice(0, 4));
+  const twoYears = useSeries(`${year - 1}-01-01`, ukDay(), "month", false, tab !== "years");
 
   const exportBase = `${site?.host ?? "site"}-${range.from}-to-${range.to}`;
   // A group of more than five draws the five with the most traffic, and says so (4.11).
@@ -188,13 +191,13 @@ export default function SiteOverviewPage() {
   } else {
     const monthly = twoYears?.[0]?.points ?? [];
     const byMonth = new Map(monthly.map((point) => [point.day.slice(0, 7), point]));
-    // The twelve months to the end of the range, each beside the same
-    // calendar month a year before — matched by month, never by position,
-    // so a month with no data cannot shift the rest out of line. Months
-    // rather than dates along the axis: no Google update is marked on it.
-    const lastMonth = range.to.slice(0, 7);
+    // January to December of this year, each beside the same month last
+    // year — matched by month, never by position, so a month with no data
+    // cannot shift the rest out of line; months still to come are left
+    // blank. Months rather than dates along the axis: no Google update is
+    // marked on it.
     const rows = Array.from({ length: 12 }, (_, index) => {
-      const month = shiftMonth(lastMonth, index - 11);
+      const month = `${year}-${String(index + 1).padStart(2, "0")}`;
       return {
         label: formatMonthName(month),
         thisYear: valueOf(byMonth.get(month), compared),
@@ -207,15 +210,15 @@ export default function SiteOverviewPage() {
         data={rows}
         sharedScale
         series={[
-          { key: "thisYear", name: t("thisYear"), colour: SITE_SERIES_COLOURS[0] },
-          { key: "lastYear", name: t("lastYear"), colour: SITE_SERIES_COLOURS[1], dashed: true },
+          { key: "thisYear", name: String(year), colour: SITE_SERIES_COLOURS[0] },
+          { key: "lastYear", name: String(year - 1), colour: SITE_SERIES_COLOURS[1], dashed: true },
         ]}
       />
     );
-    csv = () => toCsv(["month", t("thisYear"), t("lastYear")], rows.map((row) => [row.label, row.thisYear, row.lastYear]));
+    csv = () => toCsv(["month", String(year), String(year - 1)], rows.map((row) => [row.label, row.thisYear, row.lastYear]));
     enough = twoYears !== undefined && lastYear.length > 0;
-    // It draws its own twelve months, whatever the dates' start and step (2026-10-04: the caption had said otherwise).
-    dates = t("yearsCaption", { from: formatDay(`${shiftMonth(lastMonth, -11)}-01`), to: formatDay(range.to) });
+    // It draws its own two years, whatever the dates and step (2026-10-04: the caption had said otherwise).
+    dates = t("yearsCaption", { year, lastYear: year - 1 });
   }
 
   return (

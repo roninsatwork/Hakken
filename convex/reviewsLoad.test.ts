@@ -89,9 +89,9 @@ describe("Reviews at five times a large client", () => {
     const siteId = seeded.holdId;
     const officeId = seeded.offices[0];
     const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
-      ["your reviews, every office", api.siteReviews.yourReviews, { siteId }],
-      ["your reviews, one office", api.siteReviews.yourReviews, { siteId, officeId }],
-      ["against rivals", api.siteReviews.reviewsAgainstRivals, { siteId, officeId }],
+      ["your reviews, every office", api.siteReviews.yourReviews, { siteId, period: "thisYear", step: "month" }],
+      ["your reviews, one office", api.siteReviews.yourReviews, { siteId, officeId, period: "thisYear", step: "month" }],
+      ["against rivals", api.siteReviews.reviewsAgainstRivals, { siteId, officeId, period: "thisYear", step: "month" }],
       ["what customers say", api.siteReviews.whatCustomersSay, { siteId }],
       ["business profile", api.siteLocalProfile.businessProfile, { siteId, officeId }],
     ];
@@ -112,9 +112,9 @@ describe("Reviews at five times a large client", () => {
 
     // What the screens say at this size.
     const asMember = t.withIdentity({ subject: seeded.userId });
-    const yours = await asMember.query(api.siteReviews.yourReviews, { siteId });
+    const yours = await asMember.query(api.siteReviews.yourReviews, { siteId, period: "lastMonth", step: "day" });
     expect(yours.rows).toHaveLength(OFFICES * OWN_REVIEWS);
-    const against = await asMember.query(api.siteReviews.reviewsAgainstRivals, { siteId, officeId });
+    const against = await asMember.query(api.siteReviews.reviewsAgainstRivals, { siteId, officeId, period: "lastMonth", step: "day" });
     expect(against.rows).toHaveLength(1 + RIVALS_PER_OFFICE);
   });
 });

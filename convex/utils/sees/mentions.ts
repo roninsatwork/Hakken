@@ -1,4 +1,5 @@
 import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
+import type { CalendarPeriod } from "../calendarPeriods";
 
 /**
  * What Hakken sees on the Web mentions screens (docs/plans/active/discovery-
@@ -14,20 +15,19 @@ export const WORTH_ASKING = 100;
 /** A mention's tone, as filed: 0 neutral, 1 well, 2 badly. */
 const BADLY = 2;
 
-const DAY_MS = 86_400_000;
-
 /** Web mentions → All mentions: new pages naming you, those speaking badly, and those worth asking for a link. */
 export function webMentionsSees(
   result: { rows: ReadonlyArray<{ url: string; host: string; day: string; tone: number; strength: number; linked: number }> },
-  today: string,
+  /** The date menu's period and its days (calendar-periods-plan.md, item 11.1). */
+  span: { from: string; to: string },
+  period: CalendarPeriod,
 ): Seen {
   if (result.rows.length === 0) return seen([{ code: "none" }]);
-  const since = new Date(Date.parse(`${today}T00:00:00Z`) - 30 * DAY_MS).toISOString().slice(0, 10);
-  const recent = result.rows.filter((row) => row.day >= since);
+  const recent = result.rows.filter((row) => row.day >= span.from && row.day <= span.to);
   const badly = recent.filter((row) => row.tone === BADLY).sort((left, right) => right.day.localeCompare(left.day));
   const ask = result.rows.filter((row) => !row.linked && row.tone !== BADLY && row.strength >= WORTH_ASKING).sort((left, right) => right.strength - left.strength);
   const says: Array<Maybe<SeenPhrase>> = [
-    { code: "newPages", a: recent.length, b: result.rows.length },
+    { code: "newPages", a: recent.length, b: result.rows.length, period },
     badly[0] ? { code: "badly", a: badly.length, text: badly[0].host } : null,
     ask[0] ? { code: "noLink", a: ask.length, text: ask[0].host } : null,
   ];
@@ -39,7 +39,7 @@ export function webMentionsSees(
 }
 
 /** Web mentions → Against rivals: your share of the pages naming a business, who leads, and the month's change. */
-export function mentionsRivalsSees(result: { businesses: ReadonlyArray<{ host: string; you: boolean; mentions: number; before: number }> }): Seen {
+export function mentionsRivalsSees(result: { period: CalendarPeriod; businesses: ReadonlyArray<{ host: string; you: boolean; mentions: number; before: number }> }): Seen {
   const total = result.businesses.reduce((sum, row) => sum + row.mentions, 0);
   const you = result.businesses.find((row) => row.you);
   if (!you || total === 0) return seen([{ code: "none" }]);
@@ -49,7 +49,7 @@ export function mentionsRivalsSees(result: { businesses: ReadonlyArray<{ host: s
   const moved = you.mentions - you.before;
   const says: Array<Maybe<SeenPhrase>> = [
     leader.you ? { code: "lead", a: share(you.mentions) } : { code: "behind", a: share(you.mentions), b: share(leader.mentions), text: leader.host },
-    moved !== 0 ? { code: moved > 0 ? "upMonth" : "downMonth", a: Math.abs(moved) } : null,
+    moved !== 0 ? { code: moved > 0 ? "upMonth" : "downMonth", a: Math.abs(moved), period: result.period } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [
     leader.you ? null : { code: "seeLeader", text: leader.host, link: "seeBusiness", to: toRecord("business", leader.host.toLowerCase().replace(/^www\./, "")) },

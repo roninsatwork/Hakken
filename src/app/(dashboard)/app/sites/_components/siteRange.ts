@@ -1,10 +1,46 @@
+import { OPENING_PERIOD, isCalendarPeriod, periodSpan, spanBefore, stepOf, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+
 /**
  * The date range and step every Sites page shares, kept in the URL
  * (`?from=…&to=…&step=…`) so a link, a refresh and the side menu all keep
  * them. Docs/plans/active/user-sites-plan.md, "Where it lives".
+ *
+ * Sites itself now reads a calendar period (`?period=`, `parseSitePeriod`,
+ * docs/plans/active/calendar-periods-plan.md); the days below are Search
+ * Console's until its phase moves it.
  */
 
 export type SiteStep = "day" | "week" | "month";
+
+/** A calendar period's days on a Sites page, and the step its charts are drawn in. */
+export type SitePeriodRange = {
+  period: CalendarPeriod;
+  /** Inclusive, `YYYY-MM-DD`. */
+  from: string;
+  to: string;
+  step: SiteStep;
+  /** Whether the period is over: false for one still going. */
+  whole: boolean;
+  /** What it is set against (rule 4): the period before, or its same days while this one is still going. */
+  before: { from: string; to: string };
+};
+
+/**
+ * The calendar period in the address, or Last month (rule 6), and its days. A
+ * website's figures are filed the day it is checked, so a period still going
+ * runs to today, in the UK (rule 1). The step is the period's own (rule 8)
+ * unless one was chosen.
+ */
+export function parseSitePeriod(params: URLSearchParams, now: Date = new Date()): SitePeriodRange {
+  const raw = params.get("period");
+  const period = isCalendarPeriod(raw) ? raw : OPENING_PERIOD;
+  const today = ukDay(now.getTime());
+  // Today falls in or after every period, so a period always has its days here.
+  const span = periodSpan(period, today, today) ?? { from: today, to: today, whole: false };
+  const stepParam = params.get("step");
+  const before = spanBefore(period, span);
+  return { period, from: span.from, to: span.to, step: isStep(stepParam) ? stepParam : stepOf(period), whole: span.whole, before: { from: before.from, to: before.to } };
+}
 
 /** The quick picks, in days: a week to two years (D3, D8). */
 export const SITE_PRESETS = ["7", "30", "90", "365", "730"] as const;

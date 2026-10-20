@@ -8,6 +8,7 @@ import {
   spanBefore,
   spanYearBefore,
   stepOf,
+  stepsOf,
   ukDay,
 } from "./calendarPeriods";
 
@@ -82,5 +83,12 @@ describe("calendar periods (calendar-periods-plan.md, rules 1–9)", () => {
     expect(ukDay(Date.UTC(2026, 9, 20, 23, 30))).toBe("2026-10-21");
     // In winter the UK is on UTC.
     expect(ukDay(Date.UTC(2026, 11, 20, 23, 30))).toBe("2026-12-20");
+  });
+
+  it("cuts a span into its steps, the first and last cut where the span cuts them", () => {
+    expect(stepsOf({ from: "2026-10-01", to: "2026-10-19" }, "week")[0]).toEqual({ key: "2026-09-28", from: "2026-10-01", to: "2026-10-04" });
+    expect(stepsOf({ from: "2026-10-01", to: "2026-10-19" }, "week").at(-1)).toEqual({ key: "2026-10-19", from: "2026-10-19", to: "2026-10-19" });
+    expect(stepsOf({ from: "2026-01-01", to: "2026-10-19" }, "month").map((one) => one.key)).toHaveLength(10);
+    expect(stepsOf({ from: "2026-09-01", to: "2026-09-30" }, "day")).toHaveLength(30);
   });
 });

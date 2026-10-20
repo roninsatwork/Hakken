@@ -12,8 +12,8 @@ describe("All mentions", () => {
         row("news.example", "2026-10-05", 1, 420), row("forum.example", "2026-10-02", 2, 300), row("blog.example", "2026-09-20", 0, 150, 1),
         row("old.example", "2026-06-01", 0, 90), row("weak.example", "2026-10-01", 0, 20),
       ],
-    }, "2026-10-10");
-    expect(box.says).toEqual([{ code: "newPages", a: 4, b: 5 }, { code: "badly", a: 1, text: "forum.example" }, { code: "noLink", a: 1, text: "news.example" }]);
+    }, { from: "2026-07-01", to: "2026-10-10" }, "thisQuarter");
+    expect(box.says).toEqual([{ code: "newPages", a: 4, b: 5, period: "thisQuarter" }, { code: "badly", a: 1, text: "forum.example" }, { code: "noLink", a: 1, text: "news.example" }]);
     expect(box.steps).toEqual([
       { code: "reply", text: "forum.example", link: "visitPage", to: { url: "https://forum.example/page" } },
       { code: "askForLink", text: "news.example", link: "visitPage", to: { url: "https://news.example/page" } },
@@ -22,19 +22,19 @@ describe("All mentions", () => {
   });
 
   test("quiet and linked; nothing found", () => {
-    const box = webMentionsSees({ rows: [row("blog.example", "2026-08-01", 0, 300, 1)] }, "2026-10-10");
-    expect(box).toEqual({ says: [{ code: "newPages", a: 0, b: 1 }], steps: [] });
+    const box = webMentionsSees({ rows: [row("blog.example", "2026-08-01", 0, 300, 1)] }, { from: "2026-10-01", to: "2026-10-10" }, "thisMonth");
+    expect(box).toEqual({ says: [{ code: "newPages", a: 0, b: 1, period: "thisMonth" }], steps: [] });
     expectWords("mentions", box);
-    expect(webMentionsSees({ rows: [] }, "2026-10-10").says).toEqual([{ code: "none" }]);
+    expect(webMentionsSees({ rows: [] }, { from: "2026-10-01", to: "2026-10-10" }, "thisMonth").says).toEqual([{ code: "none" }]);
   });
 });
 
 describe("Against rivals", () => {
   const business = (host: string, mentions: number, before: number, you = false) => ({ host, you, mentions, before });
 
-  test("behind the leader, the month's change, and where to get listed", () => {
-    const box = mentionsRivalsSees({ businesses: [business("ronins.co.uk", 12, 15, true), business("www.brightside.co.uk", 28, 20)] });
-    expect(box.says).toEqual([{ code: "behind", a: 30, b: 70, text: "www.brightside.co.uk" }, { code: "downMonth", a: 3 }]);
+  test("behind the leader, the period's change, and where to get listed", () => {
+    const box = mentionsRivalsSees({ period: "lastMonth", businesses: [business("ronins.co.uk", 12, 15, true), business("www.brightside.co.uk", 28, 20)] });
+    expect(box.says).toEqual([{ code: "behind", a: 30, b: 70, text: "www.brightside.co.uk" }, { code: "downMonth", a: 3, period: "lastMonth" }]);
     expect(box.steps).toEqual([
       { code: "seeLeader", text: "www.brightside.co.uk", link: "seeBusiness", to: { record: "business", key: "brightside.co.uk" } },
       { code: "getListed", link: "whereToGetListed", to: { segment: "mentions/listed" } },
@@ -43,11 +43,11 @@ describe("Against rivals", () => {
   });
 
   test("level is leading; nothing found", () => {
-    const box = mentionsRivalsSees({ businesses: [business("brightside.co.uk", 5, 2), business("ronins.co.uk", 5, 1, true)] });
-    expect(box.says).toEqual([{ code: "lead", a: 50 }, { code: "upMonth", a: 4 }]);
+    const box = mentionsRivalsSees({ period: "thisYear", businesses: [business("brightside.co.uk", 5, 2), business("ronins.co.uk", 5, 1, true)] });
+    expect(box.says).toEqual([{ code: "lead", a: 50 }, { code: "upMonth", a: 4, period: "thisYear" }]);
     expect(box.steps).toEqual([{ code: "getListed", link: "whereToGetListed", to: { segment: "mentions/listed" } }]);
     expectWords("mentionsRivals", box);
-    expect(mentionsRivalsSees({ businesses: [business("ronins.co.uk", 0, 0, true)] }).says).toEqual([{ code: "none" }]);
+    expect(mentionsRivalsSees({ period: "lastMonth", businesses: [business("ronins.co.uk", 0, 0, true)] }).says).toEqual([{ code: "none" }]);
   });
 });
 

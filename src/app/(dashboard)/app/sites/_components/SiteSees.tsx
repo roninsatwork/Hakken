@@ -51,6 +51,7 @@ export function useSeenWords(namespace: "sites.seen" | "keywordResearch.seen", s
       countC: phrase.c ?? 0,
       text: phrase.text ?? "",
       more: phrase.more ?? "",
+      period: phrase.period ?? "other",
       engine: phrase.engine ? engineLabel(phrase.engine) : "",
     }),
     linkWords: (link: string) => coded(`links.${link}`, {}),

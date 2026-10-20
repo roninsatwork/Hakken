@@ -76,8 +76,8 @@ describe("Web mentions at their largest", () => {
 
     const siteId = seeded.holdId;
     const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
-      ["all mentions", api.siteWebMentions.webMentions, { siteId }],
-      ["mentions against rivals", api.siteWebMentions.mentionsAgainstRivals, { siteId }],
+      ["all mentions", api.siteWebMentions.webMentions, { siteId, period: "thisYear" }],
+      ["mentions against rivals", api.siteWebMentions.mentionsAgainstRivals, { siteId, period: "thisYear", step: "month" }],
       ["where to get listed", api.siteWebMentions.whereToGetListed, { siteId }],
     ];
     const modules = import.meta.glob("./*.ts");
@@ -94,7 +94,7 @@ describe("Web mentions at their largest", () => {
     }
     if (process.env.MENTIONS_READ_REPORT) process.stdout.write(`${JSON.stringify(read, null, 2)}\n`);
     expect(over).toEqual([]);
-    const all = await t.withIdentity({ subject: seeded.userId }).query(api.siteWebMentions.webMentions, { siteId });
+    const all = await t.withIdentity({ subject: seeded.userId }).query(api.siteWebMentions.webMentions, { siteId, period: "lastMonth" });
     expect(all.rows.length).toBeGreaterThan(800);
   });
 });

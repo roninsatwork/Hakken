@@ -10,6 +10,9 @@ import { listingsById, localSetup, rivalsOf } from "./localReads";
 import { readReviews, type StoredReview } from "./localReviews";
 import type { Site } from "./websiteSiteRows";
 import { REPLIER } from "./utils/reviewReplier";
+import { calendarPeriodValidator, periodSpan, spanBefore, stepsOf, ukDay, type CalendarPeriod, type PeriodSpan } from "./utils/calendarPeriods";
+import { stepValidator } from "./siteFigures";
+import type { ChartStep } from "./utils/searchConsolePacks";
 
 /**
  * Visibility → Reviews (docs/plans/active/discovery-local-reputation-ai-plan.md,
@@ -24,6 +27,25 @@ const DAY_MS = 86_400_000;
 const officeOptionValidator = v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) });
 const dayBefore = (days: number, now = Date.now()) => new Date(now - days * DAY_MS).toISOString().slice(0, 10);
 const daysBetween = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS));
+const inSpan = (day: string, span: { from: string; to: string }) => day >= span.from && day <= span.to;
+
+/**
+ * The date menu's period on a Reviews screen (calendar-periods-plan.md, item 11.1: Reviews and Reviews against rivals
+ * follow it), and the span it is set against: reviews are dated the day they are read, so a period runs to today.
+ */
+function reviewSpans(period: CalendarPeriod, now = Date.now()): { span: PeriodSpan; before: PeriodSpan } {
+  const today = ukDay(now);
+  const span = periodSpan(period, today, today) ?? { from: today, to: today, whole: false };
+  return { span, before: spanBefore(period, span) };
+}
+
+/** A period's reviews by the chart's step: how many each step, and their average stars. */
+function reviewSteps(rows: readonly StoredReview[], span: PeriodSpan, step: ChartStep) {
+  return stepsOf(span, step).map((one) => {
+    const of = rows.filter((row) => inSpan(row.day, one));
+    return { day: one.key, lastDay: one.to, reviews: of.length, stars: of.length > 0 ? of.reduce((sum, row) => sum + row.stars, 0) / of.length : null };
+  });
+}
 
 /** The company's own listings in a page's scope: one office's Google profile, or every own listing. */
 async function ownListings(ctx: Reader, site: Site, officeId: Id<"listings"> | undefined) {
@@ -51,6 +73,16 @@ export function reviewFiguresOf(reviews: readonly StoredReview[], now = Date.now
   };
 }
 
+/** A business's reviews in a period, as Reviews against rivals counts them when it follows the date menu. */
+export function reviewFiguresIn(reviews: readonly StoredReview[], span: { from: string; to: string }) {
+  const within = reviews.filter((review) => inSpan(review.day, span));
+  return {
+    newIn: reviews.length > 0 ? within.length : null,
+    answered: within.length > 0 ? within.filter((review) => review.replyDay).length / within.length : null,
+    daysToAnswer: daysToAnswer(within, span.from),
+  };
+}
+
 function daysToAnswer(reviews: readonly StoredReview[], since: string): number | null {
   // A reply dated only "a year ago" says it was answered, never how fast.
   const waits = reviews.filter((review) => review.replyDay && !review.replyRough && review.day >= since).map((review) => daysBetween(review.day, review.replyDay!));
@@ -71,24 +103,28 @@ const reviewRowValidator = v.object({
 });
 
 export const yourReviews = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
+  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), period: calendarPeriodValidator, step: stepValidator },
   returns: v.object({
     offices: v.array(officeOptionValidator),
     listings: v.array(v.object({ listingId: v.id("listings"), source: listingSourceValidator, town: v.union(v.string(), v.null()), rating: v.union(v.number(), v.null()) })),
     figures: v.object({
       googleRating: v.union(v.number(), v.null()),
       otherRatings: v.array(v.object({ source: listingSourceValidator, rating: v.number() })),
-      newIn30: v.number(),
+      /** New in the period chosen, and in the span it is set against. */
+      newIn: v.number(),
       newBefore: v.number(),
       waiting: v.number(),
       oldestWaitingDays: v.union(v.number(), v.null()),
+      /** The days a reply took, over the reviews of the period answered. */
       daysToAnswer: v.union(v.number(), v.null()),
     }),
-    months: v.array(v.object({ month: v.string(), reviews: v.number(), stars: v.union(v.number(), v.null()) })),
+    period: calendarPeriodValidator,
+    /** The period's reviews by the chart's step, each step's first day. */
+    points: v.array(v.object({ day: v.string(), lastDay: v.string(), reviews: v.number(), stars: v.union(v.number(), v.null()) })),
     rows: v.array(reviewRowValidator),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { setup, listings } = await ownListings(ctx, site, args.officeId);
     const rows: Array<StoredReview & { listingId: Id<"listings"> }> = [];
@@ -101,28 +137,21 @@ export const yourReviews = tenantQuery({
       ? google.reduce((sum, listing) => sum + listing.rating! * (listing.reviews ?? 0), 0) / google.reduce((sum, listing) => sum + (listing.reviews ?? 0), 0)
       : null;
     const waiting = rows.filter((row) => !row.replyDay);
-    const months = Array.from({ length: 12 }, (_, at) => {
-      const date = new Date(now);
-      date.setUTCDate(1);
-      date.setUTCMonth(date.getUTCMonth() - (11 - at));
-      return date.toISOString().slice(0, 7);
-    });
+    const { span, before } = reviewSpans(args.period, now);
     return {
       offices: setup.offices.map((office) => ({ listingId: office._id, name: office.name, town: office.town ?? null })),
       listings: listings.map((listing) => ({ listingId: listing._id, source: listing.source, town: listing.town ?? null, rating: listing.rating ?? null })),
       figures: {
         googleRating,
         otherRatings: listings.filter((listing) => listing.source !== "GOOGLE" && listing.rating !== undefined).map((listing) => ({ source: listing.source, rating: listing.rating! })),
-        newIn30: rows.filter((row) => row.day >= dayBefore(30, now)).length,
-        newBefore: rows.filter((row) => row.day >= dayBefore(60, now) && row.day < dayBefore(30, now)).length,
+        newIn: rows.filter((row) => inSpan(row.day, span)).length,
+        newBefore: rows.filter((row) => inSpan(row.day, before)).length,
         waiting: waiting.length,
         oldestWaitingDays: waiting.length > 0 ? daysBetween(waiting[waiting.length - 1].day, dayBefore(0, now)) : null,
-        daysToAnswer: daysToAnswer(rows, dayBefore(90, now)),
+        daysToAnswer: daysToAnswer(rows.filter((row) => inSpan(row.day, span)), span.from),
       },
-      months: months.map((month) => {
-        const of = rows.filter((row) => row.day.startsWith(month));
-        return { month, reviews: of.length, stars: of.length > 0 ? of.reduce((sum, row) => sum + row.stars, 0) / of.length : null };
-      }),
+      period: args.period,
+      points: reviewSteps(rows, span, args.step),
       rows: rows.map((row) => ({
         listingId: row.listingId, id: row.id, day: row.day, stars: row.stars,
         text: row.text ?? null, name: row.name ?? null, guide: row.guide === true, replyDay: row.replyDay ?? null, replyRough: row.replyRough === true,
@@ -138,32 +167,34 @@ const businessRowValidator = v.object({
   you: v.boolean(),
   rating: v.union(v.number(), v.null()),
   reviews: v.union(v.number(), v.null()),
-  newIn30: v.union(v.number(), v.null()),
+  /** New in the period chosen; answered, and the days a reply took, over the period's reviews. */
+  newIn: v.union(v.number(), v.null()),
   answered: v.union(v.number(), v.null()),
   daysToAnswer: v.union(v.number(), v.null()),
 });
 
 export const reviewsAgainstRivals = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
+  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), period: calendarPeriodValidator, step: stepValidator },
   returns: v.object({
     offices: v.array(officeOptionValidator),
     office: v.union(v.null(), officeOptionValidator),
     rows: v.array(businessRowValidator),
-    months: v.array(v.string()),
+    /** The period's steps, each step's first day. */
+    steps: v.array(v.string()),
     /**
-     * Each Google profile's reviews at the end of each month — its count now
+     * Each Google profile's reviews at the end of each step — its count now
      * less the reviews held dated after — as far back as the reviews held reach
      * (a rival's newest few): the chart's lines.
      */
     lines: v.array(v.object({ listingId: v.id("listings"), name: v.string(), you: v.boolean(), counts: v.array(v.union(v.number(), v.null())) })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) => {
     const site = await requireMySite(ctx, args.siteId);
     const setup = await localSetup(ctx, site);
     const office = setup.offices.find((entry) => entry._id === args.officeId) ?? setup.offices[0] ?? null;
     const offices = setup.offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
-    if (!office) return { offices, office: null, rows: [], months: [], lines: [] };
+    if (!office) return { offices, office: null, rows: [], steps: [], lines: [] };
     const rivals = rivalsOf(office, setup.rivals, setup.rivalOffice);
     const links = setup.hold ? await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", setup.hold!._id)).take(200) : [];
     const elsewhere = [...(await listingsById(ctx, links.map((link) => link.listingId))).values()].filter((listing) => listing.source !== "GOOGLE");
@@ -176,7 +207,7 @@ export const reviewsAgainstRivals = tenantQuery({
       ...elsewhere.filter((listing) => ownLinks.has(listing._id)).map((listing) => ({ listing, you: true })),
       ...elsewhere.filter((listing) => !ownLinks.has(listing._id) && rivalHosts.has(listing.websiteHost)).map((listing) => ({ listing, you: false })),
     ];
-    const now = Date.now();
+    const { span } = reviewSpans(args.period);
     const rows = [];
     const held = new Map<string, StoredReview[]>();
     for (const { listing, you } of businesses) {
@@ -189,22 +220,17 @@ export const reviewsAgainstRivals = tenantQuery({
         you,
         rating: listing.rating ?? null,
         reviews: listing.reviews ?? null,
-        ...reviewFiguresOf(reviews, now),
+        ...reviewFiguresIn(reviews, span),
       });
     }
-    const months = Array.from({ length: 12 }, (_, at) => {
-      const date = new Date(now);
-      date.setUTCDate(1);
-      date.setUTCMonth(date.getUTCMonth() - (11 - at));
-      return date.toISOString().slice(0, 7);
-    });
+    const steps = stepsOf(span, args.step);
     const lines = businesses.filter((entry) => entry.listing.source === "GOOGLE").map(({ listing, you }) => ({
       listingId: listing._id,
       name: listing.name,
       you,
-      counts: reviewsAtMonthEnds(held.get(listing._id) ?? [], listing.reviews ?? null, months),
+      counts: reviewsAtEnds(held.get(listing._id) ?? [], listing.reviews ?? null, steps.map((one) => one.to)),
     }));
-    return { offices, office: { listingId: office._id, name: office.name, town: office.town ?? null }, rows, months, lines };
+    return { offices, office: { listingId: office._id, name: office.name, town: office.town ?? null }, rows, steps: steps.map((one) => one.key), lines };
   }, reviewsRivalsSees),
 });
 
@@ -214,12 +240,16 @@ export const reviewsAgainstRivals = tenantQuery({
  * fewer are held than it has (a rival's newest few, `localRivalReviews`).
  */
 export function reviewsAtMonthEnds(reviews: readonly StoredReview[], total: number | null, months: readonly string[]): Array<number | null> {
-  if (total === null && reviews.length === 0) return months.map(() => null);
+  return reviewsAtEnds(reviews, total, months.map((month) => `${month}-31`));
+}
+
+/** A listing's reviews at the end of each day given (a chart step's last day), as `reviewsAtMonthEnds` counts them. */
+export function reviewsAtEnds(reviews: readonly StoredReview[], total: number | null, ends: readonly string[]): Array<number | null> {
+  if (total === null && reviews.length === 0) return ends.map(() => null);
   const now = Math.max(total ?? 0, reviews.length);
   const oldest = reviews.reduce<string | null>((day, review) => (day === null || review.day < day ? review.day : day), null);
   const complete = reviews.length >= now;
-  return months.map((month) => {
-    const end = `${month}-31`;
+  return ends.map((end) => {
     if (!complete && (oldest === null || oldest > end)) return null;
     return Math.max(0, now - reviews.filter((review) => review.day > end).length);
   });

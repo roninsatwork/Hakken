@@ -11,10 +11,10 @@ table: Draft | For | Why | Status
   table-footer
 figures
   figure: Rating
-  figure: New in # days
+  figure: New reviews
   figure: Not answered
   figure: Days to answer
-chart-card: Reviews a month
+chart-card: New reviews
 search: Find words in a review…
 filter: Listing
 filter: Stars

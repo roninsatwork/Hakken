@@ -14,6 +14,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
+import { useSiteRange } from "../../../_components/SiteDateRange";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
@@ -61,13 +62,15 @@ const DAY_MS = 86_400_000;
  */
 export default function LocalActivityPage() {
   const t = useTranslations("sites.local.activity");
+  const tp = useTranslations("common.periods");
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   const listHref = useSiteListHref(siteId);
   const site = useSite();
   const officeName = useOfficeName();
-  const data = useQuery(api.siteLocalMarket.rivalActivity, { siteId });
+  const range = useSiteRange();
+  const data = useQuery(api.siteLocalMarket.rivalActivity, { siteId, period: range.period });
   const [search, setSearch, term] = useSiteSearch();
   const [rival, setRival] = useSiteParam<string>("rival", "");
   const [what, setWhat] = useSiteParam<What | "">("what", "", WHATS);
@@ -100,8 +103,8 @@ export default function LocalActivityPage() {
 
       {figures ? (
         <FigureRow>
-          <Figure label={t("figures.posts")} emphasis value={figures.rivalPosts} detail={<span className="text-secondary">{t("figures.postsDetail", { count: figures.yourPosts })}</span>} />
-          <Figure label={t("figures.offers")} value={figures.offers} detail={<span className="text-secondary">{figures.offerNames.length > 0 ? figures.offerNames.join(", ") : t("figures.noOffers")}</span>} />
+          <Figure label={t("figures.posts")} emphasis value={figures.rivalPosts} detail={<span className="text-secondary">{t("figures.postsDetail", { count: figures.yourPosts, period: tp(range.period) })}</span>} />
+          <Figure label={t("figures.offers")} value={figures.offers} detail={<span className="text-secondary">{figures.offerNames.length > 0 ? figures.offerNames.join(", ") : t("figures.noOffers", { period: tp(`inline.${range.period}`) })}</span>} />
           <Figure label={t("figures.questions")} value={figures.openQuestions} detail={<span className="text-secondary">{t("figures.questionsDetail")}</span>} />
           <Figure label={t("figures.changes")} value={figures.profileChanges} detail={<span className="text-secondary">{t("figures.changesDetail")}</span>} />
         </FigureRow>

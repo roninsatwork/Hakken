@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { calendarPeriodValidator } from "./calendarPeriods";
 
 /**
  * What Hakken sees (docs/plans/active/discovery-detail-and-hakken-sees-plan.md
@@ -21,6 +22,8 @@ export const seenPhraseValidator = v.object({
   engine: v.optional(v.string()),
   /** Days it names (`YYYY-MM-DD`), written on screen as the reader's dates: `{day1}`, `{day2}`. */
   days: v.optional(v.array(v.string())),
+  /** The date menu's period it counts over, worded by the sentence: `{period, select, lastMonth {last month} …}` (calendar-periods-plan.md). */
+  period: v.optional(calendarPeriodValidator),
 });
 
 /**
@@ -46,6 +49,7 @@ export const seenStepValidator = v.object({
   more: v.optional(v.string()),
   engine: v.optional(v.string()),
   days: v.optional(v.array(v.string())),
+  period: v.optional(calendarPeriodValidator),
   link: v.string(),
   to: seenTargetValidator,
 });
@@ -106,9 +110,9 @@ export function toPage(segment: string, filters?: Record<string, string>): SeenT
  * result the handler already returns, so the box costs no read of its own.
  * Wraps the handler as written, early returns and all.
  */
-export function seeing<Ctx, Args, Result extends object>(handler: (ctx: Ctx, args: Args) => Promise<Result>, rule: (result: Result) => Seen) {
+export function seeing<Ctx, Args, Result extends object>(handler: (ctx: Ctx, args: Args) => Promise<Result>, rule: (result: Result, args: Args) => Seen) {
   return async (ctx: Ctx, args: Args): Promise<Result & { seen: Seen }> => {
     const result = await handler(ctx, args);
-    return { ...result, seen: rule(result) };
+    return { ...result, seen: rule(result, args) };
   };
 }

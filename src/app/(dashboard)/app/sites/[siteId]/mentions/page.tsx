@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AtSign } from "lucide-react";
@@ -16,10 +15,13 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { stepsOf } from "@/convex/utils/calendarPeriods";
 import { SiteChartCard } from "../../_components/SiteChartCard";
+import { useSiteRange } from "../../_components/SiteDateRange";
+import { datedRow } from "../../_components/datedRows";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../_components/SiteCharts";
 import { ExternalUrlCell } from "../../_components/SiteCells";
-import { formatDay, formatMonth, toCsv } from "../../_components/siteFormat";
+import { formatDay, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { WORTH_ASKING } from "@/convex/utils/sees/mentions";
@@ -38,7 +40,6 @@ const KIND_FILTERS = ["NEWS", "BLOG", "FORUM", "SHOP", "ORGANISATION"] as const;
 const TONE_FILTERS = ["WELL", "NEUTRAL", "BADLY"] as const;
 const LINKS = ["linked", "unlinked"] as const;
 const TONE_TONE = { WELL: "success", NEUTRAL: "neutral", BADLY: "danger" } as const;
-const DAY_MS = 86_400_000;
 const SORTS: SiteSortColumns<Row, "date" | "strength"> = {
   date: { value: (row) => row.day, first: "desc" },
   strength: { value: (row) => row.strength, first: "desc" },
@@ -58,14 +59,17 @@ const pathOf = (url: string) => {
  * reputation-ai-plan.md, step 6, D13, D18, D20; drawn as "Web mentions · All
  * mentions"): the pages across the web naming the business, how they speak
  * of it and whether they link to it — pages about another of the name left
- * out by the AI check.
+ * out by the AI check. The figures and the chart follow the date menu
+ * (calendar-periods-plan.md, item 11.1); the list is every page held.
  */
 export default function WebMentionsPage() {
   const t = useTranslations("sites.mentions");
+  const tp = useTranslations("common.periods");
   const { platformName } = useSystemSettings();
   const siteId = useSiteId();
   const site = useSite();
-  const data = useQuery(api.siteWebMentions.webMentions, { siteId });
+  const range = useSiteRange();
+  const data = useQuery(api.siteWebMentions.webMentions, { siteId, period: range.period });
   const [search, setSearch, term] = useSiteSearch();
   const [tone, setTone] = useSiteParam<(typeof TONE_FILTERS)[number] | "">("tone", "", TONE_FILTERS);
   const [kind, setKind] = useSiteParam<(typeof KIND_FILTERS)[number] | "">("kind", "", KIND_FILTERS);
@@ -76,23 +80,15 @@ export default function WebMentionsPage() {
   const rows = data ? all.filter((row) => (!tone || TONES[row.tone] === tone) && (!kind || KINDS[row.kind] === kind) && (!link || (link === "linked") === (row.linked === 1)) && (!matches || matches(row.title, row.host))) : undefined;
   const { rows: sorted, tableSort } = useSiteSortedList(rows, SORTS, { opening: "date", name: urlOf });
   const pager = useSitePager(sorted, { isLoading: data === undefined });
-  // The day the page opened: its last 30 days.
-  const [now] = useState(() => Date.now());
-  const since = (days: number) => new Date(now - days * DAY_MS).toISOString().slice(0, 10);
-  const last = all.filter((row) => row.day >= since(30));
-  const before = all.filter((row) => row.day >= since(60) && row.day < since(30));
+  const within = (day: string, span: { from: string; to: string }) => day >= span.from && day <= span.to;
+  const last = all.filter((row) => within(row.day, range));
+  const before = all.filter((row) => within(row.day, range.before));
   const well = last.filter((row) => row.tone === 1).length;
   const badly = last.filter((row) => row.tone === 2);
   const badlyKinds = [...new Set(badly.map((row) => KINDS[row.kind]))];
-  const months = Array.from({ length: 12 }, (_, at) => {
-    const date = new Date(now);
-    date.setUTCDate(1);
-    date.setUTCMonth(date.getUTCMonth() - (11 - at));
-    return date.toISOString().slice(0, 7);
-  });
-  const chartRows = months.map((month) => {
-    const of = all.filter((row) => row.day.startsWith(month));
-    return { label: formatMonth(month), well: of.filter((row) => row.tone === 1).length, neutral: of.filter((row) => row.tone === 0).length, badly: of.filter((row) => row.tone === 2).length };
+  const chartRows = stepsOf(range, range.step).map((step) => {
+    const of = all.filter((row) => within(row.day, step));
+    return datedRow({ day: step.key, lastDay: step.to }, { well: of.filter((row) => row.tone === 1).length, neutral: of.filter((row) => row.tone === 0).length, badly: of.filter((row) => row.tone === 2).length });
   });
   const linkWords = (row: Row) => (row.linked ? t("link.linked") : row.strength >= WORTH_ASKING && row.tone !== 2 ? t("link.ask") : t("link.none"));
   const fileBase = `${site?.host ?? "site"}-web-mentions`;
@@ -104,20 +100,19 @@ export default function WebMentionsPage() {
 
       {data ? (
         <FigureRow>
-          <Figure label={t("figures.new")} emphasis value={last.length} detail={<><Change by={last.length - before.length} arrow={last.length >= before.length ? "up" : "down"} /> <span className="text-secondary">{t("figures.monthBefore")}</span></>} />
+          <Figure label={t("figures.new")} emphasis value={last.length} detail={<><Change by={last.length - before.length} arrow={last.length >= before.length ? "up" : "down"} /> <span className="text-secondary">{t("figures.monthBefore", { before: tp(`before.${range.period}`) })}</span></>} />
           <Figure label={t("figures.well")} value={last.length > 0 ? `${Math.round((well / last.length) * 100)}%` : "–"} detail={<span className="text-secondary">{t("figures.wellDetail", { count: well, of: last.length })}</span>} />
-          <Figure label={t("figures.badly")} value={badly.length} detail={<span className="text-secondary">{badlyKinds.length === 1 ? t("figures.badlyOn", { kind: t(`kindsMany.${badlyKinds[0]}`) }) : t("figures.badlyDetail")}</span>} />
+          <Figure label={t("figures.badly")} value={badly.length} detail={<span className="text-secondary">{badlyKinds.length === 1 ? t("figures.badlyOn", { kind: t(`kindsMany.${badlyKinds[0]}`) }) : tp(range.period)}</span>} />
           <Figure label={t("figures.noLink")} value={last.filter((row) => row.linked === 0).length} detail={<span className="text-secondary">{t("figures.noLinkDetail")}</span>} />
         </FigureRow>
       ) : null}
       <Notice>{t("notice", { names: (data?.names ?? []).map((name) => `"${name}"`).join(t("and")), platformName })}</Notice>
 
       <SiteChartCard
-        dated={false}
         title={t("chartTitle")}
-        hint={t("chartHint")}
-        exportName={`${fileBase}-a-month`}
-        csv={() => toCsv([t("chartMonth"), t("tones.WELL"), t("tones.NEUTRAL"), t("tones.BADLY")], chartRows.map((row) => [row.label, row.well, row.neutral, row.badly]))}
+        hint={t("chartHint", { byStep: tp("byStep", { step: range.step }) })}
+        exportName={`${fileBase}-${range.from}-to-${range.to}`}
+        csv={() => toCsv([tp("stepColumn", { step: range.step }), t("tones.WELL"), t("tones.NEUTRAL"), t("tones.BADLY")], chartRows.map((row) => [row.day, row.well as number, row.neutral as number, row.badly as number]))}
         enoughData={all.length > 0}
       >
         <SiteBarChart

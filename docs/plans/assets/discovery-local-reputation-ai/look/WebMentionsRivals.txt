@@ -7,7 +7,7 @@ figures
   figure: Most talked about
   figure: Growing fastest
   figure: Spoken of worst
-chart-card: Mentions a month
+chart-card: New mentions
 table: Business | Mentions | Change | Speak well | Speak badly | No link | Share of mentions
   table-bar
     download: Download CSV

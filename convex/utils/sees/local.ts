@@ -1,4 +1,5 @@
 import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../hakkenSees";
+import type { CalendarPeriod } from "../calendarPeriods";
 
 /**
  * What Hakken sees on the Local and Reviews screens (docs/plans/active/
@@ -143,6 +144,8 @@ export function localMarketSees(result: {
 /** Local → Rival activity: rivals' posts against yours, offers running, and questions waiting on your profile. */
 export function rivalActivitySees(result: {
   rivals: readonly unknown[];
+  /** The date menu's period the posts are counted over (calendar-periods-plan.md, item 11.1). */
+  period: CalendarPeriod;
   figures: { rivalPosts: number; yourPosts: number; offers: number; offerNames: readonly string[] };
   questions: ReadonlyArray<{ text: string; yours: boolean; answeredDay: string | null }>;
 }): Seen {
@@ -151,7 +154,7 @@ export function rivalActivitySees(result: {
   const waiting = result.questions.filter((question) => question.yours && question.answeredDay === null);
   const says: Array<Maybe<SeenPhrase>> = [
     waiting[0] ? { code: "questionsWaiting", a: waiting.length, text: waiting[0].text } : null,
-    { code: "posts", a: rivalPosts, b: yourPosts },
+    { code: "posts", a: rivalPosts, b: yourPosts, period: result.period },
     offers > 0 ? { code: "offers", a: offers, text: offerNames[0] ?? "" } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [
@@ -182,21 +185,24 @@ export function localListingsSees(result: {
   ]);
 }
 
-/** Reviews → Your reviews: those waiting and the oldest wait, the month's new reviews, and the days to answer. */
+/** Reviews → Your reviews: those waiting and the oldest wait, the period's new reviews, and the days to answer. */
 export function yourReviewsSees(result: {
   listings: readonly unknown[];
-  figures: { newIn30: number; newBefore: number; waiting: number; oldestWaitingDays: number | null; daysToAnswer: number | null };
+  /** The date menu's period the new reviews are counted over (calendar-periods-plan.md, item 11.1). */
+  period: CalendarPeriod;
+  figures: { newIn: number; newBefore: number; waiting: number; oldestWaitingDays: number | null; daysToAnswer: number | null };
 }): Seen {
   if (result.listings.length === 0) return seen([{ code: "noProfile" }], [{ code: "linkOffice", link: "yourListings", to: toPage("local/listings") }]);
-  const { newIn30, newBefore, waiting, oldestWaitingDays, daysToAnswer } = result.figures;
+  const { period } = result;
+  const { newIn, newBefore, waiting, oldestWaitingDays, daysToAnswer } = result.figures;
   const says: Array<Maybe<SeenPhrase>> = [
     waiting > 0 ? { code: "waiting", a: waiting, b: oldestWaitingDays ?? 0 } : { code: "allAnswered" },
-    newIn30 === 0 && newBefore === 0 ? { code: "noNewReviews" } : { code: "newReviews", a: newIn30, b: newBefore },
+    newIn === 0 && newBefore === 0 ? { code: "noNewReviews", period } : { code: "newReviews", a: newIn, b: newBefore, period },
     daysToAnswer !== null ? { code: "daysToAnswer", a: daysToAnswer } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [
     waiting > 0 ? { code: "answerWaiting", a: waiting, link: "waitingReviews", to: toPage("reviews", { answered: "waiting" }) } : null,
-    newIn30 < newBefore ? { code: "askForReviews", link: "againstRivals", to: toPage("reviews/rivals") } : null,
+    newIn < newBefore ? { code: "askForReviews", period, link: "againstRivals", to: toPage("reviews/rivals") } : null,
   ];
   return seen(says, steps);
 }

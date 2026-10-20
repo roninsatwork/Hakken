@@ -147,6 +147,7 @@ function valuesOf(phrase: SeenPhrase, language: Language, currency: string | und
     cRate: rate(phrase.c),
     text: phrase.text ?? "",
     more: phrase.more ?? "",
+    period: phrase.period ?? "other",
     event: (phrase.text ?? "").split(",").filter(Boolean).map((name) => `“${name}”`).join(", "),
     engine: phrase.engine ? ENGINES[phrase.engine] ?? phrase.engine : "",
     day1: shortDay(phrase.days?.[0], language),

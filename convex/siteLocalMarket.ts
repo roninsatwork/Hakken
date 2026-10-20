@@ -8,6 +8,7 @@ import { ACTIVITY_KINDS } from "./localSchema";
 import { listingRowOf, listingRowValidator, readListingActivity, readListingWeeks } from "./localListings";
 import { MAP_BOX, listingsById, localSetup, officeChecks, officeSearches, openOffice } from "./localReads";
 import { unpackColumn } from "./utils/packedColumns";
+import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * Visibility → Local → Local market and Rival activity
@@ -18,7 +19,6 @@ import { unpackColumn } from "./utils/packedColumns";
  * and photo ones worked out from their weeks.
  */
 
-const DAY_MS = 86_400_000;
 const officeOptionValidator = v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) });
 
 export const localMarket = tenantQuery({
@@ -95,7 +95,7 @@ export function weekLines(weeks: Awaited<ReturnType<typeof readListingWeeks>>) {
 }
 
 export const rivalActivity = tenantQuery({
-  args: { siteId: v.id("companyWebsites") },
+  args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
   returns: v.object({
     rivals: v.array(v.object({ listingId: v.id("listings"), name: v.string() })),
     figures: v.object({
@@ -124,12 +124,16 @@ export const rivalActivity = tenantQuery({
       day: v.string(),
       answeredDay: v.union(v.string(), v.null()),
     })),
+    period: calendarPeriodValidator,
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { offices, rivals } = await localSetup(ctx, site);
-    const since = new Date(Date.now() - 30 * DAY_MS).toISOString().slice(0, 10);
+    // The figures count over the date menu's period, to today (calendar-periods-plan.md, item 11.1); the lines are every one held.
+    const today = ukDay();
+    const span = periodSpan(args.period, today, today) ?? { from: today, to: today, whole: false };
+    const inPeriod = (day: string) => day >= span.from && day <= span.to;
     const lines = [];
     const questions = [];
     const recent = { rivalPosts: 0, yourPosts: 0, offers: 0, profileChanges: 0, openQuestions: 0 };
@@ -142,21 +146,21 @@ export const rivalActivity = tenantQuery({
           continue;
         }
         const posted = line.kind === "POST" || line.kind === "OFFER" || line.kind === "EVENT";
-        if (line.day >= since && posted) {
+        if (inPeriod(line.day) && posted) {
           if (yours) recent.yourPosts += 1;
           else recent.rivalPosts += 1;
         }
         if (yours) continue;
-        if (line.day >= since && line.kind === "OFFER") {
+        if (inPeriod(line.day) && line.kind === "OFFER") {
           recent.offers += 1;
           offerNames.add(listing.name);
         }
-        if (line.day >= since && !posted) recent.profileChanges += 1;
+        if (inPeriod(line.day) && !posted) recent.profileChanges += 1;
         lines.push({ day: line.day, listingId: listing._id, name: listing.name, kind: line.kind, text: line.text, from: null, to: null });
       }
       if (yours) continue;
       for (const line of weekLines(await readListingWeeks(ctx, listing._id))) {
-        if (line.day >= since) recent.profileChanges += 1;
+        if (inPeriod(line.day)) recent.profileChanges += 1;
         lines.push({ day: line.day, listingId: listing._id, name: listing.name, kind: line.kind, text: null, from: line.from, to: line.to });
       }
     }
@@ -167,6 +171,7 @@ export const rivalActivity = tenantQuery({
       figures: { ...recent, offerNames: [...offerNames] },
       lines,
       questions,
+      period: args.period,
     };
   }, rivalActivitySees),
 });

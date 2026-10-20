@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
+import { useSiteRange } from "../../../_components/SiteDateRange";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { datedRow } from "../../../_components/datedRows";
 import { toCsv } from "../../../_components/siteFormat";
@@ -90,9 +91,10 @@ export default function SiteRivalPage() {
     rivalId ? [{ siteId, list: "keywords" }, { siteId, list: "keywords", rivalId }] : [],
   );
 
-  // Twenty-two months of each one's estimated visits, a point a month.
-  const today = new Date().toISOString().slice(0, 10);
-  const trend = useQuery(api.siteCharts.siteSeries, rivalId ? { siteId, from: `${Number(today.slice(0, 4)) - 2}-01-01`, to: today, step: "month", withRivals: true } : "skip");
+  // Each one's estimated visits over the date menu's period (calendar-periods-plan.md, item 11.1).
+  const range = useSiteRange();
+  const tp = useTranslations("common.periods");
+  const trend = useQuery(api.siteCharts.siteSeries, rivalId ? { siteId, from: range.from, to: range.to, step: range.step, withRivals: true } : "skip");
   const ownLine = trend?.find((line) => line.isYou), rivalLine = trend?.find((line) => !line.isYou && line.host === hold?.host);
   const months = [...new Set([...(ownLine?.points ?? []), ...(rivalLine?.points ?? [])].map((point) => point.day))].sort();
   const monthly = (you: boolean, day: string) => ((you ? ownLine : rivalLine)?.points.find((point) => point.day === day)?.estimatedTraffic ?? null);
@@ -140,9 +142,9 @@ export default function SiteRivalPage() {
       {/* Their Google visitors a month against yours (insights-analyst-plan.md phase 4, the VisRival board). */}
       <SiteChartCard
         title={t("trafficTitle", { rival: hold?.host ?? "" })}
-        hint={t("trafficHint")}
-        exportName={`${site?.host ?? "site"}-against-${hold?.host ?? "rival"}`}
-        csv={() => toCsv(["month", site?.host ?? "", hold?.host ?? ""], months.map((month) => [month, monthly(true, month), monthly(false, month)]))}
+        hint={t("trafficHint", { byStep: tp("byStep", { step: range.step }) })}
+        exportName={`${site?.host ?? "site"}-against-${hold?.host ?? "rival"}-${range.from}-to-${range.to}`}
+        csv={() => toCsv([tp("stepColumn", { step: range.step }), site?.host ?? "", hold?.host ?? ""], months.map((month) => [month, monthly(true, month), monthly(false, month)]))}
         enoughData={months.length > 1}
       >
         <SiteLineChart

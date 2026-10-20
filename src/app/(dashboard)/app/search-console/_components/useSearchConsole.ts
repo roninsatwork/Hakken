@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
-import { useSiteRange } from "../../sites/_components/SiteDateRange";
+import { useDaysRange } from "../../sites/_components/SiteDateRange";
 import { shiftDay } from "../../sites/_components/siteRange";
 import { SITE_SHARED_KEYS, useSiteParam } from "../../sites/_components/useSiteParam";
 
@@ -150,7 +150,7 @@ export function useSearchConsoleRange(newestDay: string | null | undefined): {
   /** The newest day the quick picks end on: a country kept ready has its own (§16). */
   newest: string | null;
 } {
-  const range = useSiteRange();
+  const range = useDaysRange();
   const status = useSearchConsoleStatus();
   const [country] = useSearchConsoleCountry();
   // A country kept ready may be a day behind all countries: its quick picks end on its own newest day, so they read its ready-made figures.

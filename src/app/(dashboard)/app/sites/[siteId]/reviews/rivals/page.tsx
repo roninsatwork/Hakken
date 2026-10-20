@@ -11,8 +11,10 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
+import { useSiteRange } from "../../../_components/SiteDateRange";
+import { datedRow } from "../../../_components/datedRows";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
-import { formatMonth, formatNumber, toCsv } from "../../../_components/siteFormat";
+import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
@@ -28,7 +30,7 @@ type Row = {
   you: boolean;
   rating: number | null;
   reviews: number | null;
-  newIn30: number | null;
+  newIn: number | null;
   answered: number | null;
   daysToAnswer: number | null;
 };
@@ -37,7 +39,7 @@ const SORTS: SiteSortColumns<Row, "business" | "rating" | "reviews" | "new" | "a
   business: { value: (row) => row.name, first: "asc" },
   rating: { value: (row) => row.rating, first: "desc" },
   reviews: { value: (row) => row.reviews, first: "desc" },
-  new: { value: (row) => row.newIn30, first: "desc" },
+  new: { value: (row) => row.newIn, first: "desc" },
   answered: { value: (row) => row.answered, first: "desc" },
   days: { value: (row) => row.daysToAnswer, first: "asc" },
 };
@@ -55,6 +57,8 @@ export default function ReviewsAgainstRivalsPage() {
   const t = useTranslations("sites.reviews.rivals");
   const tr = useTranslations("sites.reviews");
   const tl = useTranslations("sites.local");
+  const tp = useTranslations("common.periods");
+  const range = useSiteRange();
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -62,7 +66,7 @@ export default function ReviewsAgainstRivalsPage() {
   const site = useSite();
   const officeId = useOfficeId();
   const officeName = useOfficeName();
-  const data = useQuery(api.siteReviews.reviewsAgainstRivals, { siteId, ...(officeId ? { officeId } : {}) });
+  const data = useQuery(api.siteReviews.reviewsAgainstRivals, { siteId, ...(officeId ? { officeId } : {}), period: range.period, step: range.step });
   const rows = data?.rows as Row[] | undefined;
   const { rows: sorted, tableSort } = useSiteSortedList(rows, SORTS, { opening: "reviews", name: nameOf });
   const pager = useSitePager(sorted, { isLoading: data === undefined });
@@ -76,10 +80,11 @@ export default function ReviewsAgainstRivalsPage() {
   const fastest = answering[0];
   const best = [...google].filter((row) => row.rating !== null).sort((left, right) => right.rating! - left.rating!)[0];
   const rivals = (rows ?? []).filter((row) => !row.you && row.source === "GOOGLE").length;
-  const chartRows = (data?.months ?? []).map((month, at) => ({
-    label: formatMonth(month),
-    ...Object.fromEntries((data?.lines ?? []).map((line) => [line.listingId, line.counts[at]])),
-  }));
+  const chartRows = (data?.steps ?? []).map((day, at) => datedRow(
+    { day },
+    Object.fromEntries((data?.lines ?? []).map((line) => [line.listingId, line.counts[at]])),
+  ));
+  const newHeader = t("columns.new", { period: tp(`inline.${range.period}`) });
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,11 +115,10 @@ export default function ReviewsAgainstRivalsPage() {
       ) : null}
 
       <SiteChartCard
-        dated={false}
-        title={t("chartTitle")}
-        hint={t("chartHint")}
-        exportName={`${site?.host ?? "site"}-reviews-against-rivals`}
-        csv={() => toCsv([t("chartMonth"), ...(data?.lines ?? []).map((line) => line.name)], chartRows.map((row) => [row.label, ...(data?.lines ?? []).map((line) => (row as Record<string, unknown>)[line.listingId] as number | null)]))}
+        title={t("chartTitle", { period: tp(`inline.${range.period}`) })}
+        hint={t("chartHint", { byStep: tp("byStep", { step: range.step }) })}
+        exportName={`${site?.host ?? "site"}-reviews-against-rivals-${range.from}-to-${range.to}`}
+        csv={() => toCsv([tp("stepColumn", { step: range.step }), ...(data?.lines ?? []).map((line) => line.name)], chartRows.map((row) => [row.day, ...(data?.lines ?? []).map((line) => (row as Record<string, unknown>)[line.listingId] as number | null)]))}
         enoughData={(data?.lines ?? []).some((line) => line.counts.filter((count) => count !== null).length > 1)}
       >
         <SiteLineChart
@@ -132,7 +136,7 @@ export default function ReviewsAgainstRivalsPage() {
         rows={pager.pageRows}
         rowKey={(row) => row.listingId}
         onRowClick={(row) => router.push(row.you ? listHref("reviews") : recordHref(businessRecord({ listingId: row.listingId })!))}
-        cardHeader={<TableBar footer={pager.footer} noun="listings" actions={<ListDownload fileName={`${site?.host ?? "site"}-reviews-against-rivals`} rows={sorted ?? []} columns={[{ header: t("columns.business"), value: (row) => row.name }, { header: t("columns.listing"), value: (row) => tr(`sources.${row.source}`) }, { header: t("columns.rating"), value: (row) => row.rating }, { header: t("columns.reviews"), value: (row) => row.reviews }, { header: t("columns.new"), value: (row) => row.newIn30 }, { header: t("columns.answered"), value: (row) => (row.answered === null ? null : Math.round(row.answered * 100)) }, { header: t("columns.days"), value: (row) => (row.daysToAnswer === null ? null : Math.round(row.daysToAnswer)) }]} />}><span className="text-[13px] text-secondary">{t("youAndRivals", { count: rivals })}</span></TableBar>}
+        cardHeader={<TableBar footer={pager.footer} noun="listings" actions={<ListDownload fileName={`${site?.host ?? "site"}-reviews-against-rivals`} rows={sorted ?? []} columns={[{ header: t("columns.business"), value: (row) => row.name }, { header: t("columns.listing"), value: (row) => tr(`sources.${row.source}`) }, { header: t("columns.rating"), value: (row) => row.rating }, { header: t("columns.reviews"), value: (row) => row.reviews }, { header: newHeader, value: (row) => row.newIn }, { header: t("columns.answered"), value: (row) => (row.answered === null ? null : Math.round(row.answered * 100)) }, { header: t("columns.days"), value: (row) => (row.daysToAnswer === null ? null : Math.round(row.daysToAnswer)) }]} />}><span className="text-[13px] text-secondary">{t("youAndRivals", { count: rivals })}</span></TableBar>}
         empty={{ icon: <Scale className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pagedOnly(pager.footer)}
         sort={tableSort}
@@ -141,7 +145,7 @@ export default function ReviewsAgainstRivalsPage() {
           { key: "listing", header: t("columns.listing"), cell: (row) => <TagLabel>{tr(`sources.${row.source}`)}</TagLabel> },
           { key: "rating", header: t("columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },
           { key: "reviews", header: t("columns.reviews"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.reviews} /> },
-          { key: "new", header: t("columns.new"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.newIn30} /> },
+          { key: "new", header: newHeader, align: "right", sortable: true, cell: (row) => <FigureCell value={row.newIn} /> },
           { key: "answered", header: t("columns.answered"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.answered} text={row.answered === null ? undefined : `${Math.round(row.answered * 100)}%`} /> },
           { key: "days", header: t("columns.days"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.daysToAnswer === null ? null : Math.round(row.daysToAnswer)} /> },
         ]}

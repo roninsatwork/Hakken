@@ -8,7 +8,7 @@ figures
   figure: Gap to the leader
   figure: Fastest to answer
   figure: Best rated
-chart-card: Google reviews over the last # months
-table: Business | Listing | Rating | Reviews | New in # days | Answered | Days to answer
+chart-card: Google reviews, last month
+table: Business | Listing | Rating | Reviews | New, last month | Answered | Days to answer
   table-bar
     download: Download CSV

@@ -87,6 +87,17 @@
       "thisQuarter": "This quarter",
       "lastQuarter": "Last quarter",
       "thisYear": "This year",
+      "inline": {
+        "thisWeek": "this week",
+        "lastWeek": "last week",
+        "thisMonth": "this month",
+        "lastMonth": "last month",
+        "thisQuarter": "this quarter",
+        "lastQuarter": "last quarter",
+        "thisYear": "this year"
+      },
+      "stepColumn": "{step, select, day {Day} week {Week starting} other {Month}}",
+      "byStep": "{step, select, day {day by day} week {week by week} other {month by month}}",
       "partial": "{period}, to {day}",
       "noDaysYet": "{source} hasn't sent any of {unit, select, week {this week's} month {this month's} quarter {this quarter's} other {this year's}} days yet; its newest is {day}.",
       "before": {
@@ -10944,8 +10955,8 @@
       "performance": "Performance",
       "performanceHint": "Tick the measures to draw. Each line has its own scale, so small and large numbers can be read together.",
       "competitorsHint": "This website beside the others in its group, on one measure and one scale. The dashed lines are the others.",
-      "yearsHint": "The last twelve months against the twelve before, month by month.",
-      "yearsCaption": "{from} – {to} against the year before · Monthly",
+      "yearsHint": "This year against last year, month by month.",
+      "yearsCaption": "{year} against {lastYear} · Monthly",
       "chartView": "Chart view",
       "measure": "Measure",
       "tabs": {
@@ -10954,8 +10965,6 @@
         "years": "Years"
       },
       "thisSite": "{host} (this site)",
-      "thisYear": "Last 12 months",
-      "lastYear": "The 12 months before",
       "positions": "Organic positions",
       "positionsHint": "How many keywords sit in each band of Google's results.",
       "bands": {
@@ -11684,8 +11693,8 @@
       "empty": "No shared searches here yet.",
       "sharedOf": "This website and {rival} share {total} searches across everything both rank for. Those below are the ones in both keyword lists held, their most valuable first.",
       "sharedHeldOf": "{held} of the {total} searches you share are in both keyword lists held, and are compared here, their most valuable first.",
-      "trafficTitle": "Google visitors a month: {rival} against you",
-      "trafficHint": "Estimated visitors from Google each month, from the figures Visibility keeps."
+      "trafficTitle": "Google visitors: {rival} against you",
+      "trafficHint": "Estimated visitors from Google, {byStep}, from the figures Visibility keeps."
     },
     "domainRecord": {
       "description": "A website linking to this one: how strong it is, and each of its links here in full.",
@@ -13049,9 +13058,9 @@
         "description": "What the rivals you watch are doing on Google: their posts and offers, changes to their profiles, and the questions people ask.",
         "figures": {
           "posts": "Rival posts",
-          "postsDetail": "In 30 days · you posted {count}",
+          "postsDetail": "{period} · you posted {count}",
           "offers": "Offers running",
-          "noOffers": "None in 30 days",
+          "noOffers": "None, {period}",
           "questions": "Questions on your profile",
           "questionsDetail": "Waiting for an answer",
           "changes": "Profile changes",
@@ -13123,17 +13132,16 @@
         "figures": {
           "rating": "Rating",
           "ratingGoogle": "{offices, plural, =1 {Google} =2 {Google, both offices} other {Google, # offices}}",
-          "new": "New in 30 days",
-          "newBefore": "on the 30 days before",
+          "new": "New reviews",
+          "newBefore": "on {before}",
           "waiting": "Not answered",
           "noneWaiting": "Every review has an answer",
           "oldestWaiting": "The oldest has waited {days, plural, =1 {# day} other {# days}}",
           "daysToAnswer": "Days to answer",
-          "daysToAnswerDetail": "Average, the last 90 days"
+          "daysToAnswerDetail": "Average, {period}"
         },
-        "chartTitle": "Reviews a month",
-        "chartHint": "New reviews each month across every listing, and their average stars.",
-        "chartMonth": "Month",
+        "chartTitle": "New reviews",
+        "chartHint": "New reviews across every listing, {byStep}, and their average stars.",
         "chartReviews": "New reviews",
         "chartStars": "Average stars",
         "chartReviewsLeft": "New reviews (left)",
@@ -13186,16 +13194,15 @@
           "best": "Best rated",
           "bestDetail": "{name} · you {rating}"
         },
-        "chartTitle": "Google reviews over the last 12 months",
-        "chartHint": "How many reviews each business has, month by month. A steeper line is a business collecting reviews faster.",
-        "chartMonth": "Month",
+        "chartTitle": "Google reviews, {period}",
+        "chartHint": "How many reviews each business has, {byStep}. A steeper line is a business collecting reviews faster.",
         "youAndRivals": "you and {count, plural, =1 {# rival} other {# rivals}}",
         "columns": {
           "business": "Business",
           "listing": "Listing",
           "rating": "Rating",
           "reviews": "Reviews",
-          "new": "New in 30 days",
+          "new": "New, {period}",
           "answered": "Answered",
           "days": "Days to answer"
         },
@@ -13352,7 +13359,7 @@
           "most": "Asked of AI most"
         },
         "chartTitle": "AI against Google, a month",
-        "chartHint": "{count, plural, =1 {Your tracked search} other {Your # tracked searches added together}}, the last 12 months.",
+        "chartHint": "Monthly figures, the last 12 months: {count, plural, =1 {your tracked search} other {your # tracked searches added together}}.",
         "chartMonth": "Month",
         "chartAi": "Asked of AI",
         "chartGoogle": "Searched on Google",
@@ -13441,7 +13448,7 @@
       "notice": "Read from Google's AI answers in your country: the AI Overview at the top of results. You do not choose the questions, so it shows where you appear that you would never have thought to ask. Your own tracked questions, under AI answers, cover ChatGPT, Gemini, Google AI Mode, Claude and Perplexity. {cost} each check, each website, once a month.",
       "noticeUnpriced": "Read from Google's AI answers in your country: the AI Overview at the top of results. You do not choose the questions, so it shows where you appear that you would never have thought to ask. Your own tracked questions, under AI answers, cover ChatGPT, Gemini, Google AI Mode, Claude and Perplexity. Read once a month.",
       "chartTitle": "Share of voice a month",
-      "chartHint": "Of all the AI answers naming you or a rival you watch, the share that name each business.",
+      "chartHint": "Monthly figures, the last 12 months. Of all the AI answers naming you or a rival you watch, the share that name each business.",
       "chartMonth": "Month",
       "rivalsTitle": "You against rivals",
       "rivalsDescription": "The last month. \"Asked a month\" adds up how often the questions behind each business's mentions are asked.",
@@ -13627,19 +13634,17 @@
       "and": " and ",
       "figures": {
         "new": "New mentions",
-        "monthBefore": "on the 30 days before",
+        "monthBefore": "on {before}",
         "well": "Speak well of you",
         "wellDetail": "{count} of the {of}",
         "badly": "Speak badly of you",
-        "badlyDetail": "In the last 30 days",
         "badlyOn": "All on {kind}",
         "noLink": "Name you without a link",
         "noLinkDetail": "Pages worth asking for a link"
       },
       "notice": "Found by looking for {names} across the web, in English, from the UK. Pages about something else of the same name, like a person or another business, are left out by an AI check. {platformName} looks each week, for about 3 cents a search.",
-      "chartTitle": "Mentions a month, by how they speak about you",
-      "chartHint": "New pages naming you each month, the last 12 months.",
-      "chartMonth": "Month",
+      "chartTitle": "New mentions, by how they speak about you",
+      "chartHint": "New pages naming you, {byStep}.",
       "chartWell": "Speak well of you",
       "chartNeutral": "Neutral",
       "chartBadly": "Speak badly of you (top of each bar)",
@@ -13702,7 +13707,7 @@
         "description": "How often the web names you and the rivals you watch, and how it speaks about each.",
         "figures": {
           "share": "Your share of mentions",
-          "shareDetail": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {of} · the last 30 days",
+          "shareDetail": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {of} · {period}",
           "most": "Most talked about",
           "mostDetail": "{count, plural, =1 {1 mention} other {# mentions}} · {share}% share",
           "fastest": "Growing fastest",
@@ -13710,9 +13715,9 @@
           "worstDetail": "{count} of {of} speak badly",
           "noneBadly": "None spoken of badly"
         },
-        "chartTitle": "Mentions a month",
-        "chartHint": "New pages naming each business, the last 12 months.",
-        "youAndRivals": "{count, plural, =0 {you alone} =1 {you and 1 rival} other {you and # rivals}} · the last 30 days",
+        "chartTitle": "New mentions",
+        "chartHint": "New pages naming each business, {byStep}.",
+        "youAndRivals": "{count, plural, =0 {you alone} =1 {you and 1 rival} other {you and # rivals}} · {period}",
         "columns": {
           "business": "Business",
           "mentions": "Mentions",
@@ -14271,7 +14276,7 @@
         "noRivals": "You do not watch a rival on Google Maps yet.",
         "findRivals": "Find the businesses near you, and watch the ones that matter.",
         "questionsWaiting": "{count, plural, one {# question waits} other {# questions wait}} for an answer on your profile: “{text}”.",
-        "posts": "Your rivals posted {a} times in 30 days; you posted {b}.",
+        "posts": "Your rivals posted {a} times {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}; you posted {b}.",
         "offers": "{count, plural, one {# offer is} other {# offers are}} running, “{text}” among them.",
         "answerQuestion": "Answer “{text}” on your Google profile.",
         "postMore": "Post on your Google profile each week: offers, news and work done."
@@ -14289,11 +14294,11 @@
         "linkOffice": "Link your Google profile as your office.",
         "waiting": "{count, plural, one {# review waits} other {# reviews wait}} for an answer, the oldest for {countB, plural, one {# day} other {# days}}.",
         "allAnswered": "Every review has an answer.",
-        "newReviews": "You gained {a} reviews in the last 30 days, against {b} in the 30 days before.",
-        "noNewReviews": "No new review came in over the last 60 days.",
+        "newReviews": "You gained {a} reviews {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, against {b} {period, select, thisWeek {the same days last week} lastWeek {the week before} thisMonth {the same days last month} lastMonth {the month before} thisQuarter {the same days last quarter} lastQuarter {the quarter before} other {the same days last year}}.",
+        "noNewReviews": "No new review came in {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}} or {period, select, thisWeek {the same days last week} lastWeek {the week before} thisMonth {the same days last month} lastMonth {the month before} thisQuarter {the same days last quarter} lastQuarter {the quarter before} other {the same days last year}}.",
         "daysToAnswer": "You answer in {count, plural, one {# day} other {# days}} on average.",
         "answerWaiting": "Answer the {count, plural, one {review} other {# reviews}} waiting, the oldest first.",
-        "askForReviews": "Ask every client for a review: fewer came in this month than the month before."
+        "askForReviews": "Ask every client for a review: fewer came in {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}} than {period, select, thisWeek {the same days last week} lastWeek {the week before} thisMonth {the same days last month} lastMonth {the month before} thisQuarter {the same days last quarter} lastQuarter {the quarter before} other {the same days last year}}."
       },
       "reviewsSay": {
         "notRead": "Your reviews have not been read for what they say yet.",
@@ -14316,7 +14321,7 @@
       },
       "mentions": {
         "none": "No page naming you has been found yet: the web is searched for your name at each check.",
-        "newPages": "{count, plural, one {# new page} other {# new pages}} named you in the last 30 days, of {b} found in all.",
+        "newPages": "{count, plural, one {# new page} other {# new pages}} named you {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, of {b} found in all.",
         "badly": "{count, plural, one {# of them speaks} other {# of them speak}} badly of you, the newest on {text}.",
         "noLink": "{count, plural, one {# strong page names} other {# strong pages name}} you without a link, {text} the strongest.",
         "reply": "Read what {text} says, and answer it where you can.",
@@ -14326,8 +14331,8 @@
         "none": "No page naming you or a rival you watch has been found yet.",
         "lead": "You have {a}% of the pages naming you and the rivals you watch, more than any of them.",
         "behind": "You have {a}% of the pages naming you and the rivals you watch; {text} leads with {b}%.",
-        "upMonth": "{count, plural, one {That is # more page} other {That is # more pages}} than the month before.",
-        "downMonth": "{count, plural, one {That is # page fewer} other {That is # pages fewer}} than the month before.",
+        "upMonth": "{count, plural, one {That is # more page} other {That is # more pages}} than {period, select, thisWeek {the same days last week} lastWeek {the week before} thisMonth {the same days last month} lastMonth {the month before} thisQuarter {the same days last quarter} lastQuarter {the quarter before} other {the same days last year}}.",
+        "downMonth": "{count, plural, one {That is # page fewer} other {That is # pages fewer}} than {period, select, thisWeek {the same days last week} lastWeek {the week before} thisMonth {the same days last month} lastMonth {the month before} thisQuarter {the same days last quarter} lastQuarter {the quarter before} other {the same days last year}}.",
         "seeLeader": "See where {text} is named and you are not.",
         "getListed": "Get onto the websites that name your rivals and not you."
       },
@@ -14793,10 +14798,11 @@
     "rivalMoves": {
       "title": "What your rivals did lately",
       "empty": "No rival moves to show yet: they appear once Google's results have been checked twice.",
+      "notChecked": "Rivals are checked once a month; their newest check was {day}.",
       "biggest": "{keyword}, place {position} ({volume} a month)",
       "columns": {
         "rival": "Rival",
-        "new": "New searches, 30 days",
+        "new": "New searches, {period}",
         "climbed": "Climbed",
         "fell": "Fell",
         "biggest": "Biggest new search",

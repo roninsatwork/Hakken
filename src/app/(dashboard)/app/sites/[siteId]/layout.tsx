@@ -14,7 +14,7 @@ import { formatDay } from "../_components/siteFormat";
 import { heldIcon } from "../_components/siteGroups";
 import { SiteMark } from "../_components/SiteMark";
 import { SiteMenu } from "../_components/SiteMenu";
-import { isSiteMenuPath, setupMet, setupPaused, sitePageForPath, switchHref } from "../_components/sitePages";
+import { isSiteMenuPath, setupMet, setupPaused, showsDates, sitePageForPath, switchHref } from "../_components/sitePages";
 import { SiteSwitcher } from "../_components/SiteSwitcher";
 import { useListBack } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
@@ -100,7 +100,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               )}
             </>
           }
-          action={<SiteDateRange />}
+          action={showsDates(pathname, siteId) ? <SiteDateRange calendar /> : undefined}
         />
 
         {!site.checked && (

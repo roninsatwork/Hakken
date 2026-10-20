@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { relativePath, repoRoot, walkFiles } from "@/src/test/driftUtils";
 import { SITE_SHARED_KEYS } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
 import { CALENDAR_PERIOD_KEY } from "@/src/app/(dashboard)/app/sites/_components/useCalendarPeriod";
+import { DATED_SEGMENTS } from "@/src/app/(dashboard)/app/sites/_components/sitePages";
 
 /**
  * Every date menu in the user frontend offers the same seven calendar periods
@@ -53,5 +54,14 @@ describe("the date menus", () => {
 
   test("the side menu and the site switcher carry the chosen period from page to page", () => {
     expect(SITE_SHARED_KEYS).toContain(CALENDAR_PERIOD_KEY);
+  });
+
+  test("a website's screens draw the date menu exactly where they read it (item 11.1)", () => {
+    const base = "src/app/(dashboard)/app/sites/[siteId]";
+    const reading = walkFiles(path.join(repoRoot, base), SOURCE)
+      .filter((file) => file.endsWith("page.tsx") && /\buseSiteRange\(\)/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.relative(path.join(repoRoot, base), path.dirname(file)).split(path.sep).join("/"))
+      .sort();
+    expect(reading, "Add the screen to DATED_SEGMENTS (sitePages.ts), or stop it reading the dates").toEqual([...DATED_SEGMENTS].sort());
   });
 });

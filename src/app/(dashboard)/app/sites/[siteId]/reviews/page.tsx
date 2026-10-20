@@ -15,8 +15,10 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { SiteChartCard } from "../../_components/SiteChartCard";
+import { useSiteRange } from "../../_components/SiteDateRange";
+import { datedRow } from "../../_components/datedRows";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../_components/SiteCharts";
-import { formatDay, formatMonth, toCsv } from "../../_components/siteFormat";
+import { formatDay, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
@@ -43,17 +45,20 @@ const daysBetween = (from: string, to: string) => Math.max(0, Math.round((Date.p
  * Visibility → Reviews → Your reviews (docs/plans/active/discovery-local-
  * reputation-ai-plan.md, step 2, D18; drawn as "Reviews · Your reviews"):
  * every review on the company's own listings, newest first, and whether it
- * was answered — the reviews a month and their stars above.
+ * was answered — the period's new reviews and their stars above, by the date
+ * menu (calendar-periods-plan.md, item 11.1).
  */
 export default function YourReviewsPage() {
   const t = useTranslations("sites.reviews.yours");
   const tr = useTranslations("sites.reviews");
+  const tp = useTranslations("common.periods");
+  const range = useSiteRange();
   const siteId = useSiteId();
   const site = useSite();
   const router = useRouter();
   const drafts = useSiteDrafts(siteId, "REVIEWS", site?.host ?? "site");
   const officeId = useOfficeId();
-  const data = useQuery(api.siteReviews.yourReviews, { siteId, ...(officeId ? { officeId } : {}) });
+  const data = useQuery(api.siteReviews.yourReviews, { siteId, ...(officeId ? { officeId } : {}), period: range.period, step: range.step });
   const [search, setSearch, term] = useSiteSearch();
   const [listing, setListing] = useSiteParam<string>("listing", "");
   const [stars, setStars] = useSiteParam<(typeof STARS)[number] | "">("stars", "", STARS);
@@ -74,7 +79,7 @@ export default function YourReviewsPage() {
   const figures = data?.figures;
   const today = new Date().toISOString().slice(0, 10);
   const fileBase = `${site?.host ?? "site"}-reviews`;
-  const chartRows = (data?.months ?? []).map((month) => ({ label: formatMonth(month.month), reviews: month.reviews, stars: month.stars }));
+  const chartRows = (data?.points ?? []).map((point) => datedRow(point, { reviews: point.reviews, stars: point.stars }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -114,21 +119,20 @@ export default function YourReviewsPage() {
           <Figure
             label={t("figures.new")}
             emphasis
-            value={figures.newIn30}
-            detail={<><Change by={figures.newIn30 - figures.newBefore} arrow={figures.newIn30 >= figures.newBefore ? "up" : "down"} /> <span className="text-secondary">{t("figures.newBefore")}</span></>}
+            value={figures.newIn}
+            detail={<><Change by={figures.newIn - figures.newBefore} arrow={figures.newIn >= figures.newBefore ? "up" : "down"} /> <span className="text-secondary">{t("figures.newBefore", { before: tp(`before.${range.period}`) })}</span></>}
           />
           <Figure label={t("figures.waiting")} value={figures.waiting} detail={<span className="text-secondary">{figures.oldestWaitingDays === null ? t("figures.noneWaiting") : t("figures.oldestWaiting", { days: figures.oldestWaitingDays })}</span>} />
-          <Figure label={t("figures.daysToAnswer")} value={figures.daysToAnswer === null ? "–" : Math.round(figures.daysToAnswer)} detail={<span className="text-secondary">{t("figures.daysToAnswerDetail")}</span>} />
+          <Figure label={t("figures.daysToAnswer")} value={figures.daysToAnswer === null ? "–" : Math.round(figures.daysToAnswer)} detail={<span className="text-secondary">{t("figures.daysToAnswerDetail", { period: tp(`inline.${range.period}`) })}</span>} />
         </FigureRow>
       ) : null}
 
       <SiteChartCard
-        dated={false}
         title={t("chartTitle")}
-        hint={t("chartHint")}
-        exportName={`${fileBase}-a-month`}
-        csv={() => toCsv([t("chartMonth"), t("chartReviews"), t("chartStars")], chartRows.map((row) => [row.label, row.reviews, row.stars === null ? null : Math.round(row.stars * 10) / 10]))}
-        enoughData={chartRows.some((row) => row.reviews > 0)}
+        hint={t("chartHint", { byStep: tp("byStep", { step: range.step }) })}
+        exportName={`${fileBase}-${range.from}-to-${range.to}`}
+        csv={() => toCsv([tp("stepColumn", { step: range.step }), t("chartReviews"), t("chartStars")], chartRows.map((row) => [row.day, row.reviews as number, row.stars === null ? null : Math.round((row.stars as number) * 10) / 10]))}
+        enoughData={chartRows.some((row) => (row.reviews as number) > 0)}
       >
         <SiteBarChart
           data={chartRows}

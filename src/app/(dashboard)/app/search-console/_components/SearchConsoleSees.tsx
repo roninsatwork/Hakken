@@ -47,6 +47,7 @@ function valuesOf(phrase: SeenPhrase): Record<string, string | number> {
     countC: phrase.c ?? 0,
     text: phrase.text ?? "",
     more: phrase.more ?? "",
+    period: phrase.period ?? "other",
     day1: phrase.days?.[0] ? formatShortDay(phrase.days[0]) : "",
     day2: phrase.days?.[1] ? formatShortDay(phrase.days[1]) : "",
   };

@@ -151,12 +151,12 @@ describe("Local market", () => {
 
 describe("Rival activity", () => {
   test("questions waiting on your profile, posts against yours, offers running", () => {
-    const box = rivalActivitySees({
+    const box = rivalActivitySees({ period: "lastMonth",
       rivals: [{}],
       figures: { rivalPosts: 9, yourPosts: 1, offers: 2, offerNames: ["10% off websites"] },
       questions: [{ text: "Do you build Shopify sites?", yours: true, answeredDay: null }, { text: "Theirs", yours: false, answeredDay: null }],
     });
-    expect(box.says).toEqual([{ code: "questionsWaiting", a: 1, text: "Do you build Shopify sites?" }, { code: "posts", a: 9, b: 1 }, { code: "offers", a: 2, text: "10% off websites" }]);
+    expect(box.says).toEqual([{ code: "questionsWaiting", a: 1, text: "Do you build Shopify sites?" }, { period: "lastMonth", code: "posts", a: 9, b: 1 }, { code: "offers", a: 2, text: "10% off websites" }]);
     expect(box.steps).toEqual([
       { code: "answerQuestion", text: "Do you build Shopify sites?", link: "profileManager", to: { url: "https://business.google.com/" } },
       { code: "postMore", link: "profileManager", to: { url: "https://business.google.com/" } },
@@ -165,10 +165,10 @@ describe("Rival activity", () => {
   });
 
   test("quiet rivals; no rival watched", () => {
-    const quiet = rivalActivitySees({ rivals: [{}], figures: { rivalPosts: 0, yourPosts: 2, offers: 0, offerNames: [] }, questions: [] });
-    expect(quiet).toEqual({ says: [{ code: "posts", a: 0, b: 2 }], steps: [] });
+    const quiet = rivalActivitySees({ period: "lastMonth", rivals: [{}], figures: { rivalPosts: 0, yourPosts: 2, offers: 0, offerNames: [] }, questions: [] });
+    expect(quiet).toEqual({ says: [{ period: "lastMonth", code: "posts", a: 0, b: 2 }], steps: [] });
     expectWords("localActivity", quiet);
-    const none = rivalActivitySees({ rivals: [], figures: { rivalPosts: 0, yourPosts: 0, offers: 0, offerNames: [] }, questions: [] });
+    const none = rivalActivitySees({ period: "lastMonth", rivals: [], figures: { rivalPosts: 0, yourPosts: 0, offers: 0, offerNames: [] }, questions: [] });
     expect(none).toEqual({ says: [{ code: "noRivals" }], steps: [{ code: "findRivals", link: "localMarket", to: { segment: "local/market" } }] });
     expectWords("localActivity", none);
   });
@@ -203,24 +203,24 @@ describe("Your listings", () => {
 });
 
 describe("Your reviews", () => {
-  test("waiting and the oldest wait, the month's new reviews, the days to answer", () => {
-    const box = yourReviewsSees({ listings: [{}], figures: { newIn30: 3, newBefore: 7, waiting: 4, oldestWaitingDays: 21, daysToAnswer: 6 } });
-    expect(box.says).toEqual([{ code: "waiting", a: 4, b: 21 }, { code: "newReviews", a: 3, b: 7 }, { code: "daysToAnswer", a: 6 }]);
+  test("waiting and the oldest wait, the period's new reviews, the days to answer", () => {
+    const box = yourReviewsSees({ listings: [{}], period: "lastMonth", figures: { newIn: 3, newBefore: 7, waiting: 4, oldestWaitingDays: 21, daysToAnswer: 6 } });
+    expect(box.says).toEqual([{ code: "waiting", a: 4, b: 21 }, { code: "newReviews", a: 3, b: 7, period: "lastMonth" }, { code: "daysToAnswer", a: 6 }]);
     expect(box.steps).toEqual([
       { code: "answerWaiting", a: 4, link: "waitingReviews", to: { segment: "reviews", filters: { answered: "waiting" } } },
-      { code: "askForReviews", link: "againstRivals", to: { segment: "reviews/rivals" } },
+      { code: "askForReviews", period: "lastMonth", link: "againstRivals", to: { segment: "reviews/rivals" } },
     ]);
     expectWords("reviews", box);
   });
 
   test("every review answered; no profile", () => {
-    const box = yourReviewsSees({ listings: [{}], figures: { newIn30: 5, newBefore: 2, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
-    expect(box).toEqual({ says: [{ code: "allAnswered" }, { code: "newReviews", a: 5, b: 2 }], steps: [] });
+    const box = yourReviewsSees({ listings: [{}], period: "thisQuarter", figures: { newIn: 5, newBefore: 2, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
+    expect(box).toEqual({ says: [{ code: "allAnswered" }, { code: "newReviews", a: 5, b: 2, period: "thisQuarter" }], steps: [] });
     expectWords("reviews", box);
-    const quiet = yourReviewsSees({ listings: [{}], figures: { newIn30: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
-    expect(quiet.says).toEqual([{ code: "allAnswered" }, { code: "noNewReviews" }]);
+    const quiet = yourReviewsSees({ listings: [{}], period: "lastWeek", figures: { newIn: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
+    expect(quiet.says).toEqual([{ code: "allAnswered" }, { code: "noNewReviews", period: "lastWeek" }]);
     expectWords("reviews", quiet);
-    const none = yourReviewsSees({ listings: [], figures: { newIn30: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
+    const none = yourReviewsSees({ listings: [], period: "lastMonth", figures: { newIn: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
     expect(none).toEqual({ says: [{ code: "noProfile" }], steps: [LINK_OFFICE] });
     expectWords("reviews", none);
   });

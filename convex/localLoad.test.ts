@@ -142,7 +142,7 @@ describe("Local at five times a large client", () => {
       ["map rankings", api.siteLocalMaps.mapRankings, { siteId, officeId }],
       ["one search on the map", api.siteLocalMaps.mapSearch, { siteId, officeId, keyword: "search 7" }],
       ["local market", api.siteLocalMarket.localMarket, { siteId, officeId }],
-      ["rival activity", api.siteLocalMarket.rivalActivity, { siteId }],
+      ["rival activity", api.siteLocalMarket.rivalActivity, { siteId, period: "thisYear" }],
       ["your listings", api.siteLocalListings.localListings, { siteId }],
     ];
 

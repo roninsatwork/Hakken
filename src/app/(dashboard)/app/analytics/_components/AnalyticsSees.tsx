@@ -95,6 +95,7 @@ export function valuesOf(
     countC: phrase.c ?? 0,
     text: phrase.text ?? "",
     more: phrase.more ?? "",
+    period: phrase.period ?? "other",
     event: events(phrase.text ?? ""),
     // A second event, in `more`: what a conversion really is (ga-channel-pages-plan.md R3).
     moreEvent: events(phrase.more ?? ""),

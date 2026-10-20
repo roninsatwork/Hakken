@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Swords } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
@@ -16,7 +17,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
-import { formatNumber, toCsv } from "../../_components/siteFormat";
+import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { RecordLinkCell } from "../../_components/SiteCells";
 import { heldIcon } from "../../_components/siteGroups";
 import { MarkedHost } from "../../_components/SiteMark";
@@ -96,7 +97,13 @@ export default function SiteSideBySidePage() {
   };
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
   const tm = useTranslations("sites.rivalMoves");
-  const moves = useQuery(api.siteRivalMoves.rivalMoves, { siteId });
+  const tp = useTranslations("common.periods");
+  const moves = useQuery(api.siteRivalMoves.rivalMoves, { siteId, period: range.period });
+  // Rivals are checked once a month: a week between two checks says so rather than showing noughts.
+  const lastRivalCheck = moves && moves.length > 0 && moves.every((row) => !row.checked)
+    ? moves.reduce<string | null>((newest, row) => (row.lastCheck && (!newest || row.lastCheck > newest) ? row.lastCheck : newest), null)
+    : null;
+  const newHeader = tm("columns.new", { period: tp(`inline.${range.period}`) });
   const [moveSearch, setMoveSearch, moveTerm] = useSiteSearch("mq", "moves");
   const moveMatches = moves?.filter((row) => !moveTerm || row.host.toLowerCase().includes(moveTerm.toLowerCase()));
   const { rows: moveRows, tableSort: moveSort } = useSiteSortedList(moveMatches, MOVE_SORTS, { opening: "new", name: (row) => row.host, table: "moves" });
@@ -188,18 +195,19 @@ export default function SiteSideBySidePage() {
       />
 
       {/* What the rivals did lately (insights-analyst-plan.md phase 4): their new searches, climbs and falls, and visits a month. */}
+      {lastRivalCheck ? <Notice>{tm("notChecked", { day: formatDay(lastRivalCheck) })}</Notice> : null}
       <DataTable
         rows={movePages.pageRows}
         rowKey={(row) => row.siteId}
         onRowClick={(row) => router.push(`/app/sites/${siteId}/competitors/rival?rival=${row.siteId}`)}
         search={{ value: moveSearch, onChange: setMoveSearch, placeholder: tc("findWebsite") }}
-        cardHeader={<TableBar footer={movePages.footer} noun="websites" title={tm("title")} actions={<ListDownload fileName={`${site?.host ?? "site"}-rival-moves`} rows={moveRows} columns={[{ header: tm("columns.rival"), value: (row) => row.host }, { header: tm("columns.new"), value: (row) => row.newSearches }, { header: tm("columns.climbed"), value: (row) => row.climbed }, { header: tm("columns.fell"), value: (row) => row.fell }, { header: tm("columns.biggest"), value: (row) => row.biggestNew?.keyword ?? "" }, { header: tm("columns.visits"), value: (row) => row.visits ?? "" }]} />} />}
+        cardHeader={<TableBar footer={movePages.footer} noun="websites" title={tm("title")} actions={<ListDownload fileName={`${site?.host ?? "site"}-rival-moves`} rows={moveRows} columns={[{ header: tm("columns.rival"), value: (row) => row.host }, { header: newHeader, value: (row) => row.newSearches }, { header: tm("columns.climbed"), value: (row) => row.climbed }, { header: tm("columns.fell"), value: (row) => row.fell }, { header: tm("columns.biggest"), value: (row) => row.biggestNew?.keyword ?? "" }, { header: tm("columns.visits"), value: (row) => row.visits ?? "" }]} />} />}
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: moveTerm ? tc("noWebsiteMatch") : tm("empty") }}
         footer={movePages.footer}
         sort={moveSort}
         columns={[
           { key: "rival", header: tm("columns.rival"), sortable: true, cell: (row) => <span className="text-[13px] text-foreground">{row.host}</span> },
-          { key: "new", header: tm("columns.new"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.newSearches)}</span> },
+          { key: "new", header: newHeader, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.newSearches)}</span> },
           { key: "climbed", header: tm("columns.climbed"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.climbed)}</span> },
           { key: "fell", header: tm("columns.fell"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.fell)}</span> },
           { key: "biggest", header: tm("columns.biggest"), cell: (row) => <span className="text-[12px] text-secondary">{row.biggestNew ? tm("biggest", { keyword: row.biggestNew.keyword, position: row.biggestNew.position ?? "–", volume: formatNumber(row.biggestNew.volume) }) : "–"}</span> },

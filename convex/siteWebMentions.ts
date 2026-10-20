@@ -13,6 +13,9 @@ import { rowsOf, type MentionRow } from "./webMentions";
 import { siteKindOf } from "./utils/siteKinds";
 import { unpackColumn } from "./utils/packedColumns";
 import type { Site } from "./websiteSiteRows";
+import { calendarPeriodValidator, periodSpan, spanBefore, stepsOf, ukDay, type CalendarPeriod, type PeriodSpan } from "./utils/calendarPeriods";
+import { stepValidator } from "./siteFigures";
+import type { ChartStep } from "./utils/searchConsolePacks";
 
 /**
  * Visibility → Web mentions (docs/plans/active/discovery-local-reputation-ai-
@@ -25,8 +28,17 @@ import type { Site } from "./websiteSiteRows";
  */
 
 type Reader = { db: QueryCtx["db"] };
-const DAY_MS = 86_400_000;
-const dayBefore = (days: number, now = Date.now()) => new Date(now - days * DAY_MS).toISOString().slice(0, 10);
+const inSpan = (day: string, span: { from: string; to: string }) => day >= span.from && day <= span.to;
+
+/**
+ * The date menu's period on a Web mentions screen (calendar-periods-plan.md, item 11.1), and the span it is set
+ * against: a page is dated the day it was found, so a period runs to today.
+ */
+function mentionSpans(period: CalendarPeriod, now = Date.now()): { span: PeriodSpan; before: PeriodSpan } {
+  const today = ukDay(now);
+  const span = periodSpan(period, today, today) ?? { from: today, to: today, whole: false };
+  return { span, before: spanBefore(period, span) };
+}
 /** Left out only when the AI check found it about another of the name — never a page on a website that links here, which is about this one. */
 export const shownMention = (row: MentionRow) => row.about !== 0 || row.linked === 1;
 
@@ -76,13 +88,13 @@ const mentionRowValidator = v.object({
 });
 
 export const webMentions = tenantQuery({
-  args: { siteId: v.id("companyWebsites") },
+  args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
   returns: v.object({
     names: v.array(v.string()),
     rows: v.array(mentionRowValidator),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) => {
     const site = await requireMySite(ctx, args.siteId);
     const hold = groupOwner(site);
     const own = hold ? await ctx.db.get(hold.websiteId) : null;
@@ -93,13 +105,15 @@ export const webMentions = tenantQuery({
       names: [...(primary ? [primary] : []), own.host],
       rows: (await mentionsOf(ctx, own)).map(({ about: _about, ...row }) => row),
     };
-  }, (result) => webMentionsSees(result, new Date().toISOString().slice(0, 10))),
+  }, (result, args) => webMentionsSees(result, mentionSpans(args.period).span, args.period)),
 });
 
 export const mentionsAgainstRivals = tenantQuery({
-  args: { siteId: v.id("companyWebsites") },
+  args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator, step: stepValidator },
   returns: v.object({
-    months: v.array(v.string()),
+    period: calendarPeriodValidator,
+    /** The period's steps, each step's first day. */
+    steps: v.array(v.string()),
     businesses: v.array(v.object({
       host: v.string(),
       you: v.boolean(),
@@ -112,31 +126,26 @@ export const mentionsAgainstRivals = tenantQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod; step: ChartStep }) => {
     const site = await requireMySite(ctx, args.siteId);
-    const now = Date.now();
-    const months = Array.from({ length: 12 }, (_, at) => {
-      const date = new Date(now);
-      date.setUTCDate(1);
-      date.setUTCMonth(date.getUTCMonth() - (11 - at));
-      return date.toISOString().slice(0, 7);
-    });
+    const { span, before } = mentionSpans(args.period);
+    const steps = stepsOf(span, args.step);
     const businesses = [];
     for (const { website, you } of await watched(ctx, site)) {
       const rows = await mentionsOf(ctx, website);
-      const last = rows.filter((row) => row.day >= dayBefore(30, now));
+      const last = rows.filter((row) => inSpan(row.day, span));
       businesses.push({
         host: website.displayHost,
         you,
         mentions: last.length,
-        before: rows.filter((row) => row.day >= dayBefore(60, now) && row.day < dayBefore(30, now)).length,
+        before: rows.filter((row) => inSpan(row.day, before)).length,
         well: last.filter((row) => row.tone === 1).length,
         badly: last.filter((row) => row.tone === 2).length,
         noLink: last.filter((row) => row.linked === 0).length,
-        series: months.map((month) => rows.filter((row) => row.day.startsWith(month)).length),
+        series: steps.map((one) => rows.filter((row) => inSpan(row.day, one)).length),
       });
     }
-    return { months, businesses };
+    return { period: args.period, steps: steps.map((one) => one.key), businesses };
   }, mentionsRivalsSees),
 });
 

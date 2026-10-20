@@ -184,6 +184,47 @@ export function switchHref(pathname: string, fromSiteId: string, toSiteId: strin
   return `/app/sites/${toSiteId}${segment ? `/${segment}` : ""}${query}`;
 }
 
+/**
+ * The screens the date menu changes, and so the only ones it shows on
+ * (docs/plans/active/calendar-periods-plan.md, item 11.1; Anthony, 2026-10-20:
+ * "ok i agree i get it now"): those that chart or count over the dates chosen,
+ * a keyword's and a rival's own screens among them. The rest show the latest
+ * check, dated by the header's "Last checked", or — Brand radar and AI demand —
+ * monthly figures over the last 12 months, and draw no menu.
+ * `src/calendar-periods-drift.test.ts` holds this list to the screens that read
+ * the dates.
+ */
+export const DATED_SEGMENTS: ReadonlySet<string> = new Set([
+  "",
+  "audit",
+  "ai/mentions",
+  "ai/answers",
+  "google/searches",
+  "google/moves",
+  "google/features",
+  "local/activity",
+  "reviews",
+  "reviews/rivals",
+  "keywords",
+  "keywords/keyword",
+  "keywords/pages",
+  "keywords/bands",
+  "keywords/new-lost",
+  "paid",
+  "competitors",
+  "competitors/rival",
+  "backlinks",
+  "backlinks/quality",
+  "backlinks/new-lost",
+  "mentions",
+  "mentions/rivals",
+]);
+
+/** Whether the screen at a path follows the date menu, and so draws it. */
+export function showsDates(pathname: string, siteId: string): boolean {
+  return DATED_SEGMENTS.has(restOf(pathname, siteId));
+}
+
 /** Whether a path is one of the menu's own pages, rather than a record's screen under one. */
 export function isSiteMenuPath(pathname: string, siteId: string): boolean {
   const rest = restOf(pathname, siteId);

@@ -8,7 +8,7 @@ figures
   figure: Speak badly of you
   figure: Name you without a link
 notice (info)
-chart-card: Mentions a month, by how they speak about you
+chart-card: New mentions, by how they speak about you
 search: Find a page or website…
 filter: Tone
 filter: Kind of site

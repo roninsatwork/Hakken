@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { shiftDay } from "./insightFacts";
-import { monthStart, weekStart, type ChartStep } from "./searchConsolePacks";
+import { monthStart, stepEnd, stepStart, weekStart, type ChartStep } from "./searchConsolePacks";
 
 /**
  * The seven periods every date menu offers (docs/plans/active/calendar-periods-plan.md; Anthony, 2026-10-20: "This
@@ -142,4 +142,17 @@ export function spanYearBefore(period: CalendarPeriod, span: PeriodSpan): Period
   if (!YEAR_BEFORE_PERIODS.includes(period)) return null;
   const unit = unitOf(period);
   return spanBack(span, unit, unit === "quarter" ? 4 : 1);
+}
+
+/**
+ * The steps a span is drawn in: each step's first day (`key`: the day, its week's Monday, or the 1st) and the span's
+ * days within it, so a week or month the span cuts — the newest, still going — says it is a part of one.
+ */
+export function stepsOf(span: { from: string; to: string }, step: ChartStep): Array<{ key: string; from: string; to: string }> {
+  const out: Array<{ key: string; from: string; to: string }> = [];
+  for (let key = stepStart(span.from, step); key <= span.to; key = shiftDay(stepEnd(key, step), 1)) {
+    const end = stepEnd(key, step);
+    out.push({ key, from: key < span.from ? span.from : key, to: end > span.to ? span.to : end });
+  }
+  return out;
 }

@@ -87,6 +87,17 @@
       "thisQuarter": "Questo trimestre",
       "lastQuarter": "Il trimestre scorso",
       "thisYear": "Quest'anno",
+      "inline": {
+        "thisWeek": "questa settimana",
+        "lastWeek": "la settimana scorsa",
+        "thisMonth": "questo mese",
+        "lastMonth": "il mese scorso",
+        "thisQuarter": "questo trimestre",
+        "lastQuarter": "il trimestre scorso",
+        "thisYear": "quest'anno"
+      },
+      "stepColumn": "{step, select, day {Giorno} week {Settimana dal} other {Mese}}",
+      "byStep": "{step, select, day {giorno per giorno} week {settimana per settimana} other {mese per mese}}",
       "partial": "{period}, fino al {day}",
       "noDaysYet": "{source} non ha ancora inviato nessun giorno {unit, select, week {di questa settimana} month {di questo mese} quarter {di questo trimestre} other {di quest'anno}}; il più recente è {day}.",
       "before": {
@@ -10944,8 +10955,8 @@
       "performance": "Andamento",
       "performanceHint": "Spunta le misure da disegnare. Ogni linea ha la sua scala, così numeri piccoli e grandi si leggono insieme.",
       "competitorsHint": "Questo sito accanto agli altri del suo gruppo, su una misura e una scala. Le linee tratteggiate sono gli altri.",
-      "yearsHint": "Gli ultimi dodici mesi contro i dodici precedenti, mese per mese.",
-      "yearsCaption": "{from} – {to} rispetto all'anno prima · Mensile",
+      "yearsHint": "Quest'anno contro l'anno scorso, mese per mese.",
+      "yearsCaption": "{year} rispetto al {lastYear} · Mensile",
       "chartView": "Vista del grafico",
       "measure": "Misura",
       "tabs": {
@@ -10954,8 +10965,6 @@
         "years": "Anni"
       },
       "thisSite": "{host} (questo sito)",
-      "thisYear": "Ultimi 12 mesi",
-      "lastYear": "I 12 mesi precedenti",
       "positions": "Posizioni organiche",
       "positionsHint": "Quante parole chiave stanno in ogni fascia dei risultati di Google.",
       "bands": {
@@ -11684,8 +11693,8 @@
       "empty": "Ancora nessuna ricerca in comune qui.",
       "sharedOf": "Questo sito e {rival} condividono {total} ricerche tra tutte quelle per cui si posizionano. Qui sotto quelle presenti in entrambi gli elenchi conservati, prima le più preziose per loro.",
       "sharedHeldOf": "{held} delle {total} ricerche che condividete sono in entrambi gli elenchi conservati e vengono confrontate qui, prima le più preziose per loro.",
-      "trafficTitle": "Visitatori da Google al mese: {rival} contro di te",
-      "trafficHint": "Visitatori stimati da Google ogni mese, dai dati che Visibilità conserva."
+      "trafficTitle": "Visitatori da Google: {rival} contro di te",
+      "trafficHint": "Visitatori stimati da Google, {byStep}, dai dati che Visibilità conserva."
     },
     "domainRecord": {
       "description": "Un sito che rimanda a questo: quanto è forte, e ciascuno dei suoi link qui per intero.",
@@ -13049,9 +13058,9 @@
         "description": "Cosa fanno su Google i concorrenti che segui: i loro post e le offerte, le modifiche ai profili e le domande che le persone fanno.",
         "figures": {
           "posts": "Post dei concorrenti",
-          "postsDetail": "In 30 giorni · tu hai pubblicato {count}",
+          "postsDetail": "{period} · tu hai pubblicato {count}",
           "offers": "Offerte in corso",
-          "noOffers": "Nessuna in 30 giorni",
+          "noOffers": "Nessuna, {period}",
           "questions": "Domande sul tuo profilo",
           "questionsDetail": "In attesa di risposta",
           "changes": "Modifiche ai profili",
@@ -13123,17 +13132,16 @@
         "figures": {
           "rating": "Valutazione",
           "ratingGoogle": "{offices, plural, =1 {Google} =2 {Google, entrambe le sedi} other {Google, # sedi}}",
-          "new": "Nuove negli ultimi 30 giorni",
-          "newBefore": "rispetto ai 30 giorni precedenti",
+          "new": "Nuove recensioni",
+          "newBefore": "rispetto a {before}",
           "waiting": "Senza risposta",
           "noneWaiting": "Ogni recensione ha una risposta",
           "oldestWaiting": "La più vecchia aspetta da {days, plural, =1 {# giorno} other {# giorni}}",
           "daysToAnswer": "Giorni per rispondere",
-          "daysToAnswerDetail": "Media degli ultimi 90 giorni"
+          "daysToAnswerDetail": "Media, {period}"
         },
-        "chartTitle": "Recensioni al mese",
-        "chartHint": "Nuove recensioni ogni mese su tutte le schede, e la media delle stelle.",
-        "chartMonth": "Mese",
+        "chartTitle": "Nuove recensioni",
+        "chartHint": "Nuove recensioni su tutte le schede, {byStep}, e la media delle stelle.",
         "chartReviews": "Nuove recensioni",
         "chartStars": "Media stelle",
         "chartReviewsLeft": "Nuove recensioni (sinistra)",
@@ -13186,16 +13194,15 @@
           "best": "Valutazione migliore",
           "bestDetail": "{name} · tu {rating}"
         },
-        "chartTitle": "Recensioni Google negli ultimi 12 mesi",
-        "chartHint": "Quante recensioni ha ogni attività, mese per mese. Una linea più ripida indica un'attività che raccoglie recensioni più in fretta.",
-        "chartMonth": "Mese",
+        "chartTitle": "Recensioni Google, {period}",
+        "chartHint": "Quante recensioni ha ogni attività, {byStep}. Una linea più ripida indica un'attività che raccoglie recensioni più in fretta.",
         "youAndRivals": "tu e {count, plural, =1 {# concorrente} other {# concorrenti}}",
         "columns": {
           "business": "Attività",
           "listing": "Scheda",
           "rating": "Valutazione",
           "reviews": "Recensioni",
-          "new": "Nuove in 30 giorni",
+          "new": "Nuove, {period}",
           "answered": "Con risposta",
           "days": "Giorni per rispondere"
         },
@@ -13352,7 +13359,7 @@
           "most": "La più chiesta all'IA"
         },
         "chartTitle": "IA contro Google, al mese",
-        "chartHint": "{count, plural, =1 {La tua ricerca monitorata} other {Le tue # ricerche monitorate sommate}}, negli ultimi 12 mesi.",
+        "chartHint": "Dati mensili, ultimi 12 mesi: {count, plural, =1 {la tua ricerca monitorata} other {le tue # ricerche monitorate sommate}}.",
         "chartMonth": "Mese",
         "chartAi": "Chieste all'IA",
         "chartGoogle": "Cercate su Google",
@@ -13441,7 +13448,7 @@
       "notice": "Letto dalle risposte IA di Google nel tuo paese: l'AI Overview in cima ai risultati. Non scegli tu le domande, quindi mostra dove compari dove non avresti mai pensato di chiedere. Le tue domande monitorate, sotto Risposte IA, coprono ChatGPT, Gemini, Google AI Mode, Claude e Perplexity. {cost} per ogni controllo, ogni sito, una volta al mese.",
       "noticeUnpriced": "Letto dalle risposte IA di Google nel tuo paese: l'AI Overview in cima ai risultati. Non scegli tu le domande, quindi mostra dove compari dove non avresti mai pensato di chiedere. Le tue domande monitorate, sotto Risposte IA, coprono ChatGPT, Gemini, Google AI Mode, Claude e Perplexity. Letto una volta al mese.",
       "chartTitle": "Quota di voce al mese",
-      "chartHint": "Di tutte le risposte IA che nominano te o un concorrente che segui, la quota che nomina ogni attività.",
+      "chartHint": "Dati mensili, ultimi 12 mesi. Di tutte le risposte IA che nominano te o un concorrente che segui, la quota che nomina ogni attività.",
       "chartMonth": "Mese",
       "rivalsTitle": "Tu contro i concorrenti",
       "rivalsDescription": "L'ultimo mese. \"Chieste al mese\" somma quanto spesso vengono fatte le domande dietro le citazioni di ogni attività.",
@@ -13627,19 +13634,17 @@
       "and": " e ",
       "figures": {
         "new": "Nuove citazioni",
-        "monthBefore": "rispetto ai 30 giorni prima",
+        "monthBefore": "rispetto a {before}",
         "well": "Parlano bene di te",
         "wellDetail": "{count} su {of}",
         "badly": "Parlano male di te",
-        "badlyDetail": "Negli ultimi 30 giorni",
         "badlyOn": "Tutte su {kind}",
         "noLink": "Ti nominano senza link",
         "noLinkDetail": "Pagine a cui vale la pena chiedere un link"
       },
       "notice": "Trovate cercando {names} sul web, in inglese, dal Regno Unito. Le pagine su qualcos'altro con lo stesso nome, come una persona o un'altra attività, vengono escluse da un controllo IA. {platformName} cerca ogni settimana, per circa 3 centesimi a ricerca.",
-      "chartTitle": "Citazioni al mese, per come parlano di te",
-      "chartHint": "Nuove pagine che ti nominano ogni mese, negli ultimi 12 mesi.",
-      "chartMonth": "Mese",
+      "chartTitle": "Nuove citazioni, per come parlano di te",
+      "chartHint": "Nuove pagine che ti nominano, {byStep}.",
       "chartWell": "Parlano bene di te",
       "chartNeutral": "Neutre",
       "chartBadly": "Parlano male di te (in cima a ogni barra)",
@@ -13702,7 +13707,7 @@
         "description": "Quanto spesso il web nomina te e i concorrenti che segui, e come parla di ciascuno.",
         "figures": {
           "share": "La tua quota di citazioni",
-          "shareDetail": "{place}° su {of} · ultimi 30 giorni",
+          "shareDetail": "{place}° su {of} · {period}",
           "most": "Il più nominato",
           "mostDetail": "{count, plural, =1 {1 citazione} other {# citazioni}} · quota {share}%",
           "fastest": "In crescita più rapida",
@@ -13710,9 +13715,9 @@
           "worstDetail": "{count} su {of} ne parlano male",
           "noneBadly": "Nessuno citato male"
         },
-        "chartTitle": "Citazioni al mese",
-        "chartHint": "Nuove pagine che nominano ogni attività, negli ultimi 12 mesi.",
-        "youAndRivals": "{count, plural, =0 {solo tu} =1 {tu e 1 concorrente} other {tu e # concorrenti}} · ultimi 30 giorni",
+        "chartTitle": "Nuove citazioni",
+        "chartHint": "Nuove pagine che nominano ogni attività, {byStep}.",
+        "youAndRivals": "{count, plural, =0 {solo tu} =1 {tu e 1 concorrente} other {tu e # concorrenti}} · {period}",
         "columns": {
           "business": "Attività",
           "mentions": "Citazioni",
@@ -14271,7 +14276,7 @@
         "noRivals": "Non segui ancora un concorrente su Google Maps.",
         "findRivals": "Trova le attività vicino a te e segui quelle che contano.",
         "questionsWaiting": "{count, plural, one {# domanda attende} other {# domande attendono}} una risposta sul tuo profilo: “{text}”.",
-        "posts": "I tuoi concorrenti hanno pubblicato {a} volte in 30 giorni; tu {b}.",
+        "posts": "I tuoi concorrenti hanno pubblicato {a} volte {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}; tu {b}.",
         "offers": "{count, plural, one {# offerta è attiva} other {# offerte sono attive}}, tra cui “{text}”.",
         "answerQuestion": "Rispondi a “{text}” sul tuo profilo Google.",
         "postMore": "Pubblica sul tuo profilo Google ogni settimana: offerte, novità e lavori fatti."
@@ -14289,11 +14294,11 @@
         "linkOffice": "Collega il tuo profilo Google come tua sede.",
         "waiting": "{count, plural, one {# recensione attende} other {# recensioni attendono}} una risposta, la più vecchia da {countB, plural, one {# giorno} other {# giorni}}.",
         "allAnswered": "Ogni recensione ha una risposta.",
-        "newReviews": "Hai ricevuto {a} recensioni negli ultimi 30 giorni, contro {b} nei 30 giorni prima.",
-        "noNewReviews": "Nessuna nuova recensione negli ultimi 60 giorni.",
+        "newReviews": "Hai ricevuto {a} recensioni {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, contro {b} {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {la settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {il mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {il trimestre precedente} other {negli stessi giorni dell'anno scorso}}.",
+        "noNewReviews": "Nessuna nuova recensione {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}} né {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {la settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {il mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {il trimestre precedente} other {negli stessi giorni dell'anno scorso}}.",
         "daysToAnswer": "Rispondi in media in {count, plural, one {# giorno} other {# giorni}}.",
         "answerWaiting": "Rispondi {count, plural, one {alla recensione in attesa} other {alle # recensioni in attesa}}, dalla più vecchia.",
-        "askForReviews": "Chiedi una recensione a ogni cliente: questo mese ne sono arrivate meno del mese prima."
+        "askForReviews": "Chiedi una recensione a ogni cliente: {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}} ne sono arrivate meno che {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {nella settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {nel mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {nel trimestre precedente} other {negli stessi giorni dell'anno scorso}}."
       },
       "reviewsSay": {
         "notRead": "Le tue recensioni non sono ancora state lette per quello che dicono.",
@@ -14316,7 +14321,7 @@
       },
       "mentions": {
         "none": "Non è ancora stata trovata una pagina che ti nomina: il web viene cercato per il tuo nome a ogni controllo.",
-        "newPages": "{count, plural, one {# nuova pagina ti ha nominato} other {# nuove pagine ti hanno nominato}} negli ultimi 30 giorni, su {b} trovate in tutto.",
+        "newPages": "{count, plural, one {# nuova pagina ti ha nominato} other {# nuove pagine ti hanno nominato}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, su {b} trovate in tutto.",
         "badly": "{count, plural, one {# di esse parla} other {# di esse parlano}} male di te, la più recente su {text}.",
         "noLink": "{count, plural, one {# pagina forte ti nomina} other {# pagine forti ti nominano}} senza un link, {text} la più forte.",
         "reply": "Leggi cosa dice {text} e rispondi dove puoi.",
@@ -14326,8 +14331,8 @@
         "none": "Non è ancora stata trovata una pagina che nomina te o un concorrente che segui.",
         "lead": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui, più di ognuno di loro.",
         "behind": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui; {text} è in testa con il {b}%.",
-        "upMonth": "{count, plural, one {È # pagina in più} other {Sono # pagine in più}} del mese prima.",
-        "downMonth": "{count, plural, one {È # pagina in meno} other {Sono # pagine in meno}} del mese prima.",
+        "upMonth": "{count, plural, one {È # pagina in più} other {Sono # pagine in più}} {period, select, thisWeek {degli stessi giorni della settimana scorsa} lastWeek {della settimana precedente} thisMonth {degli stessi giorni del mese scorso} lastMonth {del mese precedente} thisQuarter {degli stessi giorni del trimestre scorso} lastQuarter {del trimestre precedente} other {degli stessi giorni dell'anno scorso}}.",
+        "downMonth": "{count, plural, one {È # pagina in meno} other {Sono # pagine in meno}} {period, select, thisWeek {degli stessi giorni della settimana scorsa} lastWeek {della settimana precedente} thisMonth {degli stessi giorni del mese scorso} lastMonth {del mese precedente} thisQuarter {degli stessi giorni del trimestre scorso} lastQuarter {del trimestre precedente} other {degli stessi giorni dell'anno scorso}}.",
         "seeLeader": "Guarda dove viene nominato {text} e tu no.",
         "getListed": "Fatti elencare sui siti che nominano i tuoi concorrenti e non te."
       },
@@ -14793,10 +14798,11 @@
     "rivalMoves": {
       "title": "Cosa hanno fatto di recente i tuoi concorrenti",
       "empty": "Ancora nessuna mossa dei concorrenti: compaiono dopo due controlli dei risultati di Google.",
+      "notChecked": "I concorrenti vengono controllati una volta al mese; il controllo più recente è del {day}.",
       "biggest": "{keyword}, posizione {position} ({volume} al mese)",
       "columns": {
         "rival": "Concorrente",
-        "new": "Nuove ricerche, 30 giorni",
+        "new": "Nuove ricerche, {period}",
         "climbed": "Salite",
         "fell": "Scese",
         "biggest": "Nuova ricerca più grande",
