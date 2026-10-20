@@ -687,6 +687,7 @@ import type * as utils_base64 from "../utils/base64.js";
 import type * as utils_bingScreens from "../utils/bingScreens.js";
 import type * as utils_bingWebmasterWeeks from "../utils/bingWebmasterWeeks.js";
 import type * as utils_boundedRequestBody from "../utils/boundedRequestBody.js";
+import type * as utils_calendarPeriods from "../utils/calendarPeriods.js";
 import type * as utils_chatAdminShapes from "../utils/chatAdminShapes.js";
 import type * as utils_clarityCollectorAgent from "../utils/clarityCollectorAgent.js";
 import type * as utils_clarityPacks from "../utils/clarityPacks.js";
@@ -1624,6 +1625,7 @@ declare const fullApi: ApiFromModules<{
   "utils/bingScreens": typeof utils_bingScreens;
   "utils/bingWebmasterWeeks": typeof utils_bingWebmasterWeeks;
   "utils/boundedRequestBody": typeof utils_boundedRequestBody;
+  "utils/calendarPeriods": typeof utils_calendarPeriods;
   "utils/chatAdminShapes": typeof utils_chatAdminShapes;
   "utils/clarityCollectorAgent": typeof utils_clarityCollectorAgent;
   "utils/clarityPacks": typeof utils_clarityPacks;
