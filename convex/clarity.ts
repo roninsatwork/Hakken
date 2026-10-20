@@ -21,9 +21,10 @@ import {
   type ClarityTotals,
   type ClarityTotalsRow,
 } from "./utils/clarityRows";
-import { addUpBy, packDaily, packTotals, unpackDaily, unpackTotals, type ClarityDayRow } from "./utils/clarityPacks";
+import { addUpBy, packDaily, packTotals, unpackDaily, unpackDailyRows, unpackTotals, type ClarityDayRow } from "./utils/clarityPacks";
 import { clarityRecordingKindValidator, clarityRecordingValidator, clarityRecordingsFrom, projectIdOf, type ClarityRecording, type ClarityRecordingKind } from "./utils/clarityRecordings";
 import { shiftDay } from "./utils/insightFacts";
+import { CALENDAR_PERIODS, OPENING_PERIOD, periodSpan, shiftMonths, spanBefore, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * Microsoft Clarity, connected and read (docs/plans/active/insights-analyst-plan.md
@@ -59,11 +60,14 @@ export const CLARITY_RECORDING_DAYS_KEPT = 30;
  * month against the same month a year before — the counting check's second witness.
  */
 export const CLARITY_MONTHS_KEPT = 13;
-/** The ready-made periods the screens read, their days, and the period before each that its comparisons read. */
-const PERIODS = [["LAST_7", 7, "BEFORE_7"], ["LAST_30", 30, "BEFORE_30"], ["LAST_90", 90, "BEFORE_90"]] as const;
-type PeriodSpan = (typeof PERIODS)[number][0];
-type BeforeSpan = (typeof PERIODS)[number][2];
-type Span = "DAY" | "MONTH" | PeriodSpan | BeforeSpan;
+/**
+ * The ready-made periods the screens read: each calendar period of the date
+ * menu (`PERIOD`, keyed by the period: "lastMonth") and what it is set against
+ * (`PERIOD_BEFORE`), worked out each morning (calendar-periods-plan.md, phase
+ * 3). The 7, 30 and 90 days before them (`LAST_*`, `BEFORE_*`) are no longer
+ * built; those kept wait to be cleared on Anthony's word.
+ */
+type Span = "DAY" | "MONTH" | "PERIOD" | "PERIOD_BEFORE" | "LAST_7" | "LAST_30" | "LAST_90" | "BEFORE_7" | "BEFORE_30" | "BEFORE_90";
 /** A record's kind: the day's or period's own figures (none), or the visits by source or by browser. */
 export type ClarityKind = Doc<"clarityFigures">["kind"];
 const SPLIT_KINDS = ["SOURCES", "BROWSERS"] as const;
@@ -174,11 +178,8 @@ async function recordsOf(ctx: Reader, holdId: Id<"companyWebsites">, span: Span,
     .take(PARTS_READ);
 }
 
-/** The ready-made period a screen's days are read from: 7, 30 or 90, or the same number of days before it. */
-export const periodFor = (days: number, before = false): PeriodSpan | BeforeSpan => {
-  const [span, , earlier] = PERIODS.find(([, length]) => days <= length) ?? PERIODS[PERIODS.length - 1];
-  return before ? earlier : span;
-};
+/** The ready-made span a screen reads: the period chosen, or what it is set against. */
+export const periodSpanName = (before = false): "PERIOD" | "PERIOD_BEFORE" => (before ? "PERIOD_BEFORE" : "PERIOD");
 
 export type ClarityPeriodRead = { first: Doc<"clarityFigures">; pages: ClarityTotalsRow[] };
 
@@ -187,10 +188,10 @@ export type ClarityPeriodRead = { first: Doc<"clarityFigures">; pages: ClarityTo
  * website's figures (and, for the period's own figures, its days), and every
  * part's pages, unpacked. Nothing adds up days when it is read.
  */
-export async function readClarityPeriod(ctx: Reader, holdId: Id<"companyWebsites">, days: number, options: { kind?: ClarityKind; before?: boolean; withPages?: boolean } = {}): Promise<ClarityPeriodRead | null> {
-  const span = periodFor(days, options.before);
-  // The first parts of the span's kinds, the newest first: one each a kind, read alone so the website's figures never read a page.
-  const firsts = await ctx.db.query("clarityFigures").withIndex("by_hold_span_part", (q) => q.eq("companyWebsiteId", holdId).eq("span", span).eq("part", 0)).order("desc").take(SPLIT_KINDS.length + 2);
+export async function readClarityPeriod(ctx: Reader, holdId: Id<"companyWebsites">, period: CalendarPeriod, options: { kind?: ClarityKind; before?: boolean; withPages?: boolean } = {}): Promise<ClarityPeriodRead | null> {
+  const span = periodSpanName(options.before);
+  // The first parts of the period's kinds: one each a kind, read alone so the website's figures never read a page.
+  const firsts = await ctx.db.query("clarityFigures").withIndex("by_hold_span_part", (q) => q.eq("companyWebsiteId", holdId).eq("span", span).eq("part", 0).eq("key", period)).take(SPLIT_KINDS.length + 2);
   const first = firsts.find((record) => record.kind === options.kind);
   if (!first) return null;
   if (options.withPages === false) return { first, pages: [] };
@@ -203,8 +204,8 @@ export async function readClarityPeriod(ctx: Reader, holdId: Id<"companyWebsites
  * part and, unless left out, every page — as Insights has read them since
  * Part 0 (insightsConversion.ts, insightsPeriod.ts).
  */
-export async function clarityPeriod(ctx: Reader, holdId: Id<"companyWebsites">, days: number, withPages = true): Promise<ClarityPeriodRead | null> {
-  return await readClarityPeriod(ctx, holdId, days, { withPages });
+export async function clarityPeriod(ctx: Reader, holdId: Id<"companyWebsites">, period: CalendarPeriod, withPages = true): Promise<ClarityPeriodRead | null> {
+  return await readClarityPeriod(ctx, holdId, period, { withPages });
 }
 
 /** A record's website totals, every device added up. */
@@ -249,7 +250,8 @@ export const claritySites = tenantQuery({
     const out = [];
     for (const entry of holds) {
       const row = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", entry.hold._id)).first();
-      const period = row ? await clarityPeriod(ctx, entry.hold._id, 30, false) : null;
+      // The opening period, as every section's front page shows it (calendar-periods-plan.md, rule 7).
+      const period = row ? await clarityPeriod(ctx, entry.hold._id, OPENING_PERIOD, false) : null;
       const whole = period ? rowOf("all", siteTotals(period.first)) : null;
       out.push({ siteId: entry.hold._id, host: entry.summary.host, status: row?.status ?? "NOT_CONNECTED", sessions: row ? whole?.sessions ?? 0 : null, scroll: whole?.scroll ?? null, lastCollectedAt: row?.lastCollectedAt ?? null });
     }
@@ -397,12 +399,13 @@ export const saveRecordings = internalMutation({
   },
 });
 
-const spanValidator = v.union(v.literal("MONTH"), v.literal("LAST_7"), v.literal("LAST_30"), v.literal("LAST_90"), v.literal("BEFORE_7"), v.literal("BEFORE_30"), v.literal("BEFORE_90"));
+const spanValidator = v.union(v.literal("MONTH"), v.literal("PERIOD"), v.literal("PERIOD_BEFORE"));
 
 /**
- * After a day is kept: its month, the three periods of each kind and the
- * three before them, and what is past keeping, each its own step so none
- * reads more than it needs.
+ * After a day is kept: its month of each kind, the seven calendar periods of
+ * each kind and what each is set against, and what is past keeping, each its
+ * own step so none reads more than it needs. A period Clarity has sent none of
+ * yet — This week on a Monday — is cleared, so its screens say so.
  */
 export const rebuildFigures = internalMutation({
   args: { holdId: v.id("companyWebsites"), day: v.string() },
@@ -412,14 +415,21 @@ export const rebuildFigures = internalMutation({
     const newest = connection?.newestDay;
     if (!newest) return null;
     const month = args.day.slice(0, 7);
-    await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId: args.holdId, span: "MONTH", key: month, from: `${month}-01`, to: `${month}-31` });
-    for (const [span, length, before] of PERIODS) {
-      const from = shiftDay(newest, -(length - 1));
+    // Sources and browsers keep months too, so a year's are read from them once their days are past keeping.
+    for (const kind of [undefined, ...SPLIT_KINDS]) {
+      await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId: args.holdId, span: "MONTH", ...(kind ? { kind } : {}), key: month, from: `${month}-01`, to: `${month}-31` });
+    }
+    const today = ukDay();
+    for (const period of CALENDAR_PERIODS) {
+      const span = periodSpan(period, today, newest);
+      // None of it sent yet: an empty span clears what was kept for it.
+      const days = span ?? { from: shiftDay(newest, 1), to: newest };
       for (const kind of [undefined, ...SPLIT_KINDS]) {
-        await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId: args.holdId, span, ...(kind ? { kind } : {}), key: newest, from, to: newest });
+        await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId: args.holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: period, from: days.from, to: days.to });
       }
       // The comparisons read the period's own figures only: no sources or browsers before.
-      await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId: args.holdId, span: before, key: newest, from: shiftDay(from, -length), to: shiftDay(from, -1) });
+      const before = span ? spanBefore(period, span) : days;
+      await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId: args.holdId, span: "PERIOD_BEFORE", key: period, from: before.from, to: before.to });
     }
     await ctx.scheduler.runAfter(0, internal.clarity.tidyFigures, { holdId: args.holdId });
     return null;
@@ -427,13 +437,44 @@ export const rebuildFigures = internalMutation({
 });
 
 /**
+ * The records a period's span is added up from: each day held, and — for a
+ * whole month whose days are past keeping (180 days, sources and browsers 90)
+ * — its month instead. A month the span cuts whose days are gone is left out,
+ * so the span counts fewer days than it covers and its comparison is not shown
+ * (`readBefore`: like is set against like).
+ */
+async function spanRecords(ctx: Reader, holdId: Id<"companyWebsites">, kind: ClarityKind, from: string, to: string, newest: string): Promise<Array<Doc<"clarityFigures">>> {
+  const floor = shiftDay(newest, -((kind ? CLARITY_SPLIT_DAYS_KEPT : CLARITY_DAYS_KEPT) - 1));
+  const out: Array<Doc<"clarityFigures">> = [];
+  for (let first = `${from.slice(0, 7)}-01`; first <= to; first = shiftMonths(first, 1)) {
+    const last = shiftDay(shiftMonths(first, 1), -1);
+    if (first < floor && from <= first && to >= last) {
+      const month = await recordsOf(ctx, holdId, "MONTH", kind, first.slice(0, 7));
+      if (month.length > 0) {
+        out.push(...month);
+        continue;
+      }
+    }
+    const a = from > first ? from : first;
+    const b = to < last ? to : last;
+    out.push(...await ctx.db.query("clarityFigures")
+      .withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "DAY").eq("kind", kind).gte("key", a).lte("key", b))
+      .take(32 * 8));
+  }
+  return out;
+}
+
+/**
  * Days' records added up into one span: every page on every device (and
  * source or browser), every device across the website, and the website a day
  * on each device.
  */
-export function addUpDays(days: ReadonlyArray<Doc<"clarityFigures">>): { pages: ClarityTotalsRow[]; site: ClarityTotalsRow[]; daily: ClarityDayRow[]; recorded: number; pageDays: string[]; cutDays: number } {
+export function addUpDays(days: ReadonlyArray<Doc<"clarityFigures">>): { pages: ClarityTotalsRow[]; site: ClarityTotalsRow[]; daily: ClarityDayRow[]; recorded: number; pageDays: number; pagesFrom: string | null; cutDays: number } {
   const pages = new Map<string, ClarityTotalsRow>();
   const withPages = new Set<string>();
+  // A month's record stands in for its days (`spanRecords`): its days with pages, and the first, as it kept them.
+  let monthPageDays = 0;
+  let monthPagesFrom: string | null = null;
   const site = new Map<string, ClarityTotalsRow>();
   const daily: ClarityDayRow[] = [];
   const into = (map: Map<string, ClarityTotalsRow>, row: ClarityTotalsRow) => {
@@ -444,22 +485,32 @@ export function addUpDays(days: ReadonlyArray<Doc<"clarityFigures">>): { pages: 
   };
   // A day's parts: its website's figures in the first, its pages in the rest (or all in one, kept before 2026-10-16).
   for (const part of [...days].sort((a, b) => a.key.localeCompare(b.key) || a.part - b.part)) {
+    const month = part.span === "MONTH";
     for (const row of unpackTotals(part.pages)) {
       into(pages, row);
-      withPages.add(part.key);
+      if (!month) withPages.add(part.key);
     }
     if (part.part !== 0) continue;
     const devices = unpackTotals(part.site);
     for (const row of devices) into(site, row);
+    if (month) {
+      daily.push(...(part.daily ? unpackDailyRows(part.daily) : []));
+      monthPageDays += part.pageDays ?? part.days;
+      const from = part.pagesFrom ?? part.from;
+      if (monthPagesFrom === null || from < monthPagesFrom) monthPagesFrom = from;
+      continue;
+    }
     for (const [device, totals] of addUpBy(devices, (row) => row.device)) daily.push({ day: part.key, device, totals });
   }
+  const firstDay = [...withPages].sort()[0] ?? null;
   return {
     pages: [...pages.values()].sort((a, b) => b.visits - a.visits),
     site: [...site.values()].sort((a, b) => b.visits - a.visits),
-    daily,
+    daily: daily.sort((a, b) => a.day.localeCompare(b.day)),
     recorded: days.reduce((sum, part) => sum + (part.part === 0 ? part.days : 0), 0),
-    pageDays: [...withPages].sort(),
-    cutDays: days.filter((part) => part.part === 0 && part.cut).length,
+    pageDays: withPages.size + monthPageDays,
+    pagesFrom: monthPagesFrom !== null && (firstDay === null || monthPagesFrom < firstDay) ? monthPagesFrom : firstDay,
+    cutDays: days.reduce((sum, part) => sum + (part.part !== 0 ? 0 : part.span === "MONTH" ? part.cutDays ?? 0 : part.cut ? 1 : 0), 0),
   };
 }
 
@@ -468,25 +519,29 @@ export const buildSpan = internalMutation({
   args: { holdId: v.id("companyWebsites"), span: spanValidator, kind: v.optional(clarityKindValidator), key: v.string(), from: v.string(), to: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const old = args.span === "MONTH" ? await recordsOf(ctx, args.holdId, "MONTH", args.kind, args.key) : await recordsOf(ctx, args.holdId, args.span, args.kind);
+    const old = await recordsOf(ctx, args.holdId, args.span, args.kind, args.key);
+    const connection = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    const newest = connection?.newestDay;
     if (args.span === "MONTH" && old.length > 0) {
       // A month whose first days are past keeping day by day is left as it was worked out, never redone from what is left of it.
-      const connection = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
-      if (connection?.newestDay && args.from < shiftDay(connection.newestDay, -(CLARITY_DAYS_KEPT - 1))) return null;
+      if (newest && args.from < shiftDay(newest, -((args.kind ? CLARITY_SPLIT_DAYS_KEPT : CLARITY_DAYS_KEPT) - 1))) return null;
     }
-    // Each day's parts: a few each, at most Clarity's 1,000 rows a day between them.
-    const days = await ctx.db.query("clarityFigures")
-      .withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("span", "DAY").eq("kind", args.kind).gte("key", args.from).lte("key", args.to))
-      .take((CLARITY_DAYS_KEPT + 1) * 8);
+    // A month from its days; a period from its days held and the months whose days are past keeping. Each day's parts: a few each, at most Clarity's 1,000 rows a day between them.
+    const days = args.span === "MONTH" || !newest
+      ? await ctx.db.query("clarityFigures")
+        .withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("span", "DAY").eq("kind", args.kind).gte("key", args.from).lte("key", args.to))
+        .take(32 * 8)
+      : await spanRecords(ctx, args.holdId, args.kind, args.from, args.to, newest);
     for (const record of old) await ctx.db.delete(record._id);
     if (days.length === 0) return null;
     const summed = addUpDays(days);
     const builtAt = Date.now();
-    const from = days.reduce((first, day) => (day.key < first ? day.key : first), days[0].key);
-    const to = days.reduce((last, day) => (day.key > last ? day.key : last), days[0].key);
+    // A month's record covers its own days: its first and last held, not its key.
+    const from = days.reduce((first, day) => (day.from < first ? day.from : first), days[0].from);
+    const to = days.reduce((last, day) => (day.to > last ? day.to : last), days[0].to);
     const common = { companyWebsiteId: args.holdId, span: args.span, ...(args.kind ? { kind: args.kind } : {}), key: args.key, from, to, days: summed.recorded, builtAt };
     // Said only where fewer days hold pages than hold figures.
-    const pagesHeld = summed.pageDays.length < summed.recorded ? { pageDays: summed.pageDays.length, ...(summed.pageDays[0] ? { pagesFrom: summed.pageDays[0] } : {}) } : {};
+    const pagesHeld = summed.pageDays < summed.recorded ? { pageDays: summed.pageDays, ...(summed.pagesFrom ? { pagesFrom: summed.pagesFrom } : {}) } : {};
     // The website's figures and its days on their own, so Overview and Insights read a few kilobytes however many pages there are.
     await ctx.db.insert("clarityFigures", { ...common, ...pagesHeld, ...(summed.cutDays > 0 ? { cutDays: summed.cutDays } : {}), part: 0, pages: packTotals([]), site: packTotals(summed.site), ...(args.kind ? {} : { daily: packDaily(summed.daily) }) });
     for (const [at, part] of pageParts(summed.pages, CLARITY_PART_ROWS).entries()) {
@@ -515,8 +570,10 @@ export const tidyFigures = internalMutation({
     for (const day of days) await ctx.db.delete(day._id);
     const [year, monthNumber] = newest.slice(0, 7).split("-").map(Number);
     const firstKept = new Date(Date.UTC(year, monthNumber - 1 - (CLARITY_MONTHS_KEPT - 1), 1)).toISOString().slice(0, 7);
-    const months = await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("span", "MONTH").eq("kind", undefined).lt("key", firstKept)).take(10);
-    for (const month of months) await ctx.db.delete(month._id);
+    for (const kind of [undefined, ...SPLIT_KINDS]) {
+      const months = await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("span", "MONTH").eq("kind", kind).lt("key", firstKept)).take(10);
+      for (const month of months) await ctx.db.delete(month._id);
+    }
     const recordings = await ctx.db.query("clarityRecordings").withIndex("by_hold_day", (q) => q.eq("companyWebsiteId", args.holdId).lt("day", shiftDay(newest, -(CLARITY_RECORDING_DAYS_KEPT - 1)))).take(50);
     for (const recording of recordings) await ctx.db.delete(recording._id);
     return null;

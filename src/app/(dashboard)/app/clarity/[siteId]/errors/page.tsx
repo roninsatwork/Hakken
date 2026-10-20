@@ -25,7 +25,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
-import { Judged, Moved, wayOf, WatchLink, mono, percent, quiet, tooFew, useBeforeWords, useCountedWords, useDeviceName, usePeriodWords } from "../../_components/ClarityParts";
+import { Judged, Moved, wayOf, WatchLink, mono, percent, quiet, tooFew, useBeforeWords, useCountedWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
 import { useClarityArgs, useClarityPageHref, useClarityStatus } from "../../_components/useClarity";
 
 type ErrorRow = FunctionReturnType<typeof api.clarityScreens.clarityErrors>["pages"][number];
@@ -50,6 +50,7 @@ const nameOf = (row: ErrorRow) => row.line.page;
  */
 export default function ClarityErrorsPage() {
   const t = useTranslations("clarity.errors");
+  const tp = useTranslations("common.periods");
   const tc = useTranslations("clarity.common");
   const router = useRouter();
   const status = useClarityStatus();
@@ -59,6 +60,7 @@ export default function ClarityErrorsPage() {
   const periodWords = usePeriodWords();
   const countedWords = useCountedWords();
   const beforeWords = useBeforeWords();
+  const waitingWords = useWaitingWords();
   const data = useQuery(api.clarityScreens.clarityErrors, args);
   const [search, setSearch, settled] = useSiteSearch();
   const [browser, setBrowser] = useSiteParam<string>("browser", "");
@@ -70,10 +72,11 @@ export default function ClarityErrorsPage() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
 
   const { now, before, period } = data;
-  const days = args.days;
+  const chosen = args.period;
   // Errors are counted from the first day they were read: the days kept before hold none.
-  const span = countedWords(period, days, data.byDay);
-  const against = beforeWords(period, days);
+  const span = countedWords(period, chosen, data.byDay);
+  const against = beforeWords(period, chosen);
+  const waiting = waitingWords(period, chosen);
   const where = (mostly: ErrorRow["mostly"]) => (mostly ? tc("browserOn", { browser: mostly.browser, device: deviceName(mostly.device).toLowerCase() }) : null);
   const errorDays = data.byDay.filter((day) => (day.errors ?? 0) > 0).length;
   const top = data.pages[0];
@@ -82,7 +85,7 @@ export default function ClarityErrorsPage() {
   const says = now.errors + now.errorClicks === 0
     ? [t("sees.none", { span })]
     : [
-      t("sees.count", { count: now.errors, span, change: before ? t("sees.change", { count: Math.abs(now.errors - before.errors), way: now.errors >= before.errors ? "more" : "fewer", days }) : "" }),
+      t("sees.count", { count: now.errors, span, change: before ? t("sees.change", { count: Math.abs(now.errors - before.errors), way: now.errors >= before.errors ? "more" : "fewer", than: tp(`than.${chosen}`) }) : "" }),
       ...(top ? [t(top.mostly ? "sees.topOn" : "sees.top", { page: top.line.page, count: top.line.now.errors, where: where(top.mostly) ?? "", clicks: top.line.now.errorClicks })] : []),
       ...(worstBrowser ? [t("sees.browser", { browser: worstBrowser.name, errors: worstBrowser.now.errors, visits: worstBrowser.now.visits })] : []),
     ];
@@ -101,6 +104,7 @@ export default function ClarityErrorsPage() {
   return (
     <>
       {header}
+      {waiting ? <Notice>{waiting}</Notice> : null}
       {period.countedFrom ? <Notice>{tc("countedFrom", { day: formatDay(period.countedFrom) })}</Notice> : null}
       <HakkenSees says={says} steps={steps} />
       <FigureRow columns={4}>
@@ -123,7 +127,7 @@ export default function ClarityErrorsPage() {
 
       <ChartCard
         title={t("browserChart.title")}
-        hint={data.browsers ? t("browserChart.hint", { span: periodWords({ ...period, now: period.now ? { ...period.now, days: data.browsers.days } : null }, days) }) : t("browserChart.hintPlain")}
+        hint={data.browsers ? t("browserChart.hint", { span: periodWords({ ...period, now: period.now ? { ...period.now, days: data.browsers.days } : null }, chosen) }) : t("browserChart.hintPlain")}
         exportName={`${status?.host ?? "site"}-clarity-errors-by-browser`}
         csv={() => toCsv([tc("columns.browser"), tc("columns.visits"), t("figures.visits"), tc("columns.ofItsVisits")], browserRows.map((row) => [row.label, row.visits, row.errors, row.share]))}
         enoughData={browserRows.length > 0}

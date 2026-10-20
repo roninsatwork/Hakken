@@ -131,7 +131,7 @@ describe("the period read", () => {
       // a day by people for a week — bots counted apart — against Analytics' 15.
       const daily = ["14", "15", "16", "17", "18", "19", "20", "21"].map((day) => ({ day: `2026-09-${day}`, totals: { ...emptyTotals(), visits: day === "14" ? 0 : 20, bots: 3 } }));
       await ctx.db.insert("clarityFigures", {
-        companyWebsiteId: holdId, span: "LAST_90", key: "2026-09-21", part: 0, from: "2026-09-14", to: "2026-09-21", days: 8,
+        companyWebsiteId: holdId, span: "PERIOD", key: "lastMonth", part: 0, from: "2026-09-14", to: "2026-09-21", days: 8,
         pages: packTotals([]), site: packTotals([{ ...emptyTotals(), page: null, device: "PC", visits: 140, bots: 24 }]), daily: packDaily(daily), builtAt: 1,
       });
       return holdId;

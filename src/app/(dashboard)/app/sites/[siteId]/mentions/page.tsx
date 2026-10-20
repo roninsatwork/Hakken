@@ -100,7 +100,7 @@ export default function WebMentionsPage() {
 
       {data ? (
         <FigureRow>
-          <Figure label={t("figures.new")} emphasis value={last.length} detail={<><Change by={last.length - before.length} arrow={last.length >= before.length ? "up" : "down"} /> <span className="text-secondary">{t("figures.monthBefore", { before: tp(`before.${range.period}`) })}</span></>} />
+          <Figure label={t("figures.new")} emphasis value={last.length} detail={<><Change by={last.length - before.length} arrow={last.length >= before.length ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${range.period}`)}</span></>} />
           <Figure label={t("figures.well")} value={last.length > 0 ? `${Math.round((well / last.length) * 100)}%` : "–"} detail={<span className="text-secondary">{t("figures.wellDetail", { count: well, of: last.length })}</span>} />
           <Figure label={t("figures.badly")} value={badly.length} detail={<span className="text-secondary">{badlyKinds.length === 1 ? t("figures.badlyOn", { kind: t(`kindsMany.${badlyKinds[0]}`) }) : tp(range.period)}</span>} />
           <Figure label={t("figures.noLink")} value={last.filter((row) => row.linked === 0).length} detail={<span className="text-secondary">{t("figures.noLinkDetail")}</span>} />

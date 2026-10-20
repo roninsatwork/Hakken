@@ -14,14 +14,19 @@ export const clarityStatusValidator = v.union(v.literal("CONNECTED"), v.literal(
 
 /**
  * What a kept record of figures covers (docs/plans/active/agents-and-clarity-plan.md,
- * Part 0, and "Finishing Parts 3 and 4"): a day, kept 180 days so the 90 days
- * can be set against the 90 before; a month, kept 13 months, so a month can be
- * set against the same month a year before; the three ready-made periods the
- * screens read, and the three before them, worked out each morning.
+ * Part 0, and "Finishing Parts 3 and 4"): a day, kept 180 days; a month, kept
+ * 13 months, so a month can be set against the same month a year before and a
+ * year read once its days are past keeping; the seven calendar periods the
+ * screens read (`PERIOD`, keyed by the period) and what each is set against
+ * (`PERIOD_BEFORE`), worked out each morning (calendar-periods-plan.md, phase
+ * 3). The 7, 30 and 90 days of before (`LAST_*`, `BEFORE_*`) are no longer
+ * built; those kept wait to be cleared on Anthony's word, and then leave here.
  */
 export const claritySpanValidator = v.union(
   v.literal("DAY"),
   v.literal("MONTH"),
+  v.literal("PERIOD"),
+  v.literal("PERIOD_BEFORE"),
   v.literal("LAST_7"),
   v.literal("LAST_30"),
   v.literal("LAST_90"),

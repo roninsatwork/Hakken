@@ -108,6 +108,24 @@
         "thisQuarter": "the same days last quarter",
         "lastQuarter": "the quarter before",
         "thisYear": "the same days last year"
+      },
+      "versus": {
+        "thisWeek": "on the same days last week",
+        "lastWeek": "on the week before",
+        "thisMonth": "on the same days last month",
+        "lastMonth": "on the month before",
+        "thisQuarter": "on the same days last quarter",
+        "lastQuarter": "on the quarter before",
+        "thisYear": "on the same days last year"
+      },
+      "than": {
+        "thisWeek": "than the same days last week",
+        "lastWeek": "than the week before",
+        "thisMonth": "than the same days last month",
+        "lastMonth": "than the month before",
+        "thisQuarter": "than the same days last quarter",
+        "lastQuarter": "than the quarter before",
+        "thisYear": "than the same days last year"
       }
     }
   },
@@ -13133,7 +13151,6 @@
           "rating": "Rating",
           "ratingGoogle": "{offices, plural, =1 {Google} =2 {Google, both offices} other {Google, # offices}}",
           "new": "New reviews",
-          "newBefore": "on {before}",
           "waiting": "Not answered",
           "noneWaiting": "Every review has an answer",
           "oldestWaiting": "The oldest has waited {days, plural, =1 {# day} other {# days}}",
@@ -13634,7 +13651,6 @@
       "and": " and ",
       "figures": {
         "new": "New mentions",
-        "monthBefore": "on {before}",
         "well": "Speak well of you",
         "wellDetail": "{count} of the {of}",
         "badly": "Speak badly of you",
@@ -21438,7 +21454,7 @@
       "columns": {
         "website": "Website",
         "status": "Clarity",
-        "sessions": "Visits, 30 days",
+        "sessions": "Visits, last month",
         "scroll": "Average scroll depth",
         "updated": "Read"
       }
@@ -21453,8 +21469,6 @@
       "switch": "Website",
       "device": "Device",
       "everyDevice": "Every device",
-      "days": "Days",
-      "lastDays": "Last {days} days",
       "figuresTo": "Clarity's figures to {day}, read each morning."
     },
     "menu": {
@@ -21484,17 +21498,14 @@
       "watch": "Watch",
       "watchIt": "Watch it",
       "openHeatmap": "Open the heatmap",
-      "lastDays": "the last {days} days",
       "soFar": "{count, plural, =0 {no days yet} one {# day so far} other {# days so far}}, since {since}",
-      "onBefore": "on the {days} days before",
       "noBefore": "nothing to compare with yet: Clarity's figures start on {since}",
-      "noneIn": "None in {span}",
+      "noneIn": "None, {span}",
       "percentOn": "{way, select, up {▲} down {▼} other {=}} {value}% {against}",
       "pointsOn": "{way, select, up {▲} down {▼} other {=}} {value} points {against}",
       "secondsOn": "{way, select, up {▲} down {▼} other {=}} {value}s {against}",
       "visitsOn": "{way, select, up {▲} down {▼} other {=}} {value, plural, one {# visit} other {# visits}} {against}",
       "plainOn": "{way, select, up {▲} down {▼} other {=}} {value} {against}",
-      "theDaysBefore": "The {days} days before",
       "browserOn": "{browser} on {device}",
       "everyDevice": "every device",
       "everywhere": "every browser",
@@ -21545,10 +21556,10 @@
       "notConnectedTitle": "Clarity isn't connected yet",
       "notConnectedDescription": "Connect this website's Microsoft Clarity project, and its figures are read each morning and kept.",
       "connect": "Connect Clarity",
-      "soFarNotice": "Clarity was connected on {since}, and it hands over only its last three days, so these figures cover {held, plural, one {# day} other {# days}} so far. The {days} days fill in a morning at a time.",
+      "soFarNotice": "Clarity was connected on {since} and hands over only its last three days, so these figures cover {held, plural, one {# day} other {# days}}: the days before it can't be fetched.",
       "sees": {
         "worst": "{page} loses its visitors soonest: they scroll {scroll} of the way down it on average{change}{back}.",
-        "change": ", {points} points {way, select, less {less} other {more}} than the {days} days before",
+        "change": ", {points} points {way, select, less {less} other {more}} {than}",
         "back": ", and {share} go straight back",
         "noneJudged": "No page has had 10 visits in {held, plural, one {this # day} other {these # days}} yet, so none can be judged on its own. Across the website, visitors scroll {scroll} of the way down a page on average.",
         "phonesLess": "Phone visitors scroll less: {phones} of the way down a page, against {computers} on a computer.",
@@ -21585,7 +21596,7 @@
       },
       "scrollChart": {
         "title": "How far down visitors scroll, day by day",
-        "hint": "The share of each page scrolled, on average: {span} against the {days} days before.",
+        "hint": "The share of each page scrolled, on average: {span} against {before}.",
         "hintAlone": "The share of each page scrolled, on average, {span}.",
         "now": "Scrolled",
         "before": "Scrolled, the days before",
@@ -21594,7 +21605,7 @@
       "errorsPanel": {
         "title": "Errors visitors hit",
         "description": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error, on {pages, plural, one {# page} other {# pages}}, and {clicks, plural, one {# click} other {# clicks}} set one off.",
-        "none": "No visit hit a JavaScript error or a click that failed in {span}: good news.",
+        "none": "No visit hit a JavaScript error or a click that failed, {span}: good news.",
         "seeAll": "See errors",
         "empty": "No errors."
       },
@@ -21612,7 +21623,7 @@
       },
       "groupsChart": {
         "title": "How far down each kind of page is scrolled",
-        "hint": "Your page groups, on average: {span} against the {days} days before. Faint: too few visits to judge.",
+        "hint": "Your page groups, on average: {span} against {before}. Faint: too few visits to judge.",
         "hintAlone": "Your page groups, on average, {span}. Faint: too few visits to judge.",
         "empty": "No page groups yet."
       },
@@ -21681,7 +21692,7 @@
       "sees": {
         "none": "No visits to this page {span}.",
         "scroll": "Visitors scroll {scroll} of the way down {page} on average{change}. {group}The whole website: {website}.",
-        "change": ", against {before} the days before",
+        "change": ", against {before} {period, select, thisWeek {the same days last week} lastWeek {the week before} thisMonth {the same days last month} lastMonth {the month before} thisQuarter {the same days last quarter} lastQuarter {the quarter before} other {the same days last year}}",
         "group": "Your other {group} pages are scrolled {scroll} of the way. ",
         "few": "Only {count, plural, one {# visit} other {# visits}} so far: too few to judge the page on its own yet.",
         "phonesBack": "{count} of its {visits} phone visits went straight back within seconds.",
@@ -21744,7 +21755,7 @@
       "sees": {
         "none": "No visit hit a JavaScript error or a click that failed, {span}: good news.",
         "count": "{count, plural, one {# visit} other {# visits}} hit a JavaScript error, {span}{change}.",
-        "change": ", {count} {way, select, more {more} other {fewer}} than the {days} days before",
+        "change": ", {count} {way, select, more {more} other {fewer}} {than}",
         "top": "{count, plural, one {# was} other {# were}} on {page}, where {clicks, plural, =0 {no click failed} one {# click failed} other {# clicks failed}}.",
         "topOn": "{count, plural, one {# was} other {# were}} on {page}, mostly in {where}, where {clicks, plural, =0 {no click failed} one {# click failed} other {# clicks failed}}.",
         "browser": "{browser} has the most errors for its visits: {errors} of its {visits}."
@@ -21786,7 +21797,8 @@
       "kindCount": "{kind} ({count})",
       "noMatch": "No recording matches.",
       "empty": "None picked yet: a few are picked each morning.",
-      "tableNote": "Picked over {span} · Clarity keeps a recording 30 days",
+      "tableNote": "Every recording Clarity still keeps · it keeps one 30 days",
+      "span": "the last 30 days",
       "kinds": {
         "ERRORS": "JavaScript errors",
         "ERROR_CLICKS": "Clicks that failed",

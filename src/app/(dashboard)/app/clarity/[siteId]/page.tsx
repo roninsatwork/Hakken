@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { LayoutDashboard, MousePointerClick } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { shiftDay } from "@/convex/utils/insightFacts";
+import { sameDayBefore } from "@/convex/utils/calendarPeriods";
 import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
@@ -37,12 +37,14 @@ import {
   percent,
   quiet,
   tooFew,
+  useBeforeName,
   useBeforeWords,
   useClarityLinks,
   useDeviceName,
   useCountedWords,
   usePeriodWords,
   useSourceName,
+  useWaitingWords,
 } from "../_components/ClarityParts";
 import { RecordingsList } from "../_components/RecordingsList";
 import { useClarityArgs, useClarityPageHref, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
@@ -58,6 +60,7 @@ import { useClarityArgs, useClarityPageHref, useClarityQuery, useClaritySiteId, 
  */
 export default function ClarityOverviewPage() {
   const t = useTranslations("clarity.overview");
+  const tp = useTranslations("common.periods");
   const tc = useTranslations("clarity.common");
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
@@ -70,6 +73,8 @@ export default function ClarityOverviewPage() {
   const periodWords = usePeriodWords();
   const countedWords = useCountedWords();
   const beforeWords = useBeforeWords();
+  const beforeName = useBeforeName();
+  const waitingWords = useWaitingWords();
   const kinds = usePageKinds(siteId);
   const { platformName } = useSystemSettings();
   const data = useQuery(api.clarityScreens.clarityOverview, args);
@@ -80,11 +85,13 @@ export default function ClarityOverviewPage() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
 
   const { now, before, period } = data;
-  const days = args.days;
+  const chosen = args.period;
   const held = period.now?.days ?? 0;
-  const span = periodWords(period, days);
-  const errorSpan = countedWords(period, days, data.byDay);
-  const against = beforeWords(period, days);
+  const span = periodWords(period, chosen);
+  const lineName = `${span.charAt(0).toUpperCase()}${span.slice(1)}`;
+  const errorSpan = countedWords(period, chosen, data.byDay);
+  const against = beforeWords(period, chosen);
+  const waiting = waitingWords(period, chosen);
   const errorsHref = `/app/clarity/${siteId}/errors${query}`;
   const recordingsHref = `/app/clarity/${siteId}/recordings${query}`;
   const pagesHref = `/app/clarity/${siteId}/pages${query}`;
@@ -102,7 +109,7 @@ export default function ClarityOverviewPage() {
       ? t("sees.worst", {
         page: worst.page,
         scroll: percent(worst.now.scroll),
-        change: worst.scrollBefore !== null && worst.now.scroll !== null ? t("sees.change", { points: Math.abs(worst.now.scroll - worst.scrollBefore).toFixed(1), way: worst.now.scroll < worst.scrollBefore ? "less" : "more", days }) : "",
+        change: worst.scrollBefore !== null && worst.now.scroll !== null ? t("sees.change", { points: Math.abs(worst.now.scroll - worst.scrollBefore).toFixed(1), way: worst.now.scroll < worst.scrollBefore ? "less" : "more", than: tp(`than.${chosen}`) }) : "",
         back: worst.now.quickBack > 0 ? t("sees.back", { share: percent(worst.now.shares.quickBack) }) : "",
       })
       : t("sees.noneJudged", { held, scroll: percent(now.scroll) }),
@@ -120,17 +127,18 @@ export default function ClarityOverviewPage() {
 
   // How far down visitors scroll, day by day: each day against the same day of the period before.
   const beforeDays = new Map(data.beforeByDay.map((day) => [day.day, day.scroll]));
-  const scrollDays = data.byDay.map((day) => datedRow({ day: day.day }, { now: day.scroll, before: beforeDays.get(shiftDay(day.day, -days)) ?? null }));
+  const scrollDays = data.byDay.map((day) => datedRow({ day: day.day }, { now: day.scroll, before: beforeDays.get(sameDayBefore(chosen, day.day)) ?? null }));
   const hasBefore = data.beforeByDay.length > 0;
   const none = <StatusLabel tone="success">{tc("noneIn", { span })}</StatusLabel>;
 
   return (
     <>
       {header}
-      {held < days || period.countedFrom || period.pages || period.cutDays > 0 ? (
+      {waiting || held < period.expected || period.countedFrom || period.pages || period.cutDays > 0 ? (
         <Notice>
           {[
-            held < days ? t("soFarNotice", { held, days, since: formatDay(period.firstDay) }) : null,
+            waiting,
+            !waiting && held < period.expected ? t("soFarNotice", { held, since: formatDay(period.firstDay) }) : null,
             period.pages?.from ? tc("pagesFrom", { day: formatDay(period.pages.from) }) : null,
             period.countedFrom ? tc("countedFrom", { day: formatDay(period.countedFrom) }) : null,
             period.cutDays > 0 ? tc("cut", { count: period.cutDays }) : null,
@@ -151,9 +159,9 @@ export default function ClarityOverviewPage() {
 
       <ChartCard
         title={t("scrollChart.title")}
-        hint={hasBefore ? t("scrollChart.hint", { span, days }) : t("scrollChart.hintAlone", { span })}
+        hint={hasBefore ? t("scrollChart.hint", { span, before: beforeName(chosen) }) : t("scrollChart.hintAlone", { span })}
         exportName={`${status?.host ?? "site"}-clarity-scrolled`}
-        csv={() => toCsv(["day", t("scrollChart.now"), t("scrollChart.before")], data.byDay.map((day) => [day.day, day.scroll, beforeDays.get(shiftDay(day.day, -days)) ?? null]))}
+        csv={() => toCsv(["day", t("scrollChart.now"), t("scrollChart.before")], data.byDay.map((day) => [day.day, day.scroll, beforeDays.get(sameDayBefore(chosen, day.day)) ?? null]))}
         enoughData={scrollDays.filter((row) => row.now !== null).length > 1}
         emptyText={t("scrollChart.empty")}
       >
@@ -162,8 +170,8 @@ export default function ClarityOverviewPage() {
           sharedScale
           formatScale={(value) => `${value}%`}
           series={[
-            { key: "now", name: span, colour: CHART_SERIES_ORANGE },
-            ...(hasBefore ? [{ key: "before", name: tc("theDaysBefore", { days }), colour: CHART_SERIES_SLATE, dashed: true }] : []),
+            { key: "now", name: lineName, colour: CHART_SERIES_ORANGE },
+            ...(hasBefore ? [{ key: "before", name: beforeName(chosen, true), colour: CHART_SERIES_SLATE, dashed: true }] : []),
           ]}
         />
       </ChartCard>
@@ -206,7 +214,7 @@ export default function ClarityOverviewPage() {
 
       <ChartCard
         title={t("groupsChart.title")}
-        hint={hasBefore ? t("groupsChart.hint", { span, days }) : t("groupsChart.hintAlone", { span })}
+        hint={hasBefore ? t("groupsChart.hint", { span, before: beforeName(chosen) }) : t("groupsChart.hintAlone", { span })}
         exportName={`${status?.host ?? "site"}-clarity-scrolled-by-group`}
         csv={() => toCsv([tc("columns.group"), tc("columns.visits"), t("scrollChart.now"), t("scrollChart.before")], data.groups.map((group) => [groupName(group.kind, group.name), group.now.visits, group.now.scroll, group.scrollBefore]))}
         enoughData={data.groups.length > 0}
@@ -216,8 +224,8 @@ export default function ClarityOverviewPage() {
           horizontal
           data={data.groups.map((group) => ({ label: groupName(group.kind, group.name), now: group.now.scroll ?? 0, before: group.scrollBefore ?? 0, visits: group.now.visits }))}
           series={[
-            { key: "now", name: span, colour: CHART_SERIES_ORANGE },
-            ...(hasBefore ? [{ key: "before", name: tc("theDaysBefore", { days }), colour: CHART_SERIES_SLATE }] : []),
+            { key: "now", name: lineName, colour: CHART_SERIES_ORANGE },
+            ...(hasBefore ? [{ key: "before", name: beforeName(chosen, true), colour: CHART_SERIES_SLATE }] : []),
           ]}
           labels={(value) => `${value.toFixed(1)}%`}
           formatScale={(value) => `${value}%`}
@@ -243,7 +251,7 @@ export default function ClarityOverviewPage() {
         />
       </AnalyticsPanel>
 
-      <AnalyticsPanel title={t("sourcesPanel.title")} description={data.sources ? t("sourcesPanel.description", { span: periodWords({ ...period, now: period.now ? { ...period.now, days: data.sources.days } : null }, days) }) : t("sourcesPanel.coming")}>
+      <AnalyticsPanel title={t("sourcesPanel.title")} description={data.sources ? t("sourcesPanel.description", { span: periodWords({ ...period, now: period.now ? { ...period.now, days: data.sources.days } : null }, chosen) }) : t("sourcesPanel.coming")}>
         <CompactList
           rows={data.sources?.rows ?? []}
           rowKey={(row) => row.name}

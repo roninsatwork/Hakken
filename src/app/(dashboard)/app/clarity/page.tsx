@@ -32,7 +32,7 @@ const TONE: Record<string, "success" | "warning" | "neutral"> = { CONNECTED: "su
 /**
  * Microsoft Clarity's section (docs/plans/active/insights-analyst-plan.md
  * I27, phase 15): the company's own websites, each with its Clarity
- * connection and its last 30 days. Opening one gives its Overview, Pages,
+ * connection and its last month. Opening one gives its Overview, Pages,
  * Devices and Connection.
  */
 export default function ClarityPage() {

@@ -11,6 +11,7 @@ import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatDateTime } from "@/src/lib/dates";
 import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { useClarityStatus } from "./useClarity";
+import { unitOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
 
 /**
  * The small parts every Clarity screen shares (docs/plans/active/agents-and-clarity-plan.md,
@@ -147,7 +148,12 @@ export function SeeAll({ href, children }: { href: string; children: ReactNode }
   );
 }
 
-/** The days a screen covers, said honestly (CF3): "the last 30 days" only when 30 are held; "4 days so far, since 12 Oct" until then. */
+/**
+ * The days a screen covers, said honestly (CF3): "last month" only when its
+ * days are all held (`expected`, to Clarity's newest); "4 days so far, since
+ * 16 Oct" until then; and Clarity's newest day while it has sent none of the
+ * period (`waiting`, calendar-periods-plan.md rule 9).
+ */
 export type ClarityPeriod = {
   now: { from: string; to: string; days: number } | null;
   before: { from: string; to: string; days: number } | null;
@@ -155,20 +161,39 @@ export type ClarityPeriod = {
   countedFrom?: string | null;
   pages?: { days: number; from: string | null } | null;
   cutDays?: number;
+  expected: number;
+  waiting: boolean;
+  newest: string | null;
 };
 
 /** A moment as the section says it: the day and the time, once, without seconds (CF5). */
 export const formatWhen = (at: number) => formatDateTime(at, { options: { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" } });
 
-export function usePeriodWords(): (period: ClarityPeriod | undefined, days: number, of?: "pages") => string {
+export function usePeriodWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod, of?: "pages") => string {
   const t = useTranslations("clarity.common");
-  return (period, days, of) => {
+  const tp = useTranslations("common.periods");
+  return (period, chosen, of) => {
     // A page's own figures can start later than the website's (`period.pages`).
     const pages = of === "pages" ? period?.pages ?? null : null;
     const held = pages ? pages.days : period?.now?.days ?? 0;
-    if (held >= days) return t("lastDays", { days });
-    return t("soFar", { count: held, since: formatDay(pages?.from ?? period?.firstDay ?? period?.now?.from ?? null) });
+    if (period && held > 0 && held >= period.expected) return tp(`inline.${chosen}`);
+    return t("soFar", { count: held, since: formatDay(pages?.from ?? period?.now?.from ?? period?.firstDay ?? null) });
   };
+}
+
+/** What the chosen period is set against, in words (rule 4): "the month before", "the same days last month"; with a capital for a chart's line. */
+export function useBeforeName(): (chosen: CalendarPeriod, capital?: boolean) => string {
+  const tp = useTranslations("common.periods");
+  return (chosen, capital = false) => {
+    const words = tp(`before.${chosen}`);
+    return capital ? `${words.charAt(0).toUpperCase()}${words.slice(1)}` : words;
+  };
+}
+
+/** Clarity has sent none of the period yet (rule 9): one line, with its newest day, in place of empty figures. */
+export function useWaitingWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod) => string | null {
+  const tp = useTranslations("common.periods");
+  return (period, chosen) => (period?.waiting && period.newest ? tp("noDaysYet", { source: "Microsoft Clarity", unit: unitOf(chosen), day: formatDay(period.newest) }) : null);
 }
 
 /**
@@ -176,22 +201,23 @@ export function usePeriodWords(): (period: ClarityPeriod | undefined, days: numb
  * first of them were kept before errors were read (`countedFrom`) — the days
  * since, never "none in 4 days" of one.
  */
-export function useCountedWords(): (period: ClarityPeriod | undefined, days: number, byDay: ReadonlyArray<{ visits: number; errors: number | null }>) => string {
+export function useCountedWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod, byDay: ReadonlyArray<{ visits: number; errors: number | null }>) => string {
   const t = useTranslations("clarity.common");
   const periodWords = usePeriodWords();
-  return (period, days, byDay) => {
-    if (!period?.countedFrom) return periodWords(period, days);
+  return (period, chosen, byDay) => {
+    if (!period?.countedFrom) return periodWords(period, chosen);
     return t("soFar", { count: byDay.filter((day) => day.errors !== null && day.visits > 0).length, since: formatDay(period.countedFrom) });
   };
 }
 
 /**
- * A figure's comparison with the same days before it, in words, or why there
- * is none: Clarity was connected after those days began.
+ * A figure's comparison with what the period is set against, in words, or why
+ * there is none: Clarity was connected after those days began.
  */
-export function useBeforeWords(): (period: ClarityPeriod | undefined, days: number) => string {
+export function useBeforeWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod) => string {
   const t = useTranslations("clarity.common");
-  return (period, days) => (period?.before && period.before.days > 0 ? t("onBefore", { days }) : t("noBefore", { since: formatDay(period?.firstDay ?? null) }));
+  const tp = useTranslations("common.periods");
+  return (period, chosen) => (period?.before && period.before.days > 0 ? tp(`versus.${chosen}`) : t("noBefore", { since: formatDay(period?.firstDay ?? null) }));
 }
 
 /** A whole number's change against the days before, as a figure's line says it. */

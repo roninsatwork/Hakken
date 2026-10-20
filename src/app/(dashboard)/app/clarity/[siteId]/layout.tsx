@@ -13,15 +13,18 @@ import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
+import { useCalendarPeriod, useCalendarPeriodChoices } from "../../sites/_components/useCalendarPeriod";
 import { formatWhen, useDeviceName } from "../_components/ClarityParts";
-import { CLARITY_DAYS, CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
+import { CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
 
 /**
  * One website in Microsoft Clarity's section (docs/plans/active/agents-and-clarity-plan.md,
  * Part 4, CS2, drawn on "Hakken — Microsoft Clarity"): Google Analytics'
  * compact header — the website's name, the switch between the company's own
- * websites, every device or one, and the days — how fresh the figures are at
- * the end of the line under it, the menu, and the page.
+ * websites, every device or one, and the date menu's calendar period
+ * (calendar-periods-plan.md, phase 3) — how fresh the figures are at the end
+ * of the line under it, the menu, and the page. Recordings shows every one
+ * Clarity still keeps, so it draws no date menu (item 11.6).
  */
 export default function ClaritySiteLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("clarity");
@@ -31,7 +34,9 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const pathname = useClarityPath();
   const query = useClarityQuery();
   const deviceName = useDeviceName();
-  const [days, setDays] = useSiteParam<string>("days", "30", CLARITY_DAYS.map(String));
+  const tp = useTranslations("common.periods");
+  const [period, setPeriod] = useCalendarPeriod();
+  const periods = useCalendarPeriodChoices();
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...CLARITY_DEVICES]);
   if (status === undefined) return <><Header /><div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (status === null || !status.owned) return <><Header /><HakkenEmptyState icon={MousePointerClick} title={t("site.notFoundTitle")} description={t("site.notFoundDescription")} /></>;
@@ -67,9 +72,11 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
                     {CLARITY_DEVICES.map((value) => <option key={value} value={value}>{deviceName(value)}</option>)}
                   </Select>
                 )}
-                <Select aria-label={t("site.days")} value={days} onChange={setDays}>
-                  {CLARITY_DAYS.map((value) => <option key={value} value={String(value)}>{t("site.lastDays", { days: value })}</option>)}
-                </Select>
+                {current === "recordings" ? null : (
+                  <Select aria-label={tp("label")} value={period} onChange={(next) => setPeriod(next as typeof period)}>
+                    {periods.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+                  </Select>
+                )}
               </div>
             )
           }

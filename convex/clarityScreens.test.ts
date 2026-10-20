@@ -37,7 +37,7 @@ async function keep(t: Harness, holdId: Id<"companyWebsites">, day: string, rows
   await finishScheduled(t);
 }
 
-/** Two days in the last 30 to 30 Sept, and two in the 30 before; `earlier` leaves the second of those out. */
+/** Two days in last month (September, on the fixed 1 October), and two in the month before; `earlier` leaves the second of those out. */
 async function threeDays(t: Harness, holdId: Id<"companyWebsites">, earlier = 2) {
   for (const day of ["2026-08-20", "2026-08-21"].slice(0, earlier)) {
     await keep(t, holdId, day, {
@@ -61,7 +61,7 @@ describe("Microsoft Clarity's screens", () => {
   beforeEach(() => useFixedDay());
   afterEach(() => vi.useRealTimers());
 
-  test("Overview: the website's figures against the 30 days before, its pages, groups, devices, sources and errors, from the same totals", async () => {
+  test("Overview: the website's figures against the month before, its pages, groups, devices, sources and errors, from the same totals", async () => {
     const t = harness();
     const { userId, holdId } = await seed(t);
     await threeDays(t, holdId);
@@ -69,9 +69,9 @@ describe("Microsoft Clarity's screens", () => {
       await ctx.db.insert("clarityRecordings", { companyWebsiteId: holdId, day: "2026-09-29", kind: "LONGEST", link: "https://clarity.microsoft.com/player/p/u/1", startedAt: 2, activeSeconds: 300, totalSeconds: 400, pages: 2, clicks: 1, page: "/hub/prism/", visited: ["/hub/prism/"], referrer: "google.com", createdAt: 1 });
       await ctx.db.insert("clarityRecordings", { companyWebsiteId: holdId, day: "2026-09-29", kind: "ERRORS", link: "https://clarity.microsoft.com/player/p/u/2", startedAt: 1, activeSeconds: 30, totalSeconds: 40, pages: 1, clicks: 2, page: "/ai-agency/", visited: ["/ai-agency/"], referrer: null, createdAt: 1 });
     });
-    const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, days: 30 });
+    const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth" });
 
-    expect(overview.period).toEqual({ now: { from: "2026-09-29", to: "2026-09-30", days: 2 }, before: { from: "2026-08-20", to: "2026-08-21", days: 2 }, firstDay: "2026-08-20", countedFrom: null, pages: null, cutDays: 0 });
+    expect(overview.period).toEqual({ now: { from: "2026-09-29", to: "2026-09-30", days: 2 }, before: { from: "2026-08-20", to: "2026-08-21", days: 2 }, firstDay: "2026-08-20", countedFrom: null, pages: null, cutDays: 0, expected: 30, waiting: false, newest: "2026-09-30" });
     expect(overview.now).toMatchObject({ visits: 26, bots: 5, errors: 2, errorClicks: 1, quickBack: 3 });
     expect(overview.before).toMatchObject({ visits: 20, scroll: 30 });
     expect(overview.byDay.map((day) => [day.day, day.visits])).toEqual([["2026-09-29", 20], ["2026-09-30", 6]]);
@@ -91,7 +91,7 @@ describe("Microsoft Clarity's screens", () => {
     const t = harness();
     const { userId, holdId } = await seed(t);
     await threeDays(t, holdId, 1);
-    const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, days: 30 });
+    const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth" });
     expect(overview.period.before).toBeNull();
     expect(overview.before).toBeNull();
     expect(overview.pages.top[0].scrollBefore).toBeNull();
@@ -103,7 +103,7 @@ describe("Microsoft Clarity's screens", () => {
     // A day kept before 2026-10-16: visits, and no people, errors or pages a visit read.
     await keep(t, holdId, "2026-09-28", { pages: [], site: [row(null, "PC", 30, 30, { users: 0, pagesSum: 0 })] });
     await keep(t, holdId, "2026-09-29", { pages: [row("/", "PC", 10, 30)], site: [row(null, "PC", 10, 30, { errors: 1 })] });
-    const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, days: 30 });
+    const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth" });
     expect(overview.period.countedFrom).toBe("2026-09-29");
     // The day kept before holds the website's figures only: each page's own start the day after.
     expect(overview.period.pages).toEqual({ days: 1, from: "2026-09-29" });
@@ -117,10 +117,10 @@ describe("Microsoft Clarity's screens", () => {
     await t.mutation(internal.clarity.saveDay, { holdId, day: "2026-09-29", pages: [row("/", "PC", 10, 30), row("/quiet/", "Any", 2, 50)], site: [row(null, "PC", 12, 30)], pagesCut: true, problem: null, refused: false });
     await finishScheduled(t);
     const asOwner = t.withIdentity({ subject: userId });
-    const every = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, page: 1, rows: 25 });
+    const every = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", page: 1, rows: 25 });
     expect(every.period.cutDays).toBe(1);
     expect(every.rows.map((line) => line.page)).toEqual(["/", "/quiet/"]);
-    const computers = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, device: "PC", page: 1, rows: 25 });
+    const computers = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", device: "PC", page: 1, rows: 25 });
     expect(computers.rows.map((line) => line.page)).toEqual(["/"]);
   });
 
@@ -128,7 +128,7 @@ describe("Microsoft Clarity's screens", () => {
     const t = harness();
     const { userId, holdId } = await seed(t);
     await threeDays(t, holdId);
-    const phones = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, days: 30, device: "Mobile" });
+    const phones = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth", device: "Mobile" });
     expect(phones.now.visits).toBe(4);
     expect(phones.byDay.map((day) => [day.day, day.visits])).toEqual([["2026-09-29", 4]]);
     expect(phones.pages.top.map((line) => [line.page, line.now.visits])).toEqual([["/ai-agency/", 4]]);
@@ -141,12 +141,12 @@ describe("Microsoft Clarity's screens", () => {
     const { userId, holdId } = await seed(t);
     await threeDays(t, holdId);
     const asOwner = t.withIdentity({ subject: userId });
-    const list = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, page: 1, rows: 25 });
+    const list = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", page: 1, rows: 25 });
     expect(list).toMatchObject({ total: 2, count: 2, few: 1 });
     expect(list.rows.map((line) => [line.page, line.title])).toEqual([["/ai-agency/", "AI Agency | London"], ["/hub/prism/", null]]);
-    const scrolledLeast = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, page: 1, rows: 25, sort: "scroll" });
+    const scrolledLeast = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", page: 1, rows: 25, sort: "scroll" });
     expect(scrolledLeast.rows.map((line) => line.page)).toEqual(["/ai-agency/", "/hub/prism/"]);
-    const found = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, page: 1, rows: 25, q: "prism" });
+    const found = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", page: 1, rows: 25, q: "prism" });
     expect(found.rows.map((line) => line.page)).toEqual(["/hub/prism/"]);
     expect(found.count).toBe(2);
   });
@@ -155,7 +155,7 @@ describe("Microsoft Clarity's screens", () => {
     const t = harness();
     const { userId, holdId } = await seed(t);
     await threeDays(t, holdId);
-    const page = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityPage, { siteId: holdId, days: 30, page: "/ai-agency/" });
+    const page = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityPage, { siteId: holdId, period: "lastMonth", page: "/ai-agency/" });
     expect(page).toMatchObject({ title: "AI Agency | London", now: { visits: 20, errors: 2 }, before: { visits: 20, scroll: 30 }, website: { visits: 26 } });
     expect(page.byDay.map((day) => [day.day, day.visits])).toEqual([["2026-09-29", 14], ["2026-09-30", 6]]);
     expect(page.errors.map((entry) => [entry.name, entry.now.errors])).toEqual([["Chrome|PC", 2]]);
@@ -167,7 +167,7 @@ describe("Microsoft Clarity's screens", () => {
     const t = harness();
     const { userId, holdId } = await seed(t);
     await threeDays(t, holdId);
-    const errors = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityErrors, { siteId: holdId, days: 30 });
+    const errors = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityErrors, { siteId: holdId, period: "lastMonth" });
     expect(errors.now).toMatchObject({ errors: 2, errorClicks: 1 });
     expect(errors.browsers?.rows.map((browser) => [browser.name, browser.now.visits, browser.now.errors])).toEqual([["Chrome", 16, 2], ["Safari", 4, 0]]);
     expect(errors.pages.map((entry) => [entry.line.page, entry.line.title, entry.mostly])).toEqual([["/ai-agency/", "AI Agency | London", { browser: "Chrome", device: "PC" }]]);
@@ -181,6 +181,6 @@ describe("Microsoft Clarity's screens", () => {
       const companyId = await ctx.db.insert("companies", { name: "Other", createdAt: 1 });
       return await ctx.db.insert("users", { email: "other@else.test", role: "ADMIN", companyId });
     });
-    await expect(t.withIdentity({ subject: strangerId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, days: 30 })).rejects.toThrow();
+    await expect(t.withIdentity({ subject: strangerId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth" })).rejects.toThrow();
   });
 });

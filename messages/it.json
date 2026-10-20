@@ -108,6 +108,24 @@
         "thisQuarter": "gli stessi giorni del trimestre scorso",
         "lastQuarter": "il trimestre precedente",
         "thisYear": "gli stessi giorni dell'anno scorso"
+      },
+      "versus": {
+        "thisWeek": "rispetto agli stessi giorni della settimana scorsa",
+        "lastWeek": "rispetto alla settimana precedente",
+        "thisMonth": "rispetto agli stessi giorni del mese scorso",
+        "lastMonth": "rispetto al mese precedente",
+        "thisQuarter": "rispetto agli stessi giorni del trimestre scorso",
+        "lastQuarter": "rispetto al trimestre precedente",
+        "thisYear": "rispetto agli stessi giorni dell'anno scorso"
+      },
+      "than": {
+        "thisWeek": "rispetto agli stessi giorni della settimana scorsa",
+        "lastWeek": "rispetto alla settimana precedente",
+        "thisMonth": "rispetto agli stessi giorni del mese scorso",
+        "lastMonth": "rispetto al mese precedente",
+        "thisQuarter": "rispetto agli stessi giorni del trimestre scorso",
+        "lastQuarter": "rispetto al trimestre precedente",
+        "thisYear": "rispetto agli stessi giorni dell'anno scorso"
       }
     }
   },
@@ -13133,7 +13151,6 @@
           "rating": "Valutazione",
           "ratingGoogle": "{offices, plural, =1 {Google} =2 {Google, entrambe le sedi} other {Google, # sedi}}",
           "new": "Nuove recensioni",
-          "newBefore": "rispetto a {before}",
           "waiting": "Senza risposta",
           "noneWaiting": "Ogni recensione ha una risposta",
           "oldestWaiting": "La più vecchia aspetta da {days, plural, =1 {# giorno} other {# giorni}}",
@@ -13634,7 +13651,6 @@
       "and": " e ",
       "figures": {
         "new": "Nuove citazioni",
-        "monthBefore": "rispetto a {before}",
         "well": "Parlano bene di te",
         "wellDetail": "{count} su {of}",
         "badly": "Parlano male di te",
@@ -14294,8 +14310,8 @@
         "linkOffice": "Collega il tuo profilo Google come tua sede.",
         "waiting": "{count, plural, one {# recensione attende} other {# recensioni attendono}} una risposta, la più vecchia da {countB, plural, one {# giorno} other {# giorni}}.",
         "allAnswered": "Ogni recensione ha una risposta.",
-        "newReviews": "Hai ricevuto {a} recensioni {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, contro {b} {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {la settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {il mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {il trimestre precedente} other {negli stessi giorni dell'anno scorso}}.",
-        "noNewReviews": "Nessuna nuova recensione {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}} né {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {la settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {il mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {il trimestre precedente} other {negli stessi giorni dell'anno scorso}}.",
+        "newReviews": "Hai ricevuto {a} recensioni {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}}, contro {b} {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {nella settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {nel mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {nel trimestre precedente} other {negli stessi giorni dell'anno scorso}}.",
+        "noNewReviews": "Nessuna nuova recensione {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}} né {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {nella settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {nel mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {nel trimestre precedente} other {negli stessi giorni dell'anno scorso}}.",
         "daysToAnswer": "Rispondi in media in {count, plural, one {# giorno} other {# giorni}}.",
         "answerWaiting": "Rispondi {count, plural, one {alla recensione in attesa} other {alle # recensioni in attesa}}, dalla più vecchia.",
         "askForReviews": "Chiedi una recensione a ogni cliente: {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} thisQuarter {questo trimestre} lastQuarter {il trimestre scorso} other {quest'anno}} ne sono arrivate meno che {period, select, thisWeek {negli stessi giorni della settimana scorsa} lastWeek {nella settimana precedente} thisMonth {negli stessi giorni del mese scorso} lastMonth {nel mese precedente} thisQuarter {negli stessi giorni del trimestre scorso} lastQuarter {nel trimestre precedente} other {negli stessi giorni dell'anno scorso}}."
@@ -21438,7 +21454,7 @@
       "columns": {
         "website": "Sito",
         "status": "Clarity",
-        "sessions": "Visite, 30 giorni",
+        "sessions": "Visite, il mese scorso",
         "scroll": "Scorrimento medio",
         "updated": "Letto"
       }
@@ -21453,8 +21469,6 @@
       "switch": "Sito",
       "device": "Dispositivo",
       "everyDevice": "Tutti i dispositivi",
-      "days": "Giorni",
-      "lastDays": "Ultimi {days} giorni",
       "figuresTo": "Dati di Clarity fino al {day}, letti ogni mattina."
     },
     "menu": {
@@ -21484,17 +21498,14 @@
       "watch": "Guarda",
       "watchIt": "Guardala",
       "openHeatmap": "Apri la mappa di calore",
-      "lastDays": "gli ultimi {days} giorni",
       "soFar": "{count, plural, =0 {ancora nessun giorno} one {# giorno finora} other {# giorni finora}}, dal {since}",
-      "onBefore": "rispetto ai {days} giorni prima",
       "noBefore": "ancora niente da confrontare: i dati di Clarity partono dal {since}",
-      "noneIn": "Nessuno in {span}",
+      "noneIn": "Nessuno, {span}",
       "percentOn": "{way, select, up {▲} down {▼} other {=}} {value}% {against}",
       "pointsOn": "{way, select, up {▲} down {▼} other {=}} {value} punti {against}",
       "secondsOn": "{way, select, up {▲} down {▼} other {=}} {value}s {against}",
       "visitsOn": "{way, select, up {▲} down {▼} other {=}} {value, plural, one {# visita} other {# visite}} {against}",
       "plainOn": "{way, select, up {▲} down {▼} other {=}} {value} {against}",
-      "theDaysBefore": "I {days} giorni prima",
       "browserOn": "{browser} su {device}",
       "everyDevice": "tutti i dispositivi",
       "everywhere": "tutti i browser",
@@ -21545,10 +21556,10 @@
       "notConnectedTitle": "Clarity non è ancora collegato",
       "notConnectedDescription": "Collega il progetto Microsoft Clarity di questo sito: i suoi dati vengono letti ogni mattina e conservati.",
       "connect": "Collega Clarity",
-      "soFarNotice": "Clarity è stato collegato il {since} e consegna solo i suoi ultimi tre giorni, quindi questi dati coprono finora {held, plural, one {# giorno} other {# giorni}}. I {days} giorni si riempiono una mattina alla volta.",
+      "soFarNotice": "Clarity è stato collegato il {since} e consegna solo i suoi ultimi tre giorni, quindi questi dati coprono {held, plural, one {# giorno} other {# giorni}}: i giorni precedenti non si possono recuperare.",
       "sees": {
         "worst": "{page} perde i visitatori prima di tutte: in media scorrono il {scroll} della pagina{change}{back}.",
-        "change": ", {points} punti {way, select, less {in meno} other {in più}} rispetto ai {days} giorni prima",
+        "change": ", {points} punti {way, select, less {in meno} other {in più}} {than}",
         "back": ", e il {share} torna subito indietro",
         "noneJudged": "Nessuna pagina ha ancora avuto 10 visite in {held, plural, one {questo # giorno} other {questi # giorni}}, quindi nessuna si può giudicare da sola. Su tutto il sito, i visitatori scorrono in media il {scroll} di una pagina.",
         "phonesLess": "Chi visita da telefono scorre meno: il {phones} di una pagina, contro il {computers} da computer.",
@@ -21585,7 +21596,7 @@
       },
       "scrollChart": {
         "title": "Quanto scorrono i visitatori, giorno per giorno",
-        "hint": "La parte di ogni pagina scorsa, in media: {span} rispetto ai {days} giorni prima.",
+        "hint": "La parte di ogni pagina scorsa, in media: {span} contro {before}.",
         "hintAlone": "La parte di ogni pagina scorsa, in media, {span}.",
         "now": "Scorrimento",
         "before": "Scorrimento, i giorni prima",
@@ -21594,7 +21605,7 @@
       "errorsPanel": {
         "title": "Errori incontrati dai visitatori",
         "description": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript, su {pages, plural, one {# pagina} other {# pagine}}, e {clicks, plural, one {# clic ne ha causato uno} other {# clic ne hanno causato uno}}.",
-        "none": "Nessuna visita ha incontrato un errore JavaScript o un clic fallito in {span}: buone notizie.",
+        "none": "Nessuna visita ha incontrato un errore JavaScript o un clic fallito, {span}: buone notizie.",
         "seeAll": "Vedi gli errori",
         "empty": "Nessun errore."
       },
@@ -21612,7 +21623,7 @@
       },
       "groupsChart": {
         "title": "Quanto viene scorso ogni tipo di pagina",
-        "hint": "I tuoi gruppi di pagine, in media: {span} rispetto ai {days} giorni prima. Tenui: troppe poche visite per giudicare.",
+        "hint": "I tuoi gruppi di pagine, in media: {span} contro {before}. Tenui: troppe poche visite per giudicare.",
         "hintAlone": "I tuoi gruppi di pagine, in media, {span}. Tenui: troppe poche visite per giudicare.",
         "empty": "Ancora nessun gruppo di pagine."
       },
@@ -21681,7 +21692,7 @@
       "sees": {
         "none": "Nessuna visita a questa pagina, {span}.",
         "scroll": "I visitatori scorrono in media il {scroll} di {page}{change}. {group}Tutto il sito: {website}.",
-        "change": ", contro il {before} dei giorni prima",
+        "change": ", contro il {before} {period, select, thisWeek {degli stessi giorni della settimana scorsa} lastWeek {della settimana precedente} thisMonth {degli stessi giorni del mese scorso} lastMonth {del mese precedente} thisQuarter {degli stessi giorni del trimestre scorso} lastQuarter {del trimestre precedente} other {degli stessi giorni dell'anno scorso}}",
         "group": "Le tue altre pagine {group} vengono scorse il {scroll}. ",
         "few": "Solo {count, plural, one {# visita} other {# visite}} finora: troppe poche per giudicare la pagina da sola.",
         "phonesBack": "{count} delle sue {visits} visite da telefono sono tornate subito indietro in pochi secondi.",
@@ -21744,7 +21755,7 @@
       "sees": {
         "none": "Nessuna visita ha incontrato un errore JavaScript o un clic fallito, {span}: buone notizie.",
         "count": "{count, plural, one {# visita ha incontrato} other {# visite hanno incontrato}} un errore JavaScript, {span}{change}.",
-        "change": ", {count} {way, select, more {in più} other {in meno}} rispetto ai {days} giorni prima",
+        "change": ", {count} {way, select, more {in più} other {in meno}} {than}",
         "top": "{count, plural, one {# era} other {# erano}} su {page}, dove {clicks, plural, =0 {nessun clic è fallito} one {# clic è fallito} other {# clic sono falliti}}.",
         "topOn": "{count, plural, one {# era} other {# erano}} su {page}, soprattutto con {where}, dove {clicks, plural, =0 {nessun clic è fallito} one {# clic è fallito} other {# clic sono falliti}}.",
         "browser": "{browser} ha più errori in proporzione alle sue visite: {errors} su {visits}."
@@ -21786,7 +21797,8 @@
       "kindCount": "{kind} ({count})",
       "noMatch": "Nessuna registrazione corrisponde.",
       "empty": "Ancora nessuna scelta: ne vengono scelte alcune ogni mattina.",
-      "tableNote": "Scelte in {span} · Clarity conserva una registrazione 30 giorni",
+      "tableNote": "Tutte le registrazioni che Clarity conserva ancora · ne conserva una per 30 giorni",
+      "span": "gli ultimi 30 giorni",
       "kinds": {
         "ERRORS": "Errori JavaScript",
         "ERROR_CLICKS": "Clic falliti",

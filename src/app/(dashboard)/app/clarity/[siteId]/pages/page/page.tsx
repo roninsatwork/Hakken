@@ -13,12 +13,13 @@ import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { AnalyticsPanel } from "../../../../analytics/_components/AnalyticsPanels";
 import { usePageKinds } from "../../../../_components/usePageKinds";
 import { SiteLineChart } from "../../../../sites/_components/SiteCharts";
 import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
-import { HeatmapLink, Judged, Moved, wayOf, WatchLink, changeOf, duration, growthOf, mono, percent, tooFew, useBeforeWords, useClarityLinks, useDeviceName, usePeriodWords, useSourceName } from "../../../_components/ClarityParts";
+import { HeatmapLink, Judged, Moved, wayOf, WatchLink, changeOf, duration, growthOf, mono, percent, tooFew, useBeforeWords, useClarityLinks, useDeviceName, usePeriodWords, useSourceName, useWaitingWords } from "../../../_components/ClarityParts";
 import { RecordingsList } from "../../../_components/RecordingsList";
 import { useClarityArgs, useClarityQuery, useClaritySiteId, useClarityStatus } from "../../../_components/useClarity";
 
@@ -44,6 +45,7 @@ export default function ClarityPageScreen() {
   const sourceName = useSourceName();
   const periodWords = usePeriodWords();
   const beforeWords = useBeforeWords();
+  const waitingWords = useWaitingWords();
   const kinds = usePageKinds(siteId);
   const { platformName } = useSystemSettings();
   const data = useQuery(api.clarityScreens.clarityPage, { ...args, page: path });
@@ -59,9 +61,10 @@ export default function ClarityPageScreen() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
 
   const { now, before, website, group, period } = data;
-  const days = args.days;
-  const span = periodWords(period, days, "pages");
-  const against = beforeWords(period, days);
+  const chosen = args.period;
+  const span = periodWords(period, chosen, "pages");
+  const against = beforeWords(period, chosen);
+  const waiting = waitingWords(period, chosen);
   const groupName = data.kindName ?? kinds.label(data.kind);
   const phones = data.devices.find((device) => device.name === "Mobile");
   const computers = data.devices.find((device) => device.name === "PC");
@@ -72,7 +75,7 @@ export default function ClarityPageScreen() {
       t("sees.scroll", {
         page: path,
         scroll: percent(now.scroll),
-        change: before && before.scroll !== null && now.scroll !== null ? t("sees.change", { before: percent(before.scroll) }) : "",
+        change: before && before.scroll !== null && now.scroll !== null ? t("sees.change", { before: percent(before.scroll), period: chosen }) : "",
         group: group && group.scroll !== null ? t("sees.group", { group: groupName, scroll: percent(group.scroll) }) : "",
         website: percent(website.scroll),
       }),
@@ -96,6 +99,7 @@ export default function ClarityPageScreen() {
   return (
     <>
       {header}
+      {waiting ? <Notice>{waiting}</Notice> : null}
       <HakkenSees says={says} steps={steps} />
       <FigureRow columns={4}>
         <Figure label={t("figures.visits")} value={formatNumber(now.visits)} detail={<span className="flex flex-col">{before ? <Moved by={growthOf(now.visits, before.visits)}>{tc("percentOn", { way: wayOf(growthOf(now.visits, before.visits)), value: Math.abs(growthOf(now.visits, before.visits) ?? 0).toFixed(1), against })}</Moved> : <span className="text-muted">{against}</span>}<span className="text-secondary">{phones ? t("figures.onPhones", { count: phones.now.visits }) : span}</span></span>} />

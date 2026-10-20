@@ -17,9 +17,9 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
-import { WatchLink, duration, formatWhen, mono, quiet, useClarityLinks, usePeriodWords, useSourceName } from "../../_components/ClarityParts";
+import { WatchLink, duration, formatWhen, mono, quiet, useClarityLinks, useSourceName } from "../../_components/ClarityParts";
 import { useRecordingWords, type ClarityRecordingRow } from "../../_components/RecordingsList";
-import { useClarityDays, useClarityPageHref, useClaritySiteId, useClarityStatus } from "../../_components/useClarity";
+import { useClarityPageHref, useClaritySiteId, useClarityStatus } from "../../_components/useClarity";
 
 const KINDS = ["ERRORS", "ERROR_CLICKS", "RAGE", "DEAD", "QUICK_BACK", "LONGEST"] as const;
 type Sort = "when" | "page" | "length" | "pages" | "clicks";
@@ -37,21 +37,21 @@ const nameOf = (row: ClarityRecordingRow) => row.link;
  * CM2; Part 4, CS2): the visits Hakken picks each morning from Clarity's own
  * recordings — those that hit an error, clicked something that failed or
  * clicked in anger, went straight back, and the longest — each with its link
- * to watch it in Clarity, which keeps a recording 30 days. The standard list:
- * search, what it shows, the table and its download.
+ * to watch it in Clarity, which keeps a recording 30 days: every one it still
+ * keeps, whatever the date menu says, which this screen does not draw
+ * (calendar-periods-plan.md, item 11.6). The standard list: search, what it
+ * shows, the table and its download.
  */
 export default function ClarityRecordingsPage() {
   const t = useTranslations("clarity.recordings");
   const tc = useTranslations("clarity.common");
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
-  const days = useClarityDays();
   const pageHref = useClarityPageHref();
   const links = useClarityLinks();
   const words = useRecordingWords();
   const sourceName = useSourceName();
-  const periodWords = usePeriodWords();
-  const data = useQuery(api.clarityScreens.clarityRecordingsList, { siteId, days });
+  const data = useQuery(api.clarityScreens.clarityRecordingsList, { siteId });
   const [search, setSearch, settled] = useSiteSearch();
   const [kind, setKind] = useSiteParam<(typeof KINDS)[number] | "">("kind", "", ["", ...KINDS]);
   const matches = settled ? wordStartMatcher(settled.toLowerCase()) : null;
@@ -60,7 +60,7 @@ export default function ClarityRecordingsPage() {
   const pager = useSitePager(rows, { isLoading: data === undefined });
   const counts = new Map(KINDS.map((one) => [one, data?.recordings.filter((row) => row.kind === one).length ?? 0]));
   const picked = KINDS.filter((one) => (counts.get(one) ?? 0) > 0);
-  const span = periodWords(data?.period, days);
+  const span = t("span");
   const says = !data
     ? [t("sees.loading")]
     : data.recordings.length === 0
@@ -103,7 +103,7 @@ export default function ClarityRecordingsPage() {
               />
             }
           >
-            <span className="text-[12px] text-secondary">{t("tableNote", { span })}</span>
+            <span className="text-[12px] text-secondary">{t("tableNote")}</span>
           </TableBar>
         }
         empty={{ icon: <PlayCircle className="h-8 w-8 text-muted/30" />, label: settled || kind ? t("noMatch") : t("empty") }}

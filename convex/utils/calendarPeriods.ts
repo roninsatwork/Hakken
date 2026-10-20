@@ -156,3 +156,11 @@ export function stepsOf(span: { from: string; to: string }, step: ChartStep): Ar
   }
   return out;
 }
+
+/**
+ * A day's match in the period before (rule 4): seven days back for a week, the same day of the month a month,
+ * quarter or year back — or that month's last — so a chart sets each day beside its own.
+ */
+export function sameDayBefore(period: CalendarPeriod, day: string): string {
+  return shiftUnits(day, unitOf(period), -1);
+}

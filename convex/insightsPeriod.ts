@@ -271,9 +271,9 @@ async function pageOneOver(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites
  * everyone. Null until they share a week of days Clarity was recording.
  */
 async function clarityBeside(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">, records: readonly HistoryRecord[]): Promise<{ clarity: number; analytics: number; days: number } | null> {
-  // The website's visits a day, from the 90 days worked out each morning (agents-and-clarity-plan.md, Part 0): by people, bots left out.
-  const period = await clarityPeriod(ctx, holdId, 90, false);
-  const days = period ? clarityDays(period.first).slice(-CLARITY_DAYS_READ) : [];
+  // The website's visits a day, from last month and this month as worked out each morning (calendar-periods-plan.md, phase 3): by people, bots left out.
+  const [lastMonth, thisMonth] = [await clarityPeriod(ctx, holdId, "lastMonth", false), await clarityPeriod(ctx, holdId, "thisMonth", false)];
+  const days = [...(lastMonth ? clarityDays(lastMonth.first) : []), ...(thisMonth ? clarityDays(thisMonth.first) : [])].slice(-CLARITY_DAYS_READ);
   const analytics = new Map((records.find((record) => record.kind === "DAYS")?.rows ?? []).map((row) => [row.key, row.visits ?? 0]));
   let clarity = 0, counted = 0, shared = 0;
   for (const { day, totals } of days) {

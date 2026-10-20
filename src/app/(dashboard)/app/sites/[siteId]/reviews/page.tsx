@@ -120,7 +120,7 @@ export default function YourReviewsPage() {
             label={t("figures.new")}
             emphasis
             value={figures.newIn}
-            detail={<><Change by={figures.newIn - figures.newBefore} arrow={figures.newIn >= figures.newBefore ? "up" : "down"} /> <span className="text-secondary">{t("figures.newBefore", { before: tp(`before.${range.period}`) })}</span></>}
+            detail={<><Change by={figures.newIn - figures.newBefore} arrow={figures.newIn >= figures.newBefore ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${range.period}`)}</span></>}
           />
           <Figure label={t("figures.waiting")} value={figures.waiting} detail={<span className="text-secondary">{figures.oldestWaitingDays === null ? t("figures.noneWaiting") : t("figures.oldestWaiting", { days: figures.oldestWaitingDays })}</span>} />
           <Figure label={t("figures.daysToAnswer")} value={figures.daysToAnswer === null ? "–" : Math.round(figures.daysToAnswer)} detail={<span className="text-secondary">{t("figures.daysToAnswerDetail", { period: tp(`inline.${range.period}`) })}</span>} />

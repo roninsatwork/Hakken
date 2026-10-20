@@ -372,7 +372,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   //    its figures — a day kept 180 days (its sources and browsers 90), a month 13 months, the ready-made periods redone each morning —
   //    and the recordings picked each morning, kept 30 days as Clarity keeps them ──
   clarityConnections: RECORD,
-  clarityFigures: thinned("days kept 180 days (sources and browsers 90), months 13 months, the 7, 30 and 90 days and the periods before them redone each morning", "clarity/tidyFigures"),
+  clarityFigures: thinned("days kept 180 days (sources and browsers 90), months of each kind 13 months, the seven calendar periods and what each is set against redone each morning", "clarity/tidyFigures"),
   clarityRecordings: thinned("kept 30 days, as Clarity keeps its recordings", "clarity/tidyFigures"),
   insightExperiments: RECORD,
   insightTally: RECORD,

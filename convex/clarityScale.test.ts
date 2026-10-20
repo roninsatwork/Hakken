@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -8,6 +8,7 @@ import { clarityErrors, clarityOverview, clarityPage, clarityPagesList } from ".
 import { emptyTotals, type ClarityTotalsRow } from "./utils/clarityRows";
 import { packTotals } from "./utils/clarityPacks";
 import { shiftDay } from "./utils/insightFacts";
+import { useFixedDay } from "@/src/test/realTime";
 import { metered, readBy } from "@/src/test/readMeter";
 import { heldBy } from "@/src/test/heapMeter";
 
@@ -49,6 +50,10 @@ describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
   let holdId: Id<"companyWebsites">;
   let ownerId: string;
 
+  // The day after Clarity's newest: This year holds all 90 days kept (calendar-periods-plan.md, phase 3).
+  beforeEach(() => useFixedDay("2026-10-16"));
+  afterEach(() => vi.useRealTimers());
+
   beforeAll(async () => {
     ({ holdId, ownerId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Shop", createdAt: 1 });
@@ -80,35 +85,35 @@ describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
     }));
   });
 
-  test("the morning's 90 days of each kind worked out within half of one read and of a query's memory", async () => {
+  test("the morning's This year of each kind, 90 days held, worked out within half of one read and of a query's memory", async () => {
     const handler = (buildSpan as unknown as { _handler: (ctx: object, args: object) => Promise<null> })._handler;
     for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
       const read = await t.run(async (ctx) => {
         const meter = metered(ctx.db);
-        const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "LAST_90", ...(kind ? { kind } : {}), key: NEWEST, from: shiftDay(NEWEST, -(DAYS - 1)), to: NEWEST }));
+        const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "thisYear", from: "2026-01-01", to: NEWEST }));
         return { bytes: meter.bytes(), holds: held.bytes };
       });
       expect(read.bytes, kind ?? "own figures").toBeLessThan(HALF_READ);
       expect(read.holds, kind ?? "own figures").toBeLessThan(HALF_MEMORY);
     }
-    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_90").eq("kind", undefined)).collect());
+    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", undefined).eq("key", "thisYear")).collect());
     expect(parts.length).toBeGreaterThan(1);
   });
 
-  test("a 90-day Pages screen, Overview, a page's own screen and Errors each read within half of one read", async () => {
+  test("This year's Pages screen, Overview, a page's own screen and Errors, 90 days held, each read within half of one read", async () => {
     for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
-      const built = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_90").eq("kind", kind)).first());
-      if (!built) await t.mutation(internal.clarity.buildSpan, { holdId, span: "LAST_90", ...(kind ? { kind } : {}), key: NEWEST, from: shiftDay(NEWEST, -(DAYS - 1)), to: NEWEST });
+      const built = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", kind).eq("key", "thisYear")).first());
+      if (!built) await t.mutation(internal.clarity.buildSpan, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "thisYear", from: "2026-01-01", to: NEWEST });
     }
-    const pages = await readBy(t, ownerId, clarityPagesList as never, { siteId: holdId, days: 90, page: 1, rows: 25 });
+    const pages = await readBy(t, ownerId, clarityPagesList as never, { siteId: holdId, period: "thisYear", page: 1, rows: 25 });
     const answer = pages.answer as { total: number; period: { now: { days: number } } };
     expect(answer.period.now.days).toBe(DAYS);
     expect(answer.total).toBeGreaterThan(ROWS);
     expect(pages.bytes).toBeLessThan(HALF_READ);
     for (const [name, query, args] of [
-      ["Overview", clarityOverview, { siteId: holdId, days: 90 }],
-      ["a page", clarityPage, { siteId: holdId, days: 90, page: path(0) }],
-      ["Errors", clarityErrors, { siteId: holdId, days: 90 }],
+      ["Overview", clarityOverview, { siteId: holdId, period: "thisYear" }],
+      ["a page", clarityPage, { siteId: holdId, period: "thisYear", page: path(0) }],
+      ["Errors", clarityErrors, { siteId: holdId, period: "thisYear" }],
     ] as const) {
       const read = await readBy(t, ownerId, query as never, args);
       expect(read.bytes, name).toBeLessThan(HALF_READ);

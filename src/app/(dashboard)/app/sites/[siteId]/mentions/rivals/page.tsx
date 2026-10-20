@@ -83,7 +83,7 @@ export default function MentionsAgainstRivalsPage() {
           <Figure
             label={t("figures.fastest")}
             value={fastest ? shortName(fastest) : "–"}
-            detail={fastest ? <><Change by={fastest.mentions - fastest.before} arrow={fastest.mentions >= fastest.before ? "up" : "down"} /> <span className="text-secondary">{tm("figures.monthBefore", { before: tp(`before.${range.period}`) })}</span></> : <span className="text-secondary">–</span>}
+            detail={fastest ? <><Change by={fastest.mentions - fastest.before} arrow={fastest.mentions >= fastest.before ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${range.period}`)}</span></> : <span className="text-secondary">–</span>}
           />
           <Figure label={t("figures.worst")} value={worst && worst.badly > 0 ? shortName(worst) : "–"} detail={<span className="text-secondary">{worst && worst.badly > 0 ? t("figures.worstDetail", { count: worst.badly, of: worst.mentions }) : t("figures.noneBadly")}</span>} />
         </FigureRow>

@@ -3,7 +3,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
-import { clarityDays, periodFor, readClarityPeriod, readPageRows, type ClarityPeriodRead } from "./clarity";
+import { CLARITY_RECORDING_DAYS_KEPT, clarityDays, readClarityPeriod, readPageRows, type ClarityPeriodRead } from "./clarity";
+import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 import { classifierFor } from "./googleAnalyticsChannelReads";
 import { titlesOf } from "./pageTitles";
 import { listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
@@ -19,18 +20,20 @@ import { shiftDay } from "./utils/insightFacts";
  * a page's own screen, Errors and Recordings. Every figure is Clarity's own,
  * set against the same days before it, the whole website, a page group or a
  * device (CS1) — never another source's. Each read is of the ready-made
- * periods worked out each morning (`clarity.ts`), by the caller's own hold.
+ * periods worked out each morning (`clarity.ts`), by the caller's own hold:
+ * the date menu's calendar period (calendar-periods-plan.md, phase 3).
  *
  * `device` narrows every figure to Clarity's devices — "PC", "Mobile",
- * "Tablet" — except the comparison of the devices themselves. `days` says how
- * many days Clarity recorded, so a screen never says 30 days of four (CF3).
+ * "Tablet" — except the comparison of the devices themselves. A span's `days`
+ * says how many days Clarity recorded, so a screen never says a month of four
+ * days (CF3).
  */
 
 type Reader = { db: QueryCtx["db"] };
 type HoldId = Id<"companyWebsites">;
 
 const nullableNumber = v.union(v.number(), v.null());
-const screenArgs = { siteId: v.id("companyWebsites"), days: v.number(), device: v.optional(v.string()) };
+const screenArgs = { siteId: v.id("companyWebsites"), period: calendarPeriodValidator, device: v.optional(v.string()) };
 
 /** The days a screen's figures cover, and the same number of days before them, as Clarity recorded them. */
 const spanValidator = v.object({ from: v.string(), to: v.string(), days: v.number() });
@@ -49,6 +52,11 @@ const periodValidator = v.object({
   pages: v.union(v.null(), v.object({ days: v.number(), from: v.union(v.string(), v.null()) })),
   /** Days whose pages Clarity cut at its 1,000 rows: quieter pages may be missing ("Large websites"). */
   cutDays: v.number(),
+  /** The period's days to Clarity's newest: when as many are held the screen says "last month", not "4 days so far". */
+  expected: v.number(),
+  /** Clarity has sent none of the period yet — This week on a Monday (calendar-periods-plan.md, rule 9) — and its newest day. */
+  waiting: v.boolean(),
+  newest: v.union(v.string(), v.null()),
 });
 
 const spanOf = (read: ClarityPeriodRead | null) => (read ? { from: read.first.from, to: read.first.to, days: read.first.days } : null);
@@ -61,19 +69,24 @@ const siteOf = (read: ClarityPeriodRead | null, device: string | undefined): Cla
 const pagesOf = (read: ClarityPeriodRead | null, device: string | undefined): Map<string, ClarityTotals> => addUpBy(read?.pages ?? [], (row) => (onDevice(device)(row) ? row.page ?? "" : null));
 
 /**
- * The same number of days before the days shown, only when Clarity recorded
- * as many of them: like is set against like, never 30 days against 4
- * (`stats-need-comparisons`). Until then a screen says why it compares nothing.
+ * What the period is set against (the period before, or its same days while
+ * it is still going), only when Clarity recorded as many of them: like is set
+ * against like, never a month against 4 days (`stats-need-comparisons`).
+ * Until then a screen says why it compares nothing.
  */
-async function readBefore(ctx: Reader, holdId: HoldId, days: number, now: ClarityPeriodRead | null, withPages = true): Promise<ClarityPeriodRead | null> {
-  const before = await readClarityPeriod(ctx, holdId, days, { before: true, withPages });
+async function readBefore(ctx: Reader, holdId: HoldId, period: CalendarPeriod, now: ClarityPeriodRead | null, withPages = true): Promise<ClarityPeriodRead | null> {
+  const before = await readClarityPeriod(ctx, holdId, period, { before: true, withPages });
   return before && now && before.first.days >= now.first.days ? before : null;
 }
 
-/** The first day Clarity recorded a visit, from the 90 days' days, for "4 days so far, since 12 Oct"; the connection's first day kept while none is. */
+/**
+ * The first day Clarity recorded a visit, among the oldest days kept, for
+ * "nothing to compare with yet: Clarity's figures start on 12 Oct"; the
+ * connection's first day kept while none is.
+ */
 async function firstDayOf(ctx: Reader, holdId: HoldId): Promise<string | null> {
-  const ninety = await readClarityPeriod(ctx, holdId, 90, { withPages: false });
-  const first = ninety ? clarityDays(ninety.first).find((day) => day.totals.visits + day.totals.bots > 0)?.day : undefined;
+  const oldest = await ctx.db.query("clarityFigures").withIndex("by_hold_span_part", (q) => q.eq("companyWebsiteId", holdId).eq("span", "DAY").eq("part", 0)).take(40);
+  const first = oldest.find((day) => day.kind === undefined && unpackTotals(day.site).some((row) => row.visits + row.bots > 0))?.key;
   if (first) return first;
   const connection = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first();
   return connection?.oldestDay ?? null;
@@ -91,9 +104,22 @@ function countedFromOf(read: ClarityPeriodRead | null): string | null {
 }
 
 /** The period's figures and when its counted ones start: errors, people and pages a visit taken over the days that hold them. */
-async function periodOf(ctx: Reader, holdId: HoldId, now: ClarityPeriodRead | null, before: ClarityPeriodRead | null) {
+async function periodOf(ctx: Reader, holdId: HoldId, period: CalendarPeriod, now: ClarityPeriodRead | null, before: ClarityPeriodRead | null) {
   const pages = now && now.first.pageDays !== undefined ? { days: now.first.pageDays, from: now.first.pagesFrom ?? null } : null;
-  return { now: spanOf(now), before: spanOf(before), firstDay: await firstDayOf(ctx, holdId), countedFrom: countedFromOf(now), pages, cutDays: now?.first.cutDays ?? 0 };
+  const newest = await newestOf(ctx, holdId);
+  const span = newest ? periodSpan(period, ukDay(), newest) : null;
+  const expected = span ? Math.round((Date.parse(`${span.to}T00:00:00Z`) - Date.parse(`${span.from}T00:00:00Z`)) / 86_400_000) + 1 : 0;
+  return {
+    now: spanOf(now),
+    before: spanOf(before),
+    firstDay: await firstDayOf(ctx, holdId),
+    countedFrom: countedFromOf(now),
+    pages,
+    cutDays: now?.first.cutDays ?? 0,
+    expected,
+    waiting: newest !== null && span === null,
+    newest,
+  };
 }
 
 /** The website's measures on the device chosen, with errors, people and pages a visit over the days that hold them. */
@@ -211,9 +237,10 @@ async function recordingsOf(ctx: Reader, holdId: HoldId, from: string | null, to
 const errorRecordingOf = (recordings: readonly RecordingRow[], page: string) => recordings.find((row) => (row.kind === "ERRORS" || row.kind === "ERROR_CLICKS") && row.page === page)?.link ?? null;
 
 /** The span a screen's recordings are read over: the period's days, or the last days chosen while nothing is kept. */
-function recordingSpan(now: ClarityPeriodRead | null, days: number, newest: string | null): { from: string | null; to: string | null } {
+function recordingSpan(now: ClarityPeriodRead | null, period: CalendarPeriod, newest: string | null): { from: string | null; to: string | null } {
   if (now) return { from: now.first.from, to: now.first.to };
-  return newest ? { from: shiftDay(newest, -(days - 1)), to: newest } : { from: null, to: null };
+  const span = newest ? periodSpan(period, ukDay(), newest) : null;
+  return span ? { from: span.from, to: span.to } : { from: null, to: null };
 }
 
 async function newestOf(ctx: Reader, holdId: HoldId): Promise<string | null> {
@@ -242,10 +269,10 @@ export const clarityOverview = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.days);
-    const before = await readBefore(ctx, holdId, args.days, now);
-    const sources = await readClarityPeriod(ctx, holdId, args.days, { kind: "SOURCES", withPages: false });
-    const browsers = await readClarityPeriod(ctx, holdId, args.days, { kind: "BROWSERS" });
+    const now = await readClarityPeriod(ctx, holdId, args.period);
+    const before = await readBefore(ctx, holdId, args.period, now);
+    const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
+    const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS" });
     const lines = await pageLines(ctx, holdId, now, before, args.device);
     const judged = lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.now.scroll !== null);
     const worst = [...judged].sort((a, b) => (a.now.scroll ?? 0) - (b.now.scroll ?? 0))[0] ?? null;
@@ -261,13 +288,13 @@ export const clarityOverview = tenantQuery({
     const mostly = mostlyOn(browsers, args.device);
     const errorLines = lines.filter((line) => line.now.errors + line.now.errorClicks > 0).sort((a, b) => b.now.errors + b.now.errorClicks - (a.now.errors + a.now.errorClicks));
     const quickest = [...lines].sort((a, b) => b.now.quickBack - a.now.quickBack)[0];
-    const span = recordingSpan(now, args.days, await newestOf(ctx, holdId));
+    const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
     const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
     const shown = await titled(ctx, holdId, [...lines.slice(0, 4), ...(worst ? [worst] : []), ...errorLines.slice(0, 5)]);
     const titleOf = new Map(shown.map((line) => [line.page, line.title]));
     const withTitle = (line: PageLine): PageLine => ({ ...line, title: titleOf.get(line.page) ?? null });
     return {
-      period: await periodOf(ctx, holdId, now, before),
+      period: await periodOf(ctx, holdId, args.period, now, before),
       now: websiteOf(now, args.device),
       before: before ? websiteOf(before, args.device) : null,
       byDay: daysOf(now, args.device),
@@ -344,8 +371,8 @@ export const clarityPagesList = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.days);
-    const before = await readBefore(ctx, holdId, args.days, now);
+    const now = await readClarityPeriod(ctx, holdId, args.period);
+    const before = await readBefore(ctx, holdId, args.period, now);
     const lines = await pageLines(ctx, holdId, now, before, args.device);
     const judged = lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.now.scroll !== null);
     const lowLines = judged.filter((line) => (line.now.scroll ?? 100) < 25);
@@ -355,7 +382,7 @@ export const clarityPagesList = tenantQuery({
     return {
       ...page,
       rows: await titled(ctx, holdId, page.rows),
-      period: await periodOf(ctx, holdId, now, before),
+      period: await periodOf(ctx, holdId, args.period, now, before),
       website: websiteOf(now, args.device),
       count: lines.length,
       low: lowLines.length,
@@ -374,8 +401,8 @@ export const clarityPagesAll = tenantQuery({
   returns: v.object({ rows: v.array(pageLineValidator) }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const now = await readClarityPeriod(ctx, site.hold._id, args.days);
-    const before = await readBefore(ctx, site.hold._id, args.days, now);
+    const now = await readClarityPeriod(ctx, site.hold._id, args.period);
+    const before = await readBefore(ctx, site.hold._id, args.period, now);
     return { rows: listedPages(await pageLines(ctx, site.hold._id, now, before, args.device), args) };
   },
 });
@@ -404,28 +431,28 @@ export const clarityPage = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
     // Every page of the period, for the page's group beside it; everything else is the page's own rows, each read from the part that holds them.
-    const now = await readClarityPeriod(ctx, holdId, args.days);
-    const before = await readBefore(ctx, holdId, args.days, now, false);
+    const now = await readClarityPeriod(ctx, holdId, args.period);
+    const before = await readBefore(ctx, holdId, args.period, now, false);
     const lines = await pageLines(ctx, holdId, now, null, args.device);
     const classifier = await classifierFor(ctx, holdId);
     const kind = lines.find((one) => one.page === args.page)?.kind ?? classifier.kindOf(args.page);
     const others = lines.filter((one) => one.kind === kind && one.page !== args.page);
     const ownOn = (rows: readonly ClarityTotalsRow[]) => rows.filter(onDevice(args.device));
     const totalsNow = pagesOf(now, args.device);
-    const beforeRows = before ? ownOn(await readPageRows(ctx, holdId, periodFor(args.days, true), undefined, before.first.key, args.page)) : [];
+    const beforeRows = before ? ownOn(await readPageRows(ctx, holdId, "PERIOD_BEFORE", undefined, args.period, args.page)) : [];
     const websiteDays = daysOf(now, args.device);
     const byDay = [];
     for (const day of websiteDays) {
       const measures = measuresOf(sumTotals(ownOn(await readPageRows(ctx, holdId, "DAY", undefined, day.day, args.page))));
       byDay.push({ day: day.day, page: measures.scroll, website: day.scroll, visits: measures.visits });
     }
-    const browsers = await readClarityPeriod(ctx, holdId, args.days, { kind: "BROWSERS", withPages: false });
-    const sources = await readClarityPeriod(ctx, holdId, args.days, { kind: "SOURCES", withPages: false });
-    const browserRows = browsers ? ownOn(await readPageRows(ctx, holdId, periodFor(args.days), "BROWSERS", browsers.first.key, args.page)) : [];
-    const sourceRows = sources ? ownOn(await readPageRows(ctx, holdId, periodFor(args.days), "SOURCES", sources.first.key, args.page)) : [];
-    const span = recordingSpan(now, args.days, await newestOf(ctx, holdId));
+    const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS", withPages: false });
+    const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
+    const browserRows = browsers ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "BROWSERS", args.period, args.page)) : [];
+    const sourceRows = sources ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "SOURCES", args.period, args.page)) : [];
+    const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
     return {
-      period: await periodOf(ctx, holdId, now, before),
+      period: await periodOf(ctx, holdId, args.period, now, before),
       title: (await titlesOf(ctx, holdId, [args.page])).get(args.page) ?? null,
       kind,
       kindName: classifier.nameOf(kind),
@@ -460,17 +487,17 @@ export const clarityErrors = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.days);
-    const before = await readBefore(ctx, holdId, args.days, now);
-    const browsers = await readClarityPeriod(ctx, holdId, args.days, { kind: "BROWSERS" });
+    const now = await readClarityPeriod(ctx, holdId, args.period);
+    const before = await readBefore(ctx, holdId, args.period, now);
+    const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS" });
     const lines = await pageLines(ctx, holdId, now, before, args.device);
     const errorLines = lines.filter((line) => line.now.errors + line.now.errorClicks > 0).sort((a, b) => b.now.errors + b.now.errorClicks - (a.now.errors + a.now.errorClicks));
     const mostly = mostlyOn(browsers, args.device);
-    const span = recordingSpan(now, args.days, await newestOf(ctx, holdId));
+    const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
     const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
     const shown = await titled(ctx, holdId, errorLines);
     return {
-      period: await periodOf(ctx, holdId, now, before),
+      period: await periodOf(ctx, holdId, args.period, now, before),
       now: websiteOf(now, args.device),
       before: before ? websiteOf(before, args.device) : null,
       byDay: daysOf(now, args.device),
@@ -483,19 +510,22 @@ export const clarityErrors = tenantQuery({
 
 // ---------------------------------------------------------------- Recordings (CM2)
 
+/**
+ * Every recording Clarity still holds — it keeps one 30 days — whatever the
+ * date menu says, which this screen does not show (calendar-periods-plan.md,
+ * item 11.6): its first and last days, and how many days they span.
+ */
 export const clarityRecordingsList = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), days: v.number() },
-  returns: v.object({ period: periodValidator, recordings: v.array(recordingValidator) }),
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.object({ span: v.union(v.null(), v.object({ from: v.string(), to: v.string() })), recordings: v.array(recordingValidator) }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.days, { withPages: false });
-    const span = recordingSpan(now, args.days, await newestOf(ctx, holdId));
+    const newest = await newestOf(ctx, holdId);
+    if (!newest) return { span: null, recordings: [] };
+    const span = { from: shiftDay(newest, -(CLARITY_RECORDING_DAYS_KEPT - 1)), to: newest };
     const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
     const titles = await titlesOf(ctx, holdId, [...new Set(recordings.map((row) => row.page))]);
-    return {
-      period: await periodOf(ctx, holdId, now, null),
-      recordings: recordings.map((row) => ({ ...row, title: titles.get(row.page) ?? null })),
-    };
+    return { span, recordings: recordings.map((row) => ({ ...row, title: titles.get(row.page) ?? null })) };
   },
 });

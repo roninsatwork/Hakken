@@ -62,7 +62,7 @@ export const reviewInputs = internalQuery({
     visits: v.number(), enquiries: v.number(), visitsBefore: v.union(v.number(), v.null()), enquiriesBefore: v.union(v.number(), v.null()),
     visits90: v.union(v.number(), v.null()), enquiries90: v.union(v.number(), v.null()),
     facts: v.union(pageFactsValidator, v.null()), structured: v.union(v.array(v.string()), v.null()),
-    /** Clarity's behaviour over its last 30 days, where it is connected (I24). */
+    /** Clarity's behaviour over last month, where it is connected (I24; calendar-periods-plan.md, phase 3). */
     behaviour: v.union(v.null(), clarityRowValidator),
   })),
   handler: async (ctx, args) => {
@@ -71,9 +71,9 @@ export const reviewInputs = internalQuery({
     const now = await landingByPath(ctx, args.holdId, "365", "NOW");
     const year = await landingByPath(ctx, args.holdId, "365", "YEAR");
     const recent = await landingByPath(ctx, args.holdId, "90", "NOW");
-    // Clarity's last 30 days by page, where the website has it connected (I24): its ready-made period, each page across its devices.
+    // Clarity's last month by page, where the website has it connected (I24): its ready-made period, each page across its devices.
     const behaviour = new Map<string, ClarityRow>();
-    const period = await clarityPeriod(ctx, args.holdId, 30);
+    const period = await clarityPeriod(ctx, args.holdId, "lastMonth");
     if (period) for (const [page, totals] of addUpBy(period.pages, (row) => row.page ?? "")) behaviour.set(page, rowOf(page, totals));
     const titles = new Map<string, string | null>();
     for (const check of checks) {

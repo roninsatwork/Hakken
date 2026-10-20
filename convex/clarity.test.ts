@@ -44,22 +44,25 @@ describe("Clarity's figures, kept", () => {
   beforeEach(() => useFixedDay());
   afterEach(() => vi.useRealTimers());
 
-  test("a day kept as one record, its month and three periods worked out, and every screen reading the same totals", async () => {
+  test("a day kept as one record, its month and the calendar periods holding it worked out, and every screen reading the same totals", async () => {
+    // 2 November: October is last month, which the list of websites shows (calendar-periods-plan.md, rule 7).
+    vi.setSystemTime(Date.parse("2026-11-02T12:00:00Z"));
     const t = harness();
     const { userId, holdId } = await seed(t);
     await keepDay(t, holdId, "2026-10-14", [page("/", "PC", 50, { dead: 5 }), page("/ai-agency/", "Mobile", 9, { quickBack: 4, errors: 2 })], [device("PC", 52, { bots: 6 }), device("Mobile", 9)]);
     await keepDay(t, holdId, "2026-10-15", [page("/", "PC", 30), page("/", "Mobile", 10)], [device("PC", 31), device("Mobile", 10)]);
-    expect(await spans(t, holdId)).toEqual(["DAY 2026-10-14", "DAY 2026-10-15", "LAST_30 2026-10-15", "LAST_7 2026-10-15", "LAST_90 2026-10-15", "MONTH 2026-10"]);
+    // On 2 November the days fall in last month, this quarter and this year; nothing is held of the periods before them.
+    expect(await spans(t, holdId)).toEqual(["DAY 2026-10-14", "DAY 2026-10-15", "MONTH 2026-10", "PERIOD lastMonth", "PERIOD thisQuarter", "PERIOD thisYear"]);
 
     const asOwner = t.withIdentity({ subject: userId });
-    const byPage = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, page: 1, rows: 25 });
+    const byPage = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", page: 1, rows: 25 });
     expect(byPage.period.now).toEqual({ from: "2026-10-14", to: "2026-10-15", days: 2 });
     expect(byPage.rows.map((row) => [row.page, row.now.visits, row.now.scroll])).toEqual([["/", 90, 30], ["/ai-agency/", 9, 30]]);
     expect(byPage.rows[1].now.shares).toMatchObject({ quickBack: 44.4 });
-    const onPhones = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, device: "Mobile", page: 1, rows: 25 });
+    const onPhones = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", device: "Mobile", page: 1, rows: 25 });
     expect(onPhones.rows.map((row) => [row.page, row.now.visits])).toEqual([["/", 10], ["/ai-agency/", 9]]);
     // The website's visits are by people: the six bots are counted apart.
-    const overview = await asOwner.query(api.clarityScreens.clarityOverview, { siteId: holdId, days: 7 });
+    const overview = await asOwner.query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth" });
     expect(overview.devices.map((row) => [row.name, row.now.visits])).toEqual([["PC", 83], ["Mobile", 19]]);
     expect(overview.now).toMatchObject({ visits: 102, bots: 6 });
     expect(overview.byDay.map((day) => [day.day, day.visits])).toEqual([["2026-10-14", 61], ["2026-10-15", 41]]);
@@ -100,10 +103,10 @@ describe("Clarity's figures, kept", () => {
     const { userId, holdId } = await seed(t);
     const many = Array.from({ length: 4_100 }, (_, at) => page(`/products/item-${at}/`, "PC", 1 + (at % 3)));
     await keepDay(t, holdId, "2026-10-15", many, [device("PC", 9_000)]);
-    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "LAST_30")).collect());
+    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", undefined).eq("key", "thisMonth")).collect());
     // The website's figures on their own, then 4,000 pages and 100.
     expect(parts.sort((a, b) => a.part - b.part).map((part) => [part.part, part.pages.deviceBook.length > 0])).toEqual([[0, false], [1, true], [2, true]]);
-    const figures = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityPagesList, { siteId: holdId, days: 30, page: 1, rows: 25 });
+    const figures = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "thisMonth", page: 1, rows: 25 });
     expect(figures.total).toBe(4_100);
   });
 

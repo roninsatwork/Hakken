@@ -13,6 +13,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
@@ -23,7 +24,7 @@ import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
-import { HeatmapLink, Judged, Points, duration, mono, percent, tooFew, useDeviceName, usePeriodWords } from "../../_components/ClarityParts";
+import { HeatmapLink, Judged, Points, duration, mono, percent, tooFew, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
 import { useClarityArgs, useClarityDevice, useClarityPageHref, useClaritySiteId, useClarityStatus } from "../../_components/useClarity";
 
 type Sort = "page" | "visits" | "scroll" | "change" | "time" | "quickBack" | "errors";
@@ -52,6 +53,7 @@ export default function ClarityPagesPage() {
   const deviceName = useDeviceName();
   const pageHref = useClarityPageHref();
   const periodWords = usePeriodWords();
+  const waitingWords = useWaitingWords();
   const kinds = usePageKinds(siteId);
   const [search, setSearch, settled] = useSiteSearch();
   const [group, setGroup] = useSiteParam<string>("group", "");
@@ -61,7 +63,8 @@ export default function ClarityPagesPage() {
   const list = useSiteListPage(api.clarityScreens.clarityPagesList, status?.connection?.newestDay ? filters : "skip");
   const answer = list.result;
   const { run, isBusy } = useAdminAction({ scope: "clarity-pages-download" });
-  const span = periodWords(answer?.period, args.days, "pages");
+  const span = periodWords(answer?.period, args.period, "pages");
+  const waiting = waitingWords(answer?.period, args.period);
 
   const says = !answer
     ? [t("sees.loading")]
@@ -89,6 +92,7 @@ export default function ClarityPagesPage() {
   return (
     <>
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      {waiting ? <Notice>{waiting}</Notice> : null}
       <HakkenSees says={says} steps={steps} />
       <ChartCard
         title={t("chart.title")}
