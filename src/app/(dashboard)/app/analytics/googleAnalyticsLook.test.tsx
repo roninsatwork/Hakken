@@ -81,6 +81,7 @@ describe("Google Analytics' approved looks", () => {
       "googleAnalyticsReads:analyticsOverview": OVERVIEW,
       "googleAnalyticsChartReads:analyticsChart": CHART,
       "googleAnalyticsOverviewReads:analyticsOverviewPanels": OVERVIEW_PANELS,
+      "googleAnalyticsOverviewReads:analyticsOverviewPagePanels": OVERVIEW_PANELS,
     });
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("2,412");

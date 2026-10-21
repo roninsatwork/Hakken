@@ -54,12 +54,16 @@ describe("Overview's panels", () => {
   test("each kind of data's first rows, from what the collection kept", async () => {
     const t = harness();
     const { siteId, user, rival } = await collectedWebsite(t, visits(), encryptConnectorToken);
+    const pagesOf = async () => (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, { siteId, ...args }))!;
+    // Without classifications the landing pages are read on their own; with them, in the classifications' own read.
+    const unclassified = await pagesOf();
+    expect(unclassified.kinds).toBeNull();
     const services = await t.run(async (ctx) => {
       const id = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "Services", type: "SERVICE", createdAt: 1, updatedAt: 1 });
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: id, kind: "STARTS_WITH", value: "/services/", createdAt: 1 });
       return id;
     });
-    const panels = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, ...args }))!;
+    const panels = { ...(await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, ...args }))!, ...await pagesOf() };
 
     // OV2: the channels with the most visits; nothing from tagged links or ad keywords.
     expect(panels.channels).toMatchObject({ count: 3, tagged: 0, keywords: 0 });
@@ -78,6 +82,9 @@ describe("Overview's panels", () => {
     expect(panels.landing.rows.map((row) => [row.label.replace("https://www.acme-shop.test", ""), row.kindName, row.visits])).toEqual([
       ["/", null, 300], ["/ai-agency/", null, 120], ["/services/web/", "Services", 90],
     ]);
+    // The same pages, visits and share who left either way.
+    expect(unclassified.landing.rows.map((row) => [row.label, row.visits, row.left])).toEqual(panels.landing.rows.map((row) => [row.label, row.visits, row.left]));
+    expect([unclassified.landing.count, unclassified.landing.left]).toEqual([panels.landing.count, panels.landing.left]);
 
     // OV5: what counts, then the form listed but not counted; the counted kind that never happened is fourth, past the three.
     expect(panels.conversions.count).toBe(4);
@@ -103,5 +110,6 @@ describe("Overview's panels", () => {
 
     // Another company's website is never read.
     await expect(rival.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, ...args })).rejects.toThrow();
+    await expect(rival.query(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, { siteId, ...args })).rejects.toThrow();
   });
 });

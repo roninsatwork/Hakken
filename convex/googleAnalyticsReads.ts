@@ -204,6 +204,11 @@ type ListArgs = {
    * `group` then keeps the channels landing most on that page group.
    */
   extras?: boolean;
+  /**
+   * Page groups only: the landing pages themselves too, as Landing pages shows them (address, change, what left),
+   * from the same read — Overview's two page panels in one pass (calendar-periods audit, 2026-10-21).
+   */
+  pages?: boolean;
 };
 
 export type ListAnswer = {
@@ -233,6 +238,8 @@ export type ListAnswer = {
   untagged: number | null;
   /** All pages read whole: how many pages each filter holds, and the pages nobody viewed Google sends most clicks. */
   moves: PageMoves | null;
+  /** Page groups read with `pages`: every landing page, named by its address. */
+  pages?: ShownRow[];
 };
 
 type Figures = ReturnType<typeof figuresOf>;
@@ -334,6 +341,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     ? await onwardOf(ctx, holdId, args.period, args.device, args.country ?? "")
     : null;
   let groupOnward: Map<string, Onward> | null = null;
+  let pages: ShownRow[] | undefined;
   if (pageList && classes && (args.list === "groups" || args.group !== undefined)) {
     const kindOf = (row: ListRow) => classes.kindOf(addresses.get(row.key) ?? row.key);
     if (args.list === "groups" && onward) groupOnward = onwardByGroup(rows, onward, kindOf);
@@ -342,6 +350,10 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
       earlier = earlier ? earlier.filter((row) => kindOf(row) === args.group) : null;
     }
     if (args.list === "groups") {
+      if (args.pages) {
+        const pageBefore = new Map((earlier ?? []).map((row) => [row.key, row]));
+        pages = rows.map((row) => withOnward({ ...shown(row, pageBefore.get(row.key), counted, earlier !== null), label: addresses.get(row.key) ?? row.key }, onward?.get(row.key), onward !== null));
+      }
       for (const row of rows) members.set(kindOf(row), (members.get(kindOf(row)) ?? 0) + 1);
       rows = grouped(rows, kindOf);
       earlier = earlier ? grouped(earlier, kindOf) : null;
@@ -366,11 +378,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (args.list === "source" && args.channel === AI_ASSISTANTS_CHANNEL) for (const row of out) row.elsewhere = elsewhere.get(row.key) ?? 0;
   if (onward) {
     const byKey = groupOnward ?? onward;
-    for (const row of out) {
-      const own = byKey.get(row.key);
-      row.onward = own ? Math.min(row.visits, own.on) : 0;
-      row.next = own && own.next && own.on > 0 ? { key: own.next, page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
-    }
+    for (const row of out) withOnward(row, byKey.get(row.key), true);
   }
   if (args.list === "page" && args.quiet && !args.eventName && args.group === undefined) {
     const whole = await withQuietPages(ctx, holdId, out, earlier, counted, addresses);
@@ -413,7 +421,16 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     counting,
     untagged,
     moves,
+    ...(pages ? { pages } : {}),
   };
+}
+
+/** A landing page's or group's visits that went on, and the page most opened next, as the collection kept them (LF4). */
+function withOnward(row: ShownRow, own: Onward | undefined, kept: boolean): ShownRow {
+  if (!kept) return row;
+  row.onward = own ? Math.min(row.visits, own.on) : 0;
+  row.next = own && own.next && own.on > 0 ? { key: own.next, page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
+  return row;
 }
 
 /** The page addresses of the rows a screen shows, and their titles (GA27), read only for them. */

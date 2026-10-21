@@ -1,3 +1,4 @@
+import type { FunctionArgs } from "convex/server";
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
@@ -112,7 +113,7 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     const country = optionalStringArg(input.args, "country");
     const key = optionalStringArg(input.args, "key");
     const search = optionalStringArg(input.args, "search");
-    return await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, {
+    const asked: FunctionArgs<typeof internal.assistantAnalyticsReads.googleAnalyticsInternal> = {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
       screen: screen as (typeof ANALYTICS_SCREENS)[number],
@@ -122,7 +123,11 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(key ? { key } : {}),
       ...(search ? { search } : {}),
       ...(list === "visitorType" || list === "browser" || list === "system" || list === "age" || list === "gender" || list === "interest" ? { list } : {}),
-    });
+    };
+    const answer = await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, asked);
+    // Overview's page panels are a read of their own, as on the screen (calendar-periods audit, 2026-10-21).
+    if (screen !== "overview" || !answer.ok) return answer;
+    return { ...answer, ...await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, { ...asked, part: "pages" }) };
   },
   /** Every Bing Webmaster screen (bing-webmaster-plan.md BW13), through the screens' own reads (`assistantBingReads.ts`). */
   "assistant.bingWebmaster": async (input) => {

@@ -50,7 +50,7 @@ when the span before holds as many days ("like against like") — so it shows no
 ## Google Analytics
 
 Five connected websites (hurtwoodhouse.com, nec.ac.uk, kordatackle.com, ronins.co.uk, morehandles.co.uk), read
-after each one's start-up fill finished, through the read the screens and Ask Hakken share.
+after each one's start-up fill finished (MoreHandles' at 13:59), through the read the screens and Ask Hakken share.
 
 - **Dates: 35 of 35 right.** Every period's dates equal the rules written separately, and so does every stored span it
   is set against — This Week against 12–13 October (the same two days), This Month against 1–20 September, This
@@ -84,6 +84,21 @@ after each one's start-up fill finished, through the read the screens and Ask Ha
    past the 16MB a step may read and failed every night, silently (the collection itself was unaffected). It had
    only met removed home countries before this build gave it every old list. **Fixed:** eight parts a step, the
    next step booked by itself; Kordatackle's old lists then cleared.
+
+7. **MoreHandles' Overview panels could not be read for This Year.** Overview's panels were one read: on MoreHandles'
+   year of landing pages the classifications panel took about 490ms, the landing pages panel 310ms (each reading the
+   same landing pages, now and before), the shop 180ms — past Convex's one second, so the panels never arrived; Last
+   Quarter took 840ms, and Ask Hakken's overview (the headline and the panels together) 970ms. **Fixed:** the two page
+   panels share one read of the landing pages, and come as a read of their own beside the rest, on the screen and in
+   Ask Hakken alike. On MoreHandles' This Year the page panels now take about half a second and the rest under 0.3s;
+   Ask Hakken answers This Year. Nothing shown changes.
+
+### Noticed, outside this build
+
+- **MoreHandles counts basket adds as conversions.** Its "what counts" setting includes `add_to_cart`,
+  `begin_checkout`, `view_cart` and newsletter sign-ups, and both `purchase` and `checkout_complete` — so a sale is
+  likely counted twice, and its This Year shows 233,359 conversions on 325,427 visits. Its own setting, not a fault in
+  the periods; left for Anthony to decide.
 
 ## Old answers cleared
 

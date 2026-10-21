@@ -28,7 +28,8 @@ import { useVisitorName } from "../_components/useVisitorName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../_components/useAnalytics";
 
 type Overview = NonNullable<FunctionReturnType<typeof api.googleAnalyticsReads.analyticsOverview>>;
-type Panels = NonNullable<FunctionReturnType<typeof api.googleAnalyticsOverviewReads.analyticsOverviewPanels>>;
+type Panels = NonNullable<FunctionReturnType<typeof api.googleAnalyticsOverviewReads.analyticsOverviewPanels>>
+  & NonNullable<FunctionReturnType<typeof api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels>>;
 type TopRow = Panels["channels"]["rows"][number];
 type Figures = NonNullable<Overview["now"]>;
 
@@ -63,7 +64,11 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   const hrefFor = useAnalyticsHref(args.siteId);
   const overview = useQuery(api.googleAnalyticsReads.analyticsOverview, args);
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, args);
-  const panels = useQuery(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, args);
+  // The page panels are a read of their own: a big website's year of landing pages took one read past its time.
+  const rest = useQuery(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, args);
+  const pagePanels = useQuery(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, args);
+  const panels: Panels | null | undefined = rest === undefined || pagePanels === undefined ? undefined
+    : rest === null || pagePanels === null ? null : { ...rest, ...pagePanels };
   const currency = status.connection?.currency ?? null;
   const counting = countsAnything(status);
 

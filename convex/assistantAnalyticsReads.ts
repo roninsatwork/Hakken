@@ -7,7 +7,7 @@ import type { SiteReader } from "./siteAccess";
 import { holdFor } from "./assistantReads";
 import { isTrackedHold } from "./utils/websitePairing";
 import { readConversions, readListPage, readOverview, type ShownRow } from "./googleAnalyticsReads";
-import { readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
+import { readOverviewPagePanels, readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitors } from "./googleAnalyticsVisitorReads";
 import { productList, readProducts } from "./googleAnalyticsProductReads";
@@ -49,24 +49,13 @@ const money = (hundredths: number | null | undefined) => (hundredths === null ||
 const percent = (share: number | null | undefined) => (share === null || share === undefined ? null : Math.round(share * 1000) / 10);
 
 /** Overview's panels in plain words (ga-overview-plan.md OV2–OV7): the rows the screen shows, money in the currency. */
-function overviewPanelParts(panels: OverviewPanels) {
-  const kindName = (name: string | null | undefined) => (name === undefined ? undefined : name ?? "unclassified");
+function overviewPanelParts(panels: Omit<OverviewPanels, "kinds" | "landing">) {
   return {
     whereVisitsCameFrom: {
       channels: panels.channels.count,
       visitsFromTaggedLinks: panels.channels.tagged,
       visitsFromAdKeywords: panels.channels.keywords,
       mostVisits: panels.channels.rows.map((row) => ({ channel: row.label, visits: row.visits, changePercent: percent(row.change), conversions: row.conversions, value: money(row.value) })),
-    },
-    pagesByClassification: panels.kinds
-      ? { classifications: panels.kinds.count, mostVisits: panels.kinds.rows.map((row) => ({ classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions })) }
-      : "The website's pages have no classifications yet.",
-    whereVisitsLanded: {
-      leftFromTheirLandingPagePercent: percent(panels.landing.left),
-      mostVisits: panels.landing.rows.map((row) => ({
-        page: row.title ? `${row.title} — ${pathOfAddress(row.label)}` : pathOfAddress(row.label),
-        classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions,
-      })),
     },
     keyEvents: panels.conversions.rows.map((row) => ({
       event: row.eventName,
@@ -80,6 +69,23 @@ function overviewPanelParts(panels: OverviewPanels) {
         bestSellers: panels.shop.rows.map((row) => ({ product: row.name, viewed: row.looks, addedToBasket: row.basket, bought: row.bought, revenue: money(row.revenue) })),
       },
     } : {}),
+  };
+}
+
+/** Overview's page panels (OV3, OV4), a read of their own: the screen's rows, in plain names. */
+function overviewPageParts(panels: Pick<OverviewPanels, "kinds" | "landing">) {
+  const kindName = (name: string | null | undefined) => (name === undefined ? undefined : name ?? "unclassified");
+  return {
+    pagesByClassification: panels.kinds
+      ? { classifications: panels.kinds.count, mostVisits: panels.kinds.rows.map((row) => ({ classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions })) }
+      : "The website's pages have no classifications yet.",
+    whereVisitsLanded: {
+      leftFromTheirLandingPagePercent: percent(panels.landing.left),
+      mostVisits: panels.landing.rows.map((row) => ({
+        page: row.title ? `${row.title} — ${pathOfAddress(row.label)}` : pathOfAddress(row.label),
+        classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions,
+      })),
+    },
   };
 }
 
@@ -197,6 +203,8 @@ export const googleAnalyticsInternal = internalQuery({
     search: v.optional(v.string()),
     /** Visitors' list. */
     list: v.optional(v.union(...VISITOR_VIEWS.map((view) => v.literal(view)))),
+    /** Overview's page panels alone, a read of their own (calendar-periods audit, 2026-10-21): the tool asks them after the rest. */
+    part: v.optional(v.literal("pages")),
   },
   handler: async (ctx, args) => {
     const found = await holdFor(ctx, args.companyId, args.website);
@@ -259,6 +267,10 @@ export const googleAnalyticsInternal = internalQuery({
 
     switch (args.screen) {
       case "overview": {
+        if (args.part === "pages") {
+          const pages = await readOverviewPagePanels(site, common);
+          return { ...base, ...(pages ? overviewPageParts(pages) : {}), link: linkTo("") };
+        }
         const answer = await readOverview(site, common);
         const figures = (figure: typeof answer.now) => figure && {
           visits: figure.visits, pageViews: figure.views, people: figure.people, engagedVisits: figure.engaged,

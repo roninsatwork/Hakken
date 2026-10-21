@@ -81,6 +81,11 @@ const productRowValidator = v.object({
   revenue: v.number(),
 });
 
+/**
+ * Overview's panels come in two reads (calendar-periods audit, 2026-10-21): a big website's year of landing pages, read
+ * now and before with every address, took the one read past Convex's second on its own. The page panels are one read,
+ * the rest another, and the screen and Ask Hakken put them together.
+ */
 export const overviewPanelsValidator = v.object({
   channels: v.object({
     rows: v.array(topRowValidator),
@@ -88,14 +93,6 @@ export const overviewPanelsValidator = v.object({
     /** Visits from tagged links and from ad keywords; null before their lists are held. */
     tagged: v.union(v.number(), v.null()),
     keywords: v.union(v.number(), v.null()),
-  }),
-  /** Null when the website's pages have no classifications. */
-  kinds: v.union(v.null(), v.object({ rows: v.array(topRowValidator), count: v.number() })),
-  landing: v.object({
-    rows: v.array(topRowValidator),
-    count: v.number(),
-    /** The share of every visit that left from the page it landed on. */
-    left: v.union(v.number(), v.null()),
   }),
   conversions: v.object({ rows: v.array(eventRowValidator), count: v.number() }),
   who: v.array(whoRowValidator),
@@ -108,7 +105,19 @@ export const overviewPanelsValidator = v.object({
     revenue: v.number(),
   })),
 });
-export type OverviewPanels = Infer<typeof overviewPanelsValidator>;
+
+/** The page panels: the classifications and the landing pages, from one read of the landing pages. */
+export const overviewPagePanelsValidator = v.object({
+  /** Null when the website's pages have no classifications. */
+  kinds: v.union(v.null(), v.object({ rows: v.array(topRowValidator), count: v.number() })),
+  landing: v.object({
+    rows: v.array(topRowValidator),
+    count: v.number(),
+    /** The share of every visit that left from the page it landed on. */
+    left: v.union(v.number(), v.null()),
+  }),
+});
+export type OverviewPanels = Infer<typeof overviewPanelsValidator> & Infer<typeof overviewPagePanelsValidator>;
 
 const overviewPanelsArgs = { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
 type PanelArgs = ObjectType<typeof overviewPanelsArgs>;
@@ -117,6 +126,12 @@ export const analyticsOverviewPanels = tenantQuery({
   args: overviewPanelsArgs,
   returns: v.union(v.null(), overviewPanelsValidator),
   handler: async (ctx, args) => await readOverviewPanels(ctx, args),
+});
+
+export const analyticsOverviewPagePanels = tenantQuery({
+  args: overviewPanelsArgs,
+  returns: v.union(v.null(), overviewPagePanelsValidator),
+  handler: async (ctx, args) => await readOverviewPagePanels(ctx, args),
 });
 
 /** The most visits first, then by name: the panels' order. */
@@ -128,8 +143,8 @@ const leftOf = (row: ShownRow) => (row.visits > 0 && row.onward !== undefined &&
 /** The visits a held list counts, or null before it is held. */
 const visitsIn = (answer: ListAnswer) => (answer.live || answer.preparing ? null : answer.rows.reduce((sum, row) => sum + row.visits, 0));
 
-/** Overview's panels for the dates, device and home country chosen: null before the first collection. */
-export async function readOverviewPanels(ctx: SiteReader, args: PanelArgs): Promise<OverviewPanels | null> {
+/** Overview's panels but the page panels, for the dates, device and home country chosen: null before the first collection. */
+export async function readOverviewPanels(ctx: SiteReader, args: PanelArgs): Promise<Infer<typeof overviewPanelsValidator> | null> {
   const site = await requireMySite(ctx, args.siteId);
   const holdId = site.hold._id;
   const country = await keptCountry(ctx, site.hold, args.country);
@@ -143,23 +158,6 @@ export async function readOverviewPanels(ctx: SiteReader, args: PanelArgs): Prom
   const keywords = await readAnalyticsList(ctx, holdId, { ...listArgs, list: "adKeyword" });
   const channelRows = [...channels.every].sort(byVisits);
 
-  // OV3: the classifications, with what left from their landing pages.
-  const kinds = await readPageKinds(ctx, holdId);
-  const groups = kinds ? await readAnalyticsList(ctx, holdId, { ...listArgs, list: "groups" }) : null;
-  const groupRows = groups ? [...groups.every].sort(byVisits) : [];
-
-  // OV4: the landing pages, each with its classification; no page recorded left out of the three.
-  const landing = await readAnalyticsList(ctx, holdId, { ...listArgs, list: "landing" });
-  const pages = [...landing.every].sort(byVisits);
-  // Named only as far as the three need: a few more for the visits with no page recorded passed over.
-  const first = pages.slice(0, OVERVIEW_TOP + PASSED_OVER);
-  const addresses = await decodePages(ctx, holdId, first.map((row) => row.key));
-  const named = first.map((row, at) => ({ row, address: addresses[at] })).filter(({ address }) => address !== "" && !isUnknownValue(address));
-  const top = named.slice(0, OVERVIEW_TOP);
-  const titles = await titlesOf(ctx, holdId, top.map(({ address }) => address));
-  const landed = pages.reduce((sum, row) => sum + row.visits, 0);
-  const stayed = pages.reduce((sum, row) => sum + (row.onward ?? 0), 0);
-
   return {
     channels: {
       rows: channelRows.slice(0, OVERVIEW_TOP).map((row) => topRow(row)),
@@ -167,6 +165,39 @@ export async function readOverviewPanels(ctx: SiteReader, args: PanelArgs): Prom
       tagged: visitsIn(campaigns),
       keywords: visitsIn(keywords),
     },
+    conversions: await conversionsPanel(ctx, args, holdId, country),
+    who: await whoVisited(ctx, holdId, listArgs),
+    shop: connection.shop === true ? shopPanel(await productList(ctx, site.hold, listArgs)) : null,
+  };
+}
+
+/** Overview's page panels (OV3, OV4): null before the first collection. */
+export async function readOverviewPagePanels(ctx: SiteReader, args: PanelArgs): Promise<Infer<typeof overviewPagePanelsValidator> | null> {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  if (!connection?.newestDay) return null;
+  const listArgs = { period: args.period, device: args.device, country };
+
+  // OV3: the classifications, with what left from their landing pages — and the landing pages from the same read.
+  const kinds = await readPageKinds(ctx, holdId);
+  const groups = kinds ? await readAnalyticsList(ctx, holdId, { ...listArgs, list: "groups", pages: true }) : null;
+  const groupRows = groups ? [...groups.every].sort(byVisits) : [];
+
+  // OV4: the landing pages, each with its classification; no page recorded left out of the three. Without
+  // classifications they are read on their own, named only as far as the three need: a few more for the visits with no
+  // page recorded passed over.
+  const pages = [...(groups?.pages ?? (await readAnalyticsList(ctx, holdId, { ...listArgs, list: "landing" })).every)].sort(byVisits);
+  const first = pages.slice(0, OVERVIEW_TOP + PASSED_OVER);
+  const addresses = groups?.pages ? first.map((row) => row.label) : await decodePages(ctx, holdId, first.map((row) => row.key));
+  const named = first.map((row, at) => ({ row, address: addresses[at] })).filter(({ address }) => address !== "" && !isUnknownValue(address));
+  const top = named.slice(0, OVERVIEW_TOP);
+  const titles = await titlesOf(ctx, holdId, top.map(({ address }) => address));
+  const landed = pages.reduce((sum, row) => sum + row.visits, 0);
+  const stayed = pages.reduce((sum, row) => sum + (row.onward ?? 0), 0);
+
+  return {
     kinds: kinds && groups ? {
       rows: groupRows.slice(0, OVERVIEW_TOP).map((row) => topRow(row, { kindName: row.key === NOT_SORTED_KIND ? null : kinds.nameOf(row.key), left: leftOf(row) })),
       count: groupRows.length,
@@ -184,9 +215,6 @@ export async function readOverviewPanels(ctx: SiteReader, args: PanelArgs): Prom
       count: pages.length,
       left: landed > 0 && pages.some((row) => row.onward !== undefined) ? Math.max(0, landed - stayed) / landed : null,
     },
-    conversions: await conversionsPanel(ctx, args, holdId, country),
-    who: await whoVisited(ctx, holdId, listArgs),
-    shop: connection.shop === true ? shopPanel(await productList(ctx, site.hold, listArgs)) : null,
   };
 }
 
