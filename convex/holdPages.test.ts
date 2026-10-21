@@ -150,11 +150,11 @@ async function numbersOf(ctx: Pick<MutationCtx, "db">, holdId: Id<"companyWebsit
 }
 
 /**
- * Its ready-made 90 days of landing pages, as a collection keeps them: each
+ * Its ready-made last quarter of landing pages, as a collection keeps them: each
  * address by its number in the hold's numbering, Google's "(not set)" as it is.
  */
 async function landing90(ctx: Pick<MutationCtx, "db">, holdId: Id<"companyWebsites">, landed: Array<[string, number]>) {
-  const key = slotKey("landing", "90", "NOW", "");
+  const key = slotKey("landing", "lastQuarter", "NOW", "");
   const named = landed.filter(([address]) => address !== "(not set)").map(([address]) => address);
   const numbers = await numbersOf(ctx, holdId, named);
   const refs = new Map(named.map((address, at) => [address, `~${numbers[at].toString(36)}`]));
@@ -489,7 +489,7 @@ describe("visits", () => {
     await analytics(t, owner);
     await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
 
-    const first = await t.query(internal.holdPages.landingVisits, { holdId: owner.holdId });
+    const first = await t.query(internal.holdPages.landingVisits, { holdId: owner.holdId, period: "lastQuarter" });
     expect(first).toMatchObject({ slot: 0, next: null });
     // "(not set)" is no page: only the three numbered.
     expect(first && "rows" in first ? first.rows : []).toHaveLength(3);
@@ -498,7 +498,7 @@ describe("visits", () => {
       const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", owner.holdId)).first();
       await ctx.db.patch(slot!._id, { slot: 1 });
     });
-    expect(await t.query(internal.holdPages.landingVisits, { holdId: owner.holdId, slot: 0, start: 0 })).toEqual({ moved: true });
+    expect(await t.query(internal.holdPages.landingVisits, { holdId: owner.holdId, period: "lastQuarter", slot: 0, start: 0 })).toEqual({ moved: true });
   });
 });
 

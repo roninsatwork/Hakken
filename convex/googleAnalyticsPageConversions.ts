@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { isPageRef } from "./holdPageRefs";
-import { slotKey } from "./googleAnalyticsCollect";
+import { periodRange, slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { shiftDay } from "./searchConsoleDays";
 import { splitChannelKey, type ListRow } from "./googleAnalyticsLists";
@@ -26,8 +26,8 @@ import { landingByChannel } from "./googleAnalyticsChannelReads";
 
 const pageArgs = { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
 
-/** The periods drawn with the days just before beside them: those held a day at a time, as Conversions' chart. */
-const PERIODS_DRAWN_BEFORE = new Set(["7", "30"]);
+/** The periods drawn with the span before beside them, day for day: the weeks and months, as Conversions' chart. */
+const PERIODS_DRAWN_BEFORE: ReadonlySet<string> = new Set(["thisWeek", "lastWeek", "thisMonth", "lastMonth"]);
 
 const pointValidator = v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), conversions: v.number(), events: v.array(v.number()) });
 
@@ -35,7 +35,7 @@ const pointValidator = v.object({ day: v.string(), lastDay: v.optional(v.string(
  * The page's "Visits needed for one conversion": its visits as a landing page
  * and their conversions a point at the grain held — a day for 90 days, then a
  * week, then a month — each counted kind's own count beside them, for the tick
- * boxes; for 7 and 30 days the days just before, each dated onto the day it is
+ * boxes; for the weeks and months the span before, each day dated onto the day it is
  * laid over; and the period's figures as the screen's "Visits that started
  * here" counts them, now and before, so the words and the figures agree.
  * `live` while the page's days are not held yet.
@@ -75,9 +75,13 @@ export const analyticsPageVisitsPerConversion = tenantQuery({
     });
     const stored = await readPageSeries(ctx, connection, "landing", args.page, args.device, total.from, total.to, country);
     if (!stored) return { ...none, live: true };
-    const shift = Number(args.period);
-    const earlier = PERIODS_DRAWN_BEFORE.has(args.period)
-      ? await readPageSeries(ctx, connection, "landing", args.page, args.device, shiftDay(total.from, -shift), shiftDay(total.to, -shift), country)
+    // The span the period is set against (calendar-periods-plan.md, phase 6), each of its days laid over the same day
+    // of the period, its first over the first.
+    const totalBefore = PERIODS_DRAWN_BEFORE.has(args.period) ? await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country)) : null;
+    const beforeRange = PERIODS_DRAWN_BEFORE.has(args.period) && connection.newestDay ? totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) : null;
+    const shift = beforeRange ? daysBetween(beforeRange.from, total.from) : 0;
+    const earlier = beforeRange
+      ? await readPageSeries(ctx, connection, "landing", args.page, args.device, beforeRange.from, beforeRange.to, country)
       : null;
     // The landing pages' ready-made lists, as the screen's "Visits that started here" reads them (PS1).
     const now = await readFor(ctx, holdId, "landing", args.period, "NOW", args.device, undefined, country);
@@ -91,7 +95,7 @@ export const analyticsPageVisitsPerConversion = tenantQuery({
       points: stored.map((point) => pointOf(point.start, point.row, point.end)),
       // Every point a day: anything coarser is not the day-for-day line this is.
       before: earlier && earlier.every((point) => point.grain === "day")
-        ? { shift, points: earlier.map((point) => pointOf(shiftDay(point.start, shift), point.row)) }
+        ? { shift, points: earlier.map((point) => pointOf(shiftDay(total.from, shift + daysBetween(total.from, point.start)), point.row)) }
         : null,
       figures: now && now !== "LIVE" ? {
         visits: own?.visits ?? 0,
@@ -165,3 +169,8 @@ export const analyticsPageConversionGrid = tenantQuery({
     };
   },
 });
+
+/** Whole days from one day to another. */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}

@@ -9,6 +9,7 @@ import { askRealtime, openSession } from "./googleAnalyticsCollect";
 import type { RealtimeAsk } from "./googleAnalyticsApi";
 import { seenValidator } from "./utils/hakkenSees";
 import { liveSees } from "./utils/sees/analyticsLive";
+import { OPENING_PERIOD } from "./utils/calendarPeriods";
 
 /**
  * Live (docs/plans/active/google-analytics-plan.md GA34, §18.2 board 14,
@@ -81,7 +82,7 @@ export async function askLiveFigures(
   companyId: Id<"companies">,
   args: { siteId: Id<"companyWebsites">; device: string; list: (typeof LIVE_LISTS)[number] },
 ): Promise<LiveAnswer> {
-  const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId, siteId: args.siteId, period: "30" });
+  const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId, siteId: args.siteId, period: OPENING_PERIOD });
   if (!found) return { ok: false as const, problem: "NOT_CONNECTED" as const };
   const opened = await openSession(ctx, found.connectionId);
   if (!opened.ok) return { ok: false as const, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" as const : "NOT_CONNECTED" as const };

@@ -793,13 +793,13 @@
       "websites": {
         "none": "None of your company's own websites is here yet. Add one in Visibility to see what Google Analytics counts on it.",
         "noneConnected": "{count, plural, =1 {Your website isn't} other {None of your # websites is}} connected to Google Analytics yet, so nobody can say which pages bring in enquiries or sales.",
-        "notCounting": "{text} had {a} visits in the last 30 days, but nothing counts as a conversion there yet, so its pages can't be weighed by what they bring in.",
-        "made": "{text} made {aMoney} from {countB, plural, =1 {one conversion} other {# conversions}} in the last 30 days.",
-        "fellVisitsUp": "{text} made {aMoney} in the last 30 days, down from {bMoney}, although its visits rose {cRate}.",
+        "notCounting": "{text} had {a} visits last month, but nothing counts as a conversion there yet, so its pages can't be weighed by what they bring in.",
+        "made": "{text} made {aMoney} from {countB, plural, =1 {one conversion} other {# conversions}} last month.",
+        "fellVisitsUp": "{text} made {aMoney} last month, down from {bMoney}, although its visits rose {cRate}.",
         "value": {
-          "down": "{text} made {aMoney} in the last 30 days, down from {bMoney}.",
-          "up": "{text} made {aMoney} in the last 30 days, up from {bMoney}.",
-          "same": "{text} made {aMoney} in the last 30 days, the same as the 30 days before."
+          "down": "{text} made {aMoney} last month, down from {bMoney}.",
+          "up": "{text} made {aMoney} last month, up from {bMoney}.",
+          "same": "{text} made {aMoney} last month, the same as the month before."
         },
         "unknown": "{text}'s tracking needs fixing too: {aRate} of its visits can't be put to a channel or a landing page.",
         "tracking": "{text}'s tracking needs a look: {count, plural, =1 {one} other {#}} of its {b} checks {count, plural, =1 {fails} other {fail}}.",
@@ -951,7 +951,7 @@
         "copy": "{event} counts as a conversion, but matches {moreEvent} day for day: it happened {count, plural, =1 {once} other {# times}} here.",
         "uncountedEnquiry": "{event} happened {count, plural, =1 {once} other {# times}} from these visits and looks like an enquiry, but isn't counted as a conversion.",
         "uncounted": "{event} happened {count, plural, =1 {once} other {# times}} from these visits; it isn't counted as a conversion.",
-        "fallingNow": "It grew over the year but is falling now: {a} visits in the last 90 days, against {b} in the 90 before and {c} a year ago.",
+        "fallingNow": "It grew over the year but is falling now: {a} visits last quarter, against {b} the quarter before and {c} the same quarter a year ago.",
         "filedElsewhere": "Google filed {a} of these {b} visits under other channels, such as Referral; they are all counted here as AI assistants.",
         "noPage": "Engagement reads {cRate}, but {bRate} without the {a} visits with no page recorded.",
         "lostSources": "{a} of its {b} people were new to the website: most of these are likely links whose source was lost.",
@@ -2288,13 +2288,13 @@
       "websites": {
         "none": "Qui non c'è ancora nessuno dei siti della tua azienda. Aggiungine uno in Visibilità per vedere cosa conta Google Analytics.",
         "noneConnected": "{count, plural, =1 {Il tuo sito non è} other {Nessuno dei tuoi # siti è}} ancora collegato a Google Analytics, quindi nessuno può dire quali pagine portano richieste o vendite.",
-        "notCounting": "{text} ha avuto {a} visite negli ultimi 30 giorni, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
-        "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} negli ultimi 30 giorni.",
-        "fellVisitsUp": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in calo da {bMoney}, anche se le sue visite sono salite del {cRate}.",
+        "notCounting": "{text} ha avuto {a} visite il mese scorso, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
+        "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} il mese scorso.",
+        "fellVisitsUp": "{text} ha fatto {aMoney} il mese scorso, in calo da {bMoney}, anche se le sue visite sono salite del {cRate}.",
         "value": {
-          "down": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in calo da {bMoney}.",
-          "up": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in crescita da {bMoney}.",
-          "same": "{text} ha fatto {aMoney} negli ultimi 30 giorni, come nei 30 giorni prima."
+          "down": "{text} ha fatto {aMoney} il mese scorso, in calo da {bMoney}.",
+          "up": "{text} ha fatto {aMoney} il mese scorso, in crescita da {bMoney}.",
+          "same": "{text} ha fatto {aMoney} il mese scorso, come nel mese precedente."
         },
         "unknown": "Anche il tracciamento di {text} va sistemato: il {aRate} delle sue visite non si può attribuire a un canale o a una pagina di destinazione.",
         "tracking": "Il tracciamento di {text} va controllato: {count, plural, =1 {uno} other {#}} dei suoi {b} controlli {count, plural, =1 {non passa} other {non passano}}.",
@@ -2446,7 +2446,7 @@
         "copy": "{event} conta come conversione, ma coincide giorno per giorno con {moreEvent}: è successo {count, plural, =1 {una volta} other {# volte}} qui.",
         "uncountedEnquiry": "{event} è successo {count, plural, =1 {una volta} other {# volte}} da queste visite e sembra una richiesta, ma non è contato come conversione.",
         "uncounted": "{event} è successo {count, plural, =1 {una volta} other {# volte}} da queste visite; non è contato come conversione.",
-        "fallingNow": "È cresciuto nell'anno ma ora cala: {a} visite negli ultimi 90 giorni, contro {b} nei 90 precedenti e {c} un anno fa.",
+        "fallingNow": "È cresciuto nell'anno ma ora cala: {a} visite il trimestre scorso, contro {b} il trimestre precedente e {c} lo stesso trimestre un anno fa.",
         "filedElsewhere": "Google ha archiviato {a} di queste {b} visite sotto altri canali, come Referral; qui sono tutte contate come assistenti AI.",
         "noPage": "Il coinvolgimento risulta {cRate}, ma {bRate} senza le {a} visite senza pagina registrata.",
         "lostSources": "{a} delle sue {b} persone erano nuove al sito: probabilmente sono per lo più link la cui sorgente è andata persa.",

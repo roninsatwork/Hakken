@@ -173,21 +173,22 @@ async function backfillAndRebuild(t: TestConvex) {
 const asUser = (t: TestConvex, userId: Id<"users">) => t.withIdentity({ subject: userId });
 
 describe("the activity screen reads buckets and agrees with a hand-count", () => {
-  test("platform scope, thirty days", async () => {
+  test("platform scope, this month (calendar-periods-plan.md, phase 7)", async () => {
     const t = makeTest();
     const seeded = await seedEstate(t);
     await seedActivity(t, seeded);
     await backfillAndRebuild(t);
 
-    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 30 });
+    // Tuesday 18 August: this month is 1 to 18 August.
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisMonth" });
 
     // Hand-count of the seeds: 3 company runs today + 4 runs carrying tool
     // calls + 1 companyless + 1 other-company + 1 five days ago = 10.
-    // The 40-day-old run is outside the window.
+    // The 40-day-old run, in July, is outside the month.
     expect(activity.runs.total).toBe(10);
     expect(activity.runs.unfinished).toBe(1);
     expect(activity.actions).toMatchObject({ read: 3, external: 1, total: 4, readShare: 75 });
-    expect(activity.timeline).toHaveLength(30);
+    expect(activity.timeline).toHaveLength(18);
 
     const today = activity.timeline.at(-1)!;
     expect(today).toMatchObject({ finished: 8, unfinished: 1, waited: 0 });
@@ -207,7 +208,7 @@ describe("the activity screen reads buckets and agrees with a hand-count", () =>
     await seedActivity(t, seeded);
     await backfillAndRebuild(t);
 
-    const activity = await asUser(t, seeded.adminId).query(api.governanceActivity.getGovernanceActivity, { days: 30 });
+    const activity = await asUser(t, seeded.adminId).query(api.governanceActivity.getGovernanceActivity, { period: "thisMonth" });
 
     // The hand-count again, minus the other company's run: 10 - 1 = 9.
     expect(activity.runs.total).toBe(9);
@@ -215,14 +216,27 @@ describe("the activity screen reads buckets and agrees with a hand-count", () =>
     expect(today.finished).toBe(7);
   });
 
-  test("a ninety-day window reaches the history the backfill built", async () => {
+  test("this quarter reaches the history the backfill built", async () => {
     const t = makeTest();
     const seeded = await seedEstate(t);
     await seedActivity(t, seeded);
     await backfillAndRebuild(t);
 
-    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 90 });
+    // 1 July to 18 August: the 40-day-old run is in it.
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisQuarter" });
     expect(activity.runs.total).toBe(11);
+  });
+
+  test("a finished period ends on its last day: last month is July's run alone, none of August's", async () => {
+    const t = makeTest();
+    const seeded = await seedEstate(t);
+    await seedActivity(t, seeded);
+    await backfillAndRebuild(t);
+
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "lastMonth" });
+    expect(activity.runs.total).toBe(1);
+    expect(activity.timeline).toHaveLength(31);
+    expect(activity.oversight).toMatchObject({ decided: 0 });
   });
 });
 
@@ -271,7 +285,7 @@ describe("the machinery is safe to re-run", () => {
     await seedActivity(t, seeded);
     await backfillAndRebuild(t);
 
-    const before = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 90 });
+    const before = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisQuarter" });
 
     // A forced second pass over every day.
     await t.mutation(internal.dataMigrations.run, {
@@ -281,7 +295,7 @@ describe("the machinery is safe to re-run", () => {
     await finishScheduled(t);
     await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
 
-    const after = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 90 });
+    const after = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisQuarter" });
     expect(after).toEqual(before);
   });
 
@@ -299,7 +313,7 @@ describe("the machinery is safe to re-run", () => {
     });
     await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
 
-    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 1 });
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisWeek" });
     expect(activity.runs.total).toBe(0);
     expect(activity.timeline.at(-1)).toMatchObject({ finished: 0, waited: 0, unfinished: 0 });
   });
@@ -374,7 +388,7 @@ describe("a day bucket says so when the approvals behind it were cut short", () 
     expect(buckets[0]).toMatchObject({ runsTotal: 2, waited: 1, truncated: true });
 
     // And the reader is told, rather than reading a floor as a total.
-    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 2 });
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisWeek" });
     expect(activity.truncated).toBe(true);
   });
 

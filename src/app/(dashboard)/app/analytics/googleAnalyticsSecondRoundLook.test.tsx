@@ -192,7 +192,7 @@ describe("Google Analytics' second-round looks", () => {
     await screen.findByText("Typed in or a bookmark");
     await screen.findByText(/593 visits started on this page/);
     // The visits needed for one conversion, by channel and conversion (page-conversion-explorer-plan.md): its toolbar, and a channel ticked off.
-    screen.getByText(/^Last 30 days: the visits that started on this page and the conversions they went on to make, day by day, from the dates at the top of the page\.$/);
+    screen.getByText(/^Last month: the visits that started on this page and the conversions they went on to make, day by day, from the dates at the top of the page\.$/);
     // Both charts have their own toolbar: each is read within its card.
     const cardOf = (title: string) => screen.getByText(title).closest("[data-part='chart-card']")!.parentElement as HTMLElement;
     // It opens on conversions, a whole line every day (Anthony, 2026-10-20: "default this to conversions").

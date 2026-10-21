@@ -8,22 +8,27 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { shiftDay } from "./searchConsoleDays";
-import { NEWEST, PROPERTY, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
+import { PROPERTY, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 
 /**
  * Products (docs/plans/active/google-analytics-plan.md GA34, §18.6.6): a
- * website is a shop when any of the shop's four steps happened in the last 90
- * days — found by itself, nothing set in admin — and only a shop has its
- * products asked and its page shown. Google faked.
+ * website is a shop when any of the shop's four steps happened this quarter or
+ * last — found by itself, nothing set in admin — and only a shop has its
+ * products asked and its page shown. On a fixed day, 9 October 2026, so last
+ * month is September. Google faked.
  */
 
 const NOW = Date.parse("2026-10-09T09:30:00Z");
+/** Last month's last day on that day: September's 30 days are its whole. */
+const LAST_MONTH_END = "2026-09-30";
+/** On Thursday 1 October, Google's newest day 30 September: last week from 21 September and last month fetched already. */
+const ON_1_OCTOBER = [{ key: "lastWeek", from: "2026-09-21", settled: true }, { key: "lastMonth", from: "2026-09-01", settled: true }];
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
 /** A website connected to Analytics with a purchase counted. */
-async function connected(t: Harness) {
+async function connected(t: Harness, fetched = false) {
   return await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
     const adminId = await ctx.db.insert("users", { name: "Admin", email: "admin@acme-shop.test", role: "ADMIN", companyId, createdAt: 1 });
@@ -34,6 +39,9 @@ async function connected(t: Harness) {
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [],
       timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [{ eventName: "purchase", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 30 }],
+      // Counted by Google's own counts, last week and last month fetched already: the first run asks the periods still
+      // going and last quarter, whose events show the shop (AGENTS.md: a test asks no more than its assertions read).
+      ...(fetched ? { countedWith: "EVENT_COUNT", periodsFetched: ON_1_OCTOBER } : {}),
       createdAt: 1, updatedAt: 1,
     });
     await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
@@ -56,13 +64,13 @@ async function dailyRun(t: Harness, agentId: Id<"agents">) {
 }
 
 /**
- * A shop's last 30 days: a hundred looks at products a day, ten baskets, five
- * checkouts and two sales — the brass handle selling, the T-bar pull looked at
- * and never bought.
+ * A shop's last month, September's 30 days: a hundred looks at products a day,
+ * ten baskets, five checkouts and two sales — the brass handle selling, the
+ * T-bar pull looked at and never bought.
  */
 function shopDays(): Visit[] {
   return Array.from({ length: 30 }, (_, at): Visit => ({
-    date: shiftDay(NEWEST, -at), device: "mobile", channel: "Organic Search", source: "google", landing: "/shop/", page: "/shop/",
+    date: shiftDay(LAST_MONTH_END, -at), device: "mobile", channel: "Organic Search", source: "google", landing: "/shop/", page: "/shop/",
     sessions: 20, engaged: 12, seconds: 600, views: 120, purchases: 2, revenue: 260,
     events: { view_item: [100, 0], add_to_cart: [10, 0], begin_checkout: [5, 0], purchase: [2, 0] },
     items: [
@@ -88,10 +96,13 @@ const save = (admin: Awaited<ReturnType<typeof connected>>["admin"], siteId: Id<
   admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [{ eventName: "purchase", counted: true, hakkenValue: null }] });
 
 describe("Products, only for a shop", () => {
-  test("a shop is found by itself from its last 90 days; the next run asks its products; the page reads them", async () => {
+  test("a shop is found by itself from this quarter or last; the next run asks its products; last month's page reads them", async () => {
+    // On 1 October This Month and This Quarter hold no days yet: the runs ask This Week, This Year and the finished
+    // periods, the second run every finished one again with the shop's products (AGENTS.md: as little as it reads).
+    vi.setSystemTime(Date.parse("2026-10-01T09:30:00Z"));
     const t = harness();
-    const { siteId, connectionId, agentId, admin } = await connected(t);
-    const google = fakeGoogle([...history(70), ...shopDays()]);
+    const { siteId, connectionId, agentId, admin } = await connected(t, true);
+    const google = fakeGoogle([...history(70, LAST_MONTH_END), ...shopDays()]);
     await save(admin, siteId);
     await finishScheduled(t);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.shop).toBe(true);
@@ -102,7 +113,7 @@ describe("Products, only for a shop", () => {
     const itemAsks = google.calls.slice(asked).filter((call) => call.url.endsWith(":runReport") && call.body.includes("itemsViewed"));
     expect(itemAsks.length).toBeGreaterThan(0);
 
-    const args = { siteId, period: "30" as const, device: "" };
+    const args = { siteId, period: "lastMonth" as const, device: "" };
     const products = (await admin.query(api.googleAnalyticsProductReads.analyticsProducts, args))!;
     expect(products).toMatchObject({ shop: true, preparing: false, missing: [], categories: ["Handles", "Pulls"] });
     expect(products.steps).toEqual({ looked: 3000, basket: 300, checkout: 150, bought: 60, revenue: 30 * 26_000 });
@@ -129,6 +140,6 @@ describe("Products, only for a shop", () => {
     await dailyRun(t, agentId);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.shop).toBeUndefined();
     expect(google.calls.some((call) => call.body.includes("itemsViewed"))).toBe(false);
-    expect((await admin.query(api.googleAnalyticsProductReads.analyticsProducts, { siteId, period: "30", device: "" }))?.shop).toBe(false);
+    expect((await admin.query(api.googleAnalyticsProductReads.analyticsProducts, { siteId, period: "lastMonth", device: "" }))?.shop).toBe(false);
   });
 });

@@ -154,7 +154,7 @@ export function ChannelDayChart({ channel, days }: { channel: string; days: Chan
   const beforeName = useBeforeName();
   const now = bucketsOf(days?.now ?? [], step);
   // The span before laid over these dates: where it is held by week, its points fall a week apart and the line joins them.
-  const before = bucketsOf(days?.before ?? [], step, Number(period));
+  const before = bucketsOf(days?.before ?? [], step, days?.shift ?? 0);
   const coarse = [...now.values(), ...before.values()].some((bucket) => coarserThanStep(bucket.first, bucket.last, step));
   const data = [...now.entries()].map(([key, bucket]) => datedRow(
     { day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last },

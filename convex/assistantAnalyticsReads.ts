@@ -19,6 +19,7 @@ import { ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreen
 import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
+import { calendarPeriodValidator } from "./utils/calendarPeriods";
 
 /**
  * Every Google Analytics screen, as the Assistant reads it
@@ -177,14 +178,15 @@ const LISTS: Partial<Record<Screen, { list: "channel" | "source" | "campaign" | 
   allPages: { list: "page", segment: "all-pages" },
 };
 
-const daysValidator = v.union(v.literal(7), v.literal(30), v.literal(90), v.literal(365));
+
 
 export const googleAnalyticsInternal = internalQuery({
   args: {
     companyId: v.id("companies"),
     website: v.string(),
     screen: v.union(...ANALYTICS_SCREENS.map((screen) => v.literal(screen))),
-    days: daysValidator,
+    /** One of the screens' calendar periods (calendar-periods-plan.md, phase 6). */
+    period: calendarPeriodValidator,
     /** One device; left out for every device. */
     device: v.optional(v.union(v.literal("desktop"), v.literal("mobile"), v.literal("tablet"))),
     /** One of the website's other home countries, as Search Console names it (`fra`); left out for the main one. */
@@ -211,7 +213,7 @@ export const googleAnalyticsInternal = internalQuery({
     }
     const site = reader(ctx, args.companyId);
     const siteId = hold._id;
-    const period = String(args.days) as "7" | "30" | "90" | "365";
+    const period = args.period;
     const device = args.device ?? "";
     const common = { siteId, period, device, ...(args.country ? { country: args.country } : {}) };
     const currency = connection.currency ?? null;
@@ -225,7 +227,7 @@ export const googleAnalyticsInternal = internalQuery({
       ok: true,
       website: host,
       screen: args.screen,
-      days: args.days,
+      period,
       figuresTo: connection.newestDay,
       currency,
       rule: "These are the figures the screen shows. Give them with the link, in plain words; money is in the currency given, never hundredths.",
@@ -391,7 +393,7 @@ export const googleAnalyticsInternal = internalQuery({
       }
       case "products": {
         const answer = await readProducts(site, common);
-        if (!answer?.shop) return { ok: false, problem: `${host} is not a shop: Google Analytics recorded no products looked at, added to a basket or bought in its last 90 days.` };
+        if (!answer?.shop) return { ok: false, problem: `${host} is not a shop: Google Analytics recorded no products looked at, added to a basket or bought this quarter or last.` };
         const products = await productList(ctx, hold, { ...common, ...(args.search ? { q: args.search } : {}) });
         return {
           ...base,

@@ -22,11 +22,7 @@ const SCREENS = ["src/app/(dashboard)/app", "src/ui/components/governance"];
 /** An old menu: a list of days opening 7, 30, 90, or the custom-range dropdown. */
 const OLD_MENU = /\[\s*"?7"?\s*,\s*"?30"?\s*,\s*"?90"?|TimeframeDropdown/;
 
-const NOT_YET_MOVED = new Set([
-  "src/app/(dashboard)/app/analytics/_components/useAnalytics.ts",
-  "src/app/(dashboard)/app/settings/page.tsx",
-  "src/ui/components/governance/EvidencePackPanel.tsx",
-  "src/ui/components/governance/GovernanceActivity.tsx",
+const NOT_YET_MOVED = new Set<string>([
 ]);
 
 const SOURCE = new Set([".ts", ".tsx"]);

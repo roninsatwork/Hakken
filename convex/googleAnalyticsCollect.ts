@@ -97,8 +97,9 @@ const DAY_DEVICES = [EVERY_DEVICE, "desktop", "mobile", "tablet", "smart tv"] as
 const DAY_PARTS_A_WRITE = 24;
 
 // What a run asks and for which dates, worked out from what is held (`googleAnalyticsJobs.ts`), named here as before.
-export { REFETCH_DAYS, analyticsWindow, dueJobs, newestWholeDayIn, periodRange, slotKey, type PeriodJob } from "./googleAnalyticsJobs";
+export { REFETCH_DAYS, analyticsWindow, dueJobs, fetchedAfter, finishedDue, newestWholeDayIn, periodRange, slotKey, type PeriodJob } from "./googleAnalyticsJobs";
 import { periodRange, type PeriodJob } from "./googleAnalyticsJobs";
+import { OPENING_PERIOD } from "./utils/calendarPeriods";
 
 // ---------------------------------------------------------------------------
 // What a step needs
@@ -133,6 +134,8 @@ export type CollectTarget = {
   /** Each page is held over time (ga-stored-figures-plan.md SF5): the run then adds each new day to it. */
   pagesHeld: boolean;
   weeklyPeriodsAt: number | undefined;
+  /** The finished periods fetched, each home country's (calendar-periods-plan.md, phase 6): which a run asks is worked out from them. */
+  periodsFetched: Array<{ key: string; from: string; settled: boolean }>;
   /** The home country every ask is filtered to, by Google's two-letter `countryId`: the main one unless a job names another. */
   country: string;
   /** The website's other home countries, kept as ready-made lists (§18.6.1), by Search Console's code (`fra`). */
@@ -204,6 +207,7 @@ export const collectTarget = internalQuery({
       oldestDay: connection.oldestDay,
       pagesHeld: connection.pageHistoryFrom !== undefined,
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
+      periodsFetched: connection.periodsFetched ?? [],
       country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
       others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
       countryHistory: (connection.countryHistory ?? []).map((one) => ({ country: one.country, newestDay: one.newestDay, oldestDay: one.oldestDay, pagesHeld: one.pageHistoryFrom !== undefined })),
@@ -214,12 +218,12 @@ export const collectTarget = internalQuery({
       // A shop's first products are asked at once too, as every new list was.
       eventless: (await ctx.db
         .query("googleAnalyticsPeriodSlots")
-        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey(connection.shop ? "product" : "interest", "365", "NOW", "")))
+        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey(connection.shop ? "product" : "interest", OPENING_PERIOD, "NOW", "")))
         .first()) === null
         // Insights' two lists (insights-analyst-plan.md I35, §8) asked at once too, rather than a week later.
         || (await ctx.db
           .query("googleAnalyticsPeriodSlots")
-          .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("firstChannel", "365", "NOW", "")))
+          .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("firstChannel", OPENING_PERIOD, "NOW", "")))
           .first()) === null,
     };
   },
@@ -421,7 +425,7 @@ export async function collectDays(
   for (let day = range.to; day >= range.from; day = shiftDay(day, -1)) days.push(day);
   const weeks: Record<string, { parts: number }> = await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, {
     companyWebsiteId: target.companyWebsiteId,
-    keys: lists.map((list) => slotKey(list, "7", "NOW", EVERY_DEVICE, country ?? "")),
+    keys: lists.map((list) => slotKey(list, "lastWeek", "NOW", EVERY_DEVICE, country ?? "")),
   });
   let rows = 0;
   let cut = false;
@@ -429,7 +433,7 @@ export async function collectDays(
   type DayRecord = { list: DayFactList; device: string; parts: PackedPart[]; folded: boolean; thresholded: boolean; cut: boolean };
   const byDay = new Map<string, DayRecord[]>(days.map((day) => [day, []]));
   for (const list of lists) {
-    const big = (weeks[slotKey(list, "7", "NOW", EVERY_DEVICE, country ?? "")]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS;
+    const big = (weeks[slotKey(list, "lastWeek", "NOW", EVERY_DEVICE, country ?? "")]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS;
     for (const span of big ? days.map((day) => ({ from: day, to: day })) : [range]) {
       const asked = await askList(session, asking, list, ["date", "deviceCategory"], span);
       if (!asked.ok) return failed(session, asked);
@@ -711,6 +715,8 @@ export async function collectPeriod(
   how: { careful?: boolean } = {},
 ): Promise<StepResult> {
   const range = periodRange(job.period, job.which, top);
+  // Google has sent none of the period yet: nothing to ask (its jobs are planned only once it has).
+  if (!range) return { ok: true, rows: 0, requests: session.requests };
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).
@@ -778,11 +784,15 @@ const SPLIT_DEVICES = ["desktop", "mobile", "tablet"] as const;
 /** Rows past which a list's last build says its devices are asked one at a time: a lead ask would hold four times as many. */
 export const SPLIT_ROWS = 25_000;
 
-/** A shop is one with any of its four steps in the last 90 days (§18.6.6): noted each time those events are read. */
+/**
+ * A shop is one with any of its four steps this quarter or last (§18.6.6; calendar-periods-plan.md, phase 6): noted
+ * a shop when either quarter's events show a step, and no longer one only when a whole quarter ended without any.
+ */
 async function noteShopFrom(ctx: ActionCtx, connectionId: Id<"googleAnalyticsConnections">, target: CollectTarget, job: PeriodJob, asked: Extract<Asked, { ok: true }>) {
-  if (job.period !== "90" || job.which !== "NOW" || job.country) return;
+  if ((job.period !== "thisQuarter" && job.period !== "lastQuarter") || job.which !== "NOW" || job.country) return;
   const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
-  if (shop !== target.shopNoted) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
+  const changed = shop ? !target.shopNoted : target.shopNoted && job.period === "lastQuarter";
+  if (changed) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
 }
 
 /**
@@ -827,7 +837,10 @@ export const noteShop = internalMutation({
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.property !== args.property) return null;
-    await ctx.db.patch(connection._id, { shop: args.shop || undefined, updatedAt: Date.now() });
+    // Newly a shop: the finished periods were fetched without its products, so they are asked again, products and all,
+    // by the next run (calendar-periods-plan.md, phase 6) — else Products' Last Month would wait for the month to roll.
+    const refetch = args.shop && connection.shop !== true;
+    await ctx.db.patch(connection._id, { shop: args.shop || undefined, ...(refetch ? { periodsFetched: undefined, shopNotedAt: Date.now() } : {}), updatedAt: Date.now() });
     return null;
   },
 });
@@ -943,7 +956,7 @@ export const clearFigures = internalMutation({
     if (connection?.clearing) {
       await ctx.db.patch(connection._id, {
         clearing: undefined, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyFrom: undefined, historyFilled: undefined, pageHistoryFrom: undefined, pageChannelsFrom: undefined, countryHistory: undefined, listsFrom: undefined, quotaSeen: undefined, fillsReached: undefined,
-        dailyPeriodsAt: undefined, weeklyPeriodsAt: undefined, updatedAt: Date.now(),
+        dailyPeriodsAt: undefined, weeklyPeriodsAt: undefined, periodsFetched: undefined, updatedAt: Date.now(),
       });
       // The new property's figures start coming in at once (§10, Q15).
       if (connection.status === "CONNECTED") await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);

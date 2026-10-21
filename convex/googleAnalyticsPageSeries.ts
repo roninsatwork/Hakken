@@ -300,22 +300,28 @@ export function pageFillPieces(newest: string, units: number): Array<{ lead: Lea
   ];
 }
 
-/** Pages viewed in 90 days, as the website's own list holds them (BR5); null before it is built. */
+/**
+ * Pages viewed in a quarter, as the website's own lists hold them (BR5): last quarter's or this quarter's, the more —
+ * either may be the one held (a finished period is asked again after a website becomes a shop). Null before either is.
+ */
 export const pagesSeenOf = internalQuery({
   args: { companyWebsiteId: v.id("companyWebsites"), country: v.optional(v.string()) },
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {
-    const key = slotKey("page", "90", "NOW", EVERY_DEVICE, args.country ?? "");
-    const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key)).first();
-    if (!slot) return null;
-    // Every part but the last is full (`packList`): only the last is read (collection-reliability-plan.md, RR3), where a
-    // big website's whole list passed a query's 16 MB.
-    if (slot.parts === 0) return 0;
-    const last = await ctx.db
-      .query("googleAnalyticsPeriods")
-      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key).eq("slot", slot.slot).eq("part", slot.parts - 1))
-      .first();
-    return (slot.parts - 1) * PART_ROWS + (last?.keys.length ?? 0);
+    const counts: number[] = [];
+    for (const period of ["lastQuarter", "thisQuarter"] as const) {
+      const key = slotKey("page", period, "NOW", EVERY_DEVICE, args.country ?? "");
+      const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key)).first();
+      if (!slot) continue;
+      // Every part but the last is full (`packList`): only the last is read (collection-reliability-plan.md, RR3),
+      // where a big website's whole list passed a query's 16 MB.
+      const last = slot.parts === 0 ? null : await ctx.db
+        .query("googleAnalyticsPeriods")
+        .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key).eq("slot", slot.slot).eq("part", slot.parts - 1))
+        .first();
+      counts.push(slot.parts === 0 ? 0 : (slot.parts - 1) * PART_ROWS + (last?.keys.length ?? 0));
+    }
+    return counts.length > 0 ? Math.max(...counts) : null;
   },
 });
 

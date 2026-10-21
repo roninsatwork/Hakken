@@ -21,6 +21,7 @@ import {
   collectDays,
   collectPeriod,
   dueJobs,
+  finishedDue,
   newestWholeDayIn,
   openSession,
   type PeriodJob,
@@ -450,7 +451,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
   // list it had reached, so the same lists are never the ones left out.
   if (args.closeOnly) {
     const target = args.to === null ? await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: args.connectionId }) : null;
-    const reached = target ? jobsFor(args.weekly, target.others, target.shop, countryDayJobs(args.countryFrom ?? [], args.top), args.listsFrom)[args.jobAt] : undefined;
+    const reached = target ? jobsFor(args.weekly, target.others, target.shop, countryDayJobs(args.countryFrom ?? [], args.top), args.listsFrom, args.top, args.recount ? [] : target.periodsFetched)[args.jobAt] : undefined;
     await close(
       "FAILED",
       `The platform kept stopping ${args.host}'s run, so it ended with what it had collected; the next run starts again from there.`,
@@ -489,7 +490,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
     let jobAt = args.jobAt;
     let rows = args.rows;
     const countryDays = countryDayJobs(args.countryFrom ?? [], args.top);
-    let jobs: Job[] = to === null ? jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom) : [];
+    let jobs: Job[] = to === null ? jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom, args.top, args.recount ? [] : target.periodsFetched) : [];
     const { resumeAt: _waited, ...going } = args;
     const now = (): CollectSiteStepArgs => ({ ...going, to, weekly, jobAt, rows, requests: args.requests + open.requests, ...(skipped.length > 0 ? { skipped } : {}) });
     // The place saved as the step goes, at most every `SAVE_EVERY_MS` (RR1): a step the platform stops is started again
@@ -539,7 +540,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
     // once a day"), the 90 days and 12 months, the page titles and tracking health's weekly checks too (SF17).
     const daysDone = () => {
       weekly = true;
-      jobs = jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom);
+      jobs = jobsFor(weekly, target.others, target.shop, countryDays, args.listsFrom, args.top, args.recount ? [] : target.periodsFetched);
     };
 
     // Stopped by the platform three times at one place: that place is left out, saying so, and the run goes on (RR1).
@@ -618,7 +619,7 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
           : null;
         await line(
           "Ready-made lists",
-          `${jobs.length} lists asked of Google ready-made: the last ${weekly ? "7 and 30 days, 90 days and 12 months" : "7 and 30 days"}, each with the span before${weekly ? ", and the 90 days and 12 months a year before" : ""}. A list whose figures did not move was left as it was.${skipped.length > 0 ? ` ${skipped.length === 1 ? "One was" : `${count(skipped.length)} were`} left out; the next run asks ${skipped.length === 1 ? "it" : "them"} first.` : ""}`,
+          `${jobs.length} lists asked of Google ready-made: this week and this month${weekly ? ", this quarter and this year" : ""}, and any finished week, month or quarter not yet fetched or settled, each with the span before${weekly ? ", and the quarters a year before" : ""}. A list whose figures did not move was left as it was.${skipped.length > 0 ? ` ${skipped.length === 1 ? "One was" : `${count(skipped.length)} were`} left out; the next run asks ${skipped.length === 1 ? "it" : "them"} first.` : ""}`,
           skipped.length > 0,
         );
         await close(
@@ -700,10 +701,21 @@ function countryDayJobs(countryFrom: ReadonlyArray<{ country: string; from: stri
  * SF13), each country's, and each action's funnel
  * (ga-conversions-visitors-plan.md CV4): the same every step of the run.
  */
-function jobsFor(weekly: boolean, others: readonly string[], shop: boolean, countryDays: readonly CountryDaysJob[], listsFrom?: string): Job[] {
+function jobsFor(
+  weekly: boolean,
+  others: readonly string[],
+  shop: boolean,
+  countryDays: readonly CountryDaysJob[],
+  listsFrom: string | undefined,
+  top: string,
+  fetched: ReadonlyArray<{ key: string; from: string; settled: boolean }>,
+): Job[] {
+  // The finished periods due (calendar-periods-plan.md, phase 6), from the connection's record, which changes only
+  // when a run closes: every step of a run plans the same lists.
+  const finished = finishedDue(fetched, top, others);
   const lists: Job[] = [
-    ...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others),
-    ...pageListJobs(weekly, others),
+    ...dueJobs({ weeklyPeriodsAt: weekly ? undefined : Date.now(), shop }, Date.now(), others, top, finished),
+    ...pageListJobs(weekly, others, top, finished),
     // What people did before converting, over 12 months, once the events' 12 months are in (ga-conversions-visitors-plan.md CV4).
     ...(weekly ? [{ funnels: true } as const] : []),
   ];

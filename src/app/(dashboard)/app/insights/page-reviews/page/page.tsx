@@ -80,7 +80,7 @@ export default function InsightsPageReviewPage() {
     t("sees.figures", { enquiries: formatNumber(review.enquiries), before: review.enquiriesBefore === null ? "–" : formatNumber(review.enquiriesBefore), now: formatNumber(now), then: formatNumber(before) }),
     ...(review.reason ? [review.reason] : []),
   ];
-  // Visitors for one enquiry: the year before, the last 12 months, and the last 90 days — lower is better.
+  // Visitors for one enquiry: the same days last year, this year, and last quarter — lower is better (calendar-periods-plan.md).
   const recent = review.visits90 !== undefined && review.visits90 !== null ? perEnquiry(review.visits90, review.enquiries90 ?? null) : null;
   const bars = [
     { label: t("chart.yearBefore"), value: before },

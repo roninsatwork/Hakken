@@ -16,12 +16,29 @@ import { PROPERTY, fakeGoogle, type Visit } from "./googleAnalyticsFake";
  * The token's encryption is the test's to hand in (`connectorTokenCrypto`), as
  * `seedGoogleSignIn` takes it: this folder never imports a Convex module.
  */
+/**
+ * A website counted by Google's own counts already, its finished periods fetched and settled on 9 October: for a test
+ * that reads none of them, so its runs ask the periods still going alone (AGENTS.md: a test asks no more than its
+ * assertions read; calendar-periods-plan.md, phase 6).
+ */
+export const FINISHED_ON_9_OCTOBER = {
+  countedWith: "EVENT_COUNT",
+  periodsFetched: [
+    { key: "lastWeek", from: "2026-09-28", settled: true },
+    { key: "lastMonth", from: "2026-09-01", settled: true },
+    { key: "lastQuarter", from: "2026-07-01", settled: true },
+  ],
+};
+
 export async function collectedWebsite(
   t: TestConvex<typeof schema>,
   visits: Visit[],
   encryptConnectorToken: Parameters<typeof seedGoogleSignIn>[1],
-  /** `firstNight: false`: only connected and collected, its two years not filled yet. */
-  options: { firstNight?: boolean } = {},
+  /**
+   * `firstNight: false`: only connected and collected, its two years not filled yet. `connection`: fields set on the
+   * connection before it is collected — the finished periods fetched already, say, for a test that reads none of them.
+   */
+  options: { firstNight?: boolean; connection?: { periodsFetched?: Array<{ key: string; from: string; settled: boolean }>; countedWith?: string } } = {},
 ) {
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
@@ -38,6 +55,7 @@ export async function collectedWebsite(
         { eventName: "sign_up", counted: true, analyticsValue: 10, hakkenValue: null, lastThirtyDays: 0 },
         { eventName: "form_submit", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
       ],
+      ...options.connection,
       createdAt: 1, updatedAt: 1,
     });
     await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });

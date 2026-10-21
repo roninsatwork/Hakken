@@ -364,8 +364,11 @@ async function consolePagesOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, hos
   }
 }
 
-/** Google Analytics' landing pages over the last 90 days, for every device: the ready-made list a collection keeps. */
-const LANDING_90 = slotKey("landing", "90", "NOW", "");
+/**
+ * Google Analytics' landing pages this quarter and last, for every device: the ready-made lists a collection keeps,
+ * each page's visits added together as Search Console's clicks are (calendar-periods-plan.md, phase 6).
+ */
+const LANDING_PERIODS = RECENT_PERIODS;
 
 /** Parts of the landing list read a call: up to 2,000 rows each, inside the 8,192 a function's answer holds to a list. */
 const LANDING_PARTS_PER_READ = 3;
@@ -374,8 +377,8 @@ const LANDING_PARTS_PER_READ = 3;
 const LANDING_READ_TRIES = 3;
 
 /**
- * Part of the company's own Google Analytics landing pages over the last 90
- * days (`googleAnalyticsCollect.ts`): each page by its number in the hold's
+ * Part of the company's own Google Analytics landing pages for one quarter
+ * (`googleAnalyticsCollect.ts`): each page by its number in the hold's
  * page numbering, with its visits, read by the hold. A few parts at a time
  * from `start`, from the build in `slot` — the one screens read when the
  * first part was — with `next` where the next part starts, null after the
@@ -383,16 +386,17 @@ const LANDING_READ_TRIES = 3;
  * in since the first part.
  */
 export const landingVisits = internalQuery({
-  args: { holdId: v.id("companyWebsites"), slot: v.optional(v.number()), start: v.optional(v.number()) },
+  args: { holdId: v.id("companyWebsites"), period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")), slot: v.optional(v.number()), start: v.optional(v.number()) },
   returns: v.union(
     v.null(),
     v.object({ moved: v.literal(true) }),
     v.object({ slot: v.number(), rows: v.array(v.object({ key: v.string(), visits: v.number() })), next: v.union(v.number(), v.null()) }),
   ),
   handler: async (ctx, args) => {
+    const key = slotKey("landing", args.period, "NOW", "");
     const held = await ctx.db
       .query("googleAnalyticsPeriodSlots")
-      .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("key", LANDING_90))
+      .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("key", key))
       .first();
     if (!held) return null;
     if (args.slot !== undefined && held.slot !== args.slot) return { moved: true as const };
@@ -400,7 +404,7 @@ export const landingVisits = internalQuery({
     const end = Math.min(held.parts, start + LANDING_PARTS_PER_READ);
     const parts = await ctx.db
       .query("googleAnalyticsPeriods")
-      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("key", LANDING_90).eq("slot", held.slot).gte("part", start).lt("part", end))
+      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("key", key).eq("slot", held.slot).gte("part", start).lt("part", end))
       .take(LANDING_PARTS_PER_READ);
     const rows: Array<{ key: string; visits: number }> = [];
     for (const part of parts) {
@@ -440,18 +444,28 @@ async function allTitles(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise
 type LandingPart = { moved: true } | { slot: number; rows: Array<{ key: string; visits: number }>; next: number | null } | null;
 
 /**
- * Every landing page of the company's own Google Analytics over the last 90
- * days, by address: read a part at a time (`landingVisits`), all from one
- * build, and the page numbers read back with the hold's numbering, read once
- * this run (`addressesOf`).
+ * Every landing page of the company's own Google Analytics this quarter and last, by address, each page's visits
+ * added together: each quarter read a part at a time (`landingVisits`), all from one build.
  */
 async function allLandingVisits(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Array<{ key: string; visits: number }>> {
+  const visits = new Map<string, number>();
+  for (const period of LANDING_PERIODS) {
+    for (const row of await landingVisitsOf(ctx, holdId, period)) visits.set(row.key, (visits.get(row.key) ?? 0) + row.visits);
+  }
+  return [...visits].map(([key, total]) => ({ key, visits: total }));
+}
+
+/**
+ * One quarter's landing pages, by address: read a part at a time (`landingVisits`), all from one build, and the page
+ * numbers read back with the hold's numbering, read once this run (`addressesOf`).
+ */
+async function landingVisitsOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, period: (typeof LANDING_PERIODS)[number]): Promise<Array<{ key: string; visits: number }>> {
   for (let tries = 1; ; tries += 1) {
     const rows: Array<{ key: string; visits: number }> = [];
     let slot: number | undefined;
     let moved = false;
     for (let start: number | null = 0; start !== null;) {
-      const part: LandingPart = await ctx.runQuery(internal.holdPages.landingVisits, { holdId, slot, start });
+      const part: LandingPart = await ctx.runQuery(internal.holdPages.landingVisits, { holdId, period, slot, start });
       if (part === null) return [];
       if ("moved" in part) {
         moved = true;

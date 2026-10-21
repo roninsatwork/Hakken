@@ -147,8 +147,11 @@ export const FAN_OUT_LIMITS = {
   consoleUpdatesListed: { choices: [25, 50, 100, 200], fallback: 100, scope: "site" },
   /** Days before a Google update began, and after it finished, that its change is read over. */
   consoleUpdateWindowDays: { choices: [7, 14, 28], fallback: 14, scope: "site" },
-  /** Weeks the weekly charts show: Position bands, Brand and non-brand, New and lost. */
-  consoleChartWeeks: { choices: [8, 16, 26, 52], fallback: 16, scope: "site" },
+  /**
+   * Weeks the weekly charts show: Position bands, Brand and non-brand, New and lost. 52 so This Year is drawn whole
+   * (calendar-periods-plan.md, phase 8); the older weeks are fetched once, by the start-up fill.
+   */
+  consoleChartWeeks: { choices: [8, 16, 26, 52], fallback: 52, scope: "site" },
   /** The most days a Search Console page can be asked for at once. */
   consoleLongestRange: { choices: [365, 500, 800], fallback: 800, scope: "site" },
   /**

@@ -7,7 +7,9 @@ import { shiftDay } from "./searchConsoleDays";
 import { bareHost } from "./googleAnalyticsApi";
 import { slotKey } from "./googleAnalyticsCollect";
 import { DAY_JOIN, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
-import { HEALTH_CHECKS, type HealthCheck } from "./googleAnalyticsSchema";
+import { HEALTH_CHECKS, type DayFactList, type HealthCheck } from "./googleAnalyticsSchema";
+import { merged, readDayPoints } from "./googleAnalyticsHistory";
+import type { CalendarPeriod } from "./utils/calendarPeriods";
 import { decodePages } from "./holdPageRefs";
 import { NEVER_TICKED, readsAsEnquiry } from "./utils/analyticsEvents";
 import { COUNTED_AGAIN } from "./utils/sees/analytics";
@@ -55,6 +57,28 @@ export const PAYMENT_SOURCES: readonly string[] = [
 ];
 
 type Result = { check: HealthCheck; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number };
+
+/**
+ * A day fact over the latest `days` days, added up from the days, weeks and months held (calendar-periods-plan.md,
+ * rules 10 and 11): no download. Null when not held so far back.
+ */
+async function heldDays(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">, list: DayFactList, days: number): Promise<ListRow[] | null> {
+  const newest = connection.newestDay;
+  if (!newest) return null;
+  const points = await readDayPoints(ctx, connection, list, "", shiftDay(newest, -(days - 1)), newest);
+  return points ? merged(points.flatMap((point) => point.rows)) : null;
+}
+
+/** Days a period still going must hold before a check reads it rather than the whole period before. */
+const LATEST_DAYS = 7;
+
+/** Google's newest answer for a list: the period still going once it holds a week, else the whole one before. */
+async function latestList(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">, list: "landing" | "page", running: CalendarPeriod, finished: CalendarPeriod): Promise<ListRow[] | null> {
+  const key = slotKey(list, running, "NOW", "");
+  const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", key)).first();
+  const held = slot ? (Date.parse(`${slot.to}T00:00:00Z`) - Date.parse(`${slot.from}T00:00:00Z`)) / 86_400_000 + 1 : 0;
+  return await slotRows(ctx, connection, held >= LATEST_DAYS ? key : slotKey(list, finished, "NOW", ""));
+}
 
 async function slotRows(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">, key: string) {
   const slot = await ctx.db
@@ -298,8 +322,9 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     results.push({ check: "SUDDEN_FALL", passing: true });
   }
 
-  // 5 to 7, from the last 30 days' channels and landing pages.
-  const channels = await slotRows(ctx, connection, slotKey("channel", "30", "NOW", "")) ?? [];
+  // 5 to 7, from the latest 30 days' channels — added up from the days held (calendar-periods-plan.md, rule 11) — and
+  // Google's newest answer for the landing pages, which are not held a day for every page at once.
+  const channels = await heldDays(ctx, connection, "channel", 30) ?? [];
   const totalVisits = channels.reduce((sum, row) => sum + row.visits, 0);
   const referrals = channels.map((row) => ({ ...splitChannelKey(row.key), visits: row.visits })).filter((row) => row.channel === "Referral");
   // A visit started again from the shop is the website's own too: its sale loses where the visitor came from.
@@ -308,7 +333,7 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   const payments = referrals.filter((row) => PAYMENT_SOURCES.some((payment) => row.source.toLowerCase() === payment || row.source.toLowerCase().endsWith(`.${payment}`) || row.source.toLowerCase().includes(payment)));
   results.push({ check: "PAYMENT_REFERRALS", passing: payments.length === 0, names: payments.map((row) => row.source), count: payments.reduce((sum, row) => sum + row.visits, 0) });
   const unassigned = channels.filter((row) => splitChannelKey(row.key).channel === "Unassigned").reduce((sum, row) => sum + row.visits, 0);
-  const landing = await slotRows(ctx, connection, slotKey("landing", "30", "NOW", "")) ?? [];
+  const landing = await latestList(ctx, connection, "landing", "thisMonth", "lastMonth") ?? [];
   const notSet = landing.filter((row) => row.key === "(not set)").reduce((sum, row) => sum + row.visits, 0);
   const unknownShare = totalVisits > 0 ? Math.max(unassigned, notSet) / totalVisits : 0;
   results.push({ check: "TOO_MUCH_UNKNOWN", passing: unknownShare <= UNKNOWN_SHARE, share: unknownShare, count: Math.max(unassigned, notSet) });
@@ -318,8 +343,9 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
   results.push({ check: "STRANGERS", passing: strangers.length === 0, names: strangers.map((entry) => entry.host), count: strangers.reduce((sum, entry) => sum + entry.visits, 0) });
 
   // 9. Counted again: a page Google counts 1.5 times or more a visit that saw it — its contents links taken as new views —
-  // which makes visits look deeper than they are (analytics-page-screen-plan.md, phase 6). The last 90 days' pages.
-  const pages = await slotRows(ctx, connection, slotKey("page", "90", "NOW", "")) ?? [];
+  // which makes visits look deeper than they are (analytics-page-screen-plan.md, phase 6). Google's newest answer for
+  // the pages: this quarter once it holds a week, else last quarter.
+  const pages = await latestList(ctx, connection, "page", "thisQuarter", "lastQuarter") ?? [];
   const again = pages
     .filter((row) => row.views >= COUNTED_AGAIN_FLOOR && row.visits > 0 && row.views / row.visits >= COUNTED_AGAIN && row.key !== "(not set)")
     .sort((left, right) => right.views / right.visits - left.views / left.visits);
@@ -331,8 +357,9 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     count: again.length,
   });
 
-  // 10 to 12: what each conversion really is, from each event's times — a day for 30 days, and in 90 days and 12 months.
-  // A list not kept yet (a website's first days; the long periods come weekly) passes rather than guesses.
+  // 10 to 12: what each conversion really is, from each event's times — a day for 30 days, and in the latest 90 days
+  // and 12 months, added up from the days, weeks and months held (rules 10 and 11). A list not held so far back yet
+  // (a website's first days, before its two years are filled) passes rather than guesses.
   const countedNames = counted.map((event) => event.eventName);
   const seriesRows = await eventDays(ctx, connection);
   const series = timesByDay(seriesRows ?? []);
@@ -344,7 +371,7 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     others: copies.map((copy) => copy.other),
     ...(copies.length > 0 ? { count: copies[0].days } : {}),
   });
-  const yearRows = await slotRows(ctx, connection, slotKey("event", "365", "NOW", ""));
+  const yearRows = await heldDays(ctx, connection, "event", 365);
   const uncounted = yearRows && seriesRows
     ? enquiriesUncounted(countedNames, yearRows.map((row) => ({ eventName: row.key, times: row.times ?? 0 })), series)
     : [];
@@ -354,8 +381,8 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     names: uncounted.map((row) => row.eventName),
     ...(uncounted.length > 0 ? { count: uncounted[0].times } : {}),
   });
-  const quarterRows = await slotRows(ctx, connection, slotKey("event", "90", "NOW", ""));
-  const quarterTotal = await slotRows(ctx, connection, slotKey("total", "90", "NOW", ""));
+  const quarterRows = await heldDays(ctx, connection, "event", 90);
+  const quarterTotal = await heldDays(ctx, connection, "total", 90);
   const silent = neverHappening(
     countedNames,
     quarterRows && quarterTotal ? { visits: quarterTotal.reduce((sum, row) => sum + row.visits, 0), times: timesOf(quarterRows) } : null,

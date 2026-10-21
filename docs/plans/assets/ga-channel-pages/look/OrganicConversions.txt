@@ -10,7 +10,7 @@ figures
   figure: Conversions
   figure: Conversions it started
   figure: Dwell time
-chart-card: Organic Search a day, against the # days before
+chart-card: Organic Search a day, against the month before
   choice: Measure: Visits | Dwell time | Conversions
 chart-card: Where Organic Search lands, by page classification
 chart-card: The pages behind the change

@@ -58,7 +58,7 @@ async function bigWebsite() {
       await ctx.db.insert("holdPageAddresses", { companyWebsiteId: siteId, record, addresses });
     }
     for (const [which, rows] of [["NOW", rowsOf(PAGES, 0)], ["BEFORE", rowsOf(PAGES - 5_000, 5_000)]] as const) {
-      const key = slotKey("landing", "90", which, "");
+      const key = slotKey("landing", "lastQuarter", which, "");
       const parts = packList("landing", rows, EVENTS);
       await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, from: "2026-07-11", to: "2026-10-08", hash: "x", builtAt: 1 });
       for (const [part, packed] of parts.entries()) {
@@ -74,9 +74,9 @@ describe("a large website's Google Analytics", () => {
   test("Landing pages, sorted by value, then searched by address, each inside its reading budget", async () => {
     const { t, siteId } = await bigWebsite();
     for (const [args, share] of [
-      [{ list: "landing" as const, period: "90" as const, device: "" }, 0.5],
-      [{ list: "landing" as const, period: "90" as const, device: "", sort: "visits" as const, direction: "asc" as const }, 0.5],
-      [{ list: "landing" as const, period: "90" as const, device: "", q: "product-4471" }, 0.75],
+      [{ list: "landing" as const, period: "lastQuarter" as const, device: "" }, 0.5],
+      [{ list: "landing" as const, period: "lastQuarter" as const, device: "", sort: "visits" as const, direction: "asc" as const }, 0.5],
+      [{ list: "landing" as const, period: "lastQuarter" as const, device: "", q: "product-4471" }, 0.75],
     ] as const) {
       const { list, reads } = await t.run(async (ctx) => {
         const { db, reads } = metered(ctx.db);
@@ -97,7 +97,7 @@ describe("a large website's Google Analytics", () => {
 
   test("What Hakken sees adds only the few page names it quotes to the list's own budget (§14)", async () => {
     const { t, siteId } = await bigWebsite();
-    const args = { list: "landing" as const, period: "90" as const, device: "" };
+    const args = { list: "landing" as const, period: "lastQuarter" as const, device: "" };
     const { box, listReads, boxReads } = await t.run(async (ctx) => {
       const { db, reads } = metered(ctx.db);
       const list = await readAnalyticsList({ db }, siteId, args);

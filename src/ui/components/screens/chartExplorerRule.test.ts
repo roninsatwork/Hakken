@@ -3,20 +3,21 @@ import { scoreWindows, scoresOf, stepFor, stepKey, verdictOf, whole, yearCompara
 
 /**
  * The rule every configurable chart follows (`ChartExplorer`; screen-kit.md, "Configurable charts"): steps from the
- * dates, whole steps, a year before only for 12 months, and better or worse over the latest whole steps.
+ * dates, whole steps, a year before only for This Year, and better or worse over the latest whole steps.
  */
 
 const month = (key: string, last: string): StepSpan => ({ key, first: `${key}-01`, last });
 
 describe("a configurable chart's rule", () => {
-  it("steps by day for 7 and 30 days, by week for 90 and by month for 12 months", () => {
-    expect([stepFor("7"), stepFor("30"), stepFor("90"), stepFor("365")]).toEqual(["day", "day", "week", "month"]);
+  it("steps by day for the weeks and months, by week for the quarters and by month for the year (calendar-periods-plan.md, rule 8)", () => {
+    expect(["thisWeek", "lastWeek", "thisMonth", "lastMonth"].map(stepFor)).toEqual(["day", "day", "day", "day"]);
+    expect([stepFor("thisQuarter"), stepFor("lastQuarter"), stepFor("thisYear")]).toEqual(["week", "week", "month"]);
     expect([stepKey("2026-10-21", "day"), stepKey("2026-10-21", "week"), stepKey("2026-10-21", "month")]).toEqual(["2026-10-21", "2026-10-19", "2026-10"]);
   });
 
-  it("sets the dates against a year before only for 12 months, month against month", () => {
-    expect(["7", "30", "90"].map(yearComparable)).toEqual([false, false, false]);
-    expect(yearComparable("365")).toBe(true);
+  it("sets the dates against a year before only for This Year, month against month", () => {
+    expect(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter"].map(yearComparable)).toEqual([false, false, false, false, false, false]);
+    expect(yearComparable("thisYear")).toBe(true);
   });
 
   it("calls a step whole only when it holds every one of its days", () => {

@@ -14,7 +14,8 @@ import { AI_ASSISTANTS_CHANNEL, GOOGLE_AI_CHANNEL, assistantOf, channelOf } from
 import { channelKey, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { FEW_VISITS, addInto, blank, connectionOf, conversionsOf, countedOf, readSlot, type Counted, type Held } from "./googleAnalyticsRows";
-import { readChannelPoints } from "./googleAnalyticsHistory";
+import { merged, readChannelPoints } from "./googleAnalyticsHistory";
+import { periodRange } from "./googleAnalyticsJobs";
 import { seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
 import { pathOfAddress } from "./utils/sees/analytics";
 import {
@@ -381,12 +382,20 @@ export async function readChannelTop(ctx: SiteReader, args: ChannelArgs): Promis
   // AI assistants by assistant, and the channels Google filed each one's visits under (CH8).
   const assistants = ai ? assistantsOf(mine, mineBefore, counted) : [];
 
-  // R7: the channel's 90-day spans and 12 months, every device.
-  const span = async (period: AnalyticsPeriod, which: "NOW" | "BEFORE" | "YEAR") => {
-    const rows = await rowsOf(ctx, holdId, key("channel", which, period));
+  // R7: last quarter against the quarter before and the same quarter a year before, every device, Google's own
+  // answers; and the last 12 months against the 12 before, added up from the days, weeks and months held — visits add
+  // up where people do not (calendar-periods-plan.md, rule 10).
+  const span = async (which: "NOW" | "BEFORE" | "YEAR") => {
+    const rows = await rowsOf(ctx, holdId, key("channel", which, "lastQuarter"));
     return rows ? ofChannel(rows, args.channel).reduce((sum, row) => sum + row.visits, 0) : null;
   };
-  const [last90, previous90, yearAgo90, year, yearBefore] = await Promise.all([span("90", "NOW"), span("90", "BEFORE"), span("90", "YEAR"), span("365", "NOW"), span("365", "BEFORE")]);
+  const twelveMonths = async (to: string) => {
+    const points = await readChannelPoints(ctx, connection, "", shiftDay(to, -364), to, country);
+    return points ? points.reduce((sum, point) => sum + ofChannel(point.rows, args.channel).reduce((total, row) => total + row.visits, 0), 0) : null;
+  };
+  const [last90, previous90, yearAgo90, year, yearBefore] = await Promise.all([
+    span("NOW"), span("BEFORE"), span("YEAR"), twelveMonths(connection.newestDay), twelveMonths(shiftDay(connection.newestDay, -365)),
+  ]);
   const spans = last90 !== null && previous90 !== null && yearAgo90 !== null && year !== null && yearBefore !== null ? { last90, previous90, yearAgo90, year, yearBefore } : null;
 
   const facts: ChannelPageFacts = {
@@ -544,6 +553,8 @@ export const analyticsChannelDays = tenantQuery({
     liveBefore: v.boolean(),
     from: v.union(v.string(), v.null()),
     to: v.union(v.string(), v.null()),
+    /** Days from the span before's first day to the period's: what lays one over the other (calendar-periods-plan.md). */
+    shift: v.number(),
     events: v.array(v.object({ eventName: v.string(), counted: v.boolean() })),
     sources: v.array(v.string()),
     rest: v.boolean(),
@@ -558,16 +569,20 @@ export async function readChannelDays(ctx: SiteReader, args: ChannelArgs) {
   const holdId = site.hold._id;
   const country = await keptCountry(ctx, site.hold, args.country);
   const connection = await connectionOf(ctx, holdId);
-  const none = { live: false, liveBefore: false, from: null, to: null, events: [], sources: [], rest: false, now: [], before: [] };
+  const none = { live: false, liveBefore: false, from: null, to: null, shift: 0, events: [], sources: [], rest: false, now: [], before: [] };
   if (!connection?.newestDay) return none;
   const counted = countedOf(connection);
   const events = (connection.events ?? []).map((event) => ({ eventName: event.eventName, counted: event.counted }));
-  const days = Number(args.period);
-  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-  const from = total?.from ?? shiftDay(connection.newestDay, -(days - 1));
-  const to = total?.to ?? connection.newestDay;
-  const beforeFrom = shiftDay(from, -days);
-  const beforeTo = shiftDay(to, -days);
+  // The period's dates and the span it is set against, as the lists were asked for (calendar-periods-plan.md, phase 6).
+  const [total, totalBefore] = await Promise.all([
+    readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country)),
+    readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country)),
+  ]);
+  const nowRange = total ?? periodRange(args.period, "NOW", connection.newestDay);
+  const beforeRange = totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay);
+  if (!nowRange || !beforeRange) return none;
+  const { from, to } = nowRange;
+  const { from: beforeFrom, to: beforeTo } = beforeRange;
   // Each span's points, from what Hakken holds for the home country (ga-stored-figures-plan.md SF2, SF7): null while
   // the dates reach past it — the minutes before a new website's two years are filled. Nothing is asked of Google.
   type Entry = { day: string; lastDay?: string; rows: ListRow[] };
@@ -610,6 +625,7 @@ export async function readChannelDays(ctx: SiteReader, args: ChannelArgs) {
     liveBefore: beforeEntries === null,
     from,
     to,
+    shift: Math.round((Date.parse(`${from}T00:00:00Z`) - Date.parse(`${beforeFrom}T00:00:00Z`)) / 86_400_000),
     events,
     sources,
     rest,
@@ -726,8 +742,10 @@ export async function readChannelsTop(ctx: SiteReader, args: ObjectType<typeof a
   const total = totalsOf(now, counted);
   const was = before ? totalsOf(before, counted) : null;
 
-  // What a visit is worth over 12 months, every device (CH9, R8).
-  const year = await rowsOf(ctx, holdId, slotKey("channel", "365", "NOW", "", country));
+  // What a visit is worth over the last 12 months, every device (CH9, R8): added up from the days, weeks and months
+  // held — visits and conversions add up (calendar-periods-plan.md, rule 10).
+  const yearPoints = await readChannelPoints(ctx, connection, "", shiftDay(connection.newestDay, -364), connection.newestDay, country);
+  const year = yearPoints ? merged(yearPoints.flatMap((point) => point.rows)) : null;
   const yearBy = year ? group(year) : new Map<string, ListRow>();
   const yearTotal = year ? totalsOf(year, counted) : null;
   const siteRate = yearTotal && yearTotal.visits > 0 ? yearTotal.conversions / yearTotal.visits : 0;

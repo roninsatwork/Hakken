@@ -5,6 +5,8 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { CALENDAR_PERIODS, stepOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
 
@@ -50,10 +52,10 @@ export function pageForPath(pathname: string, siteId: string): AnalyticsPageId {
   return under.sort((left, right) => right.segment.length - left.segment.length)[0]?.id ?? "overview";
 }
 
-/** The ready-made periods (§4.3): what the dates choice offers. */
-export const PERIODS = ["7", "30", "90", "365"] as const;
-export type Period = (typeof PERIODS)[number];
-export const PERIOD_KEY = "period";
+/** The ready-made periods: the date menu's seven calendar periods every section shares (calendar-periods-plan.md, phase 6). */
+export const PERIODS = CALENDAR_PERIODS;
+export type Period = CalendarPeriod;
+export const PERIOD_KEY = CALENDAR_PERIOD_KEY;
 
 /** Every device, or one (GA13). */
 export const DEVICES = ["all", "desktop", "mobile", "tablet"] as const;
@@ -133,16 +135,19 @@ export function useAnalyticsStatus() {
   return useQuery(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
 }
 
-export function usePeriod(): [Period, (next: Period) => void] {
-  return useSiteParam<Period>(PERIOD_KEY, "30", PERIODS);
+/** The calendar period chosen: the one the website opens on (rule 6) unless another is. */
+export function usePeriod(opening?: Period): [Period, (next: Period) => void] {
+  return useCalendarPeriod(opening);
 }
 
 export function useDevice(): [Device, (next: Device) => void] {
   return useSiteParam<Device>(DEVICE_KEY, "all", DEVICES);
 }
 
+/** How the charts step: the period's own (rule 8) unless another was chosen. */
 export function useStep(): [Step, (next: Step) => void] {
-  return useSiteParam<Step>(STEP_KEY, "day", STEPS);
+  const [period] = usePeriod();
+  return useSiteParam<Step>(STEP_KEY, stepOf(period), STEPS);
 }
 
 /**

@@ -38,7 +38,12 @@ const row = (key: string, size: number, extra: Partial<ListRow> = {}): ListRow =
   counts: new Map(EVENTS.map((event) => [event, 0])), values: new Map(EVENTS.map((event) => [event, 0])), ...extra,
 });
 
-const NEWEST = "2026-10-08";
+/**
+ * 31 December, Google's newest day the 30th: This Year at its longest, 364 days — the most any of the date menu's
+ * periods reads (calendar-periods-plan.md), and so the heaviest screen.
+ */
+const NEWEST = "2026-12-30";
+const THIS_YEAR = { NOW: { from: "2026-01-01", to: NEWEST }, BEFORE: { from: "2025-01-01", to: "2025-12-30" } } as const;
 
 async function bigWebsite() {
   const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -59,9 +64,9 @@ async function bigWebsite() {
       await ctx.db.insert("holdPageAddresses", { companyWebsiteId: siteId, record, addresses });
     }
     const put = async (list: AnalyticsList, which: "NOW" | "BEFORE", rows: ListRow[]) => {
-      const key = slotKey(list, "365", which, "");
+      const key = slotKey(list, "thisYear", which, "");
       const parts = packList(list, rows, EVENTS);
-      await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, from: "2025-10-09", to: "2026-10-08", hash: "x", builtAt: 1 });
+      await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, ...THIS_YEAR[which], hash: "x", builtAt: 1 });
       for (const [part, packed] of parts.entries()) await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: siteId, key, slot: 0, part, ...packed });
     };
     for (const which of ["NOW", "BEFORE"] as const) {
@@ -72,13 +77,13 @@ async function bigWebsite() {
       await put("product", which, Array.from({ length: PRODUCTS }, (_, at) => row(`Product ${at}\u001fHandles`, PRODUCTS - at, { basket: 10, purchases: 1, revenue: 4_999 })));
       for (const list of ["visitorType", "browser", "system", "age", "gender", "interest"] as const) await put(list, which, Array.from({ length: 40 }, (_, at) => row(`${list}-${at}`, 100 + at)));
     }
-    // The 12 months as kept (SF12): a day for 90 days, then a week, every event, new and returning, products bought.
+    // This year as kept (SF12): a day for 92 days, then a week, every event, new and returning, products bought.
     const kept: Array<[DayFactList, ListRow[]]> = [
       ["event", EVENT_NAMES.map((name) => row(name, 3, { times: 7 }))],
       ["visitorType", ["new", "returning"].map((type) => row(type, 50))],
       ["product", [row("Product 0\u001fHandles", 1, { purchases: 3 })]],
     ];
-    for (const point of pointsBetween("2025-10-09", NEWEST, NEWEST)) {
+    for (const point of pointsBetween(THIS_YEAR.NOW.from, NEWEST, NEWEST)) {
       for (const [list, rows] of kept) {
         for (const [part, packed] of packList(list, rows, EVENTS).entries()) {
           if (point.grain === "day") await ctx.db.insert("googleAnalyticsDays", { companyWebsiteId: siteId, list, device: "", day: point.start, part, ...packed, fetchedAt: 1 });
@@ -100,9 +105,9 @@ function withinBudget(reads: MeteredRead[], what: string) {
 }
 
 describe("a large website's second-round Google Analytics", () => {
-  test("each screen of 12 months, at five times the largest website, inside its reading budget", async () => {
+  test("each screen of this year at its longest, at five times the largest website, inside its reading budget", async () => {
     const { t, siteId, companyId } = await bigWebsite();
-    const args = { siteId, period: "365" as const, device: "" };
+    const args = { siteId, period: "thisYear" as const, device: "" };
     const measured = async <T>(what: string, read: (ctx: { db: never; companyId: Id<"companies"> }) => Promise<T>) => {
       const { answer, reads } = await t.run(async (ctx) => {
         const { db, reads } = metered(ctx.db);
@@ -116,15 +121,15 @@ describe("a large website's second-round Google Analytics", () => {
     const events = await measured("Events", (ctx) => readEvents(ctx, args));
     expect(events?.rows).toHaveLength(EVENT_NAMES.length + 1);
     const event = await measured("an event's own screen", (ctx) => readEvent(ctx, { ...args, event: "click" }));
-    // A day for 90 days, then a week (ga-stored-figures-plan.md SF2b).
-    expect(event?.points.filter((point) => !point.lastDay)).toHaveLength(90);
+    // A day for 92 days, then a week (ga-stored-figures-plan.md SF2b).
+    expect(event?.points.filter((point) => !point.lastDay)).toHaveLength(92);
     expect(event?.points.some((point) => point.lastDay)).toBe(true);
     const campaigns = await measured("Campaigns", (ctx) => readListPage(ctx, { ...args, list: "campaign", page: 1, rows: 25 }));
     expect(campaigns.total).toBe(CAMPAIGNS);
     const visitors = await measured("Visitors", (ctx) => readVisitors(ctx, args));
-    expect(visitors?.points.filter((point) => !point.lastDay)).toHaveLength(90);
+    expect(visitors?.points.filter((point) => !point.lastDay)).toHaveLength(92);
     const products = await measured("Products", (ctx) => readProducts(ctx, args));
-    expect(products?.points.filter((point) => !point.lastDay)).toHaveLength(90);
+    expect(products?.points.filter((point) => !point.lastDay)).toHaveLength(92);
     const hold = (await t.run(async (ctx) => await ctx.db.get(siteId)))!;
     const list = await measured("Products' list", (ctx) => productList({ db: ctx.db }, hold, { ...args, sort: "looks" }));
     expect(list.rows).toHaveLength(PRODUCTS);

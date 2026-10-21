@@ -1,9 +1,12 @@
 import { v } from "convex/values";
-import { internalQuery, type ActionCtx } from "./_generated/server";
+import { internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { askFunnel, failed, periodRange, slotKey, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
-import { EVERY_DEVICE, emptyRow, packList } from "./googleAnalyticsLists";
+import { askFunnel, failed, slotKey, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
 import { readSlot } from "./googleAnalyticsRows";
+import { merged, readDayPoints } from "./googleAnalyticsHistory";
+import { shiftDay } from "./searchConsoleDays";
+import { EVERY_DEVICE, emptyRow, packList, type ListRow } from "./googleAnalyticsLists";
 import { funnelAsk } from "./googleAnalyticsLive";
 
 /**
@@ -33,7 +36,10 @@ export const EVERY_VISIT_EVENTS: readonly string[] = ["page_view", "session_star
  */
 export const WEBSITE_FUNNEL = "session_start";
 
-/** The actions to ask, from the events kept for 12 months: the busiest by people, conversions and every visit's events left out. */
+/**
+ * The actions to ask, from the events over the last 12 months: the busiest by people a day added up — a busyness, not
+ * a count of people — conversions and every visit's events left out.
+ */
 export function actionsFrom(rows: ReadonlyArray<{ key: string; people: number }>, counted: readonly string[]): string[] {
   return rows
     .filter((row) => row.people > 0 && !counted.includes(row.key) && !EVERY_VISIT_EVENTS.includes(row.key))
@@ -42,12 +48,25 @@ export function actionsFrom(rows: ReadonlyArray<{ key: string; people: number }>
     .map((row) => row.key);
 }
 
+/**
+ * The events the actions are chosen from: the last 12 months added up from the days, weeks and months held, with no
+ * download (calendar-periods-plan.md, rule 10); until the two-year fill holds the events' months — a new website's
+ * first night — Google's own answer for this year, which the run has just fetched, so its first collection asks the
+ * actions' funnels as it always did. Shared with the screen, so it lists the actions that were asked.
+ */
+export async function actionEvents(ctx: { db: QueryCtx["db"] }, connection: Doc<"googleAnalyticsConnections">): Promise<ListRow[]> {
+  const newest = connection.newestDay;
+  const points = newest ? await readDayPoints(ctx, connection, "event", EVERY_DEVICE, shiftDay(newest, -364), newest) : null;
+  if (points) return merged(points.flatMap((point) => point.rows));
+  return (await readSlot(ctx, connection.companyWebsiteId, slotKey("event", "thisYear", "NOW", EVERY_DEVICE)))?.rows ?? [];
+}
+
 export const actionsOf = internalQuery({
   args: { companyWebsiteId: v.id("companyWebsites"), counted: v.array(v.string()) },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
-    const held = await readSlot(ctx, args.companyWebsiteId, slotKey("event", "365", "NOW", EVERY_DEVICE));
-    return actionsFrom(held?.rows ?? [], args.counted);
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.companyWebsiteId)).first();
+    return connection ? actionsFrom(await actionEvents(ctx, connection), args.counted) : [];
   },
 });
 
@@ -61,7 +80,8 @@ export const actionsOf = internalQuery({
 export async function collectActionFunnels(ctx: ActionCtx, session: Session, target: CollectTarget, top: string): Promise<StepResult> {
   if (target.counted.length === 0) return { ok: true, rows: 0, requests: session.requests };
   const actions: string[] = await ctx.runQuery(internal.googleAnalyticsActionFunnels.actionsOf, { companyWebsiteId: target.companyWebsiteId, counted: target.counted });
-  const range = periodRange("365", "NOW", top);
+  // The last 12 months to the newest day (rule 10): the before-converting steps are still asked of Google, whole.
+  const range = { from: shiftDay(top, -364), to: top };
   let narrowed = false;
   for (const action of [WEBSITE_FUNNEL, ...actions]) {
     const funnel = await askFunnel(session, target.property!, {

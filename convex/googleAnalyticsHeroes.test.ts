@@ -25,20 +25,23 @@ const row = (key: string, visits: number, engaged: number, leads: number): ListR
   counts: new Map([["generate_lead", leads]]), values: new Map([["generate_lead", 0]]),
 });
 
+/** Last month, September, and the month before it, August: the period every figure here covers (calendar-periods-plan.md). */
+const MONTHS = { NOW: { from: "2026-09-01", to: "2026-09-30" }, BEFORE: { from: "2026-08-01", to: "2026-08-31" } } as const;
+
 async function slot(t: Harness, siteId: Id<"companyWebsites">, list: "landing" | "channel", which: "NOW" | "BEFORE", rows: ListRow[]) {
   await t.run(async (ctx) => {
-    const key = slotKey(list, "30", which, "");
+    const key = slotKey(list, "lastMonth", which, "");
     const parts = packList(list, rows, EVENTS);
-    await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, from: "2026-09-10", to: "2026-10-09", hash: "x", builtAt: 1 });
+    await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, ...MONTHS[which], hash: "x", builtAt: 1 });
     for (const [part, packed] of parts.entries()) await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: siteId, key, slot: 0, part, ...packed });
   });
 }
 
-/** Search Console's ready-made 30 days: a list of rows, as the collector keeps them unpacked. */
+/** Search Console's ready-made last month: a list of rows, as the collector keeps them unpacked. */
 async function consoleList(t: Harness, siteId: Id<"companyWebsites">, list: "page" | "query", which: "NOW" | "BEFORE", rows: Array<[string, number, number, number]>) {
   await t.run(async (ctx) => {
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: siteId, searchType: "web", list, period: "lastMonth", which, part: 0, from: "2026-09-09", to: "2026-10-08",
+      companyWebsiteId: siteId, searchType: "web", list, period: "lastMonth", which, part: 0, ...MONTHS[which],
       keys: rows.map(([key]) => key), clicks: rows.map(([, clicks]) => clicks), impressions: rows.map(([, , shown]) => shown),
       positionSums: rows.map(([, , shown, position]) => shown * position), counts: rows.map(() => 1), tops: rows.map(([key]) => key), builtAt: 1,
     });
@@ -63,7 +66,7 @@ async function connected(t: Harness, withConsole = true) {
     if (withConsole) {
       await ctx.db.insert("searchConsoleConnections", { companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", newestDay: "2026-10-08", createdAt: 1, updatedAt: 1 });
       // Search Console's own totals: more clicks than its pages add up to.
-      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: "2026-10-08", clicks: 400, impressions: 300_000, ctr: 400 / 300_000, position: 18, fetchedAt: 1 });
+      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: "2026-09-30", clicks: 400, impressions: 300_000, ctr: 400 / 300_000, position: 18, fetchedAt: 1 });
     }
     return { companyId, userId, siteId };
   });

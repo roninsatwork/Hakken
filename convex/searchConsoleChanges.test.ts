@@ -257,11 +257,15 @@ describe("Position bands and Brand charts, in the dates and step chosen (2026-10
       await ctx.db.patch(connection!._id, { oldestDay: "2026-03-02" });
     });
     expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-20", "day"))).toMatchObject({ step: "day", byWeek: false });
+    // Every website's charts reach 52 weeks (calendar-periods-plan.md, phase 8): 1 June is inside them.
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-06-01", "day"))).toMatchObject({ step: "week", byWeek: true, reach: null, chartWeeks: 52 });
+    // Set to sixteen for this website, 1 June reaches past them: drawn from the first.
+    const limits = await t.run(async (ctx) => await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: siteId, consoleChartWeeks: 16, updatedAt: 1 }));
     const reaching = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-06-01", "day"));
     expect(reaching).toMatchObject({ step: "week", byWeek: true, reach: "2026-06-08", chartWeeks: 16 });
     expect(reaching.periods.map((period) => period.start)).toEqual(["2026-09-21"]);
     await t.run(async (ctx) => {
-      await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: siteId, consoleChartWeeks: 8, updatedAt: 1 });
+      await ctx.db.patch(limits, { consoleChartWeeks: 8 });
     });
     expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-08-10", "week"))).toMatchObject({ reach: null, chartWeeks: 8 });
     expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-07-01", "week"))).toMatchObject({ reach: "2026-08-03", chartWeeks: 8 });

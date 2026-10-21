@@ -549,6 +549,12 @@ describe("collecting", () => {
 
   test("the ready-made periods are built after each run: searches from the pairs, with their pages", async () => {
     const { t, siteId, admin } = await setup();
+    // The charts' reach set to sixteen weeks for this website, so the weeks filled before collection are few to name;
+    // every website's default is 52 (calendar-periods-plan.md, phase 8).
+    await t.run(async (ctx) => {
+      const hold = (await ctx.db.get(siteId))!;
+      await ctx.db.insert("fanOutLimits", { companyId: hold.companyId, companyWebsiteId: siteId, consoleChartWeeks: 16, updatedAt: 1 });
+    });
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);

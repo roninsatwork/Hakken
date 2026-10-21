@@ -6,7 +6,7 @@ import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
-import { NEWEST, PROPERTY, dayOf, fakeGoogle, type Visit } from "@/src/test/googleAnalyticsFake";
+import { PROPERTY, dayOf, fakeGoogle, type Visit } from "@/src/test/googleAnalyticsFake";
 import { shiftDay } from "./searchConsoleDays";
 import { factsByKey, fillFacts, formatFact, spansOf, type Fact } from "./utils/insightFacts";
 
@@ -62,9 +62,11 @@ describe("Google Analytics, as facts", () => {
         systemKey: "GOOGLE_ANALYTICS_COLLECTOR", createdAt: 1, updatedAt: 1,
       });
     });
+    // September's 30 days: on 9 October, the "30" facts read last month and the "90" facts last quarter (calendar-periods-plan.md).
+    const lastMonthEnd = "2026-09-30";
     const visits: Visit[] = [];
     for (let at = 0; at < 30; at += 1) {
-      const day = dayOf(shiftDay(NEWEST, -at));
+      const day = dayOf(shiftDay(lastMonthEnd, -at));
       // Perplexity's visitors first came from an AI assistant.
       visits.push(...day.map((visit) => (visit.source === "perplexity.ai" ? { ...visit, firstChannel: "AI assistants" } : visit)));
     }
@@ -76,17 +78,17 @@ describe("Google Analytics, as facts", () => {
     await finishScheduled(t);
 
     const facts = factsByKey(await t.query(internal.insightsReading.analyticsFactsInternal, { holdId: ids.siteId }));
-    // Thirty days of 16 visits a day on the website's own address; the staging address is never read.
+    // Last month's thirty days of 16 visits a day on the website's own address; the staging address is never read.
     expect(facts.get("ga.visits.30.now")?.value).toBe(30 * 16);
     expect(facts.get("ga.conversions.30.now")?.value).toBe(30);
     expect(facts.get("ga.value.30.now")).toMatchObject({ value: 30 * 250, unit: "money", currency: "GBP" });
     expect(facts.get("ga.channel.Organic Search.conversions.30.now")?.value).toBe(30);
-    // The channel that first brought each person (I35), from the 90 days and 12 months.
+    // The channel that first brought each person (I35), from last quarter and this year.
     expect(facts.get("ga.firstChannel.AI assistants.visits.90.now")?.value).toBe(30 * 4);
     expect(facts.get("ga.firstChannel.Organic Search.conversions.90.now")?.value).toBe(30);
-    // Every fact is the main home country's, with the span it counts.
+    // Every fact is the main home country's, with the span it counts: last month, whole.
     const visitsFact = facts.get("ga.visits.30.now")!;
-    expect(visitsFact).toMatchObject({ source: "analytics", to: NEWEST });
+    expect(visitsFact).toMatchObject({ source: "analytics", from: "2026-09-01", to: lastMonthEnd });
   });
 });
 

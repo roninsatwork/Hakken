@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
-import { NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
+import { dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
 import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -18,18 +18,23 @@ import { encryptConnectorToken } from "./connectorTokenCrypto";
  * a property collected with Google faked; only the caller's own website.
  */
 
-const NOW = Date.parse("2026-10-09T09:30:00Z");
+/**
+ * 31 October 2026: Google's newest whole day is the 30th, so This month is 1–30 October, set against the same days of
+ * September — all thirty.
+ */
+const NOW = Date.parse("2026-10-31T09:30:00Z");
+const LAST = "2026-10-30";
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
 /**
- * Sixty days of the plain day, and on Organic Search: an article found in the
- * last 30 days only, and a service page whose leads stopped after the 30
- * before. Forms sent from Organic Search on every day, not counted.
+ * Sixty days of the plain day to `last`, and on Organic Search: an article
+ * found in its 30 days only, and a service page whose leads stopped after the
+ * 30 before. Forms sent from Organic Search on every day, not counted.
  */
-function shifting(): Visit[] {
+function shifting(last = LAST): Visit[] {
   const visits: Visit[] = [];
   for (let at = 0; at < 60; at += 1) {
-    const date = shiftDay(NEWEST, -at);
+    const date = shiftDay(last, -at);
     visits.push(...dayOf(date));
     if (at < 30) {
       visits.push({ date, device: "mobile", channel: "Organic Search", source: "google", landing: "/blog/a/", page: "/blog/a/", sessions: 3, engaged: 3, seconds: 90, views: 6, events: { form_submit: [1, 0] } });
@@ -40,7 +45,7 @@ function shifting(): Visit[] {
   return visits;
 }
 
-const args = { period: "30" as const, device: "" };
+const args = { period: "thisMonth" as const, device: "" };
 
 beforeEach(() => {
   useFixedDay();
@@ -55,7 +60,7 @@ afterEach(() => {
 });
 
 describe("a channel's own page", () => {
-  test("its figures against the 30 days before and the whole website, with the conversions it started", async () => {
+  test("its figures against the same days of the month before and the whole website, with the conversions it started", async () => {
     const t = harness();
     const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "Organic Search" });
@@ -171,19 +176,23 @@ describe("a channel's own page", () => {
     expect(days.live).toBe(false);
     expect(days.now).toHaveLength(30);
     expect(days.before).toHaveLength(30);
-    expect(days.now.at(-1)).toMatchObject({ day: NEWEST, visits: 13, seconds: 390, conversions: 1 });
+    expect(days.now.at(-1)).toMatchObject({ day: LAST, visits: 13, seconds: 390, conversions: 1 });
+    // September's days laid over October's, first over first.
+    expect(days.shift).toBe(30);
     expect(days.before[0]).toMatchObject({ visits: 15, conversions: 2 });
     expect(days.events.map((event) => event.eventName)).toEqual(["generate_lead", "click_tel", "sign_up", "form_submit"]);
     expect(days.sources).toEqual(["google"]);
   });
 
-  test("for 90 days: the dates and the span before from what is held, its two years filled by itself after the first collection", async () => {
+  test("for last quarter: the dates and the span before from what is held, its two years filled by itself after the first collection", async () => {
+    // 1 October: Google's newest whole day is 30 September, so Last quarter is July to September, every day held.
+    vi.setSystemTime(Date.parse("2026-10-01T09:30:00Z"));
     const t = harness();
-    const { siteId, user, google } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user, google } = await collectedWebsite(t, shifting("2026-09-30"), encryptConnectorToken);
     const asked = google.calls.length;
-    const held = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "90", device: "", channel: "Organic Search" });
-    expect(held).toMatchObject({ live: false, liveBefore: false });
-    expect(held.now).toHaveLength(90);
+    const held = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "lastQuarter", device: "", channel: "Organic Search" });
+    expect(held).toMatchObject({ live: false, liveBefore: false, from: "2026-07-01", to: "2026-09-30" });
+    expect(held.now).toHaveLength(92);
     expect(held.now.at(-1)?.visits).toBe(13);
     expect(google.calls.length).toBe(asked);
   });

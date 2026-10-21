@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
-import { stepFor, whole, yearComparable } from "@/src/ui/components/screens/chartExplorerRule";
+import { whole, yearComparable } from "@/src/ui/components/screens/chartExplorerRule";
 import { CHART_SERIES_AMBER, CHART_SERIES_ROSE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import type { SiteSeries } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
@@ -14,7 +14,7 @@ import { formatPerConversion } from "./analyticsFormat";
 import { CHANNEL_COLOURS } from "./AnalyticsChart";
 import { daysSpanned } from "./stepScale";
 import { useEventName } from "./useEventName";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
 import { bucketsOf, fewerIsBetter, linesOf, rowsOf, scoresOf, sumsOf, type Against, type Bucket, type Line, type LinesBy, type Measure } from "./explorerRule";
 import { useExplorerReadout } from "./ExplorerReadout";
 import { eventList } from "./AnalyticsSees";
@@ -65,8 +65,9 @@ export function ConversionExplorerCard({ page }: { page: string }) {
   // Until a box is ticked: every kind of conversion, and the busiest channels.
   const pickedKinds = (kinds ?? events).filter((kind) => events.includes(kind));
   const pickedChannels = (channels ?? every.slice(0, FIRST_CHANNELS)).filter((channel) => every.includes(channel));
-  const step = stepFor(period);
-  // A year before only for 12 months; a choice made there falls back to nothing on shorter dates.
+  // The page's step: the period's own unless the step menu changed it, which the explorer follows too (calendar-periods-plan.md).
+  const [step] = useStep();
+  // A year before only for This Year; a choice made there falls back to nothing on the other periods.
   const withYear = yearComparable(period);
   const against: Against = chosenAgainst === "year" && !withYear ? "none" : chosenAgainst;
   const now = bucketsOf(answer?.now ?? [], step, events.length);

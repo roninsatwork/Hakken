@@ -104,7 +104,7 @@ function pageFellOf(pages: readonly PageFacts[]): PageFacts | null {
     .sort((left, right) => (right.conversionsBefore ?? 0) - (left.conversionsBefore ?? 0) || (right.visitsBefore ?? 0) - (left.visitsBefore ?? 0))[0] ?? null;
 }
 
-/** R7: growing over the 12 months, but the last 90 days below the 90 before and the same 90 a year ago. */
+/** R7: growing over the 12 months, but last quarter below the quarter before and the same quarter a year ago. */
 function fallingNow(spans: ChannelPageFacts["spans"]): boolean {
   return spans !== null && spans.year > spans.yearBefore && spans.last90 < spans.previous90 && spans.last90 < spans.yearAgo90;
 }

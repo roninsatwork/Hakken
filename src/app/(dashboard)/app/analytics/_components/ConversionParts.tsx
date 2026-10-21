@@ -221,17 +221,17 @@ export function PageConversionsByChannel({ page }: { page: string }) {
 }
 
 
-/** The periods drawn with the days just before beside them: those held a day at a time (`analyticsPeriodBeforeChart`). */
-const DRAWN_BEFORE: ReadonlySet<string> = new Set(["7", "30"]);
+/** The periods drawn with the span before beside them: the weeks and months, held a day at a time (`analyticsPeriodBeforeChart`). */
+const DRAWN_BEFORE: ReadonlySet<string> = new Set(["thisWeek", "lastWeek", "thisMonth", "lastMonth"]);
 
 /** A point of the chart's figures, each counted kind's own count in its `events`' order. */
 type KindPoint = CostPoint & { events?: readonly number[] };
-/** The days just before, each dated onto the day it is laid over, `shift` days later. */
+/** The span before, each day dated onto the day it is laid over — its first onto the period's first — `shift` days later. */
 type DaysBefore = { shift: number; events: readonly string[]; points: readonly KindPoint[] };
 /** The period's visits and each counted kind's count, now and before, as the figures at the top count them. */
 type CostFigures = { visits: number; visitsBefore: number | null; kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null }> };
 
-/** Conversions' "Visits needed for one conversion": the website's figures, and the days just before for 7 and 30 days. */
+/** Conversions' "Visits needed for one conversion": the website's figures, and the span before for the weeks and months. */
 export function VisitsPerConversionCard({ days, events, figures, from, to }: {
   days: readonly KindPoint[];
   events: readonly string[];
@@ -262,9 +262,9 @@ export function VisitsPerConversionCard({ days, events, figures, from, to }: {
  * "Visits needed for one conversion" (Anthony, 2026-10-20: "number of visits
  * required to get a conversion over time"): visits over the counted
  * conversions they made, each day, week or month as the chart steps — fewer
- * is better. For 7 and 30 days, the days just before laid over them day for
+ * is better. For the weeks and months, the span before laid over them day for
  * day as a dashed grey line ("only keep the second line for another 30 days
- * or below": past 90 days only weeks and months are kept, so nothing compares
+ * or below": past 92 days only weeks and months are kept, so nothing compares
  * a day with a day). A tick box for each kind of conversion, all ticked at
  * first ("can we add filters … such as click to apply now"): the lines and
  * the figures count only the kinds ticked, one or several. The hint leads
@@ -279,7 +279,7 @@ function VisitsPerConversionChart({ days, events, figures, before, from, to, exp
   events: readonly string[];
   /** Null while they load. */
   figures: CostFigures | null;
-  /** Null for 90 days and 12 months, and while the days before are not held. */
+  /** Null for the quarters and the year, and while the span before is not held. */
   before: DaysBefore | null;
   from: string | null;
   to: string | null;
@@ -309,7 +309,7 @@ function VisitsPerConversionChart({ days, events, figures, before, from, to, exp
   const shift = before?.shift ?? 0;
   const rows = visitsPerConversion(now, held, step);
   const periodName = tf(`periods.${period}`);
-  // "the 30 days before", as the figures at the top word it; at a sentence's start, "The 30 days before".
+  // "the month before", as the figures at the top word it; at a sentence's start, "The month before".
   const beforeName = tf(`before.${period}`);
   const BeforeName = beforeName.charAt(0).toLocaleUpperCase(locale) + beforeName.slice(1);
   const kinds = eventList(shown.map((kind) => kind.key).join(","), nameOf, locale);

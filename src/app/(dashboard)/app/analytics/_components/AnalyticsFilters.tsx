@@ -7,10 +7,14 @@ import { api } from "@/convex/_generated/api";
 import { Select } from "@/src/ui/components/screens/Select";
 import { countryName } from "../../search-console/_components/countries";
 import { readerLanguage } from "../../search-console/_components/searchConsoleFormat";
+import { useOpeningPeriod } from "../../sites/_components/useCalendarPeriod";
+import { useSetSiteParams } from "../../sites/_components/useSiteParam";
 import {
   DEVICES,
   PERIODS,
+  PERIOD_KEY,
   STEPS,
+  STEP_KEY,
   pageForPath,
   useAnalyticsCountry,
   useAnalyticsSiteId,
@@ -18,7 +22,6 @@ import {
   usePeriod,
   useStep,
   type Device,
-  type Period,
   type Step,
 } from "./useAnalytics";
 
@@ -27,7 +30,8 @@ import {
  * page (GA13, GA31; §11, §18.6.1): the website's home countries — Search
  * Console's own choice, opening on the main one — every device or one, the
  * ready-made periods (§4.3), and how the charts step. Each is kept in the
- * address, so it travels with the menu. Live counts every country, as
+ * address, so it travels with the menu. The dates are the seven calendar
+ * periods every section shares (calendar-periods-plan.md, phase 6). Live counts every country, as
  * Google's own Realtime does (Anthony, 2026-10-13), so offers none (§18).
  */
 export function AnalyticsFilters() {
@@ -35,7 +39,11 @@ export function AnalyticsFilters() {
   const siteId = useAnalyticsSiteId();
   const pathname = usePathname();
   const [device, setDevice] = useDevice();
-  const [period, setPeriod] = usePeriod();
+  const [period] = usePeriod();
+  const opening = useOpeningPeriod();
+  const setParams = useSetSiteParams();
+  // A new period draws in its own step (rule 8): a step chosen for the last one is dropped.
+  const choosePeriod = (next: string) => setParams({ [PERIOD_KEY]: next === opening ? null : next, [STEP_KEY]: null });
   const [step, setStep] = useStep();
   const [country, setCountry] = useAnalyticsCountry();
   const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId });
@@ -58,7 +66,7 @@ export function AnalyticsFilters() {
       </Select>
       {dated ? (
         <>
-          <Select aria-label={t("period")} value={period} onChange={(next) => setPeriod(next as Period)}>
+          <Select aria-label={t("period")} value={period} onChange={choosePeriod}>
             {PERIODS.map((value) => <option key={value} value={value}>{t(`periods.${value}`)}</option>)}
           </Select>
           <Select aria-label={t("step")} value={step} onChange={(next) => setStep(next as Step)}>

@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import { CALENDAR_PERIODS, calendarPeriodValidator, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * The tables behind Google Analytics for a company's own websites
@@ -221,10 +222,16 @@ export const dayFactListValidator = v.union(
   v.literal("product"),
 );
 
-/** The ready-made periods (§4.3): days, ending on the newest day held. */
-export const ANALYTICS_PERIODS = ["7", "30", "90", "365"] as const;
-export type AnalyticsPeriod = (typeof ANALYTICS_PERIODS)[number];
-export const analyticsPeriodValidator = v.union(v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365"));
+/**
+ * The ready-made periods (calendar-periods-plan.md, phase 6): the date menu's seven calendar periods, each Google's
+ * own answer for its days in the property's time zone. The screens ask by these.
+ */
+export const ANALYTICS_PERIODS = CALENDAR_PERIODS;
+export const analyticsPeriodValidator = calendarPeriodValidator;
+/** The main home country's 12 months a day, and what needs a whole year (rule 10): a fixed last 12 months, never a menu choice. */
+export const SERIES_PERIOD = "365" as const;
+/** A ready-made list's period, as its key names it. */
+export type AnalyticsPeriod = CalendarPeriod | typeof SERIES_PERIOD;
 
 /** The period itself, the span before it, and the same span a year before (§10, Q2). */
 export const analyticsWhichValidator = v.union(v.literal("NOW"), v.literal("BEFORE"), v.literal("YEAR"));
@@ -437,9 +444,17 @@ export const googleAnalyticsTables = {
       pageChannelsFrom: v.optional(v.string()),
     }))),
     lastCollectedAt: v.optional(v.number()),
-    /** When the 7 and 30 days were last asked of Google (daily), and the 90 days and 12 months (weekly). */
+    /** When the periods still going were last asked of Google (daily), and the longer lists (weekly). */
     dailyPeriodsAt: v.optional(v.number()),
     weeklyPeriodsAt: v.optional(v.number()),
+    /**
+     * The finished periods fetched (calendar-periods-plan.md, phase 6), each home country's (`lastMonth|fra`, the main
+     * one's bare): the first day of the one fetched, and whether it was asked again once Google's figures settled. A
+     * finished period is asked once it ends, again two days later, then kept.
+     */
+    periodsFetched: v.optional(v.array(v.object({ key: v.string(), from: v.string(), settled: v.boolean() }))),
+    /** When the website was last noted a shop: a run begun before it fetched the finished periods without products. */
+    shopNotedAt: v.optional(v.number()),
     /** The run collecting it now, and the days it fetches, newest first from `top` back to `from`. */
     collecting: v.optional(v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
     /** Visits on each of the property's addresses over the last 30 days, asked weekly: the strangers check (§6, check 8). */

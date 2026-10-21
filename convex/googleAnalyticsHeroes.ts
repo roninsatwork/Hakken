@@ -8,7 +8,7 @@ import { readPeriodUnnamed } from "./searchConsolePeriodReads";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { curveRows, keywordFiguresOf } from "./searchConsoleKeywordList";
 import { daysOf } from "./searchConsoleReads";
-import { addUp, shiftDay } from "./searchConsoleDays";
+import { addUp } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { connectionOf, conversionsOf, countedOf, readSlot } from "./googleAnalyticsReads";
@@ -56,9 +56,10 @@ import {
  * and channels. Nothing is asked of Google, nothing written.
  */
 
-/** The days every figure here covers: a month, so a fix's worth reads "a month". */
-const DAYS = "30";
-/** Search Console's lists are calendar periods (calendar-periods-plan.md, phase 4): last month stands for the 30 days. */
+/**
+ * The period every figure here covers: last month, so a fix's worth reads "a month" — Google Analytics' and Search
+ * Console's lists alike are calendar periods (calendar-periods-plan.md).
+ */
 const CONSOLE_PERIOD = "lastMonth" as const;
 
 /** Google's own search, as Analytics names its visits: Organic Search from google. */
@@ -200,9 +201,9 @@ export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host
   if (!connection?.newestDay || connection.status === "CHOOSING" || connection.status === "COUNTING") return empty("NOT_CONNECTED");
   const counted = countedOf(connection);
   const [landing, landingBefore, channels] = await Promise.all([
-    readSlot(ctx, holdId, slotKey("landing", DAYS, "NOW", "")),
-    readSlot(ctx, holdId, slotKey("landing", DAYS, "BEFORE", "")),
-    readSlot(ctx, holdId, slotKey("channel", DAYS, "NOW", "")),
+    readSlot(ctx, holdId, slotKey("landing", CONSOLE_PERIOD, "NOW", "")),
+    readSlot(ctx, holdId, slotKey("landing", CONSOLE_PERIOD, "BEFORE", "")),
+    readSlot(ctx, holdId, slotKey("channel", CONSOLE_PERIOD, "NOW", "")),
   ]);
   if (!landing || !channels) return empty("PREPARING");
 
@@ -245,7 +246,8 @@ export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host
   // The days before only for one page's view.
   const shownBefore = consoleConnected && focus.page ? await consolePages(ctx, holdId, host, "BEFORE", { tokensOf }) : null;
   const consoleTo = shownNow?.to ?? null;
-  const totals = consoleTo ? addUp(await daysOf(ctx, holdId, "web", shiftDay(consoleTo, -(Number(DAYS) - 1)), consoleTo)) : null;
+  // Last month's days, the same month the list covers.
+  const totals = consoleTo ? addUp(await daysOf(ctx, holdId, "web", `${consoleTo.slice(0, 7)}-01`, consoleTo)) : null;
 
   const facts = new Map<string, PageFacts>();
   const inputs: HeroPageInput[] = [];

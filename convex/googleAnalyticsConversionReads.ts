@@ -12,7 +12,7 @@ import { funnelAsk } from "./googleAnalyticsLive";
 import { EVERY_DEVICE, PAGE_FACT_JOIN, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod, type PageFactList } from "./googleAnalyticsSchema";
 import { connectionOf, conversionsOf, countedOf, readLive, readSlot, type Counted } from "./googleAnalyticsRows";
-import { WEBSITE_FUNNEL, actionsFrom } from "./googleAnalyticsActionFunnels";
+import { WEBSITE_FUNNEL, actionEvents, actionsFrom } from "./googleAnalyticsActionFunnels";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { OTHER_ROWS } from "./utils/analyticsSharedLists";
@@ -277,8 +277,10 @@ export type BeforeConverting = Infer<typeof beforeValidator>;
 export async function readBeforeConverting(ctx: Reader, holdId: HoldId, connection: Doc<"googleAnalyticsConnections">): Promise<BeforeConverting | null> {
   const counted = countedOf(connection).map((event) => event.eventName);
   if (counted.length === 0) return null;
-  const events = await readSlot(ctx, holdId, slotKey("event", "365", "NOW", EVERY_DEVICE));
-  if (!events) return { collecting: true, siteRate: null, few: FEW_PEOPLE, rows: [] };
+  // The actions as the run chose them (rule 10): from the events' months held, or this year's list before they are.
+  const eventRows = await actionEvents(ctx, connection);
+  if (eventRows.length === 0) return { collecting: true, siteRate: null, few: FEW_PEOPLE, rows: [] };
+  const events = { rows: eventRows };
   const funnelOf = async (event: string) => {
     const held = await readLive(ctx, holdId, funnelAsk(event, "365", EVERY_DEVICE));
     if (!held || held.rows.some((row) => row.key === "refused")) return null;

@@ -26,12 +26,18 @@ export const EXPERIMENT_DAYS = 56;
 
 type Reader = { db: QueryCtx["db"] };
 
-/** A page's visitors (people, over 12 months; visits over 30 days, for experiments) and enquiries in one of Analytics' landing lists, by path. */
+/**
+ * Where each of Insights' spans is read from (calendar-periods-plan.md, phase 6): last month, last quarter, and this
+ * year so far against the same days last year — Google's own answers, whose people can't be added up across days.
+ */
+const LANDING_SOURCE = { "30": "lastMonth", "90": "lastQuarter", "365": "thisYear" } as const;
+
+/** A page's visitors (people, over the year; visits over last month, for experiments) and enquiries in one of Analytics' landing lists, by path. */
 export async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "90" | "365", which: "NOW" | "YEAR") {
   const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first();
   if (!connection?.property) return null;
   const counted = countedOf(connection);
-  const landing = await readSlot(ctx, holdId, slotKey("landing", period, which, EVERY_DEVICE));
+  const landing = await readSlot(ctx, holdId, slotKey("landing", LANDING_SOURCE[period], period === "365" && which === "YEAR" ? "BEFORE" : which, EVERY_DEVICE));
   if (!landing) return null;
   const addresses = await decodePages(ctx, holdId, landing.rows.map((row) => row.key));
   const out = new Map<string, { visits: number; enquiries: number }>();

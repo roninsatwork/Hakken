@@ -1,9 +1,10 @@
 # Calendar periods in every date menu
 
 Agreed with Anthony on 2026-10-20, point by point in conversation. Built on `dev`, not pushed: the rules (phase 1),
-Sites (2), Clarity (3), Search Console (4) and Bing (5), with rule 6's This-month fallback. Search Console's "no days yet" line
+Sites (2), Clarity (3), Search Console (4), Bing (5), Google Analytics (6) and the Settings overview and Governance
+(7), with rule 6's This-month fallback. Search Console's "no days yet" line
 and Volatility's dated labels were found unbuilt after its first commit and finished in a second; its charts' 52 weeks
-moved to the start-up fill (8), because raising the setting is what starts their download. Still to build: Google Analytics (6), Settings and Governance (7), the start-up fill (8), the full
+moved to the start-up fill (8), because raising the setting is what starts their download. Still to run: the start-up fill (8), the full
 check (9) and the audit (10). Until the start-up fill runs,
 a Search Console list for a period not yet built says it is being added up.
 
@@ -159,6 +160,30 @@ People can't be added up across days, so a calendar period needs its own answer.
   365 → the last 12 months added up), Ask Hakken (`assistantAnalyticsReads.ts:180`, `toolConnectorDefinitions.ts:603`:
   the period names).
 - The 90-day and 12-month lists today run up to six days behind the 30-day one (weekly). That goes.
+
+### Google Analytics, as built (phase 6, 2026-10-21)
+
+Where the build had to choose, and why:
+
+- **Periods still going are asked every run, not weekly.** Every run has asked every list nightly since Anthony's
+  14 October instruction ("I want everything once a day"), so This Quarter and This Year stay nightly. Finished periods
+  (Last Week, Month, Quarter) are asked once they end, again two days later once Google's figures settle, then kept —
+  recorded per home country on the connection (`periodsFetched`). Fewer asks than before.
+- **Tracking health**: channels, events and totals over the latest 30, 90 and 365 days are added up from the days,
+  weeks and months held (rule 11). Landing pages and pages are not held a day for every page at once (one record a
+  page), so those two checks read Google's newest answer: This Month once it holds a week, else Last Month (the
+  quarters for the pages check).
+- **Whole-year figures** (rule 10) — a channel's worth, its "growing but falling now" year, the actions before
+  converting — are added up from the months held. Ranking those actions adds each day's people: a busyness, not a
+  count of people.
+- **Insights' 12 months come from This Year, not 12 months added up** — a departure from this plan's wording, for
+  Anthony's word. Insights' facts carry people, which can't be added up across days, so they read Google's own answer
+  for the year so far, set against the same days last year. Its 30 and 90 days are Last Month and Last Quarter. Each
+  fact keeps its real dates.
+- **92 days kept**: a website already holding 90 counts as collected; the two more fill in over the next two nights,
+  rather than every website fetching its days again.
+- **A shop** is noted from this quarter's or last quarter's events; it stops being one only when a whole quarter ended
+  without any of the four steps.
 
 ### Bing Webmaster
 

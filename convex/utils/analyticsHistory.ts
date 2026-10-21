@@ -11,8 +11,11 @@ import { monthStart, weekStart } from "./searchConsolePacks";
  * reads and the tests share one rule.
  */
 
-/** Days kept as days, the newest included. */
-export const ANALYTICS_DAYS_KEPT = 90;
+/**
+ * Days kept as days, the newest included: 92, so the month before last month is always held a day at a time — on a
+ * month's last day it starts 92 days back (calendar-periods-plan.md, the chart explorer's point 3).
+ */
+export const ANALYTICS_DAYS_KEPT = 92;
 /** Days back to which the past is kept by week: a year. */
 export const WEEKS_REACH_DAYS = 365;
 /** Days back to which anything is kept: two years. */

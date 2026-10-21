@@ -5,7 +5,7 @@ import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { NEWEST, dayOf, history, type Visit } from "@/src/test/googleAnalyticsFake";
-import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
+import { FINISHED_ON_9_OCTOBER, collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { fillStops } from "./googleAnalyticsHistory";
@@ -59,11 +59,11 @@ describe("each page's fill pieces (BR5)", () => {
       expect(pieces.at(-1)?.to).toBe(NEWEST);
       for (const [at, piece] of pieces.entries()) if (at > 0) expect(piece.from).toBe(shiftDay(pieces[at - 1].to, 1));
     }
-    // A 95-page website: the months, the weeks, the week the 90 days begin in, and the 90 days — one ask each.
+    // A 95-page website: the months, the weeks, the week the 92 days kept begin in, and the 92 days — one ask each.
     expect(pageFillPieces(NEWEST, unitsPerAsk(95)).map((piece) => piece.lead)).toEqual(["yearMonth", "isoYearIsoWeek", "isoYearIsoWeek", "date"]);
     // A 15,000-page website: a month, a week or a day an ask.
     const big = pageFillPieces(NEWEST, unitsPerAsk(15_000));
-    expect(big.filter((piece) => piece.lead === "date")).toHaveLength(90);
+    expect(big.filter((piece) => piece.lead === "date")).toHaveLength(92);
     expect(big.filter((piece) => piece.lead === "date").every((piece) => piece.from === piece.to)).toBe(true);
     expect(big.filter((piece) => piece.lead === "yearMonth").every((piece) => piece.from.slice(0, 7) === piece.to.slice(0, 7))).toBe(true);
   });
@@ -87,10 +87,14 @@ describe("each page's fill pieces (BR5)", () => {
 });
 
 describe("the fills follow the night (BR6, BR7)", () => {
-  test("connecting brings the 90 days at once; the two years wait for the night's run, then fill", async () => {
+  test("connecting brings the 92 days at once; the two years wait for the night's run, then fill", async () => {
     const t = harness();
-    // A short past is enough: what is asked, not how much comes back.
-    const { connectionId } = await collectedWebsite(t, history(91), encryptConnectorToken, { firstNight: false });
+    // A short past is enough: what is asked, not how much comes back. Counted by Google's own counts already, with its
+    // finished periods fetched, so its runs ask the periods still going alone: the fills are this test's subject.
+    const { connectionId } = await collectedWebsite(t, history(91), encryptConnectorToken, {
+      firstNight: false,
+      connection: FINISHED_ON_9_OCTOBER,
+    });
     const connected = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!;
     expect(connected.newestDay).toBe(NEWEST);
     expect(connected.historyFilled).toBeUndefined();
@@ -137,7 +141,7 @@ describe("the fills follow the night (BR6, BR7)", () => {
   test("a day-list fill that spends the hour's budget inside the night waits for the hour, and carries on where it stopped", async () => {
     const t = harness();
     const { connectionId, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, { firstNight: false });
-    // The 90 days are held, so the fill asks the months first: the first piece's channels refused for the hour.
+    // The 92 days are held, so the fill asks the months first: the first piece's channels refused for the hour.
     google.refusing = { when: "\"startDate\":\"" + historyFloors(NEWEST).month, times: 1, status: 429, message: "Exhausted property tokens per hour quota. This quota will refresh in under an hour." };
     const waited = await t.action(internal.googleAnalyticsSteps.fillHistory, { connectionId, lists: ["channel"], nightFrom: Date.now() });
     expect(waited).toMatchObject({ ok: true, handedOn: "HOUR" });

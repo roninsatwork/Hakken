@@ -15835,7 +15835,7 @@
       "title": "Google Analytics",
       "description": "Cosa ha contato Google Analytics sui tuoi siti: le visite, da dove sono arrivate e le conversioni che hanno fatto.",
       "searchPlaceholder": "Trova un sito…",
-      "period": "Gli ultimi 30 giorni fino al giorno più recente di Analytics",
+      "period": "Il mese scorso",
       "noMatch": "Nessun sito corrisponde alla ricerca.",
       "empty": "La tua azienda non ha ancora un sito proprio. Aggiungine uno in Visibilità → Siti.",
       "columns": {
@@ -15856,7 +15856,7 @@
       "withProperty": "Il tuo sito · proprietà Google Analytics {name} ({id})",
       "yourWebsite": "Il tuo sito",
       "updated": "Aggiornato {when}",
-      "collectingFirst": "Raccolta dei primi 90 giorni",
+      "collectingFirst": "Raccolta dei primi 92 giorni",
       "switch": "Scegli un sito",
       "clearing": "È stata scelta un'altra proprietà: i dati della precedente vengono cancellati, poi arrivano quelli nuovi.",
       "figuresTo": "Dati di Analytics fino al {day}; gli ultimi due giorni possono ancora cambiare."
@@ -15873,10 +15873,13 @@
         "tablet": "Tablet"
       },
       "periods": {
-        "7": "Ultimi 7 giorni",
-        "30": "Ultimi 30 giorni",
-        "90": "Ultimi 90 giorni",
-        "365": "Ultimi 12 mesi"
+        "thisWeek": "Questa settimana",
+        "lastWeek": "La settimana scorsa",
+        "thisMonth": "Questo mese",
+        "lastMonth": "Il mese scorso",
+        "thisQuarter": "Questo trimestre",
+        "lastQuarter": "Il trimestre scorso",
+        "thisYear": "Quest'anno"
       },
       "steps": {
         "day": "Giornaliero",
@@ -15884,10 +15887,13 @@
         "month": "Mensile"
       },
       "before": {
-        "7": "i 7 giorni prima",
-        "30": "i 30 giorni prima",
-        "90": "i 90 giorni prima",
-        "365": "i 12 mesi prima"
+        "thisWeek": "gli stessi giorni della settimana scorsa",
+        "lastWeek": "la settimana precedente",
+        "thisMonth": "gli stessi giorni del mese scorso",
+        "lastMonth": "il mese precedente",
+        "thisQuarter": "gli stessi giorni del trimestre scorso",
+        "lastQuarter": "il trimestre precedente",
+        "thisYear": "gli stessi giorni dell'anno scorso"
       }
     },
     "connect": {
@@ -15987,7 +15993,7 @@
       "countTitle": "Scegli cosa conta",
       "countBody": "Quasi fatto: spunta cosa conta come conversione su {host}, nella sua pagina Connessione, e la raccolta parte subito.",
       "toConnection": "Vai a Connessione",
-      "collectingTitle": "Collegato. Raccolta degli ultimi 90 giorni in corso.",
+      "collectingTitle": "Collegato. Raccolta degli ultimi 92 giorni in corso.",
       "collectingBody": "La settimana più recente arriva per prima, in un minuto o due, e questa pagina si riempie a ogni settimana che arriva. Poi il Google Analytics: Collector Agent raccoglie ogni mattina alle 04:00. Non c'è nulla da fare."
     },
     "nothingCounted": {
@@ -16225,7 +16231,7 @@
         "month": "Un mese con una conversione: più grande per più"
       },
       "coarse": {
-        "day": "Prima degli ultimi 90 giorni, ogni punto è la media giornaliera di una settimana.",
+        "day": "Prima degli ultimi 92 giorni, ogni punto è la media giornaliera di una settimana.",
         "week": "Prima degli ultimi 12 mesi, ogni punto è la media settimanale di un mese."
       },
       "flow": {
@@ -16445,10 +16451,10 @@
         "conversions": "Conversioni da queste visite",
         "value": "{money} di valore",
         "noValue": "Ancora nessun valore",
-        "up": "▲ {change} sui 30 giorni precedenti",
-        "down": "▼ {change} sui 30 giorni precedenti",
-        "same": "Come nei 30 giorni precedenti",
-        "nothingBefore": "Niente da confrontare con i 30 giorni precedenti"
+        "up": "▲ {change} sul mese precedente",
+        "down": "▼ {change} sul mese precedente",
+        "same": "Come nel mese precedente",
+        "nothingBefore": "Niente da confrontare con il mese precedente"
       }
     },
     "channels": {
@@ -16522,10 +16528,13 @@
     },
     "channelPage": {
       "beforeName": {
-        "7": "I 7 giorni prima",
-        "30": "I 30 giorni prima",
-        "90": "I 90 giorni prima",
-        "365": "I 12 mesi prima"
+        "thisWeek": "Gli stessi giorni della settimana scorsa",
+        "lastWeek": "La settimana precedente",
+        "thisMonth": "Gli stessi giorni del mese scorso",
+        "lastMonth": "Il mese precedente",
+        "thisQuarter": "Gli stessi giorni del trimestre scorso",
+        "lastQuarter": "Il trimestre precedente",
+        "thisYear": "Gli stessi giorni dell'anno scorso"
       },
       "kinds": {
         "noPage": "Nessuna pagina registrata",
@@ -16584,7 +16593,7 @@
         "hint": "Le pagine di destinazione che hanno guadagnato e perso più visite da {channel}, rispetto a {before}.",
         "lost": "Visite perse",
         "gained": "Visite guadagnate",
-        "hover": "{page}: {before} visite in {was}, {visits} negli {period}"
+        "hover": "{page}: {before} visite in {was}, {visits} {period}"
       },
       "table": {
         "viewLabel": "Mostra",
@@ -16636,7 +16645,7 @@
           "week": "Eventi chiave alla settimana",
           "month": "Eventi chiave al mese"
         },
-        "hint": "{beforeName}, sbiaditi, poi gli {period}. Ogni evento chiave del sito, contato come conversione o no.",
+        "hint": "{beforeName}, sbiaditi, poi {period}. Ogni evento chiave del sito, contato come conversione o no.",
         "empty": "Nessun evento chiave in queste date."
       },
       "sourcesChart": {
@@ -16714,7 +16723,7 @@
       "descriptionInGroupTitled": "“{title}”, una pagina di {host}, nel gruppo di pagine {group}. Ogni dato qui riguarda le visualizzazioni di questa pagina, o le visite iniziate su di essa dove lo dice.",
       "openPage": "Apri la pagina",
       "notFound": "Questa pagina non è una del sito.",
-      "noViews": "Questa pagina non è stata vista negli {period}.",
+      "noViews": "Questa pagina non è stata vista {period}.",
       "views": "Visualizzazioni",
       "people": "Persone",
       "viewsEach": "{views} visualizzazioni a testa",
@@ -17105,7 +17114,7 @@
       "descriptionInGroupTitled": "«{title}», una pagina di destinazione di {host}, nel gruppo di pagine {group}. Ogni dato qui riguarda le visite iniziate su questa pagina.",
       "openPage": "Apri la pagina",
       "notFound": "Questa pagina non è del sito.",
-      "noVisits": "Nessuna visita è iniziata su questa pagina negli {period}.",
+      "noVisits": "Nessuna visita è iniziata su questa pagina {period}.",
       "channelsTitle": "Da dove sono arrivate le sue visite",
       "channelsDescription": "I canali che hanno portato visite a questa pagina, per valore.",
       "collecting": "Ancora in raccolta…",
@@ -17145,7 +17154,7 @@
       "failed": "Impossibile salvare cosa conta. Riprova.",
       "save": "Salva · {count} contate",
       "back": "Indietro",
-      "startsAtOnce": "Salvando parte subito la raccolta degli ultimi 90 giorni, dalla settimana più recente; poi il Google Analytics: Collector Agent raccoglie ogni mattina alle 04:00.",
+      "startsAtOnce": "Salvando parte subito la raccolta degli ultimi 92 giorni, dalla settimana più recente; poi il Google Analytics: Collector Agent raccoglie ogni mattina alle 04:00.",
       "whereTitle": "Dove contano le conversioni",
       "whereDescription": "La proprietà {property} registra visite su più indirizzi oltre a quello del sito. {platformName} legge visite e pagine solo su {read}, e conta anche le conversioni e le vendite su ogni indirizzo spuntato qui — un negozio, una pagina di prenotazione — attribuite alla visita arrivata dal sito. {platformName} li ha già spuntati per te.",
       "whereWhy": {
@@ -17382,13 +17391,13 @@
       "websites": {
         "none": "Qui non c'è ancora nessuno dei siti della tua azienda. Aggiungine uno in Visibilità per vedere cosa conta Google Analytics.",
         "noneConnected": "{count, plural, =1 {Il tuo sito non è} other {Nessuno dei tuoi # siti è}} ancora collegato a Google Analytics, quindi nessuno può dire quali pagine portano richieste o vendite.",
-        "notCounting": "{text} ha avuto {a} visite negli ultimi 30 giorni, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
-        "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} negli ultimi 30 giorni.",
-        "fellVisitsUp": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in calo da {bMoney}, anche se le sue visite sono salite del {cRate}.",
+        "notCounting": "{text} ha avuto {a} visite il mese scorso, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
+        "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} il mese scorso.",
+        "fellVisitsUp": "{text} ha fatto {aMoney} il mese scorso, in calo da {bMoney}, anche se le sue visite sono salite del {cRate}.",
         "value": {
-          "down": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in calo da {bMoney}.",
-          "up": "{text} ha fatto {aMoney} negli ultimi 30 giorni, in crescita da {bMoney}.",
-          "same": "{text} ha fatto {aMoney} negli ultimi 30 giorni, come nei 30 giorni prima."
+          "down": "{text} ha fatto {aMoney} il mese scorso, in calo da {bMoney}.",
+          "up": "{text} ha fatto {aMoney} il mese scorso, in crescita da {bMoney}.",
+          "same": "{text} ha fatto {aMoney} il mese scorso, come nel mese precedente."
         },
         "unknown": "Anche il tracciamento di {text} va sistemato: il {aRate} delle sue visite non si può attribuire a un canale o a una pagina di destinazione.",
         "tracking": "Il tracciamento di {text} va controllato: {count, plural, =1 {uno} other {#}} dei suoi {b} controlli {count, plural, =1 {non passa} other {non passano}}.",
@@ -17540,7 +17549,7 @@
         "copy": "{event} conta come conversione, ma coincide giorno per giorno con {moreEvent}: è successo {count, plural, =1 {una volta} other {# volte}} qui.",
         "uncountedEnquiry": "{event} è successo {count, plural, =1 {una volta} other {# volte}} da queste visite e sembra una richiesta, ma non è contato come conversione.",
         "uncounted": "{event} è successo {count, plural, =1 {una volta} other {# volte}} da queste visite; non è contato come conversione.",
-        "fallingNow": "È cresciuto nell'anno ma ora cala: {a} visite negli ultimi 90 giorni, contro {b} nei 90 precedenti e {c} un anno fa.",
+        "fallingNow": "È cresciuto nell'anno ma ora cala: {a} visite il trimestre scorso, contro {b} il trimestre precedente e {c} lo stesso trimestre un anno fa.",
         "filedElsewhere": "Google ha archiviato {a} di queste {b} visite sotto altri canali, come Referral; qui sono tutte contate come assistenti AI.",
         "noPage": "Il coinvolgimento risulta {cRate}, ma {bRate} senza le {a} visite senza pagina registrata.",
         "lostSources": "{a} delle sue {b} persone erano nuove al sito: probabilmente sono per lo più link la cui sorgente è andata persa.",
@@ -17883,7 +17892,7 @@
       "titleAgainst": ", rispetto all'intero sito",
       "hintVisits": "{period}: le visite iniziate su questa pagina.",
       "hintViews": "{period}: ogni visualizzazione di questa pagina.",
-      "heading": "{name}, nel periodo {period}",
+      "heading": "{name}, {period}",
       "byLabel": "Per",
       "by": {
         "channel": "Canale",
@@ -18054,12 +18063,12 @@
       "perConversionOverallSome": "{period}, contando {kinds}: {per} visite per ognuna ({visits, plural, one {# visita} other {# visite}}, {conversions, plural, one {# conversione} other {# conversioni}}).",
       "perConversionNoneOverallSome": "{period}: nessuna conversione tra {kinds}, quindi non c'è un dato per queste date.",
       "perConversionRead": "Meno è meglio. {step, select, day {Un giorno} week {Una settimana} other {Un mese}} senza conversioni non ha un dato, quindi la linea lo salta.",
-      "perConversionCoarse": "Prima degli ultimi 90 giorni i dati sono conservati per settimana, quindi lì ogni punto è una settimana intera.",
+      "perConversionCoarse": "Prima degli ultimi 92 giorni i dati sono conservati per settimana, quindi lì ogni punto è una settimana intera.",
       "perConversionRow": "{visits, plural, one {# visita} other {# visite}}, {conversions, plural, =0 {nessuna conversione} one {# conversione} other {# conversioni}}",
       "perConversionBeforeOverall": "{before}: {per} ({visits, plural, one {# visita} other {# visite}}, {conversions, plural, one {# conversione} other {# conversioni}}).",
       "perConversionBeforeNone": "{before} non hanno avuto conversioni.",
       "perConversionBeforeNoneSome": "Nessuna conversione tra {kinds} ({before}).",
-      "perConversionBeforeLineShort": "La linea dei giorni precedenti è disegnata solo per 7 e 30 giorni, dove ogni giorno è conservato.",
+      "perConversionBeforeLineShort": "La linea del periodo precedente è disegnata solo per le settimane e i mesi, dove ogni giorno è conservato.",
       "perConversionRowDated": "{date}: {visits, plural, one {# visita} other {# visite}}, {conversions, plural, =0 {nessuna conversione} one {# conversione} other {# conversioni}}",
       "perConversionNone": "Nessuna delle conversioni spuntate è avvenuta in queste date, quindi non c'è un dato da disegnare.",
       "perConversionCsv": "Visite per una conversione"
@@ -20747,9 +20756,9 @@
         "hint": "Più basso è meglio. Da Google Analytics.",
         "series": "Visitatori per una richiesta",
         "span": "Periodo",
-        "yearBefore": "L'anno prima",
-        "lastYear": "Gli ultimi 12 mesi",
-        "last90": "Gli ultimi 90 giorni"
+        "yearBefore": "Gli stessi giorni dell'anno scorso",
+        "lastYear": "Quest'anno",
+        "last90": "Il trimestre scorso"
       },
       "cameFrom": {
         "title": "Dove erano i suoi visitatori subito prima",

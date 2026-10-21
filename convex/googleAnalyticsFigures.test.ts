@@ -18,7 +18,11 @@ import { PROPERTY, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
  * devices. Google faked: its people count is not additive, as Google's isn't.
  */
 
-const NOW = Date.parse("2026-10-09T09:30:00Z");
+/**
+ * 1 October: Google's newest day is 30 September, so last month is September whole and last quarter's 92 days —
+ * July to September — are all among the days kept (calendar-periods-plan.md).
+ */
+const NOW = Date.parse("2026-10-01T09:30:00Z");
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
@@ -63,7 +67,7 @@ const rowsIn = (t: Harness, siteId: Id<"companyWebsites">, key: string) =>
     return parts.flatMap((part) => unpackPart(part)).map(({ counts: _counts, values: _values, ...figures }) => figures);
   });
 
-// The fake property's visits over 30 days on the website's own address: 10 a day on phones, 6 on computers.
+// The fake property's visits over last month, September's 30 days, on the website's own address: 10 a day on phones, 6 on computers.
 const MOBILE = 30 * 10;
 const DESKTOP = 30 * 6;
 /** People as the fake counts them: from a row's visits taken whole, so adding rows up gives more. */
@@ -89,10 +93,10 @@ describe("the second round's figures", () => {
     await save(admin, siteId);
     await finishScheduled(t);
 
-    const [every] = await rowsIn(t, siteId, "total|30|NOW|");
+    const [every] = await rowsIn(t, siteId, "total|lastMonth|NOW|");
     expect(every).toMatchObject({ visits: MOBILE + DESKTOP, people: peopleOf(MOBILE + DESKTOP) });
     expect(peopleOf(MOBILE + DESKTOP)).toBeLessThan(peopleOf(MOBILE) + peopleOf(DESKTOP));
-    const [mobile] = await rowsIn(t, siteId, "total|30|NOW|mobile");
+    const [mobile] = await rowsIn(t, siteId, "total|lastMonth|NOW|mobile");
     expect(mobile).toMatchObject({ visits: MOBILE, people: peopleOf(MOBILE) });
     // Visit length adds up: 75 seconds a visit on every row.
     expect(every.length).toBe((MOBILE + DESKTOP) * 75);
@@ -105,7 +109,7 @@ describe("the second round's figures", () => {
     await save(admin, siteId);
     await finishScheduled(t);
 
-    const args = { siteId, period: "30" as const, device: "" };
+    const args = { siteId, period: "lastMonth" as const, device: "" };
     const overview = await admin.query(api.googleAnalyticsReads.analyticsOverview, args);
     // A day: 10 visits with 6 engaged and 20 views on phones; 4 with 3 and 9, and 2 with 2 and 3, on computers.
     expect(overview.now).toMatchObject({ visits: 480, engaged: 330, views: 960, people: peopleOf(480), length: 480 * 75 });
@@ -132,7 +136,7 @@ describe("the second round's figures", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("holdPages", { companyWebsiteId: siteId, page: "/ai-agency/", crawled: false, shown: false, clicks: 0, ranks: false, title: "AI Agency | Acme" });
     });
-    const args = { siteId, period: "30" as const, device: "" };
+    const args = { siteId, period: "lastMonth" as const, device: "" };
     const landing = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "landing", page: 1, rows: 25 });
     expect(landing.rows.map((row) => [row.label, row.title ?? null])).toEqual([
       ["https://www.acme-shop.test/", null],
@@ -150,26 +154,28 @@ describe("the second round's figures", () => {
     // The first night: the two-year fills follow its run (ga-big-site-reliability-plan.md BR7).
     await t.mutation(internal.googleAnalyticsFillAfter.startFills, { connectionId });
     await finishScheduled(t);
-    const args = { siteId, period: "30" as const, device: "" };
+    const args = { siteId, period: "lastMonth" as const, device: "" };
 
     const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChart, args);
     expect(chart.points).toHaveLength(30);
     expect(chart.points.every((point) => point.views === 32 && point.visits === 16)).toBe(true);
 
-    // Thirty days: from the days kept, the busiest channel first.
+    // Last month: from the days kept, the busiest channel first.
     const daily = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, args);
     expect(daily).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"], rest: false });
     expect(daily.points).toHaveLength(30);
     expect(daily.points[0].visits).toEqual([10, 4, 2]);
 
-    // Ninety days are kept as days (ga-stored-figures-plan.md SF2): read from what is held, never asked of Google.
-    const ninety = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "90" as const });
-    expect(ninety).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
-    expect(ninety.points).toHaveLength(90);
-    // Twelve months from the two years filled by themselves after the first night's collection (SF9, BR7): a day for 90 days, then weeks.
-    const long = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "365" as const });
+    // Last quarter's 92 days are kept as days (ga-stored-figures-plan.md SF2): read from what is held, never asked of Google.
+    const quarter = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "lastQuarter" as const });
+    expect(quarter).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
+    expect(quarter.points).toHaveLength(92);
+    expect(quarter.points.every((point) => !point.lastDay)).toBe(true);
+    // This year from the two years filled by themselves after the first night's collection (SF9, BR7): a day for 92 days, before them weeks.
+    const long = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "thisYear" as const });
     expect(long).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
-    expect(long.points.filter((point) => !point.lastDay)).toHaveLength(90);
+    expect(long.points.filter((point) => !point.lastDay)).toHaveLength(92);
+    expect(long.points.some((point) => point.lastDay !== undefined)).toBe(true);
 
     const top = await admin.query(api.googleAnalyticsReads.analyticsTopList, { ...args, list: "page", sort: "views", direction: "desc", count: 2 });
     expect(top.rows.map((row) => [row.label, row.views])).toEqual([["https://www.acme-shop.test/", 600], ["https://www.acme-shop.test/ai-agency/", 270]]);

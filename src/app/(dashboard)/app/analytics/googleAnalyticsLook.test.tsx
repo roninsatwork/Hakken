@@ -70,7 +70,7 @@ describe("Google Analytics' approved looks", () => {
     });
     const { container } = render(<GoogleAnalyticsPage />);
     await screen.findByText("acme-shop.test");
-    await screen.findByText(/acme-shop\.test made £4,400 in the last 30 days, up from £3,500/);
+    await screen.findByText(/acme-shop\.test made £4,400 last month, up from £3,500/);
     await expectApprovedLook(container, PLAN, "Main", "Google Analytics → your websites");
   });
 
@@ -154,7 +154,7 @@ describe("Google Analytics' approved looks", () => {
     await screen.findByText("Not counted");
     // Visits needed for one conversion (Anthony, 2026-10-20): the same figures as the top, now and the 30 days before.
     await screen.findByText("Visits needed for one conversion");
-    screen.getByText("Last 30 days: 105 visits for each conversion (2,412 visits, 23 conversions). The 30 days before: 117 (2,225 visits, 19 conversions). Fewer is better. A day with no conversion has no figure, so the line skips it.");
+    screen.getByText("Last month: 105 visits for each conversion (2,412 visits, 23 conversions). The month before: 117 (2,225 visits, 19 conversions). Fewer is better. A day with no conversion has no figure, so the line skips it.");
     await expectApprovedLook(container, "ga-conversions-visitors", "Conversions", "Google Analytics → Conversions");
   });
 
@@ -172,14 +172,14 @@ describe("Google Analytics' approved looks", () => {
     // Anthony, 2026-10-20: "filters the conversion type such as click to apply now". Only the contact form, now and last year.
     fireEvent.click(within(card).getByLabelText("Phone number clicked"));
     fireEvent.click(within(card).getByLabelText("Email address clicked"));
-    await within(card).findByText(/^Last 30 days, counting “Contact form sent”: 172 visits for each one \(2,412 visits, 14 conversions\)\. The 30 days before: 202 \(2,225 visits, 11 conversions\)\./);
+    await within(card).findByText(/^Last month, counting “Contact form sent”: 172 visits for each one \(2,412 visits, 14 conversions\)\. The month before: 202 \(2,225 visits, 11 conversions\)\./);
     // The last box stays ticked: a chart with nothing ticked says nothing.
     fireEvent.click(within(card).getByLabelText("Contact form sent"));
     expect((within(card).getByLabelText("Contact form sent") as HTMLInputElement).checked).toBe(true);
   });
 
-  it("7 · visits needed for one conversion over 90 days: no line for the days before, and the words say why", async () => {
-    at("/app/analytics/site_1/conversions", "period=90");
+  it("7 · visits needed for one conversion over last quarter: no line for the span before, and the words say why", async () => {
+    at("/app/analytics/site_1/conversions", "period=lastQuarter");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
@@ -189,7 +189,7 @@ describe("Google Analytics' approved looks", () => {
     });
     render(<AnalyticsConversionsPage />);
     // Anthony, 2026-10-20: "only keep the second line for another 30 days or below". Past 90 days no day is kept.
-    await screen.findByText(/^Last 90 days: 105 visits for each conversion .* The 90 days before: 117 .* The line for the days before is drawn for 7 and 30 days only, where every day is kept\.$/);
+    await screen.findByText(/^Last quarter: 105 visits for each conversion .* The quarter before: 117 .* The line for the span before is drawn for the weeks and months only, where every day is kept\.$/);
     const asks = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("analyticsPeriodBeforeChart"));
     expect(asks.length).toBeGreaterThan(0);
     expect(asks.every(([, args]) => args === "skip")).toBe(true);
@@ -397,11 +397,11 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, PLAN, "Connected", "Google Analytics → Connection");
   });
 
-  it("17 · the first 90 days coming in", async () => {
+  it("17 · the first 92 days coming in", async () => {
     at("/app/analytics/site_1");
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ newestDay: null, historyDone: false, lastCollectedAt: null }) });
     const { container } = render(<AnalyticsOverviewPage />);
-    await screen.findByText("Connected. Collecting the last 90 days now.");
+    await screen.findByText("Connected. Collecting the last 92 days now.");
     await expectApprovedLook(container, PLAN, "FirstCollect", "Google Analytics → the first 90 days coming in");
   });
 });

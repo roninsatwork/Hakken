@@ -61,6 +61,7 @@ export const liveTarget = internalQuery({
       oldestDay: connection.oldestDay,
       pagesHeld: connection.pageHistoryFrom !== undefined,
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
+      periodsFetched: connection.periodsFetched ?? [],
       country: countryIdOf(country || mainConsoleCountry(hold)),
       others: [],
       countryHistory: [],

@@ -15,17 +15,22 @@ export type StepSpan = { key: string; first: string; last: string };
 const DAY_MS = 86_400_000;
 const shift = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 
-/** The step the page's dates call for ("this should be automatic from the date range"): days, weeks for 90 days, months for 12 months. */
+/**
+ * The step the page's dates call for ("this should be automatic from the date range"; calendar-periods-plan.md, rule
+ * 8): days for the weeks and months, weeks for the quarters, months for the year — the same rule as every chart. The
+ * page's step menu can change it, and the explorer follows the menu.
+ */
 export function stepFor(period: string): ExplorerStep {
-  return period === "365" ? "month" : period === "90" ? "week" : "day";
+  return period === "thisYear" ? "month" : period === "thisQuarter" || period === "lastQuarter" ? "week" : "day";
 }
 
 /**
- * Whether the dates can be set against the same dates a year before: only for 12 months, month against month. A year
- * ago only weeks and months are kept, so 7, 30 or 90 days a year before would be read from weeks and months that
- * miss the dates (Anthony, 2026-10-20: the audit; "fix all").
+ * Whether the dates can be set against the same dates a year before: only for This Year, month against month. A year
+ * ago only weeks and months are kept, so a week, month or quarter a year before would be read from weeks and months
+ * that miss the dates (Anthony, 2026-10-20: the audit; "fix all"; calendar-periods-plan.md, the chart explorer's
+ * point 2: quarters compare with a year before in figures and tables only).
  */
-export const yearComparable = (period: string) => period === "365";
+export const yearComparable = (period: string) => period === "thisYear";
 
 /** A step's key for a day: the day, its week's Monday, or its month. */
 export const stepKey = (day: string, step: ExplorerStep) => (step === "day" ? day : step === "week" ? weekStart(day) : day.slice(0, 7));

@@ -1,8 +1,9 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
+import { finishScheduled } from "@/src/test/finishScheduled";
 import { NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
 import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
@@ -18,9 +19,10 @@ import { NOT_SORTED_KIND } from "./utils/pageKinds";
  * before converting, and where each kind of visitor lands.
  */
 
+/** 9 October 2026: Last month is September, its 30 days inside the sixty below. */
 const NOW = Date.parse("2026-10-09T09:30:00Z");
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
-const args = { period: "30" as const, device: "" };
+const args = { period: "lastMonth" as const, device: "" };
 
 /**
  * Sixty days of the plain day, and from search a service page where people
@@ -51,10 +53,26 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/**
+ * The website's next run, an hour on, as its schedule starts it. The actions asked for what people did before
+ * converting are found in the events' 12 months held (calendar-periods-plan.md, rule 10), which the first night's
+ * fills write after its run: the run after them asks those actions' funnels.
+ */
+async function nextRun(t: ReturnType<typeof harness>): Promise<void> {
+  vi.setSystemTime(NOW + 60 * 60 * 1000);
+  const agentId = await t.run(async (ctx) => (await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", "GOOGLE_ANALYTICS_COLLECTOR")).first())!._id);
+  const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+    agentId, triggerType: "SCHEDULE", objective: "Collect", title: "Google Analytics: Data Collection Scheduler", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+  }));
+  await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId });
+  await finishScheduled(t);
+}
+
 describe("Conversions and Visitors' pictures", () => {
   test("how visits reached a conversion, conversions by page classification, and what people did before converting", async () => {
     const t = harness();
     const { siteId, user } = await collectedWebsite(t, visits(), encryptConnectorToken);
+    await nextRun(t);
     const services = await t.run(async (ctx) => {
       const id = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "Services", type: "SERVICE", createdAt: 1, updatedAt: 1 });
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: id, kind: "STARTS_WITH", value: "/services/", createdAt: 1 });

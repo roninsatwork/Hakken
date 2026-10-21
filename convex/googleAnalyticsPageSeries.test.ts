@@ -12,12 +12,17 @@ import { pointKey, reshaped, writeBatches } from "./googleAnalyticsPageSeries";
 
 /**
  * Each page over time (docs/plans/active/ga-stored-figures-plan.md SF5): a
- * day for 90 days, a week to 12 months, a month to two years, one record a
- * page, list and device. Filled once from Google's history, its own screens
- * and All pages' ticked pages read it for any dates without asking Google.
+ * day for 92 days (calendar-periods-plan.md), a week to 12 months, a month to
+ * two years, one record a page, list and device. Filled once from Google's
+ * history, its own screens and All pages' ticked pages read it for any dates
+ * without asking Google.
  */
 
-const NOW = Date.parse("2026-10-09T09:30:00Z");
+/**
+ * 1 October 2026: the newest whole day is 30 September, so Last quarter is July to September, its 92 days the 92 kept
+ * a day, and This year is 1 January to 30 September.
+ */
+const NOW = Date.parse("2026-10-01T09:30:00Z");
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
 function twoYears(): Visit[] {
@@ -37,7 +42,7 @@ afterEach(() => {
 });
 
 describe("a page's points reshaped to the rule", () => {
-  test("a day past 90 into its week, a week past a year into its month, past two years gone, added up", () => {
+  test("a day past 92 into its week, a week past a year into its month, past two years gone, added up", () => {
     const row = (key: string, visits: number) => ({ ...emptyRow(key), visits });
     const out = reshaped([
       row("2026-10-08", 1),
@@ -86,22 +91,24 @@ describe("each page over time", () => {
   test("filled by itself after the first collection: a landing page's and a page's 12 months, and All pages' ticked page, read without asking Google", async () => {
     const t = harness();
     const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
-    const home = (await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", period: "30", device: "", page: 1, rows: 25 }))
+    const home = (await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", period: "lastMonth", device: "", page: 1, rows: 25 }))
       .rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
     // The fill ran once the first collection was in (ga-stored-figures-plan.md SF9): the pages held from two years back.
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.pageHistoryFrom).toBeDefined();
     const asked = google.calls.length;
-    const landing = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page: home, period: "365", device: "" }))!;
+    const landing = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page: home, period: "thisYear", device: "" }))!;
     expect(landing.live).toBe(false);
-    expect(landing.points.filter((point) => !point.lastDay)).toHaveLength(90);
+    // This year: the 92 days kept a day, then weeks back to January.
+    expect(landing.points.filter((point) => !point.lastDay)).toHaveLength(92);
     expect(landing.points.some((point) => point.lastDay !== undefined)).toBe(true);
     const daysOf = (point: { day: string; lastDay?: string }) => (point.lastDay ? (Date.parse(point.lastDay) - Date.parse(point.day)) / 86_400_000 + 1 : 1);
     // The plain day lands 10 visits on the home page from Organic Search, 2 from Direct, and the staging address's 2 are not the website's.
     const perDay = landing.points.find((point) => !point.lastDay)!.visits;
     expect(landing.points.reduce((sum, point) => sum + point.visits, 0)).toBe(perDay * landing.points.reduce((sum, point) => sum + daysOf(point), 0));
-    const page = (await user.query(api.googleAnalyticsPageReads.analyticsPage, { siteId, page: home, period: "90", device: "" }))!;
-    expect(page.points).toHaveLength(90);
-    const daily = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, { siteId, period: "365", device: "", pages: [home] });
+    const page = (await user.query(api.googleAnalyticsPageReads.analyticsPage, { siteId, page: home, period: "lastQuarter", device: "" }))!;
+    // Last quarter on the 1st of the next: every one of its 92 days held a day at a time.
+    expect(page.points).toHaveLength(92);
+    const daily = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, { siteId, period: "thisYear", device: "", pages: [home] });
     expect(daily.pages[0].points?.length).toBeGreaterThan(90);
     expect(google.calls.length).toBe(asked);
   });

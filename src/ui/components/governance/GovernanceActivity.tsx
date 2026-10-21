@@ -10,6 +10,8 @@ import { api } from "@/convex/_generated/api";
 import type { RiskMix } from "@/convex/governanceActivityService";
 
 import { RISK_COLOURS, RUN_OUTCOME_COLOURS, SIDE_EFFECT_COLOURS } from "./governanceColours";
+import { Select } from "@/src/ui/components/screens/Select";
+import { CALENDAR_PERIODS, OPENING_PERIOD, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
 
 const GovernanceRunsChart = dynamic(() =>
   import("./GovernanceRunsChart").then((module) => module.GovernanceRunsChart),
@@ -30,7 +32,7 @@ const GovernanceRunsChart = dynamic(() =>
  * See docs/plans/active/governance-and-trust-plan.md.
  */
 
-const RANGES = [7, 30, 90] as const;
+
 
 type GovernanceActivityProps = {
   riskMix: RiskMix;
@@ -109,8 +111,11 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 export function GovernanceActivity({ riskMix, systems }: GovernanceActivityProps) {
   const t = useTranslations("admin.governance.dashboard.activity");
-  const [days, setDays] = useState<number>(30);
-  const activity = useQuery(api.governanceActivity.getGovernanceActivity, { days });
+  // The date menu's seven calendar periods (calendar-periods-plan.md, phase 7), opening on last month.
+  const [period, setPeriod] = useState<CalendarPeriod>(OPENING_PERIOD);
+  const tp = useTranslations("common.periods");
+  const periods = CALENDAR_PERIODS.map((value) => ({ value, label: tp(value) }));
+  const activity = useQuery(api.governanceActivity.getGovernanceActivity, { period });
 
   if (activity === undefined) {
     return (
@@ -127,24 +132,9 @@ export function GovernanceActivity({ riskMix, systems }: GovernanceActivityProps
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] font-medium text-foreground">{t("title")}</p>
 
-        <div className="flex gap-1.5" role="group" aria-label={t("rangeLabel")}>
-          {RANGES.map((range) => (
-            // Stays raw: an aria-pressed range chip whose border swaps with selection — matches no variant.
-            <button
-              key={range}
-              type="button"
-              onClick={() => setDays(range)}
-              aria-pressed={days === range}
-              className={`rounded-[8px] border px-2.5 py-1 text-[12px] transition-colors ${
-                days === range
-                  ? "border-foreground/30 text-foreground"
-                  : "border-border-dim text-secondary hover:border-foreground/20"
-              }`}
-            >
-              {t("range", { count: range })}
-            </button>
-          ))}
-        </div>
+        <Select aria-label={t("rangeLabel")} value={period} onChange={(next) => setPeriod(next as CalendarPeriod)}>
+          {periods.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+        </Select>
       </div>
 
       {activity.truncated ? (

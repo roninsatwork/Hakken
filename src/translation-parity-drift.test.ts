@@ -41,6 +41,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['admin.siteView.schedulesPage.sources.names.GOOGLE_ANALYTICS', 'Product name (Google Analytics): a row of a website\'s Schedules'],
     ['admin.siteView.schedulesPage.sources.names.BING', 'Product name (Bing Webmaster): a row of a website\'s Schedules'],
     ['admin.workflows.schedules.scheduleShort.utc', 'a time and "UTC", the same in both languages'],
+    ['googleAnalytics.pageVisitors.heading', 'two placeholders and a comma: "{name}, {period}", the words come from each language'],
     ['admin.classificationTypes.namePlaceholder', 'an example type name: names are written once, in English (classification-types-plan CT7)'],
     ['sites.businessRecord.views.chatgpt', 'Product name (ChatGPT) and a count'],
     ['sites.businessRecord.views.map', 'Product name (Google Maps) and a count'],

@@ -2,6 +2,8 @@ import type { ActionCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { ask, askList, countryIdOf, failed, periodRange, writeList, type CollectTarget, type Session, type StepResult } from "./googleAnalyticsCollect";
+import { FINISHED, fetchedKey } from "./googleAnalyticsJobs";
+import { CALENDAR_PERIODS, isRunning } from "./utils/calendarPeriods";
 import { numberPages } from "./googleAnalyticsPageNumbers";
 import type { GoogleFailure } from "./googleApi";
 import { CompactRows, EVERY_DEVICE, PAGE_FACT_JOIN, beforeKey, channelKey, emptyRow, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
@@ -69,14 +71,19 @@ function partsOf(device: string, country: string | undefined): PageListPart[] {
 }
 
 /**
- * The shared lists a run asks: the 7 and 30 days each run, the 90 days and 12
- * months with the weekly lists — for the main home country, then each other
- * (ga-stored-figures-plan.md SF7) — each part a job.
+ * The shared lists a run asks (calendar-periods-plan.md, phase 6): This Week and This Month each run, This Quarter and
+ * This Year with the weekly lists, and each finished period due (`finishedDue`) — for the main home country, then each
+ * other (ga-stored-figures-plan.md SF7) — each part a job. A period Google has sent none of yet is not asked.
  */
-export function pageListJobs(weekly: boolean, others: readonly string[] = []): PageListsJob[] {
-  const periods: AnalyticsPeriod[] = weekly ? ["7", "30", "90", "365"] : ["7", "30"];
-  return [undefined, ...others].flatMap((country) => periods.flatMap((period) => DEVICES.flatMap((device) =>
-    partsOf(device, country).map((part) => ({ pages: true as const, period, device, ...(country ? { country } : {}), part })))));
+export function pageListJobs(weekly: boolean, others: readonly string[] = [], top?: string, finished: readonly string[] = []): PageListsJob[] {
+  return [undefined, ...others].flatMap((country) => {
+    const periods: AnalyticsPeriod[] = [
+      ...CALENDAR_PERIODS.filter((period) => isRunning(period) && (weekly || period === "thisWeek" || period === "thisMonth")),
+      ...FINISHED.filter((period) => finished.includes(fetchedKey(period, country))),
+    ].filter((period) => top === undefined || periodRange(period, "NOW", top) !== null);
+    return periods.flatMap((period) => DEVICES.flatMap((device) =>
+      partsOf(device, country).map((part) => ({ pages: true as const, period, device, ...(country ? { country } : {}), part }))));
+  });
 }
 
 /** A row's key past its page: its parts. */
@@ -331,6 +338,8 @@ export async function collectPageLists(
   } = {},
 ): Promise<StepResult> {
   const range = periodRange(job.period, "NOW", top);
+  // Google has sent none of the period yet: nothing to ask (its jobs are planned only once it has).
+  if (!range) return { ok: true, rows: 0, requests: session.requests };
   const device = job.device || undefined;
   const property = target.property!;
   const country = job.country ?? "";
@@ -352,7 +361,7 @@ export async function collectPageLists(
   let total = 0;
   let cut = false;
   const slotOf = (list: PageFactList, which: "NOW" | "BEFORE") => slotKey(list, job.period, which, job.device, country);
-  const datesOf = (which: "NOW" | "BEFORE") => (which === "NOW" ? range : periodRange(job.period, which, top));
+  const datesOf = (which: "NOW" | "BEFORE") => (which === "NOW" ? range : periodRange(job.period, which, top) ?? range);
   const write = async (list: PageFactList, rows: ListRow[], flags: ListFlags, events: readonly string[] = [], which: "NOW" | "BEFORE" = "NOW") => {
     total += rows.length;
     cut ||= flags.cut;
@@ -601,6 +610,7 @@ export async function collectFlowLists(
   groups: () => Promise<string[][] | null | GoogleFailure> = async () => null,
 ): Promise<{ result: StepResult; ended: boolean }> {
   const range = periodRange(job.period, "NOW", top);
+  if (!range) return { result: { ok: true, rows: 0, requests: session.requests }, ended: true };
   const device = job.device || undefined;
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;

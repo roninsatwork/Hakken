@@ -4,7 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { isPageRef } from "./holdPageRefs";
-import { slotKey } from "./googleAnalyticsCollect";
+import { periodRange, slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { shiftDay } from "./searchConsoleDays";
 import { EVERY_DEVICE, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
@@ -123,9 +123,13 @@ export const analyticsPageChannelExplorer = tenantQuery({
     // The ready-made period's dates, as the page's other charts are drawn over.
     const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
     if (!total) return none;
-    const days = Number(args.period);
-    const span = async (shift: number) => await readPageChannelPoints(ctx, connection, args.page, shiftDay(total.from, -shift), shiftDay(total.to, -shift), country);
-    const [now, before, year] = [await span(0), await span(days), await span(364)];
+    // The span it is set against, as its lists were asked, and the same days a year before (calendar-periods-plan.md,
+    // phase 6): drawn a year before for This Year alone, month by month, as the explorer's rule says.
+    const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country));
+    const beforeRange = totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) ?? total;
+    const yearRange = periodRange(args.period, "YEAR", connection.newestDay) ?? { from: shiftDay(total.from, -364), to: shiftDay(total.to, -364) };
+    const span = async (range: { from: string; to: string }) => await readPageChannelPoints(ctx, connection, args.page, range.from, range.to, country);
+    const [now, before, year] = [await span(total), await span(beforeRange), await span(yearRange)];
     const shape = (points: ChannelPoint[]) => points.map((point) => ({
       day: point.start,
       lastDay: point.end,

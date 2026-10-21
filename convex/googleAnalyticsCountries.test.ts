@@ -16,10 +16,22 @@ import { PROPERTY, fakeGoogle, history, type Visit } from "@/src/test/googleAnal
  * (docs/plans/active/google-analytics-plan.md §18.6.1): every ask filtered to
  * one, the main one kept as before, each other kept as its own ready-made
  * lists and read when chosen, the figures cleared and collected again when
- * the main one changes, and a country taken off cleared. Google faked.
+ * the main one changes, and a country taken off cleared. On a fixed day, 9
+ * October 2026: last month is September's 30 days. Google faked.
  */
 
-const NOW = Date.parse("2026-10-09T09:30:00Z");
+// Friday 1 January 2027: Google's newest day is 31 December, so This Month, This Quarter and This Year hold no days yet
+// and the runs ask This Week and Last Month — December's 31 days, which these tests read — and little else
+// (AGENTS.md: a test asks no more than its assertions read).
+const NOW = Date.parse("2027-01-01T09:30:00Z");
+const TOP = "2026-12-31";
+/** Last month's days: December's. */
+const DAYS = 31;
+/** The finished periods the tests don't read, fetched already: last week from 21 December, last quarter from 1 October. */
+const FETCHED = ["", "|fra"].flatMap((country) => [
+  { key: `lastWeek${country}`, from: "2026-12-21", settled: true },
+  { key: `lastQuarter${country}`, from: "2026-10-01", settled: true },
+]);
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
@@ -38,6 +50,9 @@ async function connected(t: Harness, countries?: string[]) {
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: ["staging.acme-shop.test"],
       timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [{ eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14 }],
+      // Last week and last quarter already fetched and settled, for both home countries: these tests read last month,
+      // so the runs ask the periods still going and last month alone (AGENTS.md: cut what the assertions don't read).
+      periodsFetched: FETCHED,
       createdAt: 1, updatedAt: 1,
     });
     await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
@@ -81,7 +96,7 @@ const keysOf = (t: Harness, siteId: Id<"companyWebsites">) =>
 function fromFrance(days: number): Visit[] {
   const out: Visit[] = [];
   for (let at = 0; at < days; at += 1) {
-    const date = new Date(Date.parse("2026-10-08T00:00:00Z") - at * 86_400_000).toISOString().slice(0, 10);
+    const date = new Date(Date.parse(`${TOP}T00:00:00Z`) - at * 86_400_000).toISOString().slice(0, 10);
     out.push({ date, device: "mobile", channel: "Organic Search", source: "google", landing: "/", page: "/", country: "FR", sessions: 3, engaged: 1, seconds: 30, views: 5 });
   }
   return out;
@@ -106,7 +121,7 @@ describe("home countries", () => {
   test("every ask is the main home country's: a visit from anywhere else is never counted", async () => {
     const t = harness();
     const { siteId, connectionId, admin } = await connected(t);
-    const google = fakeGoogle([...history(70), ...fromFrance(70)]);
+    const google = fakeGoogle([...history(70, TOP), ...fromFrance(70)]);
     await save(admin, siteId);
     await finishScheduled(t);
 
@@ -117,7 +132,7 @@ describe("home countries", () => {
       .filter((ask) => !ask.dimensions.some((dimension) => dimension.name === "countryId"));
     expect(asks.length).toBeGreaterThan(0);
     expect(asks.every((ask) => JSON.stringify(ask.dimensionFilter).includes('"fieldName":"countryId","inListFilter":{"values":["GB"]'))).toBe(true);
-    expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * UK_A_DAY);
+    expect(await visitsIn(t, siteId, "total|lastMonth|NOW|")).toBe(DAYS * UK_A_DAY);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.mainCountry).toBe("gbr");
     // A website with one home country keeps no other's.
     expect((await keysOf(t, siteId)).some((key) => key.split("|").length > 4)).toBe(false);
@@ -126,41 +141,41 @@ describe("home countries", () => {
   test("another home country is kept as its own ready-made lists, its chart among them, and its screens read them", async () => {
     const t = harness();
     const { siteId, admin } = await connected(t, ["gbr", "fra"]);
-    fakeGoogle([...history(70), ...fromFrance(70)]);
+    fakeGoogle([...history(70, TOP), ...fromFrance(70)]);
     await save(admin, siteId);
     await finishScheduled(t);
 
-    expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * UK_A_DAY);
-    expect(await visitsIn(t, siteId, "total|30|NOW||fra")).toBe(30 * 3);
-    expect(await visitsIn(t, siteId, "landing|30|NOW||fra")).toBe(30 * 3);
+    expect(await visitsIn(t, siteId, "total|lastMonth|NOW|")).toBe(DAYS * UK_A_DAY);
+    expect(await visitsIn(t, siteId, "total|lastMonth|NOW||fra")).toBe(DAYS * 3);
+    expect(await visitsIn(t, siteId, "landing|lastMonth|NOW||fra")).toBe(DAYS * 3);
 
-    const args = { siteId, period: "30" as const, device: "" };
-    expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, args)).now?.visits).toBe(30 * UK_A_DAY);
-    expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "fra" })).now?.visits).toBe(30 * 3);
+    const args = { siteId, period: "lastMonth" as const, device: "" };
+    expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, args)).now?.visits).toBe(DAYS * UK_A_DAY);
+    expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "fra" })).now?.visits).toBe(DAYS * 3);
     // A country the website does not keep reads as the main one, as Search Console's do.
-    expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "deu" })).now?.visits).toBe(30 * UK_A_DAY);
+    expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "deu" })).now?.visits).toBe(DAYS * UK_A_DAY);
     // Its chart from its own days, kept beside the main one's (ga-stored-figures-plan.md SF7).
     const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChart, { ...args, country: "fra" });
-    expect(chart.points).toHaveLength(30);
+    expect(chart.points).toHaveLength(DAYS);
     expect(chart.points.every((point) => point.visits === 3)).toBe(true);
     const channels = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "channel", country: "fra", page: 1, rows: 25 });
-    expect(channels.rows.map((row) => [row.label, row.visits])).toEqual([["Organic Search", 90]]);
+    expect(channels.rows.map((row) => [row.label, row.visits])).toEqual([["Organic Search", DAYS * 3]]);
   });
 
   test("another home country keeps its own days and shared lists (SF7): its charts, a page's and an event's screens ask Google nothing", async () => {
     const t = harness();
     const { siteId, connectionId, admin } = await connected(t, ["gbr", "fra"]);
-    fakeGoogle([...history(70), ...fromFrance(70)]);
+    fakeGoogle([...history(70, TOP), ...fromFrance(70)]);
     await save(admin, siteId);
     await finishScheduled(t);
 
     // Its 90 days a day, by device, as the main one's are: the 70 the fake holds.
     const connection = await t.run(async (ctx) => await ctx.db.get(connectionId));
-    expect(connection?.countryHistory).toEqual([expect.objectContaining({ country: "fra", newestDay: "2026-10-08" })]);
+    expect(connection?.countryHistory).toEqual([expect.objectContaining({ country: "fra", newestDay: TOP })]);
     const days = await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsDays").collect()).filter((one) => one.device === "mobile|fra" && one.list === "total"));
     expect(days).toHaveLength(70);
 
-    const args = { siteId, period: "30" as const, device: "", country: "fra" };
+    const args = { siteId, period: "lastMonth" as const, device: "", country: "fra" };
     const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, args);
     expect(chart.live).toBe(false);
     const all = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "page", page: 1, rows: 25 });
@@ -168,10 +183,10 @@ describe("home countries", () => {
     const page = (await admin.query(api.googleAnalyticsPageReads.analyticsPage, { ...args, page: home }))!;
     // France's own: three visits a day from Google, all landing on the home page.
     expect(page.story.live).toBe(false);
-    expect(page.story.sources.map((row) => [row.channel, row.visits])).toEqual([["Organic Search", 90]]);
+    expect(page.story.sources.map((row) => [row.channel, row.visits])).toEqual([["Organic Search", DAYS * 3]]);
     const event = (await admin.query(api.googleAnalyticsEventReads.analyticsEvent, { ...args, event: "page_view" }))!;
     expect(event.live).toBe(false);
-    expect(event.pages.map((row) => [row.label, row.times])).toEqual([["https://www.acme-shop.test/", 150]]);
+    expect(event.pages.map((row) => [row.label, row.times])).toEqual([["https://www.acme-shop.test/", DAYS * 5]]);
   });
 
   test("each other home country is asked for every list; its charts read its own days (SF7), Insights' year is the main one's", () => {
@@ -185,15 +200,15 @@ describe("home countries", () => {
   test("the main home country changing clears what is held, and the next run collects the new one's", async () => {
     const t = harness();
     const { siteId, connectionId, agentId, admin } = await connected(t);
-    fakeGoogle([...history(70), ...fromFrance(70)]);
+    fakeGoogle([...history(70, TOP), ...fromFrance(70)]);
     await save(admin, siteId);
     await finishScheduled(t);
-    expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * UK_A_DAY);
+    expect(await visitsIn(t, siteId, "total|lastMonth|NOW|")).toBe(DAYS * UK_A_DAY);
 
     await t.run(async (ctx) => await ctx.db.patch(siteId, { searchConsoleCountries: ["fra"] }));
     await dailyRun(t, agentId);
 
-    expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * 3);
+    expect(await visitsIn(t, siteId, "total|lastMonth|NOW|")).toBe(DAYS * 3);
     const connection = await t.run(async (ctx) => await ctx.db.get(connectionId));
     expect(connection).toMatchObject({ mainCountry: "fra", status: "CONNECTED" });
     expect(connection?.clearing).toBeUndefined();
@@ -202,7 +217,7 @@ describe("home countries", () => {
   test("lists no run keeps any more go after the next collection; Insights' 12 months a day stays", async () => {
     const t = harness();
     const { siteId, agentId, admin } = await connected(t);
-    fakeGoogle(history(70));
+    fakeGoogle(history(70, TOP));
     await save(admin, siteId);
     await finishScheduled(t);
     // As held before the charts read the days, weeks and months kept (ga-stored-figures-plan.md SF12).
@@ -220,7 +235,7 @@ describe("home countries", () => {
     const t = harness();
     const { siteId, agentId, admin } = await connected(t, ["gbr", "fra"]);
     // A fortnight of visits is enough to hold lists and days for each: what goes is the test, not how much.
-    fakeGoogle([...history(14), ...fromFrance(14)]);
+    fakeGoogle([...history(14, TOP), ...fromFrance(14)]);
     await save(admin, siteId);
     await finishScheduled(t);
     expect((await keysOf(t, siteId)).some((key) => key.endsWith("|fra"))).toBe(true);
@@ -231,7 +246,7 @@ describe("home countries", () => {
 
     const keys = await keysOf(t, siteId);
     expect(keys.some((key) => key.endsWith("|fra"))).toBe(false);
-    expect(keys).toContain("total|30|NOW|");
+    expect(keys).toContain("total|lastMonth|NOW|");
     // Its days and its place on the connection go too (SF7).
     expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsDays").collect()).some((one) => one.device.endsWith("|fra")))).toBe(false);
     expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsConnections").collect())[0].countryHistory)).toEqual([]);

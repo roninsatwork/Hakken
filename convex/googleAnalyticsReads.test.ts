@@ -8,7 +8,7 @@ import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
-import { NEWEST, PROPERTY, dayOf, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
+import { PROPERTY, dayOf, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 import { shiftDay } from "./searchConsoleDays";
 import { YOUR_PAGES_COPY, YOUR_PAGES_FIELDS } from "./holdPages";
 import { encodeCopyRows } from "./utils/copyColumns";
@@ -23,7 +23,15 @@ import { encodeCopyRows } from "./utils/copyColumns";
  * website.
  */
 
-const NOW = Date.parse("2026-10-09T09:30:00Z");
+/**
+ * The morning of 1 October 2026, so the property's newest whole day is 30 September and Last month — what the
+ * screens open on (calendar-periods-plan.md) — is the whole of September: the logs' last 30 days, set against August.
+ */
+const NOW = Date.parse("2026-10-01T09:30:00Z");
+/** The newest whole day Google has sent: yesterday, on the property's own day. */
+const TOP = "2026-09-30";
+/** Search Console's newest day, a day behind Google Analytics'. */
+const SEARCH_CONSOLE_NEWEST = shiftDay(TOP, -1);
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
@@ -73,23 +81,23 @@ async function collected(t: Harness, visits: Visit[]) {
   return { ...ids, google, admin, user: t.withIdentity({ subject: ids.userId }), rival: t.withIdentity({ subject: ids.rivalId }) };
 }
 
-/** Ten days at twice the visits and leads of the twenty before, and an AI assistant's visits. */
+/** Last month (September's 30 days) at twice the visits and leads of the 30 days before, and an AI assistant's visits. */
 function growing(): Visit[] {
   const visits: Visit[] = [];
-  for (let at = 0; at < 60; at += 1) visits.push(...dayOf(shiftDay(NEWEST, -at), at < 30 ? 2 : 1));
+  for (let at = 0; at < 60; at += 1) visits.push(...dayOf(shiftDay(TOP, -at), at < 30 ? 2 : 1));
   for (let at = 0; at < 30; at += 1) {
     visits.push({
-      date: shiftDay(NEWEST, -at), device: "mobile", channel: "Referral", source: "chatgpt.com", landing: "/ai-agency/", page: "/ai-agency/",
+      date: shiftDay(TOP, -at), device: "mobile", channel: "Referral", source: "chatgpt.com", landing: "/ai-agency/", page: "/ai-agency/",
       sessions: 1, engaged: 1, seconds: 60, views: 2, events: { sign_up: [1, 10] },
     });
   }
   return visits;
 }
 
-const listArgs = { period: "30" as const, device: "", page: 1, rows: 25 };
+const listArgs = { period: "lastMonth" as const, device: "", page: 1, rows: 25 };
 
 beforeEach(() => {
-  useFixedDay();
+  useFixedDay("2026-10-01");
   vi.setSystemTime(NOW);
   vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", Buffer.from(new Uint8Array(32).fill(7)).toString("base64"));
   vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");
@@ -101,10 +109,10 @@ afterEach(() => {
 });
 
 describe("Overview", () => {
-  test("visits, engaged visits, conversions and value against the 30 days before, and what changed most", async () => {
+  test("visits, engaged visits, conversions and value against the month before, and what changed most", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
-    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" });
+    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
     // 30 days at twice the plain day (32 visits), plus the assistant's one a day.
     expect(overview.now).toMatchObject({ visits: 30 * 33, engaged: 30 * 23, conversions: 30 * (2 + 2 + 1) });
     expect(overview.before).toMatchObject({ visits: 30 * 16, conversions: 30 * 2 });
@@ -115,13 +123,13 @@ describe("Overview", () => {
     expect(overview.changedMost.map((row) => row.kind)).toContain("channel");
   });
 
-  test("the chart: a day a point from the days kept, for the 30 days", async () => {
+  test("the chart: a day a point from the days kept, for the month", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
-    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChart, { siteId, period: "30", device: "" });
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChart, { siteId, period: "lastMonth", device: "" });
     expect(chart.points).toHaveLength(30);
     expect(chart.events).toEqual(["generate_lead", "click_tel", "sign_up"]);
-    expect(chart.points.at(-1)).toMatchObject({ day: NEWEST, visits: 33, conversions: 5, events: [2, 2, 1] });
+    expect(chart.points.at(-1)).toMatchObject({ day: TOP, visits: 33, conversions: 5, events: [2, 2, 1] });
   });
 });
 
@@ -158,7 +166,7 @@ describe("the standard tables", () => {
 
   test("a landing page Analytics names without its trailing slash shares its number with All pages, on the visits' own host", async () => {
     const t = harness();
-    const visits = history(10).map((visit) => (visit.landing === "/ai-agency/" ? { ...visit, landing: "/ai-agency" } : visit));
+    const visits = history(10, TOP).map((visit) => (visit.landing === "/ai-agency/" ? { ...visit, landing: "/ai-agency" } : visit));
     const { siteId, user } = await collected(t, visits);
     const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
     const pages = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
@@ -181,9 +189,9 @@ describe("the standard tables", () => {
   test("a device's list not built yet by a run waits for the next one: every device's is shown meanwhile, nothing asked of Google", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
-    // As on the day lists became kept by device: this device's 30 days not built yet.
+    // As on the day lists became kept by device: this device's Last month not built yet.
     await t.run(async (ctx) => {
-      const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", siteId).eq("key", "landing|30|NOW|mobile")).first();
+      const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", siteId).eq("key", "landing|lastMonth|NOW|mobile")).first();
       if (slot) await ctx.db.delete(slot._id);
     });
     const before = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, device: "mobile" });
@@ -197,7 +205,7 @@ describe("the standard tables", () => {
     const t = harness();
     const { siteId, rival } = await collected(t, growing());
     await expect(rival.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "channel", ...listArgs })).rejects.toThrow("not one your company holds");
-    await expect(rival.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" })).rejects.toThrow("not one your company holds");
+    await expect(rival.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" })).rejects.toThrow("not one your company holds");
   });
 });
 
@@ -205,7 +213,7 @@ describe("Conversions", () => {
   test("each kind with its count, value each and where it is set, against the span before", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
-    const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "30", device: "" });
+    const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "lastMonth", device: "" });
     expect(conversions.kinds).toEqual([
       { eventName: "generate_lead", count: 60, countBefore: 30, each: 25_000, setIn: "HAKKEN", value: 60 * 25_000, valueBefore: 30 * 25_000 },
       { eventName: "click_tel", count: 60, countBefore: 30, each: null, setIn: null, value: null, valueBefore: null },
@@ -213,7 +221,7 @@ describe("Conversions", () => {
     ]);
     expect(conversions.shop).toBeNull();
     // Only one conversion's landing pages.
-    const leads = await user.query(api.googleAnalyticsReads.analyticsTopList, { siteId, list: "landing", period: "30", device: "", eventName: "sign_up" });
+    const leads = await user.query(api.googleAnalyticsReads.analyticsTopList, { siteId, list: "landing", period: "lastMonth", device: "", eventName: "sign_up" });
     expect(leads.rows.map((row) => row.label)).toEqual(["https://www.acme-shop.test/ai-agency/"]);
   });
 
@@ -223,7 +231,7 @@ describe("Conversions", () => {
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
       siteId, events: [{ eventName: "generate_lead", counted: true, hakkenValue: 100 }, { eventName: "click_tel", counted: true, hakkenValue: 50 }],
     });
-    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" });
+    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
     expect(overview.now?.value).toBe(60 * 10_000 + 60 * 5_000 + 30 * 1_000);
     expect(overview.before?.value).toBe(30 * 10_000 + 30 * 5_000);
   });
@@ -235,7 +243,7 @@ describe("a landing page's own screen", () => {
     const { siteId, user } = await collected(t, growing());
     const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
     const page = landing.rows.find((row) => row.label.endsWith("/ai-agency/"))!.key;
-    const opened = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page, period: "30", device: "" }))!;
+    const opened = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page, period: "lastMonth", device: "" }))!;
     expect(opened).toMatchObject({ address: "https://www.acme-shop.test/ai-agency/", path: "/ai-agency/", live: false });
     expect(opened.row).toMatchObject({ visits: 30 * 8 + 30 });
     expect(opened.points).toHaveLength(30);
@@ -252,7 +260,7 @@ describe("a page's own screen from All pages (GA29)", () => {
     const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
     const page = all.rows.find((row) => row.label.endsWith("/ai-agency/"))!.key;
     const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
-    const args = { siteId, page, period: "30" as const, device: "" };
+    const args = { siteId, page, period: "lastMonth" as const, device: "" };
     // Its views a day from the page held over time, and where they came from, kept for every page (ga-stored-figures-plan.md SF5, SF13).
     const opened = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
     expect(opened).toMatchObject({ address: "https://www.acme-shop.test/ai-agency/", path: "/ai-agency/", live: false, viewsBefore: 30 * 9 });
@@ -283,7 +291,7 @@ describe("a page's story on its own screen (analytics-page-screen-plan.md §2, �
   function article(): Visit[] {
     const page = "/hub/prism/";
     return Array.from({ length: 30 }, (_, at): Visit[] => {
-      const date = shiftDay(NEWEST, -at);
+      const date = shiftDay(TOP, -at);
       return [
         { date, device: "mobile", channel: "Organic Search", source: "google", landing: page, page, sessions: 10, engaged: 8, seconds: 400, views: 30, age: "18-24", gender: "female", events: { scroll: [2, 0], click: [1, 0] }, about: { linkUrl: "https://en.wikipedia.org/wiki/Brand" } },
         { date, device: "desktop", channel: "Direct", source: "(direct)", landing: page, page, sessions: 2, engaged: 2, seconds: 100, views: 2, visitor: "returning", events: { scroll: [1, 0] } },
@@ -298,7 +306,7 @@ describe("a page's story on its own screen (analytics-page-screen-plan.md §2, �
     const { siteId, user } = await collected(t, [...growing(), ...article()]);
     const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
     const page = all.rows.find((row) => row.label.endsWith("/hub/prism/"))!.key;
-    const args = { siteId, page, period: "30" as const, device: "" };
+    const args = { siteId, page, period: "lastMonth" as const, device: "" };
     const first = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
     // Kept with the landing pages: the visits that started here and the conversions they made elsewhere.
     expect(first.story.started).toMatchObject({ visits: 30 * 13, conversions: 30, fewVisits: false });
@@ -347,7 +355,7 @@ describe("Events and an event's own screen (GA30)", () => {
   /** The last 30 days' scrolls and clicks off the website, on the home page: five scrolls and two clicks a day, in one visit. */
   function clicks(): Visit[] {
     return Array.from({ length: 30 }, (_, at): Visit => ({
-      date: shiftDay(NEWEST, -at), device: "desktop", channel: "Organic Search", source: "google", landing: "/", page: "/",
+      date: shiftDay(TOP, -at), device: "desktop", channel: "Organic Search", source: "google", landing: "/", page: "/",
       sessions: 1, engaged: 1, seconds: 10, views: 1, events: { scroll: [5, 0], click: [2, 0] },
       about: { linkUrl: "https://www.linkedin.com/company/acme", percentScrolled: "90" },
     }));
@@ -356,7 +364,7 @@ describe("Events and an event's own screen (GA30)", () => {
   test("every event against the span before, what counts among them, scrolls and link clicks a day", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, [...growing(), ...clicks()]);
-    const args = { siteId, period: "30" as const, device: "" };
+    const args = { siteId, period: "lastMonth" as const, device: "" };
     const events = (await user.query(api.googleAnalyticsEventReads.analyticsEvents, args))!;
     expect(events).toMatchObject({ preparing: false, live: false });
     const row = (name: string) => events.rows.find((one) => one.eventName === name);
@@ -381,7 +389,7 @@ describe("Events and an event's own screen (GA30)", () => {
   test("an event's figures, its times a day, and what it was about and its pages from what each collection keeps; its funnel asked when it opens", async () => {
     const t = harness();
     const { siteId, user, google } = await collected(t, [...growing(), ...clicks()]);
-    const args = { siteId, event: "click", period: "30" as const, device: "" };
+    const args = { siteId, event: "click", period: "lastMonth" as const, device: "" };
     const first = (await user.query(api.googleAnalyticsEventReads.analyticsEvent, args))!;
     // What it was about and its pages, kept for every event by each collection (ga-stored-figures-plan.md SF13, SF15).
     expect(first).toMatchObject({ kind: "measured", counted: false, detail: "linkUrl", live: false, afterLive: true, after: null });
@@ -392,7 +400,7 @@ describe("Events and an event's own screen (GA30)", () => {
 
     // Only its funnel is asked of Google, and kept a week (SF8).
     const asked = google.calls.length;
-    await user.action(api.googleAnalyticsLive.askEventFunnel, { siteId, period: "30", device: "", event: "click" });
+    await user.action(api.googleAnalyticsLive.askEventFunnel, { siteId, period: "lastMonth", device: "", event: "click" });
     expect(google.calls.slice(asked).filter((call) => call.url.includes("analyticsdata")).map((call) => call.url.split(":").at(-1))).toEqual(["runFunnelReport"]);
     const opened = (await user.query(api.googleAnalyticsEventReads.analyticsEvent, args))!;
     expect(opened).toMatchObject({ live: false, afterLive: false, about: first.about, pages: first.pages });
@@ -414,7 +422,7 @@ describe("Campaigns (GA28)", () => {
     const t = harness();
     // A LinkedIn campaign's visit a day for the last 30 days, its links carrying "ai agency".
     const tagged = Array.from({ length: 30 }, (_, at): Visit => ({
-      date: shiftDay(NEWEST, -at), device: "mobile", channel: "Organic Social", source: "linkedin.com", landing: "/ai-agency/", page: "/ai-agency/",
+      date: shiftDay(TOP, -at), device: "mobile", channel: "Organic Social", source: "linkedin.com", landing: "/ai-agency/", page: "/ai-agency/",
       campaign: "ai-agents-launch", medium: "social", term: "ai agency", sessions: 1, engaged: 1, seconds: 20, views: 1,
     }));
     const { siteId, user } = await collected(t, [...growing(), ...tagged]);
@@ -432,7 +440,7 @@ describe("Campaigns (GA28)", () => {
     });
     const words = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "adKeyword" });
     expect(words.rows.map((row) => [row.label, row.visits])).toEqual([["ai agency", 30]]);
-    const chart = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period: "30", device: "" });
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period: "lastMonth", device: "" });
     expect(chart.points).toHaveLength(30);
     expect(chart.points.every((point) => point.visits === 1)).toBe(true);
     // One device's campaigns are kept by the collection (SF3): read at once, never asked of Google.
@@ -447,11 +455,11 @@ describe("Visitors (GA24)", () => {
     const t = harness();
     // The last 30 days' returning visitors on Safari: a visit a day, each one a lead.
     const returning = Array.from({ length: 30 }, (_, at): Visit => ({
-      date: shiftDay(NEWEST, -at), device: "mobile", channel: "Direct", source: "(direct)", landing: "/", page: "/",
+      date: shiftDay(TOP, -at), device: "mobile", channel: "Direct", source: "(direct)", landing: "/", page: "/",
       visitor: "returning", browser: "Safari", system: "iOS", sessions: 1, engaged: 1, seconds: 30, views: 2, events: { generate_lead: [1, 0] },
     }));
     const { siteId, user } = await collected(t, [...growing(), ...returning]);
-    const args = { siteId, period: "30" as const, device: "" };
+    const args = { siteId, period: "lastMonth" as const, device: "" };
     const visitors = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitors, args))!;
     expect(visitors).toMatchObject({ preparing: false, missing: [], signals: "off" });
     expect(visitors.figures).toMatchObject({ visits: 30 * 34, visitsBefore: 30 * 16 });
@@ -512,18 +520,18 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     const { siteId, user } = await collected(t, growing());
     const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
     const read = async (screen: (typeof ANALYTICS_SCREENS)[number], extra: Record<string, string> = {}) =>
-      fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "https://www.acme-shop.test/", screen, days: 30, ...extra }));
+      fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "https://www.acme-shop.test/", screen, period: "lastMonth", ...extra }));
 
     const overview = await read("overview");
-    const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" });
+    const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
     expect(overview).toMatchObject({
       ok: true, website: "acme-shop.test", screen: "overview", currency: "GBP",
       now: { visits: shown.now!.visits, pageViews: shown.now!.views, conversions: shown.now!.conversions, value: shown.now!.value / 100 },
       theSpanBefore: { visits: shown.before!.visits },
-      link: `/app/analytics/${siteId}?period=30`,
+      link: `/app/analytics/${siteId}?period=lastMonth`,
     });
     // Its panels, the rows the screen shows (ga-overview-plan.md OV2–OV8).
-    const panels = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "30", device: "" }))!;
+    const panels = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "lastMonth", device: "" }))!;
     expect((overview.whereVisitsCameFrom as { mostVisits: Array<{ channel: string; visits: number }> }).mostVisits.map((row) => [row.channel, row.visits]))
       .toEqual(panels.channels.rows.map((row) => [row.label, row.visits]));
     expect((overview.whoVisited as Array<{ kind: string }>).map((row) => row.kind)).toEqual(panels.who.map((row) => row.kind));
@@ -535,9 +543,9 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
 
     const channel = await read("channel", { key: "Organic Search" });
     expect(channel.rows!.map((row) => row.name)).toEqual(["google"]);
-    expect(channel.link).toBe(`/app/analytics/${siteId}/channels/channel?period=30&key=Organic+Search`);
+    expect(channel.link).toBe(`/app/analytics/${siteId}/channels/channel?period=lastMonth&key=Organic+Search`);
     // The parts above its table, as its page shows them (ga-channel-pages-plan.md CH3–CH6).
-    const channelTop = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, period: "30", device: "", channel: "Organic Search" });
+    const channelTop = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, period: "lastMonth", device: "", channel: "Organic Search" });
     expect(channel.conversionsItStarted).toMatchObject({ now: channelTop.figures!.started });
     expect((channel.whereItLands as Array<{ visits: number }>).map((kind) => kind.visits)).toEqual(channelTop.kinds.map((kind) => kind.visits));
     const channels = await read("channels");
@@ -553,14 +561,14 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     expect(event).toMatchObject({ ok: true, event: "generate_lead", countsAsConversion: true, figures: { times: 60, timesBefore: 30 } });
 
     const conversions = await read("conversions");
-    const conversionsShown = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "30", device: "" });
+    const conversionsShown = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "lastMonth", device: "" });
     expect(conversions.kinds).toEqual(conversionsShown.kinds.map((kind) => ({ event: kind.eventName, count: kind.count, countBefore: kind.countBefore, value: kind.value === null ? null : kind.value / 100 })));
 
     expect(await read("visitors")).toMatchObject({ ok: true, figures: { visits: 30 * 33 }, googleSignals: "off" });
     expect(await read("products")).toMatchObject({ ok: false });
 
     // Another company's website, or none at all: never read.
-    const stranger = fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "rival.test", screen: "overview", days: 30 }));
+    const stranger = fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "rival.test", screen: "overview", period: "lastMonth" }));
     expect(stranger).toMatchObject({ ok: false });
   });
 
@@ -592,11 +600,11 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     await t.run(async (ctx) => {
       const hold = (await ctx.db.get(siteId))!;
       await ctx.db.insert("searchConsoleConnections", {
-        companyId: hold.companyId, companyWebsiteId: siteId, websiteId: hold.websiteId, status: "CONNECTED", newestDay: "2026-10-07", createdAt: 1, updatedAt: 1,
+        companyId: hold.companyId, companyWebsiteId: siteId, websiteId: hold.websiteId, status: "CONNECTED", newestDay: SEARCH_CONSOLE_NEWEST, createdAt: 1, updatedAt: 1,
       });
       for (let at = 0; at < 40; at += 1) {
         await ctx.db.insert("searchConsoleDays", {
-          companyWebsiteId: siteId, searchType: "web", day: shiftDay("2026-10-07", -at), clicks: at < 30 ? 4 : 99, impressions: at < 30 ? 800 : 99, ctr: 0, position: 10, fetchedAt: 1,
+          companyWebsiteId: siteId, searchType: "web", day: shiftDay(SEARCH_CONSOLE_NEWEST, -at), clicks: at < 30 ? 4 : 99, impressions: at < 30 ? 800 : 99, ctr: 0, position: 10, fetchedAt: 1,
         });
       }
     });
@@ -606,7 +614,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
     await withSearchConsole(t, siteId);
-    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" });
+    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
     expect(overview.counting).toBe(true);
     // The last 30 of the 40 days held: 4 clicks from 800 showings a day.
     expect(overview.searchConsole).toEqual({ clicks: 120, impressions: 24_000 });
@@ -639,7 +647,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     const { siteId, user } = await collected(t, growing());
     const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
     const ticked = all.rows.filter((row) => row.key.startsWith("~")).slice(0, 2);
-    const args = { siteId, period: "30" as const, device: "", pages: ticked.map((row) => row.key) };
+    const args = { siteId, period: "lastMonth" as const, device: "", pages: ticked.map((row) => row.key) };
     // From each page held over time (ga-stored-figures-plan.md SF5), filled by itself after the first collection.
     const drawn = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, args);
     for (const [index, page] of drawn.pages.entries()) {
@@ -671,7 +679,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     const none = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs, move: "none" });
     expect(none.rows.map((row) => [new URL(row.label).pathname, row.views, row.key.startsWith("~")])).toEqual([["/about/", 0, false], ["/pricing/", 0, false]]);
     expect(none.total).toBe(2);
-    const download = await user.query(api.googleAnalyticsReads.analyticsListAll, { siteId, list: "page", period: "30", device: "", move: "gains" });
+    const download = await user.query(api.googleAnalyticsReads.analyticsListAll, { siteId, list: "page", period: "lastMonth", device: "", move: "gains" });
     expect(download.rows).toHaveLength(3);
   });
 
@@ -686,7 +694,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
     await withSearchConsole(t, siteId);
-    const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "30", device: "" });
+    const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "lastMonth", device: "" });
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
@@ -705,12 +713,19 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
 describe("tracking health", () => {
   test("a counted conversion with no value fails once, and the super admins are told once", async () => {
     const t = harness();
-    const { siteId, connectionId, admin } = await collected(t, history(40));
-    const health = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!.health!;
-    // The log counts every page twice a visit or more: the ninth check fails too (analytics-page-screen-plan.md, phase 6).
-    // And "sign_up" is counted but never happens in 640 visits: a conversion that never happens (conversion-checks-plan.md CC4).
-    expect(health.checks.filter((check) => !check.passing).map((check) => check.check)).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"]);
-    expect(health.checks.find((check) => check.check === "NEVER_HAPPENS")).toMatchObject({ names: ["sign_up"], count: 90 });
+    const { siteId, connectionId, admin } = await collected(t, history(40, TOP));
+    const checks = async () => (await t.run(async (ctx) => await ctx.db.get(connectionId)))!.health!.checks;
+    const failing = async () => (await checks()).filter((check) => !check.passing).map((check) => check.check);
+    // The first collection's checks, and the two-year fill's that follows the first night: the log counts every page
+    // twice a visit or more, so the ninth check fails too (analytics-page-screen-plan.md, phase 6). Each event's 90 days
+    // and 12 months are added up from what is held (calendar-periods-plan.md, rules 10 and 11), so the checks run
+    // again the moment the fill holds the events' months: "sign_up" is counted but never happens in 640 visits
+    // (conversion-checks-plan.md CC4), said at once rather than a week on.
+    expect(await failing()).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"]);
+    // The next checks change nothing.
+    await t.mutation(internal.googleAnalyticsHealth.runHealthChecks, { connectionId });
+    expect(await failing()).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"]);
+    expect((await checks()).find((check) => check.check === "NEVER_HAPPENS")).toMatchObject({ names: ["sign_up"], count: 90 });
     const told = async () => (await t.run(async (ctx) => await ctx.db.query("notifications").collect())).filter((row) => row.kind === "GOOGLE_ANALYTICS_HEALTH");
     expect((await told()).map((row) => row.title)).toEqual([
       "acme-shop.test: a conversion has no value", "acme-shop.test: visits on another address", "acme-shop.test: pages counted more than once a visit",
@@ -735,7 +750,7 @@ describe("tracking health", () => {
 describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () => {
   /** The last 30 days: visits landing on /, a share going on to /about-us/ and from there to /contact/, converting; /ai-agency/'s all leaving. */
   function routes(): Visit[] {
-    const day = (at: number) => shiftDay(NEWEST, -at);
+    const day = (at: number) => shiftDay(TOP, -at);
     const base = { device: "desktop", channel: "Organic Search", source: "google", seconds: 30 };
     return Array.from({ length: 30 }, (_, at): Visit[] => [
       { ...base, date: day(at), landing: "/", page: "/", sessions: 5, engaged: 5, views: 5 },
@@ -749,7 +764,7 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
     const t = harness();
     const { siteId, user, google } = await collected(t, routes());
     const asked = google.calls.length;
-    const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "30", device: "" });
+    const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" });
     expect(google.calls.length).toBe(asked);
     expect(flow.held).toBe(true);
     const node = (column: number, path: string) => flow.nodes.find((one) => one.column === column && one.path?.endsWith(path));
@@ -779,6 +794,6 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
   test("only the caller's own website", async () => {
     const t = harness();
     const { siteId, rival } = await collected(t, routes());
-    await expect(rival.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "30", device: "" })).rejects.toThrow();
+    await expect(rival.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" })).rejects.toThrow();
   });
 });

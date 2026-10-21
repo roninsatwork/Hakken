@@ -600,7 +600,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Google Analytics",
         description:
-          "One Google Analytics screen of one of the company's own websites, over its last 7, 30 or 90 days or 12 months (365), with the figures the screen shows and its link. Screens: overview (visits, page views, people, conversions and value against the span before, visits by channel, what changed most); channels; channel (key: the channel's name, its sources); campaigns and adKeywords (visits from tagged links); landingPages; landingPage (key: the page's address or path, with where its visits came from); allPages; page (key: address or path, with the page or website visitors were on just before); events; event (key: Google's event name — click, scroll, form_submit — with what it was about, the pages it happened on and the people who converted after it); conversions; visitors (list: visitorType, browser, system, age, gender or interest); products (a shop's four steps and each product). Leave device out for every device; country is one of the website's other home countries, left out for the main one. Give the figures with the link returned; money is in the currency returned.",
+          "One Google Analytics screen of one of the company's own websites, over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, thisQuarter, lastQuarter or thisYear, weeks Monday to Sunday — with the figures the screen shows and its link. Screens: overview (visits, page views, people, conversions and value against the span before, visits by channel, what changed most); channels; channel (key: the channel's name, its sources); campaigns and adKeywords (visits from tagged links); landingPages; landingPage (key: the page's address or path, with where its visits came from); allPages; page (key: address or path, with the page or website visitors were on just before); events; event (key: Google's event name — click, scroll, form_submit — with what it was about, the pages it happened on and the people who converted after it); conversions; visitors (list: visitorType, browser, system, age, gender or interest); products (a shop's four steps and each product). Leave device out for every device; country is one of the website's other home countries, left out for the main one. Give the figures with the link returned; money is in the currency returned.",
         handlerMapping: "assistant.googleAnalytics",
         modelName: "read_google_analytics",
         requiredRole: "ADMIN",
@@ -608,11 +608,11 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         confirmationRequired: false,
         inputSchema: JSON.stringify({
           type: "object",
-          required: ["website", "screen", "days"],
+          required: ["website", "screen", "period"],
           properties: {
             website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
             screen: { type: "string", enum: ["overview", "channels", "channel", "campaigns", "adKeywords", "landingPages", "landingPage", "allPages", "page", "events", "event", "conversions", "visitors", "products"] },
-            days: { type: "number", description: "7, 30, 90 or 365." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"], description: "lastMonth when the question names no time." },
             device: { type: "string", enum: ["desktop", "mobile", "tablet"], description: "One device. Leave out for every device." },
             country: { type: "string", description: "Another home country of the website, as a three-letter code (fra). Leave out for the main one." },
             key: { type: "string", description: "For channel, landingPage, page and event: the channel, the page's address or path, or the event's Google name." },

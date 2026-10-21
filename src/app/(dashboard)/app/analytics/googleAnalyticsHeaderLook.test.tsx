@@ -58,7 +58,7 @@ describe("Google Analytics → a website's header", () => {
     nav.search = "device=mobile";
     answer(TWO_SITES);
     const { container } = render(<AnalyticsSiteLayout><p>The page</p></AnalyticsSiteLayout>);
-    await screen.findByText("Collecting its first 90 days");
+    await screen.findByText("Collecting its first 92 days");
     await expectApprovedLook(container, "ga-header", "Compact", "Google Analytics → a website's header");
 
     // How fresh the figures are ends the line under the title, not the top of the page.

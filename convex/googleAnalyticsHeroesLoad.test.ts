@@ -15,19 +15,21 @@ import { journeyOf } from "./googleAnalyticsHeroes";
  * A landing page's four stages stay inside Convex's limits on a large website
  * (docs/plans/active/google-analytics-plan.md §4.3, §13, §15 screen 7): they
  * read Analytics' landing pages, Search Console's pages, its searches and its
- * days, each for 30 days and the 30 before, naming only the page asked for
+ * days, each for last month and the month before, naming only the page asked for
  * and the pages with value — so the read is held at five times
  * morehandles.co.uk's size, inside half of a read's limits (16 MiB and 32,000
  * records), as every Analytics screen's is. Counted, not timed (AGENTS.md,
  * "Test time limits").
  */
 
-/** morehandles.co.uk's landing pages in 30 days, about 9,000, five times over; as many pages in Search Console. */
+/** morehandles.co.uk's landing pages in a month, about 9,000, five times over; as many pages in Search Console. */
 const PAGES = 45_000;
-/** Its searches in 30 days, about 25,000, five times over. */
+/** Its searches in a month, about 25,000, five times over. */
 const SEARCHES = 125_000;
 const MIB = 1024 * 1024;
 const address = (index: number) => `https://www.big.co.uk/collections/handles/product-${index}.html`;
+/** Last month, September, and the month before it: the period a landing page's four stages read (calendar-periods-plan.md). */
+const MONTHS = { NOW: { from: "2026-09-01", to: "2026-09-30" }, BEFORE: { from: "2026-08-01", to: "2026-08-31" } } as const;
 
 /**
  * Figures spread as a website's are: a few pages with most of the visits and
@@ -75,12 +77,12 @@ async function bigWebsite() {
       ["landing", "BEFORE", landingRows(PAGES - 5_000, 5_000)],
       ["channel", "NOW", Array.from({ length: 200 }, (_, index) => ({ ...landingRows(1, 0)[0], key: channelKey(index === 0 ? "Organic Search" : "Referral", index === 0 ? "google" : `site-${index}.com`), visits: 1_000 }))],
     ] as const) {
-      const key = slotKey(list, "30", which, "");
+      const key = slotKey(list, "lastMonth", which, "");
       const parts = packList(list, rows, ["generate_lead"]);
-      await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, from: "2026-09-09", to: "2026-10-08", hash: "x", builtAt: 1 });
+      await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, ...MONTHS[which], hash: "x", builtAt: 1 });
       for (const [part, packed] of parts.entries()) await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: siteId, key, slot: 0, part, ...packed });
     }
-    // Search Console's pages and searches for the 30 days, written as the build writes them (`buildSitePeriods`):
+    // Search Console's pages and searches for last month, written as the build writes them (`buildSitePeriods`):
     // one book for the build, every keyword and page once, the lists holding places in it, numbers packed.
     type Slot = { list: "page" | "query"; which: "NOW" | "BEFORE"; from: string; to: string };
     const lists: Array<{ slot: Slot; parts: PartToWrite[] }> = [];
@@ -99,9 +101,9 @@ async function bigWebsite() {
       }
       lists.push({ slot, parts });
     };
-    make({ list: "page", which: "NOW", from: "2026-09-08", to: "2026-10-07" }, PAGES, address);
-    make({ list: "page", which: "BEFORE", from: "2026-08-09", to: "2026-09-07" }, PAGES - 5_000, (index) => address(index + 5_000));
-    make({ list: "query", which: "NOW", from: "2026-09-08", to: "2026-10-07" }, SEARCHES, (index) => `door handles brass ${index}`);
+    make({ list: "page", which: "NOW", ...MONTHS.NOW }, PAGES, address);
+    make({ list: "page", which: "BEFORE", ...MONTHS.BEFORE }, PAGES - 5_000, (index) => address(index + 5_000));
+    make({ list: "query", which: "NOW", ...MONTHS.NOW }, SEARCHES, (index) => `door handles brass ${index}`);
     const places = { query: new Map<string, number>(), page: new Map<string, number>() };
     for (const kind of ["query", "page"] as const) {
       const book = bookRecords(lists.flatMap(({ slot, parts }) => parts.flatMap((part) => termsOf(slot.list, part, kind))));
@@ -119,8 +121,9 @@ async function bigWebsite() {
         });
       }
     }
+    // Last month's days, September's 30.
     for (let day = 0; day < 30; day += 1) {
-      const date = new Date(Date.parse("2026-10-07T00:00:00Z") - day * 86_400_000).toISOString().slice(0, 10);
+      const date = new Date(Date.parse("2026-09-30T00:00:00Z") - day * 86_400_000).toISOString().slice(0, 10);
       await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: date, clicks: 900, impressions: 1_000_000, ctr: 0.0009, position: 12, fetchedAt: 1 });
     }
     return siteId;

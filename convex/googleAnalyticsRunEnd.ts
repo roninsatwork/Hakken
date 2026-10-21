@@ -7,6 +7,9 @@ import { closeStep } from "./collectionSteps";
 import { fillAfterCollection } from "./googleAnalyticsFillAfter";
 import { forgetCountedHistory } from "./insightHistoryForget";
 import { COUNTED_WITH } from "./googleAnalyticsSchema";
+import { fetchedAfter, finishedDue } from "./googleAnalyticsJobs";
+import { countriesKeptReady } from "./searchConsoleCountries";
+import { isTrackedHold } from "./utils/websitePairing";
 
 /**
  * A website's Google Analytics run has one closing, whatever its ending
@@ -132,6 +135,15 @@ export async function closeConnection(ctx: MutationCtx, args: CloseArgs): Promis
   const movedSince = connection.addressesMovedAt !== undefined && (run?.startedAt ?? 0) < connection.addressesMovedAt;
   // Insights' months counted the old way are asked again on its next run (BT6).
   if (whole && args.recount) await forgetCountedHistory(ctx, connection.companyWebsiteId);
+  // The finished periods this whole run asked are noted, so the next asks them again only once Google's figures
+  // settle, and then not at all (calendar-periods-plan.md, phase 6). Worked out as the run planned them.
+  // A website noted a shop during this run had its finished periods fetched without products: they stay to be asked.
+  const top = connection.collecting?.top;
+  const shopSince = run !== null && connection.shopNotedAt !== undefined && run.startedAt <= connection.shopNotedAt;
+  const hold = whole && top && !shopSince ? await ctx.db.get(connection.companyWebsiteId) : null;
+  const periodsFetched = hold && top
+    ? fetchedAfter(connection.periodsFetched ?? [], finishedDue(connection.periodsFetched ?? [], top, isTrackedHold(hold) ? [] : await countriesKeptReady(ctx, hold)), top)
+    : undefined;
   await ctx.db.patch(connection._id, {
     ...(args.hostVisits ? { hostVisits: args.hostVisits } : {}),
     ...(args.hostConversions ? { hostConversions: args.hostConversions } : {}),
@@ -139,6 +151,7 @@ export async function closeConnection(ctx: MutationCtx, args: CloseArgs): Promis
     lastCollectedAt: now,
     ...(whole ? { dailyPeriodsAt: now } : {}),
     ...(whole && args.weekly ? { weeklyPeriodsAt: now } : {}),
+    ...(periodsFetched ? { periodsFetched } : {}),
     // The days are in: a first collection's 60 days count as its first, whole or not.
     ...(first ? { backfilledAt: now } : {}),
     ...(ours ? { collecting: undefined } : {}),

@@ -459,12 +459,14 @@ A screen supplies only its own figures and words; the kit draws the rest, the sa
   to tick.
 - **It opens on a whole line**: start on a measure that has a figure every step (conversions, not visits for one,
   which has none on a day without a conversion — "default this to conversions so we always show a full graph").
-- **The step follows the dates at the top of the page**: days for 7 and 30 days, weeks for 90, months for 12 months.
-  The chart has no dates or step of its own, and no chart-type switch.
+- **The step follows the page's step menu**, which follows the date menu's calendar period unless changed: days for
+  the weeks and months, weeks for the quarters, months for This Year (calendar-periods-plan.md, rule 8). The chart
+  has no dates or step of its own, and no chart-type switch.
 - **The lines**: each keeps its colour whatever else is ticked; a line breaks where a step has no figure, a step alone
   between two gaps drawn as a dot; a week or month the dates cut is an open ring, its hover naming its days.
-- **Against**: nothing, the period before, or — for 12 months only — the same dates a year before, dashed. A year ago
-  only weeks and months are kept, so shorter dates a year before would be read from steps that miss them.
+- **Against**: nothing, the period before (or its same days, for a period still going), or — for This Year only — the
+  same dates a year before, dashed. A year ago only weeks and months are kept, so a week, month or quarter a year
+  before would be read from steps that miss them; the quarters compare with a year before in figures and tables only.
 - **The hover is a `ChartReadoutTable`**: a row for every line drawn with their total under them ("All four"), every
   row kept and its noughts shown — never folded away; a column a figure, the one the chart is about on its own band
   with an icon, figures worked out from others (visits for one, a rate) in the quieter ink, and the column the lines
@@ -472,7 +474,7 @@ A screen supplies only its own figures and words; the kit draws the rest, the sa
   app's standard 13px throughout — not 11px, not bigger.
 - **0 and –**: 0 is a count of none; – is a figure that cannot be worked out (nothing to divide by).
 - **Better or worse** (`CompactList`): each line's latest whole step against the one before, the last three against
-  the three before, and, for 12 months, against the same three a year before. A step still going is left out.
+  the three before, and, for This Year, against the same three a year before. A step still going is left out.
 
 The approved look is the page screen's (`docs/plans/assets/analytics-page-screen/look/Page.txt`); the drawings are
 on the canvas "Hakken — a page's channels, alternatives", rows "Visits for one conversion: one chart, every

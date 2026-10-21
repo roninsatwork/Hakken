@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { BillingLink } from "./_components/BillingLink";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -16,12 +15,13 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
+import { Select } from "@/src/ui/components/screens/Select";
+import { periodSpan, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { useCalendarPeriod, useCalendarPeriodChoices } from "../sites/_components/useCalendarPeriod";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 import type { ReadCoverage } from "@/convex/utils/readCoverage";
 
-type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
 type MetricBlockProps = {
   title: string;
@@ -87,18 +87,21 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
 
 export default function CompanySettingsDashboard() {
   const t = useTranslations('admin.overview');
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("today");
-  const [customStart, setCustomStart] = useState<string>("");
-  const [customEnd, setCustomEnd] = useState<string>("");
+  const tp = useTranslations("common.periods");
+  // The seven calendar periods every section's date menu offers (calendar-periods-plan.md, phase 7), its days to today.
+  const [period, setPeriod] = useCalendarPeriod();
+  const periods = useCalendarPeriodChoices();
+  const today = ukDay();
+  const span = periodSpan(period, today, today) ?? { from: today, to: today };
 
   const user = useQuery(api.users.getMe);
   const companyId = user?.companyId;
 
   const data = useQuery(api.analytics.getCompanyMetrics, companyId ? {
     companyId,
-    timeframe,
-    customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
-    customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined
+    timeframe: "custom",
+    customStart: new Date(`${span.from}T00:00:00`).getTime(),
+    customEnd: new Date(`${span.to}T00:00:00`).getTime() + 86399999
   } : "skip") as CompanyMetricsData | undefined;
 
   if (user === undefined) {
@@ -134,14 +137,9 @@ export default function CompanySettingsDashboard() {
         </div>
 
         <div className="flex flex-col items-end gap-3 z-20">
-          <TimeframeDropdown
-            timeframe={timeframe}
-            setTimeframe={setTimeframe}
-            customStart={customStart}
-            setCustomStart={setCustomStart}
-            customEnd={customEnd}
-            setCustomEnd={setCustomEnd}
-          />
+          <Select aria-label={tp("label")} value={period} onChange={(next) => setPeriod(next as CalendarPeriod)}>
+            {periods.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+          </Select>
         </div>
       </header>
 

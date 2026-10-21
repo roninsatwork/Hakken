@@ -1,21 +1,24 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Globe } from "lucide-react";
+import { CalendarClock, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
+import { openingPeriod, periodSpan, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
 import { formatDay } from "../../sites/_components/siteFormat";
+import { shiftDay } from "../../sites/_components/siteRange";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { AnalyticsFilters } from "../_components/AnalyticsFilters";
 import { AnalyticsMenu } from "../_components/AnalyticsMenu";
 import { AnalyticsConnectionBanner } from "../_components/AnalyticsNotices";
-import { analyticsQuery, pageForPath, useAnalyticsSiteId, useAnalyticsStatus } from "../_components/useAnalytics";
+import { OpeningPeriodContext } from "../../sites/_components/useCalendarPeriod";
+import { analyticsQuery, pageForPath, useAnalyticsSiteId, usePeriod, useAnalyticsStatus, type AnalyticsPageId } from "../_components/useAnalytics";
 
 /**
  * One website in the Google Analytics section (docs/plans/active/google-analytics-plan.md
@@ -75,8 +78,9 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     ? t("figuresTo", { day: formatDay(connection.newestDay) })
     : null;
 
+  // A website whose days begin this month opens on This month until the 1st (agreed 2026-10-20).
   return (
-    <>
+    <OpeningPeriodContext.Provider value={openingPeriod(connection?.oldestDay, ukDay())}>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
@@ -117,10 +121,33 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
             <AnalyticsMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            {children}
+            <PeriodDays siteId={siteId} newestDay={connection?.newestDay ?? null}>{children}</PeriodDays>
           </section>
         </div>
       </div>
+    </OpeningPeriodContext.Provider>
+  );
+}
+
+/** The pages that keep days of their own rather than the menu's: the live minutes, tracking health's checks, the connection. */
+const OWN_DAYS: ReadonlySet<AnalyticsPageId> = new Set(["live", "trackingHealth", "connection"]);
+
+/**
+ * A page reading the date menu, or — while Google has sent none of a period still going, This month on the 1st —
+ * its title and one plain line in place of an empty page (calendar-periods-plan.md, rule 9). The property's newest
+ * whole day is yesterday in its own time zone, so its today is the day after.
+ */
+function PeriodDays({ siteId, newestDay, children }: { siteId: string; newestDay: string | null; children: React.ReactNode }) {
+  const tm = useTranslations("googleAnalytics.menu");
+  const tp = useTranslations("common.periods");
+  const source = useTranslations("sidebar")("googleAnalytics");
+  const page = pageForPath(usePathname(), siteId);
+  const [period] = usePeriod();
+  if (!newestDay || OWN_DAYS.has(page) || periodSpan(period, shiftDay(newestDay, 1), newestDay)) return <>{children}</>;
+  return (
+    <>
+      <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={tm(page)} />
+      <Notice>{tp("noDaysYet", { source, unit: unitOf(period), day: formatDay(newestDay) })}</Notice>
     </>
   );
 }

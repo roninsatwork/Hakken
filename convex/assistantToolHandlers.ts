@@ -29,11 +29,6 @@ function periodArg(args: Record<string, unknown>): CalendarPeriod {
   return days <= 7 ? "lastWeek" : days <= 31 ? "lastMonth" : days <= 92 ? "lastQuarter" : "thisYear";
 }
 
-/** Google Analytics is read over its ready-made periods: 7, 30 or 90 days, or 12 months, the nearest asked for. */
-function analyticsPeriod(days: number | undefined): 7 | 30 | 90 | 365 {
-  if (days === undefined || days <= 7) return 7;
-  return days <= 30 ? 30 : days <= 90 ? 90 : 365;
-}
 
 function stringArg(args: Record<string, unknown>, key: string) {
   const value = args[key];
@@ -121,7 +116,7 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
       screen: screen as (typeof ANALYTICS_SCREENS)[number],
-      days: analyticsPeriod(numberArg(input.args, "days")),
+      period: periodArg(input.args),
       ...(device === "desktop" || device === "mobile" || device === "tablet" ? { device } : {}),
       ...(country ? { country: country.toLowerCase() } : {}),
       ...(key ? { key } : {}),

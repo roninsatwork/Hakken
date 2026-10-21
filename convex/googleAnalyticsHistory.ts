@@ -297,6 +297,11 @@ export const noteHistoryFrom = internalMutation({
     await ctx.db.patch(connection._id, args.country
       ? { countryHistory: withCoverage(connection, args.country, { historyFrom: args.from, historyFilled: filled }), fillsReached, updatedAt: Date.now() }
       : { historyFrom: args.from, historyFilled: filled, fillsReached, updatedAt: Date.now() });
+    // The events' months now held: tracking health's year-long checks — an enquiry not counted, a conversion that
+    // never happens — read them (calendar-periods-plan.md, rule 10), so they are checked at once rather than a week on.
+    if (!args.country && args.lists.includes("event") && !filledLists(coverageOf(connection, undefined)).includes("event")) {
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsHealth.runHealthChecks, { connectionId: connection._id });
+    }
     return null;
   },
 });
@@ -474,10 +479,10 @@ export async function fillHistoryStep(ctx: ActionCtx, args: FillHistoryArgs): Pr
   const reached = new Map(lists.map((list) => [list, fillReachedOf(found, country, list)]));
   const weeks: Record<string, { parts: number }> = await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, {
     companyWebsiteId: found.companyWebsiteId,
-    keys: lists.map((list) => slotKey(list, "7", "NOW", EVERY_DEVICE, country)),
+    keys: lists.map((list) => slotKey(list, "lastWeek", "NOW", EVERY_DEVICE, country)),
   });
   const daysAnAsk = (list: DayFactList) => {
-    const perDay = ((weeks[slotKey(list, "7", "NOW", EVERY_DEVICE, country)]?.parts ?? 0) * PART_ROWS) / 7;
+    const perDay = ((weeks[slotKey(list, "lastWeek", "NOW", EVERY_DEVICE, country)]?.parts ?? 0) * PART_ROWS) / 7;
     // Four devices beside every device's own: an ask's rows are about five a key a day.
     return perDay <= 0 ? 31 : Math.max(1, Math.min(31, Math.floor(SPLIT_ROWS / (perDay * 5))));
   };

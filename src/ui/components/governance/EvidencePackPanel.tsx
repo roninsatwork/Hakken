@@ -11,9 +11,10 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { buildEvidencePackDocument } from "@/src/lib/evidencePackDocument";
+import { CALENDAR_PERIODS, OPENING_PERIOD, periodSpan, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PERIODS = [7, 30, 90, 365] as const;
+
 
 /**
  * Taking a copy of the evidence.
@@ -34,7 +35,10 @@ export function EvidencePackPanel() {
   const produce = useAction(api.evidencePack.produce);
   const action = useAdminAction({ scope: "admin-evidence-pack" });
 
-  const [days, setDays] = useState<number>(30);
+  // The date menu's seven calendar periods (calendar-periods-plan.md, phase 7), opening on last month.
+  const [period, setPeriod] = useState<CalendarPeriod>(OPENING_PERIOD);
+  const tp = useTranslations("common.periods");
+  const periods = CALENDAR_PERIODS.map((value) => ({ value, label: tp(value) }));
   const [error, setError] = useState("");
   const isProducing = action.isBusy();
 
@@ -43,8 +47,11 @@ export function EvidencePackPanel() {
 
     const outcome = await action.run(
       async () => {
-        const to = Date.now();
-        const from = to - days * DAY_MS;
+        // The period's days in the UK, to its last moment, or to now for one still going.
+        const today = ukDay();
+        const span = periodSpan(period, today, today) ?? { from: today, to: today, whole: false };
+        const from = new Date(`${span.from}T00:00:00`).getTime();
+        const to = span.whole ? new Date(`${span.to}T00:00:00`).getTime() + DAY_MS - 1 : Date.now();
         const pack = await produce({ from, to });
 
         const document = buildEvidencePackDocument({
@@ -96,13 +103,13 @@ export function EvidencePackPanel() {
         </label>
         <Select
           id="evidence-period"
-          value={days}
-          onChange={(next) => setDays(Number(next))}
+          value={period}
+          onChange={(next) => setPeriod(next as CalendarPeriod)}
           className="w-[180px]"
         >
-          {PERIODS.map((period) => (
-            <option key={period} value={period}>
-              {t(`periods.${period}`)}
+          {periods.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
             </option>
           ))}
         </Select>

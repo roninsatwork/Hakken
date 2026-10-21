@@ -1,4 +1,3 @@
-import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { getActiveCompanyId } from "./authz";
 import * as governanceShapes from "./utils/governanceShapes";
@@ -14,6 +13,7 @@ import {
 } from "./governanceActivityService";
 import { mergeBucketsForWindow, scopeKeysFor } from "./governanceRollupService";
 import { readBucketsForWindow } from "./governanceRollups";
+import { calendarPeriodValidator, periodSpan } from "./utils/calendarPeriods";
 
 /**
  * What the AI has been doing lately.
@@ -55,14 +55,16 @@ export type GovernanceActivity = {
 };
 
 export const getGovernanceActivity = governanceQuery({
-  args: { days: v.number() },
+  args: { period: calendarPeriodValidator },
   returns: governanceShapes.governanceActivityShape,
   handler: async (ctx, args): Promise<GovernanceActivity> => {
-    // Clamped rather than trusted. The range arrives from a control offering
-    // three values, and a hand-typed one should not be able to widen the scan.
-    const days = Math.min(Math.max(Math.round(args.days), 1), 90);
-    const now = Date.now();
-    const since = now - days * DAY_MS;
+    // The date menu's calendar period (calendar-periods-plan.md, phase 7), in UTC days as the day buckets are kept:
+    // from its first day to its last, or to now for one still going. At most a year of day buckets.
+    const today = new Date().toISOString().slice(0, 10);
+    const span = periodSpan(args.period, today, today) ?? { from: today, to: today, whole: false };
+    const since = Date.parse(`${span.from}T00:00:00Z`);
+    const now = span.whole ? Date.parse(`${span.to}T23:59:59.999Z`) : Date.now();
+    const days = Math.round((Date.parse(`${span.to}T00:00:00Z`) - since) / DAY_MS) + 1;
 
     const platformWide = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY";
     const scopeCompanyId = platformWide ? undefined : getActiveCompanyId(ctx.user);
@@ -94,7 +96,7 @@ export const getGovernanceActivity = governanceQuery({
         DECIDED_STATUSES.map((status) =>
           ctx.db
             .query("agentRunApprovals")
-            .withIndex("by_status_requested", (q) => q.eq("status", status).gte("requestedAt", since))
+            .withIndex("by_status_requested", (q) => q.eq("status", status).gte("requestedAt", since).lte("requestedAt", now))
             .take(PER_STATUS_LIMIT),
         ),
       ),

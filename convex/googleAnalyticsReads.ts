@@ -39,6 +39,7 @@ import {
   type Held,
   type ShownRow,
 } from "./googleAnalyticsRows";
+import { OPENING_PERIOD } from "./utils/calendarPeriods";
 import {
   allPagesSees,
   channelSees,
@@ -889,7 +890,7 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
 
 /**
  * The company's own websites, each with its Google Analytics status and its
- * last 30 days — visits, conversions, value — for the section's first page
+ * last month — visits, conversions, value — for the section's first page
  * (§5, screen 1).
  */
 export const analyticsSites = tenantQuery({
@@ -922,9 +923,9 @@ export const analyticsSites = tenantQuery({
     const holds = (await companyHolds(ctx, ctx.companyId)).filter((entry) => entry.summary.relationship === "OWNED");
     return await Promise.all(holds.map(async (entry) => {
       const connection = await connectionOf(ctx, entry.hold._id);
-      const held = connection?.newestDay ? await readSlot(ctx, entry.hold._id, slotKey("total", "30", "NOW", "")) : null;
+      const held = connection?.newestDay ? await readSlot(ctx, entry.hold._id, slotKey("total", OPENING_PERIOD, "NOW", "")) : null;
       const figures = held && connection ? figuresOf(held.rows, countedOf(connection)) : null;
-      const heldBefore = held ? await readSlot(ctx, entry.hold._id, slotKey("total", "30", "BEFORE", "")) : null;
+      const heldBefore = held ? await readSlot(ctx, entry.hold._id, slotKey("total", OPENING_PERIOD, "BEFORE", "")) : null;
       const before = heldBefore && connection ? figuresOf(heldBefore.rows, countedOf(connection)) : null;
       const checks = connection?.health?.checks ?? [];
       const unknown = checks.find((check) => check.check === "TOO_MUCH_UNKNOWN" && !check.passing);

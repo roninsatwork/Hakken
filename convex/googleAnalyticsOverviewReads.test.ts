@@ -17,16 +17,17 @@ import { NOT_SORTED_KIND } from "./utils/pageKinds";
 
 const NOW = Date.parse("2026-10-09T09:30:00Z");
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
-const args = { period: "30" as const, device: "" };
+// Last month: on 9 October, September, set against August.
+const args = { period: "lastMonth" as const, device: "" };
 
 /**
- * Sixty days of the plain day, and from search a service page where people
- * send a form that is listed but not counted, made by returning people of
- * 25 to 34 Google could name.
+ * Seventy days of the plain day — last month and the month before whole —
+ * and from search a service page where people send a form that is listed
+ * but not counted, made by returning people of 25 to 34 Google could name.
  */
 function visits(): Visit[] {
   const out: Visit[] = [];
-  for (let at = 0; at < 60; at += 1) {
+  for (let at = 0; at < 70; at += 1) {
     const date = shiftDay(NEWEST, -at);
     out.push(...dayOf(date));
     out.push({
@@ -65,7 +66,8 @@ describe("Overview's panels", () => {
     expect(panels.channels.rows.map((row) => [row.label, row.visits, row.conversions])).toEqual([
       ["Organic Search", 390, 30], ["AI assistants", 120, 30], ["Direct", 60, 0],
     ]);
-    expect(panels.channels.rows[0].change).toBe(0);
+    // The same every day: only September's 30 days against August's 31 change it.
+    expect(panels.channels.rows[0].change).toBeCloseTo(390 / 403 - 1);
 
     // OV3: the classifications by their landing pages' visits, Unclassified among them.
     expect(panels.kinds!.count).toBe(2);
@@ -96,7 +98,7 @@ describe("Overview's panels", () => {
     expect(panels.shop).toBeNull();
 
     // One device: no Device row, which would always be all of it.
-    const mobile = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "30", device: "mobile" }))!;
+    const mobile = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "lastMonth", device: "mobile" }))!;
     expect(mobile.who.map((row) => row.kind)).not.toContain("device");
 
     // Another company's website is never read.

@@ -242,9 +242,10 @@ export async function readBucketsForWindow(
   scopeKeys: string[] | undefined,
 ): Promise<Array<Doc<"governanceDayRollups">>> {
   const since = dayKey(now - (days - 1) * DAY_MS);
+  // Up to the window's last day: a finished period's window ends before today (calendar-periods-plan.md, phase 7).
   const rows = await ctx.db
     .query("governanceDayRollups")
-    .withIndex("by_date", (q) => q.gte("date", since))
+    .withIndex("by_date", (q) => q.gte("date", since).lte("date", dayKey(now)))
     .collect();
 
   return scopeKeys ? rows.filter((row) => scopeKeys.includes(row.companyKey)) : rows;

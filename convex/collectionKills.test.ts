@@ -6,7 +6,7 @@ import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { history } from "@/src/test/googleAnalyticsFake";
-import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
+import { FINISHED_ON_9_OCTOBER, collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { STEP_WATCH_MS, bookStep } from "./collectionSteps";
 import { runStepKey } from "./googleAnalyticsAgentRun";
@@ -154,7 +154,7 @@ describe("Google Analytics' run, a step stopped by the platform", () => {
     ["a page list", (dimensions: string) => dimensions === "pagePath,pageReferrer"],
   ])("at %s: carried on from its saved place, the run finishes whole, with its closing", async (_kind, when) => {
     const t = harness();
-    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken);
+    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { connection: FINISHED_ON_9_OCTOBER });
     const stops = stopAt(analyticsAsk(when));
     await nextMorning(t);
     expect(await finishWithWatch(t)).toBeGreaterThanOrEqual(1);
@@ -172,7 +172,7 @@ describe("Google Analytics' run, a step stopped by the platform", () => {
 
   test("stopped three times at one list, the run leaves it out, says so, finishes, and the next run asks it first", async () => {
     const t = harness();
-    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken);
+    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { connection: FINISHED_ON_9_OCTOBER });
     const stops = stopAt(analyticsAsk((dimensions) => dimensions === "sessionManualTerm"), 3);
     await nextMorning(t);
     await finishWithWatch(t);
@@ -193,7 +193,7 @@ describe("Google Analytics' run, a step stopped by the platform", () => {
 describe("Google Analytics' run, ended other ways", () => {
   test("cancelled from Admin while a step waits: its chain closes and its collecting mark goes", async () => {
     const t = harness();
-    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken);
+    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { connection: FINISHED_ON_9_OCTOBER });
     await nextMorning(t);
     const { run } = await siteRunOf(t);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.collecting?.runId).toBe(run._id);
@@ -205,7 +205,7 @@ describe("Google Analytics' run, ended other ways", () => {
 
   test("cancelled while its step was stopped by the platform: the watch closes it, and its collecting mark goes", async () => {
     const t = harness();
-    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken);
+    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { connection: FINISHED_ON_9_OCTOBER });
     await nextMorning(t);
     const { run } = await siteRunOf(t);
     const key = runStepKey(connectionId);
@@ -224,7 +224,7 @@ describe("Google Analytics' run, ended other ways", () => {
 
   test("given up by its watch, it ends with what it has, and the next night starts from the list it had reached", async () => {
     const t = harness();
-    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken);
+    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { connection: FINISHED_ON_9_OCTOBER });
     await nextMorning(t);
     const { run } = await siteRunOf(t);
     // As the watch books it past its most carries: the closing alone, at the 30th list of the run.
@@ -252,7 +252,7 @@ describe("Google Analytics' two-year fills, a step stopped by the platform", () 
     ["each page's fill", "GA_FILL_PAGES" as const, (dimensions: string) => /^(yearMonth|isoYearIsoWeek|date),deviceCategory,(landingPage|pagePath)/.test(dimensions)],
   ])("%s is carried on from its saved place and finishes", async (_kind, chain, when) => {
     const t = harness();
-    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { firstNight: false });
+    const { connectionId } = await collectedWebsite(t, history(10), encryptConnectorToken, { firstNight: false, connection: FINISHED_ON_9_OCTOBER });
     const stops = stopAt(analyticsAsk(when));
     await t.mutation(internal.googleAnalyticsFillAfter.startFills, { connectionId });
     expect(await finishWithWatch(t)).toBeGreaterThanOrEqual(1);

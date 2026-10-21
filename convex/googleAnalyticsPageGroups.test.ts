@@ -85,9 +85,9 @@ describe("a page's other rows are never a page", () => {
     };
     const session = { ctx, connectionId: "connection", accessToken: rehearsalToken(big), requests: 0, stopped: null, quota: null };
     // Careful: half as much held, so the 26,000 rows of each event by page are cut while read, past an event's 100th page.
-    const result = await collectPageLists(ctx as never, session as never, "connection" as never, target as never, { pages: true, period: "30", device: "", part: "eventsNow" }, TOP, { careful: true, groupPages: Number.POSITIVE_INFINITY });
+    const result = await collectPageLists(ctx as never, session as never, "connection" as never, target as never, { pages: true, period: "thisMonth", device: "", part: "eventsNow" }, TOP, { careful: true, groupPages: Number.POSITIVE_INFINITY });
     expect(result.ok).toBe(true);
-    const keys = (written.get("eventPage|30|NOW|") ?? []).flatMap((part) => part.keys);
+    const keys = (written.get("eventPage|thisMonth|NOW|") ?? []).flatMap((part) => part.keys);
     expect(keys.filter((key) => key.endsWith("\u001f(other)")).length).toBeGreaterThan(0);
     expect([...numbers.keys()].filter((address) => address.includes("(other)"))).toEqual([]);
   });
@@ -115,7 +115,7 @@ async function collected(part: PageListPart, groupPages?: number) {
     },
   };
   const session = { ctx, connectionId: "connection", accessToken: rehearsalToken(SMALL), requests: 0, stopped: null, quota: null };
-  const result = await collectPageLists(ctx as never, session as never, "connection" as never, target as never, { pages: true, period: "30", device: "", part }, TOP, { groupPages, groups: new Map() });
+  const result = await collectPageLists(ctx as never, session as never, "connection" as never, target as never, { pages: true, period: "thisMonth", device: "", part }, TOP, { groupPages, groups: new Map() });
   return { written, result, requests: session.requests };
 }
 

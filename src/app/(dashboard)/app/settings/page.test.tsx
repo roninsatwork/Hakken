@@ -1,9 +1,10 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import CompanySettingsDashboard from "./page";
+import { useScreenDay } from "@/src/test/realTime";
 
 type HookMock = {
   mockImplementation: (implementation: (...args: unknown[]) => unknown) => void;
@@ -54,12 +55,12 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-vi.mock("@/src/ui/components/TimeframeDropdown", () => ({
-  default: ({ setTimeframe }: { setTimeframe: (value: string) => void }) => (
-    <button type="button" onClick={() => setTimeframe("30d")}>
-      Change timeframe
-    </button>
-  ),
+/** The address the date menu reads and writes (calendar-periods-plan.md, phase 7). */
+const nav = vi.hoisted(() => ({ search: "", replace: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(nav.search),
+  usePathname: () => "/app/settings",
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
 }));
 
 vi.mock("framer-motion", () => ({
@@ -121,6 +122,9 @@ function getConvexPath(functionReference: unknown) {
 
 describe("CompanySettingsDashboard", () => {
   beforeEach(() => {
+    // Wednesday 21 October 2026: last month, the menu's opening period, is September.
+    useScreenDay("2026-10-21");
+    nav.search = "";
     vi.clearAllMocks();
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown, args: unknown) => {
       const path = getConvexPath(queryFn);
@@ -149,7 +153,10 @@ describe("CompanySettingsDashboard", () => {
   it("queries company metrics and renders populated organization analytics", () => {
     render(<CompanySettingsDashboard />);
 
-    expect(useQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "today" }));
+    expect(useQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      companyId: "company_1", timeframe: "custom",
+      customStart: new Date("2026-09-01T00:00:00").getTime(), customEnd: new Date("2026-09-30T00:00:00").getTime() + 86399999,
+    }));
     expect(screen.getByText("Organization Dashboard")).toBeInTheDocument();
     expect(screen.getByText("£99.00")).toBeInTheDocument();
     // A company's usage is Usage now, in credits; the model providers it ran on are not its to see (usage-credits-plan.md, step 6).
@@ -159,8 +166,14 @@ describe("CompanySettingsDashboard", () => {
     expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(screen.getByText("Sales Agent")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Change timeframe" }));
-
-    expect(useQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "30d" }));
+    // The menu offers the seven calendar periods, and a choice is kept in the address.
+    const menu = screen.getByRole("combobox", { name: "label" }) as HTMLSelectElement;
+    expect([...menu.options].map((option) => option.value)).toEqual(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"]);
+    fireEvent.change(menu, { target: { value: "thisYear" } });
+    expect(nav.replace).toHaveBeenCalledWith("/app/settings?period=thisYear", { scroll: false });
   });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });

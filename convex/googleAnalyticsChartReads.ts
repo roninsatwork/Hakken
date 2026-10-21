@@ -2,7 +2,7 @@ import { v, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
-import { slotKey } from "./googleAnalyticsCollect";
+import { periodRange, slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { UNTAGGED, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
@@ -71,8 +71,10 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   const held = total ? await readDayPoints(ctx, connection, "total", args.device, total.from, total.to, country) : null;
   if (held) return { points: held.map((one) => point(one.start, merged(one.rows)[0] ?? blank(""), one.end)), events };
   const newest = coverageOf(connection, country).newestDay;
-  if (Number(args.period) <= DAYS_CHARTED && newest) {
-    const first = shiftDay(newest, -(Number(args.period) - 1));
+  // Not built yet: the period's days, while they are among the days kept.
+  const range = newest ? periodRange(args.period, "NOW", newest) : null;
+  if (range && newest && range.from >= shiftDay(newest, -(DAYS_CHARTED - 1))) {
+    const first = range.from;
     const parts = await ctx.db
       .query("googleAnalyticsDays")
       .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "total").eq("device", dayDevice(args.device, country)).gte("day", first))
@@ -83,19 +85,22 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   return { points: [], events };
 }
 
-/** The periods whose span before is held a day at a time (the 90 days kept), and so drawn day for day. */
-const PERIODS_DRAWN_BEFORE = new Set(["7", "30"]);
+/**
+ * The periods whose span before is drawn day for day (calendar-periods-plan.md, phase 6): the weeks and months, whose
+ * span before is among the days kept ("only keep the second line for another 30 days or below").
+ */
+const PERIODS_DRAWN_BEFORE: ReadonlySet<string> = new Set(["thisWeek", "lastWeek", "thisMonth", "lastMonth"]);
 
 /**
  * Conversions' "Visits needed for one conversion" (Anthony, 2026-10-20): the
- * website's visits and counted conversions a day over the span just before
- * the dates chosen — the 7 or 30 days before, as the figures at the top
- * compare with — each day dated forward onto the day it is laid over, so the
- * two lines share the chart's days. Only for 7 and 30 days, whose span before
- * is held as days ("only keep the second line for another 30 days or below");
- * `held` is false for the longer periods and while those days are not held.
- * Each counted kind's own count beside them, for the chart's tick boxes.
- * Nothing is asked of Google.
+ * website's visits and counted conversions a day over the span the period is
+ * set against — the period before, or its same days for one still going, as
+ * the figures at the top compare with — each day laid over the same day of the
+ * period (its first over the first), so the two lines share the chart's days
+ * whatever the months' lengths. Only for the weeks and months, whose span
+ * before is held as days; `held` is false for the longer periods and while
+ * those days are not held. Each counted kind's own count beside them, for the
+ * chart's tick boxes. Nothing is asked of Google.
  */
 export const analyticsPeriodBeforeChart = tenantQuery({
   args: analyticsChartArgs,
@@ -114,12 +119,18 @@ export const analyticsPeriodBeforeChart = tenantQuery({
     const connection = await connectionOf(ctx, holdId);
     const counted = connection ? countedOf(connection) : [];
     const events = counted.map((event) => event.eventName);
-    const shift = Number(args.period);
+    const [total, totalBefore] = connection?.newestDay && PERIODS_DRAWN_BEFORE.has(args.period)
+      ? await Promise.all([
+        readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country)),
+        readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country)),
+      ])
+      : [null, null];
+    const before = connection?.newestDay ? totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) : null;
+    // The days each point moves forward by: from the span before's first day to the period's.
+    const shift = total && before ? daysBetween(before.from, total.from) : 0;
     const none = { held: false, shift, points: [], events };
-    if (!connection?.newestDay || !PERIODS_DRAWN_BEFORE.has(args.period)) return none;
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-    if (!total) return none;
-    const held = await readDayPoints(ctx, connection, "total", args.device, shiftDay(total.from, -shift), shiftDay(total.to, -shift), country);
+    if (!connection || !total || !before) return none;
+    const held = await readDayPoints(ctx, connection, "total", args.device, before.from, before.to, country);
     // Every point a day: anything coarser is not the day-for-day line this is.
     if (!held || held.some((point) => point.grain !== "day")) return none;
     return {
@@ -128,7 +139,8 @@ export const analyticsPeriodBeforeChart = tenantQuery({
       points: held.map((point) => {
         const row = merged(point.rows)[0] ?? blank("");
         return {
-          day: shiftDay(point.start, shift),
+          // Its place in the span before, laid over the same place in the period.
+          day: shiftDay(total.from, daysBetween(before.from, point.start)),
           visits: row.visits,
           conversions: conversionsOf(row, counted).conversions,
           events: events.map((event) => row.counts.get(event) ?? 0),
@@ -243,3 +255,8 @@ export const analyticsCampaignChart = tenantQuery({
     };
   },
 });
+
+/** Whole days from one day to another. */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
