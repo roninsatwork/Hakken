@@ -15,7 +15,7 @@ envelope, and the reusability of this repo as a starter for other products.
 - Work on branch `dev`. Read `AGENTS.md` before starting.
 - Do not commit or push without Anthony asking.
 - `hakken.ronins.co.uk` is an OLD deployment. Test on `localhost:3000`.
-- Node 24.18.0 for trusted checks; `verify:env` enforces the checked-in Node
+- Node 24.22.1 for trusted checks; `verify:env` enforces the checked-in Node
   and direct dependency baseline before local commands run.
 - Every item below carries an acceptance test. "It looks right" is not acceptance
   for platform work; a failing-then-passing test is.

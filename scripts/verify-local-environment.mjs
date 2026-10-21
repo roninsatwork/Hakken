@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const expectedNode = { major: 24, min: "24.18.0", range: ">=24.18.0 <25" };
+const expectedNode = { major: 24, min: "24.22.1", range: ">=24.22.1 <25" };
 
 function parseVersion(version) {
   const [major = 0, minor = 0, patch = 0] = version

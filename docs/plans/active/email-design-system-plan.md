@@ -22,7 +22,7 @@ single exception of the all-clear digest in Phase 7, which is a fatigue fix.
 **Working rules:**
 - Work on branch `dev`. Read `AGENTS.md` before starting.
 - Do not commit or push without Anthony asking.
-- Node 24.18.0 for trusted checks; `verify:env` enforces the baseline.
+- Node 24.22.1 for trusted checks; `verify:env` enforces the baseline.
 - Every item carries an acceptance test. "It looks right" is not acceptance.
   Rendering is asserted on the returned HTML string, not by eye.
 - No real domain may be hardcoded. The footer credit is the literal text

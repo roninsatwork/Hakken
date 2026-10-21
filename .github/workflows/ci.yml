@@ -57,7 +57,7 @@ jobs:
       - name: Setup Node environment
         uses: actions/setup-node@v5
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
 
       # The same 1.1GB of packages every run, changing only when the lockfile
@@ -203,7 +203,7 @@ jobs:
       - name: Setup Node environment
         uses: actions/setup-node@v5
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
 
       - name: Restore installed packages
@@ -289,7 +289,7 @@ jobs:
       - name: Setup Node environment
         uses: actions/setup-node@v5
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
 
       # The same 1.1GB of packages every run, changing only when the lockfile

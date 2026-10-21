@@ -64,7 +64,7 @@ auditors. The frontend gate prevents restricted queries from mounting.
 3. If the menu appears but the page errors with `Could not find public function`
    for `billingAdmin` or `billingMetrics`, the frontend and backend are out of
    sync. Confirm `.env.local` points to the intended **dev** deployment. With
-   Node 24.18.0, run `npm ci`, then keep `npm run dev` and `npm run convex:dev`
+   Node 24.22.1, run `npm ci`, then keep `npm run dev` and `npm run convex:dev`
    running in separate terminals. Wait for **Convex functions ready** and reload.
    `npm run verify:env` must recognize the locked Stripe SDK and component.
 4. This repository checks backend TypeScript through the root

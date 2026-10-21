@@ -128,7 +128,7 @@ to the change, suspect a stale cache first: bump the suffix in the cache key in
 
 ## Verification Gates
 
-Use Node `24.18.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.
+Use Node `24.22.1` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.
 
 Run these before asking the user to merge or push:
 

@@ -9,7 +9,7 @@ It previews product defaults and provider requirements before applying local fil
 
 ## Prerequisites
 
-- **Node.js**: `24.18.0` (`.nvmrc` / `.node-version`).
+- **Node.js**: `24.22.1` (`.nvmrc` / `.node-version`).
 - **Package Manager**: `npm` (standard for this project).
 - **Convex Account**: Sign up at [convex.dev](https://www.convex.dev/).
 

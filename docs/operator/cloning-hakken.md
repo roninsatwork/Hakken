@@ -7,7 +7,7 @@ base.
 
 ## Prepare and preview
 
-Use Node 24.18.0 and install the source repository's locked dependencies first:
+Use Node 24.22.1 and install the source repository's locked dependencies first:
 
 ```bash
 npm ci

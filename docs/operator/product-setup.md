@@ -8,7 +8,7 @@ remotes, create tenants, set secrets, contact providers, or deploy anything.
 
 Start with the copy described in [Cloning Hakken](./cloning-hakken.md). Run the
 following commands **inside that new application's directory**, using Node
-`24.18.0`. These are operator instructions, not steps run against Hakken itself.
+`24.22.1`. These are operator instructions, not steps run against Hakken itself.
 
 1. Copy `hakken.product.json` to a separate input file, for example
    `my-product.json`, and edit the values below. Keep credentials out of both.

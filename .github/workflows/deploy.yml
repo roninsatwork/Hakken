@@ -54,7 +54,7 @@ jobs:
       - name: Setup Node for Convex Backend Sync
         uses: actions/setup-node@v4
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
 
       # Same cache as CI. This job used to reinstall 1.1GB from scratch on
