@@ -1,3 +1,4 @@
+import { CALENDAR_PERIODS, isRunning, periodBounds, spanBefore, type CalendarPeriod } from "./calendarPeriods";
 import { packNumbers, unpackNumbers, type StoredNumbers } from "./searchConsolePacks";
 
 /**
@@ -89,16 +90,19 @@ export async function fingerprintRows(rows: readonly BingRow[]): Promise<string>
   return Array.from(new Uint8Array(digest).slice(0, 12), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** The ready-made periods, and how many of Bing's weeks each adds up. */
-export const BING_PERIODS = ["7", "30", "90", "182", "365"] as const;
-export type BingPeriod = (typeof BING_PERIODS)[number];
-export const WEEKS_IN: Record<BingPeriod, number> = { "7": 1, "30": 4, "90": 13, "182": 26, "365": 52 };
+/**
+ * The ready-made periods: the date menu's seven calendar periods (docs/plans/active/calendar-periods-plan.md, phase
+ * 5). Bing gives its keywords and pages a week at a time, dated by the week's last day, and runs its weeks its own
+ * way: a period is made of the Bing weeks that end inside it.
+ */
+export const BING_PERIODS = CALENDAR_PERIODS;
+export type BingPeriod = CalendarPeriod;
 
-/** The periods built with the period before them, as Search Console's 7, 30 and 90 days are. */
-export const WITH_BEFORE: ReadonlySet<BingPeriod> = new Set(["7", "30", "90"]);
+/** The periods built with the span before them: every one but This Year, whose same days a year before are past the 13 months of weeks kept. */
+export const WITH_BEFORE: ReadonlySet<BingPeriod> = new Set(CALENDAR_PERIODS.filter((period) => period !== "thisYear"));
 
-/** Search Console's ready-made period nearest in length, for Google's column; none for six months (calendar periods for Bing follow in its own phase). */
-export const GOOGLE_PERIOD_OF: Partial<Record<BingPeriod, "lastWeek" | "lastMonth" | "lastQuarter" | "thisYear">> = { "7": "lastWeek", "30": "lastMonth", "90": "lastQuarter", "365": "thisYear" };
+/** The weeks a build reads at most, newest first: the 13 months kept. */
+export const WEEKS_READ_FOR_PERIODS = 57;
 
 const DAY_MS = 86_400_000;
 
@@ -107,15 +111,21 @@ export function shiftBingDay(day: string, days: number): string {
 }
 
 /**
- * The weeks a period adds up, newest first, from the weeks held: the newest
- * `WEEKS_IN` of them for `NOW`, the same number before those for `BEFORE`.
- * Its days run from six days before its oldest week's date to its newest's
- * — Bing dates a week by its last day.
+ * The weeks a period adds up, newest first, from the weeks held: those ending inside the period on the UK day
+ * `today` for `NOW`; for `BEFORE`, those ending inside the span it is set against (rule 4) — the whole period before,
+ * or, for one still going, its same days up to this period's newest week. Its days run from six days before its
+ * oldest week's date to its newest's, so a month's first week may begin in the month before. Null with none held.
  */
-export function weeksOf(held: readonly string[], period: BingPeriod, which: "NOW" | "BEFORE"): { weeks: string[]; from: string; to: string } | null {
-  const newestFirst = [...new Set(held)].sort().reverse();
-  const count = WEEKS_IN[period];
-  const weeks = newestFirst.slice(which === "NOW" ? 0 : count, which === "NOW" ? count : count * 2);
+export function weeksOf(held: readonly string[], period: BingPeriod, which: "NOW" | "BEFORE", today: string): { weeks: string[]; from: string; to: string } | null {
+  const sorted = [...new Set(held)].sort();
+  const inside = (from: string, to: string) => sorted.filter((week) => week >= from && week <= to).reverse();
+  const bounds = periodBounds(period, today);
+  const now = inside(bounds.from, bounds.to);
+  if (now.length === 0) return null;
+  const weeks = which === "NOW" ? now : (() => {
+    const before = spanBefore(period, { from: bounds.from, to: now[0], whole: !isRunning(period) });
+    return inside(before.from, before.to);
+  })();
   if (weeks.length === 0) return null;
   return { weeks, from: shiftBingDay(weeks[weeks.length - 1], -6), to: weeks[0] };
 }

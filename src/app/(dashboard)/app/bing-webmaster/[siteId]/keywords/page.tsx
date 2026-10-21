@@ -9,7 +9,7 @@ import { formatPosition } from "../../../search-console/_components/searchConsol
 import { BingFigures, BingSees } from "../../_components/BingParts";
 import { BingClicksChart } from "../../_components/BingCharts";
 import { BingListScreen } from "../../_components/BingListTable";
-import { DAYS_OF, useBingHref, useBingSiteId, useBingStatus, usePeriod } from "../../_components/useBing";
+import { useBingHref, useBingSiteId, useBingStatus, usePeriod } from "../../_components/useBing";
 
 /**
  * Keywords (bing-webmaster-plan.md §5, board 3): What Hakken sees; the four
@@ -26,7 +26,7 @@ export default function BingKeywordsPage() {
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
   const [period] = usePeriod();
-  const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, days: DAYS_OF[period] } : "skip");
+  const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
   return (
     <BingListScreen
       header={{ icon: <Search className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}

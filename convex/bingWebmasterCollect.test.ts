@@ -84,7 +84,7 @@ async function connected(t: Harness) {
     });
     // Google's 90 days for the same website, as Search Console keeps them ready-made.
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: siteId, searchType: "web", list: "query", period: "lastQuarter", which: "NOW", part: 0, from: "2026-07-01", to: "2026-09-30",
+      companyWebsiteId: siteId, searchType: "web", list: "query", period: "thisMonth", which: "NOW", part: 0, from: "2026-10-01", to: "2026-10-11",
       keys: ["ronins", "what is a brand audit", "ai agency"], clicks: [45, 1, 106], impressions: [2129, 1509, 3848], positionSums: [14264, 15845, 9620], builtAt: 1,
     });
     for (const page of ["/", "/venture-studio/"]) {
@@ -146,19 +146,27 @@ describe("collecting a website's Bing Webmaster figures", () => {
     const weeks = await t.run(async (ctx) => await ctx.db.query("bingWeeks").collect());
     expect(weeks.filter((week) => week.list === "query").map((week) => week.week).sort()).toEqual(["2026-10-04", "2026-10-11"]);
 
-    // The 90 days add up both weeks, busiest first, and carry Google's figures for the same keyword.
-    const ninety = await t.run(async (ctx) => await ctx.db.query("bingPeriods")
-      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", siteId).eq("list", "query").eq("period", "90").eq("which", "NOW"))
+    // On Monday 12 October, This month is the two Bing weeks ending in it, busiest first, with Google's figures for the
+    // same keyword from Search Console's This month (calendar-periods-plan.md, phase 5).
+    const month = await t.run(async (ctx) => await ctx.db.query("bingPeriods")
+      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", siteId).eq("list", "query").eq("period", "thisMonth").eq("which", "NOW"))
       .first());
-    const rows = rowsOfBingPart(ninety!);
+    const rows = rowsOfBingPart(month!);
     const named = rows.map((row) => ({ keyword: book[row.key], clicks: row.clicks, impressions: row.impressions }));
     expect(named).toEqual([
       { keyword: "ronins", clicks: 5, impressions: 41 },
       { keyword: "internal and external stakeholders", clicks: 2, impressions: 35 },
       { keyword: "what is a brand audit", clicks: 2, impressions: 10 },
     ]);
-    expect(unpackNumbers(ninety!.googleClicks!)).toEqual([45, -1, 1]);
-    expect(ninety).toMatchObject({ from: "2026-09-28", to: "2026-10-11" });
+    expect(unpackNumbers(month!.googleClicks!)).toEqual([45, -1, 1]);
+    expect(month).toMatchObject({ from: "2026-09-28", to: "2026-10-11" });
+    // Last week is Bing's week ending inside it, alone; nothing is kept under the old day counts.
+    const lastWeek = await t.run(async (ctx) => await ctx.db.query("bingPeriods")
+      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", siteId).eq("list", "query").eq("period", "lastWeek").eq("which", "NOW"))
+      .first());
+    expect(lastWeek).toMatchObject({ from: "2026-10-05", to: "2026-10-11" });
+    const kept = await t.run(async (ctx) => await ctx.db.query("bingPeriods").collect());
+    expect(kept.every((row) => !/^\d+$/.test(row.period))).toBe(true);
 
     // The page list names pages by the website's one page numbering.
     const pages = await t.run(async (ctx) => await ctx.db.query("holdPageAddresses").collect());

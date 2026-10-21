@@ -10,14 +10,14 @@ import { formatPosition } from "../../../search-console/_components/searchConsol
 import { BingSees, formatShare } from "../../_components/BingParts";
 import { BingShareChart } from "../../_components/BingCharts";
 import { BingListScreen } from "../../_components/BingListTable";
-import { useBingHref, useBingSiteId, useBingStatus } from "../../_components/useBing";
+import { useBingHref, useBingSiteId, useBingStatus, usePeriod } from "../../_components/useBing";
 
 /**
  * Bing against Google (bing-webmaster-plan.md §5, board 6, §4.4): What Hakken
  * sees; Bing's share of the website's search clicks and how many keywords each
  * engine ranks higher; the share week by week; and every keyword with both
  * engines' positions and clicks, and who ranks the website higher. Over the
- * last 90 days, Search Console's comparable period.
+ * menu's calendar period, which Search Console keeps too (calendar-periods-plan.md).
  */
 export default function BingVersusPage() {
   const t = useTranslations("bingWebmaster.versus");
@@ -27,7 +27,8 @@ export default function BingVersusPage() {
   const status = useBingStatus();
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
-  const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, days: 90 } : "skip");
+  const [period] = usePeriod();
+  const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
   const bing = figures?.totals ?? null;
   const google = figures?.google ?? null;
   const share = bing && google && bing.clicks + google.clicks > 0 ? bing.clicks / (bing.clicks + google.clicks) : null;

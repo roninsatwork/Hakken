@@ -24,12 +24,12 @@ import { BingGate } from "./BingNotices";
 import { BingRecordFigures, BingSees } from "./BingParts";
 import { BingRecordChart } from "./BingCharts";
 import { pathOf } from "./BingListTable";
-import { FEW_IMPRESSIONS, useBingHref, useBingSiteId, useBingStatus } from "./useBing";
+import { FEW_IMPRESSIONS, useBingHref, useBingSiteId, useBingStatus, usePeriod } from "./useBing";
 
 /**
  * A keyword's or a page's own screen (bing-webmaster-plan.md §5, boards 4
  * and 5b): the way back to its list; What Hakken sees; its figures beside
- * Google's for the same 90 days; its weeks on Bing; and the pages Bing showed
+ * Google's for the menu's period; its weeks on Bing; and the pages Bing showed
  * for the keyword, or the keywords it showed the page for, asked of Bing when
  * the screen opens and held until the next collection (§4.1).
  */
@@ -39,7 +39,8 @@ export function BingRecordScreen({ list }: { list: "query" | "page" }) {
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
   const ref = useSearchParams().get("ref") ?? "";
-  const record = useQuery(api.bingWebmasterReads.bingRecord, ref ? { siteId, list, ref } : "skip");
+  const [period] = usePeriod();
+  const record = useQuery(api.bingWebmasterReads.bingRecord, ref ? { siteId, list, ref, period } : "skip");
   const back = list === "query" ? { label: t("backKeywords"), href: hrefFor("keywords") } : { label: t("backPages"), href: hrefFor("pages") };
   const title = record ? (list === "page" ? record.title ?? pathOf(record.key) : record.key) : "";
   return (

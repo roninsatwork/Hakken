@@ -15,7 +15,8 @@ import { useFixedDay } from "@/src/test/realTime";
  */
 
 const KEY = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
-const NOW = Date.parse("2026-10-12T04:00:00Z");
+// Monday 2 November: last month, the screens' opening period, is October, which holds Bing's two days and two weeks.
+const NOW = Date.parse("2026-11-02T04:00:00Z");
 const SITE = "https://www.ronins.co.uk/";
 const wcf = (day: string) => `/Date(${Date.parse(`${day}T00:00:00Z`)})/`;
 
@@ -65,7 +66,7 @@ async function collected(t: Harness) {
       expiresAt: NOW + 3_000_000, createdAt: 1, updatedAt: 1,
     });
     await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: siteId, searchType: "web", list: "query", period: "lastQuarter", which: "NOW", part: 0, from: "2026-07-01", to: "2026-09-30",
+      companyWebsiteId: siteId, searchType: "web", list: "query", period: "lastMonth", which: "NOW", part: 0, from: "2026-10-01", to: "2026-10-31",
       keys: ["ronins", "what is a brand audit", "ai agency"], clicks: [45, 1, 106], impressions: [2129, 1509, 3848], positionSums: [14264, 15845, 9620], builtAt: 1,
     });
     for (const [day, clicks, impressions] of [["2026-10-10", 30, 9_000], ["2026-10-11", 33, 9_500]] as const) {
@@ -106,7 +107,7 @@ describe("what the Bing Webmaster screens read", () => {
     expect(site).toMatchObject({ siteId, host: "ronins.co.uk", status: "CONNECTED", clicks: 3, impressions: 420, googleClicks: 63, to: "2026-10-11" });
     expect(site.share).toBeCloseTo(3 / 66);
 
-    const performance = (await user.query(api.bingWebmasterReads.bingPerformance, { siteId, days: 90 }))!;
+    const performance = (await user.query(api.bingWebmasterReads.bingPerformance, { siteId, period: "lastMonth" }))!;
     expect(performance.totals).toEqual({ clicks: 3, impressions: 420 });
     expect(performance.google).toEqual({ clicks: 63, impressions: 18_500 });
     // 10 Oct is a Saturday, 11 Oct a Sunday: one week, Monday the 5th.
@@ -116,7 +117,7 @@ describe("what the Bing Webmaster screens read", () => {
   test("the keyword list is searched, filtered and sorted over the whole list, with Google's positions beside Bing's", async () => {
     const t = harness();
     const { siteId, user } = await collected(t);
-    const ask = { siteId, list: "query" as const, period: "90" as const, page: 1, rows: 25 };
+    const ask = { siteId, list: "query" as const, period: "lastMonth" as const, page: 1, rows: 25 };
     const all = await user.query(api.bingWebmasterReads.bingListPage, ask);
     // The most clicks first; a tie by name, as every Sites list (`sortOrder.ts`).
     expect(all.rows.map((row) => row.key)).toEqual(["ronins", "ai agency", "internal and external stakeholders", "what is a brand audit"]);
@@ -135,10 +136,10 @@ describe("what the Bing Webmaster screens read", () => {
     expect(googleHigher.rows.map((row) => row.key)).toEqual(["ai agency"]);
   });
 
-  test("a keyword's own screen: its weeks on Bing and its 90 days beside Google's", async () => {
+  test("a keyword's own screen: its weeks on Bing and the menu's period beside Google's", async () => {
     const t = harness();
     const { siteId, user } = await collected(t);
-    const list = await user.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: "90", page: 1, rows: 25 });
+    const list = await user.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: "lastMonth", page: 1, rows: 25 });
     const ref = list.rows.find((row) => row.key === "ronins")!.ref;
     const record = (await user.query(api.bingWebmasterReads.bingRecord, { siteId, list: "query", ref }))!;
     expect(record.key).toBe("ronins");
@@ -150,12 +151,12 @@ describe("what the Bing Webmaster screens read", () => {
   test("Ask Hakken reads the same figures as the screens, for the conversation's company only", async () => {
     const t = harness();
     const { companyId } = await collected(t);
-    const performance = await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId, website: "ronins.co.uk", screen: "performance", days: 90 });
+    const performance = await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId, website: "ronins.co.uk", screen: "performance", period: "lastMonth" });
     expect(performance).toMatchObject({ ok: true, bing: { clicks: 3, impressions: 420 }, google: { clicks: 63 }, link: expect.stringMatching(/^\/app\/bing-webmaster\//) });
-    const versus = await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId, website: "ronins.co.uk", screen: "versus", days: 90 });
+    const versus = await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId, website: "ronins.co.uk", screen: "versus", period: "lastMonth" });
     expect(versus).toMatchObject({ ok: true, summary: { bingRanksHigher: 2, googleRanksHigher: 1, onlyOnBing: 1 } });
     const other = await t.run(async (ctx) => await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }));
-    expect(await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId: other, website: "ronins.co.uk", screen: "performance", days: 90 })).toMatchObject({ ok: false });
+    expect(await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId: other, website: "ronins.co.uk", screen: "performance", period: "lastMonth" })).toMatchObject({ ok: false });
   });
 
   test("another company reads nothing of it", async () => {
@@ -167,8 +168,8 @@ describe("what the Bing Webmaster screens read", () => {
         return await ctx.db.insert("users", { name: "Rival", email: "rival@rival.test", role: "ADMIN", companyId: rivalId, createdAt: 1 });
       }),
     });
-    await expect(rival.query(api.bingWebmasterReads.bingPerformance, { siteId, days: 90 })).rejects.toThrow();
-    await expect(rival.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: "90", page: 1, rows: 25 })).rejects.toThrow();
+    await expect(rival.query(api.bingWebmasterReads.bingPerformance, { siteId, period: "lastMonth" })).rejects.toThrow();
+    await expect(rival.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: "lastMonth", page: 1, rows: 25 })).rejects.toThrow();
     expect(await rival.query(api.bingWebmasterReads.bingSites, {})).toEqual([]);
     expect(await rival.query(api.bingWebmasterConnect.bingStatus, { siteId })).toBeNull();
   });

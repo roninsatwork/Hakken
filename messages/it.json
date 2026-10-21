@@ -18094,7 +18094,7 @@
       "title": "Bing Webmaster",
       "description": "Quello che Bing stesso ha contato per i tuoi siti: clic e impressioni reali da Bing, accanto a quelli di Google. Aprine uno per vederli.",
       "searchPlaceholder": "Trova un sito…",
-      "caption": "Gli ultimi 90 giorni fino al giorno più recente di Bing",
+      "caption": "Il mese scorso",
       "columns": {
         "website": "Sito",
         "status": "Stato",
@@ -18132,14 +18132,6 @@
       "figuresTo": "Dati di Bing fino al {day}. Parole chiave e pagine arrivano una settimana alla volta."
     },
     "filters": {
-      "period": "Date",
-      "periods": {
-        "7": "Ultima settimana",
-        "30": "Ultimi 30 giorni",
-        "90": "Ultimi 90 giorni",
-        "182": "Ultimi 6 mesi",
-        "365": "Ultimo anno"
-      },
       "step": "Passo",
       "steps": {
         "day": "Giornaliero",
@@ -18281,6 +18273,7 @@
       "downloading": "Download in corso…",
       "downloadFailed": "Il download non ha funzionato. Riprova.",
       "bar": "{period} · tutti i paesi",
+      "barWeeks": "{period}: le settimane di Bing dal {from} al {to} · tutti i paesi",
       "fewImpressions": "Meno di 10 impressioni: troppo poche per fidarsi",
       "filters": {
         "position": "Posizione",
@@ -18379,8 +18372,8 @@
     "seen": {
       "websites": {
         "none": "Collega Bing Webmaster Tools per vedere quello che Bing stesso conta per i tuoi siti.",
-        "top": "{host} ha portato {clicks} clic da Bing negli ultimi 90 giorni: il {share} dei suoi clic dalla ricerca, accanto ai {google} di Google.",
-        "topNoGoogle": "{host} ha portato {clicks} clic da Bing negli ultimi 90 giorni."
+        "top": "{host} ha portato {clicks} clic da Bing il mese scorso: il {share} dei suoi clic dalla ricerca, accanto ai {google} di Google.",
+        "topNoGoogle": "{host} ha portato {clicks} clic da Bing il mese scorso."
       },
       "performance": {
         "says": "Bing ha mostrato il tuo sito {impressions} volte in queste date, e le persone hanno fatto clic {clicks} volte.",

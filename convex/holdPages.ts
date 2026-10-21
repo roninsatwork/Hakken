@@ -625,33 +625,38 @@ function copyMeta(head: Head, counts: ReturnType<typeof joinHoldPages>["counts"]
   };
 }
 
-/** One part of Bing's ready-made 90 days of pages: each page's number and its clicks (bing-webmaster-plan.md §4.3). */
+/** One part of Bing's ready-made pages for this quarter or last: each page's number and its clicks (bing-webmaster-plan.md §4.3). */
 export const bingPagesPart = internalQuery({
-  args: { holdId: v.id("companyWebsites"), part: v.number() },
+  args: { holdId: v.id("companyWebsites"), part: v.number(), period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")) },
   returns: v.union(v.null(), v.object({ numbers: v.array(v.number()), clicks: v.array(v.number()) })),
   handler: async (ctx, args) => {
     const parts = await ctx.db
       .query("bingPeriods")
-      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("list", "page").eq("period", "90").eq("which", "NOW").eq("part", args.part))
+      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("list", "page").eq("period", args.period).eq("which", "NOW").eq("part", args.part))
       .take(4);
     const newest = parts.sort((left, right) => right.builtAt - left.builtAt)[0];
     return newest ? { numbers: unpackNumbers(newest.keys), clicks: unpackNumbers(newest.clicks) } : null;
   },
 });
 
-/** Every page Bing clicked to in its last 90 days, by address, read a part at a time (`bingPagesPart`). */
+/**
+ * Every page Bing clicked to this quarter or last, by address, each page's clicks added together as Search Console's
+ * are (calendar-periods-plan.md, phase 5), read a part at a time (`bingPagesPart`). The two quarters' weeks never overlap.
+ */
 async function allBingClicks(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Array<{ key: string; clicks: number }>> {
   const addresses = await addressesOf(ctx, holdId);
-  const rows: Array<{ key: string; clicks: number }> = [];
-  for (let part = 0; ; part += 1) {
-    const read: { numbers: number[]; clicks: number[] } | null = await ctx.runQuery(internal.holdPages.bingPagesPart, { holdId, part });
-    if (!read) break;
-    for (const [at, number] of read.numbers.entries()) {
-      const key = addresses.addresses[number];
-      if (key) rows.push({ key, clicks: read.clicks[at] ?? 0 });
+  const clicks = new Map<string, number>();
+  for (const period of RECENT_PERIODS) {
+    for (let part = 0; ; part += 1) {
+      const read: { numbers: number[]; clicks: number[] } | null = await ctx.runQuery(internal.holdPages.bingPagesPart, { holdId, part, period });
+      if (!read) break;
+      for (const [at, number] of read.numbers.entries()) {
+        const key = addresses.addresses[number];
+        if (key) clicks.set(key, (clicks.get(key) ?? 0) + (read.clicks[at] ?? 0));
+      }
     }
   }
-  return rows;
+  return [...clicks].map(([key, total]) => ({ key, clicks: total }));
 }
 
 /** What a rebuild changed: pages written (new or changed) and pages removed; null when the hold lists nothing of its own. */

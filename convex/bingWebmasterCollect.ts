@@ -11,7 +11,6 @@ import { normalisePage } from "./utils/pageClassification";
 import { compareText } from "./utils/sortOrder";
 import { packNumbers, unpackNumbers, type StoredNumbers } from "./utils/searchConsolePacks";
 import {
-  GOOGLE_PERIOD_OF,
   addUpRows,
   keywordMatch,
   packBingRows,
@@ -21,13 +20,13 @@ import {
   type BingPeriod,
   type BingRow,
   BING_PERIODS,
-  WEEKS_IN,
+  WEEKS_READ_FOR_PERIODS,
   WITH_BEFORE,
 } from "./utils/bingWebmasterWeeks";
 import { wholeBingBook } from "./bingWebmasterBook";
 import { addressesOf } from "./holdPageRefs";
 import { requestHoldPages } from "./holdPages";
-import { calendarPeriodValidator } from "./utils/calendarPeriods";
+import { calendarPeriodValidator, ukDay } from "./utils/calendarPeriods";
 
 /**
  * What Bing's collection writes, and the ready-made lists it builds
@@ -205,7 +204,7 @@ export const dropOldWeeks = internalMutation({
 
 /**
  * Google's figures for each keyword or page of Search Console's ready-made
- * period of the same length — the website's main home country, web results,
+ * list for the same calendar period — the website's main home country, web results,
  * as Search Console's own screens open — named as the two engines are matched
  * on: a keyword lower case, a page by its path. Null when Search Console has
  * no such period.
@@ -292,18 +291,19 @@ type Google = { keys: string[]; clicks: number[]; impressions: number[]; positio
  * The ready-made lists for every period, built from the weeks held and
  * written whole under one build time, then the older build dropped (§4.4).
  * Each keyword's or page's Google figures sit beside it, from Search
- * Console's period of the same length; -1 where Google has none.
+ * Console's list for the same calendar period; -1 where Google has none.
  */
 export async function buildPeriods(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<number> {
   const builtAt = Date.now();
+  const today = ukDay(builtAt);
   let written = 0;
   const book = await wholeBingBook(ctx, holdId);
   const pages = await addressesOf(ctx, holdId, true);
   for (const list of ["query", "page"] as const) {
-    // A week at a time, the weeks a year's period can need: 52, newest first.
+    // A week at a time, newest first: the 13 months kept, which This Year and Last Quarter's span before can need.
     const held: { week: string; hash: string }[] = await ctx.runQuery(internal.bingWebmasterCollect.weekHashes, { holdId, list });
     const byWeek = new Map<string, BingRow[]>();
-    for (const { week } of held.sort((left, right) => right.week.localeCompare(left.week)).slice(0, WEEKS_IN["365"])) {
+    for (const { week } of held.sort((left, right) => right.week.localeCompare(left.week)).slice(0, WEEKS_READ_FOR_PERIODS)) {
       const parts: StoredWeek[] = await ctx.runQuery(internal.bingWebmasterCollect.weekParts, { holdId, list, week });
       byWeek.set(week, parts.flatMap(rowsOfBingPart));
     }
@@ -316,10 +316,10 @@ export async function buildPeriods(ctx: ActionCtx, holdId: Id<"companyWebsites">
     for (const period of BING_PERIODS as readonly BingPeriod[]) {
       for (const which of ["NOW", "BEFORE"] as const) {
         if (which === "BEFORE" && !WITH_BEFORE.has(period)) continue;
-        const span = weeksOf([...byWeek.keys()], period, which);
+        const span = weeksOf([...byWeek.keys()], period, which, today);
         if (!span) continue;
         const rows = addUpRows(span.weeks.map((week) => byWeek.get(week) ?? []));
-        const googlePeriod = which === "NOW" ? GOOGLE_PERIOD_OF[period] : undefined;
+        const googlePeriod = which === "NOW" ? period : undefined;
         let figures: Google | null = null;
         if (googlePeriod) {
           if (!google.has(googlePeriod)) {

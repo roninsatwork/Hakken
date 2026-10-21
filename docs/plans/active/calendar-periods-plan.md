@@ -1,9 +1,9 @@
 # Calendar periods in every date menu
 
 Agreed with Anthony on 2026-10-20, point by point in conversation. Built on `dev`, not pushed: the rules (phase 1),
-Sites (2), Clarity (3) and Search Console (4), with rule 6's This-month fallback. Search Console's "no days yet" line
+Sites (2), Clarity (3), Search Console (4) and Bing (5), with rule 6's This-month fallback. Search Console's "no days yet" line
 and Volatility's dated labels were found unbuilt after its first commit and finished in a second; its charts' 52 weeks
-moved to the start-up fill (8), because raising the setting is what starts their download. Still to build: Bing (5), Google Analytics (6), Settings and Governance (7), the start-up fill (8), the full
+moved to the start-up fill (8), because raising the setting is what starts their download. Still to build: Google Analytics (6), Settings and Governance (7), the start-up fill (8), the full
 check (9) and the audit (10). Until the start-up fill runs,
 a Search Console list for a period not yet built says it is being added up.
 

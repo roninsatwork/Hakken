@@ -5,6 +5,8 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { stepOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 
 /**
@@ -38,10 +40,8 @@ export function pageForPath(pathname: string, siteId: string): BingPageId {
   return under.sort((left, right) => right.segment.length - left.segment.length)[0]?.id ?? "performance";
 }
 
-/** The ready-made periods (§4.4): what the dates choice offers. */
-export const PERIODS = ["7", "30", "90", "182", "365"] as const;
-export type Period = (typeof PERIODS)[number];
-export const PERIOD_KEY = "period";
+/** The date menu's period in the address: the seven calendar periods every section shares (calendar-periods-plan.md, phase 5). */
+export const PERIOD_KEY = CALENDAR_PERIOD_KEY;
 
 /** How the clicks and impressions chart steps. */
 export const STEPS = ["day", "week", "month"] as const;
@@ -81,22 +81,20 @@ export function useBingStatus() {
   return useQuery(api.bingWebmasterConnect.bingStatus, { siteId });
 }
 
-/** The dates chosen: the last 90 days unless another is, as drawn. */
-export function usePeriod(): [Period, (next: Period) => void] {
-  return useSiteParam<Period>(PERIOD_KEY, "90", PERIODS);
+/** The calendar period chosen: the one the website opens on (rule 6) unless another is. */
+export function usePeriod(opening?: CalendarPeriod): [CalendarPeriod, (next: CalendarPeriod) => void] {
+  return useCalendarPeriod(opening);
 }
 
-export function useStep(): [Step, (next: Step) => void] {
-  return useSiteParam<Step>(STEP_KEY, "week", STEPS);
+/** The chart's step: the period's own (rule 8) unless another was chosen. */
+export function useStep(period: CalendarPeriod): [Step, (next: Step) => void] {
+  return useSiteParam<Step>(STEP_KEY, stepOf(period), STEPS);
 }
 
 /** Whether the website has figures from Bing to show. */
 export function hasFigures(status: BingStatus): boolean {
   return Boolean(status.connection?.newestDay) && status.connection?.status !== "CHOOSING" && !status.connection?.clearing;
 }
-
-/** The days a period covers, for the reads that take days. */
-export const DAYS_OF: Record<Period, number> = { "7": 7, "30": 30, "90": 90, "182": 182, "365": 365 };
 
 /** Fewer impressions than this and a rate or position is greyed (BW14). */
 export const FEW_IMPRESSIONS = 10;

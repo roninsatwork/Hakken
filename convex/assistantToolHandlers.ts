@@ -18,16 +18,15 @@ const NO_COMPANY_FIGURES = {
 };
 
 /**
- * Search Console is read over the screens' calendar periods. A conversation
- * set up before they came may still ask in days: the nearest period stands in
- * — last week, last month or last quarter.
+ * Search Console and Bing are read over the screens' calendar periods. A conversation set up before they came may
+ * still ask in days: the nearest period stands in — last week, last month, last quarter or this year.
  */
-function consolePeriod(args: Record<string, unknown>): CalendarPeriod {
+function periodArg(args: Record<string, unknown>): CalendarPeriod {
   const period = optionalStringArg(args, "period");
   if (period && isCalendarPeriod(period)) return period;
   const days = numberArg(args, "days");
   if (days === undefined) return OPENING_PERIOD;
-  return days <= 7 ? "lastWeek" : days <= 31 ? "lastMonth" : "lastQuarter";
+  return days <= 7 ? "lastWeek" : days <= 31 ? "lastMonth" : days <= 92 ? "lastQuarter" : "thisYear";
 }
 
 /** Google Analytics is read over its ready-made periods: 7, 30 or 90 days, or 12 months, the nearest asked for. */
@@ -77,7 +76,7 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     return await input.ctx.runQuery(internal.assistantReads.searchConsoleInternal, {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
-      period: consolePeriod(input.args),
+      period: periodArg(input.args),
       ...(page ? { page } : {}),
     });
   },
@@ -137,14 +136,12 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     if (!(BING_SCREENS as readonly string[]).includes(screen)) {
       return { ok: false, problem: `screen must be one of: ${BING_SCREENS.join(", ")}.` };
     }
-    const asked = numberArg(input.args, "days") ?? 90;
-    const days = ([7, 30, 90, 182, 365] as const).reduce((best, option) => (Math.abs(option - asked) < Math.abs(best - asked) ? option : best), 90 as 7 | 30 | 90 | 182 | 365);
     const search = optionalStringArg(input.args, "search");
     return await input.ctx.runQuery(internal.assistantBingReads.bingWebmasterInternal, {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
       screen: screen as (typeof BING_SCREENS)[number],
-      days,
+      period: periodArg(input.args),
       ...(search ? { search } : {}),
     });
   },

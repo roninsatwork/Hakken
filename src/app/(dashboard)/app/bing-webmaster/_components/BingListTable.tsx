@@ -12,7 +12,7 @@ import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/Downlo
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
-import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../sites/_components/useSiteSort";
@@ -78,7 +78,7 @@ function BingListTable({ kind, head }: {
   head?: (answer: BingListAnswer | undefined) => React.ReactNode;
 }) {
   const t = useTranslations("bingWebmaster.table");
-  const tf = useTranslations("bingWebmaster.filters");
+  const tperiod = useTranslations("common.periods");
   const tk = useTranslations("bingWebmaster.keywords");
   const tp = useTranslations("bingWebmaster.pages");
   const router = useRouter();
@@ -95,8 +95,8 @@ function BingListTable({ kind, head }: {
   const base = {
     siteId,
     list,
-    // Bing against Google reads the 90 days, Search Console's comparable period.
-    period: kind === "versus" ? "90" : period,
+    // Bing against Google reads the menu's period too: Search Console keeps the seven (calendar-periods-plan.md).
+    period,
     ...(settled ? { q: settled } : {}),
     ...(kind === "keywords" && band !== "all" ? { band } : {}),
     ...(kind === "keywords" && google !== "all" ? { google } : {}),
@@ -143,7 +143,12 @@ function BingListTable({ kind, head }: {
         filters={filters}
         cardHeader={
           <TableBar footer={paged.footer} noun={kind === "pages" ? "pages" : "keywords"} actions={<BingDownload args={base} kind={kind} />}>
-            <span className="text-[12px] text-secondary">{t("bar", { period: tf(`periods.${base.period}`) })}</span>
+            {/* A period is the Bing weeks ending inside it, so its days are named (calendar-periods-plan.md, phase 5). */}
+            <span className="text-[12px] text-secondary">
+              {paged.result?.from && paged.result.to
+                ? t("barWeeks", { period: tperiod(base.period), from: formatDay(paged.result.from), to: formatDay(paged.result.to) })
+                : t("bar", { period: tperiod(base.period) })}
+            </span>
           </TableBar>
         }
         empty={{ icon: <SearchX className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}

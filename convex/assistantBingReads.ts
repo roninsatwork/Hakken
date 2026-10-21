@@ -5,6 +5,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { readCrawling, readList, readPerformance, shownRows } from "./bingWebmasterReads";
 import { pathOfAddress } from "./utils/sees/analytics";
 import { BING_SCREENS, type BingScreen } from "./utils/bingScreens";
+import { calendarPeriodValidator } from "./utils/calendarPeriods";
 
 /**
  * Every Bing Webmaster screen, as the Assistant reads it
@@ -24,12 +25,16 @@ const percent = (share: number | null) => (share === null ? null : Math.round(sh
 
 const SEGMENT: Record<BingScreen, string> = { performance: "", keywords: "keywords", pages: "pages", versus: "against-google", crawling: "crawling" };
 
+/** What the Assistant is told for a period Bing has sent none of yet (rule 9). */
+const NO_DAYS_YET = "Bing hasn't sent any of this period's days yet. Ask about the period before.";
+
 export const bingWebmasterInternal = internalQuery({
   args: {
     companyId: v.id("companies"),
     website: v.string(),
     screen: v.union(...BING_SCREENS.map((screen) => v.literal(screen))),
-    days: v.union(v.literal(7), v.literal(30), v.literal(90), v.literal(182), v.literal(365)),
+    /** One of the screens' calendar periods (calendar-periods-plan.md, phase 5). */
+    period: calendarPeriodValidator,
     /** Words to find in a list's keywords or pages. */
     search: v.optional(v.string()),
   },
@@ -45,21 +50,21 @@ export const bingWebmasterInternal = internalQuery({
     if (!connection?.newestDay) {
       return { ok: false, problem: `${host} has no Bing Webmaster figures yet: it is not connected, or its first collection has not finished.` };
     }
-    const period = String(args.days) as "7" | "30" | "90" | "182" | "365";
+    const period = args.period;
     const link = `/app/bing-webmaster/${hold._id}${SEGMENT[args.screen] ? `/${SEGMENT[args.screen]}` : ""}?period=${period}`;
     const base = {
       ok: true,
       website: host,
       screen: args.screen,
-      days: args.days,
+      period,
       figuresTo: connection.newestDay,
       link,
       rule: "These are the figures the screen shows. Bing's figures cover every country; Google's beside them are the website's main home country's web results, from Search Console. Give them with the link, in plain words.",
     };
 
     if (args.screen === "performance") {
-      const figures = await readPerformance(ctx, hold._id, args.days);
-      if (!figures) return { ...base, figures: null };
+      const figures = await readPerformance(ctx, hold._id, period);
+      if (!figures) return { ...base, figures: null, note: NO_DAYS_YET };
       const share = figures.google && figures.totals.clicks + figures.google.clicks > 0 ? figures.totals.clicks / (figures.totals.clicks + figures.google.clicks) : null;
       return {
         ...base,
@@ -75,8 +80,8 @@ export const bingWebmasterInternal = internalQuery({
     }
 
     if (args.screen === "crawling") {
-      const crawling = await readCrawling(ctx, hold._id, args.days);
-      if (!crawling) return { ...base, crawling: null };
+      const crawling = await readCrawling(ctx, hold._id, period);
+      if (!crawling) return { ...base, crawling: null, note: NO_DAYS_YET };
       return {
         ...base,
         from: crawling.from,
@@ -95,8 +100,8 @@ export const bingWebmasterInternal = internalQuery({
 
     const list = await readList(ctx, hold._id, {
       list: args.screen === "pages" ? "page" : "query",
-      // Bing against Google is the 90 days, Search Console's comparable period.
-      period: args.screen === "versus" ? "90" : period,
+      // Bing against Google reads the same period: Search Console keeps the seven too.
+      period,
       ...(args.search ? { q: args.search } : {}),
       sort: args.screen === "versus" ? "gap" : "clicks",
     });

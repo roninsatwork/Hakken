@@ -61,7 +61,7 @@ describe.skipIf(ON_GITHUB)("Bing Webmaster at five times morehandles.co.uk", () 
       for (const [part, packed] of packBingRows(rows).entries()) {
         const count = packed.keys.length > 0 ? rows.slice(part * 2_000, part * 2_000 + 2_000).length : 0;
         await ctx.db.insert("bingPeriods", {
-          companyWebsiteId: hold, list: "query", period: "90", which: "NOW", part, from: "2026-07-14", to: "2026-10-11", ...packed,
+          companyWebsiteId: hold, list: "query", period: "lastQuarter", which: "NOW", part, from: "2026-06-29", to: "2026-09-27", ...packed,
           googleClicks: packNumbers(Array.from({ length: count }, (_, at) => (at % 3 === 0 ? -1 : at % 500))),
           googleImpressions: packNumbers(Array.from({ length: count }, (_, at) => (at % 3 === 0 ? -1 : 5_000 - (at % 500)))),
           googlePositionSums: packNumbers(Array.from({ length: count }, (_, at) => (at % 3 === 0 ? -1 : (5_000 - (at % 500)) * ((at % 30) + 1)))),
@@ -83,20 +83,20 @@ describe.skipIf(ON_GITHUB)("Bing Webmaster at five times morehandles.co.uk", () 
     return { bytes: meter.bytes(), holds: held.bytes };
   });
 
-  test("Keywords for 90 days — within half the limit", async () => {
-    const read = await reads({ list: "query", period: "90" });
+  test("Keywords for last quarter — within half the limit", async () => {
+    const read = await reads({ list: "query", period: "lastQuarter" });
     expect(read.bytes).toBeLessThan(HALF);
     expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
-  test("Keywords for 90 days, searched — within three quarters", async () => {
-    const read = await reads({ list: "query", period: "90", q: "brass lever" });
+  test("Keywords for last quarter, searched — within three quarters", async () => {
+    const read = await reads({ list: "query", period: "lastQuarter", q: "brass lever" });
     expect(read.bytes).toBeLessThan(THREE_QUARTERS);
     expect(read.holds).toBeLessThan(THREE_QUARTERS_MEMORY);
   });
 
   test("Bing against Google, by the widest gap — within half the limit", async () => {
-    const read = await reads({ list: "query", period: "90", sort: "gap" });
+    const read = await reads({ list: "query", period: "lastQuarter", sort: "gap" });
     expect(read.bytes).toBeLessThan(HALF);
     expect(read.holds).toBeLessThan(HALF_MEMORY);
   });

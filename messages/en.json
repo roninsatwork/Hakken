@@ -18094,7 +18094,7 @@
       "title": "Bing Webmaster",
       "description": "What Bing itself counted for your own websites: real clicks and impressions from Bing, beside Google's. Open one to see them.",
       "searchPlaceholder": "Find a website…",
-      "caption": "The last 90 days to Bing's newest day",
+      "caption": "Last month",
       "columns": {
         "website": "Website",
         "status": "Status",
@@ -18132,14 +18132,6 @@
       "figuresTo": "Bing's figures to {day}. Its keywords and pages come a week at a time."
     },
     "filters": {
-      "period": "Dates",
-      "periods": {
-        "7": "Last week",
-        "30": "Last 30 days",
-        "90": "Last 90 days",
-        "182": "Last 6 months",
-        "365": "Last year"
-      },
       "step": "Step",
       "steps": {
         "day": "Daily",
@@ -18281,6 +18273,7 @@
       "downloading": "Downloading…",
       "downloadFailed": "The download didn't work. Try again.",
       "bar": "{period} · every country",
+      "barWeeks": "{period}: Bing's weeks from {from} to {to} · every country",
       "fewImpressions": "Under 10 impressions: too few to trust",
       "filters": {
         "position": "Position",
@@ -18379,8 +18372,8 @@
     "seen": {
       "websites": {
         "none": "Connect Bing Webmaster Tools to see what Bing itself counts for your websites.",
-        "top": "{host} brought {clicks} clicks from Bing in the last 90 days: {share} of its clicks from search, beside Google's {google}.",
-        "topNoGoogle": "{host} brought {clicks} clicks from Bing in the last 90 days."
+        "top": "{host} brought {clicks} clicks from Bing last month: {share} of its clicks from search, beside Google's {google}.",
+        "topNoGoogle": "{host} brought {clicks} clicks from Bing last month."
       },
       "performance": {
         "says": "Bing showed your website {impressions} times in these dates, and people clicked {clicks} times.",

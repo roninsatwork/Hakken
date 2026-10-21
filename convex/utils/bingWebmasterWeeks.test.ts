@@ -10,6 +10,7 @@ import {
   pageRefOf,
   positionOfRow,
   rowsOfBingPart,
+  shiftBingDay,
   weeksOf,
 } from "./bingWebmasterWeeks";
 
@@ -52,13 +53,23 @@ describe("adding weeks up", () => {
     expect(positionOfRow({ impressions: 0, positionSum: 0 })).toBeNull();
   });
 
-  test("a period is its newest weeks, and the period before it the weeks before those", () => {
-    const held = ["2026-10-04", "2026-09-27", "2026-09-20", "2026-09-13", "2026-09-06", "2026-08-30", "2026-08-23", "2026-08-16", "2026-08-09"];
-    expect(weeksOf(held, "7", "NOW")).toEqual({ weeks: ["2026-10-04"], from: "2026-09-28", to: "2026-10-04" });
-    expect(weeksOf(held, "30", "NOW")).toEqual({ weeks: ["2026-10-04", "2026-09-27", "2026-09-20", "2026-09-13"], from: "2026-09-07", to: "2026-10-04" });
-    expect(weeksOf(held, "30", "BEFORE")?.weeks).toEqual(["2026-09-06", "2026-08-30", "2026-08-23", "2026-08-16"]);
-    expect(weeksOf(held, "90", "BEFORE")).toBeNull();
-    expect(weeksOf([], "7", "NOW")).toBeNull();
+  test("a calendar period is the Bing weeks ending inside it, set against the weeks of the span before (calendar-periods-plan.md, phase 5)", () => {
+    // Bing's weeks dated by their last day, Sundays here, from 28 June to 18 October; today Wednesday 21 October.
+    const held = Array.from({ length: 17 }, (_, index) => shiftBingDay("2026-06-28", index * 7));
+    const today = "2026-10-21";
+    expect(weeksOf(held, "lastWeek", "NOW", today)).toEqual({ weeks: ["2026-10-18"], from: "2026-10-12", to: "2026-10-18" });
+    expect(weeksOf(held, "lastWeek", "BEFORE", today)?.weeks).toEqual(["2026-10-11"]);
+    // No Bing week has ended inside this week yet.
+    expect(weeksOf(held, "thisWeek", "NOW", today)).toBeNull();
+    // A month's first week may begin in the month before, and the list says so by its dates.
+    expect(weeksOf(held, "lastMonth", "NOW", today)).toEqual({ weeks: ["2026-09-27", "2026-09-20", "2026-09-13", "2026-09-06"], from: "2026-08-31", to: "2026-09-27" });
+    expect(weeksOf(held, "lastMonth", "BEFORE", today)?.weeks).toEqual(["2026-08-30", "2026-08-23", "2026-08-16", "2026-08-09", "2026-08-02"]);
+    // A month still going is set against the same days of the one before: 1–18 September for 1–18 October.
+    expect(weeksOf(held, "thisMonth", "NOW", today)?.weeks).toEqual(["2026-10-18", "2026-10-11", "2026-10-04"]);
+    expect(weeksOf(held, "thisMonth", "BEFORE", today)?.weeks).toEqual(["2026-09-13", "2026-09-06"]);
+    expect(weeksOf(held, "lastQuarter", "NOW", today)?.weeks).toHaveLength(13);
+    expect(weeksOf(held, "lastQuarter", "BEFORE", today)?.weeks).toEqual(["2026-06-28"]);
+    expect(weeksOf([], "lastWeek", "NOW", today)).toBeNull();
   });
 
   test("weeks are kept 13 months behind the newest", () => {
