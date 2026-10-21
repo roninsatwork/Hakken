@@ -1,3 +1,4 @@
+import { weekStart } from "@/convex/utils/searchConsolePacks";
 import type { Step } from "./useAnalytics";
 
 /**
@@ -31,4 +32,19 @@ export function coarserThanStep(first: string, last: string, step: Step): boolea
 export function perStep(value: number, first: string, last: string, step: Step): number {
   if (!coarserThanStep(first, last, step)) return value;
   return (value * (step === "day" ? 1 : 7)) / daysSpanned(first, last);
+}
+
+/**
+ * The bucket a point is drawn in at the step chosen: its day, its week's Monday, or its month. A point held as a week
+ * that runs into the next month is that month's when most of its days are: the week of 29 December to 4 January is
+ * January's (calendar periods audit, 2026-10-21: This Year's monthly charts began with a "December 2025" of three days).
+ */
+export function stepKey(step: Step, first: string, last: string = first): string {
+  if (step === "day") return first;
+  if (step === "week") return weekStart(first);
+  const month = first.slice(0, 7);
+  const lastMonth = last.slice(0, 7);
+  if (lastMonth === month) return month;
+  const next = `${lastMonth}-01`;
+  return daysSpanned(first, shiftDays(next, -1)) >= daysSpanned(next, last) ? month : lastMonth;
 }

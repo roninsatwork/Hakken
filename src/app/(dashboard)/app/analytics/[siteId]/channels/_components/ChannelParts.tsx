@@ -3,7 +3,6 @@
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { weekStart } from "@/convex/utils/searchConsolePacks";
 import { NO_PAGE_ADDRESS as NOT_SET, NO_PAGE_KIND, OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
@@ -17,7 +16,7 @@ import { SearchConsoleChartCard } from "../../../../search-console/_components/S
 import { usePageKinds } from "../../../../_components/usePageKinds";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { formatPercent, formatTime, pathOf } from "../../../_components/analyticsFormat";
-import { coarserThanStep, perStep, shiftDays } from "../../../_components/stepScale";
+import { coarserThanStep, perStep, shiftDays, stepKey } from "../../../_components/stepScale";
 import { useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, useStep, type Step } from "../../../_components/useAnalytics";
 
 /**
@@ -117,7 +116,7 @@ function bucketsOf(days: readonly Day[], step: Step, shift = 0): Map<string, Buc
   for (const day of days) {
     const first = shiftDays(day.day, shift);
     const last = shiftDays(day.lastDay ?? day.day, shift);
-    const key = step === "day" ? first : step === "week" ? weekStart(first) : first.slice(0, 7);
+    const key = stepKey(step, first, last);
     const bucket = buckets.get(key) ?? { first, last, visits: 0, seconds: 0, conversions: 0 };
     if (first < bucket.first) bucket.first = first;
     if (last > bucket.last) bucket.last = last;

@@ -2,14 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { GOOGLE_AI_CHANNEL } from "@/convex/utils/aiAssistants";
-import { weekStart } from "@/convex/utils/searchConsolePacks";
 import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { SITE_SERIES_COLOURS, SiteBarChart, type SiteSeries } from "../../../../sites/_components/SiteCharts";
 import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatMonth, formatNumber, formatShortDay, toCsv } from "../../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../../../search-console/_components/SearchConsoleChartCard";
 import { useAnalyticsStatus, usePeriod, useStep } from "../../../_components/useAnalytics";
-import { coarserThanStep, perStep } from "../../../_components/stepScale";
+import { coarserThanStep, perStep, stepKey } from "../../../_components/stepScale";
 import type { ChannelDays, ChannelTop } from "./ChannelParts";
 
 /**
@@ -38,7 +37,7 @@ export function AssistantsChart({ days }: { days: ChannelDays | undefined }) {
   ];
   const buckets = new Map<string, { first: string; last: string; visits: number[] }>();
   for (const day of days?.now ?? []) {
-    const key = step === "day" ? day.day : step === "week" ? weekStart(day.day) : day.day.slice(0, 7);
+    const key = stepKey(step, day.day, day.lastDay);
     const bucket = buckets.get(key) ?? { first: day.day, last: day.day, visits: series.map(() => 0) };
     const last = day.lastDay ?? day.day;
     if (last > bucket.last) bucket.last = last;

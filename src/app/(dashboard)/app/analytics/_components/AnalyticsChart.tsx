@@ -3,7 +3,6 @@
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { weekStart } from "@/convex/utils/searchConsolePacks";
 import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
@@ -12,7 +11,7 @@ import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_co
 import { currencySign, pathOf } from "./analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, type Step } from "./useAnalytics";
 import type { VisitorList } from "./AnalyticsListScreen";
-import { coarserThanStep, perStep } from "./stepScale";
+import { coarserThanStep, perStep, stepKey } from "./stepScale";
 
 /** One day of the chart: the website's figures, and each counted event's own count. */
 export type ChartDay = {
@@ -39,7 +38,7 @@ const MEASURE_COLOURS: Record<string, string> = {
 export function stepped(days: readonly ChartDay[], step: Step, eventCount = 0): Array<Record<string, unknown>> {
   const buckets = new Map<string, ChartDay & { first: string; last: string }>();
   for (const day of [...days].sort((left, right) => left.day.localeCompare(right.day))) {
-    const key = step === "day" ? day.day : step === "week" ? weekStart(day.day) : day.day.slice(0, 7);
+    const key = stepKey(step, day.day, day.lastDay);
     const bucket = buckets.get(key) ?? { day: key, first: day.day, last: day.day, visits: 0, engaged: 0, views: 0, conversions: 0, value: 0, events: Array<number>(eventCount).fill(0) };
     const last = day.lastDay ?? day.day;
     if (last > bucket.last) bucket.last = last;
@@ -279,7 +278,7 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
   ].map((entry, index) => (marked ? { ...entry, marks: `dot${index}` } : entry));
   const buckets = new Map<string, { first: string; last: string; visits: number[]; conversions: number[] }>();
   for (const point of [...points].sort((left, right) => left.day.localeCompare(right.day))) {
-    const key = step === "day" ? point.day : step === "week" ? weekStart(point.day) : point.day.slice(0, 7);
+    const key = stepKey(step, point.day, point.lastDay);
     const bucket = buckets.get(key) ?? { first: point.day, last: point.day, visits: series.map(() => 0), conversions: series.map(() => 0) };
     const last = point.lastDay ?? point.day;
     if (last > bucket.last) bucket.last = last;
@@ -397,7 +396,7 @@ function viewsByStep(step: Step, series: readonly SiteSeries[], lines: ReadonlyA
   const buckets = new Map<string, { first: string; last: string; views: number[] }>();
   lines.forEach((points, line) => {
     for (const point of points) {
-      const key = step === "day" ? point.day : step === "week" ? weekStart(point.day) : point.day.slice(0, 7);
+      const key = stepKey(step, point.day, point.lastDay);
       const bucket = buckets.get(key) ?? { first: point.day, last: point.day, views: series.map(() => 0) };
       if (point.day < bucket.first) bucket.first = point.day;
       const last = point.lastDay ?? point.day;

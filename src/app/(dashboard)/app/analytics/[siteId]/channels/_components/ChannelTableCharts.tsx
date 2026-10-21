@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { weekStart } from "@/convex/utils/searchConsolePacks";
 import { SITE_SERIES_COLOURS, SiteBarChart, type SiteSeries } from "../../../../sites/_components/SiteCharts";
 import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatMonth, formatShortDay, toCsv } from "../../../../sites/_components/siteFormat";
@@ -10,7 +9,7 @@ import { ChannelsChart } from "../../../_components/AnalyticsChart";
 import { useEventName } from "../../../_components/useEventName";
 import { useAnalyticsStatus, usePeriod, useStep, type Step } from "../../../_components/useAnalytics";
 import { useBeforeName, type ChannelDays } from "./ChannelParts";
-import { coarserThanStep, perStep } from "../../../_components/stepScale";
+import { coarserThanStep, perStep, stepKey } from "../../../_components/stepScale";
 
 /**
  * The charts above a channel's table views (docs/plans/active/ga-channel-pages-plan.md
@@ -20,16 +19,16 @@ import { coarserThanStep, perStep } from "../../../_components/stepScale";
 
 /** Each key event's count a bucket, the span before first and faded, then the dates chosen. */
 function eventBuckets(days: ChannelDays, step: Step): Array<Record<string, unknown>> {
-  const key = (day: string) => (step === "day" ? day : step === "week" ? weekStart(day) : day.slice(0, 7));
+  const key = (day: { day: string; lastDay?: string }) => stepKey(step, day.day, day.lastDay);
   const rows: Array<Record<string, unknown>> = [];
   for (const [span, list] of [["before", days.before], ["now", days.now]] as const) {
     const buckets = new Map<string, { first: string; last: string; counts: number[] }>();
     for (const day of list) {
-      const bucket = buckets.get(key(day.day)) ?? { first: day.day, last: day.day, counts: days.events.map(() => 0) };
+      const bucket = buckets.get(key(day)) ?? { first: day.day, last: day.day, counts: days.events.map(() => 0) };
       const last = day.lastDay ?? day.day;
       if (last > bucket.last) bucket.last = last;
       day.events.forEach((count, index) => (bucket.counts[index] += count));
-      buckets.set(key(day.day), bucket);
+      buckets.set(key(day), bucket);
     }
     for (const [at, bucket] of buckets) {
       rows.push(datedRow(

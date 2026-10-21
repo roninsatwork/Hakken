@@ -1,7 +1,6 @@
-import { weekStart } from "@/convex/utils/searchConsolePacks";
 import { datedRow, type DatedRow } from "../../sites/_components/datedRows";
 import { formatMonth, formatShortDay } from "../../sites/_components/siteFormat";
-import { coarserThanStep, daysSpanned } from "./stepScale";
+import { coarserThanStep, daysSpanned, stepKey } from "./stepScale";
 import type { Step } from "./useAnalytics";
 
 /**
@@ -57,7 +56,7 @@ export function beforeOver(points: readonly CostPoint[], from: string, to: strin
 export function visitsPerConversion(now: readonly CostPoint[], before: readonly CostPoint[] | null, step: Step): CostRow[] {
   const buckets = new Map<string, { first: string; last: string; visits: number; conversions: number }>();
   for (const point of [...now].sort((left, right) => left.day.localeCompare(right.day))) {
-    const key = step === "day" ? point.day : step === "week" ? weekStart(point.day) : point.day.slice(0, 7);
+    const key = stepKey(step, point.day, point.lastDay);
     const bucket = buckets.get(key) ?? { first: point.day, last: point.day, visits: 0, conversions: 0 };
     const last = point.lastDay ?? point.day;
     if (last > bucket.last) bucket.last = last;
