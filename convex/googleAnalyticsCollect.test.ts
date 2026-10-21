@@ -9,7 +9,7 @@ import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
-import { KEPT_BACK, analyticsWindow, dueJobs, fetchedAfter, finishedDue, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
+import { KEPT_BACK, analyticsWindow, dueJobs, fetchedAfter, finishedDue, insightsYearJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
 import { pageListJobs } from "./googleAnalyticsPageLists";
 import { afterTheHour, jobKey, startGap, startingAt } from "./googleAnalyticsAgentRun";
 import { closeConnection } from "./googleAnalyticsRunEnd";
@@ -173,6 +173,8 @@ describe("which days and lists a run asks for", () => {
     expect(periodRange("lastMonth", "YEAR", NEWEST)).toBeNull();
     // Insights' 12 months a day end on the newest day.
     expect(periodRange("365", "NOW", NEWEST)).toEqual({ from: "2025-10-09", to: NEWEST });
+    // And the 365 days before them, Insights' year before: no day in both.
+    expect(periodRange("365", "YEAR", NEWEST)).toEqual({ from: "2024-10-09", to: "2025-10-08" });
     // Google has sent none of it yet: This Week on a Monday (its newest day the Sunday), This Month and This Quarter on the 1st.
     expect(periodRange("thisWeek", "NOW", "2026-10-11")).toBeNull();
     expect(periodRange("lastWeek", "NOW", "2026-10-11")).toEqual({ from: "2026-10-05", to: "2026-10-11" });
@@ -203,6 +205,9 @@ describe("which days and lists a run asks for", () => {
       ...Array(LISTS).fill("NOW"), ...Array(LISTS).fill("BEFORE"), ...Array(LISTS).fill("YEAR"),
     ]);
     expect(first.filter((job) => job.list === "series")).toEqual([{ list: "series", period: "365", which: "NOW" }]);
+    // Insights' own 12 months, asked by the weekly run after the rest: seven lists, now and a year before (option C).
+    expect(insightsYearJobs()).toHaveLength(7 * 2);
+    expect(insightsYearJobs().every((job) => job.period === "365" && (job.which === "NOW" || job.which === "YEAR"))).toBe(true);
     // A shop's products beside them.
     expect(dueJobs({ weeklyPeriodsAt: undefined, shop: true }, NOW, [], NEWEST, finished)).toHaveLength((2 + 2 + 3 + 2 + 2 + 2 + 3) * (LISTS + 1) + 1);
 

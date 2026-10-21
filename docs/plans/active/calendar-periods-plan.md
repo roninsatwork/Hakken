@@ -4,9 +4,11 @@ Agreed with Anthony on 2026-10-20, point by point in conversation. Built on `dev
 Sites (2), Clarity (3), Search Console (4), Bing (5), Google Analytics (6) and the Settings overview and Governance
 (7), with rule 6's This-month fallback. Search Console's "no days yet" line
 and Volatility's dated labels were found unbuilt after its first commit and finished in a second; its charts' 52 weeks
-moved to the start-up fill (8), because raising the setting is what starts their download. Still to run: the start-up fill (8), the full
-check (9) and the audit (10). Until the start-up fill runs,
-a Search Console list for a period not yet built says it is being added up.
+moved to the start-up fill (8), because raising the setting is what starts their download. The start-up fill (8) ran
+on 21 October on Anthony's "runit all", then the full check (9) and the audit (10), whose record is
+[calendar-periods-audit-2026-10-21.md](calendar-periods-audit-2026-10-21.md). On his word the same day ("3 yes") the
+answers prepared for the old 7, 30, 90 and 365 days were deleted and the database now refuses them; and Insights'
+12 months became its own weekly lists (below, "option C").
 
 He asked: "i want to change the options in the data picker across the entire user frontend — This week, Last Week,
 This Month, Last Month, This Quarter, Last Quarter, This Year, Custom Date Range." Custom was then removed ("Ok remove
@@ -176,12 +178,15 @@ Where the build had to choose, and why:
 - **Whole-year figures** (rule 10) — a channel's worth, its "growing but falling now" year, the actions before
   converting — are added up from the months held. Ranking those actions adds each day's people: a busyness, not a
   count of people.
-- **Insights' 12 months come from This Year, not 12 months added up** — a departure from this plan's wording, for
-  Anthony's word. Insights' facts carry people, which can't be added up across days, so they read Google's own answer
-  for the year so far, set against the same days last year. Its 30 and 90 days are Last Month and Last Quarter. Each
-  fact keeps its real dates.
+- **Insights' 12 months are its own weekly lists** ("option C", Anthony, 2026-10-21: "Yes if it's optimised for speed
+  and storage"), replacing the first build's This Year. Insights' facts carry people, which can't be added up across
+  days, so the weekly run asks Google for the last 12 months and the 365 days before them, seven lists (total,
+  channel, first channel, landing pages, landing pages by channel, events, new or returning), every device only —
+  14 asks a week a website, nothing by device, no "visits that converted" ask. Its 30 and 90 days are Last Month
+  and Last Quarter. Each fact keeps its real dates.
 - **92 days kept**: a website already holding 90 counts as collected; the two more fill in over the next two nights,
-  rather than every website fetching its days again.
+  rather than every website fetching its days again. Until they have, a website's Last Quarter and This Year charts
+  draw nothing (Hurtwood on 21 October; the audit, finding 5).
 - **A shop** is noted from this quarter's or last quarter's events; it stops being one only when a whole quarter ended
   without any of the four steps.
 

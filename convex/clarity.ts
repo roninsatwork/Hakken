@@ -67,7 +67,7 @@ export const CLARITY_MONTHS_KEPT = 13;
  * 3). The 7, 30 and 90 days before them (`LAST_*`, `BEFORE_*`) are no longer
  * built; those kept wait to be cleared on Anthony's word.
  */
-type Span = "DAY" | "MONTH" | "PERIOD" | "PERIOD_BEFORE" | "LAST_7" | "LAST_30" | "LAST_90" | "BEFORE_7" | "BEFORE_30" | "BEFORE_90";
+type Span = "DAY" | "MONTH" | "PERIOD" | "PERIOD_BEFORE";
 /** A record's kind: the day's or period's own figures (none), or the visits by source or by browser. */
 export type ClarityKind = Doc<"clarityFigures">["kind"];
 const SPLIT_KINDS = ["SOURCES", "BROWSERS"] as const;

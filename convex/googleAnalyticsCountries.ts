@@ -5,6 +5,8 @@ import type { Doc } from "./_generated/dataModel";
 import { countriesKeptReady, mainConsoleCountry } from "./searchConsoleCountries";
 import { countryOfKey } from "./googleAnalyticsLists";
 import { countryOfDayDevice } from "./utils/analyticsHistory";
+import { INSIGHTS_YEAR_LISTS } from "./googleAnalyticsJobs";
+import { SERIES_PERIOD } from "./googleAnalyticsSchema";
 
 /**
  * Google Analytics keeps a website's home countries, and only those
@@ -69,10 +71,21 @@ export async function prepareAnalyticsCountry(ctx: MutationCtx, connection: Doc<
  */
 const RETIRED_LISTS = new Set(["eventSeries", "campaignSeries", "visitorSeries", "productSeries"]);
 const KEPT_SERIES = "series|365|NOW|";
+/** The day counts the calendar periods replaced (calendar-periods-plan.md): their lists go, Anthony 2026-10-21 ("yes"). */
+const RETIRED_PERIODS = new Set(["7", "30", "90"]);
 
-function retired(key: string): boolean {
-  const list = key.split("|")[0];
-  return RETIRED_LISTS.has(list) || (list === "series" && key !== KEPT_SERIES);
+/**
+ * A list no run keeps: a retired list or day count, or a 12-month list other than Insights' own — those lists, every
+ * device, the main home country, now and a year before (option C, `INSIGHTS_YEAR_LISTS`).
+ */
+export function retired(key: string): boolean {
+  const [list, period, which, device, country] = key.split("|");
+  if (RETIRED_LISTS.has(list) || (list === "series" && key !== KEPT_SERIES)) return true;
+  if (RETIRED_PERIODS.has(period)) return true;
+  if (period === SERIES_PERIOD && list !== "series") {
+    return !((INSIGHTS_YEAR_LISTS as readonly string[]).includes(list) && (which === "NOW" || which === "YEAR") && !device && !country);
+  }
+  return false;
 }
 
 /**

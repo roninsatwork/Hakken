@@ -151,6 +151,65 @@ async function fillChartPeriods(ctx: ActionCtx, target: Target, from: string): P
   return problems;
 }
 
+/** The stretches of days missing from a website's web results between two days: each a first and last day. */
+export const historyGaps = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
+  returns: v.array(v.object({ from: v.string(), to: v.string() })),
+  handler: async (ctx, args) => {
+    const held = new Set((await ctx.db
+      .query("searchConsoleDays")
+      .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("country", undefined).eq("searchType", "web").gte("day", args.from).lte("day", args.to))
+      .take(GAP_DAYS_READ)).map((row) => row.day));
+    const gaps: Array<{ from: string; to: string }> = [];
+    for (let day = args.from; day <= args.to; day = shiftDay(day, 1)) {
+      if (held.has(day)) continue;
+      const last = gaps.at(-1);
+      if (last && shiftDay(last.to, 1) === day) last.to = day;
+      else gaps.push({ from: day, to: day });
+    }
+    return gaps;
+  },
+});
+
+/** Days read to find the gaps: Google's sixteen months and some. */
+const GAP_DAYS_READ = 600;
+
+/**
+ * The days missing inside a website's history asked of Google again, a gap an ask for each kind of result, and written
+ * where none is held (the calendar periods audit, 2026-10-21: morehandles.co.uk held eight months less than its
+ * history said, so This Year read short). A day Google has no figures for comes back as none and stays a gap.
+ */
+export const refetchHistoryGaps = internalAction({
+  args: { connectionId: v.id("searchConsoleConnections") },
+  returns: v.object({ written: v.number(), gaps: v.array(v.object({ from: v.string(), to: v.string() })), problems: v.array(v.string()) }),
+  handler: async (ctx, args): Promise<{ written: number; gaps: Array<{ from: string; to: string }>; problems: string[] }> => {
+    const target = await ctx.runQuery(internal.searchConsoleHistoryDays.historyTarget, { connectionId: args.connectionId, again: true });
+    if (!target) return { written: 0, gaps: [], problems: [] };
+    const gaps: Array<{ from: string; to: string }> = await ctx.runQuery(internal.searchConsoleHistoryDays.historyGaps, {
+      companyWebsiteId: target.companyWebsiteId, from: historyLimitDay(Date.now()), to: shiftDay(target.oldestDay, -1),
+    });
+    const problems: string[] = [];
+    let written = 0;
+    const fetchedAt = Date.now();
+    for (const searchType of target.types) {
+      for (const gap of gaps) {
+        const answer = await askLive(ctx, { connectionId: target.connectionId, property: target.property }, { startDate: gap.from, endDate: gap.to, type: searchType, dimensions: ["date"] });
+        if (!answer.ok) {
+          problems.push(`${searchType} ${gap.from}–${gap.to}: ${answer.problem}`);
+          continue;
+        }
+        const rows = answer.rows
+          .map((row) => ({ day: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))
+          .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && row.day >= gap.from && row.day <= gap.to);
+        for (let start = 0; start < rows.length; start += DAYS_A_WRITE) {
+          written += await ctx.runMutation(internal.searchConsoleHistoryDays.writeHistoryDays, { connectionId: target.connectionId, property: target.property, searchType, rows: rows.slice(start, start + DAYS_A_WRITE), fetchedAt });
+        }
+      }
+    }
+    return { written, gaps, problems };
+  },
+});
+
 /** The charts' weeks and months alone, for a website whose days were fetched before they were filled. */
 export const fetchChartPeriods = internalAction({
   args: { connectionId: v.id("searchConsoleConnections") },

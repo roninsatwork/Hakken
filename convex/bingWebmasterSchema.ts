@@ -48,10 +48,7 @@ export const bingAttemptValidator = v.union(
 export const bingListValidator = v.union(v.literal("query"), v.literal("page"));
 
 /** The ready-made periods: the last week, 30 and 90 days, six months and a year, each ending on Bing's newest week. */
-/**
- * A ready-made period: the seven calendar periods (calendar-periods-plan.md, phase 5). The old day counts stay
- * readable until each website's next build drops its older lists (`dropOlderPeriods`), then go.
- */
+/** A ready-made period: the seven calendar periods (calendar-periods-plan.md, phase 5); the old day counts are gone. */
 export const bingPeriodValidator = v.union(
   v.literal("thisWeek"),
   v.literal("lastWeek"),
@@ -60,11 +57,6 @@ export const bingPeriodValidator = v.union(
   v.literal("thisQuarter"),
   v.literal("lastQuarter"),
   v.literal("thisYear"),
-  v.literal("7"),
-  v.literal("30"),
-  v.literal("90"),
-  v.literal("182"),
-  v.literal("365"),
 );
 
 /** How Bing read the website on one day (`GetCrawlStats`). */

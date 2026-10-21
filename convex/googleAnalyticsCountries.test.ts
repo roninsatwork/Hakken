@@ -9,6 +9,7 @@ import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart } from "./googleAnalyticsLists";
 import { dueJobs } from "./googleAnalyticsCollect";
+import { INSIGHTS_YEAR_LISTS } from "./googleAnalyticsJobs";
 import { PROPERTY, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 
 /**
@@ -220,15 +221,22 @@ describe("home countries", () => {
     fakeGoogle(history(70, TOP));
     await save(admin, siteId);
     await finishScheduled(t);
-    // As held before the charts read the days, weeks and months kept (ga-stored-figures-plan.md SF12).
+    // As held before the charts read the days, weeks and months kept (ga-stored-figures-plan.md SF12), and before the
+    // calendar periods (calendar-periods-plan.md): the old day counts, and 12 months by device or with the year before.
     await t.run(async (ctx) => {
-      for (const key of ["eventSeries|30|NOW|", "visitorSeries|90|NOW|mobile", "series|90|NOW|", "series|365|NOW|mobile"]) {
+      for (const key of ["eventSeries|30|NOW|", "visitorSeries|90|NOW|mobile", "series|90|NOW|", "series|365|NOW|mobile",
+        "total|7|NOW|", "landing|30|BEFORE|mobile", "channel|90|YEAR|", "channel|365|NOW|mobile", "event|365|BEFORE|", "page|365|NOW|"]) {
         await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: 0, from: "2026-09-09", to: "2026-10-08", hash: "x", builtAt: 1 });
       }
     });
     await dailyRun(t, agentId);
     const keys = await keysOf(t, siteId);
     expect(keys.filter((key) => key.includes("Series") || key.startsWith("series|"))).toEqual(["series|365|NOW|"]);
+    expect(keys.filter((key) => ["7", "30", "90"].includes(key.split("|")[1]))).toEqual([]);
+    // Insights' own 12 months, every device, now and a year before, are all that is left of the 365 days.
+    expect(keys.filter((key) => key.split("|")[1] === "365" && !key.startsWith("series|")).sort()).toEqual(
+      INSIGHTS_YEAR_LISTS.flatMap((list) => [`${list}|365|NOW|`, `${list}|365|YEAR|`]).sort(),
+    );
   });
 
   test("a home country taken off the website's list goes after the next collection", async () => {

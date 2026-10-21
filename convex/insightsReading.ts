@@ -7,8 +7,7 @@ import { holdAiSummary } from "./holdLists";
 import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
 import { EVERY_DEVICE, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { channelOf } from "./utils/aiAssistants";
-import type { AnalyticsList, AnalyticsWhich } from "./googleAnalyticsSchema";
-import type { CalendarPeriod } from "./utils/calendarPeriods";
+import { SERIES_PERIOD, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { daysOf } from "./searchConsoleReads";
@@ -150,8 +149,8 @@ const GA_WHICH: Record<AnalyticsWhich, FactWhich> = { NOW: "now", BEFORE: "befor
 /** The periods read, by the names Insights' facts keep, each with the spans kept for it: a year before for the quarter and the year only (I43). */
 type FactPeriod = "30" | "90" | "365";
 
-/** Each fact period's list (calendar-periods-plan.md, phase 6): people can't be added up, so Google's own; facts keep their dates. */
-const GA_SOURCE: Record<FactPeriod, CalendarPeriod> = { "30": "lastMonth", "90": "lastQuarter", "365": "thisYear" };
+/** Each fact period's list: last month, last quarter, and Insights' own last 12 months (calendar-periods-plan.md, option C). */
+const GA_SOURCE: Record<FactPeriod, AnalyticsPeriod> = { "30": "lastMonth", "90": "lastQuarter", "365": SERIES_PERIOD };
 
 const GA_SPANS: ReadonlyArray<{ period: FactPeriod; which: readonly AnalyticsWhich[] }> = [
   { period: "30", which: ["NOW", "BEFORE"] },
@@ -204,7 +203,8 @@ async function analyticsFacts(ctx: Reader, hold: Doc<"companyWebsites">, part: A
   const currency = connection.currency ?? "GBP";
   const country = connection.mainCountry;
   const slot = (list: AnalyticsList, period: FactPeriod, which: AnalyticsWhich) =>
-    readSlot(ctx, hold._id, slotKey(list, GA_SOURCE[period], period === "365" && which === "YEAR" ? "BEFORE" : which, EVERY_DEVICE));
+    // The 12 months are kept now and a year before; their year before stands for the span before too.
+    readSlot(ctx, hold._id, slotKey(list, GA_SOURCE[period], period === "365" && which === "BEFORE" ? "YEAR" : which, EVERY_DEVICE));
   const moneyOf = (row: ListRow) => conversionsOf(row, counted);
   const rowFacts = (prefix: string[], label: string | LandingWords, row: ListRow, span: { from: string; to: string }, period: string, which: FactWhich, withPeople: boolean) => {
     const base = { source: "analytics" as const, from: span.from, to: span.to, country };

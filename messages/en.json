@@ -15488,7 +15488,7 @@
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}.",
-        "shown": "Google showed your website for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, bringing {b} clicks.",
+        "shown": "Google showed your website for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} thisQuarter {this quarter} lastQuarter {last quarter} other {this year}}, bringing {b} clicks from the searches Google names.",
         "clicksUp": "That is {a}% more clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "clicksDown": "That is {a}% fewer clicks {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} thisQuarter {than the same days last quarter} lastQuarter {than the quarter before} other {than the same days last year}}.",
         "checkGoogle": "See whether Google moved, or your pages did.",

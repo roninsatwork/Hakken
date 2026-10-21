@@ -19,20 +19,13 @@ export const clarityStatusValidator = v.union(v.literal("CONNECTED"), v.literal(
  * year read once its days are past keeping; the seven calendar periods the
  * screens read (`PERIOD`, keyed by the period) and what each is set against
  * (`PERIOD_BEFORE`), worked out each morning (calendar-periods-plan.md, phase
- * 3). The 7, 30 and 90 days of before (`LAST_*`, `BEFORE_*`) are no longer
- * built; those kept wait to be cleared on Anthony's word, and then leave here.
+ * 3). The 7, 30 and 90 days they replaced were cleared on Anthony's word (2026-10-21).
  */
 export const claritySpanValidator = v.union(
   v.literal("DAY"),
   v.literal("MONTH"),
   v.literal("PERIOD"),
   v.literal("PERIOD_BEFORE"),
-  v.literal("LAST_7"),
-  v.literal("LAST_30"),
-  v.literal("LAST_90"),
-  v.literal("BEFORE_7"),
-  v.literal("BEFORE_30"),
-  v.literal("BEFORE_90"),
 );
 
 /**

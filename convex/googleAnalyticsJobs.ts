@@ -56,11 +56,12 @@ export function analyticsWindow(newestDay: string | undefined, oldestDay: string
  * A ready-made list's dates (calendar-periods-plan.md, phase 6): the calendar period on the property's own day — its
  * newest whole day `top` is yesterday there — the span it is set against (`BEFORE`: the period before, or its same
  * days for one still going), or the same period a year before (`YEAR`). The 12 months a day (`SERIES_PERIOD`) end on
- * the newest day. Null while Google has sent none of the period: This week on a Monday, This month on the 1st.
+ * the newest day, and their year before is the 365 days before them, sharing none (Insights reads it, option C). Null
+ * while Google has sent none of the period: This week on a Monday, This month on the 1st.
  */
 export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top: string): { from: string; to: string } | null {
   if (period === SERIES_PERIOD) {
-    const to = which === "NOW" ? top : which === "BEFORE" ? shiftDay(top, -365) : shiftDay(top, -364);
+    const to = which === "NOW" ? top : shiftDay(top, -365);
     return { from: shiftDay(to, -364), to };
   }
   const span = periodSpan(period, shiftDay(top, 1), top);
@@ -113,6 +114,19 @@ export function fetchedAfter(fetched: ReadonlyArray<{ key: string; from: string;
     if (range) out.push({ key, from: range.from, settled: top >= shiftDay(range.to, SETTLE_DAYS) });
   }
   return out;
+}
+
+/**
+ * Insights' 12 months (calendar-periods-plan.md, phase 6, option C, Anthony 2026-10-21: "Yes if it's optimised for
+ * speed and storage"): the lists Insights reads for a whole year, asked of Google as the last 12 months — people
+ * can't be added up across days — for the main home country, every device only, now and a year before. Each is one
+ * list, replaced each night, never kept by device or period.
+ */
+export const INSIGHTS_YEAR_LISTS: readonly AnalyticsList[] = ["total", "channel", "firstChannel", "landing", "landingChannel", "event", "visitorType"];
+
+/** Insights' 12-month asks: asked after every other list, so a run going when they were added asks its other lists in their places. */
+export function insightsYearJobs(): PeriodJob[] {
+  return INSIGHTS_YEAR_LISTS.flatMap((list) => (["NOW", "YEAR"] as const).map((which) => ({ list, period: SERIES_PERIOD, which })));
 }
 
 /** A ready-made list to ask: for the main home country, or — `country`, its code — for another home country (§18.6.1). */

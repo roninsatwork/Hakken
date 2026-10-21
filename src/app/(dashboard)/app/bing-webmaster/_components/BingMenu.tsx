@@ -10,7 +10,7 @@ import { BING_GROUPS, BING_PAGES, pageForPath, useBingHref, useBingStatus } from
  * A website's pages in the Bing Webmaster section, as drawn
  * (bing-webmaster-plan.md §5): Bing's figures, then against Google, then the
  * settings, with "Jump to a page" as Search Console's. Keywords and Pages
- * carry how many Bing showed the website for in its last 90 days.
+ * carry how many Bing showed the website for in Last Month, the period its pages open on.
  */
 export function BingMenu({ siteId }: { siteId: string }) {
   const t = useTranslations("bingWebmaster.menu");

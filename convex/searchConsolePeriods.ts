@@ -903,7 +903,6 @@ export const clearPeriodSlot = internalMutation({
     for (const part of old) await ctx.db.delete(part._id);
     // Emptied whole: the list names no build any more.
     if (args.before === undefined && old.length < CLEAR_SLOT_PARTS) {
-      // A retired period's rows (`RETIRED_PERIODS`) are cleared by the same step, named as the stored rows name them.
       await forgetListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period as SearchConsolePeriod, which: args.which });
     }
     return old.length === CLEAR_SLOT_PARTS;

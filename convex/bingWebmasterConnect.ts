@@ -18,6 +18,7 @@ import { decryptConnectorToken, encryptConnectorToken, isConnectorTokenEncryptio
 import { exchangeAuthorizationCode, refreshAccessToken } from "./oauthTokenCalls";
 import { BING_SCOPE, listUserSites, sitesForHost } from "./bingWebmasterApi";
 import { unpackNumbers } from "./utils/searchConsolePacks";
+import { OPENING_PERIOD } from "./utils/calendarPeriods";
 import { bingAttemptValidator, bingProblemValidator, bingStatusValidator } from "./bingWebmasterSchema";
 
 /**
@@ -504,11 +505,11 @@ async function bingAccessToken(
 // What the website's pages read
 // ---------------------------------------------------------------------------
 
-/** The rows of a list's ready-made 90 days, newest build: null with none built. */
+/** The rows of a list's ready-made opening period (Last Month), newest build: null with none built. */
 async function rowsHeld(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, list: "query" | "page"): Promise<number | null> {
   const parts = await ctx.db
     .query("bingPeriods")
-    .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", list).eq("period", "90").eq("which", "NOW"))
+    .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", list).eq("period", OPENING_PERIOD).eq("which", "NOW"))
     .take(200);
   if (parts.length === 0) return null;
   const newest = Math.max(...parts.map((part) => part.builtAt));

@@ -40,6 +40,7 @@ import { PART_ROWS } from "./utils/searchConsolePacks";
 import {
   DAY_FACT_LISTS,
   PAGE_FACT_LISTS,
+  SERIES_PERIOD,
   analyticsPackedRows,
   dayFactListValidator,
   type DayFactList,
@@ -97,7 +98,7 @@ const DAY_DEVICES = [EVERY_DEVICE, "desktop", "mobile", "tablet", "smart tv"] as
 const DAY_PARTS_A_WRITE = 24;
 
 // What a run asks and for which dates, worked out from what is held (`googleAnalyticsJobs.ts`), named here as before.
-export { REFETCH_DAYS, analyticsWindow, dueJobs, fetchedAfter, finishedDue, newestWholeDayIn, periodRange, slotKey, type PeriodJob } from "./googleAnalyticsJobs";
+export { REFETCH_DAYS, analyticsWindow, dueJobs, fetchedAfter, finishedDue, insightsYearJobs, newestWholeDayIn, periodRange, slotKey, type PeriodJob } from "./googleAnalyticsJobs";
 import { periodRange, type PeriodJob } from "./googleAnalyticsJobs";
 import { OPENING_PERIOD } from "./utils/calendarPeriods";
 
@@ -721,15 +722,17 @@ export async function collectPeriod(
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).
   const reading = job.list === "page" ? { ...asking, events: [...asking.events, ...READ_EVENTS] } : asking;
-  // Landing pages by channel for the dates now also count the visits that made any listed event: Conversions' flow (CV8).
-  const also = { converting: job.list === "landingChannel" && job.which === "NOW" };
+  // Landing pages by channel for the dates now also count the visits that made any listed event: Conversions' flow (CV8),
+  // which reads the calendar periods only — Insights' 12 months never ask it.
+  const also = { converting: job.list === "landingChannel" && job.which === "NOW" && job.period !== SERIES_PERIOD };
   const keyOf = (device: string) => slotKey(job.list, job.period, job.which, device, country);
   const held: Record<string, { slot: number; hash: string; from: string; to: string; parts: number }> =
     await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys: [EVERY_DEVICE, ...SPLIT_DEVICES].map(keyOf) });
   // A big website's list by device is asked a device at a time, each written and let go before the next (RR2): one ask
   // of every device at once held them all — a 10,000-page website's landing pages by channel, 750,000 rows. Judged by
   // its last build, and always on a careful second try.
-  const byDevice = KEPT_BY_DEVICE[job.list];
+  // Insights' 12 months are read for every device only (option C): never asked or kept by device.
+  const byDevice = job.period !== SERIES_PERIOD && KEPT_BY_DEVICE[job.list];
   const split = byDevice && (how.careful === true || (held[keyOf(EVERY_DEVICE)]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS);
   let rows = 0;
   let cut = false;

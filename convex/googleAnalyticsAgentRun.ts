@@ -22,6 +22,7 @@ import {
   collectPeriod,
   dueJobs,
   finishedDue,
+  insightsYearJobs,
   newestWholeDayIn,
   openSession,
   type PeriodJob,
@@ -718,6 +719,8 @@ function jobsFor(
     ...pageListJobs(weekly, others, top, finished),
     // What people did before converting, over 12 months, once the events' 12 months are in (ga-conversions-visitors-plan.md CV4).
     ...(weekly ? [{ funnels: true } as const] : []),
+    // Insights' 12 months, after everything else (calendar-periods-plan.md, phase 6, option C).
+    ...(weekly ? insightsYearJobs() : []),
   ];
   return [...countryDays, ...startingAt(lists, listsFrom)];
 }

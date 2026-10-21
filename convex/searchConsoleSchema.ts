@@ -125,12 +125,10 @@ export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competi
 /**
  * The ready-made periods (plan §14.3, item 4): the date menu's seven calendar
  * periods, each to Google's newest day held (calendar-periods-plan.md, phase
- * 4). The 7, 30 and 90 days and 12 months they replaced (`RETIRED_PERIODS`)
- * are no longer built; those kept wait to be cleared on Anthony's word, and
- * then leave the validator.
+ * 4). The 7, 30 and 90 days and 12 months they replaced were cleared on
+ * Anthony's word (2026-10-21).
  */
 export const SEARCH_CONSOLE_PERIODS = CALENDAR_PERIODS;
-export const RETIRED_PERIODS = ["7", "30", "90", "365"] as const;
 /**
  * Fan-out's own periods (§15, decision 4): its "Days of Search Console
  * averaged" setting offers 14 and 28 days, so each is kept ready too — the
@@ -177,8 +175,6 @@ export const seenType = (type: SearchType): SearchType | undefined => (type === 
 export const periodValidator = v.union(
   v.literal("1"), v.literal("14"), v.literal("28"),
   v.literal("thisWeek"), v.literal("lastWeek"), v.literal("thisMonth"), v.literal("lastMonth"), v.literal("thisQuarter"), v.literal("lastQuarter"), v.literal("thisYear"),
-  // Retired (`RETIRED_PERIODS`): read by nothing, kept only so the rows still held stay valid until cleared.
-  v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365"),
 );
 
 /**
