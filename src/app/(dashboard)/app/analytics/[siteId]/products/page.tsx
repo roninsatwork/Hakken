@@ -22,9 +22,10 @@ import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChangeCell, FigureCell, MoneyCell } from "../../_components/AnalyticsCells";
 import { ChannelsChart, TopBars } from "../../_components/AnalyticsChart";
-import { BeforeLine } from "../../_components/AnalyticsFigures";
+import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
 import { formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { formatNumber } from "../../../sites/_components/siteFormat";
+import { leftWithout } from "@/convex/utils/sees/analyticsProducts";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
 
 type Product = FunctionReturnType<typeof api.googleAnalyticsProductReads.analyticsProductList>["rows"][number];
@@ -35,8 +36,9 @@ const FIRSTS = { name: "asc", looks: "desc", basket: "desc", bought: "desc", rev
 /**
  * Products (GA34; §18.2 board 25): what each product sold, and how far
  * shoppers got with it — looked, added it to the basket, started checkout,
- * bought. What Hakken sees, the shop's four steps as figures and bars, the
- * products bought a day, and each product's looks, basket, bought, revenue
+ * bought. What Hakken sees, the shop's four steps by shoppers as figures and
+ * bars with the baskets and checkouts left (shop-baskets-plan.md), shoppers at
+ * each step and the products bought a day, and each product's looks, basket, bought, revenue
  * and change, with a Category filter. Only for a website that is a shop,
  * found by itself (§18.6.6); one device's lists asked of Google when the
  * screen opens.
@@ -72,49 +74,94 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
   const listArgs = { ...args, ...(category ? { category } : {}), ...(settled ? { q: settled } : {}), sort: order.key, direction: order.direction };
   const paged = useSiteListPage(api.googleAnalyticsProductReads.analyticsProductList, listArgs);
   const steps = answer?.steps ?? null;
-  const before = answer?.before ?? null;
+  const shoppers = steps?.visits ?? null;
+  const was = answer?.before?.visits ?? null;
+  const basketLeft = shoppers ? leftWithout(shoppers.basket, shoppers.bought) : null;
+  const checkoutLeft = shoppers ? leftWithout(shoppers.checkout, shoppers.bought) : null;
   const periodName = tf(`periods.${period}`);
   const of = (part: number, whole: number) => (whole > 0 ? formatPercent(Math.min(1, part / whole)) : "–");
+  const inPoints = (value: number) => (value * 100).toFixed(1);
   const bar = [periodName, tf(`devices.${device}`).toLowerCase()].join(" · ");
 
   return (
     <div className="flex flex-col gap-6">
       <AnalyticsSees screen="products" seen={answer?.seen} currency={currency} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
-      {steps ? (
-        <FigureRow columns={4}>
-          <Figure label={t("steps.looked")} value={formatNumber(steps.looked)} detail={<BeforeLine now={steps.looked} before={before?.looked} />} />
-          <Figure
-            label={t("steps.basket")}
-            value={formatNumber(steps.basket)}
-            detail={<span className="flex flex-col"><span className="text-secondary">{t("ofLooks", { rate: of(steps.basket, steps.looked) })}</span><BeforeLine now={steps.basket} before={before?.basket} /></span>}
-          />
-          <Figure
-            label={t("steps.checkout")}
-            value={formatNumber(steps.checkout)}
-            detail={<span className="flex flex-col"><span className="text-secondary">{t("ofBaskets", { rate: of(steps.checkout, steps.basket) })}</span><BeforeLine now={steps.checkout} before={before?.checkout} /></span>}
-          />
-          <Figure
-            label={t("steps.bought")}
-            value={formatNumber(steps.bought)}
-            detail={(
-              <span className="flex flex-col">
-                <span className="text-secondary">{t("ofCheckouts", { rate: of(steps.bought, steps.checkout), revenue: formatMoney(steps.revenue, currency) })}</span>
-                <BeforeLine now={steps.bought} before={before?.bought} />
-              </span>
-            )}
-          />
-        </FigureRow>
+      {steps && shoppers ? (
+        <>
+          {/* The shop's steps by shoppers, each with the times it happened (shop-baskets-plan.md; Anthony, 2026-10-21). */}
+          <FigureRow columns={4}>
+            <Figure
+              label={t("lookedVisits")}
+              value={formatNumber(shoppers.looked)}
+              detail={<span className="flex flex-col"><span className="text-secondary">{t("lookTimes", { times: formatNumber(steps.looked) })}</span><BeforeLine now={shoppers.looked} before={was?.looked} /></span>}
+            />
+            <Figure
+              label={t("steps.basket")}
+              value={formatNumber(shoppers.basket)}
+              detail={<span className="flex flex-col"><span className="text-secondary">{t("ofLookVisits", { rate: of(shoppers.basket, shoppers.looked), times: formatNumber(steps.basket) })}</span><BeforeLine now={shoppers.basket} before={was?.basket} /></span>}
+            />
+            <Figure
+              label={t("steps.checkout")}
+              value={formatNumber(shoppers.checkout)}
+              detail={<span className="flex flex-col"><span className="text-secondary">{t("ofBaskets", { rate: of(shoppers.checkout, shoppers.basket) })}</span><BeforeLine now={shoppers.checkout} before={was?.checkout} /></span>}
+            />
+            <Figure
+              label={t("steps.bought")}
+              value={formatNumber(shoppers.bought)}
+              detail={(
+                <span className="flex flex-col">
+                  <span className="text-secondary">{t("ofCheckouts", { rate: of(shoppers.bought, shoppers.checkout), revenue: formatMoney(steps.revenue, currency) })}</span>
+                  <BeforeLine now={shoppers.bought} before={was?.bought} />
+                </span>
+              )}
+            />
+          </FigureRow>
+          {/* What was left: the baskets and the checkouts no purchase followed, in points on the span before; fewer is better. */}
+          <FigureRow columns={2}>
+            <Figure
+              label={t("basketLeft")}
+              value={basketLeft === null ? "–" : formatPercent(basketLeft)}
+              detail={(
+                <span className="flex flex-col">
+                  <span className="text-secondary">{t("basketLeftDetail", { left: formatNumber(Math.max(0, shoppers.basket - shoppers.bought)), all: formatNumber(shoppers.basket) })}</span>
+                  <PerVisitLine now={basketLeft} before={was ? leftWithout(was.basket, was.bought) : null} format={inPoints} points lowerIsBetter />
+                </span>
+              )}
+            />
+            <Figure
+              label={t("checkoutLeft")}
+              value={checkoutLeft === null ? "–" : formatPercent(checkoutLeft)}
+              detail={(
+                <span className="flex flex-col">
+                  <span className="text-secondary">{t("checkoutLeftDetail", { left: formatNumber(Math.max(0, shoppers.checkout - shoppers.bought)), all: formatNumber(shoppers.checkout) })}</span>
+                  <PerVisitLine now={checkoutLeft} before={was ? leftWithout(was.checkout, was.bought) : null} format={inPoints} points lowerIsBetter />
+                </span>
+              )}
+            />
+          </FigureRow>
+        </>
       ) : null}
       <TopBars
         title={t("stepsTitle")}
         hint={t("stepsHint", { period: periodName.toLowerCase() })}
-        rows={steps ? (["looked", "basket", "checkout", "bought"] as const).map((step) => ({ label: t(`steps.${step}`), value: steps[step] })) : undefined}
-        measure={t("times")}
+        rows={shoppers ? (["looked", "basket", "checkout", "bought"] as const).map((step) => ({ label: t(`steps.${step}`), value: shoppers[step] })) : undefined}
+        measure={t("visits")}
+        labels={(value) => formatNumber(value)}
         exportName="google-analytics-shop-steps"
         host={status.host}
         from={null}
         to={null}
+      />
+      <ChannelsChart
+        channels={[t("steps.basket"), t("steps.checkout"), t("steps.bought")]}
+        rest={false}
+        points={(answer?.shoppers ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.basket, point.checkout, point.bought] }))}
+        host={status.host}
+        from={null}
+        to={null}
+        exportName="google-analytics-shop-steps-over-time"
+        title={{ ...t.raw("shoppersTitle") as { day: string; week: string; month: string }, hint: t("shoppersHint", { period: periodName }) }}
       />
       <ChannelsChart
         channels={[t("bought")]}

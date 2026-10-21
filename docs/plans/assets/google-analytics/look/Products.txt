@@ -4,11 +4,15 @@
 page-header: Products
 settings-card: What Hakken sees
 figures
-  figure: Looked at a product
+  figure: Visits that looked at a product
   figure: Added to the basket
   figure: Started checkout
   figure: Bought
+figures
+  figure: Left in the basket
+  figure: Left at checkout
 chart-card: The shop's steps
+chart-card: Shoppers at each step a day
 chart-card: Products bought a day
 search: Find a product…
 filter: Category

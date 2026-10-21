@@ -18,6 +18,7 @@ import { MOVE_VIEWS } from "./utils/pageMoves";
 import { ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
 import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
+import { leftWithout } from "./utils/sees/analyticsProducts";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { calendarPeriodValidator } from "./utils/calendarPeriods";
 
@@ -407,10 +408,17 @@ export const googleAnalyticsInternal = internalQuery({
         const answer = await readProducts(site, common);
         if (!answer?.shop) return { ok: false, problem: `${host} is not a shop: Google Analytics recorded no products looked at, added to a basket or bought this quarter or last.` };
         const products = await productList(ctx, hold, { ...common, ...(args.search ? { q: args.search } : {}) });
+        // Each step in times and in visits (shoppers), and the baskets and checkouts left, as the screen shows them (shop-baskets-plan.md).
+        const stepsOf = (steps: NonNullable<typeof answer.steps>) => ({
+          ...steps,
+          revenue: money(steps.revenue),
+          basketsLeftPercent: percent(leftWithout(steps.visits.basket, steps.visits.bought)),
+          checkoutsLeftPercent: percent(leftWithout(steps.visits.checkout, steps.visits.bought)),
+        });
         return {
           ...base,
-          steps: answer.steps && { ...answer.steps, revenue: money(answer.steps.revenue) },
-          theSpanBefore: answer.before && { ...answer.before, revenue: money(answer.before.revenue) },
+          steps: answer.steps && stepsOf(answer.steps),
+          theSpanBefore: answer.before && stepsOf(answer.before),
           products: products.rows.slice(0, ROWS).map((row) => ({ name: row.name, category: row.category, looks: row.looks, basket: row.basket, bought: row.bought, revenue: money(row.revenue), changeInRevenuePercent: percent(row.change) })),
           link: linkTo("products"),
         };

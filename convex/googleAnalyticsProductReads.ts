@@ -17,7 +17,9 @@ import { connectionOf, readFor, readSlot, type Held } from "./googleAnalyticsRow
 /**
  * What Products reads (docs/plans/active/google-analytics-plan.md GA34,
  * §18.2 board 25, §18.6.6): the shop's four steps from the events list and
- * its revenue, against the span before; the products bought a day; and each
+ * its revenue, against the span before — the visits that reached each step
+ * too, and a day at a time, for the baskets and checkouts left
+ * (docs/plans/active/shop-baskets-plan.md); the products bought a day; and each
  * product's looks, baskets, sales and revenue, searched, filtered by
  * category, sorted and paged on the server. Only for a shop; each device's
  * lists kept by each collection. Only the caller's own
@@ -31,13 +33,22 @@ const heldOf = (list: Held | "LIVE" | null) => (list && list !== "LIVE" ? list :
 /** The lists Products reads besides the totals, each a device's built by the next run. */
 const NEEDED = ["event", "product"] as const;
 
-const stepsValidator = v.object({ looked: v.number(), basket: v.number(), checkout: v.number(), bought: v.number(), revenue: v.number() });
+const shopStepsValidator = v.object({ looked: v.number(), basket: v.number(), checkout: v.number(), bought: v.number() });
+const stepsValidator = v.object({
+  looked: v.number(), basket: v.number(), checkout: v.number(), bought: v.number(), revenue: v.number(),
+  /** The visits that reached each step: shoppers, not times (shop-baskets-plan.md; Anthony, 2026-10-21). */
+  visits: shopStepsValidator,
+});
 
-/** The shop's four steps from an events list, and the revenue from the totals. */
-function stepsOf(events: Held | null, total: Held | null): (ShopSteps & { revenue: number }) | null {
+/** Each step's event, in the events list. */
+const STEP_EVENTS: Record<keyof ShopSteps, (typeof SHOP_STEPS)[number]> = { looked: "view_item", basket: "add_to_cart", checkout: "begin_checkout", bought: "purchase" };
+
+/** The shop's four steps from an events list, as many times as each happened and as many visits as reached it, and the revenue from the totals. */
+function stepsOf(events: Held | null, total: Held | null): (ShopSteps & { revenue: number; visits: ShopSteps }) | null {
   if (!events) return null;
-  const times = (name: (typeof SHOP_STEPS)[number]) => events.rows.find((row) => row.key === name)?.times ?? 0;
-  return { looked: times("view_item"), basket: times("add_to_cart"), checkout: times("begin_checkout"), bought: times("purchase"), revenue: total?.rows[0]?.revenue ?? 0 };
+  const row = (step: keyof ShopSteps) => events.rows.find((one) => one.key === STEP_EVENTS[step]);
+  const of = (figure: (step: keyof ShopSteps) => number): ShopSteps => ({ looked: figure("looked"), basket: figure("basket"), checkout: figure("checkout"), bought: figure("bought") });
+  return { ...of((step) => row(step)?.times ?? 0), revenue: total?.rows[0]?.revenue ?? 0, visits: of((step) => row(step)?.visits ?? 0) };
 }
 
 /** One product as the screen shows it. */
@@ -99,6 +110,8 @@ export const analyticsProducts = tenantQuery({
     steps: v.union(v.null(), stepsValidator),
     before: v.union(v.null(), stepsValidator),
     points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), bought: v.number() })),
+    /** The visits that added to the basket, started checkout and bought, a day (then a week, then a month), from the events' days kept. */
+    shoppers: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), basket: v.number(), checkout: v.number(), bought: v.number() })),
     categories: v.array(v.string()),
     seen: seenValidator,
   })),
@@ -112,13 +125,15 @@ export async function readProducts(ctx: SiteReader, args: ObjectType<typeof anal
   const country = await keptCountry(ctx, site.hold, args.country);
   const connection = await connectionOf(ctx, holdId);
   if (!connection?.newestDay) return null;
-  const none = { shop: false, preparing: false, missing: [], steps: null, before: null, points: [], categories: [], seen: { says: [], steps: [] } };
+  const none = { shop: false, preparing: false, missing: [], steps: null, before: null, points: [], shoppers: [], categories: [], seen: { says: [], steps: [] } };
   if (!isShop(connection)) return none;
   const eventsList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
   const eventsBefore = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
   // The products bought stored a day, then a week, then a month (SF12).
   const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
   const stored = every ? await readDayPoints(ctx, connection, "product", args.device, every.from, every.to, country) : null;
+  // The visits at each step the same way, from the events' days (shop-baskets-plan.md): none until those are kept.
+  const eventDays = every ? await readDayPoints(ctx, connection, "event", args.device, every.from, every.to, country) : null;
   const products = await productsOf(ctx, holdId, args, country);
   const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
   const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
@@ -132,16 +147,22 @@ export async function readProducts(ctx: SiteReader, args: ObjectType<typeof anal
     ...(point.end !== point.start ? { lastDay: point.end } : {}),
     bought: point.rows.reduce((sum, row) => sum + row.purchases, 0),
   }));
+  const shoppers = (eventDays ?? []).map((point) => {
+    const visits = (step: keyof ShopSteps) => point.rows.filter((row) => row.key === STEP_EVENTS[step]).reduce((sum, row) => sum + row.visits, 0);
+    return { day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), basket: visits("basket"), checkout: visits("checkout"), bought: visits("bought") };
+  });
+  const before = stepsOf(eventsBefore, totalBefore);
   return {
     shop: true,
     preparing: products.preparing,
     missing,
     steps,
-    before: stepsOf(eventsBefore, totalBefore),
+    before,
     points,
+    shoppers,
     categories: [...new Set(products.rows.map((row) => row.category).filter((category) => category && !/^\(.*\)$/.test(category)))].sort(),
     seen: steps && missing.length === 0 && !products.preparing
-      ? productsSees(steps, products.rows.map((row) => ({ name: row.name, looks: row.looks, bought: row.bought, revenue: row.revenue })))
+      ? productsSees(steps.visits, products.rows.map((row) => ({ name: row.name, looks: row.looks, bought: row.bought, revenue: row.revenue })), before?.visits ?? null)
       : { says: [], steps: [] },
   };
 }

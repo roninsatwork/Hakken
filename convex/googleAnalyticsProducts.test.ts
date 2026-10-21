@@ -116,11 +116,25 @@ describe("Products, only for a shop", () => {
     const args = { siteId, period: "lastMonth" as const, device: "" };
     const products = (await admin.query(api.googleAnalyticsProductReads.analyticsProducts, args))!;
     expect(products).toMatchObject({ shop: true, preparing: false, missing: [], categories: ["Handles", "Pulls"] });
-    expect(products.steps).toEqual({ looked: 3000, basket: 300, checkout: 150, bought: 60, revenue: 30 * 26_000 });
+    // Each step as many times as it happened, and the visits that reached it: twenty a day looked, ten added to the
+    // basket, five started checkout and two bought (shop-baskets-plan.md).
+    expect(products.steps).toEqual({ looked: 3000, basket: 300, checkout: 150, bought: 60, revenue: 30 * 26_000, visits: { looked: 600, basket: 300, checkout: 150, bought: 60 } });
     expect(products.points).toHaveLength(30);
     expect(products.points.every((point) => point.bought === 2)).toBe(true);
-    expect(products.seen.says.map((phrase) => phrase.code)).toEqual(["looksToBasket", "fewFinished", "stuck"]);
+    // The visits at each step a day, from the events' days kept.
+    expect(products.shoppers).toHaveLength(30);
+    expect(products.shoppers.every((point) => point.basket === 10 && point.checkout === 5 && point.bought === 2)).toBe(true);
+    // By shoppers: four in five baskets and three in five checkouts left, August holding no shop to compare with.
+    expect(products.seen.says).toEqual([
+      { code: "looksToBasket", a: 600, b: 300, c: 0.5 },
+      { code: "basketsLeftAlone", a: 0.8 },
+      { code: "checkoutsLeftAlone", a: 0.6, b: 150 },
+    ]);
     expect(products.seen.steps.map((step) => step.code)).toEqual(["seeProduct", "whyUnfinished"]);
+    // Ask Hakken reads the same: each step's visits, and the baskets and checkouts left.
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    const assistant = await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "acme-shop.test", screen: "products", period: "lastMonth" }) as { steps: Record<string, unknown> };
+    expect(assistant.steps).toMatchObject({ visits: { looked: 600, basket: 300, checkout: 150, bought: 60 }, basketsLeftPercent: 80, checkoutsLeftPercent: 60 });
 
     const list = await admin.query(api.googleAnalyticsProductReads.analyticsProductList, { ...args, page: 1, rows: 25 });
     expect(list.rows.map((row) => [row.name, row.category, row.looks, row.basket, row.bought, row.revenue])).toEqual([

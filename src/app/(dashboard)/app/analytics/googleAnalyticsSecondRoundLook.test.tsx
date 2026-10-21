@@ -310,15 +310,20 @@ describe("Google Analytics' second-round looks", () => {
       "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ shop: true }),
       "googleAnalyticsProductReads:analyticsProducts": {
         shop: true, preparing: false, missing: [],
-        steps: { looked: 4210, basket: 612, checkout: 241, bought: 118, revenue: 724_800 }, before: { looked: 3968, basket: 594, checkout: 248, bought: 112, revenue: 690_000 },
-        points: DAYS.map((day) => ({ day, bought: 4 })), categories: ["Handles"],
-        seen: productsSees({ looked: 4210, basket: 612, checkout: 241, bought: 118 }, [{ name: product.name, looks: 612, bought: 22, revenue: 286_000 }]),
+        // Each step in times and in the visits that reached it (shop-baskets-plan.md).
+        steps: { looked: 4210, basket: 612, checkout: 241, bought: 118, revenue: 724_800, visits: { looked: 1980, basket: 412, checkout: 201, bought: 118 } },
+        before: { looked: 3968, basket: 594, checkout: 248, bought: 112, revenue: 690_000, visits: { looked: 1870, basket: 398, checkout: 205, bought: 112 } },
+        points: DAYS.map((day) => ({ day, bought: 4 })), shoppers: DAYS.map((day) => ({ day, basket: 14, checkout: 7, bought: 4 })), categories: ["Handles"],
+        seen: productsSees({ looked: 1980, basket: 412, checkout: 201, bought: 118 }, [{ name: product.name, looks: 612, bought: 22, revenue: 286_000 }], { looked: 1870, basket: 398, checkout: 205, bought: 112 }),
       },
       "googleAnalyticsProductReads:analyticsProductList": { rows: [product], total: 1, page: 1, pages: 1, size: 25, cut: null, live: false, preparing: false },
     });
     const { container } = render(<AnalyticsProductsPage />);
     await screen.findByText("Brass lever handle");
-    await screen.findByText(/Shoppers looked at products 4,210 times/);
+    await screen.findByText(/Of the 1,980 visits that looked at a product, 412 added one to the basket/);
+    // The baskets and checkouts left, in points on the span before.
+    await screen.findByText("Left in the basket");
+    await screen.findByText("71.4%");
     await expectApprovedLook(container, PLAN, "Products", "Google Analytics → Products");
   });
 });
