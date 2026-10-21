@@ -228,8 +228,12 @@ describe("home countries", () => {
         "total|7|NOW|", "landing|30|BEFORE|mobile", "channel|90|YEAR|", "channel|365|NOW|mobile", "event|365|BEFORE|", "page|365|NOW|"]) {
         await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: 0, from: "2026-09-09", to: "2026-10-08", hash: "x", builtAt: 1 });
       }
+      // A big website's old page list, more parts than a call removes: cleared over several (a call reads 16MB at most).
+      const { _id, _creationTime, ...part } = (await ctx.db.query("googleAnalyticsPeriods").first())!;
+      for (let at = 0; at < 20; at += 1) await ctx.db.insert("googleAnalyticsPeriods", { ...part, key: "page|365|NOW|", part: at });
     });
     await dailyRun(t, agentId);
+    expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsPeriods").collect()).filter((part) => part.key === "page|365|NOW|"))).toEqual([]);
     const keys = await keysOf(t, siteId);
     expect(keys.filter((key) => key.includes("Series") || key.startsWith("series|"))).toEqual(["series|365|NOW|"]);
     expect(keys.filter((key) => ["7", "30", "90"].includes(key.split("|")[1]))).toEqual([]);

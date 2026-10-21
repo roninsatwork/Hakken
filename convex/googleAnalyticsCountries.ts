@@ -19,8 +19,11 @@ import { SERIES_PERIOD } from "./googleAnalyticsSchema";
 
 /** Ready-made lists read a call when looking for a country no longer kept: a page at a time. */
 const SLOTS_PER_PAGE = 200;
-/** Parts removed a call. */
-const PARTS_PER_DELETE = 64;
+/**
+ * Parts removed a call, across every list it clears: a big website's page lists hold parts near Convex's 1MB, and a
+ * call may read 16MB — 64 parts a list failed every night on Kordatackle's (calendar-periods audit, 2026-10-21).
+ */
+const PARTS_PER_CALL = 8;
 /** Day, week, month and page records looked through a call for a home country no longer kept. */
 const RECORDS_PER_PAGE = 200;
 /** The stores a home country's own records sit in, beside the main one's (ga-stored-figures-plan.md SF7), swept in turn. */
@@ -103,16 +106,18 @@ export const dropCountriesNotKept = internalMutation({
       .query("googleAnalyticsPeriodSlots")
       .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", hold._id))
       .paginate({ cursor: args.cursor ?? null, numItems: SLOTS_PER_PAGE });
+    let removed = 0;
     for (const slot of page.page) {
       const country = countryOfKey(slot.key);
       if ((!country || kept.has(country)) && !retired(slot.key)) continue;
       const parts = await ctx.db
         .query("googleAnalyticsPeriods")
         .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold._id).eq("key", slot.key))
-        .take(PARTS_PER_DELETE);
+        .take(PARTS_PER_CALL - removed);
       for (const part of parts) await ctx.db.delete(part._id);
-      // A list longer than one call's parts: the same page again, the rest of its parts first.
-      if (parts.length === PARTS_PER_DELETE) {
+      removed += parts.length;
+      // The call's parts used: the same page again, the rest of this list's parts first.
+      if (removed === PARTS_PER_CALL) {
         await ctx.scheduler.runAfter(0, internal.googleAnalyticsCountries.dropCountriesNotKept, args);
         return null;
       }

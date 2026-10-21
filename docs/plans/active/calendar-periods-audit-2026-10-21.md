@@ -79,6 +79,12 @@ after each one's start-up fill finished, through the read the screens and Ask Ha
    **Rights itself at tomorrow's collection**, when the reach moves to 22 July; the other four websites' days already
    reach it. No change made.
 
+6. **The old lists would never have cleared on the bigger websites.** The nightly clearing removed up to 64 parts of
+   a list at once; a page list on Kordatackle or MoreHandles holds parts near Convex's 1MB each, so the step read
+   past the 16MB a step may read and failed every night, silently (the collection itself was unaffected). It had
+   only met removed home countries before this build gave it every old list. **Fixed:** eight parts a step, the
+   next step booked by itself; Kordatackle's old lists then cleared.
+
 ## Old answers cleared
 
 On Anthony's word ("3 yes"), every answer prepared for the old 7, 30, 90 and 365 days was deleted from the dev
