@@ -98,6 +98,28 @@ too", then "lets make a plan to do all of them". Nothing in this plan is built y
 - Gate, coverage, smoke tests and build passed. **Still to do:** a look at the screens in Anthony's Chrome, signed out
   of Hakken when phase 1 replaced the sign-in library under the running app.
 
+### Phase 3, as built (2026-10-22)
+
+- `convex-test` 0.0.53 → 0.0.64. Our change to it (`src/test/convexTestTables.ts`) matched two of its three places; the
+  third, where a record is saved, now fills in a commit time, and the change follows it.
+- **Its clock is pinned as Convex's is** (0.0.63): each query and mutation sees the clock as it started, never behind
+  the last change saved, so with the clock frozen each save moves the next function's clock a millisecond. Fourteen
+  tests broke, in three shapes — a saved time asserted as `NOW` exactly, a limit crossed by one millisecond, a clock
+  moved back after saving — and three more of those shapes were fixed before they broke. `aboutMs` in
+  `src/test/realTime.ts` asserts a saved time; AGENTS.md has the rule.
+- **The Sites speed test timed the harness.** It checks a returned row's fields of more than one shape by throwing for
+  each that does not fit, and every throw now takes a stack many wrappers deep: "the searches that changed band" spent
+  370ms there against 40ms of its own work. The test takes no stacks while it times; Convex checks results on its own
+  servers.
+- Timed against 0.0.53 alternately on a busy machine, four of the slowest files took 47.8s against 46s: no real change.
+
+### Phase 4, as built (2026-10-22)
+
+- `actions/checkout` v7, `actions/setup-node` v7, `actions/cache` v6, `actions/upload-artifact` v7,
+  `google-github-actions/auth`, `setup-gcloud` and `deploy-cloudrun` v3, `docker/setup-buildx-action` v4. Each now runs
+  on Node 24 inside GitHub; every setting our workflows use is still among each one's inputs. Proved by the next
+  push's run; the release steps (`deploy.yml`) only at the first push to `main`.
+
 ## Limits, said plainly
 
 - Convex's own Node is Convex's: this plan can't move it, only check it.
