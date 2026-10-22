@@ -2,7 +2,13 @@ import Stripe from "stripe";
 import type { BillingConfig, BillingOffer } from "../billing.config";
 import { appError } from "./utils/appError";
 
-export const STRIPE_API_VERSION = "2026-05-27.dahlia";
+/**
+ * The Stripe API version Hakken speaks, and its webhook endpoint is set to (docs/operator/stripe-billing.md). The SDK
+ * (22.6) is typed for 2026-08-26.dahlia, a later monthly release of the same line that only adds; Hakken keeps sending
+ * this one, as Stripe allows, so updating the SDK changes nothing Stripe sees (dependency-updates-plan.md, phase 9).
+ * Moving it is a billing decision of its own, made with the endpoint's version.
+ */
+export const STRIPE_API_VERSION = "2026-05-27.dahlia" as Stripe.LatestApiVersion;
 export function stripeClient(config: BillingConfig) {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key || !new RegExp(`^(sk|rk)_${config.mode}_`).test(key) || !process.env.STRIPE_WEBHOOK_SECRET) {

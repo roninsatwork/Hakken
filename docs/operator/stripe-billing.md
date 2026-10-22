@@ -29,7 +29,8 @@ Arcade remains part of the framework.
   Company admins have **zero access to platform Admin**. Members, read-only users and impersonating
   platform administrators cannot purchase or open another company's portal.
 - Webhook signatures and provider mirrors use `@convex-dev/stripe` 0.1.6.
-  Stripe SDK 22.2.1 is pinned; configure the endpoint API version as
+  Stripe SDK 22.6.2 is pinned (the newest 22; Hakken still sends the API version below, though the SDK is
+  typed for 2026-08-26.dahlia, and 23 moves to 2026-09-30.endive, a billing decision of its own); configure the endpoint API version as
   **2026-05-27.dahlia**. Hakken additionally caps webhook bodies at 256 KiB and
   reconciles current provider state before changing access. See the
   [Convex component reference](https://www.convex.dev/components/stripe) and
