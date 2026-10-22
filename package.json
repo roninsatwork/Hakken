@@ -88,7 +88,7 @@
     "remark-gfm": "^4.0.1",
     "stripe": "22.6.2",
     "tailwind-merge": "^3.7.0",
-    "three": "^0.184.0"
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -98,7 +98,7 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@types/three": "^0.184.1",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-v8": "^5.0.5",
     "axe-core": "^4.14.0",

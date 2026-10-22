@@ -1,7 +1,7 @@
 # Bringing every dependency up to date
 
 Anthony, 2026-10-22, after the Node.js October security release: "can we check if anyting else needs to be updated
-too", then "lets make a plan to do all of them". Nothing in this plan is built yet; each phase waits for his "go".
+too", then "lets make a plan to do all of them". He said "yes go fior it" the same day. Phases 0–9 and 12 are built (9 only to the newest Stripe 22), 10 and 11 wait on other tools, and Node 26 waits on Convex — see each phase's notes below.
 
 ## Already done
 
@@ -134,6 +134,30 @@ too", then "lets make a plan to do all of them". Nothing in this plan is built y
   Coverage keeps the same 1,982 files.
 - **Before the next push:** the five-second check and a whole coverage run on a quiet machine — two other projects'
   test runs held this one at load 25–35 all afternoon, and stopped a coverage run part-way.
+
+### Phases 8–12, as built or waiting (2026-10-22)
+
+- **8a.** `intl-messageformat` 12.1.4, kept exact: Hakken's advice wording and its tests pass.
+- **8b.** `framer-motion` 14.6.0: 13 dropped a fallback Hakken never used, 14 removed internal APIs only.
+- **8c.** `@sentry/nextjs` 11.8.0. Sentry 11 left unset collects people's details, cookies, request bodies, database
+  queries and AI inputs and outputs, which 10 did not; error monitoring now sets 10's restraint in Sentry 11's own
+  terms (`dataCollection`), and `src/lib/initErrorMonitoring.test.ts` holds it.
+- **8d.** `@google/genai` 2.30.0: its breaking changes are in an API Hakken does not use. On dev, with Convex bundling
+  it, the provider probe listed 30 models, one short Gemini answer and one embedding came back.
+- **9.** `stripe` 22.6.2, kept exact — **not 23**. 22.6.2 is the newest 22 and Hakken keeps sending Stripe the same API
+  version (2026-05-27.dahlia), so nothing Stripe sees changes. Stripe 23 moves to a new API version
+  (2026-09-30.endive), which `@convex-dev/stripe` does not take yet: that is a billing decision of its own, with the
+  webhook endpoint's version and a live check, and waits for Anthony.
+- **10. Waiting.** ESLint 10 cannot be used yet: Next.js's lint settings (`eslint-config-next` 16.4.2) bring
+  `eslint-plugin-react` 7.37.5, `eslint-plugin-import` 2.32.0 and `eslint-plugin-jsx-a11y` 6.10.2, whose newest versions
+  all stop at ESLint 9. Nothing changed. (`eslint-plugin-react-hooks` stays held at 7.0.1 on purpose: 7.1 brings rules
+  with 58 places to fix, a piece of work of its own from the July hardening plan.)
+- **11. Waiting.** TypeScript 7 cannot be used yet: `typescript-eslint` takes TypeScript below 6.1 only, and
+  TypeScript 7.0.2 no longer ships the programming interface that Next.js's build and the lint tools call — only an
+  unstable one. Nothing changed; TypeScript stays 6.0.3.
+- **12.** `three` and its types 0.184 → 0.186: no part of Ronin's Run uses what the two releases changed (no custom
+  3D object with its own `dispose`, no hand-set matrices). All 148 of the game's tests pass; the opening view of
+  Lantern Courtyard, taken before and after on dev, differs in 0.01% of its pixels (the rain).
 
 ## Limits, said plainly
 
