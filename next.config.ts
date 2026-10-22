@@ -1,5 +1,5 @@
 import { NextConfig } from 'next';
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { createSecureHeaders } from 'next-secure-headers';
 import path from 'node:path';

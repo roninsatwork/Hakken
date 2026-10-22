@@ -22,7 +22,10 @@
  *
  * ## What is deliberately not sent
  *
- * `sendDefaultPii` stays off. The point of this is knowing what broke, not who
+ * People's details, cookies, request bodies, queries and AI inputs stay out
+ * (Sentry 11's `dataCollection`, set to its own spelling of v10's
+ * `sendDefaultPii: false` in `initErrorMonitoring.ts`; Sentry 11 collects them
+ * when it is left unset). The point of this is knowing what broke, not who
  * it broke for, and this platform holds other companies' data — a stack trace
  * is ours to look at, a tenant's request body is not. `reportError` already
  * carries the same warning about its `context` field.

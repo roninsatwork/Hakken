@@ -66,8 +66,23 @@ export function initErrorMonitoring(): { started: boolean; reason?: string } {
       environment: config.environment,
       ...(config.release ? { release: config.release } : {}),
       tracesSampleRate: config.tracesSampleRate,
-      // Whose data broke is not ours to collect; what broke is.
-      sendDefaultPii: false,
+      // Whose data broke is not ours to collect; what broke is. Sentry 11 collects people's details, cookies,
+      // bodies, queries and AI inputs unless told not to: this is its own spelling of v10's `sendDefaultPii: false`
+      // (its MIGRATION.md, "If you want to keep the v10 default behavior"; dependency-updates-plan.md, phase 8).
+      dataCollection: {
+        userInfo: false,
+        cookies: false,
+        httpHeaders: {
+          request: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+          response: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+        },
+        httpBodies: [],
+        urlQueryParams: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+        genAI: { inputs: false, outputs: false },
+        databaseQueryData: false,
+        queues: false,
+        graphQL: { document: false, variables: false },
+      },
     });
 
     setErrorReporter(forwardReportToSentry);
