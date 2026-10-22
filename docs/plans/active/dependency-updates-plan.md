@@ -89,6 +89,15 @@ too", then "lets make a plan to do all of them". Nothing in this plan is built y
   release from GitHub cannot answer. Nothing is large while there is no production; when there is, a release that adds
   an index needs `staged: true` on it or a decision on `--skip-large-indexes-check`.
 
+### Phase 2, as built (2026-10-22)
+
+- Tailwind and `@tailwindcss/postcss` 4.3.3, `tailwind-merge` 3.7.0, `next-intl` 4.14.9, `recharts` 3.10.1,
+  `lucide-react` 1.61.0 (no icon Hakken uses was renamed or removed: the typecheck is clean), `@xyflow/react` 12.12.0,
+  `mammoth` 1.13.0 (still given `argparse` 2), `axe-core` 4.14.0, `knip` 6.42.1, `@vitejs/plugin-react` 6.1.2,
+  `@testing-library/react` 16.3.3, Playwright 1.64.1 with its Chromium.
+- Gate, coverage, smoke tests and build passed. **Still to do:** a look at the screens in Anthony's Chrome, signed out
+  of Hakken when phase 1 replaced the sign-in library under the running app.
+
 ## Limits, said plainly
 
 - Convex's own Node is Convex's: this plan can't move it, only check it.
