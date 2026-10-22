@@ -199,6 +199,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
     } finally {
       // Use hard browser navigation instead of router.push() to ensure the redirect happens
       // even if sudden loss of Convex auth triggers a React client-side exception in deep admin pages
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the hard reload is the point (above)
       window.location.href = "/";
     }
   };
