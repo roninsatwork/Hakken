@@ -76,6 +76,19 @@ too", then "lets make a plan to do all of them". Nothing in this plan is built y
   on the internet and no webhook is set. A change to make it refuse compressed replies until Convex updates is offered
   to Anthony, not built.
 
+### Phase 1, as built (2026-10-22)
+
+- Next.js 16.3.8 → 16.4.2 (with `eslint-config-next` and `@next/third-parties`), React 19.2.7 → 19.3.1 (with its
+  types), Convex 1.40.0 → 1.47.0 (`convex-helpers` 0.1.129, `@convex-dev/auth` 0.0.96, `@convex-dev/stripe` 0.1.7).
+- **A security fix too.** Next.js's 14 October update fixes two critical flaws and a high one (`use cache` returning
+  typed arrays, SVGs through the image optimiser, Server Actions), from 16.4.1 only on the 16.x line; `npm audit` did
+  not name them. Hakken uses none of those features, and `sharp` was already at the safe 0.35.5.
+- Next.js 16.4's upgrade notes list no breaking change for an app not using Cache Components. Convex 1.47's generated
+  `server` files gain its typed environment variables.
+- **For the first release:** `npx convex deploy` now stops to ask before building an index on a large table, which a
+  release from GitHub cannot answer. Nothing is large while there is no production; when there is, a release that adds
+  an index needs `staged: true` on it or a decision on `--skip-large-indexes-check`.
+
 ## Limits, said plainly
 
 - Convex's own Node is Convex's: this plan can't move it, only check it.
