@@ -54,6 +54,41 @@ export const CONVEX_TEST_CHANGES: ReadonlyArray<{ what: string; from: string; to
                     this._documents[_id] =
                         commitTs === null ? write : resolveCommittedValues(write, commitTs);`,
   },
+  {
+    // convex-test 0.0.64 looks for an unresolved commit time (`db.vars.commitTs`) in every value it reads: each
+    // field an index or filter compares, each record written, each function's arguments and answer. A word, a
+    // number or null cannot hold one, yet each paid for a look at its prototype before saying so; with the
+    // records' own words and numbers the most of what a lookup reads, the slowest collection tests ran about
+    // a third longer on the upgrade (measured 2026-10-22, dependency-updates-plan.md phase 3). Answering
+    // "none" for them at once is what the library's own checks conclude for them, so nothing else changes.
+    what: "a plain value holds no commit time",
+    from: `function hasPendingValues(value) {
+    if (value instanceof CommitTsPlaceholder) {`,
+    to: `function hasPendingValues(value) {
+    if (typeof value !== "object" || value === null) {
+        return false;
+    }
+    if (value instanceof CommitTsPlaceholder) {`,
+  },
+  {
+    // An index read compared each record with its range by working out the range's own values again for every
+    // record, and splitting each field's name again: the same answer each time. They are worked out once a read,
+    // and each record compared exactly as `evaluateRangeFilter` compares it.
+    what: "an index read works out its range once",
+    from: `                this._iterateDocs(tableName, (doc) => {
+                    if (source.range.every((filter) => evaluateRangeFilter(doc, filter))) {`,
+    to: `                const range = source.range.map((filter) => ({ path: filter.fieldPath.split("."), type: filter.type, value: evaluateQueryValue(filter.value) }));
+                const inRange = (doc, { path, type, value }) => {
+                    let result = doc;
+                    for (const p of path) {
+                        result = result !== undefined && result !== null && isSimpleObject(result) ? result[p] : undefined;
+                    }
+                    const order = compareValues(result === undefined ? undefined : resolvePendingValues(result), value);
+                    return type === "Eq" ? order === 0 : type === "Gt" ? order > 0 : type === "Gte" ? order >= 0 : type === "Lt" ? order < 0 : type === "Lte" ? order <= 0 : undefined;
+                };
+                this._iterateDocs(tableName, (doc) => {
+                    if (range.every((filter) => inRange(doc, filter))) {`,
+  },
 ];
 
 /** The library's code with each table's ids kept; throws, naming the place, when the library no longer reads as expected. */

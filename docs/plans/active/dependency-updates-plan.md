@@ -1,7 +1,8 @@
 # Bringing every dependency up to date
 
-Anthony, 2026-10-22, after the Node.js October security release: "can we check if anyting else needs to be updated
-too", then "lets make a plan to do all of them". He said "yes go fior it" the same day. Phases 0–9 and 12 are built (9 only to the newest Stripe 22), 10 and 11 wait on other tools, and Node 26 waits on Convex — see each phase's notes below.
+Anthony, 2026-10-22, after the Node.js October security release: "can we check if anyting else needs to be updated too",
+then "lets make a plan to do all of them". He said "yes go fior it" the same day. Phases 0–9 and 12 are built (9 only to
+the newest Stripe 22), 10 and 11 wait on other tools, and Node 26 waits on Convex — see each phase's notes below.
 
 ## Already done
 
@@ -134,6 +135,14 @@ too", then "lets make a plan to do all of them". He said "yes go fior it" the sa
   Coverage keeps the same 1,982 files.
 - **Before the next push:** the five-second check and a whole coverage run on a quiet machine — two other projects'
   test runs held this one at load 25–35 all afternoon, and stopped a coverage run part-way.
+- **Found by the first five-second check after 7 (2026-10-22).** The check could time no test on its own: from Vitest
+  5, `-t` matches a test's suites and title joined by " > ", not the report's space-joined name, so every test it
+  picked was skipped and 63 were named. `scripts/check-test-speed.mjs` now sends the joined name. With that fixed,
+  the backend tests near the line were found a quarter slower than before the plan, timed side by side at the same
+  load (109s against 134s over the eight slowest files): `convex-test` 0.0.64 (phase 3) looks for a commit time in
+  every value it reads, words and numbers too. `src/test/convexTestTables.ts` gains two changes with the same
+  answers — no look inside a plain value, and an index read's range worked out once a read — which brought the
+  eight files back to within 6% of before, at a higher load, and the rehearsal test from 4.8s to 4.2s alone.
 
 ### Phases 8–12, as built or waiting (2026-10-22)
 
@@ -143,7 +152,7 @@ too", then "lets make a plan to do all of them". He said "yes go fior it" the sa
   queries and AI inputs and outputs, which 10 did not; error monitoring now sets 10's restraint in Sentry 11's own
   terms (`dataCollection`), and `src/lib/initErrorMonitoring.test.ts` holds it.
 - **8d.** `@google/genai` 2.30.0: its breaking changes are in an API Hakken does not use. On dev, with Convex bundling
-  it, the provider probe listed 30 models, one short Gemini answer and one embedding came back.
+  it, the provider probe listed 30 models, one short answer from Google's model and one embedding came back.
 - **9.** `stripe` 22.6.2, kept exact — **not 23**. 22.6.2 is the newest 22 and Hakken keeps sending Stripe the same API
   version (2026-05-27.dahlia), so nothing Stripe sees changes. Stripe 23 moves to a new API version
   (2026-09-30.endive), which `@convex-dev/stripe` does not take yet: that is a billing decision of its own, with the

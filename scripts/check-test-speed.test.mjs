@@ -11,18 +11,18 @@ describe('the test speed budget', () => {
       {
         name: '/repo/convex/example.test.ts',
         assertionResults: [
-          { fullName: 'a suite a quick test', status: 'passed', duration: 40 },
-          { fullName: 'a suite a slow test (whole company)', status: 'passed', duration: 7_200 },
-          { fullName: 'a suite a failed test', status: 'failed', duration: 9_000 },
+          { ancestorTitles: ['a suite'], title: 'a quick test', fullName: 'a suite a quick test', status: 'passed', duration: 40 },
+          { ancestorTitles: ['a suite'], title: 'a slow test (whole company)', fullName: 'a suite a slow test (whole company)', status: 'passed', duration: 7_200 },
+          { ancestorTitles: ['a suite'], title: 'a failed test', fullName: 'a suite a failed test', status: 'failed', duration: 9_000 },
         ],
       },
     ],
   };
 
-  it('reads each passed test with its file, full name and time', () => {
+  it('reads each passed test with its file, full name, the name `-t` matches and time', () => {
     expect(readTimings(report, '/repo')).toEqual([
-      { file: 'convex/example.test.ts', name: 'a suite a quick test', key: 'convex/example.test.ts › a suite a quick test', duration: 40 },
-      { file: 'convex/example.test.ts', name: 'a suite a slow test (whole company)', key: 'convex/example.test.ts › a suite a slow test (whole company)', duration: 7_200 },
+      { file: 'convex/example.test.ts', name: 'a suite a quick test', filterName: 'a suite > a quick test', key: 'convex/example.test.ts › a suite a quick test', duration: 40 },
+      { file: 'convex/example.test.ts', name: 'a suite a slow test (whole company)', filterName: 'a suite > a slow test (whole company)', key: 'convex/example.test.ts › a suite a slow test (whole company)', duration: 7_200 },
     ]);
   });
 
@@ -34,10 +34,10 @@ describe('the test speed budget', () => {
   });
 
   it('picks exactly those tests out of their file, whatever their names hold', () => {
-    const pattern = new RegExp(namePattern(['a suite a slow test (whole company)', 'costs $0.10+']));
-    expect(pattern.test('a suite a slow test (whole company)')).toBe(true);
+    const pattern = new RegExp(namePattern(['a suite > a slow test (whole company)', 'costs $0.10+']));
+    expect(pattern.test('a suite > a slow test (whole company)')).toBe(true);
     expect(pattern.test('costs $0.10+')).toBe(true);
-    expect(pattern.test('a suite a slow test whole company')).toBe(false);
+    expect(pattern.test('a suite > a slow test whole company')).toBe(false);
   });
 
   it('says why each test that is slow on purpose is', () => {

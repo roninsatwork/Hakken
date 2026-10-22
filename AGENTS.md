@@ -252,7 +252,12 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   the slowest collection tests from nine seconds to five. A `convex-test`
   upgrade that moves the code it changes fails every backend test at once,
   naming the place: update the change to the new code, never remove it to make
-  the run pass.
+  the run pass. An upgrade can also slow the backend tests without failing
+  any: time the slowest files against the old version at the same load before
+  trusting it. `convex-test` 0.0.64 ran them a quarter slower, looking for a
+  commit time inside every plain value; the same file now skips that look for
+  words and numbers and works an index read's range out once a read
+  (2026-10-22), with the same answers.
 - **A drift test never reads what a test run writes.** The repo scan
   (`walkRepoFiles`, `src/test/driftUtils.ts`) skips `coverage/`,
   `test-results/` and `playwright-report/`: a drift test reading coverage's

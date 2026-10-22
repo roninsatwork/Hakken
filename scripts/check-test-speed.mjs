@@ -38,13 +38,24 @@ export const SLOW_TESTS = new Map([
   ],
 ]);
 
-/** Every test in a Vitest JSON report: its file, full name and time. */
+/**
+ * Every test in a Vitest JSON report: its file, full name and time, and the
+ * name `-t` matches it by. From Vitest 5 that is its suites and title joined
+ * by " > ", not the report's space-joined full name, which matches nothing
+ * (2026-10-22: every test went "not timed alone").
+ */
 export function readTimings(report, root = process.cwd()) {
   return report.testResults.flatMap((file) => {
     const relative = path.relative(root, file.name).split(path.sep).join("/");
     return file.assertionResults
       .filter((test) => test.status === "passed")
-      .map((test) => ({ file: relative, name: test.fullName, key: `${relative} › ${test.fullName}`, duration: test.duration ?? 0 }));
+      .map((test) => ({
+        file: relative,
+        name: test.fullName,
+        filterName: test.title === undefined ? test.fullName : [...(test.ancestorTitles ?? []), test.title].join(" > "),
+        key: `${relative} › ${test.fullName}`,
+        duration: test.duration ?? 0,
+      }));
   });
 }
 
@@ -62,7 +73,7 @@ const seconds = (ms) => `${(ms / 1000).toFixed(1)}s`;
 
 function timeAlone(file, tests) {
   try {
-    execFileSync("npx", ["vitest", "run", file, "-t", namePattern(tests.map((test) => test.name)), "--reporter=json", `--outputFile=${ALONE}`], {
+    execFileSync("npx", ["vitest", "run", file, "-t", namePattern(tests.map((test) => test.filterName)), "--reporter=json", `--outputFile=${ALONE}`], {
       stdio: "ignore",
     });
   } catch {
