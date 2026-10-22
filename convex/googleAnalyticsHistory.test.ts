@@ -5,7 +5,7 @@ import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
-import { collectedWebsite } from "@/src/test/googleAnalyticsCollected";
+import { FINISHED_ON_9_OCTOBER, collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { fillPieces } from "./googleAnalyticsHistory";
@@ -30,6 +30,11 @@ function twoYears(): Visit[] {
 }
 
 const args = { device: "", channel: "Organic Search" };
+/**
+ * Last week, last month and last quarter fetched already: a test that reads none of their lists asks Google for none
+ * (AGENTS.md: a test asks no more than its assertions read; these sat at five seconds on a busy machine, 2026-10-22).
+ */
+const FETCHED = { connection: FINISHED_ON_9_OCTOBER };
 const visitsOf = (points: ReadonlyArray<{ visits: number }>) => points.reduce((sum, point) => sum + point.visits, 0);
 
 beforeEach(() => {
@@ -58,7 +63,7 @@ describe("channels over time", () => {
   test("filled once: this year and the same days a year before read from what is held, by day, week and month, never asking Google", async () => {
     const t = harness();
     // Filled by its first night (ga-big-site-reliability-plan.md BR7).
-    const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
+    const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.historyFilled).toContain("channel");
     const asked = google.calls.length;
     const year = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "thisYear", ...args });
@@ -79,7 +84,7 @@ describe("channels over time", () => {
 
   test("filled once: Overview, Events, Campaigns and Visitors read this year from each fact a day, never asking Google", async () => {
     const t = harness();
-    const { siteId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
+    const { siteId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
     const asked = google.calls.length;
     const year = { siteId, period: "thisYear" as const, device: "" };
     const overview = await user.query(api.googleAnalyticsChartReads.analyticsChart, year);
@@ -96,7 +101,10 @@ describe("channels over time", () => {
 
   test("a website held as 60 days: the fill tops the days up to 92 first, and nothing past the days is read until it has", async () => {
     const t = harness();
-    const { siteId, connectionId, user } = await collectedWebsite(t, twoYears(), encryptConnectorToken, { firstNight: false });
+    // Last month is read; last week and last quarter are not, so they are fetched already.
+    const { siteId, connectionId, user } = await collectedWebsite(t, twoYears(), encryptConnectorToken, {
+      firstNight: false, connection: { ...FINISHED_ON_9_OCTOBER, periodsFetched: FINISHED_ON_9_OCTOBER.periodsFetched.filter((period) => period.key !== "lastMonth") },
+    });
     // As a website collected before 90 days were kept: its 60 newest days.
     const sixty = shiftDay(NEWEST, -59);
     await t.run(async (ctx) => {
@@ -148,7 +156,7 @@ describe("channels over time", () => {
 
   test("rolling on: every day fact's day past 92 goes into its week, a week past a year into its month, the figures kept whole", async () => {
     const t = harness();
-    const { siteId } = await collectedWebsite(t, twoYears(), encryptConnectorToken);
+    const { siteId } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
     const held = async () => await t.run(async (ctx) => {
       const days = await ctx.db.query("googleAnalyticsDays").withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", siteId)).collect();
       const history = await ctx.db.query("googleAnalyticsHistory").withIndex("by_hold_grain_start", (q) => q.eq("companyWebsiteId", siteId)).collect();
