@@ -120,6 +120,21 @@ too", then "lets make a plan to do all of them". Nothing in this plan is built y
   on Node 24 inside GitHub; every setting our workflows use is still among each one's inputs. Proved by the next
   push's run; the release steps (`deploy.yml`) only at the first push to `main`.
 
+### Phases 5–7, as built (2026-10-22)
+
+- **5.** `@types/node` 20 → 24.19.2. Next.js 16.4's new lint rule against a relative `window.location.href` names the
+  top bar's sign-out, which reloads on purpose: marked as meant.
+- **6.** `@testing-library/jest-dom` 7.0.1, `jsdom` 30.1.3: all 2,665 screen tests and the drawing kit pass.
+- **7.** Vitest and `@vitest/coverage-v8` 5.0.5. Inline projects now take the root's config unless told not to, so
+  each says `extends: false` (the React plugin would run twice); the kept transformed files (`fsModuleCache`), now a
+  default everywhere, stay local only, as measured; `jest-dom`'s checks are declared for Vitest 5's types
+  (`src/test/jestDomMatchers.d.ts`) until `jest-dom` does it itself; Vitest 5's `.vitest/` joins `.gitignore` and the
+  drift tests' skip list. Its fake timers still fake every clock, `Temporal` too. A first run with an empty cache, on a
+  busy machine, timed out seven files' first tests, each loading the app's code; the next run passed all 8,052.
+  Coverage keeps the same 1,982 files.
+- **Before the next push:** the five-second check and a whole coverage run on a quiet machine — two other projects'
+  test runs held this one at load 25–35 all afternoon, and stopped a coverage run part-way.
+
 ## Limits, said plainly
 
 - Convex's own Node is Convex's: this plan can't move it, only check it.

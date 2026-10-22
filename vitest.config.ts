@@ -111,13 +111,17 @@ export default defineConfig({
   test: {
     globals: true,
     coverage: coverageConfig,
-    ...(LOCAL_RUN ? { maxWorkers: '50%', experimental: { fsModuleCache: true } } : {}),
+    ...(LOCAL_RUN ? { maxWorkers: '50%' } : {}),
+    // Vitest 5 keeps transformed files by default, GitHub too: here only, as measured (above).
+    fsModuleCache: LOCAL_RUN,
     projects: [
       {
         plugins: [reactPlugin],
         resolve: {
           alias: rootAlias,
         },
+        // Its own config, not the root's merged in (Vitest 5's default): the root's React plugin would run twice.
+        extends: false,
         test: {
           name: 'ui',
           globals: true,
@@ -148,6 +152,7 @@ export default defineConfig({
         resolve: {
           alias: rootAlias,
         },
+        extends: false,
         test: {
           name: 'backend',
           globals: true,

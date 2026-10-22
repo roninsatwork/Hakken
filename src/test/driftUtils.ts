@@ -140,7 +140,9 @@ export const ignoredRepoPathPrefixes = [
   // Playwright's results, and coverage's report with the half-written files
   // its workers leave in `coverage/.tmp` while the run is still going (a
   // drift test scanning them failed a coverage run on 2026-10-07, on timing
-  // alone): test names and numbers, not source to police.
+  // alone): test names and numbers, not source to police. Vitest 5 writes its
+  // own reports and attachments into `.vitest/` unless told where (2026-10-22).
+  '.vitest/',
   'coverage/',
   'test-results/',
   'tmp/',

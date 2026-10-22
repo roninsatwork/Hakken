@@ -23,7 +23,7 @@ import { nextTurn, realDeadline, REAL_WAIT_LIMIT_MS } from "./realTime";
  *
  * Needs fake timers, like the call it replaces. Its deadline is real time
  * (`realTime.ts`): until 2026-10-05 it was read from `process.hrtime`, which
- * Vitest 4's fake timers replace too, so a clock jump spent it and a cold
+ * Vitest's fake timers (since 4) replace too, so a clock jump spent it and a cold
  * load never did — the helper meant to fail a hang in its own words ran on
  * to the thirty-second limit instead.
  */

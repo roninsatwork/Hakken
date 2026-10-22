@@ -9,7 +9,7 @@ import { isIgnoredRepoFile } from "./driftUtils";
  */
 describe("the repo scan", () => {
   it("never reads what a test run writes", () => {
-    for (const written of ["coverage/.tmp/coverage-0.json", "coverage/coverage-final.json", "test-results/test-timings.json", "playwright-report/index.html"]) {
+    for (const written of ["coverage/.tmp/coverage-0.json", "coverage/coverage-final.json", "test-results/test-timings.json", "playwright-report/index.html", ".vitest/json/output.json"]) {
       expect(isIgnoredRepoFile(path.join(process.cwd(), written))).toBe(true);
     }
   });

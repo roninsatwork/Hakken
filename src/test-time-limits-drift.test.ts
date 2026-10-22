@@ -230,7 +230,10 @@ describe('test time limits', () => {
 
   test('the run is set as measured, and the one default for screens is where it is said to be', () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
-    expect(config).toMatch(/\.\.\.\(LOCAL_RUN \? \{ maxWorkers: '50%', experimental: \{ fsModuleCache: true \} \} : \{\}\)/)
+    expect(config).toMatch(/\.\.\.\(LOCAL_RUN \? \{ maxWorkers: '50%' \} : \{\}\)/)
+    // Transformed files kept here only (Vitest 5 keeps them by default, GitHub too); each project its own config.
+    expect(config).toMatch(/^    fsModuleCache: LOCAL_RUN,$/m)
+    expect(config.match(/^        extends: false,$/gm)).toHaveLength(2)
     expect(config).toMatch(/const STUBS_PUT_BACK = \{ unstubEnvs: true, unstubGlobals: true \} as const/)
     expect(config.match(/\.\.\.STUBS_PUT_BACK/g)).toHaveLength(2)
     const setup = readFileSync(join(repoRoot, 'vitest.setup.ts'), 'utf8')

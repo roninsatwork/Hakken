@@ -198,8 +198,9 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   a genuine hang in their own words. Never write a loop that moves the clock,
   never `vi.runAllTimersAsync()` / `vi.advanceTimersToNextTimer…()` and hope,
   never a `setTimeout` sleep of 50ms or more to wait for something.
-- **Fake timers fake every clock.** In Vitest 4 a plain `vi.useFakeTimers()`
-  replaces `Date`, `performance.now` and `process.hrtime` too, so a deadline
+- **Fake timers fake every clock.** Since Vitest 4 a plain `vi.useFakeTimers()`
+  replaces `Date`, `performance.now` and `process.hrtime` too (and `Temporal` from
+  Vitest 5, checked 2026-10-22), so a deadline
   read from any of them is fake time. Use `realDeadline()`; to time a test,
   keep `performance.now` before the fakes go in.
 - **One wait on screen.** `findBy…` and `waitFor` take the default set once in

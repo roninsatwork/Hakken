@@ -35,6 +35,7 @@ Thumbs.db
 /coverage
 /playwright-report/
 /test-results/
+/.vitest/
 /e2e/.auth/
 
 # Local scratch/proof outputs

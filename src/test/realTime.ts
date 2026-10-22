@@ -11,7 +11,7 @@ import { expect, vi } from "vitest";
  * the test then asserts too early, or hangs on a timer nobody moves until the
  * thirty-second limit. Every flake of 2026-09 and 2026-10 was that shape.
  *
- * Vitest 4's fake timers replace every clock — `Date`, `performance.now` and
+ * Vitest's fake timers (since 4) replace every clock — `Date`, `performance.now` and
  * `process.hrtime` too — so a deadline read from any of them is fake time, and
  * one jump of the fake clock spends it. These are kept from when this module
  * loads, before any test fakes them, and stay real.
