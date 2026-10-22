@@ -118,7 +118,8 @@ async function finishWithWatch(t: Harness): Promise<number> {
   let carried = 0;
   for (let look = 0; look < 30; look += 1) {
     await finishScheduled(t);
-    vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1);
+    // A second past the watch: a saved time is a few milliseconds past the frozen clock (`aboutMs`).
+    vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1_000);
     const now = await t.mutation(internal.collectionSteps.watchChains, {});
     if (now === 0) return carried;
     carried += now;
@@ -215,7 +216,8 @@ describe("Google Analytics' run, ended other ways", () => {
       await ctx.scheduler.cancel(held.stepJobId!);
       await ctx.db.patch(run._id, { status: "CANCELLED" });
     });
-    vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1);
+    // A second past the watch: the step's own time is a few milliseconds past the frozen clock (`aboutMs`).
+    vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1_000);
     expect(await t.mutation(internal.collectionSteps.watchChains, {})).toBe(1);
     await finishScheduled(t);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.collecting).toBeUndefined();

@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 
 /**
  * The one way a test waits while the clock is fake (AGENTS.md, "Tests that
@@ -135,4 +135,17 @@ export function useMiddayUtc(): void {
   const now = new Date();
   vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
   vi.setSystemTime(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12));
+}
+
+/**
+ * A time a Convex function saved, or a delay it booked, with the clock frozen: within 50 milliseconds of `ms`.
+ *
+ * `convex-test` from 0.0.63 pins each query's and mutation's clock as Convex does: at the latest of the clock and the
+ * last change saved, a millisecond on. With the clock frozen, each saved change moves the next function's clock a
+ * millisecond, so a time written after a few saves is `NOW` plus a few milliseconds, never `NOW` exactly (2026-10-22).
+ * Assert such a time with this; move the clock by more than a few milliseconds past a limit a test crosses; and never
+ * move it back once a test has saved anything, which leaves every later function's clock where the last save left it.
+ */
+export function aboutMs(ms: number) {
+  return expect.closeTo(ms, -2);
 }

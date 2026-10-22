@@ -5,7 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
-import { useFixedDay } from "@/src/test/realTime";
+import { aboutMs, useFixedDay } from "@/src/test/realTime";
 
 /**
  * Connecting an owned website to Bing Webmaster Tools, end to end with Bing
@@ -151,7 +151,7 @@ describe("connecting a website's Bing Webmaster Tools", () => {
     const { t, siteId, admin } = await setup();
     fakeBing({ sites: [{ Url: "https://www.ronins.co.uk/", IsVerified: false }] });
     await signIn(t, admin, siteId);
-    expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTING", attempt: { outcome: "UNVERIFIED", at: NOW } });
+    expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTING", attempt: { outcome: "UNVERIFIED", at: aboutMs(NOW) } });
     expect(await tokensOf(t)).toEqual([]);
 
     fakeBing({ sites: [{ Url: "https://another.test/", IsVerified: true }] });
@@ -184,7 +184,7 @@ describe("connecting a website's Bing Webmaster Tools", () => {
       await ctx.db.insert("bingDays", { companyWebsiteId: siteId, day: "2026-10-11", clicks: 1, impressions: 63, fetchedAt: NOW });
     });
     await admin.mutation(api.bingWebmasterConnect.disconnectBing, { siteId });
-    expect(await connectionOf(t, siteId)).toMatchObject({ status: "DISCONNECTED", disconnectedAt: NOW });
+    expect(await connectionOf(t, siteId)).toMatchObject({ status: "DISCONNECTED", disconnectedAt: aboutMs(NOW) });
     expect(await tokensOf(t)).toEqual([]);
     expect(await t.run(async (ctx) => (await ctx.db.query("bingDays").collect()).length)).toBe(1);
   });

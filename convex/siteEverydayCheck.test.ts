@@ -112,6 +112,11 @@ async function filedList(
 const KORDA: Array<[number, number, number, number]> = [[0, 1_000, 1_000, 827], [1_000, 1_000, 1_000, 781], [2_000, 1_000, 989, 937]];
 const KORDA_TOTALS = { rows: 2_989, searches: 2_545 };
 const TEN_DAYS_AGO = "2026-09-16";
+/**
+ * The next day's run, a minute after the first's: the first's purchases are saved a few milliseconds past the frozen
+ * clock (`aboutMs`), so a run exactly a day on falls those milliseconds short of a day since them and plans nothing.
+ */
+const NEXT_DAY = "2026-09-27T23:01:00Z";
 
 describe("the everyday check", () => {
   test("buys the everyday check's searches on every run, and the whole list weekly, each sized from the last list", async () => {
@@ -132,7 +137,7 @@ describe("the everyday check", () => {
 
     // The next day: only the rows a thousand searches take — not a thousand
     // rows, which held 827 of them.
-    vi.setSystemTime(new Date("2026-09-27T23:00:00Z"));
+    vi.setSystemTime(new Date(NEXT_DAY));
     const second = await run(t, companyId);
     expect(await listPagesOf(t, second)).toEqual([{ offset: 0, limit: 1_000, reach: 1_000 }, { offset: 1_000, limit: 344, reach: 1_000 }]);
   });
@@ -164,7 +169,7 @@ describe("the everyday check", () => {
     const first = await run(t, companyId);
     expect(await listPagesOf(t, first)).toEqual([{ offset: 0, limit: 1_000, reach: 1_000 }]);
     await answerAll(t);
-    vi.setSystemTime(new Date("2026-09-27T23:00:00Z"));
+    vi.setSystemTime(new Date(NEXT_DAY));
     expect(await listPagesOf(t, await run(t, companyId))).toEqual([]);
   });
 
@@ -175,7 +180,7 @@ describe("the everyday check", () => {
     await filedList(t, websiteId, TEN_DAYS_AGO, [[0, 1_000, 943, 807]], { rows: 943, searches: 807 });
     await run(t, companyId);
     await answerAll(t);
-    vi.setSystemTime(new Date("2026-09-27T23:00:00Z"));
+    vi.setSystemTime(new Date(NEXT_DAY));
     expect(await listPagesOf(t, await run(t, companyId))).toEqual([{ offset: 0, limit: 1_000, reach: 1_000 }]);
   });
 

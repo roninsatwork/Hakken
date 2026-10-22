@@ -56,7 +56,8 @@ describe("single-use owned uploads", () => {
     vi.useFakeTimers();
     const { t, owner, mint } = await setup();
     const expired = await mint();
-    vi.advanceTimersByTime(UPLOAD_TICKET_MS + 1);
+    // A second past the ticket's life: its saved time is a few milliseconds past the clock (`aboutMs`).
+    vi.advanceTimersByTime(UPLOAD_TICKET_MS + 1_000);
     await expect(t.mutation(internal.uploadReservations.begin, { token: expired, contentType: "text/plain" })).rejects.toThrow("expired");
     const moved = await mint();
     await t.run(ctx => ctx.db.patch(owner.userId, { companyId: undefined }));

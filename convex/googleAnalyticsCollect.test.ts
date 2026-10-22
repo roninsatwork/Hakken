@@ -5,7 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
-import { useFixedDay } from "@/src/test/realTime";
+import { aboutMs, useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
@@ -557,7 +557,7 @@ describe("collecting a website's Google Analytics", () => {
     expect([again.map((range) => range.startDate).sort()[0], again.map((range) => range.endDate).sort().at(-1)]).toEqual(["2026-10-01", "2026-12-31"]);
     const redone = (await connectionOf(t, connectionId))!;
     expect(redone.countedWith).toBe("EVENT_COUNT");
-    expect(redone.weeklyPeriodsAt).toBe(FIRST + HOUR);
+    expect(redone.weeklyPeriodsAt).toEqual(aboutMs(FIRST + HOUR));
     // Insights' month kept month by month goes, to be asked again; one asked whole each run stays.
     const kinds = await t.run(async (ctx) => (await ctx.db.query("insightHistory").collect()).map((record) => record.kind));
     expect(kinds).toEqual(["GA_SOURCES"]);

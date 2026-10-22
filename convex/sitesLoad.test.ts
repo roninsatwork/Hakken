@@ -252,6 +252,12 @@ describe("a very large site", () => {
     const timed = screens.map(([name, query, args]): [string, () => Promise<unknown>] => [name, () => asMember.query(query, args)]);
     // Warm the functions up once, so module loading is not timed as reading.
     await timed[0][1]();
+    // No stacks while timing. convex-test checks a returned row's fields that may take more than one shape by trying each
+    // and throwing for each that does not fit — about ten a row of the searches that changed band — and from 0.0.59 every
+    // throw takes a stack many wrappers deep: 5,000 rows came to 370ms there, against 40ms of the query's own work
+    // (2026-10-22). Convex checks what a query returns on its own servers, so the stacks timed nothing a screen waits on.
+    const stackLimit = Error.stackTraceLimit;
+    Error.stackTraceLimit = 0;
     const scan = await fastest(() => t.run(async (ctx) => (await ctx.db.query("siteKeywordRanks").collect()).length), 2);
     const fullScan = scan.took;
     expect(scan.result).toBe(50_000);
@@ -271,6 +277,7 @@ describe("a very large site", () => {
     const answerScreens = new Set(["AI mentions", "share of voice", "side by side", "the Overview's extras", "the site's header", "the Sites list"]);
     for (const [name, run] of timed.filter(([name]) => answerScreens.has(name))) await time(`${name}, a thousand questions`, run);
     await time("suggested competitors, a thousand questions", () => asMember.query(api.siteCompetitors.listSuggested, { siteId: holdId }));
+    Error.stackTraceLimit = stackLimit;
     expect(slow).toEqual([]);
 
     // What each kind of screen reads against its budget (core-data-normalisation-plan.md

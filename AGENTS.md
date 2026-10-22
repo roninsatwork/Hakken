@@ -219,6 +219,14 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   file: that is how ten were found in six files. Ignore failures from
   module-level `Date.now()` or real elapsed time, which only that check
   breaks.
+- **A Convex function's clock is pinned** (2026-10-22, `convex-test` 0.0.63 on). Each
+  query and mutation sees the clock as it started, never behind the last change saved, as
+  Convex does — so with the clock frozen, each saved change moves the next function's clock
+  a millisecond on. Assert a time a function saved, or a delay it booked, with
+  `aboutMs(…)` (`src/test/realTime.ts`), never `NOW` exactly; move the clock a second, not
+  a millisecond, past a limit a test crosses; and set a test's day before it saves anything,
+  as its clock never moves back once it has. Fourteen tests broke on the upgrade by one of
+  those three.
 - **No timer outlives its test.** A screen's timer left running — a "Saved"
   note cleared two seconds later — fired after its test's window was gone on
   GitHub's slower runner and failed a run whose every test had passed (CI #26).

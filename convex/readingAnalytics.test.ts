@@ -56,10 +56,11 @@ describe("Analytics", () => {
   });
 
   test("Overview: the period's figures beside the one before, every day of it, the tabs' counts and the top five of each", async () => {
+    // Forty days ago, before anything is saved: in the 30 days before, not in these 30. A test's clock never moves back
+    // once it has saved anything (`aboutMs`).
+    vi.setSystemTime(Date.parse("2026-08-30T12:00:00Z"));
     const t = harness();
     const s = await setUp(t);
-    // Forty days ago: in the 30 days before, not in these 30.
-    vi.setSystemTime(Date.parse("2026-08-30T12:00:00Z"));
     await s.read(s.james, "VIEW", "OURS", s.ours);
     vi.setSystemTime(Date.parse("2026-10-08T12:00:00Z"));
     await s.read(s.james, "VIEW", "WEB", s.web);

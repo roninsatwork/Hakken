@@ -51,9 +51,9 @@ async function stopped(t: Harness) {
   await t.run(async (ctx) => await ctx.scheduler.cancel(row.stepJobId!));
 }
 
-/** The watch's next look, once the step is past its watch. */
+/** The watch's next look, once the step is past its watch: a second past, as a saved time is a few milliseconds past the frozen clock (`aboutMs`). */
 async function watchLater(t: Harness): Promise<number> {
-  vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1);
+  vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1_000);
   return await t.mutation(internal.collectionSteps.watchChains, {});
 }
 

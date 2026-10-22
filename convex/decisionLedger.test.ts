@@ -81,9 +81,10 @@ describe("Decision calls on the cost ledger", () => {
   });
 
   test("the nightly totals count each call once, charged to the Decision Maker", async () => {
+    // The day first: once a test has saved anything its clock never moves back (`aboutMs`).
+    vi.setSystemTime(Date.UTC(2026, 4, 2, 9));
     const t = setup();
     const { companyId } = await seed(t);
-    vi.setSystemTime(Date.UTC(2026, 4, 2, 9));
     await decide(t, companyId);
 
     await t.action(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-02" });

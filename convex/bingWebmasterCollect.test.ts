@@ -5,7 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
-import { useFixedDay } from "@/src/test/realTime";
+import { aboutMs, useFixedDay } from "@/src/test/realTime";
 import { rowsOfBingPart } from "./utils/bingWebmasterWeeks";
 import { unpackNumbers } from "./utils/searchConsolePacks";
 
@@ -134,7 +134,7 @@ describe("collecting a website's Bing Webmaster figures", () => {
     expect(siteRun.finalOutput).toContain("and the ready-made lists built again");
 
     const connection = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!;
-    expect(connection).toMatchObject({ newestDay: "2026-10-11", oldestDay: "2026-10-10", newestWeek: "2026-10-11", oldestWeek: "2026-10-04", lastCollectedAt: NOW });
+    expect(connection).toMatchObject({ newestDay: "2026-10-11", oldestDay: "2026-10-10", newestWeek: "2026-10-11", oldestWeek: "2026-10-04", lastCollectedAt: aboutMs(NOW) });
     expect(connection.collecting).toBeUndefined();
 
     const days = await t.run(async (ctx) => await ctx.db.query("bingDays").withIndex("by_hold_day", (q) => q.eq("companyWebsiteId", siteId)).collect());

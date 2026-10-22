@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { useFixedDay, whileMovingClock } from "@/src/test/realTime";
+import { aboutMs, useFixedDay, whileMovingClock } from "@/src/test/realTime";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { ASK_LIMIT_MS, within } from "./insightsAsk";
 import { INSIGHTS_STEP_WATCH_MS } from "./insightsRunSteps";
@@ -83,8 +83,8 @@ describe("a website's week in steps", () => {
     expect(jobs.find((job) => job._id === first)?.state.kind).toBe("canceled");
     const pending = jobs.filter((job) => job.state.kind === "pending").map((job) => [job.name, job.scheduledTime - Date.now()]);
     expect(pending).toEqual(expect.arrayContaining([
-      ["insightsRunSteps:watchInsightsStep", INSIGHTS_STEP_WATCH_MS],
-      ["insightsRunAfter:afterWeek", 0],
+      ["insightsRunSteps:watchInsightsStep", aboutMs(INSIGHTS_STEP_WATCH_MS)],
+      ["insightsRunAfter:afterWeek", aboutMs(0)],
     ]));
   });
 

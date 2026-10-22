@@ -41,15 +41,18 @@ export const CONVEX_TEST_CHANGES: ReadonlyArray<{ what: string; from: string; to
                     this.__tableIds?.get(tableNameFromId(_id))?.delete(_id);`,
   },
   {
+    // convex-test 0.0.64 writes the record with its commit time filled in (Convex 1.43's `v.commitTs()`).
     what: "a record added joins its table's ids",
-    from: `                    this._documents[_id] = write;`,
+    from: `                    this._documents[_id] =
+                        commitTs === null ? write : resolveCommittedValues(write, commitTs);`,
     to: `                    if (!(_id in this._documents)) {
                         this.__tableIds ??= new Map();
                         const table = tableNameFromId(_id);
                         if (!this.__tableIds.has(table)) this.__tableIds.set(table, new Set());
                         this.__tableIds.get(table).add(_id);
                     }
-                    this._documents[_id] = write;`,
+                    this._documents[_id] =
+                        commitTs === null ? write : resolveCommittedValues(write, commitTs);`,
   },
 ];
 

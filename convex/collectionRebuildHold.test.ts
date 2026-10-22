@@ -5,7 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishSeoCycle } from "./seoCollectionQueue";
 import { COLLECTION_REBUILD_EVERY_MS, siteRebuildKey } from "./siteRankings";
-import { useFixedDay } from "@/src/test/realTime";
+import { aboutMs, useFixedDay } from "@/src/test/realTime";
 
 /**
  * One rebuild at the end of each collection, not during it
@@ -135,7 +135,7 @@ describe("a website's rebuild during its collection", () => {
 
     await fileRanks(t, korda.websiteId, korda.ranked);
     const jobs = await waiting(t);
-    expect(named(jobs, "rebuildSite").map((job) => job.inMs)).toEqual([20_000]);
+    expect(named(jobs, "rebuildSite").map((job) => job.inMs)).toEqual([aboutMs(20_000)]);
     expect(named(jobs, "releaseHeldRequest")).toEqual([]);
   });
 });

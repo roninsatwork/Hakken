@@ -701,6 +701,8 @@ describe("collecting", () => {
     // A first collection adds its lists up.
     const first = await builtAt("lastWeek");
     expect(first).toBeDefined();
+    // Each list is added up in its own step, a millisecond or more apart (`aboutMs`): this year's own time.
+    const firstYear = await builtAt("thisYear");
 
     // The next night's fetch brings a new day and adds nothing up.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
@@ -721,7 +723,7 @@ describe("collecting", () => {
     await finishScheduled(t);
     const second = await builtAt("lastWeek");
     expect(second).toBeGreaterThan(first!);
-    expect(await builtAt("thisYear")).toBe(first);
+    expect(await builtAt("thisYear")).toBe(firstYear);
 
     // A week on, the sweep adds up the website whole.
     vi.setSystemTime(NOW + 8 * 24 * 60 * 60 * 1000);

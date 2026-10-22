@@ -27,8 +27,11 @@ const ON_1_OCTOBER = [{ key: "lastWeek", from: "2026-09-21", settled: true }, { 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
-/** A website connected to Analytics with a purchase counted. */
-async function connected(t: Harness, fetched = false) {
+/** On Friday 9 October, last week and last month fetched already; last quarter, which shows a shop or none, still asked. */
+const ON_9_OCTOBER = [{ key: "lastWeek", from: "2026-09-28", settled: true }, { key: "lastMonth", from: "2026-09-01", settled: true }];
+
+/** A website connected to Analytics with a purchase counted; `fetched`, the finished periods fetched already. */
+async function connected(t: Harness, fetched: false | typeof ON_1_OCTOBER = false) {
   return await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
     const adminId = await ctx.db.insert("users", { name: "Admin", email: "admin@acme-shop.test", role: "ADMIN", companyId, createdAt: 1 });
@@ -41,7 +44,7 @@ async function connected(t: Harness, fetched = false) {
       events: [{ eventName: "purchase", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 30 }],
       // Counted by Google's own counts, last week and last month fetched already: the first run asks the periods still
       // going and last quarter, whose events show the shop (AGENTS.md: a test asks no more than its assertions read).
-      ...(fetched ? { countedWith: "EVENT_COUNT", periodsFetched: ON_1_OCTOBER } : {}),
+      ...(fetched ? { countedWith: "EVENT_COUNT", periodsFetched: fetched } : {}),
       createdAt: 1, updatedAt: 1,
     });
     await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
@@ -101,7 +104,7 @@ describe("Products, only for a shop", () => {
     // periods, the second run every finished one again with the shop's products (AGENTS.md: as little as it reads).
     vi.setSystemTime(Date.parse("2026-10-01T09:30:00Z"));
     const t = harness();
-    const { siteId, connectionId, agentId, admin } = await connected(t, true);
+    const { siteId, connectionId, agentId, admin } = await connected(t, ON_1_OCTOBER);
     const google = fakeGoogle([...history(70, LAST_MONTH_END), ...shopDays()]);
     await save(admin, siteId);
     await finishScheduled(t);
@@ -147,7 +150,8 @@ describe("Products, only for a shop", () => {
 
   test("a website selling nothing is no shop: no products asked, the page says so", async () => {
     const t = harness();
-    const { siteId, connectionId, agentId, admin } = await connected(t);
+    // Its quarters asked, which show a shop or none; last week and last month not read (AGENTS.md: as little as it reads).
+    const { siteId, connectionId, agentId, admin } = await connected(t, ON_9_OCTOBER);
     const google = fakeGoogle(history(70));
     await save(admin, siteId);
     await finishScheduled(t);

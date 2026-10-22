@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { useFixedDay } from "@/src/test/realTime";
+import { aboutMs, useFixedDay } from "@/src/test/realTime";
 
 const { generate, fetchPage } = vi.hoisted(() => ({ generate: vi.fn(), fetchPage: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -115,7 +115,7 @@ describe("the News Collector", () => {
     // The agent's own instructions lead what the model is told.
     expect(generate.mock.calls[0][0].systemInstruction).toMatch(/^Summarise plainly\./);
     const read = await t.run(async (ctx) => await ctx.db.get(sourceId));
-    expect(read).toMatchObject({ lastCheckedAt: Date.now(), lastItemAt: Date.now(), found: 2 });
+    expect(read).toMatchObject({ lastCheckedAt: aboutMs(Date.now()), lastItemAt: aboutMs(Date.now()), found: 2 });
     // Each item is filed under the person and their channel, whose counts follow.
     expect(saved.every((item) => item.channelId === sourceId && item.followId === read?.followId)).toBe(true);
     const person = await t.run(async (ctx) => (read ? await ctx.db.get(read.followId) : null));
