@@ -14,6 +14,14 @@ describe("the repo scan", () => {
     }
   });
 
+  it("never reads a dependency tree installed below a repository tool", () => {
+    expect(
+      isIgnoredRepoFile(
+        path.join(process.cwd(), "tools/socket-ci/node_modules/socket/dist/vendor.js"),
+      ),
+    ).toBe(true);
+  });
+
   it("still reads the source", () => {
     expect(isIgnoredRepoFile(path.join(process.cwd(), "convex/schema.ts"))).toBe(false);
   });

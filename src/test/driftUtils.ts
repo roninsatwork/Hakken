@@ -151,8 +151,12 @@ export const ignoredRepoPathPrefixes = [
 
 export const isIgnoredRepoFile = (filePath: string) => {
   const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
+  const pathSegments = normalizedPath.split('/');
 
-  return ignoredRepoPathPrefixes.some((prefix) => normalizedPath === prefix || normalizedPath.startsWith(prefix));
+  return (
+    pathSegments.includes('node_modules') ||
+    ignoredRepoPathPrefixes.some((prefix) => normalizedPath === prefix || normalizedPath.startsWith(prefix))
+  );
 };
 
 export const walkRepoFiles = (dir: string, extensions: ReadonlySet<string>): string[] => {
