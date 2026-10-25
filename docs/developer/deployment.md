@@ -78,7 +78,7 @@ cloud cost with `npm run test:e2e:real-auth`. Steps, when it does run:
 
 Every other browser job runs against a mocked backend: `next.config.ts` aliases
 `convex/react` to `src/e2e/convexReactMock.tsx` whenever
-`NEXT_PUBLIC_E2E_AUTH_ENABLED=1`, so those jobs prove the screens render but
+`NEXT_PUBLIC_E2E_AUTH_ENABLED=1` and `NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT=local`, so those jobs prove the screens render but
 never prove the wiring between the screens and Convex. This job is the only one
 that signs in through real Convex Auth, writes through real mutations, and reads
 back through real reactive queries. The mocked suite stays as the fast

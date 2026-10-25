@@ -204,7 +204,7 @@ describe("Telegram's messages in", () => {
   test("only with the secret Telegram was given, and answered in the background", async () => {
     const t = harness();
     await seed(t);
-    const update = { message: { chat: { id: 1001, type: "private" }, from: { id: 1001, first_name: "Anthony" }, text: "hello" } };
+    const update = { update_id: 1001, message: { chat: { id: 1001, type: "private" }, from: { id: 1001, first_name: "Anthony" }, text: "hello" } };
 
     const refused = await t.fetch("/telegram/webhook", { method: "POST", headers: { "X-Telegram-Bot-Api-Secret-Token": "wrong" }, body: JSON.stringify(update) });
     expect(refused.status).toBe(403);
@@ -215,12 +215,18 @@ describe("Telegram's messages in", () => {
     await finishScheduled(t);
     vi.useRealTimers();
     expect(said()).toEqual(["Hello! I’m Hakken. To talk with me here, open your profile in Hakken, find Telegram, and send me the code you see there."]);
+
+    vi.useFakeTimers();
+    await t.fetch("/telegram/webhook", { method: "POST", headers: { "X-Telegram-Bot-Api-Secret-Token": "test-secret" }, body: JSON.stringify(update) });
+    await finishScheduled(t);
+    vi.useRealTimers();
+    expect(said()).toEqual(["Hello! I’m Hakken. To talk with me here, open your profile in Hakken, find Telegram, and send me the code you see there."]);
   });
 
   test("a group chat is not answered", async () => {
     const t = harness();
     await seed(t);
-    const update = { message: { chat: { id: -500, type: "group" }, text: "hello" } };
+    const update = { update_id: 1002, message: { chat: { id: -500, type: "group" }, text: "hello" } };
 
     vi.useFakeTimers();
     await t.fetch("/telegram/webhook", { method: "POST", headers: { "X-Telegram-Bot-Api-Secret-Token": "test-secret" }, body: JSON.stringify(update) });

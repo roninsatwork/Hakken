@@ -149,11 +149,12 @@ describe("the treatments are the ones a regulator would expect", () => {
     expect(ruleFor("agentRunApprovals")?.treatment).toBe("RETAIN");
   });
 
-  test("only four things are retained, so the exceptions stay reviewable", () => {
+  test("only five things are retained, so the exceptions stay reviewable", () => {
     expect(rulesFor("RETAIN").map((rule) => rule.table).sort()).toEqual([
       "agentRunApprovals",
       "auditLogs",
       "maintenanceScriptRuns",
+      "personalDataErasureRuns",
       "purgeHistory",
     ]);
   });
@@ -180,7 +181,7 @@ describe("what the person answering the request is handed", () => {
   test("names every exception, because a silent one is what causes trouble", () => {
     const lines = describeErasure([]);
 
-    expect(lines.filter((line) => line.startsWith("Kept:"))).toHaveLength(4);
+    expect(lines.filter((line) => line.startsWith("Kept:"))).toHaveLength(5);
   });
 
   test("says plainly when there was nothing to delete", () => {

@@ -3955,6 +3955,33 @@ export default defineSchema({
   })
     .index("by_script_started", ["scriptId", "startedAt"]),
 
+  /**
+   * A large personal-data erasure hands itself to the next action segment.
+   * The row is retained as evidence of the request and whether it completed;
+   * it contains no erased content beyond the identity needed for that record.
+   */
+  personalDataErasureRuns: defineTable({
+    subjectUserId: v.id("users"),
+    subjectEmail: v.string(),
+    actorId: v.id("users"),
+    status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    ruleIndex: v.number(),
+    fieldIndex: v.number(),
+    cursor: v.optional(v.string()),
+    pagesProcessed: v.number(),
+    attempts: v.number(),
+    tallies: v.array(v.object({
+      table: v.string(),
+      treatment: v.union(v.literal("ERASE"), v.literal("DISSOCIATE"), v.literal("RETAIN")),
+      rows: v.number(),
+    })),
+    startedAt: v.number(),
+    lastProgressAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_subject_status", ["subjectUserId", "status"]),
+
   // The wiki tables are base-module schema. They sat inside the salesData
   // fence above until 2026-08-19, when the first real strip build showed a
   // salesData-free template losing its entire wiki (24 files failing to

@@ -33,7 +33,7 @@ const environment = {
   CONVEX_SITE_URL: "https://e2e-placeholder.convex.site",
 };
 // A verification build cannot inherit the caller's auth bypass or upload source maps.
-for (const name of ["E2E_AUTH_ENABLED", "NEXT_PUBLIC_E2E_AUTH_ENABLED", "SENTRY_AUTH_TOKEN", "CONVEX_DEPLOY_KEY"]) delete environment[name];
+for (const name of ["E2E_AUTH_ENABLED", "E2E_AUTH_ENVIRONMENT", "NEXT_PUBLIC_E2E_AUTH_ENABLED", "NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT", "SENTRY_AUTH_TOKEN", "CONVEX_DEPLOY_KEY"]) delete environment[name];
 
 function run(directory, label, command, commandArgs) {
   console.log(`${path.basename(directory)}: ${label}`);

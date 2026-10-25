@@ -41,6 +41,7 @@ For a local no-production-credentials demo seed, configure Convex with:
 
 ```bash
 LOCAL_DEMO_SEED_ENABLED=1
+LOCAL_DEMO_SEED_ENVIRONMENT=local
 LOCAL_DEMO_SEED_SECRET=replace-with-local-secret
 ```
 
@@ -52,7 +53,7 @@ LOCAL_DEMO_SEED_SECRET=replace-with-local-secret npm run demo:local:seed
 
 This seeds a demo company, super-admin, company admin, model defaults, starter knowledge, `knowledge.search` tool, a draft knowledge assistant, and starter eval fixtures.
 
-The seed is local-only. `convex/localDemoSeed.ts` refuses to run unless `LOCAL_DEMO_SEED_ENABLED=1`, the passed secret matches `LOCAL_DEMO_SEED_SECRET`, and `LOCAL_DEMO_SEED_ENVIRONMENT` is not `production`. Use the operator runbook for the full safety and troubleshooting flow.
+The seed is local-only. `convex/localDemoSeed.ts` refuses to run unless `LOCAL_DEMO_SEED_ENABLED=1`, the passed secret matches `LOCAL_DEMO_SEED_SECRET`, and `LOCAL_DEMO_SEED_ENVIRONMENT=local`. Use the operator runbook for the full safety and troubleshooting flow.
 
 The local seed is useful for rehearsing the setup flow, but it is not a production onboarding or migration tool.
 

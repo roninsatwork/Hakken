@@ -5368,6 +5368,8 @@
         "erase": "Delete everything",
         "readFailed": "That could not be produced. Check the email address and try again.",
         "eraseFailed": "Nothing was deleted. Check the email address and try again.",
+        "backgroundFailed": "The background erasure stopped after repeated failures. No completion record was issued; an operator needs to inspect the failed run.",
+        "working": "Still working. This request will continue in the background until every record is handled.",
         "done": "Done. Keep this — it is the answer to give whoever asked.",
         "keepRecord": "Save this record",
         "cancel": "Cancel",

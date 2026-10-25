@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { issueUpload, requireOwnedUpload } from "./uploadReservations";
 import { uploadMetadataArgs } from "./uploadSchema";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { redactPII } from "./utils/pii";
 import { appError } from "./utils/appError";
@@ -37,6 +37,20 @@ import { hakkenTaskProposalValidator } from "./hakkenTaskSchema";
 const USER_THREAD_MESSAGE_LIMIT = 500;
 const AI_CONTEXT_MESSAGE_LIMIT = 40;
 const THREAD_DELETE_MESSAGE_BATCH_SIZE = 100;
+
+async function assertRunnableAgent(
+  ctx: Pick<MutationCtx, "db">,
+  agentId: Id<"agents">,
+  companyId: Id<"companies"> | undefined,
+) {
+  const agent = await ctx.db.get(agentId);
+  if (!agent || (agent.companyId !== undefined && agent.companyId !== companyId)) {
+    throw appError("NOT_FOUND", "Agent not found.");
+  }
+  if (!agent.isActive) {
+    throw appError("CONFLICT", "This agent is disabled and cannot answer conversations.");
+  }
+}
 
 const safetyRefusalCategoryValidator = v.union(
   v.literal("hidden_instructions"),
@@ -352,6 +366,7 @@ export const createThread = tenantMutation({
       throw appError("NOT_FOUND", "That client does not exist.");
     }
     const activeCompanyId = args.forPlatform ? undefined : args.forCompanyId ?? getActiveCompanyId(user);
+    if (args.agentId) await assertRunnableAgent(ctx, args.agentId, activeCompanyId);
     // Only a website the conversation's own company holds: never another company's.
     if (args.forWebsiteId !== undefined) {
       const hold = await ctx.db.get(args.forWebsiteId);
@@ -400,6 +415,16 @@ export const sendMessage = publicMutation({
 
     await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
     assertWidgetTurnSettingsAllowed(thread, args);
+
+    // Resolve and validate the execution target before storing a message,
+    // consuming quota or looking up uploads. A disabled agent must be a hard
+    // stop even when a caller bypasses the agent picker or reuses an old
+    // thread that still names it.
+    const targetAgentId = resolveTargetAgentId(thread.agentId, args.dynamicAgentId);
+    if (isAnonymousWidgetThread(thread) && args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
+      throw appError("UNAUTHORIZED", "Unauthorized: Widget conversations cannot switch agents");
+    }
+    if (targetAgentId) await assertRunnableAgent(ctx, targetAgentId, thread.companyId);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
     if (args.fileIds?.length && !thread.widgetId && !(current && isThreadInCallersWorkspace(current.user, thread))) {
@@ -492,10 +517,6 @@ export const sendMessage = publicMutation({
     await ctx.db.patch(args.threadId, { updatedAt: now });
 
     // Determine if we need to hot-swap the agent mid-conversation
-    const targetAgentId = resolveTargetAgentId(thread.agentId, args.dynamicAgentId);
-    if (isAnonymousWidgetThread(thread) && args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
-      throw appError("UNAUTHORIZED", "Unauthorized: Widget conversations cannot switch agents");
-    }
     if (args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
         await ctx.db.patch(args.threadId, { agentId: targetAgentId });
     }

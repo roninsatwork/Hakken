@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { createOrUpdateHakkenAuthUser } from "./authUserProvisioning";
 import schema from "./schema";
 
@@ -23,6 +23,75 @@ async function getAuthEventTypes(t: ReturnType<typeof setup>, email: string) {
 }
 
 describe("Hakken auth user provisioning", () => {
+  test("the anonymous email gate admits only usable identities without returning their classification", async () => {
+    const t = setup();
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Gate Corp", createdAt: now });
+      await ctx.db.insert("users", { email: "existing@example.com", role: "USER", companyId });
+      await ctx.db.insert("invitations", {
+        email: "pending@example.com",
+        role: "USER",
+        companyId,
+        status: "PENDING",
+        token: "pending",
+        invitedAt: now,
+      });
+      await ctx.db.insert("invitations", {
+        email: "revoked@example.com",
+        role: "USER",
+        companyId,
+        status: "REVOKED",
+        token: "revoked",
+        invitedAt: now,
+      });
+      await ctx.db.insert("invitations", {
+        email: "expired@example.com",
+        role: "USER",
+        companyId,
+        status: "PENDING",
+        token: "expired",
+        invitedAt: now - 8 * DAY_MS,
+      });
+    });
+
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: " Existing@Example.com " }))
+      .resolves.toBe(true);
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: "pending@example.com" }))
+      .resolves.toBe(true);
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: "missing@example.com" }))
+      .resolves.toBe(false);
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: "revoked@example.com" }))
+      .resolves.toBe(false);
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: "expired@example.com" }))
+      .resolves.toBe(false);
+  });
+
+  test("the email gate refuses ambiguous identity rows instead of choosing one", async () => {
+    const t = setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("users", { email: "duplicate@example.com", role: "USER" });
+      await ctx.db.insert("users", { email: "Duplicate@Example.COM", role: "ADMIN" });
+      const companyId = await ctx.db.insert("companies", { name: "Duplicate Invites", createdAt: NOW });
+      for (const token of ["one", "two"]) {
+        await ctx.db.insert("invitations", {
+          email: "duplicate-invite@example.com",
+          role: "USER",
+          companyId,
+          status: "PENDING",
+          token,
+          invitedAt: NOW,
+        });
+      }
+    });
+
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: "duplicate@example.com" }))
+      .resolves.toBe(false);
+    await expect(t.query(internal.authEvents.canStartEmailSignIn, { email: "duplicate-invite@example.com" }))
+      .resolves.toBe(false);
+  });
+
   test("provisions a pending invite without accepting it before email verification", async () => {
     const t = setup();
 
@@ -440,5 +509,68 @@ describe("Hakken auth user provisioning", () => {
     });
 
     vi.unstubAllEnvs();
+  });
+
+  test("rejects a provider identity linked to a different email account", async () => {
+    const t = setup();
+
+    const linkedUserId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Linked Corp", createdAt: NOW });
+      return await ctx.db.insert("users", {
+        email: "original@example.com",
+        role: "USER",
+        companyId,
+        createdAt: NOW,
+      });
+    });
+
+    await expect(
+      t.run((ctx) =>
+        createOrUpdateHakkenAuthUser(
+          ctx,
+          {
+            existingUserId: linkedUserId,
+            provider: { id: "google", type: "oidc" },
+            profile: { email: "attacker@example.com", emailVerified: true },
+          },
+          NOW,
+        ),
+      ),
+    ).rejects.toThrow("does not match its linked account");
+  });
+
+  test("rejects a verified invitation that would move an existing account between companies", async () => {
+    const t = setup();
+
+    await expect(
+      t.run(async (ctx) => {
+        const originalCompanyId = await ctx.db.insert("companies", { name: "Original", createdAt: NOW });
+        const otherCompanyId = await ctx.db.insert("companies", { name: "Other", createdAt: NOW });
+        const userId = await ctx.db.insert("users", {
+          email: "member@example.com",
+          role: "USER",
+          companyId: originalCompanyId,
+          createdAt: NOW,
+        });
+        await ctx.db.insert("invitations", {
+          email: "member@example.com",
+          role: "ADMIN",
+          companyId: otherCompanyId,
+          status: "PENDING",
+          token: "cross-tenant-token",
+          invitedAt: NOW,
+        });
+
+        return await createOrUpdateHakkenAuthUser(
+          ctx,
+          {
+            existingUserId: userId,
+            provider: { id: "resend", type: "email" },
+            profile: { email: "member@example.com", emailVerified: true },
+          },
+          NOW + 1_000,
+        );
+      }),
+    ).rejects.toThrow("different workspace");
   });
 });

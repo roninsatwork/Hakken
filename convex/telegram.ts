@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import {
@@ -29,6 +30,55 @@ import { redactPII } from "./utils/pii";
 export const CODE_MINUTES = 10;
 
 const MOST_MESSAGE_CHARACTERS = 10_000;
+const WEBHOOK_REPLAY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+const webhookMessageValidator = v.object({
+  kind: v.literal("MESSAGE"),
+  chatId: v.string(),
+  text: v.string(),
+  telegramName: v.optional(v.string()),
+  languageCode: v.optional(v.string()),
+});
+const webhookTapValidator = v.object({
+  kind: v.literal("TAP"),
+  chatId: v.string(),
+  tapId: v.string(),
+  telegramMessageId: v.optional(v.number()),
+  data: v.string(),
+});
+
+/** Atomically claim a Telegram update and book its work exactly once. */
+export const claimWebhookUpdateInternal = internalMutation({
+  args: {
+    updateId: v.number(),
+    update: v.optional(v.union(webhookMessageValidator, webhookTapValidator)),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("telegramWebhookUpdates")
+      .withIndex("by_update", (q) => q.eq("updateId", args.updateId))
+      .first();
+    if (existing) return false;
+
+    const now = Date.now();
+    await ctx.db.insert("telegramWebhookUpdates", { updateId: args.updateId, receivedAt: now });
+    if (args.update) {
+      await ctx.scheduler.runAfter(0, internal.telegramActions.handleUpdateInternal, {
+        update: args.update,
+      });
+    }
+
+    // Replay receipts are short-lived operational state. Bound cleanup so an
+    // inbound webhook cannot turn retention into an unbounded transaction.
+    const expired = await ctx.db
+      .query("telegramWebhookUpdates")
+      .withIndex("by_received", (q) => q.lt("receivedAt", now - WEBHOOK_REPLAY_RETENTION_MS))
+      .take(50);
+    for (const receipt of expired) await ctx.db.delete(receipt._id);
+    return true;
+  },
+});
 
 // ── The person's own, on their profile ──────────────────────────────────────
 

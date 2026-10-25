@@ -2,7 +2,7 @@ import type { Id } from "./_generated/dataModel";
 import type { AuthEventType } from "./utils/authEventTypes";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
 import * as governanceShapes from "./utils/governanceShapes";
 import {
@@ -35,6 +35,71 @@ export type AuthEventInput = {
 };
 
 type AuthEventCtx = Pick<MutationCtx, "db">;
+type AuthIdentityLookupCtx = { db: Pick<MutationCtx["db"], "query"> };
+
+/**
+ * Find legacy case/whitespace variants as well as today's canonical rows.
+ * New writes are canonical, so the exact index is authoritative going
+ * forward; the bounded search-index fallback prevents an older mixed-case row
+ * from being silently preclaimed during the transition.
+ */
+export async function usersForCanonicalEmail(ctx: AuthIdentityLookupCtx, rawEmail: string) {
+  const email = normaliseEmail(rawEmail);
+  if (!email) return [];
+
+  const [exact, legacyCandidates] = await Promise.all([
+    ctx.db.query("users").withIndex("email", (q) => q.eq("email", email)).take(3),
+    ctx.db
+      .query("users")
+      .withSearchIndex("search_email", (q) => q.search("email", email))
+      .take(100),
+  ]);
+
+  return Array.from(
+    new Map(
+      [...exact, ...legacyCandidates]
+        .filter((user) => normaliseEmail(user.email ?? "") === email)
+        .map((user) => [user._id, user]),
+    ).values(),
+  ).slice(0, 3);
+}
+
+/**
+ * Decide whether an email provider may be started without exposing that
+ * decision to the anonymous caller.
+ *
+ * Convex Auth invokes the user-provisioning callback before sending the first
+ * email.  Letting the callback throw for an unknown, revoked or expired
+ * address made the public action an invitation-directory oracle.  The public
+ * wrapper now returns the same generic result for both branches and only calls
+ * the provider for an address that can actually complete sign-in.
+ */
+export const canStartEmailSignIn = internalQuery({
+  args: { email: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args): Promise<boolean> => {
+    const email = normaliseEmail(args.email);
+    if (!email) return false;
+
+    const existingUsers = await usersForCanonicalEmail(ctx, email);
+    // Ambiguous identity rows must be repaired by an operator, never selected
+    // by whichever document the database happens to return first.
+    if (existingUsers.length !== 0) return existingUsers.length === 1;
+
+    const initialSuperAdmin = normaliseEmail(process.env.INITIAL_SUPER_ADMIN_EMAIL ?? "");
+    if (initialSuperAdmin && email === initialSuperAdmin) return true;
+
+    const invitations = await ctx.db
+      .query("invitations")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .take(2);
+    if (invitations.length !== 1) return false;
+    const invite = invitations[0];
+    if (!invite) return false;
+    if (invite.status === "ACCEPTED") return true;
+    return invite.status === "PENDING" && Date.now() - invite.invitedAt <= INVITE_EXPIRATION_MS;
+  },
+});
 
 /**
  * The authoritative email-send gate. This mutation is called by the exported

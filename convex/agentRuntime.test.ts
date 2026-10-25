@@ -3171,6 +3171,9 @@ describe("tools that belong to a company", () => {
     // one nobody was looking at.
     const t = makeTest();
     const { agentId, companyId, userId } = await seedAgentRun(t);
+    // A tenant-owned agent must never lose its tenant context. This case is
+    // specifically about a global agent whose scheduled run has no company.
+    await t.run(async (ctx) => await ctx.db.patch(agentId, { companyId: undefined }));
     await bind(t, agentId, await seedTool(t, "acme_invoices", companyId));
     await bind(t, agentId, await seedTool(t, "platform_search"));
 

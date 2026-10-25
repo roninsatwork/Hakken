@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # The step below walks back through recent commits looking for one
           # that passed CI. A default checkout fetches exactly one commit and
@@ -44,15 +44,15 @@ jobs:
 
       - name: Authenticate to Google Cloud
         id: auth
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v3
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
 
       - name: Setup Node for Convex Backend Sync
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24.22.1'
           cache: 'npm'
@@ -61,7 +61,7 @@ jobs:
       # every release even though the lockfile rarely moves.
       - name: Restore installed packages
         id: packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: node_modules
           key: node-modules-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -72,7 +72,7 @@ jobs:
 
       - name: Workaround NPM Optional Dependency Bug
         if: steps.packages.outputs.cache-hit != 'true'
-        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+        run: npm install @rollup/rollup-linux-x64-gnu@4.62.4 --no-save --ignore-scripts
 
       # Scoped to runtime dependencies: this gate exists to block shipping a
       # vulnerable artifact, and devDependencies (ESLint, Vitest, Playwright)
@@ -181,7 +181,7 @@ jobs:
       # is the expensive one and it only changes when the lockfile does, but a
       # plain `docker build` starts every release with an empty slate.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # Tag every image with the commit SHA as well as :latest. :latest alone
       # is not rollback-able — once it is overwritten the previous image has no
@@ -219,12 +219,12 @@ jobs:
       # Deploy the immutable SHA tag, not :latest, so the revision records
       # exactly which image is serving traffic.
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v3
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
-          flags: '--allow-unauthenticated --port=3000'
+          flags: '--allow-unauthenticated --port=3000 --service-account=hakken-runtime@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
           env_vars: |-
             NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
             CONVEX_SITE_URL=${{ secrets.CONVEX_SITE_URL }}

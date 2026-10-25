@@ -27,6 +27,8 @@ export type SafeWorkflowFetchDependencies = {
    * few, because feeds move (`/feed` to `/feed/`, http to https).
    */
   maxRedirects?: number;
+  /** Read only the status and headers, cancelling the response stream. */
+  discardBody?: boolean;
 };
 
 function isBlockedIpv4(address: string): boolean {
@@ -233,6 +235,15 @@ export async function fetchWorkflowAction(
     if (response.headers.get("content-encoding") && response.headers.get("content-encoding") !== "identity") {
       await response.body?.cancel();
       throw appError("UPSTREAM_FAILURE", "Encoded outbound responses are not supported.");
+    }
+
+    if (dependencies.discardBody) {
+      await response.body?.cancel().catch(() => undefined);
+      return {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: "",
+      };
     }
 
     return {

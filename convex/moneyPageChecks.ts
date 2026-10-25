@@ -1,14 +1,15 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { accessTokenFor } from "./searchConsoleConnect";
 import { callGoogle } from "./googleApi";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
 import { changeKindValidator, fingerprintChanges } from "./utils/insightTrack";
-import { PAGE_READER_AGENT, indexedFrom, originOf, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
+import { readBoundedBody } from "./utils/boundedRequestBody";
+import { indexedFrom, originOf, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
 
 /**
  * The weekly checks on a website's money pages (docs/plans/active/
@@ -28,6 +29,7 @@ const THIN_PAGE = 80;
 /** Pages checked at once: PageSpeed takes ten to twenty seconds a page. */
 const AT_ONCE = 4;
 const MONEY_KINDS = new Set(["HOME", "SERVICE", "ABOUT"]);
+const FIRECRAWL_PAGE_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 /** What a website's checks need: its address, its Search Console property and its money pages. */
 export const checkTargets = internalQuery({
@@ -100,7 +102,7 @@ export const saveChecks = internalMutation({
 });
 
 /** One page's three checks; each failing on its own reads as unknown. */
-async function checkPage(origin: string, page: string, inspect: ((address: string) => Promise<Indexed | null>) | null, problems: Set<string>): Promise<{ indexed: Indexed | null; speed: Speed | null; structured: string[] | null; facts: PageFacts | null }> {
+async function checkPage(ctx: ActionCtx, origin: string, page: string, inspect: ((address: string) => Promise<Indexed | null>) | null, problems: Set<string>): Promise<{ indexed: Indexed | null; speed: Speed | null; structured: string[] | null; facts: PageFacts | null }> {
   const address = `${origin}${page}`;
   const key = process.env.PAGESPEED_API_KEY;
   const [indexed, speed, read] = await Promise.all([
@@ -111,7 +113,7 @@ async function checkPage(origin: string, page: string, inspect: ((address: strin
       if (!response.ok) problems.add(`PageSpeed: ${response.status}`);
       return response.ok ? speedFrom(await response.json()) : null;
     })().catch(() => null),
-    readPage(address).catch(() => null),
+    readPage(ctx, address).catch(() => null),
   ]);
   return { indexed, speed, structured: read?.structured ?? null, facts: read?.facts ?? null };
 }
@@ -122,18 +124,30 @@ async function checkPage(origin: string, page: string, inspect: ((address: strin
  * for a finding's own page, so a change to it restarts the finding's check
  * (utils/insightClock.ts).
  */
-export async function readPage(address: string): Promise<{ structured: string[]; facts: PageFacts } | null> {
-  const response = await fetch(address, { headers: { "User-Agent": PAGE_READER_AGENT, Accept: "text/html" } });
-  if (!response.ok) return null;
-  const html = await response.text();
+export async function readPage(ctx: ActionCtx, address: string): Promise<{ structured: string[]; facts: PageFacts } | null> {
+  const response = await ctx.runAction(internal.outboundHttp.fetchSitePage, { url: address });
+  if (response.status < 200 || response.status >= 300) return null;
+  const html = response.body;
   let facts = pageFactsOf(html);
   // A page drawn by its scripts shows almost no words to a plain read: Firecrawl renders it (plan §9).
   if (facts.words < THIN_PAGE && process.env.FIRECRAWL_API_KEY) {
-    const rendered = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false }),
-    }).then((answer) => (answer.ok ? answer.json() : null)).catch(() => null) as { data?: { markdown?: string } } | null;
+    const rendered = await (async () => {
+      try {
+        const renderedResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        const bounded = await readBoundedBody(renderedResponse, FIRECRAWL_PAGE_MAX_RESPONSE_BYTES);
+        if (!bounded.ok || !renderedResponse.ok) return null;
+        return JSON.parse(bounded.text) as { data?: { markdown?: string } };
+      } catch {
+        // Rendering is an optional enhancement. Keep the safely read raw page
+        // when the provider times out, rejects, or sends malformed JSON.
+        return null;
+      }
+    })();
     if (rendered?.data?.markdown) facts = pageFactsOf(html, rendered.data.markdown);
   }
   return { structured: structuredDataOf(html), facts };
@@ -165,7 +179,7 @@ export const checkWebsite = internalAction({
     const rows: Array<typeof checkRow.type> = [];
     for (let at = 0; at < targets.pages.length; at += AT_ONCE) {
       const batch = targets.pages.slice(at, at + AT_ONCE);
-      const found = await Promise.all(batch.map((page) => checkPage(targets.origin, page.page, inspect, problems)));
+      const found = await Promise.all(batch.map((page) => checkPage(ctx, targets.origin, page.page, inspect, problems)));
       batch.forEach((page, index) => rows.push({ ...page, ...found[index] }));
     }
     // Typed here: a result inferred from this module's own mutation collapses the API's types.

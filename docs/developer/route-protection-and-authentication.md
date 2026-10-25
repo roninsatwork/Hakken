@@ -115,7 +115,7 @@ The root layout wraps the app with:
 - `UIProvider`
 - `AnalyticsProvider`
 
-`ConvexClientProvider` uses `ConvexAuthNextjsProvider` during normal runtime. When `NEXT_PUBLIC_E2E_AUTH_ENABLED=1`, it bypasses the real Convex client so the E2E mock can provide deterministic data.
+`ConvexClientProvider` uses `ConvexAuthNextjsProvider` during normal runtime. Only when `NEXT_PUBLIC_E2E_AUTH_ENABLED=1`, `NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT=local`, and the build is non-production does it bypass the real Convex client so the E2E mock can provide deterministic data.
 
 `src/app/(dashboard)/layout.tsx` provides the authenticated dashboard shell and sidebar. It does not itself perform role checks.
 
@@ -162,7 +162,7 @@ Logout calls `api.users.recordLogout`, then Convex Auth `signOut`, then hard-nav
 Local test auth is intentionally gated. The credentials provider is added only when:
 
 - `LOCAL_TEST_AUTH_ENABLED=1`
-- `LOCAL_TEST_AUTH_ENVIRONMENT` is not `production`
+- `LOCAL_TEST_AUTH_ENVIRONMENT=local`
 
 `convex/localTestAuth.ts` requires `LOCAL_TEST_AUTH_SECRET` and supports deterministic roles:
 
@@ -172,7 +172,7 @@ Local test auth is intentionally gated. The credentials provider is added only w
 
 `api.localTestAuth.seed` creates or updates a deterministic `Local Test Company` and three deterministic users. `internal.localTestAuth.authorize` verifies the shared secret, checks that the requested user exists with the expected role, and ensures tenant users have a company.
 
-This provider must never be enabled in production. Tests assert that it fails closed when disabled or marked production.
+This provider must never be enabled in production. Tests assert that it fails closed unless the environment is explicitly labelled local.
 
 ## E2E Mock Auth
 
@@ -182,7 +182,7 @@ Playwright E2E tests use a separate deterministic cookie helper:
 - `e2e/helpers/auth.ts` can set the same cookie in a test.
 - `src/e2e/convexReactMock.tsx` reads the cookie and returns deterministic users from mocked `useQuery` calls.
 
-This is not the same as Convex local test auth. E2E mock auth bypasses the Convex client through `NEXT_PUBLIC_E2E_AUTH_ENABLED=1` and should only be used for browser route smoke tests.
+This is not the same as Convex local test auth. E2E mock auth requires both server and public enable flags, both explicit `local` environment labels, and a non-production runtime. It should only be used for browser route smoke tests.
 
 ## Route Redirects And Aliases
 

@@ -77,6 +77,18 @@ the newest Stripe 22), 10 and 11 wait on other tools, and Node 26 waits on Conve
   on the internet and no webhook is set. A change to make it refuse compressed replies until Convex updates is offered
   to Anthony, not built.
 
+### Supply-chain follow-up (2026-10-25)
+
+- Socket's CI policy scan no longer runs `npx --yes socket@…`, which downloaded executable code outside the
+  repository lock. `socket` 1.1.158 instead has a dedicated integrity-protected lock under `tools/socket-ci/`; CI
+  installs that isolated tool without lifecycle scripts and runs its local binary from the repository root.
+- The Linux Rollup workaround now installs the exact `4.62.4` artifact already recorded with integrity in the
+  lockfile, with lifecycle scripts disabled. It no longer asks npm for an unconstrained package version.
+- `src/security-boundary-drift.test.ts` ties both workflow rules to the lockfile so a Rollup update or a return to
+  on-demand Socket execution cannot drift silently.
+- This follow-up was source-validated only under the security audit's execution boundary. A fresh `npm ci` and the
+  CI-hosted Socket request remain for the next approved isolated/package-validation run or normal GitHub check.
+
 ### Phase 1, as built (2026-10-22)
 
 - Next.js 16.3.8 → 16.4.2 (with `eslint-config-next` and `@next/third-parties`), React 19.2.7 → 19.3.1 (with its

@@ -259,7 +259,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
     });
 
     await t.mutation(internal.invites.createInviteRecord, {
-      email: "NEW@Test.COM",
+      email: "  NEW@Test.COM  ",
       companyId,
       role: "USER",
       token: "token-a",

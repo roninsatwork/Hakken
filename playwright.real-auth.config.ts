@@ -11,6 +11,7 @@ export default defineConfig({
     command: "npm run dev -- -p 3100",
     env: {
       LOCAL_TEST_AUTH_ENABLED: "1",
+      LOCAL_TEST_AUTH_ENVIRONMENT: "local",
     },
     url: "http://localhost:3100/login",
     reuseExistingServer: false,

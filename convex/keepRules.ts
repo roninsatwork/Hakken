@@ -69,6 +69,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   arcadeScores: forever("the arcade's leaderboards read every score"),
   arcadeRuns: forever("each game played"),
   maintenanceScriptRuns: forever("each script run by hand, a record of what was done"),
+  personalDataErasureRuns: forever("the legal record that an erasure completed, or why it failed"),
   apifyRuns: forever("each Apify run, read back when one goes wrong"),
 
   // ── Sign-in (Convex Auth) ───────────────────────────────────────────────────
@@ -194,6 +195,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   outboxMessages: cleared("60 days once sent, failed or skipped", "purges/sentEmails"),
   telegramLinks: RECORD,
   telegramLinkCodes: LATEST,
+  telegramWebhookUpdates: cleared("7 days", "telegram/claimWebhookUpdateInternal"),
   telegramBots: RECORD,
 
   // ── Hakken tasks ──────────────────────────────────────────────────────────

@@ -140,6 +140,16 @@ export function isTurnComplete(raw) {
   }
 }
 
+/** A text-originated user turn must pass the same kiosk meter as speech. */
+export function isClientContentTurn(raw) {
+  try {
+    const content = JSON.parse(raw)?.clientContent;
+    return Boolean(content && Array.isArray(content.turns) && content.turns.length > 0);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The tokens one Vertex message reports, for the session's cost row: Google
  * puts `usageMetadata` on the messages that close a response, and thinking is

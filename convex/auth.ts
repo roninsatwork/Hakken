@@ -140,7 +140,7 @@ const providers: AuthProviderConfig[] = [
 
 if (
   process.env.LOCAL_TEST_AUTH_ENABLED === "1" &&
-  process.env.LOCAL_TEST_AUTH_ENVIRONMENT !== "production"
+  process.env.LOCAL_TEST_AUTH_ENVIRONMENT === "local"
 ) {
   providers.push(
     ConvexCredentials({
@@ -204,6 +204,11 @@ export const signIn = publicAction({
         provider,
       });
       if (!allowed) return { started: true };
+
+      const eligible = await ctx.runQuery(internal.authEvents.canStartEmailSignIn, {
+        email: params.email as string,
+      });
+      if (!eligible) return { started: true };
     }
 
     return await (frameworkSignIn as unknown as {

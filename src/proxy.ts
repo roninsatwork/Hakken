@@ -6,6 +6,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
 import { legacyAdminRedirect } from "@/src/lib/legacyAdminRedirect";
 import { decideWidgetEmbed, widgetIdFromPathname } from "@/src/lib/widgetEmbedPolicy";
+import { isE2EAuthRuntimeEnabled } from "@/src/lib/e2eAuthEnvironment";
 
 const isSignInPage = createRouteMatcher(["/login"]);
 const isLandingPage = createRouteMatcher(["/"]);
@@ -95,7 +96,7 @@ export default convexAuthNextjsMiddleware(async (request) => {
     return await applyWidgetEmbedPolicy(request, widgetId);
   }
 
-  if (process.env.E2E_AUTH_ENABLED === "1") {
+  if (isE2EAuthRuntimeEnabled()) {
     const e2eRole = request.cookies.get("hakken_e2e_auth")?.value;
     if (e2eRole) {
       if (isSignInPage(request)) {

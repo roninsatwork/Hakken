@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
+import { isE2EAuthRuntimeEnabled } from "@/src/lib/e2eAuthEnvironment";
 
 /**
  * `read-only` is here so the oversight role added for the governance layer can
@@ -10,7 +11,7 @@ import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
 const E2E_ROLES = new Set(["super-admin", "company-admin", "user", "read-only", "auditor"]);
 
 export function GET(request: NextRequest) {
-  if (process.env.E2E_AUTH_ENABLED !== "1") {
+  if (!isE2EAuthRuntimeEnabled()) {
     return new NextResponse("Not found", { status: 404 });
   }
 

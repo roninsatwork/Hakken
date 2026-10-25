@@ -324,6 +324,90 @@ describe("OWASP: Broken Access Control - Users", () => {
     });
   });
 
+  test("managed users have canonical unique email addresses", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, superAdminId, existingId, otherId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Email Corp", createdAt: 1 });
+      const superAdminId = await ctx.db.insert("users", { email: "super@email.test", role: "SUPER_ADMIN" });
+      const existingId = await ctx.db.insert("users", {
+        // A legacy row from before canonical writes were enforced.
+        email: "Member@Example.COM",
+        role: "USER",
+        companyId,
+      });
+      const otherId = await ctx.db.insert("users", {
+        email: "other@example.com",
+        role: "USER",
+        companyId,
+      });
+      return { companyId, superAdminId, existingId, otherId };
+    });
+    const client = t.withIdentity({ subject: superAdminId });
+
+    await expect(client.mutation(api.users.addUser, {
+      name: "Duplicate",
+      email: " MEMBER@EXAMPLE.COM ",
+      role: "USER",
+      companyId,
+    })).rejects.toThrow("already uses");
+    await expect(client.mutation(api.users.updateUser, {
+      id: otherId,
+      email: " Member@Example.com ",
+    })).rejects.toThrow("already uses");
+
+    const newId = await client.mutation(api.users.addUser, {
+      name: "Normalised",
+      email: " NEW@EXAMPLE.COM ",
+      role: "USER",
+      companyId,
+    });
+    const [existing, created] = await t.run(async (ctx) =>
+      await Promise.all([ctx.db.get(existingId), ctx.db.get(newId)]),
+    );
+    expect(existing?.email).toBe("Member@Example.COM");
+    expect(created?.email).toBe("new@example.com");
+  });
+
+  test("company-scoped admins and read-only users see accountable people only in their workspace", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { adminAId, adminBId, readOnlyAId, superAdminId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "A", createdAt: 1 });
+      const companyBId = await ctx.db.insert("companies", { name: "B", createdAt: 1 });
+      const adminAId = await ctx.db.insert("users", {
+        name: "Admin A",
+        email: "admin-a@example.com",
+        role: "ADMIN",
+        companyId: companyAId,
+      });
+      const adminBId = await ctx.db.insert("users", {
+        name: "Admin B",
+        email: "admin-b@example.com",
+        role: "ADMIN",
+        companyId: companyBId,
+      });
+      const readOnlyAId = await ctx.db.insert("users", {
+        name: "Reader A",
+        email: "reader-a@example.com",
+        role: "READ_ONLY",
+        companyId: companyAId,
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        name: "Platform Admin",
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+      return { adminAId, adminBId, readOnlyAId, superAdminId };
+    });
+
+    for (const subject of [adminAId, readOnlyAId]) {
+      const people = await t.withIdentity({ subject }).query(api.users.getAccountablePeople);
+      const ids = people.map((person) => person._id);
+      expect(ids).toContain(adminAId);
+      expect(ids).toContain(superAdminId);
+      expect(ids).not.toContain(adminBId);
+    }
+  });
+
   test("paginated user queries honor super admin, admin, and impersonation scope", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

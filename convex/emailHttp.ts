@@ -1,6 +1,9 @@
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { verifyWebhookSignature } from "./utils/webhookSignature";
+import { readBoundedBody } from "./utils/boundedRequestBody";
+
+const RESEND_WEBHOOK_MAX_BODY_BYTES = 128 * 1024;
 
 /**
  * The two ways an email reaches back into the platform (docs/plans/active/
@@ -34,7 +37,14 @@ const SUPPRESSING_EVENTS: Record<string, "BOUNCED" | "COMPLAINED"> = {
  * anything unsigned or old is refused.
  */
 export const handleResendWebhook = httpAction(async (ctx, request) => {
-  const body = await request.text();
+  const bounded = await readBoundedBody(request, RESEND_WEBHOOK_MAX_BODY_BYTES);
+  if (!bounded.ok) {
+    return new Response(
+      bounded.reason === "too_large" ? "Payload too large." : "Bad request.",
+      { status: bounded.reason === "too_large" ? 413 : 400 },
+    );
+  }
+  const body = bounded.text;
   const genuine = await verifyWebhookSignature({
     secret: process.env.RESEND_WEBHOOK_SECRET,
     id: request.headers.get("svix-id"),

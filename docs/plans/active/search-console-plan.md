@@ -278,8 +278,9 @@ No one else can: it is his Google account and his secrets.
 5. Put its client ID and secret into the dev deployment's settings as
    `SEARCH_CONSOLE_GOOGLE_CLIENT_ID` and `SEARCH_CONSOLE_GOOGLE_CLIENT_SECRET`.
    Dev does not have `CONNECTOR_TOKEN_ENCRYPTION_KEY` yet (checked
-   2026-09-27): `npx convex env set CONNECTOR_TOKEN_ENCRYPTION_KEY "$(openssl
-   rand -base64 32)"` makes and sets one without showing it. `SITE_URL` on dev
+   2026-09-27): `openssl rand -base64 32 | npx convex env set
+   CONNECTOR_TOKEN_ENCRYPTION_KEY` makes and sets one without showing it or
+   placing it in process arguments. `SITE_URL` on dev
    is `http://localhost:3000`, where the sign-in comes back to.
 6. When built: connect Ronins' own website from its Search Console page — the
    sign-in is his, never Claude's.

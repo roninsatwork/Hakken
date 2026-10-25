@@ -6,10 +6,12 @@ vi.mock("node:fs/promises", () => ({ default: { readFile }, readFile }));
 import { GET } from "./route";
 
 const originalE2EAuthEnabled = process.env.E2E_AUTH_ENABLED;
+const originalE2EAuthEnvironment = process.env.E2E_AUTH_ENVIRONMENT;
 const originalFixturePath = process.env.FACE_PROOF_FIXTURE_PATH;
 
 afterEach(() => {
   process.env.E2E_AUTH_ENABLED = originalE2EAuthEnabled;
+  process.env.E2E_AUTH_ENVIRONMENT = originalE2EAuthEnvironment;
   process.env.FACE_PROOF_FIXTURE_PATH = originalFixturePath;
   readFile.mockReset();
 });
@@ -25,6 +27,7 @@ describe("GET /api/e2e-fixture/face-proof", () => {
 
   it("does not read an arbitrary path when the fixture is unconfigured", async () => {
     process.env.E2E_AUTH_ENABLED = "1";
+    process.env.E2E_AUTH_ENVIRONMENT = "local";
     delete process.env.FACE_PROOF_FIXTURE_PATH;
 
     expect(await GET()).toMatchObject({ status: 404 });
@@ -33,6 +36,7 @@ describe("GET /api/e2e-fixture/face-proof", () => {
 
   it("serves only the environment-owned local PNG fixture without caching", async () => {
     process.env.E2E_AUTH_ENABLED = "1";
+    process.env.E2E_AUTH_ENVIRONMENT = "local";
     process.env.FACE_PROOF_FIXTURE_PATH = "/private/face.png";
     readFile.mockResolvedValue(new Uint8Array([137, 80, 78, 71]));
 

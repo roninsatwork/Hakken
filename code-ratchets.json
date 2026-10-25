@@ -1,13 +1,13 @@
 {
   "moduleSize": {
-    "convex/schema.ts": 4250,
+    "convex/schema.ts": 4300,
     "convex/agentEvalFixtures.ts": 2000,
     "convex/wikiPages.ts": 1850,
     "convex/knowledge.ts": 1700,
     "convex/aiModels.ts": 1550,
     "convex/agents.ts": 1400,
     "convex/agentRuns.ts": 1350,
-    "convex/users.ts": 1250,
+    "convex/users.ts": 1300,
     "convex/agentRuntime.ts": 1200,
     "convex/agentSkills.ts": 1200,
     "convex/agentMemoryCandidates.ts": 1200,

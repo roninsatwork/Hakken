@@ -73,6 +73,40 @@ describe("Google's answers on a big website (BR2)", () => {
     // Every row once: the first page was not asked again.
     expect(held).toBe(60_000);
   });
+
+  test("a paged report checks Google's remaining allowance before asking for its next page", async () => {
+    const offsets: number[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { offset: number };
+      offsets.push(body.offset);
+      return Response.json({
+        rowCount: 60_000,
+        rows: Array.from({ length: REPORT_PAGE_ROWS }, () => ({
+          dimensionValues: [{ value: "/page" }, { value: "https://elsewhere.test/" }],
+          metricValues: [{ value: "1" }],
+        })),
+        propertyQuota: {
+          tokensPerDay: { remaining: 39_999 },
+          tokensPerHour: { remaining: 30_000 },
+          tokensPerProjectPerHour: { remaining: 10_000 },
+          potentiallyThresholdedRequestsPerHour: { remaining: 100 },
+        },
+      });
+    }));
+
+    const report = await runReport("token", PROPERTY, ASK, () => {}, 0, (quota) =>
+      quota.tokensPerDay !== null && quota.tokensPerDay <= 40_000 ? "daily reserve reached" : null,
+    );
+
+    expect(report).toMatchObject({
+      ok: false,
+      reason: "BUDGET",
+      pagesRead: 1,
+      requests: 1,
+      detail: "daily reserve reached",
+    });
+    expect(offsets).toEqual([0]);
+  });
 });
 
 describe("a big website's page lists, trimmed while they are read (BR3)", () => {

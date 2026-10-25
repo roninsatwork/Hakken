@@ -22,8 +22,8 @@ const DEMO_AGENT_NAME = "Demo Knowledge Assistant";
 const DEFAULT_USE_CASES = ["agent", "workflow", "chat", "report", "embedding"];
 
 function assertLocalDemoSeedEnabled(secret: string) {
-  if (process.env.LOCAL_DEMO_SEED_ENVIRONMENT === "production") {
-    throw appError("UNAUTHORIZED", "Local demo seed is not available in production.");
+  if (process.env.LOCAL_DEMO_SEED_ENVIRONMENT !== "local") {
+    throw appError("UNAUTHORIZED", "Local demo seed is available only in an explicitly local environment.");
   }
 
   if (process.env.LOCAL_DEMO_SEED_ENABLED !== "1") {

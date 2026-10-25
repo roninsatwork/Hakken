@@ -5,6 +5,8 @@ import schema from "./schema";
 beforeEach(() => {
   vi.stubEnv("APIFY_WEBHOOK_SECRET", "body-limit-test-secret");
   vi.stubEnv("VOICE_RELAY_SECRET", "body-limit-test-secret");
+  vi.stubEnv("TELEGRAM_WEBHOOK_SECRET", "body-limit-test-secret");
+  vi.stubEnv("RESEND_WEBHOOK_SECRET", "body-limit-test-secret");
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -14,6 +16,8 @@ const surfaces = [
   { path: "/api/telephony/voice", limit: 16_384 },
   { path: "/api/telephony/turns", limit: 128 * 1024 },
   { path: "/api/telephony/status", limit: 16_384 },
+  { path: "/api/webhooks/resend", limit: 128 * 1024 },
+  { path: "/telegram/webhook", limit: 128 * 1024, headers: { "X-Telegram-Bot-Api-Secret-Token": "body-limit-test-secret" } },
 ];
 
 describe.each(surfaces)("bounded public body at $path", ({ path, limit, headers }) => {

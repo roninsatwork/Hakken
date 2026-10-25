@@ -33,7 +33,7 @@ export async function checkOpenFindings(
   const pages = [...new Set(open.findings.flatMap((finding) => pageOf(finding) ?? []))];
   const read = new Map<string, Awaited<ReturnType<typeof readPage>>>();
   for (let at = 0; at < pages.length && open.origin; at += AT_ONCE) {
-    await Promise.all(pages.slice(at, at + AT_ONCE).map(async (page) => read.set(page, await readPage(`${open.origin}${page}`).catch(() => null))));
+    await Promise.all(pages.slice(at, at + AT_ONCE).map(async (page) => read.set(page, await readPage(ctx, `${open.origin}${page}`).catch(() => null))));
   }
   const seen = new Map<Id<"insightFindings">, PageSeen>();
   for (const finding of open.findings) {

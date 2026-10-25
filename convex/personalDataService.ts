@@ -104,6 +104,12 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     reason: "The record of who ran a maintenance script against live data.",
   },
   {
+    table: "personalDataErasureRuns",
+    fields: ["subjectUserId", "actorId"],
+    treatment: "RETAIN",
+    reason: "The legal record that an erasure was requested, who authorised it, and whether it completed.",
+  },
+  {
     table: "discoveredCompetitors",
     fields: ["decidedBy"],
     treatment: "DISSOCIATE",
@@ -341,4 +347,6 @@ export type ErasureResult = {
   email: string;
   summary: string[];
   tallies: ErasureTally[];
+  queued?: boolean;
+  runId?: string;
 };

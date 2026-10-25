@@ -1,4 +1,4 @@
-import { internalQuery, internalMutation } from "./_generated/server";
+import { internalQuery, internalMutation, type MutationCtx } from "./_generated/server";
 import schema from "./schema";
 import { v } from "convex/values";
 import { issueUpload, requireOwnedUpload } from "./uploadReservations";
@@ -29,6 +29,8 @@ import {
   tallyLoginsByUser,
 } from "./userActivityService";
 import { recordLanguage } from "./readerPreferences";
+import { normaliseEmail } from "./oneTimeCodeService";
+import { usersForCanonicalEmail } from "./authEvents";
 
 /**
  * How long one recorded login stands in for continued activity on a device.
@@ -38,6 +40,17 @@ import { recordLanguage } from "./readerPreferences";
  * day counts separately.
  */
 const RECENT_LOGIN_WINDOW_MS = 60 * 60 * 1000;
+
+async function assertManagedEmailAvailable(
+  ctx: Pick<MutationCtx, "db">,
+  email: string,
+  excludeUserId?: Id<"users">,
+) {
+  const matches = await usersForCanonicalEmail(ctx, email);
+  if (matches.some((user) => user._id !== excludeUserId)) {
+    throw appError("CONFLICT", "An account already uses that email address.");
+  }
+}
 
 
 type UserPaginationResult = {
@@ -289,11 +302,15 @@ export const addUser = tenantMutation({
       newCompanyId: args.companyId,
     });
 
+    const email = normaliseEmail(args.email);
+    if (!email) throw appError("INVALID_INPUT", "Enter a valid email address.");
+    await assertManagedEmailAvailable(ctx, email);
+
     // Basic implementation: manually created users get a distinct token pattern
     const fakeTokenId = `manual|${Date.now()}|${Math.random().toString(36).substring(7)}`;
     const newUserId = await ctx.db.insert("users", {
       name: args.name,
-      email: args.email,
+      email,
       role: args.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       image: args.image,
       companyId: args.companyId,
@@ -308,7 +325,7 @@ export const addUser = tenantMutation({
       entityType: "users",
       entityId: newUserId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ email: args.email, role: args.role, companyId: args.companyId })
+      metadata: JSON.stringify({ email, role: args.role, companyId: args.companyId })
     });
 
     return newUserId;
@@ -342,11 +359,18 @@ export const updateUser = tenantMutation({
       nextCompanyId: args.companyId,
     });
 
-    const { id, role, companyId, ...updates } = args;
+    const { id, role, companyId, email: requestedEmail, ...updates } = args;
     const previousRole = targetUser.role;
+
+    const email = requestedEmail === undefined ? undefined : normaliseEmail(requestedEmail);
+    if (requestedEmail !== undefined) {
+      if (!email) throw appError("INVALID_INPUT", "Enter a valid email address.");
+      await assertManagedEmailAvailable(ctx, email, id);
+    }
 
     await ctx.db.patch(id, {
       ...updates,
+      ...(email !== undefined && { email }),
       ...(role !== undefined && { role }),
       ...(companyId !== undefined && { companyId })
     });
@@ -1223,10 +1247,39 @@ export const getAccountablePeople = adminQuery({
   args: {},
   returns: userShapes.accountablePeopleShape,
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").take(500);
+    const activeCompanyId = getActiveCompanyId(ctx.user);
+    // This picker exposes names and addresses and can assign responsibility.
+    // Even a platform reader or impersonating super-admin stays inside an
+    // explicitly active company; only an unscoped platform session sees all.
+    const platformWide = activeCompanyId === undefined
+      && (ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY");
+
+    const [admins, superAdmins] = await Promise.all([
+      platformWide
+        ? ctx.db
+            .query("users")
+            .withIndex("by_role_lastLogin", (q) => q.eq("role", "ADMIN"))
+            .take(500)
+        : activeCompanyId
+          ? ctx.db
+              .query("users")
+              .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+              .take(500)
+          : [],
+      ctx.db
+        .query("users")
+        .withIndex("by_role_lastLogin", (q) => q.eq("role", "SUPER_ADMIN"))
+        .take(500),
+    ]);
+
+    const users = Array.from(
+      new Map(
+        [...admins.filter((user) => user.role === "ADMIN"), ...superAdmins]
+          .map((user) => [user._id, user]),
+      ).values(),
+    );
 
     return users
-      .filter((user) => user.role === "ADMIN" || user.role === "SUPER_ADMIN")
       .map((user) => ({
         _id: user._id,
         name: (user.name ?? user.email ?? "").trim(),

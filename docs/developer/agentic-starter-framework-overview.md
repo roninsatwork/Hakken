@@ -64,7 +64,7 @@ For a new agentic app or tenant:
 10. Inspect durable runs and eval history before activation.
 11. Add product-specific code, data models, workflow, schedule, widget, webhook, or public API surface only after the agent behavior is tested.
 
-For a quick local demo, use `npm run demo:local:seed` after enabling `LOCAL_DEMO_SEED_ENABLED=1` and configuring `LOCAL_DEMO_SEED_SECRET` in Convex. The seeded demo creates a tenant, users, model defaults, starter knowledge, a knowledge search tool, a draft agent, and starter eval fixtures without requiring production credentials.
+For a quick local demo, use `npm run demo:local:seed` after enabling `LOCAL_DEMO_SEED_ENABLED=1`, setting `LOCAL_DEMO_SEED_ENVIRONMENT=local`, and configuring `LOCAL_DEMO_SEED_SECRET` in Convex. The seeded demo creates a tenant, users, model defaults, starter knowledge, a knowledge search tool, a draft agent, and starter eval fixtures without requiring production credentials.
 
 ## Main Extension Points
 

@@ -108,6 +108,7 @@ Before running it, configure the local app shell and Convex backend with:
 
 ```bash
 LOCAL_TEST_AUTH_ENABLED=1
+LOCAL_TEST_AUTH_ENVIRONMENT=local
 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth
 ```
 
@@ -139,7 +140,7 @@ local-only. Clear the data a run leaves behind with `npm run auth:local:cleanup`
 For tests that need a reusable Playwright storage state, start the app locally and run:
 
 ```bash
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run dev -- -p 3100
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_ENVIRONMENT=local LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run dev -- -p 3100
 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3100 npm run auth:local:state
 ```
 

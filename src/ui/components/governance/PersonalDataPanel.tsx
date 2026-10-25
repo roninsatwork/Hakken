@@ -6,6 +6,7 @@ import { Download, Loader2, Trash2, UserSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
@@ -33,13 +34,30 @@ export function PersonalDataPanel() {
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
+  const [erasureRunId, setErasureRunId] = useState<Id<"personalDataErasureRuns"> | null>(null);
+  const erasureStatus = useQuery(
+    api.personalData.erasureStatus,
+    erasureRunId ? { runId: erasureRunId } : "skip",
+  );
 
   const canErase = me?.role === "SUPER_ADMIN";
+  const erasureIsRunning = Boolean(
+    erasureRunId && (!erasureStatus || erasureStatus.status === "RUNNING"),
+  );
+  const displayedSummary = erasureStatus?.status === "SUCCESS"
+    ? erasureStatus.summary
+    : erasureStatus?.status === "FAILED"
+      ? []
+      : summary;
+  const displayedError = erasureStatus?.status === "FAILED"
+    ? t("backgroundFailed")
+    : error;
 
   const handleRead = async () => {
     if (!email.trim()) return;
     setError("");
     setSummary([]);
+    setErasureRunId(null);
 
     const outcome = await action.run(
       async () => {
@@ -60,6 +78,7 @@ export function PersonalDataPanel() {
 
   const handleErase = async () => {
     setError("");
+    setErasureRunId(null);
 
     const outcome = await action.run(() => erase({ email: email.trim() }), {
       key: "erase",
@@ -71,6 +90,11 @@ export function PersonalDataPanel() {
       // The summary is the answer to give a regulator, so it stays on screen
       // rather than flashing past in a toast.
       setSummary(outcome.data.summary);
+      setErasureRunId(
+        outcome.data.queued && outcome.data.runId
+          ? outcome.data.runId as Id<"personalDataErasureRuns">
+          : null,
+      );
       setConfirming(false);
       setEmail("");
       return;
@@ -131,35 +155,39 @@ export function PersonalDataPanel() {
         ) : null}
       </div>
 
-      <SaveError>{error}</SaveError>
+      <SaveError>{displayedError}</SaveError>
 
-      {summary.length > 0 ? (
+      {displayedSummary.length > 0 ? (
         <div className="rounded-[10px] border border-border-dim bg-background/60 p-4">
-          <p className="text-[13px] font-medium text-foreground">{t("done")}</p>
+          <p className="text-[13px] font-medium text-foreground">
+            {erasureIsRunning ? t("working") : t("done")}
+          </p>
           <ul className="mt-2 flex flex-col gap-1">
-            {summary.map((line) => (
+            {displayedSummary.map((line) => (
               <li key={line} className="text-[13px] leading-relaxed text-secondary">
                 {line}
               </li>
             ))}
           </ul>
-          {/* Stays raw: an underlined text link drawn as a button — matches no variant. */}
-          <button
-            type="button"
-            onClick={() => {
-              const blob = new Blob([summary.join("\n")], { type: "text/plain" });
-              const url = URL.createObjectURL(blob);
-              const link = window.document.createElement("a");
-              link.href = url;
-              link.download = "erasure-record.txt";
-              link.click();
-              URL.revokeObjectURL(url);
-            }}
-            className="mt-3 flex items-center gap-2 text-[13px] text-foreground underline underline-offset-4"
-          >
-            <Download className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("keepRecord")}
-          </button>
+          {!erasureIsRunning ? (
+            // Stays raw: an underlined text link drawn as a button — matches no variant.
+            <button
+              type="button"
+              onClick={() => {
+                const blob = new Blob([displayedSummary.join("\n")], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const link = window.document.createElement("a");
+                link.href = url;
+                link.download = "erasure-record.txt";
+                link.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="mt-3 flex items-center gap-2 text-[13px] text-foreground underline underline-offset-4"
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("keepRecord")}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

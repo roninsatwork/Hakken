@@ -9,7 +9,11 @@ import { buildAppContentSecurityPolicy } from './src/lib/securityHeaders';
 // consumer (src/proxy.ts and the fixture routes all check this env var), but
 // that safety rested entirely on nobody ever setting it in production. Fail
 // the build instead of trusting the fleet's env config forever.
-if (process.env.E2E_AUTH_ENABLED === '1' && process.env.NODE_ENV === 'production') {
+const e2eAuthEnabled = process.env.E2E_AUTH_ENABLED === '1'
+  && process.env.E2E_AUTH_ENVIRONMENT === 'local'
+  && process.env.NODE_ENV !== 'production';
+
+if (process.env.E2E_AUTH_ENABLED === '1' && !e2eAuthEnabled && process.env.NODE_ENV === 'production') {
   throw new Error(
     'E2E_AUTH_ENABLED=1 in a production build: this would ship a working auth bypass. Unset it.'
   );
@@ -31,7 +35,7 @@ const nextConfig: NextConfig = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   output: 'standalone',
-  ...(process.env.E2E_AUTH_ENABLED === '1'
+  ...(e2eAuthEnabled
     ? {
         turbopack: {
           resolveAlias: {
@@ -41,7 +45,7 @@ const nextConfig: NextConfig = {
       }
     : {}),
   webpack(config) {
-    if (process.env.E2E_AUTH_ENABLED === '1') {
+    if (e2eAuthEnabled) {
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
         'convex/react': path.resolve(process.cwd(), 'src/e2e/convexReactMock.tsx'),

@@ -24,9 +24,14 @@ Until the bot is set up, Integrations lists no apps.
    the message came from Telegram.
 
    ```bash
-   npx convex env set TELEGRAM_BOT_TOKEN '<the key from BotFather>'
-   npx convex env set TELEGRAM_WEBHOOK_SECRET "$(openssl rand -hex 32)"
+   read -rs TELEGRAM_BOT_TOKEN
+   printf '%s' "$TELEGRAM_BOT_TOKEN" | npx convex env set TELEGRAM_BOT_TOKEN
+   unset TELEGRAM_BOT_TOKEN
+   openssl rand -hex 32 | npx convex env set TELEGRAM_WEBHOOK_SECRET
    ```
+
+   The silent prompt and standard-input pipes keep both secrets out of the
+   terminal display and process arguments.
 
 3. **Connect the bot to this deployment.** This reads the bot's name from
    Telegram, keeps it for the profile, and tells Telegram to send the bot's

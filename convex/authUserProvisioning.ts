@@ -1,8 +1,9 @@
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { logAuthEvent } from "./authEvents";
+import { logAuthEvent, usersForCanonicalEmail } from "./authEvents";
 import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 import { appError } from "./utils/appError";
+import { normaliseEmail } from "./oneTimeCodeService";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_ONLY_ACCESS_DENIED = "Access Denied: This is an invite-only platform. Please contact your administrator.";
@@ -27,6 +28,7 @@ type AuthProvider = {
 };
 
 export type CreateOrUpdateUserArgs = {
+  existingUserId?: Id<"users"> | null;
   provider?: AuthProvider;
   profile?: AuthProfile;
   email?: string;
@@ -36,14 +38,19 @@ export type CreateOrUpdateUserArgs = {
 type AuthProvisioningCtx = Pick<MutationCtx, "db">;
 
 function getAuthIdentity(args: CreateOrUpdateUserArgs) {
-  const email = (args.profile?.email || args.email || args.user?.email || "").trim().toLowerCase();
+  const email = normaliseEmail(args.profile?.email || args.email || args.user?.email || "");
   const name = args.profile?.name || args.user?.name || email.split("@")[0] || "User";
   const image = args.profile?.image || args.profile?.picture || args.user?.image || "";
 
   return { email, name, image };
 }
 
-async function acceptPendingInvite(ctx: AuthProvisioningCtx, email: string, now: number) {
+async function acceptPendingInvite(
+  ctx: AuthProvisioningCtx,
+  email: string,
+  now: number,
+  user: Doc<"users">,
+) {
   const pendingInvite = await ctx.db
     .query("invitations")
     .withIndex("by_email", (q) => q.eq("email", email))
@@ -51,6 +58,13 @@ async function acceptPendingInvite(ctx: AuthProvisioningCtx, email: string, now:
     .first();
 
   if (!pendingInvite) return;
+
+  if (pendingInvite.companyId !== user.companyId) {
+    throw appError(
+      "CONFLICT",
+      "This invitation belongs to a different workspace than the existing account.",
+    );
+  }
 
   await ctx.db.patch(pendingInvite._id, {
     status: "ACCEPTED",
@@ -112,10 +126,23 @@ export async function createOrUpdateHakkenAuthUser(
     throw appError("INVALID_INPUT", "Invalid login: No email provided.");
   }
 
-  const existingUser = await ctx.db
-    .query("users")
-    .withIndex("email", (q) => q.eq("email", email))
-    .first();
+  const emailMatches = await usersForCanonicalEmail(ctx, email);
+  if (emailMatches.length > 1) {
+    throw appError("CONFLICT", "More than one account uses this email address. Ask an administrator to repair it.");
+  }
+
+  const linkedUser = args.existingUserId ? await ctx.db.get(args.existingUserId) : null;
+  if (args.existingUserId && !linkedUser) {
+    throw appError("UNAUTHORIZED", "The identity provider is linked to an account that no longer exists.");
+  }
+  if (linkedUser && normaliseEmail(linkedUser.email ?? "") !== email) {
+    throw appError("UNAUTHORIZED", "The identity provider email does not match its linked account.");
+  }
+  if (linkedUser && emailMatches[0] && linkedUser._id !== emailMatches[0]._id) {
+    throw appError("CONFLICT", "This email address is linked to a different account.");
+  }
+
+  const existingUser = linkedUser ?? emailMatches[0];
 
   if (existingUser) {
     await logAuthEvent(ctx, {
@@ -129,7 +156,7 @@ export async function createOrUpdateHakkenAuthUser(
     });
 
     if (isVerifiedEmail) {
-      const acceptedInvite = await acceptPendingInvite(ctx, email, now);
+      const acceptedInvite = await acceptPendingInvite(ctx, email, now, existingUser);
       await logAuthEvent(ctx, {
         email,
         eventType: verifiedEventType,
@@ -157,7 +184,8 @@ export async function createOrUpdateHakkenAuthUser(
     return existingUser._id;
   }
 
-  const isInitialSuperAdmin = !!process.env.INITIAL_SUPER_ADMIN_EMAIL && email === process.env.INITIAL_SUPER_ADMIN_EMAIL.toLowerCase();
+  const initialSuperAdminEmail = normaliseEmail(process.env.INITIAL_SUPER_ADMIN_EMAIL ?? "");
+  const isInitialSuperAdmin = Boolean(initialSuperAdminEmail) && email === initialSuperAdminEmail;
 
   if (isInitialSuperAdmin) {
     const initialUserId = await ctx.db.insert("users", {
@@ -171,10 +199,15 @@ export async function createOrUpdateHakkenAuthUser(
     return initialUserId;
   }
 
-  const invite = await ctx.db
+  const invitations = await ctx.db
     .query("invitations")
     .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
+    .take(2);
+
+  if (invitations.length > 1) {
+    throw appError("CONFLICT", "More than one invitation uses this email address. Ask an administrator to repair it.");
+  }
+  const invite = invitations[0];
 
   if (!invite) {
     throw appError("UNAUTHORIZED", INVITE_ONLY_ACCESS_DENIED);
@@ -216,7 +249,9 @@ export async function createOrUpdateHakkenAuthUser(
   }
 
   if (isVerifiedEmail) {
-    const acceptedInvite = await acceptPendingInvite(ctx, email, now);
+    const provisionedUser = await ctx.db.get(newUserId);
+    if (!provisionedUser) throw appError("NOT_FOUND", "The new account could not be loaded.");
+    const acceptedInvite = await acceptPendingInvite(ctx, email, now, provisionedUser);
     await logAuthEvent(ctx, {
       email,
       eventType: verifiedEventType,

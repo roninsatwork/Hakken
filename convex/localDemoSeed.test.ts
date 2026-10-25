@@ -15,7 +15,7 @@ function setup() {
 function enableLocalDemoSeed() {
   process.env.LOCAL_DEMO_SEED_ENABLED = "1";
   process.env.LOCAL_DEMO_SEED_SECRET = "demo-secret";
-  delete process.env.LOCAL_DEMO_SEED_ENVIRONMENT;
+  process.env.LOCAL_DEMO_SEED_ENVIRONMENT = "local";
 }
 
 function restoreEnv() {
@@ -136,10 +136,10 @@ describe("local demo seed", () => {
     process.env.LOCAL_DEMO_SEED_ENABLED = "1";
     process.env.LOCAL_DEMO_SEED_ENVIRONMENT = "production";
     await expect(t.mutation(api.localDemoSeed.seed, { secret: "demo-secret" })).rejects.toThrow(
-      "Local demo seed is not available in production"
+      "Local demo seed is available only in an explicitly local environment"
     );
 
-    delete process.env.LOCAL_DEMO_SEED_ENVIRONMENT;
+    process.env.LOCAL_DEMO_SEED_ENVIRONMENT = "local";
     await expect(t.mutation(api.localDemoSeed.seed, { secret: "wrong-secret" })).rejects.toThrow(
       "Invalid local demo seed secret"
     );

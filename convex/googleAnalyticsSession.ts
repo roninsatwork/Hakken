@@ -48,13 +48,21 @@ export async function openSession(
 export async function ask(session: Session, property: string, report: ReportAsk, sink?: ReportSink): Promise<({ ok: true } & Report) | GoogleFailure> {
   // Asked again after a failure part-way: with a sink, from the page Google reached (ga-big-site-reliability-plan.md BR2).
   let fromPage = 0;
+  const thresholded = report.dimensions.some((dimension) => THRESHOLDED_DIMENSIONS.has(dimension));
   return await retried(session, async (token) => {
-    const answer = await runReport(token, property, report, sink, fromPage);
+    const answer = await runReport(token, property, report, sink, fromPage, async (quota) => {
+      session.quota = quota;
+      await session.ctx.runMutation(internal.googleAnalyticsQuota.noteQuota, {
+        connectionId: session.connectionId,
+        quota,
+      });
+      return overBudget(quota, thresholded);
+    });
     if (!answer.ok) fromPage = answer.pagesRead;
     if (answer.ok && answer.quota) session.quota = answer.quota;
     if (answer.ok && answer.quota) await session.ctx.runMutation(internal.googleAnalyticsQuota.noteQuota, { connectionId: session.connectionId, quota: answer.quota });
-    return { answer, requests: answer.ok ? answer.requests : 1 };
-  }, { budgeted: true, thresholded: report.dimensions.some((dimension) => THRESHOLDED_DIMENSIONS.has(dimension)) });
+    return { answer, requests: answer.requests };
+  }, { budgeted: true, thresholded });
 }
 
 /** Google's live figures (§18.6.7), asked as every report is; nothing is kept. */

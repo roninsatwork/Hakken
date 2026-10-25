@@ -1,0 +1,7 @@
+{
+  "name": "@hakken/socket-ci",
+  "private": true,
+  "dependencies": {
+    "socket": "1.1.158"
+  }
+}

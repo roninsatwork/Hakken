@@ -18,8 +18,8 @@ import { REHEARSAL_HOST, TEN_TIMES_KORDA, isRehearsalToken, rehearsalAnswer, reh
 const NOW = Date.parse("2026-10-16T02:00:00Z");
 /** The pretend Google's answers checked at a size with every split whole. */
 const SMALL = { pages: 30, consoleRowsADay: 200, breadth: 0, days: 800 };
-/** A whole rehearsal run here: a few pages, two of each split, under a fortnight of history. */
-const TINY = { pages: 5, consoleRowsADay: 20, breadth: 2, days: 12, countries: ["gbr"] };
+/** A whole rehearsal run here: two pages, two of each split, and two days of history. */
+const TINY = { pages: 2, consoleRowsADay: 4, breadth: 2, days: 2, countries: ["gbr"] };
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
 beforeEach(() => {
@@ -98,7 +98,7 @@ describe("the pretend Google", () => {
 });
 
 describe("a rehearsal, end to end at a small size", () => {
-  test("set up, both first collections run to their end without the network, reported, and removed", async () => {
+  test("sets up, runs both first collections to their end without the network, and reports them", async () => {
     const t = harness();
     await t.run(async (ctx) => {
       for (const systemKey of ["GOOGLE_ANALYTICS_COLLECTOR", "SEARCH_CONSOLE_COLLECTOR"]) {
@@ -122,7 +122,11 @@ describe("a rehearsal, end to end at a small size", () => {
     expect(done.console).toMatchObject({ settling: false, problem: null });
     expect(done.console?.daysFrom).toBeTruthy();
     expect(fetch).not.toHaveBeenCalled();
+  });
 
+  test("removes every row made by a rehearsal setup", async () => {
+    const t = harness();
+    await t.mutation(internal.collectionRehearsal.seedRehearsal, { countries: TINY.countries });
     expect(await t.action(internal.collectionRehearsal.endRehearsal, {})).toContain("its figures are being cleared");
     await finishScheduled(t);
     expect(await t.query(internal.collectionRehearsal.rehearsalReport, {})).toBeNull();

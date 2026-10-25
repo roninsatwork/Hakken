@@ -30,7 +30,7 @@ The seed fails closed unless all required controls are present:
 - `LOCAL_DEMO_SEED_ENABLED` must be `1`.
 - `LOCAL_DEMO_SEED_SECRET` must be configured.
 - The secret passed to the mutation must match `LOCAL_DEMO_SEED_SECRET`.
-- `LOCAL_DEMO_SEED_ENVIRONMENT` must not be `production`.
+- `LOCAL_DEMO_SEED_ENVIRONMENT` must be exactly `local`.
 
 The script also requires a Convex URL. It resolves the URL in this order:
 
@@ -51,10 +51,11 @@ Keep the seed secret local. Do not commit it to the repository, paste it into do
 
 ```bash
 LOCAL_DEMO_SEED_ENABLED=1
+LOCAL_DEMO_SEED_ENVIRONMENT=local
 LOCAL_DEMO_SEED_SECRET=replace-with-local-secret
 ```
 
-Only set `LOCAL_DEMO_SEED_ENVIRONMENT` when you intentionally need the production guard to block seeding.
+Any missing or different environment label blocks seeding; the enable flag alone is never enough.
 
 ## Run The Seed
 

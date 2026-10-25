@@ -237,6 +237,7 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
 }) {
   const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
   if (!agent) throw appError("NOT_FOUND", "Agent not found.");
+  if (!agent.isActive) throw appError("CONFLICT", "This agent is disabled and cannot run.");
 
   const thread = args.threadId
     ? await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId })
@@ -246,6 +247,10 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   const owner: RunOwner = thread
     ? { companyId: thread.companyId, userId: thread.userId }
     : args.owner ?? {};
+
+  if (agent.companyId !== undefined && agent.companyId !== owner.companyId) {
+    throw appError("NOT_FOUND", "Agent not found.");
+  }
 
   const runtimeSkills = await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
     agentId: args.agentId,

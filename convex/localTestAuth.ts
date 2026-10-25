@@ -47,8 +47,8 @@ const LOCAL_TEST_USERS: Record<
 };
 
 function assertLocalTestAuthEnabled(secret: string) {
-  if (process.env.LOCAL_TEST_AUTH_ENVIRONMENT === "production") {
-    throw appError("UNAUTHORIZED", "Local test auth is not available in production.");
+  if (process.env.LOCAL_TEST_AUTH_ENVIRONMENT !== "local") {
+    throw appError("UNAUTHORIZED", "Local test auth is available only in an explicitly local environment.");
   }
 
   if (process.env.LOCAL_TEST_AUTH_ENABLED !== "1") {

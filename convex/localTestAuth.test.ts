@@ -15,7 +15,7 @@ function setup() {
 function enableLocalTestAuth() {
   process.env.LOCAL_TEST_AUTH_ENABLED = "1";
   process.env.LOCAL_TEST_AUTH_SECRET = "test-secret";
-  delete process.env.LOCAL_TEST_AUTH_ENVIRONMENT;
+  process.env.LOCAL_TEST_AUTH_ENVIRONMENT = "local";
 }
 
 function restoreEnv() {
@@ -151,7 +151,7 @@ describe("local test auth", () => {
     process.env.LOCAL_TEST_AUTH_ENABLED = "1";
     process.env.LOCAL_TEST_AUTH_ENVIRONMENT = "production";
     await expect(t.mutation(api.localTestAuth.seed, { secret: "test-secret" })).rejects.toThrow(
-      "Local test auth is not available in production"
+      "Local test auth is available only in an explicitly local environment"
     );
   });
 });

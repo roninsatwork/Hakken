@@ -20,7 +20,7 @@ export default defineConfig({
     // routes are production-compatible, CI compensates with a larger
     // timeout-minutes budget instead of a faster server.
     command:
-      'E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud} npm run dev -- -p 3100',
+      'E2E_AUTH_ENABLED=1 E2E_AUTH_ENVIRONMENT=local NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT=local NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud} npm run dev -- -p 3100',
     url: 'http://localhost:3100/login',
     reuseExistingServer: false,
     timeout: 180000,

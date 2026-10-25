@@ -95,7 +95,18 @@ async function ingestStoredDocument(
 
       if (!ingestText.trim()) throw appError("INVALID_INPUT", "No text content could be extracted from the intelligence file.");
 
-      await embedAndStoreDoc(ctx, documentId, doc.companyId, doc.agentId, doc.threadId, ingestText);
+      await embedAndStoreDoc(
+        ctx,
+        documentId,
+        doc.companyId,
+        doc.agentId,
+        doc.threadId,
+        ingestText,
+        {
+          maxCharacters: KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS,
+          maxChunks: KNOWLEDGE_WEBSITE_MAX_CHUNKS,
+        },
+      );
 
     } catch (error) {
        console.error("Critical Failure in Knowledge Ingestion:", error);
@@ -360,16 +371,16 @@ async function embedAndStoreDoc(
   agentId: Id<"agents"> | undefined,
   threadId: Id<"threads"> | undefined,
   rawText: string,
-  limits?: { maxCharacters: number; maxChunks: number },
+  limits: { maxCharacters: number; maxChunks: number },
 ) {
-      if (limits && rawText.length > limits.maxCharacters) {
+      if (rawText.length > limits.maxCharacters) {
         throw appError(
           "INVALID_INPUT",
           `Knowledge source exceeds ${limits.maxCharacters} characters.`,
         );
       }
       const chunks = chunkKnowledgeText(rawText);
-      if (limits && chunks.length > limits.maxChunks) {
+      if (chunks.length > limits.maxChunks) {
         throw appError(
           "INVALID_INPUT",
           `Knowledge source exceeds ${limits.maxChunks} embedding chunks.`,

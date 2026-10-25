@@ -1,5 +1,6 @@
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
+import { normaliseEmail } from "../oneTimeCodeService";
 
 /**
  * How many rows one read of an identity table takes at a time.
@@ -105,12 +106,14 @@ export async function purgeAuthIdentity(ctx: MutationCtx, userId: Id<"users">, e
   );
 
   if (!email) return;
+  const canonicalEmail = normaliseEmail(email);
+  if (!canonicalEmail) return;
 
   await drainRows(
     (limit) =>
       ctx.db
         .query("invitations")
-        .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
+        .withIndex("by_email", (q) => q.eq("email", canonicalEmail))
         .take(limit),
     (invitation) => ctx.db.delete(invitation._id)
   );

@@ -180,6 +180,8 @@ export const erasureShape = v.object({
     treatment: v.union(v.literal("ERASE"), v.literal("DISSOCIATE"), v.literal("RETAIN")),
     rows: v.number(),
   })),
+  queued: v.optional(v.boolean()),
+  runId: v.optional(v.string()),
 });
 
 export const platformOverviewShape = v.object({

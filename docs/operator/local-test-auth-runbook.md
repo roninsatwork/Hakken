@@ -30,7 +30,7 @@ Local test auth fails closed unless all required controls are present:
 - `LOCAL_TEST_AUTH_ENABLED` must be `1` for the local Convex environment so the `local-test` credentials provider and seed/authorize functions are available.
 - `LOCAL_TEST_AUTH_SECRET` must be configured in the local Convex environment.
 - The secret passed to the script or `/local-test-auth` route must match `LOCAL_TEST_AUTH_SECRET`.
-- `LOCAL_TEST_AUTH_ENVIRONMENT` must not be `production` in either the local Next.js app or local Convex environment.
+- `LOCAL_TEST_AUTH_ENVIRONMENT` must be exactly `local` in both the local Next.js app and local Convex environment.
 - The browser route must be opened on `localhost`, `127.0.0.1`, or `::1`.
 
 Keep the local test auth secret local. Do not commit it, paste it into docs, share it in support channels, or reuse a production secret.
@@ -45,16 +45,17 @@ Keep the local test auth secret local. Do not commit it, paste it into docs, sha
 
 ```bash
 LOCAL_TEST_AUTH_ENABLED=1
+LOCAL_TEST_AUTH_ENVIRONMENT=local
 LOCAL_TEST_AUTH_SECRET=replace-with-local-secret
 ```
 
-The web app only needs the enable flag and non-production environment guard:
+The web app needs the same explicit local label:
 
 ```bash
-LOCAL_TEST_AUTH_ENABLED=1 npm run dev
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_ENVIRONMENT=local npm run dev
 ```
 
-Only set `LOCAL_TEST_AUTH_ENVIRONMENT` when you intentionally need the production guard to block local test auth. If it is set to `production` for either process, local test auth is unavailable.
+Any missing or different environment label blocks local test auth; the enable flag alone is never enough.
 
 ## Seed The Local Identities
 
@@ -132,7 +133,7 @@ The real-auth Playwright lane is configured in `playwright.real-auth.config.ts` 
 npm run test:e2e:real-auth
 ```
 
-That lane starts the local app on port `3100` with `LOCAL_TEST_AUTH_ENABLED=1` and runs `e2e/local-real-auth-smoke.spec.ts` projects for public, super-admin, and user checks. The smoke spec signs in dynamically through `/local-test-auth`; it does not require pre-generated storage states. You still need to seed the deterministic local users first with `npm run auth:local:seed`.
+That lane starts the local app on port `3100` with `LOCAL_TEST_AUTH_ENABLED=1` and `LOCAL_TEST_AUTH_ENVIRONMENT=local`, then runs `e2e/local-real-auth-smoke.spec.ts` projects for public, super-admin, and user checks. The smoke spec signs in dynamically through `/local-test-auth`; it does not require pre-generated storage states. You still need to seed the deterministic local users first with `npm run auth:local:seed`.
 
 ## Manual Route Check
 
@@ -154,7 +155,7 @@ Common failure messages:
 - `Local test auth is disabled.`: set `LOCAL_TEST_AUTH_ENABLED=1` in the local Convex environment and restart affected services.
 - `Local test auth secret is not configured.`: configure `LOCAL_TEST_AUTH_SECRET` in the local Convex environment.
 - `Invalid local test auth secret.`: the script or route secret does not match the Convex environment secret.
-- `Local test auth is not available in production.`: the production guard is active; do not bypass it.
+- `Local test auth is available only in an explicitly local environment.`: set the exact `local` label on local processes only; do not bypass this guard elsewhere.
 - `Local test auth is only available on localhost.`: open the route from localhost, `127.0.0.1`, or `::1`.
 - `Local test user has not been seeded.`: run `npm run auth:local:seed` before creating storage state.
 - `Local test tenant user is missing a company.`: rerun the seed so tenant roles are assigned to `Local Test Company`.

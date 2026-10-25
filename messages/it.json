@@ -5368,6 +5368,8 @@
         "erase": "Cancella tutto",
         "readFailed": "Non è stato possibile produrlo. Controlla l'indirizzo email e riprova.",
         "eraseFailed": "Non è stato cancellato nulla. Controlla l'indirizzo email e riprova.",
+        "backgroundFailed": "La cancellazione in background si è fermata dopo ripetuti errori. Non è stato emesso alcun documento di completamento; un operatore deve controllare l'esecuzione non riuscita.",
+        "working": "Operazione ancora in corso. La richiesta continuerà in background finché ogni record non sarà stato gestito.",
         "done": "Fatto. Conserva questo — è la risposta da dare a chi l'ha chiesto.",
         "keepRecord": "Salva questo documento",
         "cancel": "Annulla",

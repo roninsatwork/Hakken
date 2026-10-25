@@ -180,6 +180,24 @@ describe("knowledge actions", () => {
     expect(consoleError).toHaveBeenCalledWith("Queue Scrape Error", expect.any(Error));
   });
 
+  test("uploaded or pasted text uses the same ceiling before embedding", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const documentId = await t.run(async (ctx) => await ctx.db.insert("knowledgeDocuments", {
+      title: "Oversized upload",
+      textContent: "x".repeat(KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS + 1),
+      status: "processing",
+      format: "text/plain",
+      createdAt: Date.now(),
+    }));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await t.action(internal.knowledgeActions.ingestDocument, { documentId });
+
+    expect(await t.run(async (ctx) => ctx.db.get(documentId))).toMatchObject({ status: "failed" });
+    expect(embedContentMock).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith("Critical Failure in Knowledge Ingestion:", expect.any(Error));
+  });
+
   test("document ingestion marks unextractable documents as failed without throwing", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

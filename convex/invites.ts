@@ -12,6 +12,8 @@ import { getPlatformName } from "./settings";
 import { adminAction, adminMutation, adminQuery, superAdminMutation, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { buildInvitationEmail } from "./platformEmails";
+import { normaliseEmail } from "./oneTimeCodeService";
+import { usersForCanonicalEmail } from "./authEvents";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
@@ -237,7 +239,8 @@ export const createInviteRecord = internalMutation({
     callerId: v.optional(v.id("users")),
   },
   handler: async (ctx, args): Promise<InviteRecordOutcome> => {
-    const email = args.email.toLowerCase();
+    const email = normaliseEmail(args.email);
+    if (!email) throw appError("INVALID_INPUT", "Enter a valid email address.");
     const now = Date.now();
 
     const existing = await ctx.db
@@ -263,10 +266,11 @@ export const createInviteRecord = internalMutation({
      * before that fix.
      */
     if (existing?.status === "ACCEPTED") {
-      const activeUser = await ctx.db
-        .query("users")
-        .withIndex("email", (q) => q.eq("email", email))
-        .first();
+      const activeUsers = await usersForCanonicalEmail(ctx, email);
+      if (activeUsers.length > 1) {
+        throw appError("CONFLICT", "More than one account uses this email address. Repair the identity records before inviting it.");
+      }
+      const activeUser = activeUsers[0];
 
       if (activeUser) {
         return { outcome: "alreadyActive", previousStatus: existing.status };
@@ -365,6 +369,8 @@ export const dispatchInviteEmail = adminAction({
   handler: async (ctx, args): Promise<InviteDispatchResult> => {
     const { userId: callerId, user: caller } = await requireActionUser(ctx);
     if (!caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
+    const recipientEmail = normaliseEmail(args.email);
+    if (!recipientEmail) throw appError("INVALID_INPUT", "Enter a valid email address.");
 
     if (caller.role !== "SUPER_ADMIN") {
       const activeCompanyId = getActiveCompanyId(caller);
@@ -405,7 +411,7 @@ export const dispatchInviteEmail = adminAction({
     // Skip if API key missing (dev environment graceful degradation)
     if (!process.env.RESEND_API_KEY) {
        console.warn("No RESEND_API_KEY found. Mocking email dispatch successfully.", email.text);
-       const simulated: InviteRecordOutcome = await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
+       const simulated: InviteRecordOutcome = await ctx.runMutation(internal.invites.createInviteRecord, { email: recipientEmail, companyId: args.companyId, role: args.role, token, callerId });
        return { success: true, simulated: true, outcome: simulated.outcome };
     }
 
@@ -422,7 +428,7 @@ export const dispatchInviteEmail = adminAction({
         idempotencyKey: `invite:${token}`,
         payload: {
           from: fromAddress,
-          to: args.email,
+          to: recipientEmail,
           subject: email.subject,
           html: email.html,
           text: email.text,
@@ -430,7 +436,7 @@ export const dispatchInviteEmail = adminAction({
       });
 
       // 4. Record DB mapping on successful dispatch
-      const record: InviteRecordOutcome = await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
+      const record: InviteRecordOutcome = await ctx.runMutation(internal.invites.createInviteRecord, { email: recipientEmail, companyId: args.companyId, role: args.role, token, callerId });
 
       return { success: true, id: data?.id, outcome: record.outcome };
     } catch (e: unknown) {

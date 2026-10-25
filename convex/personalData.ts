@@ -2,8 +2,9 @@ import { v } from "convex/values";
 
 import { internal } from "./_generated/api";
 import type { Id, TableNames } from "./_generated/dataModel";
-import { internalMutation, internalQuery } from "./_generated/server";
-import { governanceAction, superAdminAction } from "./tenantFunctions";
+import type { ActionCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { governanceAction, superAdminAction, superAdminQuery } from "./tenantFunctions";
 import * as governanceShapes from "./utils/governanceShapes";
 import {
   PERSONAL_DATA_RULES,
@@ -18,6 +19,8 @@ import {
   type SubjectAccessResult,
 } from "./personalDataService";
 import { appError } from "./utils/appError";
+import { purgeAuthIdentity } from "./utils/authIdentityPurge";
+import { usersForCanonicalEmail } from "./authEvents";
 
 /**
  * Answering the two questions a person can ask about their own data: what do
@@ -49,6 +52,53 @@ const SCAN_PAGE = 200;
  * is reported rather than passed off as a complete answer.
  */
 const MAX_PAGES = 200;
+
+/**
+ * How much destructive work one action segment may hand to Convex mutations.
+ * A larger request saves its exact cursor and schedules the next segment,
+ * instead of silently stopping at the old subject-access read ceiling.
+ */
+// Twenty pages is at most 4,000 row writes. Keep the handoff comfortably
+// inside one action's lifetime so a very large request progresses through
+// many durable checkpoints instead of risking one long, uncheckpointed turn.
+const ERASURE_PAGES_PER_SEGMENT = 20;
+
+const erasureTallyValidator = v.object({
+  table: v.string(),
+  treatment: v.union(v.literal("ERASE"), v.literal("DISSOCIATE"), v.literal("RETAIN")),
+  rows: v.number(),
+});
+
+const erasureRunValidator = v.object({
+  _id: v.id("personalDataErasureRuns"),
+  _creationTime: v.number(),
+  subjectUserId: v.id("users"),
+  subjectEmail: v.string(),
+  actorId: v.id("users"),
+  status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+  ruleIndex: v.number(),
+  fieldIndex: v.number(),
+  cursor: v.optional(v.string()),
+  pagesProcessed: v.number(),
+  attempts: v.number(),
+  tallies: v.array(erasureTallyValidator),
+  startedAt: v.number(),
+  lastProgressAt: v.number(),
+  completedAt: v.optional(v.number()),
+  error: v.optional(v.string()),
+});
+
+type ErasureProgress = {
+  ruleIndex: number;
+  fieldIndex: number;
+  cursor: string | null;
+  pagesProcessed: number;
+  tallies: ErasureTally[];
+};
+
+const ERASABLE_RULES = PERSONAL_DATA_RULES.filter(
+  (rule) => rule.treatment !== "RETAIN" && rule.table !== "users",
+);
 
 /**
  * The table being searched comes from the manifest, so its name is data rather
@@ -88,15 +138,23 @@ function searchFor(
 
 export const findByEmail = internalQuery({
   args: { email: v.string() },
+  returns: v.union(v.null(), v.object({
+    userId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    role: v.string(),
+  })),
   handler: async (ctx, args): Promise<PersonSummary | null> => {
     const email = args.email.trim().toLowerCase();
     if (!email) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", email))
-      .first();
+    const users = await usersForCanonicalEmail(ctx, email);
 
+    if (users.length === 0) return null;
+    if (users.length > 1) {
+      throw appError("CONFLICT", "More than one account uses that email address. Repair the identity records before continuing.");
+    }
+    const user = users[0];
     if (!user) return null;
 
     return { userId: user._id, name: user.name ?? "", email: user.email ?? "", role: user.role ?? "USER" };
@@ -122,6 +180,11 @@ export const collectPage = internalQuery({
     userId: v.id("users"),
     cursor: v.union(v.string(), v.null()),
   },
+  returns: v.object({
+    rows: v.array(v.any()),
+    cursor: v.union(v.string(), v.null()),
+    isDone: v.boolean(),
+  }),
   handler: async (
     ctx,
     args,
@@ -242,6 +305,11 @@ export const eraseFromTable = internalMutation({
     /** Clear the field rather than delete the row. */
     dissociate: v.boolean(),
   },
+  returns: v.object({
+    removed: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    isDone: v.boolean(),
+  }),
   handler: async (ctx, args): Promise<{ removed: number; cursor: string | null; isDone: boolean }> => {
     const { source, indexed } = searchFor(
       ctx.db.query(args.table as TableNames),
@@ -272,11 +340,206 @@ export const eraseFromTable = internalMutation({
   },
 });
 
-export const removePerson = internalMutation({
+async function processErasureSegment(
+  ctx: ActionCtx,
+  userId: Id<"users">,
+  progress: ErasureProgress,
+): Promise<{ done: boolean; progress: ErasureProgress }> {
+  const next: ErasureProgress = {
+    ...progress,
+    tallies: progress.tallies.map((tally) => ({ ...tally })),
+  };
+  let pagesThisSegment = 0;
+
+  while (next.ruleIndex < ERASABLE_RULES.length) {
+    const rule = ERASABLE_RULES[next.ruleIndex];
+    if (!rule) break;
+
+    if (!next.tallies[next.ruleIndex]) {
+      next.tallies.push({ table: rule.table, treatment: rule.treatment, rows: 0 });
+    }
+
+    while (next.fieldIndex < rule.fields.length) {
+      const field = rule.fields[next.fieldIndex];
+      if (!field) break;
+
+      const result: { removed: number; cursor: string | null; isDone: boolean } =
+        await ctx.runMutation(internal.personalData.eraseFromTable, {
+          table: rule.table,
+          field,
+          userId,
+          cursor: next.cursor,
+          dissociate: rule.treatment === "DISSOCIATE",
+        });
+
+      const tally = next.tallies[next.ruleIndex];
+      if (tally) tally.rows += result.removed;
+      next.pagesProcessed += 1;
+      pagesThisSegment += 1;
+
+      if (result.isDone) {
+        next.fieldIndex += 1;
+        next.cursor = null;
+      } else {
+        next.cursor = result.cursor;
+      }
+
+      if (pagesThisSegment >= ERASURE_PAGES_PER_SEGMENT) {
+        return { done: false, progress: next };
+      }
+    }
+
+    next.ruleIndex += 1;
+    next.fieldIndex = 0;
+    next.cursor = null;
+  }
+
+  return { done: true, progress: next };
+}
+
+export const findRunningErasure = internalQuery({
   args: { userId: v.id("users") },
+  returns: v.union(v.null(), erasureRunValidator),
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("personalDataErasureRuns")
+      .withIndex("by_subject_status", (q) => q.eq("subjectUserId", args.userId).eq("status", "RUNNING"))
+      .first(),
+});
+
+export const getErasureRun = internalQuery({
+  args: { runId: v.id("personalDataErasureRuns") },
+  returns: v.union(v.null(), erasureRunValidator),
+  handler: async (ctx, args) => await ctx.db.get(args.runId),
+});
+
+export const createErasureRun = internalMutation({
+  args: {
+    subjectUserId: v.id("users"),
+    subjectEmail: v.string(),
+    actorId: v.id("users"),
+    ruleIndex: v.number(),
+    fieldIndex: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    pagesProcessed: v.number(),
+    tallies: v.array(erasureTallyValidator),
+  },
+  returns: v.id("personalDataErasureRuns"),
   handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("personalDataErasureRuns")
+      .withIndex("by_subject_status", (q) => q.eq("subjectUserId", args.subjectUserId).eq("status", "RUNNING"))
+      .first();
+    if (existing) return existing._id;
+
+    const now = Date.now();
+    return await ctx.db.insert("personalDataErasureRuns", {
+      subjectUserId: args.subjectUserId,
+      subjectEmail: args.subjectEmail,
+      actorId: args.actorId,
+      status: "RUNNING",
+      ruleIndex: args.ruleIndex,
+      fieldIndex: args.fieldIndex,
+      ...(args.cursor === null ? {} : { cursor: args.cursor }),
+      pagesProcessed: args.pagesProcessed,
+      attempts: 0,
+      tallies: args.tallies,
+      startedAt: now,
+      lastProgressAt: now,
+    });
+  },
+});
+
+export const saveErasureProgress = internalMutation({
+  args: {
+    runId: v.id("personalDataErasureRuns"),
+    ruleIndex: v.number(),
+    fieldIndex: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    pagesProcessed: v.number(),
+    tallies: v.array(erasureTallyValidator),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run || run.status !== "RUNNING") return false;
+    await ctx.db.patch(args.runId, {
+      ruleIndex: args.ruleIndex,
+      fieldIndex: args.fieldIndex,
+      cursor: args.cursor === null ? undefined : args.cursor,
+      pagesProcessed: args.pagesProcessed,
+      tallies: args.tallies,
+      attempts: 0,
+      error: undefined,
+      lastProgressAt: Date.now(),
+    });
+    return true;
+  },
+});
+
+export const failErasureRun = internalMutation({
+  args: { runId: v.id("personalDataErasureRuns"), error: v.string() },
+  returns: v.object({ retry: v.boolean(), attempts: v.number() }),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run || run.status !== "RUNNING") return { retry: false, attempts: 0 };
+    const attempts = run.attempts + 1;
+    const retry = attempts < 5;
+    const now = Date.now();
+    await ctx.db.patch(args.runId, {
+      attempts,
+      error: args.error.slice(0, 2_000),
+      ...(retry ? {} : { status: "FAILED" as const, completedAt: now }),
+    });
+    return { retry, attempts };
+  },
+});
+
+/**
+ * Make identity removal and governance evidence one transaction. A crash
+ * cannot leave a deleted user with live auth rows, or a completed deletion
+ * without its audit record and durable run status.
+ */
+export const finalizeErasure = internalMutation({
+  args: {
+    userId: v.id("users"),
+    email: v.string(),
+    actorId: v.id("users"),
+    summary: v.array(v.string()),
+    runId: v.optional(v.id("personalDataErasureRuns")),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    if (args.runId) {
+      const run = await ctx.db.get(args.runId);
+      if (!run || run.status !== "RUNNING") return false;
+    }
+
     const person = await ctx.db.get(args.userId);
-    if (person) await ctx.db.delete(args.userId);
+    if (person) {
+      await purgeAuthIdentity(ctx, args.userId, person.email ?? args.email);
+      await ctx.db.delete(args.userId);
+    }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "ERASE_PERSONAL_DATA",
+      actorId: args.actorId,
+      entityType: "users",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({
+        summary: [`Erased everything held about ${args.email}.`, ...args.summary],
+      }),
+    });
+
+    if (args.runId) {
+      const now = Date.now();
+      await ctx.db.patch(args.runId, {
+        status: "SUCCESS",
+        completedAt: now,
+        lastProgressAt: now,
+      });
+    }
+    return true;
   },
 });
 
@@ -287,6 +550,7 @@ export const recordAction = internalMutation({
     action: v.union(v.literal("SUBJECT_ACCESS"), v.literal("ERASURE")),
     summary: v.array(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.insert("auditLogs", {
       actionType: args.action === "ERASURE" ? "ERASE_PERSONAL_DATA" : "EXPORT_PERSONAL_DATA",
@@ -298,6 +562,70 @@ export const recordAction = internalMutation({
       // what was erased would put it straight back.
       metadata: JSON.stringify({ summary: args.summary }),
     });
+  },
+});
+
+export const continueErasure = internalAction({
+  args: { runId: v.id("personalDataErasureRuns") },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<void> => {
+    const run = await ctx.runQuery(internal.personalData.getErasureRun, args);
+    if (!run || run.status !== "RUNNING") return;
+
+    try {
+      const result = await processErasureSegment(ctx, run.subjectUserId, {
+        ruleIndex: run.ruleIndex,
+        fieldIndex: run.fieldIndex,
+        cursor: run.cursor ?? null,
+        pagesProcessed: run.pagesProcessed,
+        tallies: run.tallies as ErasureTally[],
+      });
+
+      if (result.done) {
+        const summary = describeErasure(result.progress.tallies);
+        await ctx.runMutation(internal.personalData.finalizeErasure, {
+          userId: run.subjectUserId,
+          email: run.subjectEmail,
+          actorId: run.actorId,
+          summary,
+          runId: args.runId,
+        });
+        return;
+      }
+
+      const saved = await ctx.runMutation(internal.personalData.saveErasureProgress, {
+        runId: args.runId,
+        ...result.progress,
+      });
+      if (saved) {
+        await ctx.scheduler.runAfter(0, internal.personalData.continueErasure, args);
+      }
+    } catch (error) {
+      const failure = await ctx.runMutation(internal.personalData.failErasureRun, {
+        runId: args.runId,
+        error: error instanceof Error ? error.message : "The erasure worker failed.",
+      });
+      if (failure.retry) {
+        const delay = Math.min(60_000 * 2 ** (failure.attempts - 1), 15 * 60_000);
+        await ctx.scheduler.runAfter(delay, internal.personalData.continueErasure, args);
+      }
+    }
+  },
+});
+
+export const erasureStatus = superAdminQuery({
+  args: { runId: v.id("personalDataErasureRuns") },
+  returns: v.object({
+    status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    summary: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run) throw appError("NOT_FOUND", "Erasure run not found.");
+    return {
+      status: run.status,
+      summary: describeErasure(run.tallies as ErasureTally[]),
+    };
   },
 });
 
@@ -315,51 +643,55 @@ export const erase = superAdminAction({
       throw appError("UNAUTHORIZED", "You cannot erase your own account from here. Ask another administrator.");
     }
 
-    const tallies: ErasureTally[] = [];
-
-    for (const rule of PERSONAL_DATA_RULES) {
-      if (rule.treatment === "RETAIN" || rule.table === "users") continue;
-
-      let rows = 0;
-
-      for (const field of rule.fields) {
-        let cursor: string | null = null;
-
-        for (let page = 0; page < MAX_PAGES; page += 1) {
-          const result: { removed: number; cursor: string | null; isDone: boolean } =
-            await ctx.runMutation(internal.personalData.eraseFromTable, {
-              table: rule.table,
-              field,
-              userId: person.userId,
-              cursor,
-              dissociate: rule.treatment === "DISSOCIATE",
-            });
-
-          rows += result.removed;
-          if (result.isDone) break;
-          cursor = result.cursor;
-        }
-      }
-
-      tallies.push({ table: rule.table, treatment: rule.treatment, rows });
+    const running = await ctx.runQuery(internal.personalData.findRunningErasure, {
+      userId: person.userId,
+    });
+    if (running) {
+      return {
+        email: person.email,
+        summary: ["Erasure is already continuing safely in the background."],
+        tallies: running.tallies as ErasureTally[],
+        queued: true,
+        runId: String(running._id),
+      };
     }
 
-    // The person themselves goes last, so a failure part-way through leaves an
-    // account that can be found and finished rather than orphaned rows nobody
-    // can trace back.
-    await ctx.runMutation(internal.personalData.removePerson, { userId: person.userId });
-
-    const summary = describeErasure(tallies);
-
-    await ctx.runMutation(internal.personalData.recordAction, {
-      actorId: ctx.userId,
-      // Deliberately not the deleted id: it points at nothing now, and the
-      // summary is what the record is for.
-      action: "ERASURE",
-      summary: [`Erased everything held about ${person.email}.`, ...summary],
+    const result = await processErasureSegment(ctx, person.userId, {
+      ruleIndex: 0,
+      fieldIndex: 0,
+      cursor: null,
+      pagesProcessed: 0,
+      tallies: [],
     });
 
-    return { email: person.email, summary, tallies };
+    if (!result.done) {
+      const runId = await ctx.runMutation(internal.personalData.createErasureRun, {
+        subjectUserId: person.userId,
+        subjectEmail: person.email,
+        actorId: ctx.userId,
+        ...result.progress,
+      });
+      await ctx.scheduler.runAfter(0, internal.personalData.continueErasure, { runId });
+
+      return {
+        email: person.email,
+        summary: ["Erasure is continuing safely in the background until every matching record is handled."],
+        tallies: result.progress.tallies,
+        queued: true,
+        runId: String(runId),
+      };
+    }
+
+    const summary = describeErasure(result.progress.tallies);
+
+    await ctx.runMutation(internal.personalData.finalizeErasure, {
+      userId: person.userId,
+      email: person.email,
+      actorId: ctx.userId,
+      summary,
+    });
+
+    return { email: person.email, summary, tallies: result.progress.tallies };
   },
 });
 

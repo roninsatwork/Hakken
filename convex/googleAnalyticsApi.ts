@@ -196,6 +196,7 @@ export const MOST_REPORT_PAGES = 20;
  * they come (`googleAnalyticsPageLists.ts`).
  */
 export type ReportSink = (rows: ReportRow[]) => void;
+export type ReportPageGuard = (quota: QuotaLeft) => Promise<string | null> | string | null;
 
 export type ReportAsk = {
   startDate: string;
@@ -315,7 +316,8 @@ export async function runReport(
   ask: ReportAsk,
   sink?: ReportSink,
   fromPage = 0,
-): Promise<({ ok: true } & Report) | (GoogleFailure & { pagesRead: number })> {
+  pageGuard?: ReportPageGuard,
+): Promise<({ ok: true } & Report) | (GoogleFailure & { pagesRead: number; requests: number })> {
   const url = `${DATA}/${property}:runReport`;
   const rows: ReportRow[] = [];
   let folded = false;
@@ -337,7 +339,7 @@ export async function runReport(
       returnPropertyQuota: true,
     });
     requests += 1;
-    if (!answer.ok) return { ...answer, pagesRead: page };
+    if (!answer.ok) return { ...answer, pagesRead: page, requests };
     const json = answer.json as {
       rows?: { dimensionValues?: { value?: string }[]; metricValues?: { value?: string }[] }[];
       rowCount?: number;
@@ -356,6 +358,19 @@ export async function runReport(
     if (sink) sink(answered);
     else for (const row of answered) rows.push(row);
     if (seen >= total || answered.length < REPORT_PAGE_ROWS) break;
+    if (quota && pageGuard) {
+      const stopped = await pageGuard(quota);
+      if (stopped) {
+        return {
+          ok: false,
+          reason: "BUDGET",
+          status: 0,
+          detail: stopped,
+          pagesRead: page + 1,
+          requests,
+        };
+      }
+    }
   }
   return { ok: true, rows, folded, thresholded, cut: seen < total, requests, quota };
 }

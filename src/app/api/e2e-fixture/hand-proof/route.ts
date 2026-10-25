@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
+import { isE2EAuthRuntimeEnabled } from "@/src/lib/e2eAuthEnvironment";
 
 export async function GET() {
-  if (process.env.E2E_AUTH_ENABLED !== "1") {
+  if (!isE2EAuthRuntimeEnabled()) {
     return new NextResponse("Not found", { status: 404 });
   }
 

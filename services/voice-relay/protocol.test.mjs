@@ -8,6 +8,7 @@ import {
   createCallerRouter,
   createTicketReplayGuard,
   isCallerFrameAllowed,
+  isClientContentTurn,
   isTurnComplete,
   pcm16HasSpeech,
   readTicket,
@@ -148,6 +149,13 @@ describe("metering kiosk speech", () => {
     expect(isTurnComplete(JSON.stringify({ serverContent: { turnComplete: true } }))).toBe(true);
     expect(isTurnComplete(JSON.stringify({ serverContent: { interrupted: true } }))).toBe(false);
     expect(isTurnComplete("not json")).toBe(false);
+  });
+
+  test("a typed clientContent turn is metered, while tool answers are not", () => {
+    expect(isClientContentTurn(JSON.stringify({
+      clientContent: { turns: [{ role: "user", parts: [{ text: "Hello" }] }], turnComplete: true },
+    }))).toBe(true);
+    expect(isClientContentTurn(JSON.stringify({ toolResponse: { functionResponses: [] } }))).toBe(false);
   });
 
   test("a message's usage is read for the session's cost, thinking counted as output", () => {

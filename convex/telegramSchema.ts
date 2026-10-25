@@ -43,4 +43,12 @@ export const telegramTables = {
     name: v.string(),
     setUpAt: v.number(),
   }),
+
+  /** Telegram retries deliveries; one update id may start work only once. */
+  telegramWebhookUpdates: defineTable({
+    updateId: v.number(),
+    receivedAt: v.number(),
+  })
+    .index("by_update", ["updateId"])
+    .index("by_received", ["receivedAt"]),
 };

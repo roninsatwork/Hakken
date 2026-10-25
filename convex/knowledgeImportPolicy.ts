@@ -10,7 +10,11 @@ export const KNOWLEDGE_WEBSITE_URLS_PER_HOUR = 100;
 export const KNOWLEDGE_WEBSITE_MAPS_PER_HOUR = 20;
 export const KNOWLEDGE_WEBSITE_REQUEUE_WINDOW_MS = 60 * 60 * 1000;
 
-/** The provider response includes JSON around the extracted markdown. */
+/**
+ * The provider response includes JSON around the extracted markdown.
+ * The text and chunk ceilings also apply to uploaded and pasted documents:
+ * every source reaches the same paid embedding boundary.
+ */
 export const KNOWLEDGE_WEBSITE_RESPONSE_MAX_BYTES = 512 * 1024;
 export const KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS = 100_000;
 export const KNOWLEDGE_WEBSITE_MAX_CHUNKS = 128;

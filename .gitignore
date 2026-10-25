@@ -54,6 +54,10 @@ poseData.json
 
 .npm-cache/
 
+# Temporary cloud credentials emitted by bespoke provisioning. The master
+# setup removes them on every exit; this is the second, repository-level stop.
+/bespoke-installation/gcp-*-key-*.json
+
 # The drawing kit is built from the code (npm run drawing-kit), never committed.
 /docs/design/drawing-kit/build/
 

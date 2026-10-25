@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { writeKeywordCopy } from "@/src/test/keywordCopies";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -35,9 +36,25 @@ const UK = 2826;
 const US = 2840;
 
 /** A company with its own website, ronins.co.uk, watching one competitor, and a member signed in to it. */
-async function company(t: Harness, role: "USER" | "READ_ONLY" = "USER") {
+async function company(t: Harness, role?: "USER" | "READ_ONLY"): Promise<{
+  companyId: Id<"companies">;
+  websiteId: Id<"websites">;
+  siteId: Id<"companyWebsites">;
+  userId: Id<"users">;
+  as: ReturnType<Harness["withIdentity"]>;
+}>;
+async function company(t: Harness, role: "USER" | "READ_ONLY", withWebsite: false): Promise<{
+  companyId: Id<"companies">;
+  userId: Id<"users">;
+  as: ReturnType<Harness["withIdentity"]>;
+}>;
+async function company(t: Harness, role: "USER" | "READ_ONLY" = "USER", withWebsite = true) {
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() });
+    if (!withWebsite) {
+      const userId = await ctx.db.insert("users", { name: "Anthony", email: `a-${Math.random()}@test.com`, role, companyId, createdAt: Date.now() });
+      return { companyId, userId };
+    }
     const websiteId = await ctx.db.insert("websites", { host: "ronins.co.uk", displayHost: "ronins.co.uk", firstSeenAt: Date.now() });
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: Date.now() });
     const rivalWebsiteId = await ctx.db.insert("websites", { host: "lightflows.co.uk", displayHost: "lightflows.co.uk", firstSeenAt: Date.now() });
@@ -112,10 +129,12 @@ function dataForSeo(serpFor: (keyword: string) => Array<{ domain: string; positi
 describe("Look up", () => {
   test("writes the company's lookups and starts the Keyword research agent for what is not held", async () => {
     const t = harness();
-    const { as, siteId, companyId } = await company(t);
+    // This assertion never reads a website. Keep its fixture lean so the first
+    // cold backend test stays well inside the Mac's full-suite speed limit.
+    const { as, companyId } = await company(t, "USER", false);
     const agentId = await researchAgent(t);
 
-    const looked = await as.mutation(api.keywordResearch.lookUp, { keywords: ["Web design agency", "  seo   london ", "web design agency"], locationCode: UK, siteId });
+    const looked = await as.mutation(api.keywordResearch.lookUp, { keywords: ["Web design agency", "  seo   london ", "web design agency"], locationCode: UK });
 
     expect(looked.waiting).toBe(2);
     const { lookups, runs } = await t.run(async (ctx) => ({

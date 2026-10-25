@@ -625,3 +625,63 @@ describe("Message Quotas Enforcements", () => {
     expect(messages.at(-1)?.content).toBe("message-44");
   });
 });
+
+describe("agent execution boundaries", () => {
+  test("a disabled agent cannot be attached to a new conversation", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userId, agentId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Disabled Agent Co", createdAt: 1 });
+      const userId = await ctx.db.insert("users", { email: "admin@disabled.test", role: "ADMIN", companyId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Stopped assistant",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: false,
+        companyId,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      return { userId, agentId };
+    });
+
+    await expect(
+      t.withIdentity({ subject: userId }).mutation(api.chat.createThread, { agentId }),
+    ).rejects.toThrow("disabled");
+  });
+
+  test("a disabled agent on an old conversation is refused before the message is stored", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userId, threadId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Old Thread Co", createdAt: 1 });
+      const userId = await ctx.db.insert("users", { email: "admin@old.test", role: "ADMIN", companyId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Now disabled",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: false,
+        companyId,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId,
+        agentId,
+        title: "Old conversation",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      return { userId, threadId };
+    });
+
+    await expect(
+      t.withIdentity({ subject: userId }).mutation(api.chat.sendMessage, {
+        threadId,
+        content: "Do not run this agent",
+      }),
+    ).rejects.toThrow("disabled");
+
+    const messages = await t.run(async (ctx) => await ctx.db.query("messages").collect());
+    expect(messages).toHaveLength(0);
+  });
+});

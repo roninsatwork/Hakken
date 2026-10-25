@@ -79,9 +79,9 @@ describe("the provider roster", () => {
     expect(providerIds()).toEqual(["google", "resend", "one-time-code"]);
   });
 
-  test("registers the local-test provider only when enabled outside production", async () => {
+  test("registers the local-test provider only when explicitly local", async () => {
     vi.stubEnv("LOCAL_TEST_AUTH_ENABLED", "1");
-    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "development");
+    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "local");
     await loadAuth();
     expect(providerIds()).toContain("local-test");
 
@@ -91,7 +91,7 @@ describe("the provider roster", () => {
     expect(providerIds()).not.toContain("local-test");
 
     vi.stubEnv("LOCAL_TEST_AUTH_ENABLED", "0");
-    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "development");
+    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "local");
     await loadAuth();
     expect(providerIds()).not.toContain("local-test");
   });
@@ -231,7 +231,7 @@ describe("the one-time code email", () => {
 describe("the local-test credentials gate", () => {
   test("refuses unknown roles and non-string secrets without touching the database", async () => {
     vi.stubEnv("LOCAL_TEST_AUTH_ENABLED", "1");
-    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "development");
+    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "local");
     await loadAuth();
     const authorize = optionOf<
       (credentials: Record<string, unknown>, ctx: { runQuery: ReturnType<typeof vi.fn> }) =>
@@ -247,7 +247,7 @@ describe("the local-test credentials gate", () => {
 
   test("passes known roles and the shared secret through to the seeded authorize query", async () => {
     vi.stubEnv("LOCAL_TEST_AUTH_ENABLED", "1");
-    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "development");
+    vi.stubEnv("LOCAL_TEST_AUTH_ENVIRONMENT", "local");
     await loadAuth();
     const authorize = optionOf<
       (credentials: Record<string, unknown>, ctx: { runQuery: ReturnType<typeof vi.fn> }) =>

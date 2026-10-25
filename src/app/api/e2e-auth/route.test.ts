@@ -3,9 +3,11 @@ import { NextRequest } from "next/server";
 import { GET } from "./route";
 
 const originalE2EAuthEnabled = process.env.E2E_AUTH_ENABLED;
+const originalE2EAuthEnvironment = process.env.E2E_AUTH_ENVIRONMENT;
 
 afterEach(() => {
   process.env.E2E_AUTH_ENABLED = originalE2EAuthEnabled;
+  process.env.E2E_AUTH_ENVIRONMENT = originalE2EAuthEnvironment;
 });
 
 function buildRequest(path: string) {
@@ -23,12 +25,14 @@ describe("GET /api/e2e-auth", () => {
 
   it("rejects unknown roles", () => {
     process.env.E2E_AUTH_ENABLED = "1";
+    process.env.E2E_AUTH_ENVIRONMENT = "local";
 
     expect(GET(buildRequest("/api/e2e-auth?role=owner"))).toMatchObject({ status: 400 });
   });
 
   it("sets a deterministic role cookie and preserves a safe local redirect", () => {
     process.env.E2E_AUTH_ENABLED = "1";
+    process.env.E2E_AUTH_ENVIRONMENT = "local";
 
     const response = GET(buildRequest(
       "/api/e2e-auth?role=super-admin&redirectTo=%2Fapp%2Ftasks",
@@ -43,6 +47,7 @@ describe("GET /api/e2e-auth", () => {
 
   it("falls back to the app for an external redirect", () => {
     process.env.E2E_AUTH_ENABLED = "1";
+    process.env.E2E_AUTH_ENVIRONMENT = "local";
 
     const response = GET(buildRequest(
       "/api/e2e-auth?role=user&redirectTo=https%3A%2F%2Fexample.com%2Fsteal",

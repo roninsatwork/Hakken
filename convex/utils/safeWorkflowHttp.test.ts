@@ -121,6 +121,22 @@ describe("safe workflow HTTP", () => {
     expect(reads).toBe(1);
   });
 
+  test("a status-only probe cancels the body without reading it", async () => {
+    const cancel = vi.fn();
+    const pull = vi.fn();
+    const body = new ReadableStream<Uint8Array>({ pull, cancel }, { highWaterMark: 0 });
+
+    const response = await fetchWorkflowAction("https://hooks.example/probe", {}, {
+      fetchImplementation: async () => new Response(body, { status: 200 }),
+      resolveHostname: resolvePublic,
+      discardBody: true,
+    });
+
+    expect(response).toMatchObject({ status: 200, body: "" });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(pull).not.toHaveBeenCalled();
+  });
+
   test("aborts a request that exceeds the deadline", async () => {
     const fetchImplementation = vi.fn(async (_url: string, init?: RequestInit) =>
       await new Promise<Response>((_resolve, reject) => {

@@ -1,7 +1,8 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * Erasure and subject access, end to end.
@@ -11,6 +12,9 @@ import schema from "./schema";
  * records a workspace depends on standing.
  */
 describe("personal data rights", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
   const setUp = async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -74,6 +78,7 @@ describe("personal data rights", () => {
     const { t, superAdminId } = await setUp();
 
     await t.withIdentity({ subject: superAdminId }).action(api.personalData.erase, { email: "leaver@test" });
+    await finishScheduled(t);
 
     const left = await t.run(async (ctx) => ({
       threads: await ctx.db.query("threads").collect(),
@@ -86,10 +91,65 @@ describe("personal data rights", () => {
     expect(left.person).toBeNull();
   });
 
+  test("erasure also removes every sign-in identity row and spent invitation", async () => {
+    const { t, superAdminId, subjectId, companyId } = await setUp();
+
+    await t.run(async (ctx) => {
+      const accountId = await ctx.db.insert("authAccounts", {
+        userId: subjectId,
+        provider: "resend",
+        providerAccountId: "leaver@test",
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        accountId,
+        provider: "resend",
+        code: "unredeemed-code",
+        expirationTime: Date.now() + 60_000,
+      });
+      const sessionId = await ctx.db.insert("authSessions", {
+        userId: subjectId,
+        expirationTime: Date.now() + 60_000,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        sessionId,
+        expirationTime: Date.now() + 60_000,
+      });
+      await ctx.db.insert("invitations", {
+        email: "leaver@test",
+        companyId,
+        role: "USER",
+        status: "ACCEPTED",
+        token: "spent-token",
+        invitedAt: Date.now(),
+        acceptedAt: Date.now(),
+      });
+    });
+
+    await t.withIdentity({ subject: superAdminId }).action(api.personalData.erase, {
+      email: "leaver@test",
+    });
+    await finishScheduled(t);
+
+    const remaining = await t.run(async (ctx) => ({
+      accounts: await ctx.db.query("authAccounts").collect(),
+      codes: await ctx.db.query("authVerificationCodes").collect(),
+      sessions: await ctx.db.query("authSessions").collect(),
+      refreshTokens: await ctx.db.query("authRefreshTokens").collect(),
+      invitations: await ctx.db.query("invitations").collect(),
+    }));
+
+    expect(remaining.accounts).toHaveLength(0);
+    expect(remaining.codes).toHaveLength(0);
+    expect(remaining.sessions).toHaveLength(0);
+    expect(remaining.refreshTokens).toHaveLength(0);
+    expect(remaining.invitations).toHaveLength(0);
+  });
+
   test("somebody else's records are untouched", async () => {
     const { t, superAdminId, otherId } = await setUp();
 
     await t.withIdentity({ subject: superAdminId }).action(api.personalData.erase, { email: "leaver@test" });
+    await finishScheduled(t);
 
     const logins = await t.run(async (ctx) => ctx.db.query("logins").collect());
 
@@ -103,6 +163,7 @@ describe("personal data rights", () => {
     const { t, superAdminId, ruleId } = await setUp();
 
     await t.withIdentity({ subject: superAdminId }).action(api.personalData.erase, { email: "leaver@test" });
+    await finishScheduled(t);
 
     const rule = await t.run(async (ctx) => ctx.db.get(ruleId));
 
@@ -114,6 +175,7 @@ describe("personal data rights", () => {
     const { t, superAdminId, subjectId } = await setUp();
 
     await t.withIdentity({ subject: superAdminId }).action(api.personalData.erase, { email: "leaver@test" });
+    await finishScheduled(t);
 
     const logs = await t.run(async (ctx) =>
       ctx.db.query("auditLogs").filter((q) => q.eq(q.field("actionType"), "UPDATE_COMPANY")).collect()
@@ -127,6 +189,7 @@ describe("personal data rights", () => {
     const { t, superAdminId } = await setUp();
 
     await t.withIdentity({ subject: superAdminId }).action(api.personalData.erase, { email: "leaver@test" });
+    await finishScheduled(t);
 
     const record = await t.run(async (ctx) =>
       ctx.db.query("auditLogs").filter((q) => q.eq(q.field("actionType"), "ERASE_PERSONAL_DATA")).first()
@@ -137,6 +200,39 @@ describe("personal data rights", () => {
     expect(summary.some((line) => line.startsWith("Kept:"))).toBe(true);
     // A record that quoted what it erased would put it straight back.
     expect(record?.metadata).not.toContain("Something they said");
+  });
+
+  test("a handed-off erasure finalizes the identity and durable run together", async () => {
+    const { t, superAdminId, subjectId } = await setUp();
+    const runId = await t.run(async (ctx) => await ctx.db.insert("personalDataErasureRuns", {
+      subjectUserId: subjectId,
+      subjectEmail: "leaver@test",
+      actorId: superAdminId,
+      status: "RUNNING",
+      // Past the manifest means all table segments were already checkpointed.
+      ruleIndex: 10_000,
+      fieldIndex: 0,
+      pagesProcessed: 200,
+      attempts: 0,
+      tallies: [],
+      startedAt: Date.now(),
+      lastProgressAt: Date.now(),
+    }));
+
+    await t.action(internal.personalData.continueErasure, { runId });
+
+    const state = await t.run(async (ctx) => ({
+      person: await ctx.db.get(subjectId),
+      run: await ctx.db.get(runId),
+      audit: await ctx.db
+        .query("auditLogs")
+        .filter((q) => q.eq(q.field("actionType"), "ERASE_PERSONAL_DATA"))
+        .first(),
+    }));
+    expect(state.person).toBeNull();
+    expect(state.run?.status).toBe("SUCCESS");
+    expect(state.run?.completedAt).toEqual(expect.any(Number));
+    expect(state.audit).not.toBeNull();
   });
 
   test("an administrator cannot erase themselves and end the session doing it", async () => {

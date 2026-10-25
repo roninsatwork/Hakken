@@ -35,6 +35,7 @@ import {
   classifyUpgradePath,
   createCallerRouter,
   createTicketReplayGuard,
+  isClientContentTurn,
   isTurnComplete,
   pcm16HasSpeech,
   readToolCalls,
@@ -236,7 +237,7 @@ relay.on("connection", (browser) => {
       }
       turnState = "open";
       for (const frame of meteredFrames.splice(0)) {
-        deliverCallerDecision(router.receive(frame, true));
+        deliverCallerDecision(router.receive(frame.data, frame.isBinary));
       }
     } catch (error) {
       console.warn(`[session ${id}] turn admission failed:`, error?.message ?? error);
@@ -389,10 +390,34 @@ relay.on("connection", (browser) => {
   };
 
   browser.on("message", (data, isBinary) => {
-    if (sessionPayload?.meteredVoiceTurns && isBinary && turnState !== "open") {
-      const frame = Buffer.from(data);
-      if (meteredFrames.length === 0 && !pcm16HasSpeech(frame)) return;
-      if (meteredFrames.length < MAX_HELD_FRAMES) meteredFrames.push(frame);
+    if (sessionPayload?.meteredVoiceTurns) {
+      const frame = isBinary ? Buffer.from(data) : data.toString();
+      const typedTurn = !isBinary && isClientContentTurn(frame);
+      if (typedTurn) {
+        // One complete typed turn consumes one admission. A second turn sent
+        // before Vertex closes the first cannot ride on the same reservation.
+        if (turnState !== "idle") {
+          if (browser.readyState === WebSocket.OPEN) browser.send(JSON.stringify({ type: "relay.busy" }));
+          return;
+        }
+        meteredFrames.push({ data: frame, isBinary: false });
+        void beginMeteredTurn();
+        return;
+      }
+
+      if (turnState === "open") {
+        deliverCallerDecision(router.receive(data, isBinary));
+        return;
+      }
+
+      const startsTurn = isBinary && (meteredFrames.length > 0 || pcm16HasSpeech(frame));
+      // Tool replies and other control frames are not user turns. Speech waits
+      // for an atomic quota reservation before Vertex sees its first frame.
+      if (!startsTurn) {
+        deliverCallerDecision(router.receive(data, isBinary));
+        return;
+      }
+      if (meteredFrames.length < MAX_HELD_FRAMES) meteredFrames.push({ data: frame, isBinary });
       if (turnState === "idle") void beginMeteredTurn();
       return;
     }

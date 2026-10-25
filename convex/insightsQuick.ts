@@ -5,7 +5,6 @@ import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { daysOf } from "./searchConsoleReads";
 import { shiftDay } from "./utils/insightFacts";
-import { PAGE_READER_AGENT } from "./utils/moneyPageChecks";
 
 /**
  * Insights' daily quick check (docs/plans/active/insights-analyst-plan.md §2,
@@ -62,8 +61,7 @@ export const quickCheck = internalAction({
     const answers = async (address: string) => {
       for (let tries = 0; tries < 2; tries += 1) {
         try {
-          const response = await fetch(address, { method: "GET", redirect: "follow", headers: { "User-Agent": PAGE_READER_AGENT }, signal: AbortSignal.timeout(15_000) });
-          await response.body?.cancel();
+          const response = await ctx.runAction(internal.outboundHttp.fetchSitePage, { url: address, probe: true });
           if (response.status < 400) return response.status;
           if (tries === 1) return response.status;
         } catch {

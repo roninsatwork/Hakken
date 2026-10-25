@@ -25,7 +25,7 @@ The root application layout in `src/app/layout.tsx` wraps the app in `ThemeProvi
 
 `src/ui/providers/ThemeProvider.tsx` is a thin `next-themes` wrapper using the `class` attribute, system default theme, and system theme support. Use it as the top-level theme provider rather than mounting another `next-themes` provider inside feature routes.
 
-`src/context/ConvexClientProvider.tsx` owns the browser Convex client wrapper. Normal runtime uses Convex Auth's Next.js provider, while the local E2E path can bypass the real client when `NEXT_PUBLIC_E2E_AUTH_ENABLED=1` so deterministic mocks can provide app data.
+`src/context/ConvexClientProvider.tsx` owns the browser Convex client wrapper. Normal runtime uses Convex Auth's Next.js provider, while the local E2E path can bypass the real client only when `NEXT_PUBLIC_E2E_AUTH_ENABLED=1`, `NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT=local`, and the build is non-production so deterministic mocks can provide app data.
 
 `src/context/UIContext.tsx` stores global shell UI state, currently `isLoading` and `isSidebarOpen`. `Header`, `SidebarNavigation`, and `FluidWorkspace` consume `useUI` for sidebar open/close behavior. Keep this context small and shell-oriented; feature-specific loading, form, modal, and table state should stay local to the feature surface.
 

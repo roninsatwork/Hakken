@@ -24,19 +24,21 @@ Before starting, ensure you have the following tools and information:
     *   Artifact Registry API
     *   Cloud Build API
     *   **Vertex AI API** (Required for LLM processing)
-3.  **Create Service Account (`github-deployer`):**
+3.  **Create separate service accounts:**
+    * `github-deployer` deploys Cloud Run and writes Artifact Registry. It has no Vertex AI role.
+    * `hakken-runtime` runs the service and authenticates the backend's Vertex AI calls. It has only `Vertex AI User`; the deployer may attach this one identity.
+    * Never reuse one key for deployment and runtime AI access.
+4.  **Deployment roles (`github-deployer`):**
     *   Assign Roles:
         *   `Cloud Run Admin`
-        *   `Artifact Registry Administrator`
-        *   `Storage Admin`
-        *   `Service Account User`
-        *   **`Vertex AI User`** (Crucial for Hakken AI features)
-    *   **Generate Key:** Create a new JSON key. This key is used for both GitHub Actions and backend AI authentication.
-4.  **Create Artifact Registry:** Repository named `hakken-repo` in the desired region (e.g., `us-central1`).
-5.  **OAuth Consent Screen:** 
+        *   `Artifact Registry Writer`
+    * Grant `Service Account User` only on `hakken-runtime`, not across the project.
+    * Generate a deployment JSON key for GitHub and a separate runtime JSON key for Convex.
+5.  **Create Artifact Registry:** Repository named `hakken-repo` in the desired region (e.g., `us-central1`).
+6.  **OAuth Consent Screen:**
     *   Configure as "External".
     *   Add scopes: `openid`, `email`, `profile`.
-6.  **Credentials:**
+7.  **Credentials:**
     *   Create **OAuth 2.0 Client ID** (Web application).
     *   **Authorized Redirect URIs:** 
         *   `https://[client-domain]/api/auth/callback/google`
@@ -73,7 +75,7 @@ All variables below must be set in **Convex Dashboard > Settings > Environment V
 
 Add these to **GitHub Settings > Secrets and variables > Actions**:
 *   `GCP_PROJECT`: GCP Project ID.
-*   `GCP_CREDENTIALS`: Full content of the Service Account JSON key.
+*   `GCP_CREDENTIALS`: Full content of the deployment service-account JSON key only.
 *   `CONVEX_DEPLOY_KEY`: From Convex Settings.
 *   `CONVEX_DEPLOYMENT`: Convex deployment name (e.g. `prod-hakken-client`).
 *   `NEXT_PUBLIC_CONVEX_URL`: Convex Production URL.
@@ -101,10 +103,11 @@ cd bespoke-installation
 
 ### 🧠 Automation Logic
 The orchestrator now:
-1.  **Provisions GCP**: Creates project, SA, and registers APIs.
-2.  **Parses JSON**: Automatically extracts `private_key` and `client_email` from the GCP Key.
+1.  **Provisions GCP**: Creates the project, separate deployment/runtime service accounts, and registers APIs.
+2.  **Parses JSON**: Extracts Vertex credentials only from the narrow runtime key.
 3.  **Syncs Convex**: Injects ALL Vertex AI and OAuth variables into Convex via CLI.
-4.  **Injects GitHub**: Configures all secrets for the CI/CD pipeline.
+4.  **Injects GitHub**: Configures secrets against the explicitly named repository, using only the deployment key.
+5.  **Cleans up**: Creates both key files in a mode-600 operating-system temporary directory and removes them on success or failure. The repository ignores the legacy key pattern as a second guard.
 
 > [!IMPORTANT]
 > Manual step remaining post-script: **GCP OAuth Consent Screen** configuration and **Resend Domain Verification**.
