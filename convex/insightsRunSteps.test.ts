@@ -6,6 +6,7 @@ import schema from "./schema";
 import { aboutMs, useFixedDay, whileMovingClock } from "@/src/test/realTime";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { ASK_LIMIT_MS, within } from "./insightsAsk";
+import { stepKey, STEP_WATCH_MS } from "./collectionSteps";
 import { INSIGHTS_STEP_WATCH_MS } from "./insightsRunSteps";
 
 /**
@@ -37,7 +38,7 @@ async function seeded(t: ReturnType<typeof harness>, status: "RUNNING" | "SUCCES
       systemKey: "INSIGHTS_HEAD_OF_STRATEGY", createdAt: now, updatedAt: now,
     });
     const runId = await ctx.db.insert("agentRuns", {
-      agentId, triggerType: "EVENT", objective: "read ronins.co.uk", status, startedAt: now - movedAgo, updatedAt: now - movedAgo,
+      agentId, companyId, triggerType: "EVENT", objective: "read ronins.co.uk", status, startedAt: now - movedAgo, updatedAt: now - movedAgo,
     });
     const workflowExecutionId = await ctx.db.insert("workflowExecutions", { agentId, agentRunId: runId, triggerType: "EVENT", status: "RUNNING", startedAt: now - movedAgo });
     return { runId, workflowExecutionId, holdId, companyId, host: "ronins.co.uk" };
@@ -60,7 +61,7 @@ describe("a website's week in steps", () => {
     const after = await seeded(t);
     await t.mutation(internal.insightsRunSteps.watchInsightsStep, { ...after, step: "AFTER" });
     await finishScheduled(t);
-    expect(await runOf(t, after.runId)).toMatchObject({ status: "SUCCESS" });
+    expect(await runOf(t, after.runId)).toMatchObject({ status: "FAILED" });
     expect((await runOf(t, after.runId))?.finalOutput).toMatch(/^ronins\.co\.uk: the week was saved/);
   });
 
@@ -98,7 +99,7 @@ describe("a website's week in steps", () => {
     expect(picking).toBeDefined();
     const watch = (await pending()).find((job) => job.name === "insightsRunSteps:watchInsightsStep")!;
     await t.action(internal.insightCompetingJudge.pickWebsite, { ...run, watchId: watch._id, pagesChanged: [] });
-    expect((await pending()).map((job) => job.name)).toEqual(expect.arrayContaining(["insightsRun:decideWebsite"]));
+    expect((await pending()).map((job) => job.name)).toEqual(expect.arrayContaining(["insightCompetingSteps:prepareGroups"]));
   });
 
   test("each search's pick is kept, the last replaced", async () => {
@@ -133,5 +134,43 @@ describe("a model that says nothing", () => {
     expect(ASK_LIMIT_MS).toBe(180_000);
     await expect(whileMovingClock(within(new Promise(() => {}), ASK_LIMIT_MS))).rejects.toThrow("The model gave no answer within 180 seconds, so it was given up.");
     await expect(within(Promise.resolve("answered"), 10)).resolves.toBe("answered");
+  });
+});
+
+
+describe("watched whole-section runs", () => {
+  test("a duplicate start reuses the active run and its saved place survives the platform stopping a step", async () => {
+    const t = harness();
+    const parent = await seeded(t, "RUNNING", 0);
+    const input = { parentRunId: parent.runId, holdId: parent.holdId, companyId: parent.companyId, host: parent.host, delayMs: 0 };
+    const runId = (await t.mutation(internal.insightsTeam.startWebsiteRun, input))!;
+    expect(await t.mutation(internal.insightsTeam.startWebsiteRun, input)).toBe(runId);
+    const key = stepKey("INSIGHTS", parent.holdId);
+    const chain = () => t.run(async (ctx) => (await ctx.db.query("collectionSteps").withIndex("by_key", (q) => q.eq("key", key)).unique())!);
+    const first = await chain();
+    expect(first.args).toMatchObject({ runId, stage: "GATHER", booking: 1 });
+    await t.mutation(internal.collectionSteps.stepStarted, { key, booking: 1 });
+    const history = { pieces: [{ kind: "GA_PAGES", month: "2026-09", newestDay: "2026-10-11" }], at: 0, records: 7, asks: 10, problems: [], waits: 0, attempt: 0 };
+    await t.mutation(internal.collectionSteps.notePlace, { key, booking: 1, place: "HISTORY:0", args: { ...first.args, stage: "HISTORY", history } });
+    await t.run(async (ctx) => await ctx.scheduler.cancel(first.stepJobId!));
+    vi.setSystemTime(Date.now() + STEP_WATCH_MS + 1_000);
+    await t.mutation(internal.collectionSteps.watchChains, {});
+    expect(await chain()).toMatchObject({ booking: 2, args: { stage: "HISTORY", history } });
+    expect((await t.mutation(internal.collectionSteps.stepStarted, { key, booking: 1 })).go).toBe(false);
+    await t.mutation(internal.insightsRunSteps.watchInsightsStep, { ...parent, runId, step: "HISTORY" });
+    expect((await runOf(t, runId))?.status).toBe("QUEUED");
+  });
+
+  test("completion exposes failed and pending stages until that same run completes them; another company cannot mark them", async () => {
+    const t = harness(), run = await seeded(t, "RUNNING", 0);
+    await t.mutation(internal.insightsRunSteps.recordStage, { runId: run.runId, companyId: run.companyId, stage: "History", detail: "Quota refused", failed: true });
+    let states = await t.query(internal.insightsRunSteps.stageResults, { runId: run.runId });
+    expect(states.find((row) => row.stage === "History")?.status).toBe("FAILED");
+    expect(states.find((row) => row.stage === "Page reviews")?.status).toBe("PENDING");
+    await t.mutation(internal.insightsRunSteps.recordStage, { runId: run.runId, companyId: run.companyId, stage: "History", detail: "Saved all pieces", failed: false });
+    states = await t.query(internal.insightsRunSteps.stageResults, { runId: run.runId });
+    expect(states.find((row) => row.stage === "History")?.status).toBe("SUCCESS");
+    const otherId = await t.run(async (ctx) => await ctx.db.insert("companies", { name: "Other", createdAt: 1 }));
+    await expect(t.mutation(internal.insightsRunSteps.recordStage, { runId: run.runId, companyId: otherId, stage: "History", detail: "Wrong company", failed: false })).rejects.toThrow("another company");
   });
 });

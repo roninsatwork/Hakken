@@ -4,6 +4,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
+import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 import { linkGapOf } from "./siteWebMentions";
 import { ACTIVITY_KINDS } from "./localSchema";
@@ -140,9 +141,10 @@ async function lastPostOf(ctx: { db: import("./_generated/server").QueryCtx["db"
 
 /** The week's drafts, each with its tagged link (I39); one already drafted lately for the same target is skipped. */
 export const saveDrafts = internalMutation({
-  args: { holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), origin: v.string(), drafts: v.array(draftedValidator) },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), origin: v.string(), drafts: v.array(draftedValidator) },
   returns: v.number(),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const now = Date.now();
     const since = now - REDRAFT_AFTER_DAYS * 86_400_000;
     let saved = 0;

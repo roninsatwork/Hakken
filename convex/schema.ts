@@ -1723,6 +1723,9 @@ export default defineSchema({
     // workflow and sales-report paths log outside any agent run.
     runId: v.optional(v.id("agentRuns")),
     stepId: v.optional(v.id("agentRunSteps")),
+    /** Complete Insights answers can be reused after a stopped step; ordinary log previews remain short. */
+    requestKey: v.optional(v.string()),
+    completeResponse: v.optional(v.string()),
     // What actually happened, recorded rather than inferred. The screen used to
     // decide between a tick and a cross by testing whether interactionType
     // contained the text "ERROR" or "FAIL", so a failed tool dispatch — whose
@@ -1746,6 +1749,7 @@ export default defineSchema({
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
     .index("by_run", ["runId", "createdAt"])
+    .index("by_run_request", ["runId", "requestKey", "createdAt"])
     .searchIndex("search_content", {
       searchField: "promptContent",
       filterFields: ["agentId"]

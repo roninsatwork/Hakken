@@ -67,8 +67,7 @@ export const CHANGE_DAYS = 30;
 const words = (path: string) => new Set(path.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 2).map((word) => word.slice(0, 6)));
 
 /** How alike two paths are: the share of their words in common. */
-function alike(a: string, b: string): number {
-  const one = words(a), two = words(b);
+function alike(one: ReadonlySet<string>, two: ReadonlySet<string>): number {
   const common = [...one].filter((word) => two.has(word)).length;
   const all = new Set([...one, ...two]).size;
   return all > 0 ? common / all : 0;
@@ -93,10 +92,48 @@ export function pageChanges(now: readonly PageYear[], year: readonly PageYear[])
   const gone = [...lastYear.values()].filter((page) => !thisYear.has(page.path) && page.enquiries >= 3);
   // A page that took another's place: new this year, or one that grew by half or more — the other merged into it.
   const heirs = [...thisYear.values()].filter((page) => page.visits >= 20 && (!lastYear.has(page.path) || page.visits >= (lastYear.get(page.path)?.visits ?? 0) * 1.5)).map((page) => page.path);
+  // Index word sets by their size. For a candidate to beat the first qualifying page, it needs an exact
+  // minimum overlap; any such candidate must share a word in the query's shortest qualifying prefix.
+  // This skips common-category pairs that cannot improve the score without changing thresholds or tie order.
+  const heirWords = heirs.map(words);
+  const buckets = new Map<number, Map<string, number[]>>();
+  heirWords.forEach((set, at) => {
+    let byWord = buckets.get(set.size);
+    if (!byWord) buckets.set(set.size, (byWord = new Map()));
+    for (const word of set) {
+      const held = byWord.get(word) ?? [];
+      held.push(at);
+      byWord.set(word, held);
+    }
+  });
+  const matches = new Map<string, { candidate: string; score: number } | undefined>();
+  const bestHeir = (pathWords: Set<string>) => {
+    const signature = JSON.stringify([...pathWords].sort());
+    if (matches.has(signature)) return matches.get(signature);
+    const first = heirWords[0];
+    const common = first ? [...pathWords].filter((word) => first.has(word)).length : 0;
+    const union = first ? pathWords.size + first.size - common : 0;
+    const firstScore = union ? common / union : 0;
+    let best = firstScore >= 0.34 ? { candidate: heirs[0], score: firstScore } : undefined;
+    const possible = new Set<number>();
+    for (const [size, byWord] of buckets) {
+      // x/(a+b-x) > common/union for an improvement, or >= 17/50 for the original threshold.
+      const required = best ? Math.floor(common * (pathWords.size + size) / (common + union)) + 1 : Math.ceil(17 * (pathWords.size + size) / 67);
+      if (required > Math.min(pathWords.size, size)) continue;
+      const prefix = [...pathWords].sort((a, b) => (byWord.get(a)?.length ?? 0) - (byWord.get(b)?.length ?? 0)).slice(0, pathWords.size - required + 1);
+      for (const word of prefix) for (const at of byWord.get(word) ?? []) possible.add(at);
+    }
+    for (const at of [...possible].sort((a, b) => a - b)) {
+      const score = alike(pathWords, heirWords[at]);
+      if (score >= 0.34 && (!best || score > best.score)) best = { candidate: heirs[at], score };
+    }
+    matches.set(signature, best);
+    return best;
+  };
   const changes: Change[] = [];
   for (const page of gone) {
     const path = page.path;
-    const heir = heirs.map((candidate) => ({ candidate, score: alike(path, candidate) })).filter((entry) => entry.score >= 0.34).sort((a, b) => b.score - a.score)[0];
+    const heir = bestHeir(words(path));
     if (heir) {
       const merged = lastYear.has(heir.candidate);
       // Merged: the two pages' enquiries together a year before, against the one page's now.

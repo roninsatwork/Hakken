@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Agent skill authoring and Markdown import
+audience: skill authors and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/agent-skill-authoring-guide.md
+last_reviewed: '2026-10-26T14:56:47+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Agent Skill Authoring Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Agent skill authoring and Markdown import
+> **Reviewed:** 26 October 2026, 14:56:47 GMT (Europe/London)
+> **Source path:** `docs/developer/agent-skill-authoring-guide.md` · **Status:** Current
 
 Use this guide when creating or reviewing reusable Hakken agent skills.
 
@@ -79,7 +94,7 @@ Example:
 
 ## Tool Requirements
 
-Required tools are readiness gates, not permissions. Attaching a skill does not grant execution rights. Runtime tool use still depends on agent tool bindings and backend policy checks.
+Required tools contribute to readiness advice, not execution permissions or a universal activation gate. Attaching a skill does not grant execution rights. Runtime tool use still depends on agent tool bindings and backend policy checks.
 
 Use required tools when the skill cannot honestly perform its job without the tool. Use recommended tools when the skill can still produce a plan, draft, or review without the tool.
 
@@ -127,7 +142,7 @@ Importer behavior:
 - `Required Tools`, `Required Connectors`, `Required MCP`, or `Dependencies` sections become required tool mappings.
 - Other tool, connector, or MCP sections become recommended tool mappings.
 - Example, eval, or test sections seed starter eval fixture guidance.
-- Imported skills are always saved as `DRAFT` and should be reviewed before activation.
+- The Markdown import mutation creates a new draft, but the current catalog upload immediately follows it with activation. Same-name replacements preserve existing status. Bundle import still starts a draft; these are different entry paths.
 
 The import review compares parsed tool names with active Hakken `aiTools.handlerMapping` values. Use the active mapping controls in the review step to replace aliases or external tool names with real handler mappings before rollout.
 
@@ -135,7 +150,7 @@ The import review compares parsed tool names with active Hakken `aiTools.handler
 
 Saving a skill creates a new immutable skill version when the snapshot changes.
 
-Existing agent bindings stay pinned to their current skill version. The Skill Detail rollout panel shows which agents are outdated. Upgrade agents deliberately, then rerun skill smoke evals before activating high-risk changes.
+Bindings retain version evidence, but runtime reads current active catalog instructions. Markdown replacement can roll attached agent version references forward. General edits and explicit upgrades have different version behavior; do not promise that an old binding freezes execution text or describe an absent separate skill-detail route as a current screen.
 
 ## Review Checklist
 
@@ -148,3 +163,27 @@ Before marking a skill production-ready:
 - High-risk behavior has approval, refusal, or threshold coverage.
 - The skill has been attached to a test agent and smoke evals pass on the current version.
 - Upgrade impact is reviewed for agents pinned to older versions.
+
+## Parser Scope And Honest Tool Hints
+
+The Markdown parser is `convex/utils/skillMarkdownService.ts`, with normalization/contracts in the adjacent skill helpers. Its frontmatter reader is a simple line-based key/value parser, not a full YAML implementation. Quoted scalar fields and recognized headings are useful inputs; complex nested YAML does not automatically become a validated capability contract. Keep instructions explicit in the body and verify the actual preview rather than assuming another tool's SKILL.md format is interpreted identically.
+
+The importer can infer a title from the first heading, a description from opening prose, and risk from recognized frontmatter or body terms. Risk inference is a heuristic, not an independent safety assessment. Use the highest credible effect of the actual tools when reviewing a skill. Required/recommended tool names are extracted from recognized headings and text/backticks; they are hints that must match real active handler mappings before tool execution can succeed.
+
+The example mappings above illustrate shape. They are not a guarantee those handlers are installed in this deployment. Catalog preview compares against bounded active tool metadata and reports unresolved hints. Changing a name in a skill does not install a connector, grant an account permission, set credentials, or bypass company ownership. A good instruction explains what to do when required evidence/tools are unavailable, rather than ordering the model to improvise access.
+
+## Upload Identity And Runtime Consequences
+
+The current upload UI requires an entered name and file. The entered name wins over parsed frontmatter. The backend searches a bounded exact-name set and updates the first non-archived match, while a matching source hash can return unchanged. A re-upload is therefore not always a new independent draft. Review name collisions, old archived namesakes, and the source hash before replacing shared behavior.
+
+Instruction text is capped at 8,000 characters and Markdown/JSON fields at 24,000 under `skillContracts.ts`. A long authoring document can be richer than the instruction extracted from its recognized sections; inspect the preview for what will actually be saved. The runtime's deliberate two-skill limit also means splitting one behavior into many overlapping skills is not a useful workaround for a large prompt.
+
+Shared catalog changes can affect linked companies and agents. Active runtime text comes from the current central record, while version IDs support evidence and fixture currency. Markdown replacement additionally updates agent bindings through the rollout helper. Archive stops active runtime resolution; delete removes attachments and a bounded version set. None of these operations rewrites historical runs or proves every external side effect of an old run has been reversed.
+
+## Fixtures Are Evidence, Not Publication Approval
+
+The fixture counts in this guide are authoring recommendations. The backend does not universally refuse to activate an agent because a high-risk skill lacks a passed smoke test. Contract-only smoke evaluation checks configuration; model-graded evaluation runs real runtime work; explicit rehearsal suppresses selected effects. Match the fixture to the evidence needed and review whether its action is permitted before running it. Documentation maintenance runs none of these evaluations.
+
+Write rubrics around observable behavior, justified refusals and source use. Avoid a fixture that merely restates the skill instruction and passes because the configured mapping exists. An empty expected tool plan in a rehearsal proves completion rather than exact tool choice, and extra handlers do not automatically fail that grader. A passed local sample does not establish production connector acceptance, calibrated confidence, or tenant security across every caller.
+
+Use [configuration/catalogs](./agent-configuration-and-catalogs.md) for actual import, binding, bulk-operation and cap details, and [runtime operations](./agent-runtime-operations.md) for evaluation/learning evidence. This authoring review inspected parser and test source without uploading a skill, activating an agent, generating a candidate, or calling a provider. Product direction and dated records remain unchanged.

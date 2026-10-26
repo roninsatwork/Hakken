@@ -1,8 +1,23 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: dataforseo-data-kept
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/dataforseo-data-kept.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # DataForSEO data: what is kept, and for how long
 
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** dataforseo-data-kept
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/dataforseo-data-kept.md` · **Status:** Current
+
 What Hakken keeps of the data it buys from DataForSEO, how long, and what an
-operator can no longer do once it has gone. The reasons are in the
-[DataForSEO cost plan](../plans/active/dataforseo-cost-plan.md).
+operator can no longer do once it has gone. The historical reasons are in the dated
+[DataForSEO cost plan](../plans/active/dataforseo-cost-plan.md). Current behavior is defined by `convex/seoCollectionPolicy.ts`, `seoCollectionSweep.ts` and `positionHistory.ts`; this is a source-level retention review, not proof that a particular deployment has completed its sweep.
 
 ## Raw answers — 7 days
 
@@ -93,8 +108,7 @@ figures are not kept besides (`discoveredCompetitorDays` until 2026-10-07).
 
 ## The AI's searches by day — 12 months
 
-Each search an AI answer ran, by day (`promptFanOutDays`), is kept **12
-months** (`FAN_OUT_DAYS_RETENTION_DAYS`), for the date-based fan-out report
+Each search an AI answer ran, by day (`promptFanOutDays`), is kept **365 days** (`FAN_OUT_DAYS_RETENTION_DAYS`), for the date-based fan-out report
 when it is built; the hourly collection sweep clears older ones. The searches
 themselves (`promptFanOutQueries`) are kept.
 
@@ -102,11 +116,4 @@ themselves (`promptFanOutQueries`) are kept.
 
 Since 2026-10-06 a content gap is worked out when it is read, from the
 keyword copies each website keeps already (`convex/siteContentGap.ts`), for
-a company's own websites only. Nothing is stored for it: the rows it kept
-before (`siteContentGaps`) and their copies are cleared by the data
-migration `2026-10-06-drop-stored-gaps`:
-
-    npx convex run dataMigrations:run '{"name":"2026-10-06-drop-stored-gaps"}'
-
-Run it once on each deployment after this release; `siteContentGaps` leaves
-the schema once it has run everywhere.
+a company's own websites only. Nothing is stored for it: the former `siteContentGaps` table is absent from the current schema. `convex/dataMigrations.ts` records the historical `2026-10-06-drop-stored-gaps` migration as already run on dev before removal, and that migration is no longer registered. Do not invoke its old name against current code. A deployment still carrying those old rows needs a separately reviewed historical-version recovery plan; this documentation pass neither ran migrations nor established live deployment state.

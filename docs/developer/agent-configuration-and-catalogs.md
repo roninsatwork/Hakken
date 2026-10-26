@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Agent configuration and skills
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/agent-configuration-and-catalogs.md
+last_reviewed: '2026-10-26T14:18:05+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Agent Configuration And Catalogs Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Agent configuration and skills
+> **Reviewed:** 26 October 2026, 14:18:05 GMT (Europe/London)
+> **Source path:** `docs/developer/agent-configuration-and-catalogs.md` · **Status:** Current
 
 This guide covers the implemented agent configuration surfaces that sit around the runtime: the agent builder, built-in templates, input/output schema editing, reusable skill catalog administration, agent logs, and transaction summaries. Read it with [Agents](./agents.md), [Agent Runtime Operations](./agent-runtime-operations.md), [Screen Kit](./screen-kit.md), [AI Tools And Connectors](./ai-tools-and-connectors.md), and [Knowledge Management](./knowledge-management.md).
 
@@ -6,10 +21,10 @@ This guide covers the implemented agent configuration surfaces that sit around t
 
 Agent configuration routes live under `src/app/(dashboard)/admin/agents/`:
 
-- `page.tsx`: agent catalogue, search, template builder, blank-agent creation, template-agent creation, and delete confirmation.
+- `page.tsx`: agent catalog, search/filtering, Add navigation and delete confirmation. `new/page.tsx` creates a scratch agent using shared `AgentFormSections`; the old template wizard is absent.
 - `[id]/page.tsx`: agent dashboard with transaction summary cards and paginated transaction history.
 - `[id]/layout.tsx`: agent detail shell, tab navigation, and the manual `Run Agent`/`Stop Agent` action. `Run Agent` calls `api.scheduler.manualRunSchedule`; if the agent has no standing job, the UI asks for a one-off objective first.
-- `[id]/settings/page.tsx`: agent identity, avatar upload, model mode, reasoning effort, internet access, and the draft/live switch with the one reason an agent cannot go live.
+- `[id]/settings/page.tsx`: agent identity, avatar upload, model mode, reasoning effort, internet access, and the draft/live switch and advisory readiness warnings.
 - `[id]/knowledge/page.tsx`: per-agent knowledge library management through the shared knowledge admin surface.
 - `[id]/system-prompt/page.tsx`: Instructions editing, including `standingObjective` for the job and `systemPrompt` for behavior.
 - `[id]/rules/page.tsx`, `[id]/rules/new/page.tsx`, and `[id]/rules/[ruleId]/page.tsx`: agent rule list, creation, and editing.
@@ -51,44 +66,19 @@ The `agents.getAgentTemplatesForCreation` query returns these definitions to the
 
 Do not treat templates as only UI copy. They are operational defaults that shape prompts, approval policy, tool readiness, and initial eval coverage.
 
-## Agent Builder
+## Add Page And Legacy Template API
 
-The agent list page implements a four-step builder:
+`admin/agents/new/page.tsx` uses shared `AgentFormSections` from the Settings surface. It calls `agents.createAgent` and redirects into the created agent. Name/description, owner/risk, inherited or overridden model, reasoning, internet access, approval policy, limits, active state, and optional role are submitted. Runtime minutes are converted to milliseconds. Invalid/cleared numeric limits are submitted as zero so backend default resolution applies consistently with update behavior.
 
-1. `template`: choose a built-in template or blank agent.
-2. `mission`: set name, objective, audience, and blank-agent description.
-3. `policy`: choose approval policy, model behavior, template knowledge usage, and template tool usage.
-4. `readiness`: acknowledge draft, eval, approval, and template checks before creation.
+The earlier template, mission, policy, and readiness-checklist wizard is not the current Add page. Objective/audience builder intent fields and template backend functions remain compatibility/API artifacts; do not use their existence as evidence of routed UI. `createAgentFromTemplate` still seeds template defaults and suggested fixtures for authorized callers. Model configuration resolves the stored agent use case rather than a hardcoded runtime model.
 
-The builder writes a `builderIntent` object with:
-
-- `objective`
-- `audience`
-- `approvalPolicy`
-- `modelBehavior`
-- `knowledgePlan`
-- `toolPlan`
-- `smokeEvalRequired`
-- `readinessAcknowledged`
-
-For template agents, the page calls `api.agents.createAgentFromTemplate`. For blank agents, it calls `api.agents.createAgent`. Both routes navigate to `/admin/agents/[id]` after successful creation.
-
-`createAgent` and `createAgentFromTemplate` resolve default model configuration through the stored AI model defaults for the `agent` use case. Runtime model choices must continue to flow through model configuration rather than hardcoded provider model literals.
+`agents.createAgent` defaults inactive but accepts an explicit active state. `updateAgent` validates supplied configuration and computes readiness separately. Passed evals, release gates, and smoke evidence are advisory rather than universal activation refusals. Tool approvals, credential resolution, and per-run limits remain runtime boundaries. Documentation should distinguish a recommended release process from backend enforcement.
 
 ## Schema Editing
 
-The interfaces tab at `[id]/interfaces/page.tsx` edits `agents.outputSchema`. `agents.inputSchema` is no longer edited or read: it was stored and versioned, and nothing consumed it.
+The Interfaces page edits `agents.outputSchema` through `JsonSchemaBuilder`, with simple object properties such as string, number, and boolean. An empty builder result is saved as undefined. The legacy `agents.inputSchema` field is stored/versioned compatibility data and is not the current input-editing workflow. Avoid describing two active schema tabs or claiming arbitrary JSON Schema coverage from the simple builder.
 
-The UI uses `JsonSchemaBuilder` for both schemas:
-
-- the input schema describes the structured context expected by the agent
-- the output schema describes the expected response contract
-
-`JsonSchemaBuilder` supports simple object schemas with string, number, and boolean properties. Empty builder state emits an empty string; the save mutation converts empty strings to `undefined` before calling `agents.updateAgent`.
-
-Output schema editing includes a warning because strict response contracts can make agent behavior brittle. Preserve that warning when changing the schema surface.
-
-Schema updates are normal agent updates, so the backend activation and readiness guardrails in `convex/agents.ts` still apply. Do not add a schema-specific write path that bypasses model, release-gate, smoke-eval, skill-readiness, or authorization checks.
+Strict output contracts can make model responses fail the consuming path's validation. Review actual runtime and workflow consumers before relying on a format universally. Schema updates use the normal authorized agent update mutation; readiness advice is not an additional schema-specific activation gate.
 
 ## Skill Catalog
 
@@ -146,7 +136,7 @@ Treat starter skills as catalogue content, not migration-only data. If starter b
 
 ## Skill Bindings
 
-Agent-to-skill assignments live in `agentSkillBindings`. A binding snapshots the skill version attached to an agent so catalogue edits do not silently rewrite existing agent behavior.
+Agent-to-skill assignments live in `agentSkillBindings`. A binding records a skill-version ID for evidence and fixture currency. It does not fully freeze runtime content: `getRuntimeSkillsInternal` reads instruction and mapping fields from the current active `agentSkills` row, while returning version identifiers and snapshot hash from the attached version. A normal edit can therefore change runtime text even when a binding still identifies an older snapshot.
 
 Important operations include:
 
@@ -155,7 +145,7 @@ Important operations include:
 - `upgradeSkillBindingToLatest` for a single agent binding.
 - `upgradeSkillBindingsForSkill` for bulk rollout from the Skill Center.
 
-High-risk skills need smoke evidence before activation readiness can pass. Required tool mappings must resolve before the agent can be treated as ready. Keep this relationship aligned with `agents.getAgentReadiness` and `agents.updateAgent`.
+High-risk smoke evidence and required tool mappings contribute to readiness advice. They are not a universal refusal in `agents.updateAgent`. Keep the distinction between warning, binding evidence, and runtime tool execution explicit.
 
 ## Logs
 
@@ -227,7 +217,7 @@ When extending agent configuration:
 3. Keep builder intent metadata stable enough for audit logs and support review.
 4. Use `JsonSchemaBuilder` unless the schema requirement exceeds the implemented simple object builder.
 5. Keep skill JSON validation server-side.
-6. Use skill versions and binding upgrades for catalogue changes instead of silently rewriting agent behavior.
+6. Preserve version/eval evidence and document that current runtime skill text is read from the active catalog record; do not claim that a version pointer alone pins instructions.
 7. Keep logs and transactions company-scoped for ordinary admins.
 8. Keep visible admin strings localized in `messages/en.json` and `messages/it.json` when touching UI.
 
@@ -244,12 +234,22 @@ Focused tests include:
 - `src/app/(dashboard)/admin/agents/[id]/settings/page.test.tsx`
 - `src/ui/components/settings/JsonSchemaBuilder.test.tsx`
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+This documentation review inspected source and relevant tests without running agent/provider operations or application gates. Implementation changes require the current verification gates in [AGENTS.md](../../AGENTS.md); do not rely on an abbreviated copied gate list. Local tests are not deployed acceptance or external integration cutover evidence.
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Markdown Upload And Replacement
+
+The visible catalog is shared by `admin/ai/skills/page.tsx` and `admin/agents/skills/page.tsx`. Upload calls `previewSkillMarkdownImport`, then `importSkillMarkdown`, then `updateSkill` with active status. The entered name overrides parsed frontmatter. Activation is a second mutation, so partial success is possible. The retained backend bundle import creates draft records and is distinct from this screen's active-after-upload behavior.
+
+`importSkillMarkdown` searches up to ten exact-name rows, skipping archived entries. A new match creates a draft. A supplied hash equal to the existing source hash returns unchanged without touching its update time. A changed match patches parsed fields while preserving existing status, snapshots the result, and calls `rollAgentsOntoLatestSkillVersion` for attached agents. This is an update/rollout path, not an always-create import. Preview warnings about name or tool mappings are advisory and use bounded catalog/tool reads.
+
+General `updateSkill` creates a snapshot and audits pinned-binding count but does not perform that same automatic version rollout. Snapshot creation deduplicates by skill/hash through `agentSkillVersions.by_skill_hash` and allocates the next version from `by_skill_created`. Actual instruction execution still reads current skill text, as described above. Do not infer runtime pinning from audit names such as pinned bindings.
+
+## Limits, Destructive Operations, And Scope
+
+`utils/skillContracts.ts` sets instruction text to 8,000 characters, JSON and Markdown inputs to 24,000, catalog scans to 250, binding-page reads to 100, and active tool lookup to 500. Cursor catalog queries and `searchActiveSkills` provide scalable selection; the capped legacy active list must not substitute for the picker. `getSkillCatalogAnalytics` uses a maintained rollup with freshness/completeness evidence, and rebuilds must preserve partial-population reporting.
+
+`readEverySkillBinding` reads one beyond a 2,000-binding ceiling and refuses before a whole-skill edit/delete/rollout would silently affect only part of the attachment set. `deleteSkill` removes all discovered bindings, then up to 250 version snapshots, then the skill, auditing detached-agent/deleted-version counts. A skill with more version history can leave older snapshots behind; the all-bindings safety contract does not make the version cleanup unbounded. Archive preserves records but active runtime resolution excludes archived skills.
+
+`MAX_SKILLS_PER_AGENT` is two. `bindSkillToAgent` checks enabled attachments when inserting a new binding; existing-binding updates and `setBindingEnabled` do not repeat every insertion check. Do not claim an impossible global invariant solely from that insertion guard. Catalog writes and bind/upgrade/enable/remove are super-admin mutations. `getForAgent` is an admin query and checks binding company access; runtime resolution skips bindings assigned to a different company. Newly attached global bindings explicitly clear company scope.
+
+Single and bulk upgrades can seed suggested eval fixtures unless disabled. Bulk upgrade reads every binding, optionally narrows requested IDs, and skips already-current references. These operations update evidence and configuration; they do not prove provider acceptance or a passed run. Logs and transaction boundaries described above remain separate from global catalog access. No provider credentials are stored in portable skill bundles by this contract.

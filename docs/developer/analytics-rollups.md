@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Inventory and operational analytics rollups
+audience: developers and platform operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/analytics-rollups.md
+last_reviewed: '2026-10-26T14:40:17+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Analytics Rollups Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Inventory and operational analytics rollups
+> **Reviewed:** 26 October 2026, 14:40:17 GMT (Europe/London)
+> **Source path:** `docs/developer/analytics-rollups.md` · **Status:** Current
 
 Analytics rollups are the daily precomputed usage snapshots behind Hakken's admin analytics dashboards and data-health checks. They reduce historical dashboard work by storing global, company, and user summaries in `analyticsDailySnapshots`, while the analytics queries add today's live messages and agent transactions on top.
 
@@ -10,7 +25,7 @@ Read this before changing `convex/analytics.ts`, `convex/analyticsSnapshots.ts`,
 - `convex/analytics.ts` serves admin analytics queries for global costs, platform overview, user costs, company metrics, global inventory metrics, and global analytics.
 - `convex/analyticsSnapshots.ts` generates daily snapshots, seeds historical snapshots, and validates/backfills message analytics dimensions.
 - `convex/systemHealth.ts` exposes analytics data health.
-- `convex/analyticsService.ts` owns timeframe resolution, aggregation grouping, model cost lookup, cost calculation, USD-to-GBP conversion, and metric rounding helpers.
+- `convex/analyticsService.ts` owns timeframe resolution, aggregation grouping, model cost lookup, shared USD cost calculation and metric rounding helpers.
 - `convex/crons.ts` schedules `internal.analyticsSnapshots.generateDailySnapshots` daily at 00:05 UTC.
 
 Analytics settings also manage the Google Analytics or Google Tag Manager tracking id through `api.system.getAnalyticsId` and `api.system.updateAnalyticsId`. This guide focuses on usage and cost rollups, not browser tracking injection.
@@ -26,7 +41,7 @@ Analytics settings also manage the Google Analytics or Google Tag Manager tracki
 - `metrics.totalMessages`
 - `metrics.totalInputTokens`
 - `metrics.totalOutputTokens`
-- `metrics.costGBP`
+- `metrics.costUsd`
 - optional `metrics.activeUsersCount`
 - optional `uniqueUserIds`
 - optional `modelMetrics`
@@ -35,26 +50,15 @@ Analytics settings also manage the Google Analytics or Google Tag Manager tracki
 
 Indexes include date, type/date, company/date, and user/date access patterns. Preserve these if dashboard queries are refactored; the current queries intentionally read historical snapshots by date/type and add live data separately.
 
-Snapshots currently persist model distribution through `modelMetrics`, but they do not persist provider distribution. Provider distribution in `getGlobalAnalytics` and `getCompanyMetrics` is built from the live raw-message and agent-transaction overlay for the current day. Do not describe provider distribution as a complete historical rollup until provider metrics are added to snapshots and query aggregation.
+Snapshots persist per-model `modelMetrics`. `mergeSnapshotModelMetrics` derives historical provider distribution by joining those model identifiers to the current catalog, falling back to unknown for models no longer attributable. This is not merely today's provider overlay.
 
 ## Snapshot Generation
 
-`generateDailySnapshots` is an internal mutation. Without a target date it generates yesterday's UTC snapshot. With `targetDateStr`, it generates the requested `YYYY-MM-DD` UTC window.
+`generateDailySnapshots` is an internal action. It resolves yesterday's UTC day by default, or a supplied date, and skips when any snapshot exists for that date. It reads a bounded model catalog with a partial flag, refusing to write a wrongly priced snapshot when that catalog is incomplete.
 
-The generator:
+It pages messages, ordinary transactions, and Decision runs through `readDayInteractionsPage`, 500 rows at a time. Decision input is reduced to model-bearing call rows, preventing one batched request from being counted as many independent calls. The accumulated day refuses above 250,000 interactions rather than writing a silently shortened day. Source reads, dimension joins, aggregation, and `writeDailySnapshots` are separate action/query/mutation stages. An empty day gets an empty global snapshot.
 
-1. Computes the UTC day start and end.
-2. Skips generation when any snapshot already exists for that date.
-3. Loads model cost configuration and default model id.
-4. Reads up to 10,000 assistant messages in the day.
-5. Reads up to 10,000 agent transactions in the day.
-6. Creates one empty global snapshot when the day has no messages or agent transactions.
-7. Joins threads, users, companies, and agents needed for attribution and leaderboards.
-8. Merges assistant messages and agent transactions into a unified interaction stream.
-9. Computes global, company, and user aggregates.
-10. Inserts one global snapshot, one snapshot per observed company, and one snapshot per observed non-widget user.
-
-The duplicate guard is date-wide: if any snapshot exists for the target date, generation skips the entire date. Do not rely on rerunning `generateDailySnapshots` to repair partial or duplicate rows without first investigating and cleaning the existing data deliberately.
+The date-existence check and final insert are not a single shared transaction. `writeDailySnapshots` inserts its supplied rows without independently rechecking the date. Do not assume concurrent action invocations provide exactly-once day generation. The date-wide skip also means one existing partial row can prevent an ordinary rerun from repairing that date. Health and a separately approved repair must assess duplicate/partial state.
 
 ## Attribution Rules
 
@@ -74,7 +78,7 @@ User snapshots are only created for interactions with a user id and no widget id
 - `providerModelId`
 - `providerKey:providerModelId`
 
-`computeCostFromMap` calculates cost from input and output tokens using the configured model rates. Input cost switches to the above-200k rate when input tokens exceed 200,000. Dashboard code converts model costs to GBP using the current fixed `USD_TO_GBP_RATE` of `0.78`.
+`computeCostFromMap` delegates to `calculateModelCostUsd` using configured rates. Above-200k input pricing falls back to the standard input price when the higher-band value is absent. Current supplier costs are USD; the former fixed 0.78 GBP conversion is gone. Historical stored metrics must be interpreted with their original schema/verification context rather than rewritten as a later result.
 
 Keep analytics model choices resolved from stored model configuration. Do not hardcode provider model literals in analytics runtime paths.
 
@@ -84,7 +88,7 @@ Historical windows combine snapshots with live data.
 
 For days before today, queries read `analyticsDailySnapshots`. For today, queries read raw assistant messages and agent transactions directly. This keeps dashboards current without regenerating snapshots during the day.
 
-Because historical snapshots do not store provider distribution, provider-distribution charts are currently strongest for live-day provider attribution and weaker for long historical windows. Model distribution, costs, leaderboards, messages, tokens, and active users are supported by stored snapshot fields.
+Historical provider distribution is derived from each snapshot's model metrics through the current catalog. Missing catalog models become unknown; this differs from preserving original provider identity immutably on every day row.
 
 Important queries:
 
@@ -141,9 +145,9 @@ If data health reports missing global snapshot dates, regenerate each missing da
 
 ## Limits And Caveats
 
-Current snapshot generation and dashboard reads use bounded `.take(10000)` calls. This is acceptable for current scale but should be revisited as usage grows.
+Dashboard reads generally use a 10,000-row coverage-aware limit, while snapshot generation pages up to its distinct day ceiling. Coverage flags identify truncated dashboard inputs; totals must be interpreted with those flags.
 
-The fixed GBP conversion rate is stored in code as `USD_TO_GBP_RATE = 0.78`. If finance requirements change, move exchange-rate handling into configuration and update analytics tests.
+Plan-derived inventory value retains its `priceGBP`/`mrr` storage names independently of supplier USD costs. Neither is an exchange-rate conversion or Stripe receipt ledger.
 
 Snapshot rows store leaderboard and model distribution summaries, not raw event lists. Use raw message, thread, run, transaction, and audit tables for incident-level evidence.
 
@@ -156,12 +160,24 @@ Focused tests include:
 - `convex/analyticsService.test.ts` for timeframe resolution, aggregation grouping, model cost lookup, conversion, and rounding helpers.
 - `src/app/(dashboard)/admin/settings/analytics/page.test.tsx` for analytics settings and data-health UI behavior.
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+For documentation-only edits, run `git diff --check`. For implementation changes, follow the current complete gates in [AGENTS.md](../../AGENTS.md).
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Maintained Inventory And Rebuild Refusal
+
+`utils/inventoryRollupService.ts` maintains a global `inventoryRollups.by_key` row. Provisioning/deletion paths adjust user/company totals, company plan changes adjust plan populations, and plan updates/removal refresh pricing distribution. Counters are floored at zero. These are saved summaries, so a missing rollup can read as zero rather than prove there are no users. Incremental maintenance depends on every owning write path applying its appropriate adjustment.
+
+`inventoryRollups.rebuildGlobalInventoryRollupData` reads one beyond 10,000 users, companies, and plans. If any population overflows, it refuses before replacement and leaves existing totals intact. The public rebuild mutation is super-admin-only; the allowlisted maintenance script invokes the same logic. It does not progressively accumulate a truncated rebuild, silently replace totals with a first page, or make a provider request.
+
+The rebuild counts all provisioned user/company rows. Companies with a plan ID contribute to that plan's population. The stored mrr value is the sum of active plan priceGBP times assigned companies. It does not inspect Stripe subscription payment status, invoices, collection, refunds, trials, canceled subscriptions, per-seat billing, or an actual revenue ledger. A plan assignment is not a paid company; total provisioned users are not covered users. Keep those distinctions aligned with [the Stripe operator handoff](../operator/stripe-billing.md).
+
+`getGlobalInventoryMetrics` returns the stored aggregates and normalized active plan distribution to super-admins. It is separate from daily AI usage snapshots and from customer frontend Billing. A rebuilt value can be internally consistent while failing to represent collected revenue, because collected revenue is not the formula's source.
+
+## Coverage, Dates, And Repair Boundaries
+
+`analytics.ts` uses coverage-aware reads with a one-past limit to detect truncated inputs. `getCompanyMetrics` and `getGlobalAnalytics` add today's messages, transactions, and model-bearing Decision calls to older snapshots. Sources have distinct dimensions and retention; a chart is not a raw event archive. A message, agent transaction, and Decision call can describe different parts of work, so do not infer unique customer requests solely from summed model interactions.
+
+Snapshot days use UTC, while selected timeframe helpers include calendar calculations using the runtime's date handling. Read actual returned range/grouping when reconciling a boundary, particularly yesterday, year-to-date, or custom periods. Historical provider mapping also uses current catalog metadata; a renamed/deleted model can change attribution without a new source event.
+
+Dimension backfill fills only missing values inferred from a thread and reports existing mismatches. A row with mismatches can still receive other missing fields, but those wrong existing values are not overwritten. Dry-run mode previews the current paged read; it does not make a later write identical if data changes. Historical seeding is bounded orchestration and cannot repair an existing date simply by ignoring the date-wide guard. Wipe and rebuild tools mutate saved evidence and require their own authorized operational task.
+
+Relevant evidence includes analytics and analyticsCron tests, analyticsService tests, provisioning tests, and inventory maintenance cases. No rebuild, snapshot generation, backfill, wipe, provider bill lookup, Stripe read, or financial verification ran in this documentation pass. The formulas and limits here describe local implementation, leaving product decisions, historical records, and live acceptance unchanged.

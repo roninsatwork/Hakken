@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: user guide
+feature_area: knowledge sources and retrieval
+audience: company admins, platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/knowledge-management.md
+last_reviewed: '2026-10-26T09:54:27+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Knowledge Management
+
+> **Product:** Hakken · **Document type:** User guide · **Feature area:** Knowledge sources and retrieval
+> **Reviewed:** 26 October 2026, 09:54:27 GMT (Europe/London)
+> **Source path:** `docs/end-user/knowledge-management.md` · **Status:** Current
 
 Knowledge management is where Hakken operators add, inspect, test, and repair the source material that assistants, agents, widgets, and workflows can use. The current app supports global knowledge, company knowledge, agent knowledge, and chat-thread documents.
 
@@ -8,7 +23,7 @@ For company-level maintained pages, maps, review checkpoints, source receipts, a
 
 Implemented knowledge surfaces include:
 
-- `/admin/ai/global-knowledge` for super-admin-managed global knowledge.
+- `/admin/ai/knowledge` for the platform Wiki and its import/source controls. The old `/admin/ai/global-knowledge` address redirects here.
 - `/admin/companies/[id]/ai/knowledge` for company knowledge.
 - `/admin/agents/[id]/knowledge` for agent-scoped knowledge.
 - assistant thread uploads, which are tied to a specific chat thread.
@@ -31,7 +46,7 @@ The knowledge manager also accepts multiple files or a whole folder in one drop,
 
 Markdown ingestion removes YAML frontmatter from searchable content and uses a frontmatter `title` when present. Other frontmatter fields are not imported as independent metadata. Review the resulting document title and chunks after uploading an unfamiliar bundle.
 
-Website ingestion is a two-step flow. First map a root URL to discover candidate pages, then queue the selected URLs for ingestion. The mapper applies URL safety checks and caps a map request at 500 links. Queued website pages behave like other documents: they can become `ready`, fail, be retried, or be deleted in bulk under the same website root.
+Website ingestion is a two-step flow. First map a root URL to discover candidate pages, then queue the selected URLs for ingestion. The mapper applies URL safety checks and caps a map request at 100 links. Queued website pages behave like other documents: they can become `ready`, fail, be retried, or be deleted in bulk under the same website root.
 
 ## Document Status
 
@@ -56,7 +71,7 @@ The retrieval test lets admins run a sample query against the scoped knowledge b
 
 ## Repair And Deletion
 
-Failed, stale, drifted, or empty ready documents can be repaired individually or in bulk. Website documents can also be deleted as a group under a root website. Normal document deletion removes the document and its chunks from the selected scope.
+Failed, stale, drifted, or empty ready documents can be repaired individually or in bulk. Website documents can also be deleted as a group under a root website. Normal document deletion removes the source record and stored file and schedules chunk cleanup in batches. For non-thread sources, it also removes the source-note page and up to 500 associated receipts. Topic pages that learned from the source remain with their provenance trail; deletion is not a promise that every derived fact disappears immediately.
 
 Use repair before re-uploading the same source. Use deletion when the source is obsolete, belongs to the wrong company, or should no longer influence assistant responses.
 
@@ -64,7 +79,7 @@ Use repair before re-uploading the same source. Use deletion when the source is 
 
 Knowledge is scoped. A company admin should not be able to see or repair another company's knowledge or global knowledge. Super admins can inspect global and company scopes. Chat-thread documents are readable by the thread owner, super admins, and admins for the thread company.
 
-Thread-scoped documents are temporary assistant context. They are attached to a chat thread rather than managed from the admin knowledge pages, and thread vectors are cleaned up by the backend retention helper after the configured short-lived window.
+Thread-scoped documents are temporary assistant context. They belong to a chat thread rather than the admin knowledge archive. The reviewed garbage collector selects ready thread documents older than twenty-four hours, up to one hundred per pass, deletes their file/document and schedules chunk cleanup. This is not a universal expiry guarantee for failed or processing uploads.
 
 Treat knowledge uploads as customer data. Confirm the target scope before adding documents, especially when moving between global, company, and agent pages.
 
@@ -82,3 +97,23 @@ Before enabling an agent, widget, or workflow for customer use:
 - delete outdated material instead of leaving conflicting instructions in place
 
 Knowledge quality affects answer quality directly. A clean prompt cannot compensate for missing, stale, or incorrectly scoped knowledge.
+
+## Upload Passes And Processing Limits
+
+Uploads now use an authenticated reservation and a counted gateway. The browser receives a short-lived permission URL rather than a reusable unrestricted storage upload address. A pass normally expires after ten minutes and can begin only once. The gateway checks the current owner, workspace, purpose, declared type and size, and enforces a two-minute streaming timeout. A transfer may therefore need to be uploaded again if the connection is interrupted or the active workspace changes. A storage identifier copied from another user or workspace cannot be attached as your knowledge document.
+
+Uploading bytes and creating a usable knowledge source are separate stages. A ready, unattached upload is normally eligible for attachment for twenty-four hours; abandoned reservations and files have bounded cleanup. Once attached, document-specific retention and deletion apply. Do not treat the abandoned-upload cleanup as a twenty-four-hour retention policy for all knowledge documents.
+
+The fifty-megabyte file limit is a transport allowance, not a guarantee that all of a large document can be embedded. Current ingestion applies a one-hundred-thousand-character source limit and at most one hundred twenty-eight chunks. Large extracted text can fail even when its original file was accepted. Split a genuinely large source into coherent documents, preserving meaningful titles and source context. Avoid repeatedly uploading the same oversized file while assuming the error is a temporary provider outage.
+
+Website imports have separate cost limits. Mapping returns at most one hundred links, and the current policy limits mapping to twenty requests per hour and queued URLs to one hundred per hour for its applicable reservation scope. The mapper and scraper also bound provider response size and request duration. A website import does not promise a full crawl of every page. Choose the relevant pages deliberately and inspect the resulting sources rather than treating a mapped root as complete coverage.
+
+Files in a bulk drop upload with limited browser concurrency, then a smaller backend queue drains pending files. Failed extraction is recorded on that document so the rest of the queue can continue. URL documents use a separate queue; a provider rate refusal puts the URL back into pending and schedules a later attempt. A queue that is pending is not necessarily broken, but no source should be relied on until inspection confirms the expected content and status.
+
+## Source Archive Versus Learned Pages
+
+Ready company sources can teach the Wiki automatically. Sources requiring review first prepare claims for a person; global sources request review by default in the reviewed save path. A successful embedding does not prove the Wiki review was approved or that every resulting topic is current. Thread attachments remain conversation material rather than a request to teach the company brain. Agent-scoped configuration has its own context and should be checked before assuming it contributes to a global or company Wiki.
+
+Before deleting a source, inspect what depends on it. The source note is removed, while learned topic pages retain their own content and receipt history. Use the Wiki's maintenance and review process to correct those pages if the underlying facts changed. Re-uploading or repairing can refresh source notes, but neither operation is a blanket rollback of every answer previously generated from the material.
+
+This refresh was checked against knowledge save/repair/delete handlers, upload reservations and HTTP streaming, the file and URL queues, import cost policy and hybrid retrieval. No file was uploaded, website scraped, embedding requested or source deleted. A source-level review cannot establish that a deployed provider configuration, queue or retention sweep has run successfully.

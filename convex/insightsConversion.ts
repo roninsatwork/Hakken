@@ -14,6 +14,7 @@ import { clarityRowValidator, rowOf, type ClarityRow } from "./utils/clarityRows
 import { addUpBy } from "./utils/clarityPacks";
 import { clarityPeriod } from "./clarity";
 import { SERIES_PERIOD } from "./googleAnalyticsSchema";
+import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
 
 /**
  * The Conversion specialist's reads and writes (docs/plans/active/
@@ -105,9 +106,10 @@ export const reviewInputs = internalQuery({
 
 /** The week's funnel, sources and reviews; each verdict not yet tried becomes an experiment ready to start; the experiments due are measured. */
 export const saveConversion = internalMutation({
-  args: { holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), conversion: conversionValidator },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), conversion: conversionValidator },
   returns: v.object({ ready: v.number(), measured: v.number() }),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const now = Date.now();
     const held = await ctx.db.query("insightConversions").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     const row = { companyId: args.companyId, companyWebsiteId: args.holdId, week: args.week, ...args.conversion, createdAt: now };

@@ -45,6 +45,22 @@ async function owned(t: Harness) {
   });
 }
 
+describe("Analytics health reused by Insights", () => {
+  test("retains the current health result fields including the related event names", async () => {
+    const t = harness();
+    const ids = await owned(t);
+    const health = [{ check: "SOMETHING_ELSE" as const, passing: false, names: ["generate_lead"], others: ["page_view"] }];
+    await t.run(async (ctx) => {
+      await ctx.db.insert("googleAnalyticsConnections", {
+        companyId: ids.companyId, companyWebsiteId: ids.siteId, websiteId: ids.websiteId,
+        status: "CONNECTED", health: { checkedAt: Date.now(), checks: health }, createdAt: 1, updatedAt: 1,
+      });
+    });
+    expect(await t.query(internal.insightsReading.measurementInternal, { holdId: ids.siteId }))
+      .toEqual({ health, byDay: [] });
+  });
+});
+
 describe("Google Analytics, as facts", () => {
   test("visits, people and conversions for each period kept, and the people each channel first brought", async () => {
     const t = harness();

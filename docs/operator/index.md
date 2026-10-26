@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: audience index
+feature_area: operator documentation directory
+audience: operator
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/index.md
+last_reviewed: '2026-10-26T15:21:11+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Operator Documentation
+
+> **Product:** Hakken · **Document type:** audience index · **Feature area:** operator documentation directory
+> **Reviewed:** 26 October 2026, 15:21:11 GMT (Europe/London)
+> **Source path:** `docs/operator/index.md` · **Status:** Current
 
 Operator docs are for internal launch, release, demo, and packaging workflows. These are not customer-facing docs and are not usually implementation plans.
 
@@ -14,6 +29,10 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 - [Product Recipes](../developer/product-recipes.md)
 - [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)
 
+## Collection Operations
+
+- [Data Collection Operations](./collection-operations.md) — progress, limits, recovery boundaries and provider-specific follow-up.
+
 ## Data Kept
 
 - [DataForSEO Data: What Is Kept, and For How Long](./dataforseo-data-kept.md)
@@ -25,6 +44,16 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 - Movement Demo Live Rehearsal Notes Template (not included in this copy)
 - Movement Demo Presenter Card (not included in this copy)
 
+## Additional Reviewed Guides
+
+- [Reading Room Readership Analytics](./reading-room-readership-analytics.md) — internal engagement counts and interpretation.
+- [News Collector And Editorial Recovery](./news-collector-and-editorial-recovery.md) — bounded imports, costs, cursors and retention.
+
 ## Coverage Status
 
-The 2026-07-30 documentation coverage audit found the current operator docs aligned with the operator workflows visible in the repository: local auth, demo seed, vertical packaging, and movement-demo operations. Add new operator runbooks only when a real internal workflow exists, and track broader documentation follow-up in [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).
+The [central documentation inventory](../index.md#documentation-coverage-inventory)
+records actual source review times, evidence, scope and the current queue. The known
+89-unit documentation inventory was completed on 26 October 2026; this is not live
+integration acceptance or an exhaustive guarantee about every behavior in the repository.
+New source changes can create new work. Older documentation audits and plans are dated
+records and do not override that current coverage record.

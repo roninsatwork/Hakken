@@ -50,6 +50,9 @@ describe('Provider Classification Drift', () => {
       // in. Naming them here is the point; naming them anywhere else is the
       // scattering this guard exists to catch.
       'convex/seoAiEngines.ts',
+      // These current guides describe that same answer-engine catalog, rather than the runtime's model provider.
+      'docs/developer/ai-questions-and-answers.md',
+      'docs/end-user/ai-questions-and-answers.md',
       // The tests of that table and of the code that reads it. The behaviour
       // under test is engine-specific — which engines queue, which take a
       // location — so the engines are named, as the provider adapter's own
@@ -271,6 +274,9 @@ describe('Provider Classification Drift', () => {
       // AI engine is asked under when we buy an answer from it. They live in
       // the one file whose subject is those engines.
       'convex/seoAiEngines.ts',
+      // These current guides describe that same answer-engine catalog, rather than the runtime's model provider.
+      'docs/developer/ai-questions-and-answers.md',
+      'docs/end-user/ai-questions-and-answers.md',
       'convex/aiModelService.ts',
       'convex/aiModelService.test.ts',
       'convex/aiModels.test.ts',

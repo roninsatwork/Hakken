@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: Administration
+audience: end-user
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/administration.md
+last_reviewed: '2026-10-26T14:50:15+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Administration User Guide
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Administration
+> **Reviewed:** 26 October 2026, 14:50:15 GMT (Europe/London)
+> **Source path:** `docs/end-user/administration.md` · **Status:** Current
 
 ## What Administration Is
 
@@ -28,7 +43,7 @@ Use the dashboard to understand business health, client adoption, cost movement,
 
 Company management is a super-admin function. A company represents a tenant workspace. Companies can have a name, description, overview, system prompt, assigned plan, message usage, and related users, invites, knowledge, rules, models, widgets, chat logs, and settings. The company list supports search and paginated browsing. Company rows are enriched with user counts so admins can quickly understand tenant size.
 
-From company detail screens, a super admin can review and configure the tenant. Current routes include overview, workspace feature gates, directory users and invitations, company calls, company mailbox, company AI prompt and rules, model defaults, knowledge source archive, Wiki pages/map/diary/unanswered questions, saved answers, checks, memory, skills, usage, chat logs, and widget configuration. Company prompts and rules influence how the assistant behaves for that tenant, but they do not override platform safety or tenant isolation.
+From company detail screens, a super admin can review and configure the tenant. Current routes include overview, workspace feature gates, directory users and invitations, company calls, retired company mailbox references, company AI prompt and rules, model defaults, knowledge source archive, Wiki pages/map/diary/unanswered questions, saved answers, checks, memory, skills, usage, chat logs, and widget configuration. Company prompts and rules influence how the assistant behaves for that tenant, but they do not override platform safety or tenant isolation.
 
 Deleting a company is destructive. The implementation deletes the company record, adjusts global inventory, writes an audit entry, and starts asynchronous cleanup of related users and invitations in batches. Because cleanup can continue in the background, administrators should treat company deletion as a serious irreversible operation and confirm they have selected the correct tenant before proceeding.
 
@@ -95,3 +110,11 @@ Before making a change, confirm the current context: global super-admin mode, im
 When inviting users, choose the least privileged role that lets the person do their work. Use `USER` for normal product users, `ADMIN` for people who manage a company workspace, and `SUPER_ADMIN` only for trusted platform operators. When troubleshooting assistant behavior, review AI rules and prompts before changing models. When troubleshooting access, review the user’s role, company assignment, invitation status, and whether a super admin is currently impersonating a company.
 
 Administration is powerful because it connects to every major Hakken subsystem. Treat changes as operational changes, not cosmetic edits. When in doubt, make the smallest change that solves the problem, verify it with a normal user journey, and leave enough context in audit notes or support records for the next operator to understand what happened.
+
+## Reviewed Platform Scope And Cross-References
+
+Administration now includes website holdings, cross-company website oversight, collection settings, Insights operations, content/editorial administration, credit prices and the Outbox alongside the inherited company/user/AI tools. A menu item or a retained compatibility route does not prove a feature is enabled, deployed, or accepted by its provider. Use the [central inventory](../index.md#documentation-coverage-inventory) to identify the reviewed guide for each capability rather than assuming this overview repeats all subsystem details.
+
+Company administrators use team/workspace settings and Billing in the frontend. They have no general platform-admin entitlement. READ_ONLY removes write affordances and relies on backend write refusals; AUDITOR is limited to the Governance route scope. Some super-admin query wrappers permit platform readers while particular functions remain narrower. Read the owning guide for exact permissions instead of turning access to the shell into authority over every endpoint.
+
+Current product implementation includes measurement, visibility and Insights paths beyond the older framework tour. PRODUCT.md still contains planned/unbuilt statements that need owner reconciliation. These documentation edits describe specific source evidence and do not change product direction, acceptance criteria, deployment status or roadmap completion. Known privacy/evidence discrepancies are recorded separately for source fixes; no admin operation, invitation, impersonation, billing change or provider call was run during this review.

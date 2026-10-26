@@ -1,8 +1,20 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: Company AI readiness and checks
+audience: end-user
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/company-ai-readiness-and-checks.md
+last_reviewed: '2026-10-26T14:37:23+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Company AI Readiness And Checks
 
-Last reviewed: 2026-08-22 01:00 BST +0100
-Status: current; related rebuild and checks plans are still active
-Audience: administrators, operators, support, and customer-success teams reviewing a company's AI setup.
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Company AI readiness and checks
+> **Reviewed:** 26 October 2026, 14:37:23 GMT (Europe/London)
+> **Source path:** `docs/end-user/company-ai-readiness-and-checks.md` · **Status:** Current
+
 
 ## What This Area Is
 
@@ -60,8 +72,6 @@ current routed sections listed above.
 The Company AI overview checks these areas:
 
 - Knowledge: whether company documents exist and whether any failed to process.
-- Wiki: whether maintained company pages, reviews, open questions, diary, and
-  unanswered-demand signals need attention.
 - Widget: whether a company widget exists and whether it is active.
 - Instructions: whether the company has its own prompt or active rules.
 - Model routing: whether company model choices are configured and whether any
@@ -170,14 +180,11 @@ When preparing a company for launch:
 8. Add starter checks or custom checks.
 9. Run checks.
 10. Resolve drift by rerunning checks after changes.
-11. Review company usage, money view, calls, mailbox, and chat logs after real testing.
+11. Review company usage, money view, calls, Outbox delivery, and chat logs after real testing.
 
-## Important Caveat
+## Verification Scope
 
-Company AI is an active product area. The current implementation is documented
-here, but related work remains open in the Company AI readiness rebuild and AI
-Checks plans. When those plans land, this guide should be refreshed in the same
-documentation pass.
+This guide describes reviewed local implementation. Dated plans and research remain historical/planned context; no product or roadmap completion is changed by this review.
 
 ## Related Documentation
 
@@ -187,3 +194,27 @@ documentation pass.
 - [Knowledge Management](./knowledge-management.md)
 - [Agents](./agents.md)
 - [Company Workspace Administration](./company-workspace-administration.md)
+
+## Readiness Is A Configuration Review
+
+The overview's Ready headline means none of its inspected areas currently requires attention. It does not certify answer quality, live provider access, complete knowledge, or accepted external integrations. The state is derived from the same eight area rows it displays, without an invented percentage. Wiki pages, diary, demand, and money are related navigation destinations rather than extra independently counted readiness rows.
+
+Not configured is informational because a company can inherit platform behavior. Needs attention is reserved for a detected issue in its local setup, such as failed documents, broken overrides, unsafe bound-skill configuration, failing must-pass checks, or unresolved drift. Never-run checks remain visibly never run; they are not silently included in passing results. A widget labeled live reflects its saved active state, not a fresh browser or DNS acceptance test.
+
+The overview reads bounded populations. It inspects up to 500 knowledge documents, 200 rules, 1,000 memories/skills/checks in relevant groups, and 100 unresolved drift events. Some counts show a plus sign at their limit. The most recently created widget is used for its widget summary; the row is not an exhaustive report of every historical widget configuration. Large-company totals and absent warnings should be interpreted with those bounds.
+
+## What A Company Check Exercises
+
+A check creates an evaluation conversation and asks the company assistant through the actual answer path. It then grades the reply and applies required source, memory, skill, and forbidden-claim expectations from recorded evidence. The target-surface label organizes the check; it does not mean the system opened a real public widget, made a phone call, or exercised every workflow destination. Evaluation conversations also omit the running administrator's personal note, keeping the result from varying with that private context.
+
+One to five repeated samples can be requested. Each usually involves an answer and a grading call, and grading may fall back to the same model when no independent text model is available. Batches take at most 100 selected active cases; the preview is a bounded estimate and extra tool/retrieval work can add to the nominal answer-plus-grade calls. Results are local saved evidence, not free or universal integration acceptance.
+
+A missing answer is an answer failure. An exception that prevents testing is recorded as not tested rather than proving the assistant gave a bad answer. Review that distinction before changing content in response to an unreachable provider. Nothing in this documentation task ran a check or purchased model work.
+
+## Drift, Skills, And Memory Follow-Through
+
+Drift records say a tracked input changed. They can be resolved explicitly, so a resolved drift list alone is not proof a new check passed. Rerun appropriate checks as a deliberate operation when updated behavior needs evidence. Large resolution operations are bounded and can leave additional history to inspect.
+
+Company skills link to the central Skill Center. Runtime reads the active central instruction through that link; editing or archiving the central skill can affect every linked company. The current limit is two company skills. An old copied-looking description is not a frozen independent skill version. Company memories have a separate five-item always-applied cap, with other memories selected when relevant. Autonomous memory is a platform policy, not individual per-company approval for every learned note.
+
+The mailbox mentioned in older operating checklists is retired; use the current email/outbox and conversation guides for actual communication paths. Preserve dated plans as historical context without using their status as current implementation or live proof. Review [AI rules](./ai-rules-and-prompts.md), [models and Decisions](./ai-models-providers-and-costs.md), and [Company Wiki](./company-wiki.md) for the specific permissions and known limitations of those controls.

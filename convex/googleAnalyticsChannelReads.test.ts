@@ -47,6 +47,22 @@ function shifting(last = LAST): Visit[] {
 
 const args = { period: "thisMonth" as const, device: "" };
 
+type CollectedFixture = Awaited<ReturnType<typeof collectedWebsite>>;
+let shiftingFixture: Promise<CollectedFixture> | undefined;
+
+/**
+ * These read-only contracts all inspect the same completed collection. Keep
+ * one real collection for them; tests that alter it or use a different day
+ * still create their own isolated website.
+ */
+function collectedShifting(): Promise<CollectedFixture> {
+  if (!shiftingFixture) {
+    const t = harness();
+    shiftingFixture = collectedWebsite(t, shifting(), encryptConnectorToken);
+  }
+  return shiftingFixture;
+}
+
 beforeEach(() => {
   useFixedDay();
   vi.setSystemTime(NOW);
@@ -61,8 +77,7 @@ afterEach(() => {
 
 describe("a channel's own page", () => {
   test("its figures against the same days of the month before and the whole website, with the conversions it started", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "Organic Search" });
     expect(top.state).toBe("READY");
     // The plain day's 10 visits, and the article's 3 now against the service page's 5 before.
@@ -72,8 +87,7 @@ describe("a channel's own page", () => {
   });
 
   test("its visits by page group, Hakken's own page types while the website has no classification, and the pages behind the change", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "Organic Search" });
     const kind = (key: string) => top.kinds.find((one) => one.kind === key);
     expect(kind("HOME")).toMatchObject({ visits: 300, visitsBefore: 300, conversions: 30, conversionsBefore: 30 });
@@ -86,8 +100,7 @@ describe("a channel's own page", () => {
   });
 
   test("its table's landing pages and page groups: every device's, each page with its group, filtered by group", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const list = { siteId, ...args, device: "mobile", channel: "Organic Search", page: 1, rows: 25 };
     const pages = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...list, list: "landing" });
     expect(pages.live).toBe(false);
@@ -117,8 +130,7 @@ describe("a channel's own page", () => {
   });
 
   test("What Hakken sees: the service page that made leads and lost its visits, and where the change went", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "Organic Search" });
     expect(top.seen.says.map((say) => say.code)).toEqual(["lead.down.down", "pageFell", "shift"]);
     expect(top.seen.says[1]).toMatchObject({ text: "/services/web/", a: 150, b: 0, c: 30 });
@@ -137,8 +149,7 @@ describe("a channel's own page", () => {
   });
 
   test("AI assistants: each assistant, and the visits Google filed under another channel", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "AI assistants" });
     // The plain day's Perplexity visits arrive as Referral.
     expect(top.figures).toMatchObject({ visits: 120, elsewhere: 120 });
@@ -159,8 +170,7 @@ describe("a channel's own page", () => {
   });
 
   test("every key event, counted or not, with where those visits landed", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const events = await user.query(api.googleAnalyticsChannelReads.analyticsChannelEvents, { siteId, ...args, channel: "Organic Search" });
     expect(events.rows.map((row) => row.eventName).sort()).toEqual(["click_tel", "form_submit", "generate_lead", "sign_up"]);
     expect(events.rows.find((row) => row.eventName === "generate_lead")).toMatchObject({ counted: true, count: 30, countBefore: 60, value: 30 * 25_000 });
@@ -170,8 +180,7 @@ describe("a channel's own page", () => {
   });
 
   test("the channel a day, against the span before, from the days kept", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const days = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, ...args, channel: "Organic Search" });
     expect(days.live).toBe(false);
     expect(days.now).toHaveLength(30);
@@ -198,8 +207,7 @@ describe("a channel's own page", () => {
   });
 
   test("only the caller's own website", async () => {
-    const t = harness();
-    const { siteId, rival } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, rival } = await collectedShifting();
     await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "Organic Search" })).rejects.toThrow();
     await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, ...args, channel: "Organic Search" })).rejects.toThrow();
     await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelEvents, { siteId, ...args, channel: "Organic Search" })).rejects.toThrow();
@@ -209,8 +217,7 @@ describe("a channel's own page", () => {
 
 describe("Channels", () => {
   test("each channel by page group, what a visit is worth, and What Hakken sees", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelsTop, { siteId, ...args });
     expect(top.state).toBe("READY");
     // A lead and a call a day, and the service page's lead a day before.
@@ -224,8 +231,7 @@ describe("Channels", () => {
   });
 
   test("the table's extras: the conversions each channel started and where most of its visits land, filtered by that page group", async () => {
-    const t = harness();
-    const { siteId, user } = await collectedWebsite(t, shifting(), encryptConnectorToken);
+    const { siteId, user } = await collectedShifting();
     const page = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, ...args, list: "channel", page: 1, rows: 25 });
     const organic = page.rows.find((row) => row.label === "Organic Search");
     expect(organic).toMatchObject({ started: 30, landsMost: { kind: "HOME", name: null } });

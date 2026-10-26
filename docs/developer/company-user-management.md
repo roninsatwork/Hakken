@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: company and user administration
+audience: company admins, platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/company-user-management.md
+last_reviewed: '2026-10-26T09:45:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Company And User Management Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Company and user administration
+> **Reviewed:** 26 October 2026, 09:45:20 GMT (Europe/London)
+> **Source path:** `docs/developer/company-user-management.md` · **Status:** Current
 
 Company and user management covers tenant workspaces, managed users, invitations, role boundaries, super-admin company assignment, impersonation, login tracking, plan assignment, workspace feature gates, personal assistant notes, and destructive cleanup. It is implemented across global admin routes, tenant organization routes, and Convex authorization helpers.
 
@@ -8,7 +23,7 @@ Read this before changing `convex/companies.ts`, `convex/users.ts`, `convex/user
 
 Super-admin routes:
 
-- `/admin/companies` lists and creates companies.
+- `/admin/companies` lists companies; `/admin/companies/new` renders `AddCompanyPage` for name and website creation.
 - `/admin/companies/[id]` redirects into the company detail surface from `src/app/(dashboard)/admin/companies/[id]/page.tsx`.
 - `/admin/companies/[id]/overview` edits profile fields and plan assignment.
 - `/admin/companies/[id]/features` edits workspace feature gates through `src/app/(dashboard)/admin/companies/[id]/features/page.tsx`.
@@ -24,7 +39,7 @@ Tenant routes:
 - `/app/settings/team` manages tenant-scoped users and pending invites.
 - `/app/profile` edits the signed-in user's profile, preferences, Assistant Notes, and plan usage.
 
-Keep these route groups distinct. `/admin` is super-admin-only at the layout level, while `/app/settings/team` uses the same backend user-management mutations under tenant-scoped authorization.
+Keep these route groups distinct. `/admin` admits super admins and read-only accounts, with auditors restricted to Governance; writes remain separately authorized, while `/app/settings/team` uses the same backend user-management mutations under tenant-scoped authorization.
 
 ## Authorization Helpers
 
@@ -49,17 +64,17 @@ The key privilege checks live in `convex/userManagementService.ts`:
 - Unimpersonated super admins can create, update, and delete managed users globally.
 - Tenant admins are scoped to their active company.
 - Super admins who are impersonating a company are treated as scoped admins for managed-user writes.
-- Scoped admins cannot create super admins.
-- Scoped admins cannot update or delete super admins.
+- Scoped admins cannot create any platform role: `SUPER_ADMIN`, `READ_ONLY`, or `AUDITOR`.
+- Scoped admins cannot update or delete accounts holding any platform role. Oversight callers themselves are explicitly refused, including if an impersonation field is present.
 - Scoped admins cannot move users outside the active company.
 
 This distinction prevents a super admin who is operating inside a tenant context from accidentally performing global privilege changes through tenant-team workflows.
 
 `addUser` inserts a manual user row with a `manual|...` token identifier, increments global inventory user totals, and writes `CREATE_USER`.
 
-`updateUser` patches allowed fields, role, and company assignment after policy checks, then writes `UPDATE_USER`.
+`updateUser` patches allowed fields, role, and company assignment after policy checks, then writes `UPDATE_USER` including previous role when it changes. Add/update canonicalize email and call `assertManagedEmailAvailable`; ambiguous or duplicate identities must be repaired rather than silently reused. User return shapes use `toClientUser` to omit `tokenIdentifier`.
 
-`deleteUser` schedules `internal.users.purgeUserEntitiesInternal`, deletes the user row, decrements global inventory user totals, and writes `DELETE_USER`.
+`deleteUser` schedules `internal.users.purgeUserEntitiesInternal`, synchronously calls `purgeAuthIdentity`, deletes the user row, decrements global inventory user totals, and writes `DELETE_USER`.
 
 `updateMyProfile` is separate from managed-user editing. It only allows the signed-in user to update name, phone, and image. If a storage id is supplied, it validates the upload with the admin image policy before resolving the storage URL.
 
@@ -75,7 +90,7 @@ company memories and agent memories.
 
 - requires a current user with a role
 - scopes tenant admins and impersonating super admins to `getActiveCompanyId`
-- returns global results for unimpersonated super admins
+- returns global results for unimpersonated super admins, or for super admins explicitly requesting `scope: "platform"` even while impersonating
 - supports email search through the `search_email` index
 - enriches rows with company names
 
@@ -83,7 +98,7 @@ company memories and agent memories.
 
 `getUsersByCompany` allows super admins or tenant admins whose active company matches the requested company.
 
-`getSuperAdmins` is super-admin-only.
+`getSuperAdmins` uses `superAdminQuery`, whose read-role set also includes `READ_ONLY`. That does not make other user queries readable by oversight roles; their handlers have their own checks.
 
 `getUserById` allows the target user, any super admin, or a user whose active company matches the target user's company.
 
@@ -104,8 +119,8 @@ Invite email templates are stored in `emailTemplates` with `templateType: "INVIT
 `dispatchInviteEmail` is an action because it sends email through Resend. It:
 
 1. Requires an action-authenticated user.
-2. Allows unimpersonated super admins globally.
-3. Allows tenant admins only for their active company and only for `USER` or `ADMIN` roles.
+2. Allows super admins globally in this action, including when impersonating; this differs from scoped managed-user writes.
+3. Allows company admins only for their active company and only for `USER` or `ADMIN` roles. The action checks `caller.role !== "SUPER_ADMIN"`, so it does not apply the managed-user service’s impersonation restriction to a super-admin caller.
 4. Rejects tenant-admin attempts to invite super admins or invite users into another company.
 5. Generates a random token.
 6. Reads email branding from settings.
@@ -115,7 +130,7 @@ Invite email templates are stored in `emailTemplates` with `templateType: "INVIT
 
 The invite link currently points to `/login`. It does not expose the stored token in the URL. Access depends on the invited email matching the authenticated account during provisioning.
 
-`createInviteRecord` lowercases the email, overwrites an existing non-accepted invite for that email with a new token/status/date, leaves accepted invites alone, inserts new pending invites otherwise, and writes `CREATE_INVITE` when a caller id is supplied.
+`createInviteRecord` canonicalizes the email and returns `created`, `reissued`, or `alreadyActive`. An accepted invite with an active canonical account returns `alreadyActive`; an orphaned accepted invite can be reissued. Reissue refreshes company, role, token, pending status and date, and clears `acceptedAt`. Creation/reissue writes `CREATE_INVITE` when caller identity is supplied. Dispatch sends email before this mutation; delivery and record persistence are not atomic. Per-dispatch provider idempotency uses `invite:${token}`, with a new token for a new action call, so repeated calls are not a universal deduplication guarantee.
 
 ## Auth Provisioning
 
@@ -136,7 +151,7 @@ Accepted invites can be recovered if the invite was accepted but the user row is
 
 ## Companies
 
-`convex/companies.ts` is super-admin-only for company management.
+`convex/companies.ts` uses platform read builders for company lists and super-admin mutations for management. Read-only access is admitted by the query builder; company-specific user/invite handlers can still be narrower.
 
 Company list queries:
 
@@ -147,14 +162,14 @@ Company list queries:
 
 Company mutations:
 
-- `createCompany` inserts name and optional system prompt, increments global inventory company totals, and writes `CREATE_COMPANY`.
+- `createCompany` inserts name, optional prompt and normalized modules, increments inventory totals, and writes `CREATE_COMPANY`. A supplied `websiteUrl` calls `holdOwnWebsite` in the same mutation; invalid website creation rolls back the transaction.
 - `updateCompany` patches name and optional prompt, then writes `UPDATE_COMPANY`.
 - `updateCompanyProfile` patches name, description, and overview, then writes `UPDATE_COMPANY_PROFILE`.
 - `updateCompanyPrompt` patches the prompt and writes `UPDATE_COMPANY_PROMPT` with prompt length and safety-warning categories.
 - `updateCompanyDescription` patches only description and currently does not write an audit log.
-- `assignPlanToCompany` validates the target company and plan, patches `planId`, and adjusts global inventory plan totals.
+- `assignPlanToCompany` refuses Stripe-managed companies, validates company and target plan, patches `planId`, and adjusts inventory totals. It is not a way to override provider billing.
 - `setCompanyModules` validates workspace feature keys against `COMPANY_MODULES`, patches `enabledModules`, and writes the workspace-specific section access used by navigation and capability gates.
-- `deleteCompany` schedules company cleanup, deletes the company row, adjusts inventory totals, and writes `DELETE_COMPANY`.
+- `deleteCompany` refuses companies with a billing account/history, schedules user/invite cleanup and the separate company website-hold purge, removes up to five Auto Setup rows, deletes the company, adjusts inventory totals, and writes `DELETE_COMPANY`. Shared website identities remain.
 
 Because company deletion deletes the company row before all scheduled cleanup necessarily finishes, present it as destructive asynchronous cleanup in UI and operator notes.
 
@@ -174,16 +189,19 @@ Because company deletion deletes the company row before all scheduled cleanup ne
 
 - deletes up to 100 login rows for the user
 - deletes up to 100 AI rules created by the user
+- deletes up to 100 personal `userMemories` and the user-memory sweep marker
 - reads up to 10 threads
 - deletes up to 100 messages per thread
 - deletes a thread only when its current message batch is below the limit
 - reschedules itself when more rows may remain
 
+Individual `deleteUser` calls `purgeAuthIdentity` inline. That helper drains indexed identity rows in reads of 200: refresh tokens per session, sessions per user, verification codes per account, provider accounts per user, and canonical-email invitations. It is synchronous total draining, not merely a capped first batch. Company batch deletion directly removes user rows and schedules content cleanup without calling this identity helper; equivalent identity cleanup is not established for that path. Flag this discrepancy for separately authorized implementation review.
+
 Do not assume related data is gone immediately after deleting a user or company. If a new company-owned or user-owned table is introduced, add cleanup coverage or document why it is intentionally retained.
 
 ## Impersonation And Super-Admin Assignment
 
-`impersonateCompany` requires a super admin, patches the caller's `impersonatingCompanyId`, writes `IMPERSONATE_COMPANY`, and returns `true`. Passing `undefined` clears impersonation.
+`impersonateCompany` requires a super admin, patches the caller's `impersonatingCompanyId`, writes `IMPERSONATE_COMPANY` when entering or `END_IMPERSONATION` when leaving, and returns `true`. Passing `undefined` clears impersonation.
 
 Impersonation changes `getActiveCompanyId`, so tenant-scoped queries and mutations behave as if the super admin is inside that company for many workflows.
 
@@ -202,9 +220,9 @@ Login tracking is initiated from the dashboard header. It attempts to fetch IP/l
 `recordLogin`:
 
 - returns `null` for unauthenticated callers
-- throttles repeated identical device/IP rows for 60 minutes
+- throttles repeated same-device rows for 60 minutes, regardless of IP
 - inserts a `logins` row with device, IP, location, success status, and timestamp
-- writes `SYSTEM_AUTHENTICATION` for admin and super-admin users
+- writes `SYSTEM_AUTHENTICATION` for every inserted login session and updates `lastLoginAt`
 
 `recordLogout` writes `SYSTEM_DISCONNECTION` for admin and super-admin users.
 
@@ -236,6 +254,8 @@ Current covered events include:
 - `REVOKE_INVITE`
 - `SYSTEM_AUTHENTICATION`
 - `SYSTEM_DISCONNECTION`
+- `UPDATE_COMPANY_MODULES`
+- `END_IMPERSONATION`
 - `IMPERSONATE_COMPANY`
 - `ASSIGN_SUPER_ADMIN`
 - `DETACH_SUPER_ADMIN`
@@ -256,12 +276,12 @@ Focused tests include:
 - `convex/planService.test.ts` and `convex/plans.test.ts` for plan status and plan assignment constraints.
 - UI tests under `src/app/(dashboard)/admin/users`, `src/app/(dashboard)/admin/companies`, and tenant settings pages for tables, forms, destructive confirmation, and pagination.
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+For implementation changes, use the current verification gates in AGENTS.md. This documentation pass ran focused Markdown validation only.
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Current Screen And Evidence Limits
+
+`AddCompanyPage` reuses the content editor page and form state, trims name/website inputs, and opens the saved company. Plans and features are configured afterwards. `/app/settings/team` uses `getPaginatedUsers` with a 15-row initial page and filters pending invitations to `currentUser.companyId`. Its editor calls `addUser` or `updateUser`; it does not invoke `dispatchInviteEmail`. The editor remains a `HakkenModal` despite the page-editor instruction. Document the mismatch rather than copying it into new UI.
+
+The team page uses durable `companyId` for its form payload and invitation filter, while the paginated user query can resolve an impersonated active company. Do not assert universal impersonation equivalence across this screen. Verify the actual route and caller context for support work. The organisation dashboard likewise reads the user's durable company, offers calendar periods, and no longer contains the old provider-distribution or usage chart. Dedicated Usage and billing guides define those figures.
+
+The source review covered company/user CRUD, the management policy service, invitation dispatch and record outcomes, individual identity cleanup, company batch cleanup entry points, current company creation and team screens, and the personal-note API boundary. It did not audit every company-owned table or execute destructive tests. The focused tests listed above are local source evidence only; live email delivery, deployed access behavior and completed erasure require separate acceptance evidence.

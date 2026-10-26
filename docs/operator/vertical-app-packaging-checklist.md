@@ -1,9 +1,24 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: vertical-app-packaging-checklist
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/vertical-app-packaging-checklist.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Vertical App Packaging Checklist
+
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** vertical-app-packaging-checklist
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/vertical-app-packaging-checklist.md` · **Status:** Current
 
 Use this checklist when turning Hakken into a new customer-specific or vertical product starter.
 
 First create the code copy using [Build a new application from Hakken](./cloning-hakken.md).
-The default keeps the framework and Arcade; the other four application areas are opt-in.
+The export retains the framework and Arcade. The optional registry is currently empty; the four removed application areas are not available as opt-ins.
 
 The goal is to make product-specific changes through configuration, translations, templates, seed data, and extension points before editing core runtime code.
 
@@ -42,7 +57,7 @@ The goal is to make product-specific changes through configuration, translations
 ## 4. Starter Agents
 
 - Pick the closest agent archetype in `convex/agentTemplates.ts`, or add one for the vertical.
-- Build each starter agent from the guided builder and configure:
+- Create a draft from the current Add Agent settings form, or use a separately reviewed template API/seed path. The frontend no longer presents the old guided template builder. Configure:
   - starter prompt
   - suggested connectors and bound tools
   - knowledge scopes
@@ -64,7 +79,7 @@ The goal is to make product-specific changes through configuration, translations
 
 - Run `npm run setup:validate` for local development.
 - Run `npm run setup:validate -- --profile=production` before production handoff.
-- Configure the providers and feature credentials selected in `hakken.product.json`. Knowledge embeddings, voice and telephony require Vertex independently of the text-model provider.
+- Configure the providers and feature credentials selected in `hakken.product.json`. The setup resolver requires Vertex for knowledge embeddings and when voice/telephony are selected, independently of the text-model provider. Runtime voice adapters also include OpenAI; verify the actual selected channel configuration.
 - Set model defaults from stored configuration, not hardcoded runtime literals.
 - Install connector definitions and configure secret references outside source control.
 - Keep write, destructive, and external tools approval-gated unless explicitly reviewed.
@@ -87,6 +102,9 @@ npm run setup:validate -- --profile=production
 npm run verify:env
 npm run lint:all
 npm run check
+npm run test:coverage
+npm run coverage:check
+npm run test:e2e:smoke
 npm run build
 git diff --check
 ```

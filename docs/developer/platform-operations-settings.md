@@ -1,4 +1,42 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: platform operations and inherited limits
+audience: developers and operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/platform-operations-settings.md
+last_reviewed: '2026-10-26T15:14:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Platform Operations Settings Developer Guide
+
+> **Product:** Hakken · **Document type:** developer guide · **Feature area:** platform operations and inherited limits
+> **Reviewed:** 26 October 2026, 15:14:20 GMT (Europe/London)
+> **Source path:** `docs/developer/platform-operations-settings.md` · **Status:** Current
+
+
+## Inherited Limits Implementation
+
+This section is verified against the current Limits implementation. The operational sections below have been reconciled with their specialist guides after the limits, settings, diagnostics and rollup reviews. The relevant entry points are `convex/platformLimits.ts`, `companyDataLimits.ts`, `fanOutLimits.ts`, `sharedLimits.ts`, and the shared `src/app/(dashboard)/admin/_components/limits/LimitsScreen.tsx`. Plan quotas are covered separately in [Platform Plans And Quotas](./platform-plans-and-quotas.md); these configuration values must not be presented as paid seats or revenue.
+
+`getPlatformLimits`, `getCompanyLimits`, `getSiteLimits`, and their three setters use super-admin query or mutation builders. Do not replace those with a company-scoped builder just because an argument contains a company ID. These are platform operator controls. The builder names distinguish capability, not identical role lists: `superAdminQuery` includes `READ_ONLY`; setters admit `SUPER_ADMIN` alone. The company query checks the company exists; the site query resolves the `companyWebsites` hold and website, and returns null for a missing hold. The supplied hold identifies the company used for resolution. A global website identity and a company's holding are different entities.
+
+`LIMITS` assembles the data, fan-out, and shared definitions into one registry. Every entry supplies choices, a starting number, reach, and competitor applicability. `COMPANY_KEYS` excludes platform-only entries. `WEBSITE_KEYS` contains website-reachable entries. `getSiteLimits` filters those further for competitor holdings. The setters validate keys and allowed numeric choices through `assertLimits` before routing changes to the existing storage helpers. Missing keys preserve prior settings; null means inheritance for company and website mutations. The platform setter accepts numeric values only.
+
+Data limits are `keywordsPerSite`, `everydayKeywords`, and `backlinksPerSite`. Their allowed choices currently range from 100 to 10,000 through the enumerated `DATA_LIMIT_CHOICES`, with built-in starts of 1,000. `platformDataLimits` combines saved platform values with starts. `readCompanyDataLimits` overlays a company row. `resolveSiteDataLimits` overlays a holding row field by field and returns flags distinguishing explicit website choices. `readSiteDataLimits` provides the consumer-facing resolution path. Do not copy constants into a new consumer when the resolver already expresses the hierarchy.
+
+Data overrides live in `companyDataLimits` and `websiteDataLimits`. The holding override also stores company identity. `writeCompanyDataLimits` and `writeSiteDataLimits` validate target records, calculate the resulting own fields, replace or insert the row, and delete it when every field inherits. They record actual changed fields in `auditLogs` as `DATA_LIMITS_CHANGED`, identifying the company or holding. No audit entry is emitted for unchanged values. A reset is represented as the parent level in audit metadata, not as a stored null numeric value.
+
+Fan-out settings use `fanOutLimits` rows for company or holding overrides. The resolver reads the platform row and overlays a company row, then an eligible site row only for site-scoped keys. `writeSiteFanOutLimits` refuses competitor holdings; the competitor's data limits are handled separately. `writeCompanyFanOutLimits` and `writeSiteFanOutLimits` audit changed values as `FAN_OUT_LIMITS_CHANGED`. Changing `sitemapPagesRead` also calls `noteDataChanged` for the affected own-website page materialisation. The company path enumerates holdings up to its configured bound. This marks data for rebuilding; the setter is not itself a provider fetch or proof of a completed rebuilt list.
+
+The shared registry has platform-only limits for fan-out queries, cited sources, businesses, newly found websites, overview searches, and download rows. `sharedLimitsOf` merges the platform row and fallbacks; `getSharedLimits` is an internal query for actions that cannot read the database. `sharedLimitCeiling` gives the maximum supported choice for callers requiring an upper read bound. A shared AI answer or purchase serves multiple companies, which is why an individual company's override cannot redefine its parse size. Preserve that distinction when adding a new setting.
+
+`setPlatformLimits` stores changed values in `platformLimits` with `updatedAt` and writes `PLATFORM_LIMITS_CHANGED`. Company and site setters split data from fan-out changes, then call the corresponding helpers within the mutation. They do not dispatch a universal cleanup, re-buy data, recompute every historical report, or synchronise billing. Verify each consumer before describing the effect of a decrease as deletion or the effect of an increase as immediate expanded results.
+
+The platform, company, and site pages use the same `LimitsScreen`. `limitTopics.ts` groups every backend key and supplies units. Each `TopicCard` keeps only touched dropdown edits, converts the inherited empty option to null, and submits only changed keys through `useAdminAction`. Each card owns its save state. Company pages pass platform-only values into read-only shared cards linking to `/admin/settings/limits`; site pages omit those cards. The query's `others` lists show explicit lower-level overrides, not every record. `OWN_ROWS_READ` bounds platform override summaries at 2,000 rows per queried table; never treat these summaries as an exhaustive migration input.
+
+Relevant local test sources are `convex/platformLimits.test.ts`, `convex/fanOutLimits.test.ts`, and the shared screen's `LimitsScreen.test.tsx`. The first checks inheritance, company-only reach, choice validation, super-admin access, audit records, shared values, competitor applicability, and complete topic/unit/locale coverage. The fan-out tests check resolution and application to rebuilds. These test declarations were inspected, not executed in this documentation pass. None establishes live supplier acceptance, available provider balance, deployment status, or a full retention contract.
 
 Platform operations settings cover API keys, webhook delivery internals, maintenance scripts, data retention, analytics health, system health, external connection checks, auth diagnostics, and audit log detail. These surfaces are implemented as admin operations rather than customer-facing product workflows, but they are important for launch support, incident response, and integration safety. For analytics rollups and data-health internals, see [Analytics Rollups](./analytics-rollups.md). For audit feed and audit purge internals, see [Audit Log Service](./audit-log-service.md). For auth event diagnostics, see [Auth Diagnostics](./auth-diagnostics.md). For email sender resolution, see [Email Branding](./email-branding.md). For maintenance script internals, see [Maintenance Scripts](./maintenance-scripts.md). For purge execution internals, see [Data Retention And Purges](./data-retention-and-purges.md). For health reports and daily platform alert emails, see [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 
@@ -52,7 +90,7 @@ Webhook deliveries have no listing screen. The delivery engine — queueing, dis
 
 ## Maintenance Scripts
 
-`convex/maintenanceScriptRegistry.ts` is the allowlist. The current script id is `inventory-rollup-rebuild`, categorized as low-risk inventory maintenance. It recalculates global inventory rollup values from current companies, users, and plans.
+`convex/maintenanceScriptRegistry.ts` is the allowlist. One current script id is `inventory-rollup-rebuild`, categorized as low-risk inventory maintenance; the maintenance guide explains the wider allowlist and migration operations. It recalculates global inventory rollup values from current companies, users, and plans.
 
 `convex/maintenanceScripts.ts` lists definitions, reads one script with its last 10 runs, and executes scripts. Execution creates a `maintenanceScriptRuns` row, writes `MAINTENANCE_SCRIPT_STARTED`, runs the allowlisted implementation, patches the run to success or failed, and writes a matching success or failure audit log.
 
@@ -62,7 +100,7 @@ The detailed script registry, execution, audit, history, and extension contract 
 
 ## Data Retention And Purges
 
-`convex/purges.ts` implements the unified purge engine for agent logs, workflow logs, user logins, chat history, and audit logs. It supports super-admin configuration, manual runs, scheduled runs, recursive deletion, cancellation, purge history, and audit evidence. `convex/auditLogs.ts` also contains a separate older audit-log purge scheduler.
+`convex/purges.ts` implements the unified purge engine for agent logs, workflow logs, user logins, chat history, and audit logs. It supports super-admin configuration, manual runs, scheduled runs, recursive deletion, cancellation, purge history, and audit evidence. The older audit-only purge scheduler is absent from the current `convex/auditLogs.ts` exports and active cron wiring; use the unified engine rather than old scheduler instructions.
 
 The settings UI exposes unified purge state through `PurgesSettingsSection`. It reads `api.purges.getPipelineConfig` and `api.purges.getRecentPurges`, updates the entire pipeline config map through `api.purges.updatePipelineConfig`, triggers manual runs through `api.purges.runManualPurge`, and cancels active runs through `api.purges.cancelPurge`. The UI paginates recent purge history with `ADMIN_PAGE_SIZE`.
 
@@ -112,11 +150,11 @@ The auth diagnostics routes share `src/app/(dashboard)/_features/auth-diagnostic
 
 The detailed `authEvents` schema, logging sources, admin/company scoping, UI filters, and extension checklist are documented in [Auth Diagnostics](./auth-diagnostics.md).
 
-`convex/auditLogs.ts` handles audit log writes, config, purging, dispatch, and recent log reads. The current detail route reads `api.auditLogs.getRecentLogs` and falls back to static demo records when the database is empty. Because detail lookup searches the recent feed rather than a dedicated `getById` query, very old audit rows may not be reachable from that detail route without a future backend addition.
+`convex/auditLogs.ts` implements audit writes, bounded recent reads, paginated Governance reads, filters, export and direct `getAuditEntry`. The legacy `/admin/audit-logs/[id]` page still resolves against its recent feed with demo fallback behavior; Governance detail uses direct entry lookup with its own role/company checks. Do not apply the legacy recent-feed limitation to every audit-detail route.
 
 When adding privileged operations, write explicit audit logs with actor, entity type, entity id, company id where relevant, timestamp, and compact metadata. Avoid storing raw secrets, raw webhook bodies, or large payloads in audit metadata.
 
-The detailed audit row contract, recent-feed behavior, detail-route limitation, audit-specific purge path, and audit coverage checklist are documented in [Audit Log Service](./audit-log-service.md).
+The detailed audit row contract, recent-feed behavior, detail-route limitation, retired audit-only scheduler, and audit coverage checklist are documented in [Audit Log Service](./audit-log-service.md).
 
 ## Data Model
 
@@ -134,6 +172,9 @@ For documentation-only edits, run `git diff --check`. Before merging code change
 npm run verify:env
 npm run lint:all
 npm run check
+npm run test:coverage
+npm run coverage:check
+npm run test:e2e:smoke
 npm run build
 git diff --check
 ```

@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: reception voice kiosk
+audience: workspace users, operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/receptionist-screen.md
+last_reviewed: '2026-10-26T10:22:32+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Receptionist Screen
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Reception voice kiosk
+> **Reviewed:** 26 October 2026, 10:22:32 GMT (Europe/London)
+> **Source path:** `docs/developer/receptionist-screen.md` · **Status:** Current
 
 The Receptionist screen is the kiosk runtime built on top of Hakken's widget and
 spoken-channel machinery. It is implemented by `/app/reception`,
@@ -24,8 +39,7 @@ health, or reset behavior.
   route-local copy.
 
 The public kiosk route is intentionally not protected by dashboard auth. It is
-served only when the backing widget exists, is active, and has `kioskEnabled`
-set.
+served only when the backing widget exists, is active, has `kioskEnabled` set and the company effectively has the Reception module.
 
 ## Convex API
 
@@ -143,9 +157,9 @@ Current limits are:
 - `VOICE_TURN_MAX_LENGTH = 4000`
 
 Thread minting records `RATE_LIMITED_KIOSK_THREADS` once when the hourly thread
-ceiling is crossed. A widget can hold only one pending or active voice session.
-The hourly count advances only when the relay redeems the ticket and opens a
-real provider session; close releases the active lease and expiry is its
+ceiling is crossed. A widget can hold one active redeemed voice lease. Ticket issuance holds no shared pending slot.
+The hourly count advances when the relay redeems the ticket, before the Vertex
+connection succeeds; close releases the active lease and expiry is its
 backstop. Heartbeats are accepted at most once per interval.
 
 ## Tests And Verification
@@ -153,7 +167,7 @@ backstop. Heartbeats are accepted at most once per interval.
 Focused coverage lives in:
 
 - `convex/kiosk.test.ts` for opt-in gating, token access, transcript writes,
-  session reservation, hourly ceilings, audit logging, message caps, and
+  ticket/lease admission, hourly ceilings, audit logging, message caps, and
   heartbeat throttling
 - `src/app/(dashboard)/admin/_features/widget-config/WidgetConfigSections.test.tsx`
   for the Receptionist screen switch, link, last-seen timestamp, and count
@@ -178,4 +192,18 @@ Preserve these invariants:
 - Kiosk session/thread minting must remain bounded per widget.
 - Each completed kiosk voice turn spends one company-plan message allowance;
   silence and abandoned turns do not.
-- Spoken voice stays a workspace setting shared with Ask Hakken and phone calls.
+- Spoken voice stays a workspace setting shared with Google Ask Hakken and phone calls.
+
+## Current Capability And Accounting Boundaries
+
+`getKioskConfig`, `createKioskThread`, ticket authorization and relay redemption check the effective Reception module, in addition to widget active/kiosk flags. These public surfaces have their own capability gate and do not inherit a signed-in super-admin bypass. `listMyReceptionScreens` is a module query over at most one hundred company widgets. Heartbeats are public widget-ID calls and are throttled, not proof of a valid voice conversation or device identity.
+
+`authorizeKioskVoiceTicket` checks the existing active lease and session window, increments only the per-thread ticket counter and returns. Legacy `kioskVoicePending*` fields do not reserve capacity. The action performs provider/relay configuration checks before this ticket reservation, then assembles instructions and signs. Later prompt/ticket failure can still consume a per-thread ticket attempt; do not describe every failed mint as leaving every counter untouched.
+
+`redeemVoiceTicketInternal` validates widget/thread/company and kiosk source identity, effective module, lease and hourly count in one mutation. It increments lifetime/hourly session counters and creates the active ticket lease before the relay connects to Vertex. Admitted sessions are not completed conversations. Redemption scans a bounded expired-record batch, refunding an eligible unfinished quota reservation and releasing matching widget leases. Expiry is a backstop, not instantaneous cleanup at a universal wall-clock deadline.
+
+`controlKioskVoiceTurn` requires the next integer turn index, makes repeated begin calls for the same pending turn a no-op, resolves chat quota on the kiosk thread, and increments allowance transactionally. Complete settles that exact pending turn; close conditionally refunds a remaining company reservation and records usage. These turn IDs do not deduplicate browser transcript writes. The transcript handler checks existing message count before inserting up to two rows, so a count of 399 can become 401; it does not enforce a strict final maximum of 400.
+
+`recordKioskVoiceTurn` uses token/thread access and stores each nonempty side with Google provider attribution, while failed browser persistence is caught. Reset discards browser references and closes tracks/sockets; it does not purge the saved conversation. The one-hour thread/session windows, per-thread ticket allowance and fifteen-minute relay life are distinct from data retention. No complete dedicated kiosk purge path was established here.
+
+The daily reload runs on an hourly timer and reloads only when device-local hour is three and phase is idle, rather than promising an exact 03:00 event. The silence prompt/reset timers and one-minute heartbeat were inspected from current page source. No browser or audio session was run. Existing tests are source evidence only, and coordinated live backend/relay behavior remains unverified.

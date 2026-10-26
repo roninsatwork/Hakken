@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Run observatory
+audience: developers and operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/run-observatory.md
+last_reviewed: '2026-10-26T15:01:33+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Run Observatory Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Run observatory
+> **Reviewed:** 26 October 2026, 15:01:33 GMT (Europe/London)
+> **Source path:** `docs/developer/run-observatory.md` · **Status:** Current
 
 The run observatory is the sampled operations view for recent agent execution health. It aggregates run status, failure reasons, cost, tokens, latency, model usage, agent activity, tool risk, and recent run evidence so operators can spot release regressions and runtime incidents quickly.
 
@@ -44,7 +59,7 @@ Tool calls are sampled from the most recent 60 sampled runs, with up to 20 tool 
 
 - `scope`: `platform` for super admins or `company` for company admins.
 - `lookbackDays`, `sampledRuns`, and `sampledToolCalls`.
-- `totals`: sampled run count, successful runs, failed runs, active runs, cost in GBP, input/output tokens, success rate, and average completed latency.
+- `totals`: sampled run count, successful runs, failed runs, active runs, cost in USD, input/output tokens, success rate, and average completed latency.
 - `statusCounts`: counts for `QUEUED`, `RUNNING`, `PENDING_APPROVAL`, `SUCCESS`, `FAILED`, and `CANCELLED`.
 - `triggerCounts`: counts by trigger type.
 - `modelStats`: top sampled models by run count with failures and cost.
@@ -134,3 +149,13 @@ npm run check
 npm run build
 git diff --check
 ```
+
+## Current Service Ownership And Scope Differences
+
+The handler delegates to `agentObservabilityService.ts:readRunObservatory`; the aggregation is not embedded entirely in `agentRuns.ts`. It defaults to seven days and 120 runs, clamps lookback to one through ninety, samples statuses separately for super-admin, and slices the merged sample by recency. Tool evidence comes from bounded per-run reads and an overall 300-call budget. A small number of recent runs can dominate the tool sample; it is not a uniformly sampled account-wide tool audit.
+
+For non-super-admin callers, this service uses `user.companyId` for run selection. That is distinct from the active-company helper used by System Health and other impersonation-aware projections. Preserve the actual branch in troubleshooting rather than claiming every subpanel necessarily shares identical workspace resolution. Ordinary ADMIN without a company is refused. The role wrapper and service branch must both be read before extending platform-reader access.
+
+Totals sum saved `costUsd`, input/output tokens, statuses and completed latency within the retained sample. A success rate and average latency describe that sample and denominator, not every historical request or a service-level guarantee. Canceled/failed/active runs have different contributions. Model/agent/trigger summaries can help locate a pattern but do not establish that a model change caused it. Open the linked durable run and tool-call evidence before acting.
+
+Health combines this sampled run panel with a separate local operational report. Neither panel replays jobs, refreshes provider measurements, or repairs states on read. Alert delivery is independently queued through the Outbox. Source tests validate bounded examples and aggregation math without proving production telemetry completeness. This documentation pass did not execute a run, generate a model response, cancel/replay work, send an alert, or contact an external service.

@@ -1,9 +1,12 @@
 import { v } from "convex/values";
+import { memoryNow } from "./utils/stepMemory";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { prepareDecisions, runDecisions, type DecisionResult } from "./decisionActions";
 import { PAGE_SLOTS } from "./fanOutPageJudge";
+import { failureSummary } from "./roleRuns";
+import { appError } from "./utils/appError";
 import { insightsStepArgs } from "./insightsAsk";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { applyChosen, offeredReading, ownerQuestions, pickedPages, picksDue } from "./utils/insightCompetingJudge";
@@ -32,8 +35,8 @@ export const OWNER_DECISION = "seo.angle-page";
 const AT_ONCE = 16;
 /** A picking step asks for this long, then hands on to itself: well inside the ten minutes an action lives. */
 const PICK_FOR_MS = 7 * 60 * 1000;
-/** Picking steps a week, at most: a website's searches never need more. */
-export const MOST_PICK_ROUNDS = 6;
+/** Two successive steps without progress stop a refusal without limiting a large site's completed work. */
+const OWNER_STALLS = 2;
 
 /** The website and place its rankings are read for. */
 export const judgeTarget = internalQuery({
@@ -52,6 +55,7 @@ export const picksFor = internalQuery({
   args: { holdId: v.id("companyWebsites"), searches: v.array(v.string()) },
   returns: v.array(pickValidator),
   handler: async (ctx, args) => {
+    if (args.searches.length > 50) throw appError("INVALID_INPUT", "Read at most 50 saved search picks at once.");
     const out = [];
     for (const search of new Set(args.searches)) {
       const row = await ctx.db.query("insightSearchPicks").withIndex("by_hold_search", (q) => q.eq("companyWebsiteId", args.holdId).eq("search", search)).first();
@@ -84,35 +88,35 @@ export const savePicks = internalMutation({
  * its time ran out first.
  */
 export const pickWebsite = internalAction({
-  args: { ...insightsStepArgs, watchId: v.id("_scheduled_functions"), pagesChanged: v.array(v.object({ kind: v.string(), page: v.string() })), round: v.optional(v.number()) },
+  args: { ...insightsStepArgs, watchId: v.id("_scheduled_functions"), pagesChanged: v.array(v.object({ kind: v.string(), page: v.string() })), round: v.optional(v.number()), ownerRemaining: v.optional(v.number()), ownerStalls: v.optional(v.number()) },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    const { watchId, pagesChanged, round = 1, ...run } = args;
-    let done = true;
-    try {
-      done = await pickOwners(ctx, run, round);
-    } catch (error) {
-      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: run.runId, companyId: run.companyId, heading: "Pages for each search", detail: error instanceof Error ? error.message.slice(0, 500) : "Could not pick.", failed: true });
-    }
-    const again = !done && round < MOST_PICK_ROUNDS;
-    await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...run, step: again ? "PICK" : "DECIDE", cancelWatchId: watchId, pagesChanged, round: round + 1 });
+    const { watchId, pagesChanged, round = 1, ownerRemaining, ownerStalls = 0, ...run } = args;
+    let left = 0;
+    let problem: string | null = null;
+    try { left = (await pickOwners(ctx, run, round)).left; }
+    catch (error) { problem = failureSummary(error); }
+    const stalled = ownerRemaining !== undefined && left >= ownerRemaining ? ownerStalls + 1 : 0;
+    const again = !problem && left > 0 && stalled < OWNER_STALLS;
+    if (!again) await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: run.runId, companyId: run.companyId, stage: "Search ownership", detail: problem ?? (left ? `${left} searches remain after two steps without progress.` : "Every due search has a recorded choice, or its decision is switched off."), failed: problem !== null || left > 0 });
+    await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...memoryNow(), ...run, step: again ? "PICK" : "GROUPS", cancelWatchId: watchId, pagesChanged, ...(again ? { round: round + 1, ownerRemaining: left, ownerStalls: stalled } : {}) });
     return null;
   },
 });
 
 /** One picking step's asking; true when every search due was asked. */
-async function pickOwners(ctx: ActionCtx, run: { runId: Id<"agentRuns">; companyId: Id<"companies">; holdId: Id<"companyWebsites">; host: string }, round: number): Promise<boolean> {
+async function pickOwners(ctx: ActionCtx, run: { runId: Id<"agentRuns">; companyId: Id<"companies">; holdId: Id<"companyWebsites">; host: string }, round: number): Promise<{ left: number; total: number }> {
   const prepared = await prepareDecisions(ctx, { keys: [OWNER_DECISION], companyId: run.companyId });
-  if (prepared.modes[OWNER_DECISION] !== "ACT") return true;
+  if (prepared.modes[OWNER_DECISION] !== "ACT") return { left: 0, total: 0 };
   const [competing, business, target] = await Promise.all([
-    ctx.runQuery(internal.insightCompeting.groupsForRun, { holdId: run.holdId }),
+    ctx.runAction(internal.insightCompeting.groupsForRun, { holdId: run.holdId }),
     ctx.runQuery(internal.holdProfiles.describeHoldForJudgingInternal, { companyWebsiteId: run.holdId }),
     ctx.runQuery(internal.insightCompetingJudge.judgeTarget, { holdId: run.holdId }),
   ]);
-  if (!competing || !target) return true;
+  if (!competing || !target) return { left: 0, total: 0 };
   const started = Date.now();
   const questions = [...new Map(competing.groups.flatMap((group) => ownerQuestions(group, PAGE_SLOTS.length)).map((question) => [question.search, question])).values()];
-  const held = await ctx.runQuery(internal.insightCompetingJudge.picksFor, { holdId: run.holdId, searches: questions.map((question) => question.search) });
+  const held = await readPicks(ctx, run.holdId, questions.map((question) => question.search));
   const picks = new Map(held.map((pick) => [pick.search, pick]));
   const due = picksDue(questions, picks, started);
   const pages = [...new Set(competing.groups.flatMap((group) => group.pages.map((page) => page.path)))];
@@ -154,7 +158,14 @@ async function pickOwners(ctx: ActionCtx, run: { runId: Id<"agentRuns">; company
     detail: `The decision model ("Which page answers this search?")${round > 1 ? `, step ${round},` : ""} was asked ${asked} of ${due.length} searches whose page it hadn't picked for the pages Google shows now, and was sure of ${sure}; ${questions.length - due.length} were kept from before.${left > 0 ? ` ${left} are asked in the next step.` : ""}`,
     failed: false,
   });
-  return left === 0;
+  return { left, total: due.length };
+}
+
+async function readPicks(ctx: ActionCtx, holdId: Id<"companyWebsites">, searches: string[]): Promise<Array<typeof pickValidator.type>> {
+  const out: Array<typeof pickValidator.type> = [];
+  const unique = [...new Set(searches)];
+  for (let at = 0; at < unique.length; at += 50) out.push(...await ctx.runQuery(internal.insightCompetingJudge.picksFor, { holdId, searches: unique.slice(at, at + 50) }));
+  return out;
 }
 
 export type OwnerTally = { chosen: number; changed: number; unsure: number };
@@ -169,7 +180,7 @@ export async function ownerJudge(ctx: ActionCtx, run: { companyId: Id<"companies
   const prepared = await prepareDecisions(ctx, { keys: [OWNER_DECISION], companyId: run.companyId });
   if (prepared.modes[OWNER_DECISION] !== "ACT") return null;
   const searches = groups.flatMap((group) => group.searches.map((search) => search.search));
-  const picks = new Map((await ctx.runQuery(internal.insightCompetingJudge.picksFor, { holdId: run.holdId, searches })).map((pick) => [pick.search, pick]));
+  const picks = new Map((await readPicks(ctx, run.holdId, searches)).map((pick) => [pick.search, pick]));
   const tally: OwnerTally = { chosen: 0, changed: 0, unsure: 0 };
   const judge = (group: CompetingGroup) => {
     const { chosen, unsure } = pickedPages(ownerQuestions(group, PAGE_SLOTS.length), picks);

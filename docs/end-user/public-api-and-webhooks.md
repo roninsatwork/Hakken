@@ -1,6 +1,21 @@
+---
+product: Hakken
+documentation_type: User guide
+feature_area: public API keys, run triggers and webhook foundations
+audience: integration owners, developers and platform operators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/public-api-and-webhooks.md
+last_reviewed: '2026-10-26T10:39:47+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Public API And Webhooks
 
-Hakken includes tenant-scoped API keys, public run-trigger endpoints, public run-status lookup, and webhook delivery monitoring. These features are intended for governed integrations rather than everyday chat use.
+> **Product:** Hakken · **Document type:** User guide · **Feature area:** Public API keys, run triggers and webhook foundations
+> **Reviewed:** 26 October 2026, 10:39:47 GMT (Europe/London)
+> **Source path:** `docs/end-user/public-api-and-webhooks.md` · **Status:** Current
+
+Hakken includes tenant-scoped API keys, public run-trigger endpoints, public run-status lookup, and an internal outbound webhook foundation. These features are intended for governed integrations rather than everyday chat use.
 
 ## API Keys
 
@@ -43,7 +58,7 @@ API key creation and revocation are also recorded in audit logs.
 
 ## Webhook Deliveries
 
-Webhook deliveries have no listing screen. The delivery engine — queueing, dispatch, retry backoff and per-attempt recording — is built and works, but nothing queues a delivery and there is nowhere in the product to register a destination URL, so the log could never contain anything. The screen was removed rather than left showing an empty log of an event that cannot happen. To make webhooks real: give a company somewhere to store a destination, and call `recordQueuedInternal` when a run finishes.
+Webhook deliveries have no listing screen. The repository contains an internal delivery engine for queueing, dispatch, retry backoff and per-attempt recording; live operation was not verified, but nothing queues a delivery and there is nowhere in the product to register a destination URL, so the log could never contain anything. The screen was removed rather than left showing an empty log of an event that cannot happen. To make webhooks real: give a company somewhere to store a destination, and call `recordQueuedInternal` when a run finishes.
 
 ## Operating Guidance
 
@@ -54,6 +69,38 @@ Use narrow scopes and rotate keys deliberately. For production integrations:
 - use an expiration when the integration is temporary
 - keep the one-time secret in the external system's secret manager
 - revoke keys instead of sharing or reusing them across environments
-- monitor public request logs and webhook delivery status after launch
+- review authorized request and run evidence after launch; there is no current outbound delivery monitor
 
-For webhook incidents, start with failed, abandoned, and retry-scheduled deliveries. Check the destination URL, last HTTP status, last error, attempt count, and next retry time before increasing integration volume.
+An operator investigating internal delivery records can distinguish failed attempts, retry scheduling and abandonment. The product does not currently offer a destination-registration or delivery-monitor screen. Do not send a customer to a screen that is absent.
+
+## Choose The Right Integration Path
+
+The API-key flow creates work inside the key's company. It is useful when a trusted external system should ask an existing tenant-owned agent or webhook workflow to run. It does not create a company, choose a different tenant dynamically, or expose a global assistant through a tenant key. The normal key editor is a platform Admin settings route. Backend key management supports company-scoped admin checks, but that is not evidence that company admins can enter platform Admin; arrange configuration with the authorized platform operator.
+
+The editor initially selects agent execution and run reading, opens the request limit at sixty per minute, and suggests an expiry about a year ahead. These are form defaults rather than a guarantee that every existing key has them. A super admin chooses the company deliberately. Give the key a useful name so its prefix, purpose and eventual revocation can be understood without storing the secret in an audit note.
+
+A key can carry workflow execution permission without receiving a public workflow status endpoint. The current `run-status` endpoint reads agent runs only. An agent trigger returns a run id and polling URL; a workflow trigger returns an execution id and status but no equivalent public polling URL. Do not put a workflow execution id into the agent run-status address and expect a workflow result. Use the authorized workflow execution screen or agree a separate integration design if an external system needs completion evidence.
+
+## Accepted Does Not Mean Completed
+
+A successful trigger responds with HTTP 202. For agents, that means the run row was queued and a background runtime step scheduled. For workflows, it means an execution row exists and startup was scheduled; a RUNNING response is not a proof that every step finished. The downstream system can still wait for approval, encounter missing configuration or fail. Check the returned run/execution evidence before reporting a business outcome such as a sent email or completed external action.
+
+Repeated trigger requests are not protected by a supplied idempotency key in this inspected API. If the client loses the response after a successful request, blindly posting again can create a second run. An integration owner needs to distinguish a deliberate new request from an uncertain prior result and keep the returned identifiers. Polling agent status also consumes the key's rate allowance, so do not poll in a tight loop or assume read-only requests are free of the request ceiling.
+
+POST bodies are bounded at 128 KiB before JSON is accepted. The shorter feature-specific character limits still apply: four thousand characters for an agent objective and twenty thousand for the resulting workflow input. Workflow JSON values other than strings are serialized to text before the runtime receives them. The raw webhook workflow path uses a different body limit and secret, so payloads that work through one route are not guaranteed accepted through the other.
+
+## Errors, Revocation And Evidence
+
+Authentication failures return 401, a missing scope returns 403, and exceeding the key allowance returns 429. Invalid JSON and required-field failures return 400; an oversized public API body returns 413. A key can authenticate successfully and still fail to create a run because the selected target is missing, inactive, owned elsewhere or unsuitable for public execution. Hakken deliberately does not reveal whether an inaccessible id exists in another company.
+
+The request allowance counts accepted authentication events before payload parsing and business validation. An invalid objective after successful authentication still spends an allowance slot. The request log's AUTHORIZED state therefore means the key was admitted, not that a model completed work or that the final HTTP handler necessarily returned success. Refused-request evidence is sampled to avoid unlimited log growth, so a list of refusals is not a complete count of every attempted request.
+
+Revocation is permanent for that key record and repeated revocation returns the existing revoked state. It stops later authentication but does not cancel work already accepted before revocation. Replace a lost raw secret by creating a new key and revoking the old one through the authorized owner. The digest and prefix stored by Hakken cannot be used to recover the original secret. API-request history and delivery history have their own retention; they are not permanent archives simply because a key remains listed.
+
+## Webhook Readiness And Rename Cutover
+
+The direct workflow webhook accepts a workflow id and `x-hakken-secret` header, rather than a bearer key. It has its own allowance of sixty admitted triggers per workflow per hour and responds with Retry-After when exhausted. A secret in the URL is not accepted as an alternative. This path is incoming automation, separate from outbound callbacks and from provider-specific phone, email or collection webhooks.
+
+The internal outbound dispatcher can optionally sign a payload with Hakken signature and timestamp headers, but absent signing configuration means an unsigned dispatch. Source support does not establish that a customer destination exists or that any completed run currently queues a callback. No normal producer calling the queue functions was found in the inspected non-test backend. Do not promise automatic completion callbacks or a working delivery subscription based on those helper functions alone.
+
+PRODUCT.md section 33 records accepted rename cutover issues for external receivers and protocol names. A receiver still expecting old headers, metadata or deployment addresses needs its own coordinated acceptance work. This documentation pass read handlers, key management, workflow admission and dispatch code; it did not issue a key, make an HTTP request, contact a receiver or establish deployed provider acceptance. Share current [developer integration details](../developer/public-api-and-webhooks.md) with the responsible engineer and keep live validation separate from source review.

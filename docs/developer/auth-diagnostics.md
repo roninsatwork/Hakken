@@ -1,4 +1,20 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Auth diagnostics
+audience: developers and support operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/auth-diagnostics.md
+last_reviewed: '2026-10-26T15:16:13+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Auth Diagnostics Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Auth diagnostics
+> **Reviewed:** 26 October 2026, 15:16:13 GMT (Europe/London)
+> **Source path:** `docs/developer/auth-diagnostics.md` · **Status:** Current
+
 
 Auth diagnostics are the support surface for login, magic-link, invite, and provisioning events. They use the `authEvents` table, not the regular `auditLogs` ledger, because these events are troubleshooting evidence for authentication flows rather than privileged admin mutations.
 
@@ -143,3 +159,17 @@ npm run check
 npm run build
 git diff --check
 ```
+
+## Bounded Event Evidence And Current Auth Flow
+
+`authEvents.getRecentAuthEvents` is an admin query. SUPER_ADMIN reads the newest 500 platform events; other permitted callers read up to 500 for the active company or receive an empty list without one. UI search, event/time filters and pagination operate on that returned population. Choosing All means all returned events, not every historical authentication event. Missing an old event in this screen does not prove it was never recorded.
+
+The ledger includes pre-session invite/email attempts that may not carry a company. Company admins do not receive all unscoped events merely because the attempted email resembles their domain. Role, provider, reason and invitation identifiers can be sensitive support evidence. Do not include tokens, raw cookies, auth codes or secret values when adding an event or copying diagnostics into a report.
+
+`recordMagicLinkRequestAttempt` and reservation helpers have their own public-before-session contract and bounded rate checks. They are not a way to provision arbitrary users or bypass invite-only admission. Provider callback/provisioning source is in `authUserProvisioning.ts`, which checks canonical identity/email and records actual admission/refusal events. A started email event or an invite row is weaker than successful callback verification. Simulated dispatch remains explicitly different from a real accepted provider send.
+
+The auth event keep rule is 180 days through the owning purge pipeline, not the 500-row screen limit. An event can exist outside the recent list, and retention cleanup is not proof of provider-side deletion. Local test-auth events have explicit environment guards; documentation review did not create a login, seed a fixture, reserve a send, or test an identity provider.
+
+Read [Authentication](./route-protection-and-authentication.md) for sign-in/control flow and [Company user management](./company-user-management.md) for invitation repair consequences. Source tests cover selected admission and scope cases; they do not certify every production callback, external email delivery, or accepted rename cutover. Diagnostic investigation is observational; actually resending/revoking or changing a role requires the separate operation's authorization.
+
+For support handoff, distinguish event visibility from the user's current session and actual mail delivery. An empty bounded feed cannot prove that an older or unscoped sign-in attempt never occurred.

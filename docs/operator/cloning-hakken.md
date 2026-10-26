@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: cloning-hakken
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/cloning-hakken.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Build a new application from Hakken
+
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** cloning-hakken
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/cloning-hakken.md` · **Status:** Current
 
 A copy contains the framework and Arcade. The optional demo modules — Posture
 Studio, Properties, Sales Reports and Sales Data — were stripped from Hakken on
@@ -51,9 +66,7 @@ its contributions to shared files. Shared packages stay when the framework needs
 them: for example, Three.js serves Arcade, ZIP handling serves the wiki, and
 chart export is shared.
 
-Generic Apify jobs remain available without Properties. Calls, email and the wiki
-remain available without Sales Data; customer matching then returns no match.
-When Sales Data is included, the existing company-scoped CRM lookup is retained.
+Generic Apify jobs, Calls, email and the wiki remain in the base. The removed Sales Data module cannot currently be selected or restored with `--keep`; historical CRM-related helper/schema references are not evidence of an available customer module.
 
 Translations, navigation snapshots and quality ratchets are adjusted for the code
 removed. The source limits are never increased by packaging. The copied lockfile
@@ -91,7 +104,7 @@ For repeatable local packaging checks from the full source:
 ```bash
 npm run template:verify
 npm run template:verify -- --matrix --browser
-npm run template:verify -- --case salesReports
+npm run template:verify -- --case base
 ```
 
 The first command installs, runs the source guards/lint/types/tests and builds a
@@ -102,7 +115,7 @@ base copy, using fixtures and port 3100. These checks use
 placeholder backend URLs, do not deploy, and do not prove a customer's live
 provider configuration. Logs and copies are retained in the printed temporary
 directory; successful copies' installed dependencies are removed to save space.
-Use `--case` to recheck one named area independently after a packaging change.
+Use `--case` only with a currently registered case. With the optional registry empty, the available case is `base`; `--matrix` does not revive the four removed areas.
 
 Finish naming, branding, domains, providers, deployment configuration and live
 readiness using the [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md).

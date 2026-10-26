@@ -1,4 +1,22 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: Workflow automation
+audience: authorized workflow administrators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/workflow-automation.md
+last_reviewed: '2026-10-26T14:22:10+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Workflow Automation
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Workflow automation
+> **Reviewed:** 26 October 2026, 14:22:10 GMT (Europe/London)
+> **Source path:** `docs/end-user/workflow-automation.md` · **Status:** Current
+
+
+Core execution entry points, mail queueing, role boundaries, approval expiry and retry policy were refreshed. Detailed designer/node configuration and related runtime guides remain queued for deeper review.
 
 Workflow automation is the part of Hakken where super admins build and schedule automated operational flows. A workflow can connect AI agents, external API calls, data lookups, routing rules, delays, approval checkpoints, repeated item processing, merge points, and email sending. Hakken records workflow runs in backend execution tables, while agent-owned activity is reviewed from the relevant agent screens.
 
@@ -14,7 +32,7 @@ Workflow screens are in the admin area:
 - `/admin/workflows/schedules/new` creates a schedule.
 - `/admin/workflows/schedules/[id]` edits a schedule.
 
-The admin navigation may group these screens with other agentic platform tools. Access is role-based: if a person cannot open the admin workflow pages, they likely do not have the required super-admin role.
+The admin navigation may group these screens with other agentic platform tools. Platform read-only accounts can read the workflow/schedule queries. Creating, editing, running, deleting and deciding workflow approvals require super-admin write/action permissions. Company admins do not manage this area.
 
 ## What Workflows Are For
 
@@ -56,11 +74,11 @@ The available node types are:
 | Database Action | Reads or changes selected Hakken records. |
 | Wait / Delay | Delays downstream steps. |
 | Human Approval | Pauses the run until it is approved from the execution report. |
-| Send Email | Sends or simulates an email depending on email service configuration. |
+| Send Email | Queues a written message through the shared Outbox for later delivery. |
 
 Use the save graph button after changing the canvas. Hakken checks for direct cycles before saving. If the canvas routes backward and could loop forever, Hakken rejects the save and shows an in-app message. Use the iterator node when the goal is repeated work over a list.
 
-The manual run button starts the real workflow graph from the builder. It creates an execution record and queues the first node or nodes. Open Workflow Runs under Agents to inspect progress and results.
+The manual run button starts the real workflow graph from the builder. It creates an execution record and queues the first node or nodes. Open `/admin/workflows/executions` and its individual execution report to inspect graph steps; agent runs have their own linked evidence.
 
 ## Configuring Triggers
 
@@ -83,7 +101,7 @@ An AI Agent node can use an inline agent that belongs to the workflow or an exis
 
 For most operators, the mapping tab is the practical starting point. You can describe what data should be sent to the agent and let Hakken generate a mapping, or switch to developer mapping to bind values manually. The advanced engine tab is more technical and should be changed carefully because it controls the actual model behavior and the shape of data expected from the agent.
 
-Workflow agent execution currently requires the resolved workflow or agent model to be compatible with the Google Vertex runtime path. Treat non-Vertex providers in the model catalog as available for the surfaces that already support them, not as a guarantee that workflow agent nodes can execute with them.
+Agent execution resolves configured models through supported provider adapters, currently Google Vertex, Anthropic, OpenAI and OpenRouter. Google internet grounding remains a narrower Vertex capability. Provider support does not guarantee that every model accepts every input or tool; TypeSafe decision models cannot run an agent.
 
 AI-generated mapping is intended for short, specific configuration help. Very long prompts, oversized graph context, or repeated rapid generation attempts can be rejected before Hakken calls the AI provider. The mapping helper currently uses the platform global workflow model setting rather than a tenant-specific model override. If generation fails, shorten the request, configure the mapping manually, or wait before trying again.
 
@@ -97,9 +115,9 @@ Database Action nodes read or change selected Hakken records. These are powerful
 
 Logic Router nodes compare values and choose a downstream branch. They are useful for paths such as "if the score is high, continue to approval; otherwise send a summary." Merge nodes bring branches together. A merge can wait for all required upstream branches or continue when any one branch succeeds, depending on configuration. Iterator nodes turn a list into repeated downstream steps, one per item. Wait nodes add a delay before downstream nodes are scheduled.
 
-Human Approval nodes pause a run. When a run reaches an approval node, the execution report shows the step as needing approval. The current admin report exposes an approve-and-resume action. Approval allows downstream steps to continue. Rejection behavior exists in the backend, but the current report screen presents the approval path as the visible action.
+Human Approval nodes pause a run. When a run reaches an approval node, the execution report shows the step as needing approval. The current execution report exposes approval and rejection. Approval resumes downstream work; rejection requires confirmation and fails the workflow execution. This differs from rejecting an agent tool call, which can let the agent continue another way. Only a super admin can perform these workflow decisions.
 
-Send Email nodes build an email from configured fields and workflow data. If Hakken's email service is configured, the node sends through that service. If it is not configured in the environment, the run records a simulated email output so admins can still test the workflow path without sending a real email.
+Send Email nodes render the subject/body from configured fields and workflow data, then queue messages in the Outbox. The step reports queueing rather than recipient delivery. Sender configuration, preferences, provider readiness and later queue processing determine delivery. A workflow success is not proof of an email arriving; see [Emails](./emails.md) for the delivery lifecycle.
 
 ## Standalone Schedules
 
@@ -107,7 +125,7 @@ The schedule list is separate from the workflow builder. It can schedule either 
 
 Creating a schedule starts with a name, a target type, a selected target, schedule timing, and the active or paused state. Target type can be workflow graph or autonomous agent. The screen defaults to agent mode, so switch to workflow graph when you intend to schedule a workflow. You can search available workflows or agents and select one.
 
-Schedule timing supports recurring and targeted-time modes. Recurring schedules can run hourly, daily, weekly, or monthly. Targeted-time schedules can contain one or more local times. The builder shows the local time and a UTC preview so operators can check whether the schedule lines up with the expected dispatch time. Hakken stores schedule configuration in a versioned format and calculates the next run time from it.
+Schedule timing supports recurring and targeted-time modes. Recurring schedules support hourly, daily, weekly, fortnightly and monthly timing. A fortnightly schedule uses an anchor date so missed dispatches do not silently change which week it belongs to. Targeted-time schedules can contain one or more local times. The builder shows the local time and a UTC preview so operators can check whether the schedule lines up with the expected dispatch time. Hakken stores schedule configuration in a versioned format and calculates the next run time from it.
 
 The active toggle is important. Active schedules are armed and can run when their next run time arrives. Paused schedules remain saved but should not dispatch. Editing a schedule lets you change the target, cadence, timing, and active state. Deleting a schedule removes the schedule.
 
@@ -134,3 +152,29 @@ For webhook operations, verify the endpoint, workflow id, active status, trigger
 For approvals, open Workflow Runs. A run waiting on a person is flagged there and counted on the sidebar. Opening it shows what the approval node is asking, and its preview, with approve and reject on the waiting step. Approving resumes the downstream path; rejecting stops the whole run. An approval nobody answers expires on the platform window and the run is marked failed. Failed runs should be inspected from the step list before being retried.
 
 Workflow automation connects to the rest of Hakken through agents, models, settings, knowledge, database records, email branding, and logs. Changes in those areas can affect workflow behavior. For example, an inactive agent may prevent a scheduled agent run, missing email configuration may make email nodes simulate rather than send, and model settings can affect agent node output. Treat workflows as operational assets that need periodic review, especially after changing agents, model configuration, external endpoints, or company data structures.
+
+## Current Execution And Recovery Boundaries
+
+Workflow Human Approval steps share the platform approval window, normally twenty-four hours. A scheduled sweep checks them every fifteen minutes. Expiry fails the halted workflow execution and its waiting approval steps; it never grants permission automatically. This workflow path reads the platform window rather than a per-agent override. The sweep is bounded, so the exact moment a waiting execution changes state can be later than its deadline. Check the execution report before acting from an older browser tab.
+
+Webhook requests are limited after the secret is verified. A workflow can reserve at most sixty webhook starts in a rolling hour; an exhausted allowance returns a rate-limit response with retry timing. Invalid-secret calls do not consume that workflow allowance. The bounded input reader rejects oversized request bodies. A successful HTTP response contains an execution ID; it is not a final graph-completion or delivery certificate. Keep webhook secrets out of URLs, documentation examples, screenshots and ordinary logs.
+
+The designer's manual Run starts the graph, while Force run on a workflow schedule still creates a simulated completion record. Choose the correct entry point when gathering evidence. For agents, the Run/Force run path starts durable agent work and resolves specialized role jobs separately. The Assistant is not a standalone scheduled worker: its manual-run path refuses a run without a person asking a conversational question.
+
+Automatic retries apply only to a transient failure on an eligible agent node, with no evidence that its first attempt already acted externally. They do not undo earlier steps. API actions, writes, mail queueing and other side effects fail for review rather than being universally repeated. When deciding whether to retry a failed workflow manually, inspect completed steps and any outbox rows first. Starting a fresh execution can repeat those effects even if a prior execution later failed.
+
+The backend also implements a task node that creates a generic company task using the workflow creator's company. The reviewed node-library UI did not expose that node, so this is not documented as an available drag-and-drop choice. It is distinct from personal Hakken recurring tasks. A workflow with no creator company cannot raise such a task and reports the missing workspace. Internal implementation is not enough to promise a complete customer workflow.
+
+This refresh checked workflow CRUD and webhook handlers, graph dispatch, schedule/manual entry points, node dispatch, database authorization, approval decisions/expiry and retry policy. It did not launch a graph, send a webhook, buy provider data or deliver mail. Existing collection-specific guidance is linked from [Collection Operations](../operator/collection-operations.md), while the large runtime and node-configuration internals remain a separate detailed review. No local result in this pass establishes deployment or external rename cutover acceptance.
+
+## Saving Detailed Node Configuration
+
+Node drawer edits change the canvas configuration. Save the workflow before using Manual Run to check those changes: the run button dispatches the saved graph and does not automatically save pending edits. Record which saved configuration produced a result when reviewing a failure with another administrator. A successful mapping-generation message also does not establish that a real run used the newly generated fields.
+
+Standard-mode mapping assistance turns a short description and available node information into mapping/template strings. Review the generated references before saving. Developer mapping uses saved node identifiers and output paths, rather than the node's friendly name alone. A missing string path can become an empty value, so check actual step output when a downstream message loses information. The helper has limits on prompt/context size, available nodes, and request frequency; repeated generation is model work and can cost money.
+
+Iterator nodes refuse lists larger than 100 items instead of silently completing part of the list. Each item gets a separate downstream step, but a shared node's displayed output is not necessarily a full list of all item results. Use step evidence to understand what happened to each item, particularly around merge nodes or approvals.
+
+There is a current email limitation when one email node repeats within the same execution. Its queued-message identity uses the execution and node, without the individual item index. Distinct iterations can therefore be treated as the same queued email and suppressed. Do not rely on an iterator around one email node as verified bulk delivery. This needs a separate application fix; the documentation loop does not alter the sending contract. An email step completing means it reached the Outbox path, not that every intended recipient received a message.
+
+A human-task node creates an assignment or follow-up in the workflow's workspace, and refuses a workflow with no usable workspace context. It does not do that person's task automatically. Treat database changes, external actions, emails, and tasks as real effects when reviewing a graph; an execution preview or configuration helper is not universal simulation. The retained [runtime guide](../developer/workflow-runtime-internals.md) explains the implementation and the current repeated-email limit.

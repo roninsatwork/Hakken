@@ -1,4 +1,20 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Tenant feature generator
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/feature-generator.md
+last_reviewed: '2026-10-26T15:05:19+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Build a feature after cloning
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Tenant feature generator
+> **Reviewed:** 26 October 2026, 15:05:19 GMT (Europe/London)
+> **Source path:** `docs/developer/feature-generator.md` · **Status:** Current
+
 
 The feature generator creates a working, company-scoped administration feature
 in a cloned product. It previews by default and writes local files only with
@@ -146,3 +162,23 @@ the registry; the generator refuses to replace custom edits to those files.
 Review product-specific rules, retention/export/deletion responsibilities, audit
 requirements and domain translations before storing real customer data. The
 scaffold does not invent those policies from field names.
+
+## Current Implementation And Review Boundaries
+
+These procedures describe local creation tools for an explicitly requested new product or feature. They are not authorization to generate application files during Hakken documentation maintenance. This run inspected scripts only: it did not create a clone, apply a recipe, generate a schema, install dependencies, write product defaults, create tenants or deploy anything. The current Hakken repository and its separate upstream remain distinct identities.
+
+`template.verticals.json` currently has no optional vertical definitions; base and Arcade are retained. Older instructions describing four opt-in application areas or restored Sales/Properties/movement routes do not match this checkout. Residual schema/callback compatibility must be inspected independently, and absence of a screen does not authorize deletion of historical records.
+
+Agent setup uses the current scratch Add page sharing Settings sections. The retained template API and local demo seed are different entry points, not proof the old guided builder is available. Passed evals and release policy are readiness advice in the current activation path. A recommended review checklist should never be presented as backend refusal unless the source actually enforces it.
+
+Stored configuration and catalog capability do not prove live integration acceptance. General text adapters include Google Vertex, OpenAI, Anthropic and OpenRouter; TypeSafe is Decision-only, and specific media/grounding/embedding jobs have narrower requirements. Live voice and phone paths must follow [Spoken channels](./spoken-channels.md), while Gmail mailbox polling is retired. Do not revive old features because a retained generic connector/configuration key still exists.
+
+For a real implementation task, use current [AGENTS.md](../../AGENTS.md) gates including coverage and browser smoke where required, rather than an abbreviated gate list copied into an old checklist. Product intent/acceptance changes need their own agreement. Local source/tests, generated test files and a passing configuration validator are separate from a deployed provider/account accepting the actual customer workflow.
+
+## Preview Integrity And Generated Contracts
+
+`scripts/generate-entity.mjs` parses arguments, builds a plan and prints the source edit list. Default invocation is preview; `--apply` calls `applyEntity`. The model accepts string, finite number, boolean, calendar-date and reference fields, with at most twenty fields and a required string label/search field. Unknown, reserved or duplicate field/entity names refuse planning rather than produce ambiguous schema. A reference targets a known generated table; it is not permission to join arbitrary private tables.
+
+The planner records each file's before state, rejects path/symlink collisions and stale shared generator contracts, then validates all before values again before and during application. New files use exclusive publication and existing edits use temporary replacement. A caught application failure restores earlier writes and removes directories created by that apply where possible. This protects ordinary local failures; it is not a guarantee against power loss or unrelated concurrent changes outside planned targets.
+
+Generated records carry company ownership, timestamps and edit revisions. Relationship guards reject foreign-company links and block deleting a referenced parent. Updates/deletes require the expected revision, so a stale form should receive a conflict instead of overwriting another editor's work. Generated tests demonstrate these intended contracts but must actually run in the new product before release. Generation installs no runtime database rows, provider connection or public customer portal.

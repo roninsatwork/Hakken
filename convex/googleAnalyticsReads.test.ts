@@ -94,6 +94,25 @@ function growing(): Visit[] {
   return visits;
 }
 
+type CollectedFixture = Awaited<ReturnType<typeof collected>> & { t: Harness };
+let growingFixture: Promise<CollectedFixture> | undefined;
+
+/**
+ * Read-only tests share one real collection. Repeating the same two-year fill
+ * in every test made this read contract one of CI's longest files without
+ * exercising another path. Tests that change stored data or call Google keep
+ * their own isolated collection below.
+ */
+function collectedGrowing(): Promise<CollectedFixture> {
+  if (!growingFixture) {
+    growingFixture = (async () => {
+      const t = harness();
+      return { t, ...(await collected(t, growing())) };
+    })();
+  }
+  return growingFixture;
+}
+
 const listArgs = { period: "lastMonth" as const, device: "", page: 1, rows: 25 };
 
 beforeEach(() => {
@@ -110,8 +129,7 @@ afterEach(() => {
 
 describe("Overview", () => {
   test("visits, engaged visits, conversions and value against the month before, and what changed most", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
     // 30 days at twice the plain day (32 visits), plus the assistant's one a day.
     expect(overview.now).toMatchObject({ visits: 30 * 33, engaged: 30 * 23, conversions: 30 * (2 + 2 + 1) });
@@ -124,8 +142,7 @@ describe("Overview", () => {
   });
 
   test("the chart: a day a point from the days kept, for the month", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const chart = await user.query(api.googleAnalyticsChartReads.analyticsChart, { siteId, period: "lastMonth", device: "" });
     expect(chart.points).toHaveLength(30);
     expect(chart.events).toEqual(["generate_lead", "click_tel", "sign_up"]);
@@ -135,8 +152,7 @@ describe("Overview", () => {
 
 describe("the standard tables", () => {
   test("Channels: AI assistants a channel of their own, sorted by value, paged on the server", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const channels = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "channel", ...listArgs });
     // Perplexity's visits Google files under Referral are an assistant's too (§4.4).
     expect(channels.rows.map((row) => row.label)).toEqual(["Organic Search", "AI assistants", "Direct"]);
@@ -153,8 +169,7 @@ describe("the standard tables", () => {
   });
 
   test("Landing pages: addresses named, searched by address, with the change on the span before", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
     expect(landing.rows.map((row) => row.label)).toEqual([
       "https://www.acme-shop.test/", "https://www.acme-shop.test/ai-agency/", "https://www.acme-shop.test/contact/",
@@ -177,8 +192,7 @@ describe("the standard tables", () => {
   });
 
   test("a page list for one device is read from what the collection kept, never asked of Google", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const after = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, device: "mobile" });
     expect(after.live).toBe(false);
     expect(after.rows.map((row) => [row.label, row.visits])).toEqual([
@@ -202,8 +216,7 @@ describe("the standard tables", () => {
   });
 
   test("only the caller's own website", async () => {
-    const t = harness();
-    const { siteId, rival } = await collected(t, growing());
+    const { siteId, rival } = await collectedGrowing();
     await expect(rival.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "channel", ...listArgs })).rejects.toThrow("not one your company holds");
     await expect(rival.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" })).rejects.toThrow("not one your company holds");
   });
@@ -211,8 +224,7 @@ describe("the standard tables", () => {
 
 describe("Conversions", () => {
   test("each kind with its count, value each and where it is set, against the span before", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "lastMonth", device: "" });
     expect(conversions.kinds).toEqual([
       { eventName: "generate_lead", count: 60, countBefore: 30, each: 25_000, setIn: "HAKKEN", value: 60 * 25_000, valueBefore: 30 * 25_000 },
@@ -239,8 +251,7 @@ describe("Conversions", () => {
 
 describe("a landing page's own screen", () => {
   test("its figures from the ready-made list, its chart from the page held over time and its channels from those kept, never asked of Google", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
     const page = landing.rows.find((row) => row.label.endsWith("/ai-agency/"))!.key;
     const opened = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page, period: "lastMonth", device: "" }))!;
@@ -361,9 +372,19 @@ describe("Events and an event's own screen (GA30)", () => {
     }));
   }
 
+  let clicksFixture: Promise<CollectedFixture> | undefined;
+  const collectedClicks = () => {
+    if (!clicksFixture) {
+      clicksFixture = (async () => {
+        const t = harness();
+        return { t, ...(await collected(t, [...growing(), ...clicks()])) };
+      })();
+    }
+    return clicksFixture;
+  };
+
   test("every event against the span before, what counts among them, scrolls and link clicks a day", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, [...growing(), ...clicks()]);
+    const { siteId, user } = await collectedClicks();
     const args = { siteId, period: "lastMonth" as const, device: "" };
     const events = (await user.query(api.googleAnalyticsEventReads.analyticsEvents, args))!;
     expect(events).toMatchObject({ preparing: false, live: false });
@@ -387,8 +408,10 @@ describe("Events and an event's own screen (GA30)", () => {
   });
 
   test("an event's figures, its times a day, and what it was about and its pages from what each collection keeps; its funnel asked when it opens", async () => {
-    const t = harness();
-    const { siteId, user, google } = await collected(t, [...growing(), ...clicks()]);
+    const { siteId, user } = await collectedClicks();
+    // Globals are restored after every test, so this test installs its own
+    // Google endpoint while reusing only the read-only collected rows.
+    const google = fakeGoogle([...growing(), ...clicks()]);
     const args = { siteId, event: "click", period: "lastMonth" as const, device: "" };
     const first = (await user.query(api.googleAnalyticsEventReads.analyticsEvent, args))!;
     // What it was about and its pages, kept for every event by each collection (ga-stored-figures-plan.md SF13, SF15).
@@ -478,8 +501,7 @@ describe("Visitors (GA24)", () => {
 
 describe("Live (GA34)", () => {
   test("who is on the website now and the last 30 minutes, from Google's live figures, and nothing kept", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { t, siteId, user } = await collectedGrowing();
     const google = fakeGoogle(growing());
     google.live = [
       { minutesAgo: 1, city: "London", page: "AI Agency", device: "desktop", views: 3 },
@@ -516,8 +538,7 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
   const fields = (answer: unknown) => answer as Record<string, unknown> & { rows?: Array<Record<string, unknown>> };
 
   test("each screen's figures as the screen shows them, with its link; a website not the company's has none", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { t, siteId, user } = await collectedGrowing();
     const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
     const read = async (screen: (typeof ANALYTICS_SCREENS)[number], extra: Record<string, string> = {}) =>
       fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "https://www.acme-shop.test/", screen, period: "lastMonth", ...extra }));
@@ -578,8 +599,7 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
   });
 
   test("Live, asked of Google as the Live page asks it, and kept no more than it is", async () => {
-    const t = harness();
-    const { siteId } = await collected(t, growing());
+    const { t, siteId } = await collectedGrowing();
     const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
     const google = fakeGoogle(growing());
     google.live = [
@@ -630,8 +650,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
   });
 
   test("each list's box is of the whole list, whatever is searched, its pages named by their paths", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const channels = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "channel", ...listArgs, q: "dir" });
     expect(channels.rows.map((row) => row.label)).toEqual(["Direct"]);
     expect(channels.seen.says[0]).toMatchObject({ code: "lead", text: "Organic Search" });
@@ -648,8 +667,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
   });
 
   test("All pages' Views a day: the ticked pages asked of Google in one go, each held by its number, each adding up to its row", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
     const ticked = all.rows.filter((row) => row.key.startsWith("~")).slice(0, 2);
     const args = { siteId, period: "lastMonth" as const, device: "", pages: ticked.map((row) => row.key) };
@@ -689,8 +707,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
   });
 
   test("a device's box weighs it against every device, both kept by the collection", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, growing());
+    const { siteId, user } = await collectedGrowing();
     const answered = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, device: "mobile" });
     expect(answered.seen.says[0]).toMatchObject({ code: "device.mobile", a: 630 });
   });
@@ -765,9 +782,19 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
     ]).flat();
   }
 
+  let routesFixture: Promise<CollectedFixture> | undefined;
+  const collectedRoutes = () => {
+    if (!routesFixture) {
+      routesFixture = (async () => {
+        const t = harness();
+        return { t, ...(await collected(t, routes())) };
+      })();
+    }
+    return routesFixture;
+  };
+
   test("the chart, from what each collection keeps: visits landed, left there and went on, two steps on, conversions where made", async () => {
-    const t = harness();
-    const { siteId, user, google } = await collected(t, routes());
+    const { siteId, user, google } = await collectedRoutes();
     const asked = google.calls.length;
     const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" });
     expect(google.calls.length).toBe(asked);
@@ -784,8 +811,7 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
   });
 
   test("the table: each landing page's visits that went on, and the page most of them opened next, sorted over the whole list", async () => {
-    const t = harness();
-    const { siteId, user } = await collected(t, routes());
+    const { siteId, user } = await collectedRoutes();
     const list = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, sort: "left" });
     // The fewest leaving first: / (60 went on) before /ai-agency/ (none).
     expect(list.rows.map((row) => [row.label.replace("https://www.acme-shop.test", ""), row.visits, row.onward, row.next?.page.replace("https://www.acme-shop.test", "") ?? null])).toEqual([
@@ -797,8 +823,7 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
   });
 
   test("only the caller's own website", async () => {
-    const t = harness();
-    const { siteId, rival } = await collected(t, routes());
+    const { siteId, rival } = await collectedRoutes();
     await expect(rival.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" })).rejects.toThrow();
   });
 });

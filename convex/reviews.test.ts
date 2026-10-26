@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
+import { finishScheduled } from "@/src/test/finishScheduled";
 import {
   GOOGLE_REVIEWS_OPERATION,
   TRIPADVISOR_REVIEWS_OPERATION,
@@ -156,5 +157,7 @@ describe("filing", () => {
     vi.advanceTimersByTime(60_000);
     await fileAnswer(t, "17195342752822652591", items);
     expect((await partsOf(t, officeId))[0].updatedAt).toBe(own.updatedAt);
+    // Advancing the clock started the reply writer: it must finish before its test environment disappears.
+    await finishScheduled(t);
   });
 });

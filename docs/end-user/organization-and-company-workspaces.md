@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: Organization workspace profile and personal context
+audience: end-user
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/organization-and-company-workspaces.md
+last_reviewed: '2026-10-26T14:58:39+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Organization And Company Workspaces
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Organization workspace profile and personal context
+> **Reviewed:** 26 October 2026, 14:58:39 GMT (Europe/London)
+> **Source path:** `docs/end-user/organization-and-company-workspaces.md` · **Status:** Current
 
 Organization and company workspace screens let tenant admins monitor their own workspace, manage team members, review company-level AI usage, and adjust personal profile information. Super admins also have company detail and white-label settings screens for preparing customer workspaces and branded platform packages.
 
@@ -25,12 +40,12 @@ Super-admin company routes:
 - `/admin/companies/[id]/directory/users` manages company users.
 - `/admin/companies/[id]/directory/invites` manages company invitations.
 - `/admin/companies/[id]/calls` reviews company calls.
-- `/admin/companies/[id]/mailbox` reviews company mailbox messages.
+- The former company Mailbox is retired; use the current communication guides.
 - `/admin/settings` manages platform identity, appearance, security, audit, purge, option, and white-label readiness settings.
 
 ## Organization Dashboard
 
-The organization dashboard shows company-level usage and cost metrics for the current user's company. It includes a timeframe selector with preset and custom ranges, metric cards for monthly recurring revenue, active context, AI cost, and message count, a usage timeline, provider usage, top users, and top agents.
+The organization dashboard shows company-level usage and cost metrics for the current user's company. It includes a timeframe selector with preset and custom ranges, metric cards for monthly recurring revenue, active context, AI cost, and message count, top-user and top-agent views, with current layout limits described below.
 
 If the signed-in user is not linked to a company, the page shows that no organization is linked. If the user is linked to a company, the analytics query is scoped to that company.
 
@@ -83,3 +98,31 @@ White-label readiness compares system settings and active widgets against packag
 For tenant admin work, start in `/app/settings` and `/app/settings/team`. For platform setup or support, start from `/admin/companies/[id]` so the company context is explicit. For platform-wide user review, start from `/admin/users`. For branded deployments, use `/admin/settings` together with the white-label operator guides and widget configuration.
 
 Before deleting a user, revoking an invite, impersonating a company, changing a company prompt, deleting a company, changing a plan assignment, or changing global white-label settings, confirm the active company and role context. These changes can affect access, AI behavior, billing limits, branding, retained data, and customer trust immediately.
+
+## Current Workspace Dashboard And Billing Distinctions
+
+The organization dashboard is a company-scoped view, not platform administration. Its implementation has removed the old dedicated supplier-cost card and usage/provider chart from the main layout; Usage is a separate credits destination. Some leaderboard rows still display their recorded cost values. Read the actual screen and labels rather than assuming every cost field has moved or that every older dashboard description remains accurate.
+
+A recurring value displayed from assigned plans is an estimate based on plan assignment, not verified Stripe collection. Paid company, covered users, available credit balance, model supplier spend and customer revenue answer different questions. Company-admin Billing is `/app/settings/billing`; global setup stays under platform Admin. Do not use an organization's dashboard as a financial acceptance record.
+
+The team, invitation, role and company-deletion details are maintained in [Company workspace administration](./company-workspace-administration.md). In particular, user management and company management have different authority, and selecting a company does not permit editing super-admin privileges. Former company Mailbox routes are retired; the current email and Outbox paths are described separately.
+
+## Personal Notes About You
+
+Profile includes an Assistant Note tab, alongside preferences and other account tabs. These notes are about the signed-in person and how they prefer answers, not the company's shared facts. They travel with the user identity rather than being keyed to the currently selected company. Company knowledge belongs in its Wiki/knowledge workflow, so moving workspaces should not turn a personal preference into another company's business record.
+
+You can list your own active notes, add one, or remove one. The current set is limited to twenty notes, with each saved note normalized and truncated to 300 characters. Duplicate normalized wording is ignored, but attempting to add while the set is already full is refused before that duplicate check. Remove an unwanted entry rather than repeatedly submitting the same note to a full list. Text rejected by the platform's safety patterns cannot be saved as written.
+
+Deletion removes the current personal-note row rather than moving it to an admin-readable archive. The audit records that a note was added or deleted without recording its words. This is narrower than erasing every earlier conversation or provider prompt that may have included it. Historical messages and integrations have their own retention and personal-data workflows.
+
+When platform Autonomous memory is enabled, a periodic process can infer a small number of notes from the user's own recent conversation text. It uses bounded history and a configured model, and successful learning can appear as AI-applied notes. There is no separate administrator queue exposing the content of everyone's personal notes. Company weekly reports can include a count learned without those words.
+
+The prompt layer uses personal notes only for the signed-in asker's own eligible conversations, excluding widget visitor and EVAL-purpose threads at injection. The learning reader explicitly excludes widget threads but does not separately exclude every EVAL-purpose thread in the reviewed selection path. Evaluation ownership and memory-learning scope should therefore be reviewed before claiming all testing conversations are excluded from learning. This documentation records the implementation distinction without changing it.
+
+## Preferences, Profile Identity, And Practical Review
+
+The profile form edits your own name, phone and image; email is a displayed fixed identity field. It does not provide a way to change your platform role or company assignment. Image uploads use the owned upload reservation and two-MiB admin-image policy. A profile photo upload is different from sending a photo for an Assistant action or adding a document to company knowledge.
+
+Theme and language preferences change your presentation, not the product's global stored brand or another user's access. Communication and integration tabs have their own delivery and account-linking contracts, including Telegram. Do not share a personal integration link or widget/session credential as a troubleshooting shortcut.
+
+Use the appropriate layer when correcting behavior: personal preference in Assistant Note, shared company facts in Wiki, active company/agent behavior in its authorized configuration, and profile identity in the account form. This review read source and local test files without updating a profile, sweeping memories, generating a model answer, changing team access, or contacting a provider. Local configuration and a saved guide do not prove external cutover or production acceptance.

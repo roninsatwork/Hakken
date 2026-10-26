@@ -1,12 +1,15 @@
 "use node";
 
+import { memoryNow } from "./utils/stepMemory";
+import { appError } from "./utils/appError";
+
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
-import { ask, factLines, filled, insightsStepArgs, lines, rulesFor, type InsightsRunArgs } from "./insightsAsk";
+import { ASK_LIMIT_MS, ask, factLines, filled, insightsStepArgs, lines, rulesFor, type InsightsRunArgs } from "./insightsAsk";
 import { readWebsiteFacts } from "./insightsReading";
 import { decideForRun } from "./insightDecisions";
 import { writeBoxes } from "./insightBoxes";
@@ -16,7 +19,7 @@ import type { TeamMember } from "./insightsTeam";
 import type { WrittenFinding } from "./insightsRunSteps";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { briefFor } from "./utils/insightBriefs";
-import { factsByKey, shiftDay, type Fact } from "./utils/insightFacts";
+import { FACT_UNITS, factsByKey, shiftDay, type Fact } from "./utils/insightFacts";
 import { typedNumbers } from "./utils/insightEditor";
 import { BOARD_FORMAT, MONTH_FORMAT, SHOP_RULE, SPECIALIST_ROLE } from "./utils/insightTeam";
 import type { Score } from "./utils/insightSummary";
@@ -26,6 +29,7 @@ import { REVIEW_RULES, VERDICTS, funnelFrom, sourcesFrom, verdictByRule, type Ve
 import { missingStructuredData } from "./utils/moneyPageChecks";
 import { ask as askAnalytics, openSession } from "./googleAnalyticsCollect";
 import { journeysOf, type Journey } from "./googleAnalyticsLists";
+import { INSIGHT_AFTER_PARTS } from "./utils/insightRunStages";
 import { assistantOf } from "./utils/aiAssistants";
 
 /**
@@ -41,55 +45,50 @@ type SavedScorecard = Score[];
 
 export const afterWeek = internalAction({
   args: {
-    ...insightsStepArgs,
-    watchId: v.id("_scheduled_functions"),
-    week: v.string(),
-    today: v.string(),
+    ...insightsStepArgs, watchId: v.id("_scheduled_functions"), week: v.string(), today: v.string(),
+    afterPart: v.optional(v.number()), afterAttempt: v.optional(v.number()),
     counts: v.object({ facts: v.number(), candidates: v.number(), written: v.number(), published: v.number(), sentBack: v.number() }),
   },
   returns: v.null(),
-  handler: async (ctx, args) => {
-    const { watchId, week, today, counts, workflowExecutionId, ...run } = args;
-    const failed = (heading: string) => async (error: unknown) => {
-      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: run.runId, companyId: run.companyId, heading, detail: failureSummary(error), failed: true });
-      return null;
-    };
+  handler: async (ctx, args): Promise<null> => {
+    const { watchId, week, today, counts, afterPart = 0, afterAttempt = 0, ...run } = args;
+    const stage = INSIGHT_AFTER_PARTS[afterPart];
+    if (!stage) throw appError("INVALID_INPUT", "Unknown Insights writing step.");
+    let failed: string | null = null;
     try {
-      const runArgs: InsightsRunArgs = { ...run, shop: await ctx.runQuery(internal.insightsReading.isShopInternal, { holdId: run.holdId }).catch(() => false) };
+      const runArgs: InsightsRunArgs = { ...run, shop: await ctx.runQuery(internal.insightsReading.isShopInternal, { holdId: run.holdId }) };
       const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
       const member = (role: string) => setup.members.find((entry) => entry.role === role && entry.isActive);
       const lead = member(INSIGHTS_LEAD_ROLE);
-      const saved = await ctx.runQuery(internal.insightsRunSteps.savedWeek, { holdId: run.holdId, week, runId: run.runId });
       const facts = (await readWebsiteFacts(ctx, run.holdId)).facts;
-      // The newest whole month's tests, for the boxes written for the period a screen opens on.
-      const view: WhyView | null = await ctx.runQuery(internal.insightsPeriod.runView, { holdId: run.holdId }).catch(() => null);
-      const [reports, drafted] = await Promise.all([
-        // 6. The Report Writer (§4.1, §4.2): the week's brief every run; the monthly report and the board report when due.
-        saved?.summary
-          ? writeReports(ctx, runArgs, { week, today, verdict: saved.verdict, findings: saved.findings, summary: saved.summary, facts, writer: member("INSIGHTS_REPORT_WRITER") ?? lead }).catch(failed("Report Writer"))
-          : Promise.resolve(null),
-        // 7. Drafted fixes for what lives off the website (I23, I39): profile changes and posts, review replies, outreach.
-        writeDrafts(ctx, runArgs, week, member(SPECIALIST_ROLE.local) ?? lead, member(SPECIALIST_ROLE.links) ?? lead).catch(failed("Drafts")),
-        // 8. The buyer-question panel (I28): built every 90 days by the AI visibility specialist, and asked once its collection is on.
-        buildPanel(ctx, runArgs, member(SPECIALIST_ROLE.aiVisibility) ?? lead).catch(failed("Buyer questions")),
-        // 9. The Conversion specialist's pages (phase 14): the funnel, each source's rate, each money page reviewed, experiments;
-        // then every page's decision, reading those reviews, the Page decisions specialist handed what the rule doesn't simply keep.
-        reviewPages(ctx, runArgs, week, facts, member(SPECIALIST_ROLE.conversion) ?? lead).catch(failed("Page reviews"))
-          .then(async () => await decideForRun(ctx, runArgs, week, rulesFor(runArgs), member(PAGE_DECISIONS_ROLE) ?? lead))
-          // and Page decisions' box, written from the decisions just made.
-          .then(async () => await writeBoxes(ctx, runArgs, week, rulesFor(runArgs), facts, member, null, true).catch(failed("Page decisions' box"))),
-        // 11. Each screen's "What Hakken sees" box, written by its discipline's specialist (insights-one-voice-plan.md phase 4).
-        writeBoxes(ctx, runArgs, week, rulesFor(runArgs), [...facts, ...(view ? whyFacts(view) : [])], member, view?.chosen?.id ?? null).catch(failed("Screens' boxes")),
-      ]);
-      const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: run.runId });
-      const written = reports ?? [];
-      await ctx.runMutation(internal.insightsRunSteps.cancelInsightsWatch, { watchId });
-      await finishRun(ctx, run.runId, workflowExecutionId, "SUCCESS", `${run.host}: ${counts.facts} facts read,${written.length > 0 ? ` ${written.join(", ")} written,` : ""}${drafted ? ` ${drafted} fixes drafted,` : ""} ${counts.candidates} candidates, ${counts.written} findings written, ${counts.published} published and ${counts.sentBack} sent back by the Editor. Cost $${costUsd.toFixed(3)}.`);
-    } catch (error: unknown) {
-      // The week is saved either way: what failed here is said, and the run is finished.
-      await ctx.runMutation(internal.insightsRunSteps.cancelInsightsWatch, { watchId });
-      await finishRun(ctx, run.runId, workflowExecutionId, "SUCCESS", `${run.host}: the week was saved; what follows it stopped: ${failureSummary(error)}`);
+      if (stage === "Reports") {
+        const saved = await ctx.runQuery(internal.insightsRunSteps.savedWeek, { holdId: run.holdId, week, runId: run.runId });
+        if (!saved?.summary) throw appError("UPSTREAM_FAILURE", "The run has no completed weekly analysis to write reports from.");
+        await writeReports(ctx, runArgs, { week, today, verdict: saved.verdict, findings: saved.findings, summary: saved.summary, facts, writer: member("INSIGHTS_REPORT_WRITER") ?? lead });
+      } else if (stage === "Drafts") await writeDrafts(ctx, runArgs, week, member(SPECIALIST_ROLE.local) ?? lead, member(SPECIALIST_ROLE.links) ?? lead);
+      else if (stage === "Buyer questions") await buildPanel(ctx, runArgs, member(SPECIALIST_ROLE.aiVisibility) ?? lead);
+      else if (stage === "Page reviews") await reviewPages(ctx, runArgs, week, facts, member(SPECIALIST_ROLE.conversion) ?? lead);
+      else if (stage === "Page decisions") await decideForRun(ctx, runArgs, week, rulesFor(runArgs), member(PAGE_DECISIONS_ROLE) ?? lead);
+      else if (stage === "Page decisions' box") await writeBoxes(ctx, runArgs, week, rulesFor(runArgs), facts, member, null, true);
+      else {
+        const view: WhyView | null = await ctx.runQuery(internal.insightsPeriod.runView, { holdId: run.holdId });
+        await writeBoxes(ctx, runArgs, week, rulesFor(runArgs), [...facts, ...(view ? whyFacts(view) : [])], member, view?.chosen?.id ?? null);
+      }
+    } catch (error) { failed = failureSummary(error); }
+    if (failed && afterAttempt === 0) {
+      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...memoryNow(), ...run, step: "AFTER", cancelWatchId: watchId, week, today, counts, afterPart, afterAttempt: 1, delayMs: 5_000 });
+      return null;
     }
+    await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: run.runId, companyId: run.companyId, stage, failed: failed !== null, detail: failed ?? "Completed, including any valid empty result." });
+    if (afterPart + 1 < INSIGHT_AFTER_PARTS.length) {
+      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...memoryNow(), ...run, step: "AFTER", cancelWatchId: watchId, week, today, counts, afterPart: afterPart + 1, afterAttempt: 0 });
+      return null;
+    }
+    const stages = await ctx.runQuery(internal.insightsRunSteps.stageResults, { runId: run.runId });
+    const unfinished = stages.filter((entry) => entry.status !== "SUCCESS");
+    const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: run.runId });
+    await ctx.runMutation(internal.insightsRunSteps.cancelInsightsWatch, { watchId });
+    await finishRun(ctx, run.runId, run.workflowExecutionId, unfinished.length ? "FAILED" : "SUCCESS", `${run.host}: ${counts.facts} facts read; ${counts.published} findings published and ${counts.sentBack} sent back by the Editor. ${unfinished.length ? `The whole section has not refreshed. Unfinished: ${unfinished.map((entry) => entry.stage).join(", ")}. Completed results remain available.` : "Every required Insights stage completed."} Cost $${costUsd.toFixed(3)}.`);
     return null;
   },
 });
@@ -107,6 +106,7 @@ async function writeDrafts(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
   const pages = inputs.pages.map((page) => page.page);
   const recent = inputs.recent.map((row) => `${row.kind}: ${row.target}`);
   const drafted: Drafted[] = [];
+  const acceptsDrafts = (answer: unknown) => Array.isArray((answer as { drafts?: unknown })?.drafts);
   if (inputs.own.length > 0) {
     const system = [briefFor("INSIGHTS_LOCAL", local?.instructions), DRAFT_RULES].filter(Boolean).join("\n\n");
     const prompt = JSON.stringify({
@@ -128,7 +128,7 @@ async function writeDrafts(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
       newestWaiting: inputs.waiting,
       pages: inputs.pages,
     });
-    const answer = await ask(ctx, args, local, "the Local and reputation specialist's drafts", system, prompt);
+    const answer = await ask(ctx, args, local, "the Local and reputation specialist's drafts", system, prompt, ASK_LIMIT_MS, acceptsDrafts);
     drafted.push(...draftsFrom(answer, "LOCAL", pages), ...draftsFrom(answer, "REVIEWS", pages));
   }
   if (inputs.outreach.length > 0) {
@@ -140,11 +140,11 @@ async function writeDrafts(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
       sites: inputs.outreach.map((site) => ({ site: site.host, linksToRivals: site.rivals, strength: site.strength })),
       pages: inputs.pages,
     });
-    const answer = await ask(ctx, args, links, "the Links and PR specialist's drafts", system, prompt);
+    const answer = await ask(ctx, args, links, "the Links and PR specialist's drafts", system, prompt, ASK_LIMIT_MS, acceptsDrafts);
     drafted.push(...draftsFrom(answer, "LINKS", pages));
   }
   if (drafted.length === 0) return 0;
-  return await ctx.runMutation(internal.insightsDrafts.saveDrafts, { holdId: args.holdId, companyId: args.companyId, week, origin: inputs.origin, drafts: drafted });
+  return await ctx.runMutation(internal.insightsDrafts.saveDrafts, { holdId: args.holdId, companyId: args.companyId, runId: args.runId, chainBooking: args.chainBooking, week, origin: inputs.origin, drafts: drafted });
 }
 
 /** The buyer-question panel, built when due (I28); then put on or taken off the company's questions as its collection says. */
@@ -154,12 +154,12 @@ async function buildPanel(ctx: ActionCtx, args: InsightsRunArgs, member: TeamMem
   if (inputs.due && inputs.searches.length > 0) {
     const system = [briefFor("INSIGHTS_AI_VISIBILITY", member?.instructions), PANEL_RULES].filter(Boolean).join("\n\n");
     const prompt = JSON.stringify({ business: inputs.name, website: inputs.host, searches: inputs.searches.map((row) => ({ search: row.search, monthly: row.volume, page: row.page })), services: inputs.services, guides: inputs.guides });
-    const answer = await ask(ctx, args, member, "the buyer-question panel", system, prompt);
+    const answer = await ask(ctx, args, member, "the buyer-question panel", system, prompt, ASK_LIMIT_MS, (answer) => Array.isArray((answer as { questions?: unknown })?.questions));
     const sources = new Map<string, number | null>([...inputs.searches.map((row) => [row.search.toLowerCase(), row.volume] as [string, number]), ...inputs.guides.map((guide) => [guide.toLowerCase(), null] as [string, null])]);
     const questions = panelFrom(answer, inputs.name, sources);
-    if (questions.length > 0) await ctx.runMutation(internal.insightsPanel.savePanel, { holdId: args.holdId, companyId: args.companyId, questions });
+    if (questions.length > 0) await ctx.runMutation(internal.insightsPanel.savePanel, { holdId: args.holdId, companyId: args.companyId, runId: args.runId, chainBooking: args.chainBooking, questions });
   }
-  const synced = await ctx.runMutation(internal.insightsPanel.syncPanel, { holdId: args.holdId });
+  const synced = await ctx.runMutation(internal.insightsPanel.syncPanel, { holdId: args.holdId, runId: args.runId, chainBooking: args.chainBooking });
   if (synced.overLimit > 0) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Buyer questions", detail: `${synced.overLimit} of the panel's questions are past the website's limit of questions and aren't asked.`, failed: false });
   }
@@ -212,9 +212,11 @@ async function reviewPages(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
   const beforeOf = await pagesBefore(ctx, args.holdId, inputs.map((page) => page.page)).catch(() => new Map<string, Journey[]>());
   if (inputs.length > 0) {
     const system = [briefFor("INSIGHTS_CONVERSION", member?.instructions), REVIEW_RULES, args.shop ? SHOP_RULE : ""].filter(Boolean).join("\n\n");
+    const answers = await Promise.all(Array.from({ length: Math.ceil(inputs.length / 2) }, async (_, at) => {
+    const batch = inputs.slice(at * 2, at * 2 + 2);
     const prompt = JSON.stringify({
       website: args.host,
-      pages: inputs.map((page) => ({
+      pages: batch.map((page) => ({
         page: page.page, kind: page.kind, title: page.title,
         visits: page.visits, enquiries: page.enquiries, visitsYearBefore: page.visitsBefore, enquiriesYearBefore: page.enquiriesBefore,
         headline: page.facts?.headline ?? null, words: page.facts?.words ?? null, showsPrice: page.facts?.price ?? null, showsProof: page.facts?.proof ?? null,
@@ -225,8 +227,17 @@ async function reviewPages(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
         behaviour: page.behaviour ? { visits: page.behaviour.sessions, scrollDepth: page.behaviour.scroll, deadClicks: page.behaviour.dead, rageClicks: page.behaviour.rage, quickBacks: page.behaviour.quickBack, activeSeconds: page.behaviour.activeSeconds } : null,
       })),
     });
-    const answer = await ask(ctx, args, member, "the Conversion specialist's page reviews", system, prompt).catch(() => null) as { pages?: unknown } | null;
-    const list = Array.isArray(answer?.pages) ? answer.pages : [];
+    const accepts = (value: unknown) => {
+      const rows = value && typeof value === "object" && "pages" in value && Array.isArray(value.pages) ? value.pages : [];
+      return batch.every((page) => rows.some((row: Record<string, unknown>) => {
+        if (row?.page !== page.page || !VERDICTS.includes(row.verdict as Verdict)) return false;
+        return row.verdict !== "ADD_COMPANY_FACTS" || missingStructuredData(page.kind === "HOME" || page.page === "/" ? "HOME" : page.kind, page.structured ?? []).includes("ORGANISATION");
+      }));
+    };
+    const answer = await ask(ctx, args, member, "the Conversion specialist's page reviews", system, prompt, ASK_LIMIT_MS, accepts) as { pages: unknown[] };
+    return answer.pages;
+    }));
+    const list = answers.flat();
     const markupOf = new Map(inputs.map((page) => [page.page, page]));
     answered = new Map(list.flatMap((raw) => {
       const entry = raw as Record<string, unknown>;
@@ -239,6 +250,8 @@ async function reviewPages(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
       return [[entry.page, { verdict, reason: typeof entry.reason === "string" ? entry.reason.trim().slice(0, 300) : "", steps }]];
     }));
   }
+  const missing = inputs.filter((page) => !answered.has(page.page));
+  if (missing.length > 0) throw appError("UPSTREAM_FAILURE", `The Conversion specialist did not complete valid reviews for: ${missing.map((page) => page.page).join(", ")}. Previous completed reviews remain available.`);
   const pages = inputs.map((page) => {
     const said = answered.get(page.page);
     return {
@@ -247,7 +260,7 @@ async function reviewPages(ctx: ActionCtx, args: InsightsRunArgs, week: string, 
       before: beforeOf.get(page.page) ?? [],
     };
   });
-  await ctx.runMutation(internal.insightsConversion.saveConversion, { holdId: args.holdId, companyId: args.companyId, week, conversion: { funnel: funnelFrom(facts), sources: sourcesFrom(facts), pages } });
+  await ctx.runMutation(internal.insightsConversion.saveConversion, { holdId: args.holdId, companyId: args.companyId, week, runId: args.runId, chainBooking: args.chainBooking, conversion: { funnel: funnelFrom(facts), sources: sourcesFrom(facts), pages } });
 }
 
 /** What Hakken did this run, for the reports' "work Hakken did". */
@@ -298,7 +311,7 @@ async function writeReports(
   const base = { scorecard: input.summary.scorecard, findings, did, enquiriesByMonth: input.summary.enquiriesByMonth, shareByMonth: input.summary.shareByMonth };
   const weekEnd = shiftDay(input.week, 6);
   await ctx.runMutation(internal.insightsTeam.saveReport, {
-    holdId: args.holdId, companyId: args.companyId, kind: "WEEKLY", from: input.week, to: weekEnd, period: input.week, title: "Weekly brief", runId: args.runId,
+    holdId: args.holdId, companyId: args.companyId, kind: "WEEKLY", from: input.week, to: weekEnd, period: input.week, title: "Weekly brief", runId: args.runId, chainBooking: args.chainBooking,
     body: {
       ...base,
       headline: input.verdict,
@@ -309,44 +322,55 @@ async function writeReports(
     },
   });
   written.push("the weekly brief");
-  const due = await ctx.runQuery(internal.insightsTeam.reportsDue, { holdId: args.holdId, today: input.today });
+  const due = await ctx.runQuery(internal.insightsTeam.reportTargetsForRun, { holdId: args.holdId, today: input.today, refreshLatest: args.refreshReports });
   const used = (facts: ReadonlyMap<string, Fact>) => [...facts.values()].map((fact) => ({ key: fact.key, label: fact.label, value: fact.value, unit: fact.unit }));
   if (due.month) {
-    const monthFacts = await ctx.runQuery(internal.insightsReading.monthFactsInternal, { holdId: args.holdId, month: due.month });
-    const facts = factsByKey([...monthFacts, ...input.facts.filter((fact) => fact.source === "market" && fact.key.endsWith(".now"))]);
+    const monthFacts = await ctx.runQuery(internal.insightsReading.monthFactsInternal, { holdId: args.holdId, month: due.month.period });
+    const facts = factsByKey(monthFacts);
     const system = [rulesFor(args), briefFor("INSIGHTS_REPORT_WRITER", writerBrief(input.writer)), MONTH_FORMAT].filter(Boolean).join("\n\n");
-    const prompt = JSON.stringify({ website: args.host, month: monthName(due.month), facts: factLines([...facts.values()]), findings: input.findings.slice(0, 5).map((finding) => ({ headline: finding.headline, action: finding.action })) });
+    const prompt = JSON.stringify({ website: args.host, month: monthName(due.month.period), facts: factLines([...facts.values()]), findings: (due.month.previous?.findings ?? input.findings).slice(0, 5).map((finding) => ({ headline: finding.headline, action: finding.action })) });
     const answer = await ask(ctx, args, input.writer, "the Report Writer's monthly report", system, prompt) as Record<string, unknown> | null;
-    const headline = filled(answer?.headline, facts) ?? input.verdict;
+    if (!answer) throw appError("UPSTREAM_FAILURE", "The monthly report writer did not return a valid answer; the previous report is kept.");
+    const headline = filled(answer.headline, facts);
+    const monthlySummary = filled(answer.summary, facts);
+    if (!headline || !monthlySummary) throw appError("UPSTREAM_FAILURE", "The monthly report failed its evidence check; the previous completed report is kept.");
     await ctx.runMutation(internal.insightsTeam.saveReport, {
-      holdId: args.holdId, companyId: args.companyId, kind: "MONTHLY", from: `${due.month}-01`, to: monthFacts.find((fact) => fact.key === "month.enquiries.now")?.to ?? `${due.month}-28`,
-      period: due.month, title: `Monthly report: ${monthName(due.month)}`, runId: args.runId,
+      holdId: args.holdId, companyId: args.companyId, kind: "MONTHLY", from: due.month.from, to: due.month.to,
+      period: due.month.period, title: `Monthly report: ${monthName(due.month.period)}`, runId: args.runId, chainBooking: args.chainBooking,
       body: {
-        ...base,
+        ...(due.month.previous ?? base),
+        enquiriesByMonth: input.summary.enquiriesByMonth.filter((month) => month.month <= due.month!.period),
         headline,
-        summary: filled(answer?.summary, facts) ?? headline,
+        summary: monthlySummary,
         points: lines(answer?.points, facts, 4),
         next: lines(answer?.next, facts, 3),
         risks: [], opportunities: [], decision: null,
         facts: used(facts),
       },
     });
-    written.push(`the ${monthName(due.month)} report`);
+    written.push(`the ${monthName(due.month.period)} report`);
   }
-  if (due.quarter) {
-    const facts = factsByKey(input.facts.filter((fact) => /\.(90|365)\.(now|year|before)$/.test(fact.key) && /^(ga\.(conversions|people|visits|peoplePerConversion|channel\.(Organic Search|AI assistants|Direct)\.(visits|conversions))|sc\.clicks)/.test(fact.key) || fact.source === "market" || /^ai\.[^.]+\.mentions/.test(fact.key) || /^local\./.test(fact.key)));
+  if (due.board) {
+    const currentFacts = input.facts.filter((fact) => /\.(90|365)\.(now|year|before)$/.test(fact.key) && /^(ga\.(conversions|people|visits|peoplePerConversion|channel\.(Organic Search|AI assistants|Direct)\.(visits|conversions))|sc\.clicks)/.test(fact.key) || fact.source === "market" || /^ai\.[^.]+\.mentions/.test(fact.key) || /^local\./.test(fact.key));
+    // A saved board report is historical: its evidence, scorecard and findings must describe its own dates.
+    const historicalFacts: Fact[] | null = due.board.previous?.facts.map((fact) => {
+      const unit = FACT_UNITS.find((known) => known === fact.unit);
+      if (!unit) throw appError("UPSTREAM_FAILURE", `Unknown unit in the saved report: ${fact.unit}`);
+      return { ...fact, unit, source: "market" };
+    }) ?? null;
+    const facts = factsByKey(historicalFacts ?? currentFacts);
     const system = [rulesFor(args), briefFor("INSIGHTS_REPORT_WRITER", writerBrief(input.writer)), BOARD_FORMAT].filter(Boolean).join("\n\n");
-    const prompt = JSON.stringify({ website: args.host, quarter: due.quarter, facts: factLines([...facts.values()]), findings: input.findings.slice(0, 6).map((finding) => ({ headline: finding.headline, story: finding.story, action: finding.action })) });
+    const prompt = JSON.stringify({ website: args.host, quarter: due.board.period, from: due.board.from, to: due.board.to, facts: factLines([...facts.values()]), findings: (due.board.previous?.findings ?? input.findings).slice(0, 6).map((finding) => ({ headline: finding.headline, ...("story" in finding ? { story: finding.story } : {}), action: finding.action })) });
     const answer = await ask(ctx, args, input.writer, "the Report Writer's board report", system, prompt) as Record<string, unknown> | null;
-    const from = shiftDay(input.today, -90);
-    const to = shiftDay(input.today, -1);
+    if (!answer) throw appError("UPSTREAM_FAILURE", "The board report writer did not return a valid answer; the previous report is kept.");
+    const { from, to } = due.board;
     const headline = typeof answer?.headline === "string" && typedNumbers(answer.headline).length === 0 && !/\[\[/.test(answer.headline) ? answer.headline.trim().slice(0, 80) : "The quarter, against last year and our rivals";
     await ctx.runMutation(internal.insightsTeam.saveReport, {
-      holdId: args.holdId, companyId: args.companyId, kind: "BOARD", from, to, period: due.quarter, title: `Board report: ${dayName(from)} to ${dayName(to)}`, runId: args.runId,
+      holdId: args.holdId, companyId: args.companyId, kind: "BOARD", from, to, period: due.board.period, title: `Board report: ${dayName(from)} to ${dayName(to)}`, runId: args.runId, chainBooking: args.chainBooking,
       body: {
-        ...base,
+        ...(due.board.previous ?? base),
         headline,
-        summary: filled(answer?.summary, facts) ?? input.verdict,
+        summary: filled(answer?.summary, facts) ?? due.board.previous?.summary ?? input.verdict,
         points: lines(answer?.points, facts, 3),
         risks: lines(answer?.risks, facts, 3),
         opportunities: lines(answer?.opportunities, facts, 3),
@@ -355,7 +379,7 @@ async function writeReports(
         facts: used(facts),
       },
     });
-    written.push(`the ${due.quarter} board report`);
+    written.push(`the ${due.board.period} board report`);
   }
   return written;
 }

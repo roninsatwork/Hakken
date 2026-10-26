@@ -9,6 +9,7 @@ import { loadSite } from "./websiteSiteRows";
 import { partIsOn } from "./collectionParts";
 import { addWebsiteQuestionCore } from "./websiteCanonical";
 import { PANEL_REFRESH_DAYS, PANEL_SIZE, panelQuestionValidator } from "./utils/insightPanel";
+import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
 
 /**
  * The buyer-question panel's reads and writes (docs/plans/active/
@@ -65,9 +66,10 @@ export const panelInputs = internalQuery({
 });
 
 export const savePanel = internalMutation({
-  args: { holdId: v.id("companyWebsites"), companyId: v.id("companies"), questions: v.array(panelQuestionValidator) },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites"), companyId: v.id("companies"), questions: v.array(panelQuestionValidator) },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const held = await ctx.db.query("insightQuestionPanels").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     // The questions a panel built before asked, and this one doesn't, come off the company's list.
     if (held) {
@@ -84,9 +86,10 @@ export const savePanel = internalMutation({
 
 /** The panel's questions on the company's list while its collection is on, off it while it's off. */
 export const syncPanel = internalMutation({
-  args: { holdId: v.id("companyWebsites") },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites") },
   returns: v.object({ asking: v.number(), overLimit: v.number() }),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const hold = await ctx.db.get(args.holdId);
     const panel = await ctx.db.query("insightQuestionPanels").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     if (!hold || !panel) return { asking: 0, overLimit: 0 };

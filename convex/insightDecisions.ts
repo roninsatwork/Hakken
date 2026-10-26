@@ -1,3 +1,4 @@
+import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -113,7 +114,7 @@ export const decisionSources = internalQuery({
     if (!hold || !site) return null;
 
     // Analytics: landing visits and enquiries over the last 12 whole months, from the history.
-    const records = await historyOf(ctx, hold._id);
+    const records = await historyOf(ctx, hold._id, ["GA_SOURCES", "GA_PAGES"]);
     const kindOf = await pageKindsOf(ctx, hold._id);
     const year = new Set(monthsOf(records, kindOf).filter((month) => month.whole).map((month) => month.month).sort().slice(-12));
     const byYear = new Map<string, { visits: number; enquiries: number }>();
@@ -266,7 +267,7 @@ export async function buildDecisions(ctx: ActionCtx, holdId: Id<"companyWebsites
   const before = new Map((await ctx.runQuery(internal.insightDecisions.keptDecisions, { holdId })).map((decision) => [decision.path, decision]));
   const carried = carryPages(decisions, before);
   if (specialist) await handToSpecialist(ctx, specialist, decisions, new Map(listed.flatMap((page) => (page.title ? [[page.path, page.title] as const] : []))), carried);
-  await ctx.runMutation(internal.insightDecisions.saveDecisions, { holdId, decisions: decisions.slice(0, MOST_DECISIONS_KEPT), creates: sources.creates, pages: decisions.length });
+  await ctx.runMutation(internal.insightDecisions.saveDecisions, { holdId, ...(specialist ? { runId: specialist.run.runId, chainBooking: specialist.run.chainBooking } : {}), decisions: decisions.slice(0, MOST_DECISIONS_KEPT), creates: sources.creates, pages: decisions.length });
   const counts: Record<string, number> = {};
   for (const decision of decisions) counts[decision.verdict] = (counts[decision.verdict] ?? 0) + 1;
   return { ...counts, CREATE: sources.creates.length };
@@ -293,6 +294,7 @@ async function handToSpecialist(ctx: ActionCtx, specialist: PageSpecialist, deci
     await log(`${said} It kept ${applied.kept}, changed ${applied.changed}${applied.refused > 0 ? `, and ${applied.refused} of its answers broke a guard or gave no reason, so the rule's verdict stands for them` : ""}.`, false);
   } catch (error) {
     await log(`${said} Not reached, so the rule's verdicts stand: ${error instanceof Error ? error.message : String(error)}`, true);
+    throw error;
   }
 }
 
@@ -304,6 +306,7 @@ export async function decideForRun(ctx: ActionCtx, run: InsightsRunArgs, week: s
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: run.runId, companyId: run.companyId, heading: "Page decisions", detail, failed: !counts });
   } catch (error) {
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: run.runId, companyId: run.companyId, heading: "Page decisions", detail: error instanceof Error ? error.message.slice(0, 500) : "Could not decide.", failed: true });
+    throw error;
   }
 }
 
@@ -316,9 +319,10 @@ export const decideNow = internalAction({
 
 /** The decisions kept, the last run's replaced: in parts a screen reads whole. */
 export const saveDecisions = internalMutation({
-  args: { holdId: v.id("companyWebsites"), decisions: v.array(decisionValidator), creates: v.array(createValidator), pages: v.number() },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites"), decisions: v.array(decisionValidator), creates: v.array(createValidator), pages: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const hold = await ctx.db.get(args.holdId);
     if (!hold) return null;
     const old = await ctx.db.query("insightPageDecisions").withIndex("by_hold_part", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOST_PARTS + 4);

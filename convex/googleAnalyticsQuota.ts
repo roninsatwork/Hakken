@@ -9,7 +9,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
  * so no first ask of a step, a fill or a resumed run is made blind.
  */
 
-const quotaFields = {
+export const quotaFields = {
   tokensPerDay: v.union(v.number(), v.null()),
   tokensPerHour: v.union(v.number(), v.null()),
   tokensPerProjectPerHour: v.union(v.number(), v.null()),

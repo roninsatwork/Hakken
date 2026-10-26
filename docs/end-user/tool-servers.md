@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: user guide
+feature_area: MCP tool servers
+audience: company admins, platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/tool-servers.md
+last_reviewed: '2026-10-26T10:03:16+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Tool Servers
+
+> **Product:** Hakken · **Document type:** User guide · **Feature area:** MCP tool servers
+> **Reviewed:** 26 October 2026, 10:03:16 GMT (Europe/London)
+> **Source path:** `docs/end-user/tool-servers.md` · **Status:** Current
 
 Some of the systems your business already uses can offer their tools to your
 agents directly. Connect one, and your agents can use it — without anyone
@@ -38,13 +53,13 @@ other tool.
 
 ## What happens if something goes wrong
 
-Nothing breaks. Whatever the reason, it is written against the server and shown
+Failures are recorded where the corresponding operation supports them and shown
 on the screen: the server did not answer, it answered too slowly, the login is
 missing, it speaks a version Hakken does not support, or it offers no tools at
 all.
 
-Connected servers also appear on your **Connections** screen, alongside your
-mailbox, phone line and AI providers — so a server that has stopped answering
+Connected servers also appear on your **Connections** screen, alongside other
+external dependencies and AI providers — so a server that has stopped answering
 turns up where you already look for things that need attention.
 
 ## What is switched on by default: nothing
@@ -101,3 +116,27 @@ another company is never even offered them, whatever it has been set up with.
 
 Disconnecting a server removes its tools from your library, and any agent using
 them loses them. You will be told that before it happens.
+
+## Access, Workspace And Credentials
+
+The current screen is `/admin/ai/tool-servers`. It lives in platform Admin, where super admins and read-only accounts can enter permitted pages. Backend server list/read operations require an admin-reader role and an active company; writes require an admin write role. Company admins have scoped backend rights, but those rights do not grant access to the platform Admin route itself. A super admin should select the intended workspace before listing or creating servers. Do not assume a global agent automatically runs with that workspace merely because its tool binding was configured there.
+
+For an authenticated server, entering a credential reference is only the first configuration step. The deployment operator must separately approve that company, server, exact normalized URL and reference in backend credential bindings. Without an exact approved binding, discovery and use fail before resolving the credential or contacting the destination. A server with no authentication has no such credential binding, but still faces URL and transport checks. Changing the address or credential reference can invalidate approval and needs an operator to review the new destination.
+
+Never paste a bearer token, password or API key into the reference field. The reference points to a value held in the backend environment. The browser should not receive that value. Connecting stores the record disabled; discovery contacts the destination and can therefore use its credential. Discovery is an external operation even though it does not enable tools for agents. This documentation pass did not perform discovery or contact a server.
+
+## Refreshing A Tool List
+
+Discovery stores the server's current offerings. Adding them to the library rebuilds the imported tools rather than simply appending missing names. The existing imported tools and their agent bindings are removed within the implementation's bounds, and replacement tools start disabled with conservative approval settings. After refreshing, review schemas, re-enable only approved tools and reattach them where needed. Do not expect an old binding or operator classification to survive a rebuild automatically.
+
+The displayed server name, model-facing tool name and supplier's original tool name have different jobs. Imported names are prefixed and bounded so separate servers can coexist; names that collide after normalization can be skipped. A successful discovery or import count is not a promise that every supplier offering became a distinct usable tool. Inspect the result and confirm that the intended functions are present before relying on an agent workflow.
+
+Discovery follows at most ten list pages and admits at most two hundred tools. Responses have a size cap and individual requests have a deadline. A server that needs a different transport or protocol can fail despite having a valid-looking address. There is no automatic promise that the complete external catalog is supported. The recorded discovery note explains truncation or failure where implemented.
+
+## Calls, Approval And Disconnecting
+
+At execution, the run's company must match both imported tool ownership and server ownership. A run without a company receives no access to company-owned tools. The server must be connected, arguments must satisfy its published schema, and any credential grant must still match. A copied tool ID or an old binding does not bypass these checks. An allowed request still leaves Hakken and can create real effects in the supplier system after approval.
+
+If an external call times out or returns an error, the agent receives failure information rather than a guaranteed successful result. A network failure does not prove the supplier did nothing. Check the remote system through an authorized operator process before repeating a data-changing action. Hakken's approval, timeout and untrusted-result wrapper are controls around execution, not rollback or universal exactly-once delivery.
+
+Disconnecting removes the server, discovered entries and imported tools with bounded binding cleanup. Historical run evidence is not universally erased. If an unusually large number of agent bindings exists, the current cleanup cap requires manual verification; do not assume every historical reference vanished because the server row disappeared. Switching a server off is the less destructive choice when the intention is to pause future calls while preserving configuration.

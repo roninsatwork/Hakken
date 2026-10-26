@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: User guide
+feature_area: widget customer handoff and support
+audience: customer support and workspace operators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/widget-handoff-and-troubleshooting.md
+last_reviewed: '2026-10-26T10:28:26+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Widget Handoff And Troubleshooting
+
+> **Product:** Hakken · **Document type:** User guide · **Feature area:** widget customer handoff and support
+> **Reviewed:** 26 October 2026, 10:28:26 GMT (Europe/London)
+> **Source path:** `docs/end-user/widget-handoff-and-troubleshooting.md` · **Status:** Current
 
 Widget handoff and troubleshooting covers the public embedded chat widget after it has been configured in Hakken. Use this guide before giving a customer an embed snippet, when a widget does not load on a host site, or when a support team needs to understand where widget conversations and failures appear.
 
@@ -12,7 +27,7 @@ For the widget feature overview, see [Embedded Widgets](./embedded-widgets.md). 
 - `/w/[widgetId]`: public iframe route loaded by the embed script.
 - `/kiosk/[widgetId]`: full-screen receptionist screen when the widget has
   opted in.
-- `/admin/companies/[id]/chat-logs`: company chat logs, including widget-originated conversations.
+- `/admin/companies/[id]/ai/chat-logs`: company chat logs, including widget-originated conversations.
 
 The global widget is platform-wide. Company widgets belong to a specific tenant. Use the company widget for customer handoffs whenever the widget should be tenant-scoped.
 
@@ -42,8 +57,8 @@ Current behavior:
 - concrete hostnames allow exact hosts and subdomains
 - exact host matches are accepted
 - subdomains of allowlisted hosts are accepted
-- an empty allowlist can still let the iframe render public configuration, but it does not authorize backend conversation creation
-- invalid or unauthorized source URLs are rejected by the backend
+- an empty allowlist denies embedding through the frame policy and does not authorize backend conversation creation
+- the backend checks the signed observed host; a supplied source URL alone cannot authorize access
 - blocked backend attempts are recorded as `BLOCKED_WIDGET_ACCESS` audit events
 - widget thread creation also requires the server-minted embed pass generated
   when `/w/[widgetId]` is served, so a direct mutation call with an invented
@@ -90,7 +105,7 @@ If a widget has a linked agent, visitor messages run with that agent context. If
 
 ## Attachments
 
-Anonymous widget uploads are restricted. The widget must be active, the target thread must belong to the widget, the browser must present the matching widget session credential, and each widget thread has a cap on attachment-bearing messages. Uploaded files are validated before finalization.
+Anonymous widget uploads are restricted. The widget must be active, the target thread must belong to the widget, the browser must present the matching widget session credential, and each widget thread can request ten upload URLs, including abandoned or removed previews. Uploaded files are validated before finalization.
 
 If a visitor cannot upload, check whether the widget is active, the thread belongs to the widget, the browser session is still valid, the quota has been reached, and the file type/size matches the widget attachment policy.
 
@@ -140,3 +155,19 @@ For customer support teams, record:
 - who owns widget changes
 
 Do not send customers raw audit metadata, internal thread ids, or sensitive chat excerpts unless the destination is approved for that customer's data.
+
+## Distinguish A Display Problem From An Admission Problem
+
+A missing launcher usually calls for checking the installed script and customer-page policy first. A visible launcher with a blocked frame points toward frame-ancestor or customer-site restrictions. A rendered frame that cannot start a thread calls for checking the signed embed pass, observed hostname, active widget and thread window. A thread that exists but cannot send can instead be at its burst allowance, the widget's shared 600-message hourly ceiling, or company AI allocation. These are different stages; an audit event from one stage does not prove another stage succeeded.
+
+The sandbox is hosted on Hakken's domain. A restricted customer allowlist can refuse it unless that testing host is deliberately included. A direct visit to `/w/[widgetId]` without a referring page also differs from a real embed and needs the explicit wildcard policy for thread creation. Interpret that difference before changing the customer's saved domains. An unavailable backend policy causes the serving layer to refuse framing rather than opening access broadly.
+
+For an upload complaint, check the image policy of one MiB and the ten upload-URL requests per thread. The limit counts the request for a URL before the eventual message, so a visitor who repeatedly changes a photo can reach it without sending ten photos. Do not promise that removing a preview or retrying an upload restores a slot. A photo-only message is valid; a photo task suggestion still needs the visitor's confirmation before it becomes team work.
+
+## Explain Reset And Identity Clearly
+
+A name or email gate gathers visitor-provided information. It does not prove ownership of an email address, establish a logged-in customer identity, or authorize access to that customer's private account. Review support decisions against the actual saved conversation and your customer verification process. Do not treat a plausible email field as permission to disclose sensitive business records.
+
+Reset clears this browser's selected widget thread, session credential and staged state. Earlier server messages remain. Deleting the widget configuration likewise does not establish deletion of every conversation and stored image. Refer an erasure request to the responsible operator and keep it separate from a request to start a fresh chat. Disabling the widget makes anonymous session reads and writes fail the shared active-widget check, but retained records still need their own lifecycle handling.
+
+This handoff guide was checked against the current widget editor, iframe client, embed/domain helpers, upload handlers and chat access helpers. It shares implementation coverage with the [developer widget guide](../developer/embedded-widgets.md); a separate handoff backend does not exist. No external snippet installation, live message, customer-domain acceptance or rename cutover was tested during this documentation review. Record those outcomes separately when an authorized launch check is performed.

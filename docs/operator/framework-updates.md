@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: framework-updates
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/framework-updates.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Bring framework updates into a product
+
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** framework-updates
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/framework-updates.md` · **Status:** Current
 
 An exported product keeps its own code and Git history. Framework updates are an
 explicit review and integration, using a fresh export with the same optional
@@ -55,7 +70,7 @@ The review distinguishes incoming additions, edits and deletions, files already
 aligned, and overlaps where both product and framework changed. Other product
 changes are listed separately and preserved. This is a file-level comparison:
 an overlap may be easy to merge, but the tool never assumes that automatically.
-Binary files and executable-bit changes are included. Symlink/file-directory
+Binary files and executable-bit changes are included. Terminal output shows at most forty incoming entries; use the review JSON for the complete list. Symlink/file-directory
 collisions stop comparison for explicit review.
 
 ## Review and integrate
@@ -83,8 +98,7 @@ text in the JSON; paths and baseline/incoming fingerprints are checked again.
 If the incoming export or baseline changes, generate a fresh plan. The product
 can change during deliberate integration; recording captures its final checkpoint.
 
-Run the product's checks after integration: `npm ci`, `npm run verify:env`,
-`npm run lint:all`, `npm run check`, `npm run build` and `git diff --check`.
+Run the product's checks after integration, using its current AGENTS instructions and the [verification baseline](../developer/getting-started.md). Hakken's baseline includes `npm ci`, `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run test:coverage`, `npm run coverage:check`, `npm run test:e2e:smoke`, `npm run build` and `git diff --check`.
 Run relevant browser/provider checks and migration rehearsals when affected.
 Describe the checks actually completed and any remaining release restrictions in
 `verification`. The tool records your statement; it does not run or certify them.

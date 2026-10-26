@@ -1,10 +1,25 @@
+---
+product: Hakken
+documentation_type: end-user guide
+feature_area: Ask Hakken assistant conversations
+audience: signed-in company members and administrators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/assistant-chat.md
+last_reviewed: '2026-10-26T08:48:31+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Assistant Chat User Guide
+
+> **Product:** Hakken · **Document type:** end-user guide · **Feature area:** Ask Hakken assistant conversations
+> **Reviewed:** 26 October 2026, 08:48:31 GMT (Europe/London)
+> **Source path:** `docs/end-user/assistant-chat.md` · **Status:** Current
 
 ## What Assistant Chat Is
 
 Assistant chat is the main place where users ask Hakken for help, analysis, writing, research over uploaded documents, inspecting photos, and other AI-supported work inside the dashboard. It is reached from the sidebar item labelled `Ask Hakken` or `Ask {platform name}`, depending on how the workspace has been branded. The first screen is a clean prompt workspace where you can type a request, attach documents or photos, choose an available AI engine, pick how much reasoning effort the assistant should use, dictate a prompt with your microphone, or start a live spoken conversation. Once you send the first message, Hakken opens a conversation thread at `/app/assistant/{thread}` so you can continue the same discussion.
 
-This guide describes the features that are currently implemented. It does not describe future agent tools, upcoming automation features, or any planned redesigns unless those features already appear in the product.
+This guide describes implementation reviewed on the date above. It does not prove that provider credentials, data connections or live voice have been accepted in a particular deployment. Product plans and dated verification records are separate from this behavior guide.
 
 ## Who Uses It
 
@@ -28,7 +43,7 @@ Each message includes a small timestamp. User messages use your account image wh
 
 ## Managing Conversation History
 
-On desktop-sized layouts, assistant conversations include a history sidebar. Use the plus button in that sidebar to start a new conversation, or choose an existing conversation title to reopen it. The search box filters your own recent conversations by title; it does not search inside message content or other users' conversations.
+On desktop-sized layouts, assistant conversations include a history sidebar. Use the plus button in that sidebar to start a new conversation, or choose an existing conversation title to reopen it. The history loads in pages of 25, with a control to load more. Search asks the server across your own conversation titles, including older conversations; it does not search message bodies or other users' conversations. Evaluation conversations are excluded from this personal list.
 
 Hover over a conversation in the history list to show rename and delete controls. Rename opens an inline title editor; press Enter or use the check button to save, or press Escape to leave edit mode. Delete opens an in-app confirmation modal and, after confirmation, removes the conversation from your history. If you delete the conversation you are currently viewing, the app returns you to the assistant welcome screen.
 
@@ -76,7 +91,7 @@ Live voice uses the workspace spoken voice chosen by an administrator. It depend
 
 Assistant chat requires a signed-in user. Your conversation belongs to your user account. Hakken stores the active company on a new thread so the assistant can apply the right company prompt, active AI rules, knowledge, model defaults, and message allocation. If a super admin is impersonating a company workspace, new threads use that company context until impersonation is exited.
 
-The product enforces message and usage limits in the backend. A single message cannot exceed the configured payload size limit. Hakken also rate-limits rapid posting in a thread, currently allowing up to 10 user messages per minute. If your company has used its AI allocation for the current period, Hakken stores your message and replies with a notice that the company allocation is exhausted. Ask your administrator to review the workspace plan or allocation in that case.
+The product enforces message and usage limits in the backend. A single message cannot exceed the configured payload size limit. Hakken also rate-limits rapid posting in a thread, currently allowing up to 10 user messages per minute. If your company has used its AI allocation for the current period, Hakken stores your message and replies with a notice that the company allocation is exhausted. Ask your administrator to review the workspace plan or allocation in that case. A billing-managed company also needs current paid access; an unlimited personal allowance cannot bypass an expired company subscription. See [Platform Plans And Quotas](./platform-plans-and-quotas.md).
 
 The assistant is designed not to reveal hidden system prompts, private configuration, secrets, or data from another tenant. Uploaded files and retrieved knowledge are treated as reference material, not as instructions that can override platform safety or company permissions. If a user asks the assistant to bypass permissions or expose protected instructions, it should refuse briefly and suggest a safe alternative.
 
@@ -86,7 +101,7 @@ After you send a message, Hakken writes your message to the thread and schedules
 
 If something goes wrong with the AI provider, the thread should show a clear assistant message saying the core assistant is offline or that communication with the provider failed. If a file cannot be processed, the document may show a failed processing state in areas that inspect knowledge documents, and the assistant may answer from the prompt and other available context instead. If the browser upload itself fails, your unsent prompt and pending files are restored where possible so you can try again.
 
-Finished assistant answers can show **Helpful** and **Not right** controls when platform feedback is enabled. A negative rating can be qualified as wrong, missing something, or not helpful, and you can change the rating later. Ratings are only available on your own completed assistant answers, not while text is streaming or on platform notices such as quota refusals. Feedback influences bounded learning signals; it does not rewrite the answer you already received.
+Finished assistant answers can show **Helpful** and **Not right** controls when platform feedback is enabled. A negative rating can be qualified as wrong, missing something, or not helpful, and you can change the rating later. Ratings are only available on your own completed assistant answers, not while text is streaming or on platform notices such as quota refusals. Feedback influences bounded learning signals; it does not rewrite the answer you already received. A typed correction can also be proposed to the company memory review queue when eligible. It is a proposal for review, not an immediate replacement of the company’s approved knowledge.
 
 ## Practical Guidance
 
@@ -101,3 +116,59 @@ Keep privacy in mind. Hakken includes safety checks and tenant boundaries, but u
 Assistant chat is connected to Hakken’s company setup, AI model management, knowledge system, plan limits, and admin rules. Admins configure models, global and company prompts, knowledge, rules, and usage controls in the administration area. Users experience those settings through the assistant’s available engines, response style, access to company knowledge, and quota behavior.
 
 The same backend foundations also support widgets, agents, workflows, run logs, and analytics elsewhere in Hakken. Assistant chat is therefore the everyday entry point into the platform’s AI capabilities, while the admin screens control how those capabilities are governed, measured, and extended.
+
+
+## Choose what the answer is about
+
+The **Answering for** control can focus a new conversation on one of the
+company's held websites or all its websites. This is useful when a company has
+several sites and a question such as “what changed?” would otherwise be
+ambiguous. The choice can be remembered for that company and reflected in the
+welcome page's address. Check it before starting another discussion, especially
+if your last question concerned a competitor rather than your own site.
+
+A platform super administrator can also choose which client a new conversation
+answers for, or a platform context without a client. That is a privileged
+capability. Company members cannot choose a foreign company simply by adding
+its name or identifier to a prompt or address. A conversation's selected
+company and website are stored when it is created. Changing the welcome
+screen's choice is not evidence that an old thread has been reassigned.
+
+The answer comes through the built-in Assistant agent, using the shared
+knowledge and instruction assembly used by other conversation doors. If the
+Assistant is switched off, the product says it cannot answer. A message that
+appears in history therefore does not guarantee that a model was successfully
+run or that a disabled agent was bypassed.
+
+## Check figures and recurring-work proposals
+
+The Assistant can look up authorized company figures through the same reads
+used by application screens. When an answer carries a **Looked up** line,
+follow its link to inspect the source screen and dates. It can also attach a
+chart built from the underlying figures. A chart or link is useful evidence
+for checking a numerical answer; it does not make a suggested cause certain,
+and it does not prove a source connection is complete or fresh.
+
+Ask which website, period and source an answer used if those details are
+unclear. Search Console clicks, Analytics visits and a counted conversion are
+different measurements. A comparison can be misleading when one source holds
+fewer days, a different home country or a different definition of conversion.
+The dedicated [Google Analytics guide](./google-analytics.md) explains those
+measurement choices for Analytics.
+
+The Assistant can propose recurring alerts and reports, such as watching a
+website's search performance or sending a regular list of changed pages.
+Review the proposal and confirm it using the offered control before expecting
+work to run. A draft proposal in a conversation is different from a saved,
+active task. The underlying task's schedule, selected channels and email
+preferences determine how you hear from it. Turning task emails off on your
+profile does not delete the task. See [Emails From Hakken](./emails.md) for
+communication choices and delivery timing.
+
+Conversation deletion removes the thread from your history, but the current
+backend deletion path only deletes a bounded batch of messages before removing
+the root. It must not be treated as a verified complete purge of every related
+file, feedback record or long transcript. For a formal data-removal request,
+use your organization's data-handling process and the platform's retention or
+subject-rights workflow rather than assuming a history-list delete completes
+that request.

@@ -1,8 +1,23 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: Ask Hakken assistant conversations
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/assistant-chat.md
+last_reviewed: '2026-10-26T08:48:31+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Assistant Chat Developer Guide
+
+> **Product:** Hakken · **Document type:** developer guide · **Feature area:** Ask Hakken assistant conversations
+> **Reviewed:** 26 October 2026, 08:48:31 GMT (Europe/London)
+> **Source path:** `docs/developer/assistant-chat.md` · **Status:** Current
 
 ## Purpose and Product Surface
 
-Assistant chat is the primary user-facing AI conversation workflow in Hakken. It lets authenticated users start a conversation, choose an active chat model, set a reasoning effort, dictate prompts through the browser microphone, attach supported documents and photos, rate finished answers, confirm photo-derived follow-up tasks, and continue a thread while provider text streams into reactive message rows. It appears in the main dashboard navigation as `Ask {platformName}` and is implemented under `src/app/(dashboard)/app/assistant/`. The welcome screen is `src/app/(dashboard)/app/assistant/page.tsx`; active conversations are rendered by `src/app/(dashboard)/app/assistant/[threadId]/page.tsx`; the surrounding route layout is `src/app/(dashboard)/app/assistant/layout.tsx`. The sidebar entry is produced by `src/ui/components/layout/SidebarNavigation.tsx`.
+Assistant chat is the primary user-facing AI conversation workflow in Hakken. It lets authenticated users start a conversation, choose an active chat model, set a reasoning effort, dictate prompts through the browser microphone, attach supported documents and photos, rate finished answers, confirm photo-derived follow-up tasks, and continue a thread while provider text streams into reactive message rows. It appears in the main dashboard navigation as `Ask {platformName}` and is implemented under `src/app/(dashboard)/app/assistant/`. The welcome screen is `src/app/(dashboard)/app/assistant/page.tsx`; active conversations are rendered by `src/app/(dashboard)/app/assistant/[threadId]/page.tsx`; the surrounding route layout is `src/app/(dashboard)/app/assistant/layout.tsx`. The sidebar entry is assembled by `src/ui/components/layout/SidebarNavTrees.tsx` and `SidebarNavigation.tsx`.
 
 This document describes the current implementation, not planned behavior. It should be read alongside `docs/developer/upload-and-knowledge-policy.md`, `docs/developer/photo-actions.md`, `docs/developer/ai-provider-tool-extension.md`, `convex/chat.ts`, `convex/chatService.ts`, `convex/aiChat.ts`, `convex/aiSpeech.ts`, `convex/photoActionService.ts`, `convex/knowledge.ts`, `convex/knowledgeActions.ts`, `convex/aiPromptAssembly.ts`, and `convex/aiModelService.ts` before changing chat behavior. The user interface and the backend both enforce important constraints, so future edits should not rely on client-side validation alone.
 
@@ -14,7 +29,7 @@ The welcome composer is split into small route-local components: `src/app/(dashb
 
 The active thread route in `src/app/(dashboard)/app/assistant/[threadId]/page.tsx` reads messages with `api.chat.getMessages` and thread-scoped documents with `api.knowledge.getThreadDocuments`. It renders `ChatMessage` rows from `src/ui/components/chat/ChatMessage.tsx`, shows an ingestion progress block while thread documents are pending or processing, and keeps a fixed bottom composer through `src/ui/components/chat/ChatInput.tsx`. `ChatMessage` also renders viewable image thumbnails and the photo-action confirmation chip when `messages.photoActionProposal` is present. The page derives the thinking indicator from the last message: if the last stored message belongs to the user, the assistant is treated as currently generating. A separate optimistic message state is used while a new message is being submitted and before the database result catches up. Pre-reply status comes from the run itself: the Assistant's run (`convex/hakkenAssistant.ts` while it waits for new files, then `runAgentObjective` in `convex/agentRuntime.ts`) writes `threads.assistantStage` as it enters each real phase (checking, reading files, searching knowledge, writing) and clears it however the run exits, and `src/ui/components/chat/AssistantStagePill.tsx` shows the noted stage through `getPresentableAssistantStage`, falling back to a plain "Thinking..." when no stage is available. This replaced a client-side rotation of invented phrases on a timer, so a label on screen is always a phase actually in progress.
 
-The assistant layout mounts `ChatHistoryList` in the desktop sidebar. The history list calls `api.chat.getThreads`, filters the returned user-owned thread titles client-side, links directly to `/app/assistant/{threadId}`, and exposes inline rename plus modal-confirmed delete controls. Rename calls `api.chat.renameThread` and delete calls `api.chat.deleteThread`; both backend mutations require the current user to own the thread. If the currently viewed thread is deleted, the client routes back to `/app/assistant`.
+The assistant layout mounts `ChatHistoryList` in the desktop sidebar. The history list uses `usePaginatedQuery(api.chat.getThreads)` in pages of 25, passes a server-side title `searchTerm`, links directly to `/app/assistant/{threadId}`, and exposes inline rename plus modal-confirmed delete controls. Rename calls `api.chat.renameThread` and delete calls `api.chat.deleteThread`; both backend mutations require the current user to own the thread. If the currently viewed thread is deleted, the client routes back to `/app/assistant`.
 
 `ChatInput` mirrors the welcome composer for continued conversations. It supports drag-and-drop upload, a file picker, voice dictation through `src/hooks/useVoiceToText.ts`, active model selection via `api.aiModels.getActiveModels` with `useCase: "chat"`, and a thinking-level selector with `NONE`, `LOW`, `MEDIUM`, and `HIGH`. The chosen model and thinking level reach the Assistant's run and are kept on it (`agentRuns.modelId`, `agentRuns.reasoningEffort`), so a resumed segment finishes as it started.
 
@@ -26,15 +41,15 @@ Voice transcription calls `api.aiSpeech.transcribeAudio`. The action requires an
 
 The core tables are defined in `convex/schema.ts`. Conversations are stored in `threads`, messages in `messages`, files and vector state in `knowledgeDocuments` and `knowledgeChunks`, configured models in `aiModels` and `aiModelDefaults`, active rules in `aiRules`, companies in `companies`, users in `users`, AI action reservations in `aiActionRequests`, and safety events or administrative actions in `auditLogs`. Thread records include `userId`, optional `companyId`, optional `agentId`, optional `widgetId`, optional `widgetAccessTokenHash`, title, creation time, and update time. Message records include `threadId`, `role`, `content`, creation time, optional `attachments`, token metadata, provider/model metadata, and analytics dimensions copied from the thread.
 
-Chat uploads use Convex storage for the original file. The UI validates chat documents using `validateUploadFile(file, "chatDocument")` from `src/lib/constants/uploads.ts`. Current accepted document formats are PDF, CSV, plain text, legacy Excel, XLSX, and DOCX. The client-side document limit is 50MB. Inline model payload processing in `convex/aiChat.ts` applies an additional 5MB limit before attaching a file as inline model content. This means a larger accepted document can still be ingested into vector knowledge but may be skipped for inline model context if it exceeds the 5MB inline threshold. Future docs and UI copy should keep that distinction clear.
+Chat uploads use Convex storage for the original file. The UI validates chat documents using `validateUploadFile(file, "chatDocument")` from `src/lib/constants/uploads.ts`. Current accepted document formats are PDF, CSV, plain text, legacy Excel, XLSX, and DOCX. The client-side document limit is 50MB. `convex/aiChat.ts` now contains title generation, not the retired inline reply path. In `agentRuntime.ts`, attached document text is parsed and appended through an untrusted context wrapper bounded to 10,000 characters; Google image parts have a separate 5,242,880-byte inline ceiling. An accepted upload is not a promise that every byte becomes model context. Keep upload acceptance, extracted-text limits and image inlining distinct.
 
 When a file is saved through `api.knowledge.saveChatDocument`, the knowledge document is attached to the thread. `convex/knowledgeActions.ts` extracts text from PDFs with `pdf-extraction`, DOCX with `mammoth`, and other supported files as UTF-8 text. It chunks the text through `chunkKnowledgeText`, resolves the active embedding model with `internal.aiModels.resolveEmbeddingModelConfigForExecution`, generates Google Vertex embeddings, and stores vectors in `knowledgeChunks`. It marks documents failed when extraction or embedding fails, and `convex/knowledge.ts` exposes status and inspection queries used by the UI and admin knowledge tools.
 
 ## Backend Flow
 
-`api.chat.createThread` requires an authenticated user through `requireCurrentUser`. It stores the active company from `getActiveCompanyId(user)`, which means a super admin using company impersonation creates a thread scoped to the impersonated company. The created title is `"New Conversation"` until title generation updates it.
+`api.chat.createThread` uses `tenantMutation`, which resolves an authenticated user before the handler. It stores the active company from `getActiveCompanyId(user)`, which means a super admin using company impersonation creates a thread scoped to the impersonated company. The created title is `"New Conversation"` until title generation updates it.
 
-`api.chat.getThreads` returns up to 100 user-owned threads newest first. `api.chat.getMessages` loads a thread, verifies the current user can access it, and returns up to 500 messages in chronological order. `convex/chatService.ts` contains the access helper. Normal authenticated threads are only readable by their owning user. Anonymous widget threads are a separate pathway and are readable only while the associated widget is active and the caller presents the matching widget access token for the thread. The assistant route uses authenticated user threads, while widget routes use the widget-specific path.
+`api.chat.getThreads` paginates user-owned history. Without search it reads `threads.by_user` newest first; title search uses `search_title` scoped to `userId`. Only ID, creation time, title and updated time leave the query, and evaluation threads are filtered from the personal result after paging. `api.chat.getMessages` loads a thread, verifies the current user can access it, and returns up to 500 messages in chronological order. `convex/chatService.ts` contains the access helper. Normal authenticated threads are only readable by their owning user. Anonymous widget threads are a separate pathway and are readable only while the associated widget is active and the caller presents the matching widget access token for the thread. The assistant route uses authenticated user threads, while widget routes use the widget-specific path.
 
 `api.chat.sendMessage` is the key mutation. It rejects content over 10,000 characters, verifies the thread exists, verifies access before heavy attachment lookup, validates stored attachment metadata, rate-limits the thread to 10 user messages per minute, resolves the company or user quota, and writes a soft block assistant response if the plan allocation is exhausted. When quota is available, it increments the relevant user or company usage counter, redacts PII according to `PII_REDACTION_CONFIG` in `systemConfig`, stores the user message with attachment IDs, updates the thread timestamp, optionally swaps the target agent, and schedules the appropriate async action. Anonymous widget threads are the exception to dynamic agent swapping: if `dynamicAgentId` would change the thread agent, the mutation rejects the message with `Unauthorized: Widget conversations cannot switch agents`. Agent threads call `internal.agentRuntime.runAgentObjective` with their own agent; everything else — Ask Hakken, and a website chat with no agent of its own — calls `internal.hakkenAssistant.answerInternal`, which answers through the built-in Assistant agent on the same runtime (docs/plans/active/assistant-foundation-plan.md, item 5). The company checks and the wiki's Ask box use the same entry point. Ask Hakken's own single-call path (`generateHakkenResponse`) was compared with the Assistant on 2026-10-06 (item 6: the same instructions and reading, the same sources) and removed (item 9). What every door is told and reads is put together once, in `convex/assistantKnowledge.ts`; `src/assistant-doors-drift.test.ts` fails a second copy. New conversations also schedule `internal.aiChat.generateThreadTitle`.
 
@@ -64,9 +79,9 @@ Provider-neutral chat generation is currently more mature for text-only prompts 
 
 `MessageFeedbackControls` appears only for completed, non-system assistant messages when `SELF_IMPROVEMENT_CONFIG.endUserFeedback` is enabled. `convex/messageFeedback.ts` requires thread ownership, accepts positive or negative ratings plus bounded labels and comment data, and lets one user update rather than stack ratings for a message. The first 20 ratings per user in a rolling day count toward learning; later ratings are retained but do not move learning counters.
 
-Ratings update feedback counters only for company memories recorded in the answer's evidence and feed the company memory sweep. Comment text remains untrusted stored text and is never inserted into prompts. Keep the switch enforced in the mutation as well as the UI so stale clients cannot continue collecting feedback after an operator disables it.
+Ratings update feedback counters only for company memories recorded in the answer's evidence and feed the company memory sweep. Comment text remains untrusted. Eligible newly typed corrections call `companyMemories.proposeCorrectionCandidate` through `proposeCorrection`; editing a rating without a new correction does not propose the same text twice. Do not describe comments as inert storage or as automatically approved knowledge. Keep the switch enforced in the mutation as well as the UI so stale clients cannot continue collecting feedback after an operator disables it.
 
-Chat-log cost displays use `src/lib/chatTelemetry.ts`. Those helpers total stored input/output token fields and estimate GBP display cost from fixed USD rates, a hardcoded GBP/USD conversion, and a simple `modelUsed` name check that treats names containing `pro` as pro-priced. This is an operational estimate for admin chat-log screens, not a billing ledger; billing or cost-accounting changes should use provider pricing configuration and backend cost records instead of these display helpers.
+Chat-log cost displays use `src/lib/chatTelemetry.ts`. Those helpers total stored input/output token fields and estimate USD display cost from fixed USD rates and a simple `modelUsed` name check that treats names containing `pro` as pro-priced. The previous guessed GBP conversion has been removed. This is an operational estimate for admin chat-log screens, not a billing ledger; billing or cost-accounting changes should use provider pricing configuration and backend cost records instead of these display helpers.
 
 ## The Swarm, removed
 
@@ -76,7 +91,7 @@ The Swarm — an "autonomous" mode that ran five hard-coded demo agents found by
 
 The chat route is available to authenticated dashboard users. The UI does not show an admin-only guard around `/app/assistant`; backend access is enforced by Convex mutations and queries. A user can only read and mutate their own authenticated threads. Company scope is stored on new threads for quotas, rules, model defaults, and knowledge retrieval, but it does not make company-wide thread reading possible. Administrators do not get automatic read access to another user's personal thread through `api.chat.getMessages`.
 
-Tenant behavior enters chat through three places. First, `getActiveCompanyId` sets the thread company at creation. Second, quota resolution checks user plan overrides before company plans, then treats missing plans as unlimited. Third, the Assistant's run is told the company's prompt and active rules, reads the company's knowledge, and resolves the company's model defaults, all through `convex/assistantKnowledge.ts`. A super admin may pick which client a new conversation is for (`createThread`'s `forCompanyId` / `forPlatform`; item 8) without changing who they view as. The safety contract in `convex/aiPromptAssembly.ts` explicitly ranks platform isolation and authorization above configured prompts, company prompts, active rules, retrieved knowledge, uploaded files, and user instructions.
+Tenant behavior enters chat through three places. First, `getActiveCompanyId` sets the thread company at creation. Second, quota resolution first checks paid access for the effective company, then user plan overrides and company plans, treating missing quota targets as unlimited only after the paid-access check. Third, the Assistant's run is told the company's prompt and active rules, reads the company's knowledge, and resolves the company's model defaults, all through `convex/assistantKnowledge.ts`. A super admin may pick which client a new conversation is for (`createThread`'s `forCompanyId` / `forPlatform`; item 8) without changing who they view as. The safety contract in `convex/aiPromptAssembly.ts` explicitly ranks platform isolation and authorization above configured prompts, company prompts, active rules, retrieved knowledge, uploaded files, and user instructions.
 
 The assistant uses deterministic backend validation for file metadata and authorization. Retrieved documents and uploaded files are deliberately wrapped as untrusted material in the model prompt. Do not change this wrapping casually; it is the main defense against prompt injection from files and knowledge sources. Similarly, model selection should remain resolved through stored configuration. Runtime paths should avoid hardcoding model literals except for the documented failsafe in `convex/aiModelService.ts`.
 
@@ -96,4 +111,54 @@ The PII redaction switch is stored as JSON in `systemConfig` under `PII_REDACTIO
 
 ## Verification
 
-Relevant focused tests include `src/app/(dashboard)/app/assistant/page.test.tsx`, assistant component and stream-presentation tests, `src/lib/streamReveal.test.ts`, `src/lib/googleLiveVoice.test.ts`, `src/lib/voiceSession.test.ts`, `convex/chat.test.ts`, `convex/chatService.test.ts`, `convex/ai.test.ts`, `convex/photoActionService.test.ts`, `convex/agentRuntime.test.ts` photo cases, the provider service and stream service tests, `convex/messageFeedback.test.ts`, `convex/aiPromptAssembly.test.ts`, `convex/aiSafetyPolicy.test.ts`, `convex/knowledge.test.ts`, `convex/knowledgeActions.test.ts`, `convex/utils/uploadPolicy.test.ts`, `convex/aiModelService.test.ts`, and `e2e/user-chat-flow.spec.ts`. For broader validation, follow the repo gate in `AGENTS.md`: `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check`. When changing upload, knowledge, image, or AI behavior, also exercise the UI with at least one normal prompt, one unsupported upload, one supported small upload, one image-bearing turn, one microphone permission denial if browser support permits, one transcription guardrail case, and one tenant-scoped model/default scenario.
+Relevant focused tests include `src/app/(dashboard)/app/assistant/page.test.tsx`, assistant component and stream-presentation tests, `src/lib/streamReveal.test.ts`, `src/lib/googleLiveVoice.test.ts`, `src/lib/voiceSession.test.ts`, `convex/chat.test.ts`, `convex/chatService.test.ts`, `convex/ai.test.ts`, `convex/photoActionService.test.ts`, `convex/agentRuntime.test.ts` photo cases, the provider service and stream service tests, `convex/messageFeedback.test.ts`, `convex/aiPromptAssembly.test.ts`, `convex/aiSafetyPolicy.test.ts`, `convex/knowledge.test.ts`, `convex/knowledgeActions.test.ts`, `convex/utils/uploadPolicy.test.ts`, `convex/aiModelService.test.ts`, and `e2e/user-chat-flow.spec.ts`. For broader validation, follow the repo gate in `AGENTS.md`: `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run test:coverage`, `npm run coverage:check`, `npm run test:e2e:smoke`, `npm run build`, and `git diff --check`. When changing upload, knowledge, image, or AI behavior, also exercise the UI with at least one normal prompt, one unsupported upload, one supported small upload, one image-bearing turn, one microphone permission denial if browser support permits, one transcription guardrail case, and one tenant-scoped model/default scenario.
+
+
+## Current client projection and website focus
+
+`getMessages` and `getAssistantStage` are deliberately declared public because
+anonymous widget visitors use the same transport with a token-bound access
+check. Their public declaration does not make arbitrary transcripts public.
+`assertCanAccessThread` still enforces authenticated ownership or the matching
+widget session. `clientMessageValidator` explicitly projects content and
+presentation fields rather than returning the stored message wholesale.
+Storage IDs, runtime evidence JSON, token accounting and provider metadata are
+not automatically sent to every chat reader. Image attachment URLs are
+resolved after access validation. Keep that projection narrow when adding a
+new message field or widget display.
+
+`createThread` accepts `forCompanyId`, `forPlatform` and `forWebsiteId`.
+Only SUPER_ADMIN may choose the first two. The website argument must name a
+hold in the resolved conversation company; it is stored as
+`threads.companyWebsiteId`. `AssistantWebsitePicker.tsx` validates welcome
+choices against the company's held websites and uses a `site` URL choice,
+including `all`. The frontend remembers a choice per company, but the backend
+must independently reject foreign holds. Reading the remembered choice does
+not alter an already created thread's scope.
+
+`assistantReads.holdFor` resolves a model-written website name among the
+conversation company's holds. Related Analytics and Bing read modules extend
+the Assistant's available figures; they do not grant it an arbitrary company
+argument. `assistantReplyExtras.runExtrasInternal` collects source lookups,
+task proposals and chart data from a run's tool calls. A new data tool should
+reuse the source screen's read and attach the screen address where supported,
+rather than create a divergent figure solely for chat.
+
+`assistantTaskHandlers.ts` implements proposal paths for alerts and scheduled
+reports as well as task changes. These tools validate that a conversation has
+a company and resolve its website/target before returning a proposal. Saving
+and confirming a proposal is a separate user-facing operation. The wider
+Hakken tasks runtime still needs its own detailed guide review; this chat
+review does not claim all scheduling, notification and retention behavior of
+that subsystem is revalidated.
+
+This review inspected current thread builders, history paging, client message
+projection, shared assistant assembly, image inlining, quota precedence,
+feedback corrections, website selection, task proposal entry points and USD
+telemetry. The existing 100-message deletion caveat remains present in source
+and is reported without changing application behavior. Relevant tests include
+`chat.test.ts`, `chatService.test.ts`, `messageFeedback.test.ts`,
+`ChatHistoryList.test.tsx` and `assistant-doors-drift.test.ts`. Tests and provider
+calls were not run; local source review does not establish deployed provider
+acceptance, real-time voice operation or completion of the larger product
+vision.

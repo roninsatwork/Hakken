@@ -1,5 +1,6 @@
 "use node";
 
+import { memoryNow } from "./utils/stepMemory";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -141,7 +142,8 @@ export const runWebsite = internalAction({
     try {
       const pagesChanged = await gather(ctx, args);
       // Next, each cannibalisation search's page picked by the decision model, in a step of its own (insightCompetingJudge.ts).
-      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...args, step: "PICK", cancelWatchId: watchId, pagesChanged });
+      const pieces = await ctx.runAction(internal.insightHistorySteps.planForRun, { holdId: args.holdId });
+      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...memoryNow(), ...args, step: "HISTORY", cancelWatchId: watchId, pagesChanged, history: { pieces, at: 0, records: 0, asks: 0, problems: [], waits: 0, attempt: 0 } });
     } catch (error: unknown) {
       await ctx.runMutation(internal.insightsRunSteps.cancelInsightsWatch, { watchId });
       await finishRun(ctx, args.runId, args.workflowExecutionId, "FAILED", failureSummary(error));
@@ -157,13 +159,14 @@ export const runWebsite = internalAction({
  * handed on to what follows the save.
  */
 export const decideWebsite = internalAction({
-  args: { ...insightsStepArgs, watchId: v.id("_scheduled_functions"), pagesChanged: v.array(v.object({ kind: v.string(), page: v.string() })) },
+  args: { ...insightsStepArgs, decideAttempt: v.optional(v.number()), watchId: v.id("_scheduled_functions"), pagesChanged: v.array(v.object({ kind: v.string(), page: v.string() })) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { watchId, pagesChanged, ...run } = args;
+    const { watchId, pagesChanged, decideAttempt = 0, ...run } = args;
     try {
-      const done = await readAndDecide(ctx, run, pagesChanged as Array<{ kind: Change["kind"]; page: string }>);
-      await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...run, step: "AFTER", cancelWatchId: watchId, ...done });
+      const { retry, ...done } = await readAndDecide(ctx, run, pagesChanged as Array<{ kind: Change["kind"]; page: string }>);
+      if (retry && decideAttempt === 0) await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...memoryNow(), ...run, step: "DECIDE", cancelWatchId: watchId, pagesChanged, decideAttempt: 1, delayMs: 5_000 });
+      else await ctx.runMutation(internal.insightsRunSteps.handOnInsights, { ...memoryNow(), ...run, step: "AFTER", cancelWatchId: watchId, ...done });
     } catch (error: unknown) {
       await ctx.runMutation(internal.insightsRunSteps.cancelInsightsWatch, { watchId });
       await finishRun(ctx, run.runId, run.workflowExecutionId, "FAILED", failureSummary(error));
@@ -186,19 +189,6 @@ async function gather(ctx: ActionCtx, args: InsightsRunArgs): Promise<Array<{ ki
     await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Money pages", detail: failureSummary(error), failed: true });
   }
 
-  // 0b. The research's history (utils/insightHistory.ts): sixteen months of Search Console and Analytics, asked of Google for free.
-  try {
-    const history: { records: number; asks: number; problems: string[] } = await ctx.runAction(internal.insightHistory.fetchHistory, { holdId: args.holdId });
-    await ctx.runMutation(internal.roleRuns.logRunLine, {
-      runId: args.runId,
-      companyId: args.companyId,
-      heading: "History",
-      detail: `Kept ${history.records} records of Search Console and Analytics from ${history.asks} asks to Google.${history.problems.length > 0 ? ` ${history.problems.join(" ")}` : ""}`.slice(0, 900),
-      failed: history.records === 0 && history.problems.length > 0,
-    });
-  } catch (error) {
-    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "History", detail: failureSummary(error), failed: true });
-  }
   return pagesChanged;
 }
 
@@ -206,6 +196,7 @@ async function gather(ctx: ActionCtx, args: InsightsRunArgs): Promise<Array<{ ki
 async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChanged: Array<{ kind: Change["kind"]; page: string }>) {
   // A shop is read in sales wherever enquiries are counted (I40).
   const args: InsightsRunArgs = { ...runArgs, shop: await ctx.runQuery(internal.insightsReading.isShopInternal, { holdId: runArgs.holdId }).catch(() => false) };
+  const analysisProblems: string[] = [];
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
   const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
@@ -214,11 +205,12 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
 
   // 1. One reading of every source (§2.1), and what the run asks Google itself (§8, I37, I42).
   const reading = await readWebsiteFacts(ctx, args.holdId);
+  analysisProblems.push(...reading.problems);
   reading.facts.push(...await askedInRun(ctx, args.holdId));
   // 1b. Why the enquiries moved (insights-intelligence-plan.md phase 8): DataForSEO's week kept with the week, and the
   // newest whole month's six tests, from the sixteen months held, as facts the Analyst and the Head of Strategy may name.
   const rankings = await ctx.runQuery(internal.insightsPeriod.rankSnapshot, { holdId: args.holdId }).catch(() => null);
-  const view: WhyView | null = await ctx.runQuery(internal.insightsPeriod.runView, { holdId: args.holdId }).catch(() => null);
+  const view: WhyView | null = await ctx.runQuery(internal.insightsPeriod.runView, { holdId: args.holdId }).catch((error: unknown) => { analysisProblems.push(`Period figures: ${failureSummary(error)}`); return null; });
   const why = view ? whyFacts(view) : [];
   reading.facts.push(...why);
   const facts = factsByKey(reading.facts);
@@ -243,10 +235,14 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   try {
     // The change log (I25): the page changes the website's own figures show, the parts of money pages
     // this week's check saw change, and its own Google profile's changes, each once, with what followed.
-    const found = await ctx.runQuery(internal.insightsReading.pageChangesInternal, { holdId: args.holdId });
+    const found = await ctx.runAction(internal.insightsReading.pageChangesInternal, { holdId: args.holdId });
     const { notRemoved } = found;
     const changes = [...found.changes, ...await ctx.runQuery(internal.insightsReading.newChangesInternal, { holdId: args.holdId, today, seen: pagesChanged })];
-    if (changes.length > 0 || notRemoved.length > 0) await ctx.runMutation(internal.insightsTeam.saveChanges, { holdId: args.holdId, companyId: args.companyId, week: weekOf(now), changes, notRemoved });
+    // All outcomes are kept; only the transaction size changes. Replayed batches reuse their existing change rows.
+    for (let at = 0; at < Math.max(changes.length, notRemoved.length); at += 25) await ctx.runMutation(internal.insightsTeam.saveChanges, {
+      holdId: args.holdId, companyId: args.companyId, runId: args.runId, chainBooking: args.chainBooking,
+      week: weekOf(now), changes: changes.slice(at, at + 25), notRemoved: notRemoved.slice(at, at + 25),
+    });
     // Keeping score (§2.7; utils/insightClock.ts), after the change log so this week's page changes count:
     // each open finding's days started again when its page changed, its figure so far kept, each one due judged.
     const checked = await checkOpenFindings(ctx, args, facts, today);
@@ -257,8 +253,10 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
         failed: false,
       });
     }
+    await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Track record", detail: "Page changes and open findings checked.", failed: false });
   } catch (error) {
-    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Track record", detail: failureSummary(error), failed: true });
+    analysisProblems.push(`Track record: ${failureSummary(error)}`);
+    await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Track record", detail: failureSummary(error), failed: true });
   }
   // The enquiry check (I42): the specialists are told when the count may be wrong.
   const check = enquiryCheck(reading.facts);
@@ -266,18 +264,36 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   const learnings = await ctx.runQuery(internal.insightsTeam.learningsFor, { holdId: args.holdId }).catch(() => []);
   const caveat = [enquiryCheckBrief(check), learnings.length > 0 ? `What changes have taught (use it when you advise; say "this worked on N of M websites like yours" only from the lines that say so): ${learnings.join("; ")}.` : null].filter(Boolean).join("\n\n") || null;
   // The Measurement check (phase 13): whether the figures can be trusted, for the page and the Measurement specialist.
-  const measured = await ctx.runQuery(internal.insightsReading.measurementInternal, { holdId: args.holdId }).catch(() => ({ health: null, byDay: [] }));
+  let measurementReady = true;
+  const measured = await ctx.runQuery(internal.insightsReading.measurementInternal, { holdId: args.holdId }).then(async (value) => {
+    return value;
+  }).catch(async (error: unknown) => {
+    await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Measurement", detail: failureSummary(error), failed: true });
+    measurementReady = false;
+    analysisProblems.push(`Measurement: ${failureSummary(error)}`);
+    return { health: null, byDay: [] };
+  });
   const measurement = { checks: measurementFrom(reading.facts, check, measured.health), byDay: measured.byDay };
   // Opportunities and the page plan (phase 9), for their pages and the Search and content specialist.
-  const plan = await ctx.runQuery(internal.insightsReading.planInternal, { holdId: args.holdId }).catch(() => null);
+  const plan = await ctx.runQuery(internal.insightsReading.planInternal, { holdId: args.holdId }).then(async (value) => {
+    return value;
+  }).catch(async (error: unknown) => {
+    await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Opportunities", detail: failureSummary(error), failed: true });
+    analysisProblems.push(`Opportunities: ${failureSummary(error)}`);
+    return null;
+  });
   const briefs: Record<string, string | null> = { measurement: measurementBrief(measurement.checks), search: plan ? planBrief(plan) : null };
   const caveatFor = (specialist: string) => [caveat, briefs[specialist] ?? null].filter(Boolean).join("\n\n") || null;
   // 3. Each specialist thinks and tests, side by side (§2.3) — the Keyword cannibalisation specialist beside them, handed the groups
   // the rule reads anew (insightCompeting.ts): asked after them, it cost the run a minute it had no room for (2026-10-12).
-  const competingWork = competingForRun(ctx, args, weekOf(now), rulesFor(args), member(COMPETING_ROLE) ?? lead)
+  const competingWork = competingForRun(ctx, args, weekOf(now), rulesFor(args), member(COMPETING_ROLE) ?? lead, { cachedOnly: true })
+    .then(async (value) => {
+      if (value.problems.length > 0) await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Keyword cannibalisation", detail: value.problems.join("; "), failed: true });
+      return value;
+    })
     .catch(async (error: unknown) => {
-      await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Keyword cannibalisation", detail: failureSummary(error), failed: true });
-      return { competing: null, drafts: [], facts: [], summary: null };
+      await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Keyword cannibalisation", detail: failureSummary(error), failed: true });
+      return { competing: null, drafts: [], facts: [], summary: null, problems: [failureSummary(error)], batch: { next: 0, complete: true, signature: "" } };
     });
   // 3b. The Analyst says why the enquiries moved, from the tests' facts, beside them: its words kept only when every figure is held.
   const analystWork = (async (): Promise<{ period: string; compare: "YEAR_AGO" | "BEFORE"; paragraph: string } | undefined> => {
@@ -302,6 +318,7 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
     try {
       return await askSpecialist(ctx, args, specialist, mine, reading.facts, member(SPECIALIST_ROLE[specialist]) ?? lead, caveatFor(specialist));
     } catch (error) {
+      analysisProblems.push(`${specialist}: ${failureSummary(error)}`);
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: specialist, detail: failureSummary(error), failed: true });
       return [];
     }
@@ -311,6 +328,7 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
 
   // 3c. The Keyword cannibalisation specialist's write-ups, ranked and checked with the rest.
   const competing = await competingWork;
+  analysisProblems.push(...competing.problems);
   drafts.push(...competing.drafts);
   reading.facts.push(...competing.facts);
 
@@ -338,12 +356,15 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
         });
       }
     } catch (error) {
+      analysisProblems.push(`Head of Strategy: ${failureSummary(error)}`);
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: "Head of Strategy", detail: failureSummary(error), failed: true });
     }
   }
 
   // 5. The Editor checks every figure, comparison and claim, against a fresh reading (I21, I29).
-  const fresh = factsByKey([...(await readWebsiteFacts(ctx, args.holdId)).facts, ...why, ...competing.facts]);
+  const freshReading = await readWebsiteFacts(ctx, args.holdId);
+  analysisProblems.push(...freshReading.problems);
+  const fresh = factsByKey([...freshReading.facts, ...why, ...competing.facts]);
   const saved: SavedFinding[] = [];
   let rank = 0;
   for (const draft of ordered) {
@@ -406,24 +427,37 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
     ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),
   };
   const costUsd = await ctx.runQuery(internal.insightsTeam.runCost, { runId: args.runId });
+  const analysisComplete = analysisProblems.length === 0;
   const publishedIds = await ctx.runMutation(internal.insightsTeam.saveWeek, {
+    analysisComplete,
     holdId: args.holdId,
     companyId: args.companyId,
     week: weekOf(now),
     runId: args.runId,
+    chainBooking: args.chainBooking,
     verdict: verdictText,
     sources,
     problems: reading.problems,
     findings: saved,
     costUsd,
     summary,
-    measurement,
+    ...(measurementReady ? { measurement } : {}),
     ...(plan ? { plan } : {}),
   });
-  await keepCompeting(ctx, args, weekOf(now), competing, saved, publishedIds);
+  if (measurementReady) await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Measurement", detail: "Measurement results saved.", failed: false });
+  if (plan) await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Opportunities", detail: "Opportunities and page plan saved.", failed: false });
+  if (competing.problems.length === 0) {
+    try {
+      await keepCompeting(ctx, args, weekOf(now), competing, analysisComplete ? saved : [], publishedIds);
+      await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Keyword cannibalisation", detail: competing.competing ? "Competing-page results saved." : "Search Console is not connected; no competing-page result inferred.", failed: false });
+    } catch (error) {
+      await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Keyword cannibalisation", detail: failureSummary(error), failed: true });
+    }
+  }
+  await ctx.runMutation(internal.insightsRunSteps.recordStage, { runId: args.runId, companyId: args.companyId, stage: "Analysis", detail: analysisProblems.join("; ") || "Findings and weekly analysis saved.", failed: analysisProblems.length > 0 });
   // 6–10 follow the save in a step of their own (insightsRunAfter.ts): the reports, drafts, buyer questions, page reviews and Page decisions.
-  const published = saved.filter((finding) => finding.status === "PUBLISHED").length;
-  return { week: weekOf(now), today, counts: { facts: reading.facts.length, candidates: candidates.length, written: drafts.length, published, sentBack: saved.length - published } };
+  const published = publishedIds.length;
+  return { retry: !analysisComplete, week: weekOf(now), today, counts: { facts: reading.facts.length, candidates: candidates.length, written: drafts.length, published, sentBack: analysisComplete ? saved.length - published : 0 } };
 }
 
 /**
@@ -558,7 +592,7 @@ async function askSpecialist(
     candidates: candidates.map((candidate, number) => ({ number, pattern: candidate.pattern, seen: candidate.seen, atStake: Math.round(candidate.stake * 10) / 10, facts: candidate.facts })),
     facts: factLines(factsFor(specialist, candidates, all)),
   });
-  const answer = await ask(ctx, args, member, `the ${specialist} specialist`, system, prompt) as { findings?: unknown } | null;
+  const answer = await ask(ctx, args, member, `the ${specialist} specialist`, system, prompt, undefined, (value) => value !== null && typeof value === "object" && "findings" in value && Array.isArray(value.findings)) as { findings?: unknown } | null;
   const found = Array.isArray(answer?.findings) ? answer.findings : [];
   return found.slice(0, 3).flatMap((raw) => {
     const number = typeof (raw as { candidate?: unknown })?.candidate === "number" ? (raw as { candidate: number }).candidate : 0;
@@ -613,7 +647,7 @@ async function askStrategy(
     // And why the enquiries moved, the Analyst's tests (phase 8), so the verdict can say what caused the move.
     facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key) || fact.key.startsWith("why."))),
   });
-  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt, LEAD_ASK_LIMIT_MS) as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown; services?: unknown } | null;
+  const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt, LEAD_ASK_LIMIT_MS, (value) => value !== null && typeof value === "object" && "verdict" in value && typeof value.verdict === "string") as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown; services?: unknown } | null;
   const order = Array.isArray(answer?.order) ? answer.order.filter((number): number is number => Number.isInteger(number) && number >= 0 && number < drafts.length) : [];
   const joined = (Array.isArray(answer?.joined) ? answer.joined : []).flatMap((raw) => {
     const listed: unknown[] = Array.isArray((raw as { from?: unknown })?.from) ? (raw as { from: unknown[] }).from : [];

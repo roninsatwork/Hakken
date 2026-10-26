@@ -1,131 +1,118 @@
+---
+product: Hakken
+documentation_type: developer reference
+feature_area: package commands and operational boundaries
+audience: developers and platform operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/operational-scripts-reference.md
+last_reviewed: '2026-10-26T15:14:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Operational Scripts Reference
 
-Last reviewed: 2026-07-30 17:39 BST +0100
-Status: current package-script inventory
-Audience: engineers, agents, and operators choosing the right local command or documenting a recurring operation.
+> **Product:** Hakken · **Document type:** developer reference · **Feature area:** package commands and operational boundaries
+> **Reviewed:** 26 October 2026, 15:14:20 GMT (Europe/London)
+> **Source path:** `docs/developer/operational-scripts-reference.md` · **Status:** Current
 
-## Purpose
 
-This reference groups `package.json` scripts by job. It does not replace
-operator runbooks. If a script becomes a recurring human process, create an
-operator runbook and link it from `docs/operator/index.md`.
+This reference lists the current Hakken package commands and explains how to choose between local checks, application work and operations that touch another system. The command map was compared with `package.json`; the local-auth and deployment-environment scripts were also read. Packaging, generator, product initialization, recipes and framework-update implementations have now been reviewed in their dedicated guides; deployment has its own current reference. No command in the table was executed during this documentation pass.
 
-Before pushing, follow the verification gates in `AGENTS.md`. Do not push just
-because a script passes locally.
+## Scope And Audience
+
+Engineers and operators use this reference to locate a command, not as blanket permission to run it. Repository documentation maintenance is restricted to reading source and validating Markdown. Commands that seed users, open browsers, save authentication sessions, contact Convex, change a theme record, create a template or apply a recipe need their own authorized task. Even a familiar command can write generated output or use a configured remote endpoint.
+
+The precise command body is included below because npm aliases can hide several steps. Lifecycle entries beginning with `pre` are automatically invoked by npm before their matching command. Read the current AGENTS.md for required verification before a separately authorized push or merge; this table does not abbreviate those gates or establish that they passed.
+
+## Current Package Command Map
+
+Each row is a package key and its actual configured command. Arguments after `--` are passed through according to npm and the target tool. A script name is not a guarantee of read-only behavior or local-only scope.
+
+| Package command | Configured implementation |
+| --- | --- |
+| `npm run help` | `node scripts/list-platform-scripts.mjs` |
+| `npm run dev` | `next dev` |
+| `npm run predev` | `npm run verify:env` |
+| `npm run build` | `next build` |
+| `npm run prebuild` | `npm run verify:env` |
+| `npm run start` | `next start` |
+| `npm run lint` | `eslint` |
+| `npm run lint:all` | `eslint` |
+| `npm run convex:dev` | `convex dev` |
+| `npm run preconvex:dev` | `npm run verify:env` |
+| `npm run test` | `vitest` |
+| `npm run pretest` | `npm run verify:env` |
+| `npm run test:run` | `vitest run --reporter=default --reporter=json --outputFile.json=test-results/test-timings.json && node scripts/check-test-speed.mjs` |
+| `npm run pretest:run` | `npm run verify:env` |
+| `npm run test:coverage` | `vitest run --coverage` |
+| `npm run pretest:coverage` | `npm run verify:env` |
+| `npm run coverage:check` | `node scripts/check-coverage-thresholds.mjs` |
+| `npm run check:pagination` | `node scripts/check-convex-pagination.mjs` |
+| `npm run check:encoding` | `node scripts/check-text-source-encoding.mjs` |
+| `npm run check:layering` | `node scripts/check-layering.mjs` |
+| `npm run check:screen-kit` | `node scripts/check-screen-kit.mjs` |
+| `npm run check:orphans` | `knip --include files,dependencies,unlisted --no-config-hints` |
+| `npm run check:fences` | `node scripts/strip-verticals.mjs --check` |
+| `npm run check:guards` | `npm run check:encoding && npm run check:pagination && npm run check:layering && npm run check:screen-kit && npm run check:messages && npm run check:orphans && npm run check:fences` |
+| `npm run check:theme` | `node scripts/check-theme-record.mjs` |
+| `npm run theme:pull` | `node scripts/theme-pull.mjs` |
+| `npm run drawing-kit` | `node scripts/drawing-kit.mjs` |
+| `npm run check:drawing` | `node scripts/check-drawing.mjs` |
+| `npm run template:build` | `node scripts/strip-verticals.mjs` |
+| `npm run verify:env` | `node scripts/verify-local-environment.mjs` |
+| `npm run verify:deployment` | `node scripts/verify-deployment-environment.mjs` |
+| `npm run typecheck` | `node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit` |
+| `npm run typecheck:cold` | `node -e "require('fs').rmSync('tsconfig.tsbuildinfo',{force:true})" && npm run typecheck` |
+| `npm run check` | `npm run verify:env && npm run check:guards && npm run check:theme && npm run lint && npm run typecheck:cold && npm run test:run` |
+| `npm run gate` | `npm run check:guards && npm run lint && npm run typecheck:cold && npm run test:run && npm run test:e2e && npm run test:coverage && npm run coverage:check` |
+| `npm run setup:validate` | `node scripts/validate-setup.mjs` |
+| `npm run test:e2e` | `playwright test` |
+| `npm run pretest:e2e` | `npm run verify:env` |
+| `npm run test:e2e:smoke` | `playwright test --grep @smoke` |
+| `npm run pretest:e2e:smoke` | `npm run verify:env` |
+| `npm run test:e2e:real-auth` | `playwright test -c playwright.real-auth.config.ts` |
+| `npm run pretest:e2e:real-auth` | `npm run verify:env` |
+| `npm run auth:local:seed` | `node scripts/local-test-auth.mjs seed` |
+| `npm run auth:local:state` | `node scripts/local-test-auth.mjs state` |
+| `npm run auth:local:cleanup` | `node scripts/local-test-auth.mjs cleanup` |
+| `npm run demo:local:seed` | `node scripts/local-demo-seed.mjs` |
+| `npm run check:messages` | `node scripts/check-messages.mjs` |
+| `npm run template:verify` | `node scripts/verify-template.mjs` |
+| `npm run product:init` | `node scripts/init-product.mjs` |
+| `npm run feature:generate` | `node scripts/generate-entity.mjs` |
+| `npm run product:recipe` | `node scripts/product-recipe.mjs` |
+| `npm run framework:update` | `node scripts/framework-update.mjs` |
 
 ## Development And Verification
 
-| Script | Purpose |
-| --- | --- |
-| `npm run help` | Lists platform scripts. |
-| `npm run product:recipe -- <recipe>` | Previews a complete starter recipe; `--list` shows the catalog and `--apply` writes it locally. See [Product Recipes](./product-recipes.md). |
-| `npm run framework:update -- --upstream <export>` | Compares a pristine matching export; optional review-plan and baseline-recording steps are explicit. See [Framework Updates](../operator/framework-updates.md). |
-| `npm run feature:generate -- <entity>` | Previews a complete tenant feature; `--apply` writes it locally. See [Feature Generator](./feature-generator.md). |
-| `npm run dev` | Runs the Next.js dev server after `verify:env`. |
-| `npm run convex:dev` | Runs Convex dev after `verify:env`. |
-| `npm run build` | Builds the Next.js app after `verify:env`. |
-| `npm run start` | Starts the built Next.js app. |
-| `npm run verify:env` | Checks Node and installed direct dependency versions against the lockfile. |
-| `npm run lint` | Runs ESLint. |
-| `npm run lint:all` | Runs the current full lint target. |
-| `npm run typecheck` | Runs TypeScript with `--noEmit`. |
-| `npm run test` | Runs Vitest in watch/default mode after `verify:env`. |
-| `npm run test:run` | Runs the Vitest suite once after `verify:env`. |
-| `npm run test:coverage` | Runs coverage after `verify:env`. |
-| `npm run coverage:check` | Checks coverage thresholds. |
-| `npm run check:pagination` | Runs the pagination drift guard. |
-| `npm run check:encoding` | Runs the source/document encoding guard. |
-| `npm run check:layering` | Runs the app layering/import-boundary guard. |
-| `npm run check:guards` | Runs the project guard checks as a grouped command. |
-| `npm run check` | Runs environment verification, lint, typecheck, and Vitest. |
-| `npm run gate` | Runs lint, typecheck, unit tests, E2E, coverage, and coverage threshold check. |
-| `npm run setup:validate` | Checks local files/environment against the providers and capabilities in `hakken.product.json`; no network calls. |
-| `npm run verify:deployment` | Reads the selected Convex deployment's environment and checks required key names using the same product rules; `--prod` selects production. |
+`dev` starts Next.js and `convex:dev` starts the backend development process; their environment guards run first. `build` creates application output and `start` serves an existing build. These are application operations and are not necessary to validate prose or local Markdown links. Starting services can make network connections or execute configured development behavior, so do not treat them as passive file inspection.
 
-These npm lifecycle guards run automatically before their matching scripts:
+`verify:env` checks Node and installed direct dependency versions against the repository's expected environment and lockfile. Its success is a prerequisite for trusting application tests, not evidence of a deployed backend. This scheduled documentation task does not install dependencies merely to make a prose check green. Node and dependency requirements are reviewed with build/deployment documentation rather than copied into every guide where they can drift.
 
-| Script | Purpose |
-| --- | --- |
-| `npm run predev` | Runs `verify:env` before `npm run dev`. |
-| `npm run preconvex:dev` | Runs `verify:env` before `npm run convex:dev`. |
-| `npm run prebuild` | Runs `verify:env` before `npm run build`. |
-| `npm run pretest` | Runs `verify:env` before `npm run test`. |
-| `npm run pretest:run` | Runs `verify:env` before `npm run test:run`. |
-| `npm run pretest:coverage` | Runs `verify:env` before `npm run test:coverage`. |
-| `npm run pretest:e2e` | Runs `verify:env` before `npm run test:e2e`. |
-| `npm run pretest:e2e:real-auth` | Runs `verify:env` before `npm run test:e2e:real-auth`. |
-| `npm run preeval:movement-avatar` | Runs `verify:env` before `npm run eval:movement-avatar`. |
+`check` is a composed gate: environment verification, grouped source guards, saved-theme consistency, lint, a cold type check and the test run. `test:run` writes JSON timing output and then applies the speed checker, so it is not equivalent to a bare Vitest invocation. `typecheck:cold` removes the incremental TypeScript build information before calling the standard type check. Both can write or remove generated/local state. A result from a previous checkout is not automatically evidence for today's source.
 
-## Browser And Auth Testing
+Coverage runs and coverage thresholds are separate package commands. The `gate` command includes browser and coverage stages but does not contain exactly the same composition as `check`; consult the actual table rather than assuming one always subsumes the other. `test:e2e:smoke` selects Playwright tests tagged for smoke coverage, while `test:e2e:real-auth` uses its separate configuration. Browser tests may authenticate, save state and exercise application behavior; none is part of this documentation-only review.
 
-| Script | Purpose |
-| --- | --- |
-| `npm run test:e2e` | Runs Playwright tests. |
-| `npm run test:e2e:movement` | Runs the on-demand movement Playwright config. |
-| `npm run eval:movement-avatar` | Runs the movement avatar proof evaluation. |
-| `npm run test:e2e:real-auth` | Runs Playwright tests against real auth config. |
-| `npm run auth:local:seed` | Seeds deterministic local auth state. |
-| `npm run auth:local:state` | Prints deterministic local auth state. |
+The guard family covers encoding, pagination, import layering, the shared screen kit, locale parity, orphan detection and copy boundaries. `check:guards` composes several of them; theme checking remains explicit in `check`. A hypothetical documentation-related error in one of those application guards is not a reason to edit source under this maintenance authorization. Report the unrelated failure and retain the validated documentation diff.
 
-Use [Local Test Auth Runbook](../operator/local-test-auth-runbook.md) for the
-human workflow around deterministic local auth.
+## Environment And Authentication Operations
 
-## Demo, Seed, And Template Scripts
+`setup:validate` reads local configuration and environment to check selected providers and capabilities. `verify:deployment` is different: `scripts/verify-deployment-environment.mjs` invokes `npx --no-install convex env list`, choosing production when `--prod` is supplied. The implementation validates required setting names and suppresses raw command errors because they may include values. A successful name check does not prove credential validity, provider connectivity, frontend configuration, deployment success or live integration acceptance.
 
-| Script | Purpose |
-| --- | --- |
-| `npm run demo:local:seed` | Seeds local demo data. |
-| `npm run product:init -- --config <file>` | Previews product defaults; `--apply` explicitly updates a clone. See [Product Setup](../operator/product-setup.md). |
-| `npm run template:build -- --out <directory>` | Writes a framework + Arcade copy; optional areas are opt-in. |
-| `npm run template:verify` | Installs and verifies temporary template copies. |
+The deterministic local-auth commands have three different effects. Seed calls a backend mutation to create/update test users. Cleanup calls another mutation and reports queued cleanup. State launches Chromium through Playwright, signs in selected deterministic roles and saves session files under `e2e/.auth`. The state command does not merely print a diagnostic report. These session files contain credentials and should not become documentation attachments or committed fixtures.
 
-Use [Local Demo Seed Runbook](../operator/local-demo-seed-runbook.md)
-and [Vertical App Packaging Checklist](../operator/vertical-app-packaging-checklist.md)
-when these scripts are part of a handoff or packaging process.
+The auth helper requires `LOCAL_TEST_AUTH_SECRET`. Backend URL resolution checks `LOCAL_TEST_AUTH_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_URL`, a value in `.env.local`, then a loopback fallback. Browser base selection checks `LOCAL_TEST_AUTH_BASE_URL` before its localhost default. The command name does not itself lock execution to a particular database. The defaults also use different ports for the backend and browser app. Consult the [Local Test Auth Runbook](../operator/local-test-auth-runbook.md) before a separately authorized testing workflow, and do not copy actual environment values into a guide.
 
-## Movement Script Families
+## Theme, Drawings And Generated Work
 
-The movement demo is frozen unless explicitly reopened or a gate is broken.
-Movement scripts are numerous and intentionally specialized. They are grouped
-here by purpose rather than repeated as one long command list.
+`theme:pull`, `drawing-kit` and `check:drawing` serve the repository's drawing workflow. Pulling the theme can change the saved record and the kit command can generate assets. This reference establishes their current entry points, not a replacement for the [Drawing Guide](./drawing-guide.md) or [Screen Kit](./screen-kit.md). Drawings use the actual saved theme and component kit; an old document or screenshot is not authority for recreating those assets.
 
-| Family | Examples | Purpose |
-| --- | --- | --- |
-| Replay analysis and comparison | `movement:replay:analyze`, `movement:replay:compare`, `movement:replay:three-party:analyze` | Analyze and compare recorded movement sessions. |
-| Replay capture and proof | `movement:replay:capture`, `movement:replay:proof-set`, `movement:replay:nine-proof`, `movement:replay:fast-subset-proof`, `movement:replay:targeted-proof` | Capture and validate replay proof sets. |
-| Replay/Game comparison | `movement:replay-game:compare`, `movement:replay-game:packet-proof`, `movement:replay-game:deep-targeted-proof`, `movement:replay-game:deep-all-nine-proof` | Compare Replay Studio and mounted Game Studio behavior. |
-| Game visual proof | `movement:game-visual-plan`, `movement:game-visual-capture`, `movement:game-visual-review`, `movement:game:packet-proof`, `movement:game:nine-proof` | Plan, capture, and review Game visual proof. |
-| Support-readiness audits | `movement:facing-occlusion-support-audit`, `movement:root-travel-support-audit`, `movement:sitting-support-audit`, `movement:walking-support-audit`, strict variants | Check readiness for specific movement families or support categories. |
-| Deep capture and dense capture | `movement:replay-game:deep-local-proof`, `movement:dense-capture:benchmark`, `movement:dense-capture:device-review` | Validate deep capture and dense capture behavior. |
-| Architecture and plan gates | `movement:architecture-guard`, `movement:roadmap-progress-report`, `movement:outstanding-tasks-audit`, strict variants | Keep movement plan/status/proof claims aligned. |
-| Scenario validation | `movement:proof:validate:facing-occlusion`, `movement:proof:validate:root-travel`, `movement:proof:validate:seated-forward-fold` | Validate named movement proof scenarios. |
+The template, feature generator, product recipe, product initialization and framework update commands represent broader engineering workflows. Their dedicated guides cover the reviewed preview/apply modes, stale-file checks and side effects; this package table remains a command lookup rather than duplicating those procedures. Read their guides and source before running an apply/update operation. In particular, the presence of a framework update command does not authorize fetching upstream or editing Sonae from a Hakken documentation task.
 
-Before using these scripts, read:
+## Missing Or Historical Commands
 
-- Movement Definitive Plan (not included in this copy)
-- Movement Mirror And Side-Ownership Contract (not included in this copy)
-- Movement Tracking Developer Notes (not included in this copy)
+The previous version of this reference listed many movement capture, replay, proof and evaluation command families. Those package keys were not found in the current package script map. Their absence means the old commands cannot be advertised as current invocation paths; it does not authorize deleting historical proof records, declaring the underlying feature removed, or adding scripts back. The optional/possibly removed capability review remains in the [documentation inventory](../index.md).
 
-## Adding Or Changing Scripts
+When a command appears in an old guide, compare the current package key, target script and applicable operator runbook. A missing package key is not a valid current command just because its old documentation exists. Conversely a script still present on disk may have no supported package alias. Record that distinction and ask for a product decision before restoring or retiring functionality.
 
-When adding a script:
-
-1. Choose a stable name with an obvious family prefix.
-2. Keep the script command portable across machines.
-3. Document required services or environment variables.
-4. Add or update the relevant developer guide or operator runbook.
-5. If the script is part of a verification gate, make its failure actionable.
-6. If the script writes proof artifacts, keep generated output out of commits
-   unless the repo explicitly tracks that artifact.
-
-## Verification
-
-Documentation-only changes to script docs should run:
-
-```bash
-git diff --check
-```
-
-Script behavior changes should run the focused script and the relevant gate from
-`AGENTS.md`. For high-cost, live-data, or external-service scripts, get explicit
-approval before running them.
+For maintenance actions inside the application, use [Maintenance Scripts](./maintenance-scripts.md). That registry is a typed backend allowlist with its own actor, history and migration scheduling. It is separate from package commands on a developer machine. Neither registry should be expanded with arbitrary command execution to work around an operational problem. Current documentation validation checks paths, links, metadata and whitespace; full application gates, live environment inspection, authentication saves and migrations remain unrun in this pass.

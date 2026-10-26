@@ -1,8 +1,20 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: public home page, navigation and motion
+audience: frontend developers and platform operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/public-website.md
+last_reviewed: '2026-10-26T10:52:01+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Public Website Developer Guide
 
-Last reviewed: 2026-07-30 17:39 BST +0100
-Status: current for the implemented public home page; broader public site still in active development
-Audience: engineers and agents changing `src/app/(public)`, public copy, public motion, or pre-login routing.
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** public home page, navigation and motion
+> **Reviewed:** 26 October 2026, 10:52:01 GMT (Europe/London)
+> **Source path:** `docs/developer/public-website.md` · **Status:** Current
+
 
 ## Implementation Scope
 
@@ -22,14 +34,9 @@ Current implementation files include:
 - `src/app/(public)/_motion/PublicMotion.tsx`
 - `src/app/(public)/_components/home/ProductHero.tsx`
 - `src/app/(public)/_components/home/WhatHakkenIs.tsx`
-- optional module (not included in this copy)
-- optional module (not included in this copy)
 - `src/app/(public)/_components/home/WhoItsFor.tsx`
 
-The public website is governed by
-`docs/plans/active/public-website-plan.md`. Read that plan before changing
-public routes, public copy, motion direction, contact behavior, or planned
-public information architecture.
+The historical public website plan records inherited framework design intent. PRODUCT.md remains the product-intent authority; its discovery positioning differs from current public copy. Changes to public information architecture or wording require separate product alignment, and were not made by this documentation review.
 
 ## Current Routes
 
@@ -43,7 +50,6 @@ present those pages as live behavior until the files exist.
 
 There is current drift to resolve under the Public Website Plan:
 
-- `src/app/(public)/_components/home/WhatHakkenIs.tsx` links to `/platform`.
 - `src/app/(public)/_components/ContactLink.tsx` falls back to `/contact` when
   `NEXT_PUBLIC_CONTACT_URL` is unset.
 
@@ -109,7 +115,7 @@ Public motion is split into a small helper and a mounted client component:
 Home sections can also mount their own GSAP timelines. `ProductHero` animates
 hero lines, the drawn dashboard surface, stat tiles, bars, and the activity
 chart line. `WhatHakkenIs` uses ScrollTrigger to track the active reading row.
-`ProductPanels` uses ScrollTrigger for the stacked product-panel behavior.
+The old `ProductPanels` module is not present in this checkout and is not rendered by the home page.
 
 Every animation path should respect reduced-motion preferences. Avoid adding a
 new animation style that bypasses `prefersReducedMotion`.
@@ -120,33 +126,17 @@ new animation style that bypasses `prefersReducedMotion`.
 
 1. `ProductHero`
 2. `WhatHakkenIs`
-3. `DemosIntro`
-4. `ProductPanels`
-5. `WhoItsFor`
-6. the Hakken name story block
-7. the closing contact CTA
+3. `WhoItsFor`
+4. the inherited Hakken name-story block
+5. the closing contact call to action
 
-The hero uses a drawn interface rather than a captured screenshot. Its numbers
-and run labels are illustrative public-site presentation data, not operational
-analytics. This is deliberate: it avoids exposing customer data and avoids
-fixture-branded screenshots.
-
-`ProductPanels` contains proof panels for Properties, Reports, and Posture
-Studio. Those vertical references are wrapped by template removal comments in
-the route where required by the template boundary. When adding public showcase
-routes for verticals, wrap the vertical-specific lines in a
-`template:remove:start <vertical>` / `template:remove:end` fence in the same
-product change as the route implementation. `scripts/strip-verticals.mjs`
-reads those fences, and `npm run check:fences` fails the build if one is
-unclosed or names a vertical that does not exist.
+The hero uses a drawn interface, not a captured or live customer dashboard. Its numbers and activity labels are illustrative presentation data. `DemosIntro` and `ProductPanels` are absent and no longer rendered; old Properties, Reports and Posture Studio panel descriptions do not establish a current routed feature. Do not recreate those modules to satisfy stale prose.
 
 ## Copy Rules
 
 Public copy should stay buyer-facing and benefit-led. It should not read like
 developer documentation, and it should not describe planned pages as if they
-exist. The active Public Website Plan records the agreed public positioning,
-including the Hakken name story, the "Powered by Ronins" credit rule, no pricing,
-and contact-first calls to action.
+exist. The inherited public website plan records earlier positioning. Current source still says preparedness in its name story, while PRODUCT.md defines discovery and a business-asset product. Record this as a source/product discrepancy; do not amend PRODUCT.md or rewrite approved intent to fit a stale page.
 
 Avoid jargon on public pages unless the audience genuinely needs it. The public
 site can mention knowledge, models, agents, workflows, approvals, evals,
@@ -172,13 +162,28 @@ For public-site implementation changes, verify:
   messages are added
 - template boundary tests still pass if vertical public routes are added
 
-The local repo gate from `AGENTS.md` remains required before pushing or merging
-implementation changes:
+For separately authorized implementation changes, follow the current full gates in AGENTS.md. This documentation pass used file/link/metadata checks and `git diff --check`, and did not run the application or its browser tests.
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Contact Configuration And Source Boundaries
+
+`ContactLink` reads `NEXT_PUBLIC_CONTACT_URL` at module scope. A truthy value renders an external anchor with `target="_blank"` and `rel="noopener noreferrer"`; no value renders a Next Link to `/contact`. The component does not validate a form, send an email, persist a lead or prove the target URL is reachable. It also does not provide its own destination validation or retry policy. Do not document a native contact form or customer-enquiry queue from this implementation.
+
+The footer's Company column routes its Contact entry through the same helper. Name/tagline come from `product.identity.ts`; Powered by Ronins is a separate credit with optional `NEXT_PUBLIC_COMPANY_URL`. Those public variables are browser-build configuration, and this review did not inspect actual environment values. The deployment workflow passes the contact URL into Docker but does not explicitly pass the company-credit variable. A source-level optional link cannot establish that a particular deployment has the corresponding setting.
+
+The public layout loads Bricolage Grotesque and a scoped public stylesheet. It is intentionally separate from dashboard typography and theme tokens. `PublicNav` records scroll state above twenty-four pixels, uses its open/scrolled class for appearance, and removes its scroll listener on unmount. The mobile toggle has a text accessibility label and conditionally renders the actions. No browser was run to audit keyboard focus, layout behavior or accessibility conformance; a component's JSX is evidence of its intent, not a complete interaction test.
+
+`PublicMotion` checks reduced motion at mount, registers GSAP/ScrollTrigger once client-side, animates reveal elements and applies parent-based parallax to speed-marked elements. Its effect returns `ctx.revert` to undo the created animation context. It does not subscribe to preference changes after mounting. `ProductHero` and `WhatHakkenIs` also own local animation paths, so changing only the generic helper is not automatically a complete motion change.
+
+## Route Discovery And Authentication Separation
+
+The current public marketing route group contains the home page only. Other unauthenticated routes include login/verification, unsubscribe, widget/sandbox and kiosk experiences, plus guarded diagnostic fixture routes. They are separate systems and should not be folded into public-site marketing navigation merely because they can render before a session exists. Their own request guards, capability tokens or secrets define their access contracts.
+
+The home page does not query tenant data, perform agent execution or collect an enquiry in its inspected composition. It does not have data indexes, mutations, background retries or stored user submissions of its own. Its main external behavior is navigation and optional external links. Authentication remains in the login/provider flow; the public site's Sign in button neither provisions an account nor changes company permissions.
+
+Tests and guards relevant to this surface include the no-client-specific-fallback and copy-boundary checks, public component source and any retained rendering tests. Names in a historical plan or old script reference are not evidence that corresponding page files exist. Source review did not confirm deployed routing, DNS, current contact delivery, monitoring or external rename cutover. PRODUCT.md section 33 remains relevant when a public host or distributed link still points at an older deployment name.
+
+## Documentation And Product Decisions
+
+Support documentation should describe what a visitor sees while explicitly separating inaccurate inherited text from product truth. The current name-story explanation and framework headline need a product-copy decision, not a documentation workaround that teaches preparedness as the Hakken definition. Missing showcase/trust/contact routes remain not found in current implementation; the old plan is labeled historical instead of being treated as an active promise.
+
+Reusing the existing home-page components is appropriate for a separately authorized product task, but a documentation refresh must not silently edit layout, CSS, identity, environment wiring or acceptance records. This pass changed only the two guides and the coverage inventory. It did not install dependencies, build the app, open a browser, fetch a customer website or update the historical plan. Keep that evidence boundary when using the guide during a launch discussion.

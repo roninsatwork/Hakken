@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Organization workspace profile and personal context
+audience: developer
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/organization-and-company-workspaces.md
+last_reviewed: '2026-10-26T14:58:39+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Organization And Company Workspaces Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Organization workspace profile and personal context
+> **Reviewed:** 26 October 2026, 14:58:39 GMT (Europe/London)
+> **Source path:** `docs/developer/organization-and-company-workspaces.md` · **Status:** Current
 
 Organization and company workspace implementation spans tenant-facing settings under `/app`, super-admin company detail routes under `/admin/companies`, profile management, personal assistant notes, scoped user management, workspace feature gates, and white-label system settings. This guide covers the implementation that exists now and should be reviewed before changing tenant admin workflows, company directory aliases, profile uploads, plan usage displays, module gating, or white-label packaging readiness.
 
@@ -106,3 +121,25 @@ npm run check
 npm run build
 git diff --check
 ```
+
+## Reviewed Personal Layer And Current Routes
+
+`app/profile/page.tsx` calls `users.getMe`, `updateMyProfile` and the controlled image upload mutation. `updateMyProfile` allows only name, phone, image/reference fields, verifies owned uploaded images with the admin image policy, and does not accept role/email/company fields. Profile preferences and tabs are shared components; Assistant Note is an in-page tab, not an invented `/about-me` route. The Telegram integration has its own nested route and proof/session contract.
+
+`userMemories.ts` stores the personal layer by userId alone. Tenant list/add/delete mutations always use `ctx.userId`; the module intentionally exposes no admin-content reader. `listMine` returns at most twenty active notes. `addMine` collapses whitespace, truncates at 300 characters, applies safety warning rejection, checks the full-set limit, then normalized duplicate detection. `deleteMine` verifies owner and deletes the row immediately. Audit metadata omits content; this does not establish erasure of prior prompt/log copies elsewhere.
+
+`getActiveForUserInternal` supplies note content and IDs for eligible answer assembly. `aiPromptAssembly.shouldInjectPersonalNote` excludes widget and EVAL threads, and callers must preserve the actual asker's ownership. `markUsedInternal` updates bounded usage stamps asynchronously. The company weekly learned count reads up to 200 company members and each person's bounded approved notes, returning counts rather than content. This is not permission for an admin to inspect personal note text.
+
+## Automatic Personal Learning And Selection Bounds
+
+`userMemorySuggestionActions.sweepDispatcher` schedules per-user work from the roster query. `listUsersToSweepInternal` stops when autonomous memory is off, reads at most 500 users and picks 25 by least-recent run evidence. The user input query skips a full twenty-note set, reads ten recent threads and at most twenty messages per thread, and retains up to forty new user messages after the saved marker. Widget threads are explicitly skipped. EVAL-purpose threads are not independently filtered in that learning reader, even though personal-note injection excludes them. Keep that distinction visible in future test/privacy changes.
+
+The transcript is bounded to 12,000 characters and parsing returns at most three notes per sweep. A fast-chat model produces suggestions with common spend attribution. The landing mutation rechecks autonomousMemory so disabling it during work can prevent application. On provider failure, the marker remains at its previous time; successful reads advance to their newest selected message. Bounded history and marker advancement do not guarantee lossless reading of every older conversation under heavy activity.
+
+Learned notes are still subject to safety, normalization, duplicate and capacity checks. A deleted manual row does not create a permanent semantic rejection fingerprint for every possible relearning. Personal content must not be copied to company Wiki or public widgets by an extension merely because it is in a prompt. The existing tests provide local examples; this review did not execute a sweep or inspect any real person's notes.
+
+## Workspace Metrics And Existing Management Coverage
+
+`app/settings/page.tsx` queries company metrics for `user.companyId`. It has removed the main supplier-cost card and usage/provider chart while retaining some cost-valued leaderboard cells. Do not derive final visibility claims from comments alone or describe the removed chart as still present. Company usage/credits and company-admin frontend billing have separate routes. Assigned-plan mrr remains a formula rather than Stripe collected revenue.
+
+Current team/user/invitation and company purge/impersonation contracts are maintained in [Company user management](./company-user-management.md), [billing](./platform-plans-and-quotas.md), and [tenancy](./tenancy-enforcement.md). This broad guide does not override their bounded cleanup and permission findings. Gmail mailbox controls are retired. No company/profile mutation, invitation, payment, memory sweep, provider call, or live acceptance test was performed for documentation maintenance.

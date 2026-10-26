@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Upload and knowledge policy
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/upload-and-knowledge-policy.md
+last_reviewed: '2026-10-26T14:51:32+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Upload And Knowledge Policy
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Upload and knowledge policy
+> **Reviewed:** 26 October 2026, 14:51:32 GMT (Europe/London)
+> **Source path:** `docs/developer/upload-and-knowledge-policy.md` · **Status:** Current
 
 This document records the shared upload and ingestion policy used by Hakken.
 
@@ -101,3 +116,15 @@ Focused tests include:
 - User, settings, agent settings, and widget page tests where admin image upload UI is exercised.
 
 For implementation changes, run the relevant focused tests plus the repo gate from `AGENTS.md`. For documentation-only changes, this automation runs Markdown link validation and `git diff --check`.
+
+## Controlled Upload Reservations
+
+Current upload issuance uses `uploadReservations.ts` and the shared upload policy. A reservation binds owner, company, purpose, maximum/exact byte expectations and content type before the uploaded object is attached to a record. Anonymous widget ownership is tied to its conversation/session rather than treated as an unowned public storage write. Signed-in ownership follows the active company/user association.
+
+The controlled upload path claims a pending pass, verifies that it has not expired or already been used, checks current owner/thread availability, and moves it to uploading. Completion validates stored metadata and bytes before marking it ready. `requireOwnedUpload` accepts only the appropriate owner, company, allowed purpose and ready/attached state; a ready pass must still be within its lifetime. Merely knowing a storage ID is not sufficient permission to reuse another user's upload.
+
+Client file MIME/type checks improve feedback but do not replace server validation of the stored object. The current maximums are five MiB for chat images, fifty MiB for chat/knowledge documents, two MiB for admin images, and one MiB for widget images. Markdown has explicit recognized MIME/extension normalization. Unsupported type, mismatched metadata or owner context should refuse the write rather than silently add a file to knowledge.
+
+Abandoned reservation cleanup and attached-record deletion have different owners. Cleanup processes bounded expired reservation states and quota records; it is not a blanket guarantee of immediate removal of every blob on every failed request. Message images remain turn attachments, while documents can enter the separate parsing/knowledge pipeline. Neither classification means the file is automatically safe to expose publicly or immediately erased after a reply.
+
+Widget quota counts issuance, including abandoned attempts, before final attachment. A browser reset is not backend erasure. The [photo guide](./photo-actions.md), [widget guide](./embedded-widgets.md), and [retention guide](./data-retention-and-purges.md) record their specific effects. These contracts were reviewed through source and policy tests only. No file was uploaded, parsed, scraped, embedded, deleted, or sent to a provider during documentation maintenance.

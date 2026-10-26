@@ -33,7 +33,7 @@ async function seeded(t: ReturnType<typeof harness>) {
 }
 
 describe("the screens' boxes kept", () => {
-  test("the week's replace the last; a screen not written keeps none; another company reads none", async () => {
+  test("the week's replace the last; a screen not written keeps its previous week; another company reads none", async () => {
     const t = harness();
     const { holdId, userId, strangerId } = await seeded(t);
     await t.mutation(internal.insightBoxes.saveBoxes, { holdId, week: "2026-10-05", boxes: [
@@ -43,7 +43,7 @@ describe("the screens' boxes kept", () => {
     await t.mutation(internal.insightBoxes.saveBoxes, { holdId, week: "2026-10-12", boxes: [{ screen: "AI_SEARCH", says: ["Named 12 times."], role: "INSIGHTS_AI_VISIBILITY" }] });
     const me = t.withIdentity({ subject: userId });
     expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "AI_SEARCH" })).toEqual({ says: ["Named 12 times."], role: "INSIGHTS_AI_VISIBILITY", week: "2026-10-12", period: null });
-    expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "LEADERBOARDS" })).toBeNull();
+    expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "LEADERBOARDS" })).toMatchObject({ says: ["Third of five."], week: "2026-10-05" });
     expect(await t.withIdentity({ subject: strangerId }).query(api.insightBoxes.insightsScreenBox, { screen: "AI_SEARCH" })).toBeNull();
     await expect(t.withIdentity({ subject: strangerId }).query(api.insightBoxes.insightsScreenBox, { screen: "AI_SEARCH", siteId: holdId })).rejects.toThrow();
   });
@@ -80,4 +80,13 @@ describe("the screens' boxes kept", () => {
     expect(read.about.PAGE_DECISIONS).toEqual([{ page: "/old/", do: "redirect", into: "/new/", why: "It repeats /new/." }]);
     expect(read.about.TRACK_RECORD?.map((entry) => entry.checked)).toEqual(expect.arrayContaining(["RIGHT", "WRONG"]));
   });
+  test("an answered screen whose prose fails evidence checks clears its older prose, while an uncompleted writer keeps it", async () => {
+    const t = harness(), { holdId, userId } = await seeded(t);
+    await t.mutation(internal.insightBoxes.saveBoxes, { holdId, week: "2026-10-05", boxes: [{ screen: "AI_SEARCH", says: ["Older completed words"], role: "INSIGHTS_AI_VISIBILITY" }, { screen: "LEADERBOARDS", says: ["Keep while its writer failed"], role: "INSIGHTS_MARKET" }] });
+    await t.mutation(internal.insightBoxes.saveBoxes, { holdId, week: "2026-10-12", boxes: [], completedScreens: ["AI_SEARCH"] });
+    const me = t.withIdentity({ subject: userId });
+    expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "AI_SEARCH" })).toBeNull();
+    expect(await me.query(api.insightBoxes.insightsScreenBox, { screen: "LEADERBOARDS" })).toMatchObject({ says: ["Keep while its writer failed"], week: "2026-10-05" });
+  });
+
 });

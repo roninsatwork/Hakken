@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: product-setup
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/product-setup.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Initialise a product after cloning
+
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** product-setup
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/product-setup.md` · **Status:** Current
 
 Phase 1 adds product defaults and setup tooling. Arcade remains framework code.
 The initialiser is a local file editor: it does not install packages, change Git
@@ -49,7 +64,7 @@ version or an upgrade history.
 | `email` | Optional sender display name and bare sender address for the generated environment example. Verify the sender domain with your mail provider separately. |
 | `providers.auth` | One or both of `google`, `resend`. Every listed provider is required in production. |
 | `providers.ai` | Any combination of `vertex`, `openai`, `anthropic`, `openrouter`. Every listed provider is required in production; an empty list is allowed for a product without AI requirements. |
-| `features` | Boolean credential requirements for `email`, `knowledge`, `webIngestion`, `apify`, `gmail`, `voice`, `telephony` and `widget`. |
+| `features` | Boolean credential requirements for `email`, `knowledge`, `webIngestion`, `apify`, `gmail`, `voice`, `telephony` and `widget`. The retained `gmail` configuration key does not restore the retired Gmail product surface. |
 
 These selections describe **configuration requirements**. They do not remove
 code, hide routes, authorise users, activate agents or select models in the
@@ -64,7 +79,7 @@ name and preview again. It never prints credentials in that error.
 The shipped configuration describes Hakken's Google sign-in, email and Vertex/
 knowledge requirements. For email sign-in plus another text-model provider,
 select `resend` and that provider. Knowledge embeddings still require Vertex;
-voice and telephony also require Vertex in the current implementation. Turning
+the setup requirements resolver also adds Vertex whenever voice or telephony is selected. This is a validator requirement, not an exhaustive description of runtime adapters: current live-voice code also has OpenAI paths. Check the [spoken-channel guide](../developer/spoken-channels.md) and the selected runtime configuration rather than assuming a provider selection rewires all channels. Turning
 those requirements off is appropriate only when the product will not use them.
 
 ## Files the initialiser owns or updates

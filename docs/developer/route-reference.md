@@ -1,232 +1,466 @@
+---
+product: Hakken
+documentation_type: Developer reference
+feature_area: Current route file inventory
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/route-reference.md
+last_reviewed: '2026-10-26T15:14:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Route Reference
 
-Last reviewed: 2026-08-25
-Status: current route inventory
-Audience: engineers and agents changing Hakken routing, navigation, page ownership, or documentation coverage.
+> **Product:** Hakken · **Document type:** Developer reference · **Feature area:** Current route file inventory
+> **Reviewed:** 26 October 2026, 15:14:20 GMT (Europe/London)
+> **Source path:** `docs/developer/route-reference.md` · **Status:** Current
 
-## Purpose
+This is a source-file route reference for Hakken, generated from the current `src/app` page and handler paths during documentation review. It is a routing lookup, not a list of accepted deployments or a second documentation completion queue. [The central inventory](../index.md#documentation-coverage-inventory) records review depth, owning guides, uncertainties and remaining work. The [frontend guide](./frontend.md) explains composition and the [access guide](./route-protection-and-authentication.md) explains role/session boundaries.
 
-This reference maps every implemented Next.js route family to its product
-purpose and owning documentation. It is intentionally route-focused. For feature
-semantics, read the linked product or developer guide. For backend function and
-schema ownership, read [Convex API And Schema Reference](./convex-api-and-schema-reference.md).
+The URL column removes Next.js route-group folders such as `(dashboard)` and `(system)`. Bracketed path segments are dynamic parameters. A page file can redirect, require a role, depend on a feature flag, show an unavailable state or call a narrowly authorized backend; file existence does not prove that every account can use it. Source links preserve the actual repository folder path so maintainers can inspect that behavior before editing documentation.
 
-When adding, removing, renaming, or splitting a route, update this file, the
-relevant audience guide, and [Function And Feature Coverage Matrix](./function-and-feature-coverage-matrix.md)
-in the same documentation pass.
+The authenticated workspace includes Sites, Insights, Google Analytics, Search Console, Bing, Clarity, keyword research, content/news, Assistant, tasks, calls, reception, governance, usage, profile and team/billing settings. Platform routes include company/user management, website oversight, AI configuration, agents, workflows, content, health, connections and system settings. Exact implemented paths appear below rather than inferred future feature names.
 
-## Public And Auth Routes
+The normal admin shell admits super-admin/platform-reader roles and limits auditors to Governance. Company administrators manage frontend workspace/team and company billing; their authority is not equivalent to general platform console access. Individual backend queries can have narrower or broader read policies, so always verify the owning function as well as the route layout. Client navigation hiding, including diagnostic Arcade visibility, is not a security control.
 
-| Route | Source | Purpose | Owning docs |
-| --- | --- | --- | --- |
-| `/` | `src/app/(public)/page.tsx` | Public pre-login home page. | [Public Website](../end-user/public-website.md), [Public Website Developer Guide](./public-website.md) |
-| `/login` | `src/app/login/page.tsx` | Sign-in screen. | [Login, Access, And Authentication](../end-user/login-access-and-authentication.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
-| `/verify` | `src/app/verify/page.tsx` | Magic-link consent confirmation page. | [Login, Access, And Authentication](../end-user/login-access-and-authentication.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
-| `/local-test-auth` | `src/app/local-test-auth/page.tsx` | Local deterministic auth helper. | [Local Test Auth Runbook](../operator/local-test-auth-runbook.md) |
-| `/w/[widgetId]` | `src/app/w/[widgetId]/page.tsx` | Public embedded widget runtime. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
-| `/kiosk/[widgetId]` | `src/app/kiosk/[widgetId]/page.tsx` | Full-screen receptionist voice surface for a kiosk-enabled widget. | [Receptionist Screen](../end-user/receptionist-screen.md), [Receptionist Screen Developer Guide](./receptionist-screen.md) |
-| `/sandbox/[widgetId]` | `src/app/sandbox/[widgetId]/page.tsx` | Widget sandbox host page. | [Widget Handoff And Troubleshooting](../end-user/widget-handoff-and-troubleshooting.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
-| `/api/health` | `src/app/api/health/route.ts` | HTTP health route. | [System Health And Platform Alerts](./system-health-and-platform-alerts.md) |
-| `/api/email-preview` | `src/app/api/email-preview/route.ts` | Dev-only email template preview and raw source route. | [Email System](./email-system.md) |
-| Convex HTTP `/api/connectors/oauth/authorize` | `convex/http.ts`, `convex/connectorOAuth.ts` | Connector OAuth authorize redirect leg. | [Gmail Mailbox](./gmail-mailbox.md), [AI Provider Tool Extension](./ai-provider-tool-extension.md) |
-| Convex HTTP `/api/connectors/oauth/callback` | `convex/http.ts`, `convex/connectorOAuth.ts` | Connector OAuth callback and token-exchange leg. | [Gmail Mailbox](./gmail-mailbox.md), [AI Provider Tool Extension](./ai-provider-tool-extension.md) |
-| `/api/e2e-auth` | `src/app/api/e2e-auth/route.ts` | Deterministic E2E auth route. | Test-only route; see auth docs before changing. |
-| `/api/e2e-fixture/face-proof` | `src/app/api/e2e-fixture/face-proof/route.ts` | Test fixture route for movement proof. | Movement docs and E2E tests. |
-| `/api/e2e-fixture/hand-proof` | `src/app/api/e2e-fixture/hand-proof/route.ts` | Test fixture route for movement proof. | Movement docs and E2E tests. |
+`/admin/settings` preserves old tab bookmarks through redirects to identity, aesthetics, security, retention or options. A legacy alias is not a second editor or evidence that a removed panel still exists. Retained saved-answer routes similarly redirect to their current knowledge destination where implemented. A missing route must be marked not found/possibly deprecated and checked manually before deleting historical documentation or data.
 
-## Authenticated App Routes
+Public/supporting routes include authentication, widget iframe/sandbox, receptionist kiosk and local testing helpers. Widget frame policy, signed passes and session credentials have their own contracts; anonymous does not mean an unguarded data write. Local test-auth pages require explicit local configuration and are not a production login bypass. The five Next handlers listed separately are not the full Convex HTTP surface; inspect `convex/http.ts` and the [public API guide](./public-api-and-webhooks.md) for those endpoints.
 
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/app` | Authenticated app landing/dashboard handoff. | [Hakken Product Overview](../end-user/platform-overview.md), [Frontend Development](./frontend.md) |
-| `/app/assistant` | Assistant landing/new conversation surface. | [Assistant Chat User Guide](../end-user/assistant-chat.md), [Assistant Chat Developer Guide](./assistant-chat.md) |
-| `/app/assistant/[threadId]` | Existing assistant thread view. | [Assistant Chat User Guide](../end-user/assistant-chat.md), [Assistant Chat Developer Guide](./assistant-chat.md) |
-| `/app/calls` | Workspace calls display, dialable number, live state, and masked recent call list. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
-| `/app/calls/[id]` | Call detail with full caller number, transcript, summary, matched customer, and task link. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
-| `/app/reception` | Workspace receptionist screen list and open-screen links. | [Receptionist Screen](../end-user/receptionist-screen.md), [Receptionist Screen Developer Guide](./receptionist-screen.md) |
-| `/app/tasks` | Workspace task list, mine/everyone switch, manual task creation, state changes, and source links. | [Tasks And Notifications](../end-user/tasks-and-notifications.md), [Tasks And Notifications Developer Guide](./tasks-and-notifications.md) |
-| `/app/profile` | User profile settings. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Company And User Management](./company-user-management.md) |
-| `/app/settings` | Tenant admin organization dashboard. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Organization And Company Workspaces Developer Guide](./organization-and-company-workspaces.md) |
-| `/app/settings/team` | Tenant team management. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/app/settings/auth-diagnostics` | Tenant-facing auth diagnostics. | [Operational Diagnostics And Retention](../end-user/operational-diagnostics-and-retention.md), [Auth Diagnostics](./auth-diagnostics.md) |
-| `/app/governance` | Workspace governance overview. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/app/governance/register` | Workspace AI register. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/app/governance/policies` | Workspace active-policy view. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/app/governance/audit-trail` | Workspace audit trail. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/app/arcade/ronins-run` | Ronin's Run arcade experience. | [Auxiliary App Experiences](../end-user/auxiliary-app-experiences.md), [Auxiliary App Experiences Developer Guide](./auxiliary-app-experiences.md) |
-| `/app/agentic-testing` | Agentic testing sandbox. | [Auxiliary App Experiences](../end-user/auxiliary-app-experiences.md), [Auxiliary App Experiences Developer Guide](./auxiliary-app-experiences.md) |
+This reference contains no generated external URLs or secret values. It was refreshed without starting a browser/server, making HTTP requests, running capture tests or changing routes. PRODUCT.md remains product intent; its planned/unbuilt distinction must not be overridden by treating this route catalogue as delivery of all of Part Three. Dated research/plans remain unchanged.
 
-## Admin Root And Companies
+## Page Files And URL Shapes
 
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/admin` | Super-admin dashboard. | [Administration User Guide](../end-user/administration.md), [Administration Developer Guide](./administration.md) |
-| `/admin/directory` | Read-only platform user directory. | [Administration User Guide](../end-user/administration.md), [Administration Developer Guide](./administration.md) |
-| `/admin/companies` | Company list and management. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]` | Company detail redirect/root. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/overview` | Company overview. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/features` | Workspace feature gates outside plan defaults. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/directory` | Company directory shell. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/directory/users` | Directory user list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/directory/invites` | Directory invitation list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/calls` | Company call list for platform operators. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
-| `/admin/companies/[id]/calls/[callId]` | Company call detail for platform operators. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
-| `/admin/companies/[id]/widget` | Company widget configuration, including Receptionist screen opt-in. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md), [Receptionist Screen](../end-user/receptionist-screen.md) |
+Reviewed file inventory: 419 `page.tsx` files. This is a file count, not a count of distinct product capabilities.
 
-## Company AI Routes
+| URL shape | Repository source |
+| --- | --- |
+| `/admin/agents/[id]/evals/[fixtureId]` | [src/app/(dashboard)/admin/agents/[id]/evals/[fixtureId]/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/evals/[fixtureId]/page.tsx) |
+| `/admin/agents/[id]/evals` | [src/app/(dashboard)/admin/agents/[id]/evals/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/evals/page.tsx) |
+| `/admin/agents/[id]/interfaces` | [src/app/(dashboard)/admin/agents/[id]/interfaces/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/interfaces/page.tsx) |
+| `/admin/agents/[id]/knowledge` | [src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx) |
+| `/admin/agents/[id]/logs/[logId]` | [src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx) |
+| `/admin/agents/[id]/logs` | [src/app/(dashboard)/admin/agents/[id]/logs/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/logs/page.tsx) |
+| `/admin/agents/[id]/memory` | [src/app/(dashboard)/admin/agents/[id]/memory/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/memory/page.tsx) |
+| `/admin/agents/[id]/observability/[runId]` | [src/app/(dashboard)/admin/agents/[id]/observability/[runId]/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/observability/[runId]/page.tsx) |
+| `/admin/agents/[id]/observability` | [src/app/(dashboard)/admin/agents/[id]/observability/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/observability/page.tsx) |
+| `/admin/agents/[id]` | [src/app/(dashboard)/admin/agents/[id]/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/page.tsx) |
+| `/admin/agents/[id]/rules/[ruleId]` | [src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx) |
+| `/admin/agents/[id]/rules/new` | [src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx) |
+| `/admin/agents/[id]/rules` | [src/app/(dashboard)/admin/agents/[id]/rules/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/rules/page.tsx) |
+| `/admin/agents/[id]/runs` | [src/app/(dashboard)/admin/agents/[id]/runs/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/runs/page.tsx) |
+| `/admin/agents/[id]/settings` | [src/app/(dashboard)/admin/agents/[id]/settings/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/settings/page.tsx) |
+| `/admin/agents/[id]/skills` | [src/app/(dashboard)/admin/agents/[id]/skills/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/skills/page.tsx) |
+| `/admin/agents/[id]/system-prompt` | [src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx](../../src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx) |
+| `/admin/agents/new` | [src/app/(dashboard)/admin/agents/new/page.tsx](../../src/app/(dashboard)/admin/agents/new/page.tsx) |
+| `/admin/agents` | [src/app/(dashboard)/admin/agents/page.tsx](../../src/app/(dashboard)/admin/agents/page.tsx) |
+| `/admin/agents/skills` | [src/app/(dashboard)/admin/agents/skills/page.tsx](../../src/app/(dashboard)/admin/agents/skills/page.tsx) |
+| `/admin/ai/chat-logs` | [src/app/(dashboard)/admin/ai/chat-logs/page.tsx](../../src/app/(dashboard)/admin/ai/chat-logs/page.tsx) |
+| `/admin/ai/costs` | [src/app/(dashboard)/admin/ai/costs/page.tsx](../../src/app/(dashboard)/admin/ai/costs/page.tsx) |
+| `/admin/ai/decisions/[key]` | [src/app/(dashboard)/admin/ai/decisions/[key]/page.tsx](../../src/app/(dashboard)/admin/ai/decisions/[key]/page.tsx) |
+| `/admin/ai/decisions` | [src/app/(dashboard)/admin/ai/decisions/page.tsx](../../src/app/(dashboard)/admin/ai/decisions/page.tsx) |
+| `/admin/ai/diary` | [src/app/(dashboard)/admin/ai/diary/page.tsx](../../src/app/(dashboard)/admin/ai/diary/page.tsx) |
+| `/admin/ai/evals/[evalCaseId]/edit` | [src/app/(dashboard)/admin/ai/evals/[evalCaseId]/edit/page.tsx](../../src/app/(dashboard)/admin/ai/evals/[evalCaseId]/edit/page.tsx) |
+| `/admin/ai/evals/[evalCaseId]` | [src/app/(dashboard)/admin/ai/evals/[evalCaseId]/page.tsx](../../src/app/(dashboard)/admin/ai/evals/[evalCaseId]/page.tsx) |
+| `/admin/ai/evals/new` | [src/app/(dashboard)/admin/ai/evals/new/page.tsx](../../src/app/(dashboard)/admin/ai/evals/new/page.tsx) |
+| `/admin/ai/evals` | [src/app/(dashboard)/admin/ai/evals/page.tsx](../../src/app/(dashboard)/admin/ai/evals/page.tsx) |
+| `/admin/ai/global-knowledge` | [src/app/(dashboard)/admin/ai/global-knowledge/page.tsx](../../src/app/(dashboard)/admin/ai/global-knowledge/page.tsx) |
+| `/admin/ai/knowledge/[pageId]` | [src/app/(dashboard)/admin/ai/knowledge/[pageId]/page.tsx](../../src/app/(dashboard)/admin/ai/knowledge/[pageId]/page.tsx) |
+| `/admin/ai/knowledge/map` | [src/app/(dashboard)/admin/ai/knowledge/map/page.tsx](../../src/app/(dashboard)/admin/ai/knowledge/map/page.tsx) |
+| `/admin/ai/knowledge` | [src/app/(dashboard)/admin/ai/knowledge/page.tsx](../../src/app/(dashboard)/admin/ai/knowledge/page.tsx) |
+| `/admin/ai/models/[id]` | [src/app/(dashboard)/admin/ai/models/[id]/page.tsx](../../src/app/(dashboard)/admin/ai/models/[id]/page.tsx) |
+| `/admin/ai/models/catalogue` | [src/app/(dashboard)/admin/ai/models/catalogue/page.tsx](../../src/app/(dashboard)/admin/ai/models/catalogue/page.tsx) |
+| `/admin/ai/models/defaults` | [src/app/(dashboard)/admin/ai/models/defaults/page.tsx](../../src/app/(dashboard)/admin/ai/models/defaults/page.tsx) |
+| `/admin/ai/models` | [src/app/(dashboard)/admin/ai/models/page.tsx](../../src/app/(dashboard)/admin/ai/models/page.tsx) |
+| `/admin/ai/models/providers` | [src/app/(dashboard)/admin/ai/models/providers/page.tsx](../../src/app/(dashboard)/admin/ai/models/providers/page.tsx) |
+| `/admin/ai/money` | [src/app/(dashboard)/admin/ai/money/page.tsx](../../src/app/(dashboard)/admin/ai/money/page.tsx) |
+| `/admin/ai` | [src/app/(dashboard)/admin/ai/page.tsx](../../src/app/(dashboard)/admin/ai/page.tsx) |
+| `/admin/ai/rules/[id]` | [src/app/(dashboard)/admin/ai/rules/[id]/page.tsx](../../src/app/(dashboard)/admin/ai/rules/[id]/page.tsx) |
+| `/admin/ai/rules/new` | [src/app/(dashboard)/admin/ai/rules/new/page.tsx](../../src/app/(dashboard)/admin/ai/rules/new/page.tsx) |
+| `/admin/ai/rules` | [src/app/(dashboard)/admin/ai/rules/page.tsx](../../src/app/(dashboard)/admin/ai/rules/page.tsx) |
+| `/admin/ai/skills` | [src/app/(dashboard)/admin/ai/skills/page.tsx](../../src/app/(dashboard)/admin/ai/skills/page.tsx) |
+| `/admin/ai/system-prompt` | [src/app/(dashboard)/admin/ai/system-prompt/page.tsx](../../src/app/(dashboard)/admin/ai/system-prompt/page.tsx) |
+| `/admin/ai/tool-servers` | [src/app/(dashboard)/admin/ai/tool-servers/page.tsx](../../src/app/(dashboard)/admin/ai/tool-servers/page.tsx) |
+| `/admin/ai/tools/[id]` | [src/app/(dashboard)/admin/ai/tools/[id]/page.tsx](../../src/app/(dashboard)/admin/ai/tools/[id]/page.tsx) |
+| `/admin/ai/tools/connectors/[id]` | [src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.tsx](../../src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.tsx) |
+| `/admin/ai/tools/new` | [src/app/(dashboard)/admin/ai/tools/new/page.tsx](../../src/app/(dashboard)/admin/ai/tools/new/page.tsx) |
+| `/admin/ai/tools` | [src/app/(dashboard)/admin/ai/tools/page.tsx](../../src/app/(dashboard)/admin/ai/tools/page.tsx) |
+| `/admin/ai/unanswered` | [src/app/(dashboard)/admin/ai/unanswered/page.tsx](../../src/app/(dashboard)/admin/ai/unanswered/page.tsx) |
+| `/admin/ai/usage/chat-logs` | [src/app/(dashboard)/admin/ai/usage/chat-logs/page.tsx](../../src/app/(dashboard)/admin/ai/usage/chat-logs/page.tsx) |
+| `/admin/ai/usage/costs` | [src/app/(dashboard)/admin/ai/usage/costs/page.tsx](../../src/app/(dashboard)/admin/ai/usage/costs/page.tsx) |
+| `/admin/ai/voice` | [src/app/(dashboard)/admin/ai/voice/page.tsx](../../src/app/(dashboard)/admin/ai/voice/page.tsx) |
+| `/admin/ai/widget` | [src/app/(dashboard)/admin/ai/widget/page.tsx](../../src/app/(dashboard)/admin/ai/widget/page.tsx) |
+| `/admin/audit-logs/[id]` | [src/app/(dashboard)/admin/audit-logs/[id]/page.tsx](../../src/app/(dashboard)/admin/audit-logs/[id]/page.tsx) |
+| `/admin/auth-diagnostics` | [src/app/(dashboard)/admin/auth-diagnostics/page.tsx](../../src/app/(dashboard)/admin/auth-diagnostics/page.tsx) |
+| `/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new` | [src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new/page.tsx) |
+| `/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new` | [src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new/page.tsx) |
+| `/admin/companies/[id]/ai/chat-logs` | [src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx) |
+| `/admin/companies/[id]/ai/decisions/[key]` | [src/app/(dashboard)/admin/companies/[id]/ai/decisions/[key]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/decisions/[key]/page.tsx) |
+| `/admin/companies/[id]/ai/decisions` | [src/app/(dashboard)/admin/companies/[id]/ai/decisions/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/decisions/page.tsx) |
+| `/admin/companies/[id]/ai/diary` | [src/app/(dashboard)/admin/companies/[id]/ai/diary/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/diary/page.tsx) |
+| `/admin/companies/[id]/ai/evals/[evalCaseId]/edit` | [src/app/(dashboard)/admin/companies/[id]/ai/evals/[evalCaseId]/edit/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/evals/[evalCaseId]/edit/page.tsx) |
+| `/admin/companies/[id]/ai/evals/[evalCaseId]` | [src/app/(dashboard)/admin/companies/[id]/ai/evals/[evalCaseId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/evals/[evalCaseId]/page.tsx) |
+| `/admin/companies/[id]/ai/evals/new` | [src/app/(dashboard)/admin/companies/[id]/ai/evals/new/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/evals/new/page.tsx) |
+| `/admin/companies/[id]/ai/evals` | [src/app/(dashboard)/admin/companies/[id]/ai/evals/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/evals/page.tsx) |
+| `/admin/companies/[id]/ai/knowledge/[documentId]` | [src/app/(dashboard)/admin/companies/[id]/ai/knowledge/[documentId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/knowledge/[documentId]/page.tsx) |
+| `/admin/companies/[id]/ai/knowledge` | [src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx) |
+| `/admin/companies/[id]/ai/memory` | [src/app/(dashboard)/admin/companies/[id]/ai/memory/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/memory/page.tsx) |
+| `/admin/companies/[id]/ai/models` | [src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx) |
+| `/admin/companies/[id]/ai/money` | [src/app/(dashboard)/admin/companies/[id]/ai/money/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/money/page.tsx) |
+| `/admin/companies/[id]/ai` | [src/app/(dashboard)/admin/companies/[id]/ai/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/page.tsx) |
+| `/admin/companies/[id]/ai/pages/[pageId]` | [src/app/(dashboard)/admin/companies/[id]/ai/pages/[pageId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/pages/[pageId]/page.tsx) |
+| `/admin/companies/[id]/ai/pages/map` | [src/app/(dashboard)/admin/companies/[id]/ai/pages/map/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/pages/map/page.tsx) |
+| `/admin/companies/[id]/ai/pages` | [src/app/(dashboard)/admin/companies/[id]/ai/pages/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/pages/page.tsx) |
+| `/admin/companies/[id]/ai/prompt` | [src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx) |
+| `/admin/companies/[id]/ai/rules/[ruleId]` | [src/app/(dashboard)/admin/companies/[id]/ai/rules/[ruleId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/rules/[ruleId]/page.tsx) |
+| `/admin/companies/[id]/ai/rules/new` | [src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx) |
+| `/admin/companies/[id]/ai/rules` | [src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx) |
+| `/admin/companies/[id]/ai/saved-answers` | [src/app/(dashboard)/admin/companies/[id]/ai/saved-answers/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/saved-answers/page.tsx) |
+| `/admin/companies/[id]/ai/skills/new` | [src/app/(dashboard)/admin/companies/[id]/ai/skills/new/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/skills/new/page.tsx) |
+| `/admin/companies/[id]/ai/skills` | [src/app/(dashboard)/admin/companies/[id]/ai/skills/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/skills/page.tsx) |
+| `/admin/companies/[id]/ai/unanswered` | [src/app/(dashboard)/admin/companies/[id]/ai/unanswered/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/unanswered/page.tsx) |
+| `/admin/companies/[id]/ai/usage` | [src/app/(dashboard)/admin/companies/[id]/ai/usage/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/ai/usage/page.tsx) |
+| `/admin/companies/[id]/calls/[callId]` | [src/app/(dashboard)/admin/companies/[id]/calls/[callId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/calls/[callId]/page.tsx) |
+| `/admin/companies/[id]/calls` | [src/app/(dashboard)/admin/companies/[id]/calls/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/calls/page.tsx) |
+| `/admin/companies/[id]/directory/invites` | [src/app/(dashboard)/admin/companies/[id]/directory/invites/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/directory/invites/page.tsx) |
+| `/admin/companies/[id]/directory` | [src/app/(dashboard)/admin/companies/[id]/directory/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/directory/page.tsx) |
+| `/admin/companies/[id]/directory/users` | [src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx) |
+| `/admin/companies/[id]/features` | [src/app/(dashboard)/admin/companies/[id]/features/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/features/page.tsx) |
+| `/admin/companies/[id]/hakken-tasks` | [src/app/(dashboard)/admin/companies/[id]/hakken-tasks/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/hakken-tasks/page.tsx) |
+| `/admin/companies/[id]/overview` | [src/app/(dashboard)/admin/companies/[id]/overview/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/overview/page.tsx) |
+| `/admin/companies/[id]` | [src/app/(dashboard)/admin/companies/[id]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/page.tsx) |
+| `/admin/companies/[id]/websites/ai-searches/fan-out` | [src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/fan-out/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/fan-out/page.tsx) |
+| `/admin/companies/[id]/websites/ai-searches` | [src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/page.tsx) |
+| `/admin/companies/[id]/websites/ai-searches/prompts/[questionId]` | [src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/prompts/[questionId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/prompts/[questionId]/page.tsx) |
+| `/admin/companies/[id]/websites/ai-searches/searches` | [src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/searches/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/ai-searches/searches/page.tsx) |
+| `/admin/companies/[id]/websites/answers` | [src/app/(dashboard)/admin/companies/[id]/websites/answers/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/answers/page.tsx) |
+| `/admin/companies/[id]/websites/auto-setup` | [src/app/(dashboard)/admin/companies/[id]/websites/auto-setup/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/auto-setup/page.tsx) |
+| `/admin/companies/[id]/websites/classification` | [src/app/(dashboard)/admin/companies/[id]/websites/classification/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/classification/page.tsx) |
+| `/admin/companies/[id]/websites/competitors` | [src/app/(dashboard)/admin/companies/[id]/websites/competitors/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/competitors/page.tsx) |
+| `/admin/companies/[id]/websites/data` | [src/app/(dashboard)/admin/companies/[id]/websites/data/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/data/page.tsx) |
+| `/admin/companies/[id]/websites/limits` | [src/app/(dashboard)/admin/companies/[id]/websites/limits/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/limits/page.tsx) |
+| `/admin/companies/[id]/websites/market` | [src/app/(dashboard)/admin/companies/[id]/websites/market/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/market/page.tsx) |
+| `/admin/companies/[id]/websites/names` | [src/app/(dashboard)/admin/companies/[id]/websites/names/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/names/page.tsx) |
+| `/admin/companies/[id]/websites` | [src/app/(dashboard)/admin/companies/[id]/websites/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/page.tsx) |
+| `/admin/companies/[id]/websites/rankings` | [src/app/(dashboard)/admin/companies/[id]/websites/rankings/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/rankings/page.tsx) |
+| `/admin/companies/[id]/websites/runs/[cycleId]` | [src/app/(dashboard)/admin/companies/[id]/websites/runs/[cycleId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/runs/[cycleId]/page.tsx) |
+| `/admin/companies/[id]/websites/runs` | [src/app/(dashboard)/admin/companies/[id]/websites/runs/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/runs/page.tsx) |
+| `/admin/companies/[id]/websites/schedules` | [src/app/(dashboard)/admin/companies/[id]/websites/schedules/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/schedules/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/citations` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/citations/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/citations/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/[classificationId]` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/[classificationId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/[classificationId]/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/new` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/new/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/new/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/classification` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/classification/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/competitors` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/competitors/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/competitors/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/fan-out` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/fan-out/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/fan-out/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/keywords` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/keywords/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/keywords/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/limits` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/limits/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/limits/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/market` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/market/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/market/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/profile` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/profile/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/profile/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/questions/[questionId]` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/questions/[questionId]/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/questions/[questionId]/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/questions` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/questions/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/questions/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/schedules` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/schedules/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/schedules/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/searches` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/searches/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/searches/page.tsx) |
+| `/admin/companies/[id]/websites/site/[companyWebsiteId]/settings` | [src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/settings/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/settings/page.tsx) |
+| `/admin/companies/[id]/websites/todo` | [src/app/(dashboard)/admin/companies/[id]/websites/todo/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/websites/todo/page.tsx) |
+| `/admin/companies/[id]/widget` | [src/app/(dashboard)/admin/companies/[id]/widget/page.tsx](../../src/app/(dashboard)/admin/companies/[id]/widget/page.tsx) |
+| `/admin/companies/new` | [src/app/(dashboard)/admin/companies/new/page.tsx](../../src/app/(dashboard)/admin/companies/new/page.tsx) |
+| `/admin/companies` | [src/app/(dashboard)/admin/companies/page.tsx](../../src/app/(dashboard)/admin/companies/page.tsx) |
+| `/admin/connections` | [src/app/(dashboard)/admin/connections/page.tsx](../../src/app/(dashboard)/admin/connections/page.tsx) |
+| `/admin/content/analytics/articles/[itemKey]` | [src/app/(dashboard)/admin/content/analytics/articles/[itemKey]/page.tsx](../../src/app/(dashboard)/admin/content/analytics/articles/[itemKey]/page.tsx) |
+| `/admin/content/analytics/articles` | [src/app/(dashboard)/admin/content/analytics/articles/page.tsx](../../src/app/(dashboard)/admin/content/analytics/articles/page.tsx) |
+| `/admin/content/analytics/companies/[companyId]` | [src/app/(dashboard)/admin/content/analytics/companies/[companyId]/page.tsx](../../src/app/(dashboard)/admin/content/analytics/companies/[companyId]/page.tsx) |
+| `/admin/content/analytics/companies` | [src/app/(dashboard)/admin/content/analytics/companies/page.tsx](../../src/app/(dashboard)/admin/content/analytics/companies/page.tsx) |
+| `/admin/content/analytics` | [src/app/(dashboard)/admin/content/analytics/page.tsx](../../src/app/(dashboard)/admin/content/analytics/page.tsx) |
+| `/admin/content/analytics/people` | [src/app/(dashboard)/admin/content/analytics/people/page.tsx](../../src/app/(dashboard)/admin/content/analytics/people/page.tsx) |
+| `/admin/content/google-updates/[updateId]` | [src/app/(dashboard)/admin/content/google-updates/[updateId]/page.tsx](../../src/app/(dashboard)/admin/content/google-updates/[updateId]/page.tsx) |
+| `/admin/content/google-updates/new` | [src/app/(dashboard)/admin/content/google-updates/new/page.tsx](../../src/app/(dashboard)/admin/content/google-updates/new/page.tsx) |
+| `/admin/content/google-updates` | [src/app/(dashboard)/admin/content/google-updates/page.tsx](../../src/app/(dashboard)/admin/content/google-updates/page.tsx) |
+| `/admin/content/knowledge/[articleId]` | [src/app/(dashboard)/admin/content/knowledge/[articleId]/page.tsx](../../src/app/(dashboard)/admin/content/knowledge/[articleId]/page.tsx) |
+| `/admin/content/knowledge/from-link` | [src/app/(dashboard)/admin/content/knowledge/from-link/page.tsx](../../src/app/(dashboard)/admin/content/knowledge/from-link/page.tsx) |
+| `/admin/content/knowledge/new` | [src/app/(dashboard)/admin/content/knowledge/new/page.tsx](../../src/app/(dashboard)/admin/content/knowledge/new/page.tsx) |
+| `/admin/content/knowledge` | [src/app/(dashboard)/admin/content/knowledge/page.tsx](../../src/app/(dashboard)/admin/content/knowledge/page.tsx) |
+| `/admin/content/knowledge/web/[articleId]` | [src/app/(dashboard)/admin/content/knowledge/web/[articleId]/page.tsx](../../src/app/(dashboard)/admin/content/knowledge/web/[articleId]/page.tsx) |
+| `/admin/content/news` | [src/app/(dashboard)/admin/content/news/page.tsx](../../src/app/(dashboard)/admin/content/news/page.tsx) |
+| `/admin/content/outbox/[id]` | [src/app/(dashboard)/admin/content/outbox/[id]/page.tsx](../../src/app/(dashboard)/admin/content/outbox/[id]/page.tsx) |
+| `/admin/content/outbox` | [src/app/(dashboard)/admin/content/outbox/page.tsx](../../src/app/(dashboard)/admin/content/outbox/page.tsx) |
+| `/admin/content/topics/[topicId]` | [src/app/(dashboard)/admin/content/topics/[topicId]/page.tsx](../../src/app/(dashboard)/admin/content/topics/[topicId]/page.tsx) |
+| `/admin/content/topics/new` | [src/app/(dashboard)/admin/content/topics/new/page.tsx](../../src/app/(dashboard)/admin/content/topics/new/page.tsx) |
+| `/admin/content/topics` | [src/app/(dashboard)/admin/content/topics/page.tsx](../../src/app/(dashboard)/admin/content/topics/page.tsx) |
+| `/admin/content/who-to-follow/[followId]/edit` | [src/app/(dashboard)/admin/content/who-to-follow/[followId]/edit/page.tsx](../../src/app/(dashboard)/admin/content/who-to-follow/[followId]/edit/page.tsx) |
+| `/admin/content/who-to-follow/[followId]` | [src/app/(dashboard)/admin/content/who-to-follow/[followId]/page.tsx](../../src/app/(dashboard)/admin/content/who-to-follow/[followId]/page.tsx) |
+| `/admin/content/who-to-follow/new` | [src/app/(dashboard)/admin/content/who-to-follow/new/page.tsx](../../src/app/(dashboard)/admin/content/who-to-follow/new/page.tsx) |
+| `/admin/content/who-to-follow` | [src/app/(dashboard)/admin/content/who-to-follow/page.tsx](../../src/app/(dashboard)/admin/content/who-to-follow/page.tsx) |
+| `/admin/directory` | [src/app/(dashboard)/admin/directory/page.tsx](../../src/app/(dashboard)/admin/directory/page.tsx) |
+| `/admin/governance/approvals` | [src/app/(dashboard)/admin/governance/approvals/page.tsx](../../src/app/(dashboard)/admin/governance/approvals/page.tsx) |
+| `/admin/governance/audit-trail/[id]` | [src/app/(dashboard)/admin/governance/audit-trail/[id]/page.tsx](../../src/app/(dashboard)/admin/governance/audit-trail/[id]/page.tsx) |
+| `/admin/governance/audit-trail` | [src/app/(dashboard)/admin/governance/audit-trail/page.tsx](../../src/app/(dashboard)/admin/governance/audit-trail/page.tsx) |
+| `/admin/governance` | [src/app/(dashboard)/admin/governance/page.tsx](../../src/app/(dashboard)/admin/governance/page.tsx) |
+| `/admin/governance/policies` | [src/app/(dashboard)/admin/governance/policies/page.tsx](../../src/app/(dashboard)/admin/governance/policies/page.tsx) |
+| `/admin/governance/register` | [src/app/(dashboard)/admin/governance/register/page.tsx](../../src/app/(dashboard)/admin/governance/register/page.tsx) |
+| `/admin/health` | [src/app/(dashboard)/admin/health/page.tsx](../../src/app/(dashboard)/admin/health/page.tsx) |
+| `/admin/insights/[weekId]` | [src/app/(dashboard)/admin/insights/[weekId]/page.tsx](../../src/app/(dashboard)/admin/insights/[weekId]/page.tsx) |
+| `/admin/insights` | [src/app/(dashboard)/admin/insights/page.tsx](../../src/app/(dashboard)/admin/insights/page.tsx) |
+| `/admin/insights/patterns` | [src/app/(dashboard)/admin/insights/patterns/page.tsx](../../src/app/(dashboard)/admin/insights/patterns/page.tsx) |
+| `/admin` | [src/app/(dashboard)/admin/page.tsx](../../src/app/(dashboard)/admin/page.tsx) |
+| `/admin/settings/classification/[typeKey]` | [src/app/(dashboard)/admin/settings/(system)/classification/[typeKey]/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/classification/[typeKey]/page.tsx) |
+| `/admin/settings/classification/new` | [src/app/(dashboard)/admin/settings/(system)/classification/new/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/classification/new/page.tsx) |
+| `/admin/settings/classification` | [src/app/(dashboard)/admin/settings/(system)/classification/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/classification/page.tsx) |
+| `/admin/settings/identity/aesthetics` | [src/app/(dashboard)/admin/settings/(system)/identity/aesthetics/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/identity/aesthetics/page.tsx) |
+| `/admin/settings/identity` | [src/app/(dashboard)/admin/settings/(system)/identity/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/identity/page.tsx) |
+| `/admin/settings/limits` | [src/app/(dashboard)/admin/settings/(system)/limits/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/limits/page.tsx) |
+| `/admin/settings/options/approvals` | [src/app/(dashboard)/admin/settings/(system)/options/approvals/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/options/approvals/page.tsx) |
+| `/admin/settings/options` | [src/app/(dashboard)/admin/settings/(system)/options/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/options/page.tsx) |
+| `/admin/settings/options/self-improvement` | [src/app/(dashboard)/admin/settings/(system)/options/self-improvement/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/options/self-improvement/page.tsx) |
+| `/admin/settings/security` | [src/app/(dashboard)/admin/settings/(system)/security/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/security/page.tsx) |
+| `/admin/settings/security/purge-history` | [src/app/(dashboard)/admin/settings/(system)/security/purge-history/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/security/purge-history/page.tsx) |
+| `/admin/settings/security/retention` | [src/app/(dashboard)/admin/settings/(system)/security/retention/page.tsx](../../src/app/(dashboard)/admin/settings/(system)/security/retention/page.tsx) |
+| `/admin/settings/analytics` | [src/app/(dashboard)/admin/settings/analytics/page.tsx](../../src/app/(dashboard)/admin/settings/analytics/page.tsx) |
+| `/admin/settings/api-keys` | [src/app/(dashboard)/admin/settings/api-keys/page.tsx](../../src/app/(dashboard)/admin/settings/api-keys/page.tsx) |
+| `/admin/settings/billing` | [src/app/(dashboard)/admin/settings/billing/page.tsx](../../src/app/(dashboard)/admin/settings/billing/page.tsx) |
+| `/admin/settings/billing/setup` | [src/app/(dashboard)/admin/settings/billing/setup/page.tsx](../../src/app/(dashboard)/admin/settings/billing/setup/page.tsx) |
+| `/admin/settings/credit-prices` | [src/app/(dashboard)/admin/settings/credit-prices/page.tsx](../../src/app/(dashboard)/admin/settings/credit-prices/page.tsx) |
+| `/admin/settings` | [src/app/(dashboard)/admin/settings/page.tsx](../../src/app/(dashboard)/admin/settings/page.tsx) |
+| `/admin/settings/plans/[id]/billing` | [src/app/(dashboard)/admin/settings/plans/[id]/billing/page.tsx](../../src/app/(dashboard)/admin/settings/plans/[id]/billing/page.tsx) |
+| `/admin/settings/plans` | [src/app/(dashboard)/admin/settings/plans/page.tsx](../../src/app/(dashboard)/admin/settings/plans/page.tsx) |
+| `/admin/settings/scripts/[scriptId]` | [src/app/(dashboard)/admin/settings/scripts/[scriptId]/page.tsx](../../src/app/(dashboard)/admin/settings/scripts/[scriptId]/page.tsx) |
+| `/admin/settings/scripts` | [src/app/(dashboard)/admin/settings/scripts/page.tsx](../../src/app/(dashboard)/admin/settings/scripts/page.tsx) |
+| `/admin/super-admins/[id]` | [src/app/(dashboard)/admin/super-admins/[id]/page.tsx](../../src/app/(dashboard)/admin/super-admins/[id]/page.tsx) |
+| `/admin/super-admins/invite` | [src/app/(dashboard)/admin/super-admins/invite/page.tsx](../../src/app/(dashboard)/admin/super-admins/invite/page.tsx) |
+| `/admin/super-admins` | [src/app/(dashboard)/admin/super-admins/page.tsx](../../src/app/(dashboard)/admin/super-admins/page.tsx) |
+| `/admin/users/[id]` | [src/app/(dashboard)/admin/users/[id]/page.tsx](../../src/app/(dashboard)/admin/users/[id]/page.tsx) |
+| `/admin/users/invite` | [src/app/(dashboard)/admin/users/invite/page.tsx](../../src/app/(dashboard)/admin/users/invite/page.tsx) |
+| `/admin/users` | [src/app/(dashboard)/admin/users/page.tsx](../../src/app/(dashboard)/admin/users/page.tsx) |
+| `/admin/websites/[websiteId]` | [src/app/(dashboard)/admin/websites/[websiteId]/page.tsx](../../src/app/(dashboard)/admin/websites/[websiteId]/page.tsx) |
+| `/admin/websites/collection/[cycleId]` | [src/app/(dashboard)/admin/websites/collection/[cycleId]/page.tsx](../../src/app/(dashboard)/admin/websites/collection/[cycleId]/page.tsx) |
+| `/admin/websites/collection` | [src/app/(dashboard)/admin/websites/collection/page.tsx](../../src/app/(dashboard)/admin/websites/collection/page.tsx) |
+| `/admin/websites/costs` | [src/app/(dashboard)/admin/websites/costs/page.tsx](../../src/app/(dashboard)/admin/websites/costs/page.tsx) |
+| `/admin/websites` | [src/app/(dashboard)/admin/websites/page.tsx](../../src/app/(dashboard)/admin/websites/page.tsx) |
+| `/admin/workflows/[id]` | [src/app/(dashboard)/admin/workflows/[id]/page.tsx](../../src/app/(dashboard)/admin/workflows/[id]/page.tsx) |
+| `/admin/workflows/executions/[id]` | [src/app/(dashboard)/admin/workflows/executions/[id]/page.tsx](../../src/app/(dashboard)/admin/workflows/executions/[id]/page.tsx) |
+| `/admin/workflows/executions` | [src/app/(dashboard)/admin/workflows/executions/page.tsx](../../src/app/(dashboard)/admin/workflows/executions/page.tsx) |
+| `/admin/workflows` | [src/app/(dashboard)/admin/workflows/page.tsx](../../src/app/(dashboard)/admin/workflows/page.tsx) |
+| `/admin/workflows/schedules/[id]` | [src/app/(dashboard)/admin/workflows/schedules/[id]/page.tsx](../../src/app/(dashboard)/admin/workflows/schedules/[id]/page.tsx) |
+| `/admin/workflows/schedules/new` | [src/app/(dashboard)/admin/workflows/schedules/new/page.tsx](../../src/app/(dashboard)/admin/workflows/schedules/new/page.tsx) |
+| `/admin/workflows/schedules` | [src/app/(dashboard)/admin/workflows/schedules/page.tsx](../../src/app/(dashboard)/admin/workflows/schedules/page.tsx) |
+| `/app/agentic-testing` | [src/app/(dashboard)/app/agentic-testing/page.tsx](../../src/app/(dashboard)/app/agentic-testing/page.tsx) |
+| `/app/analytics/[siteId]/all-pages/page` | [src/app/(dashboard)/app/analytics/[siteId]/all-pages/page/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/all-pages/page/page.tsx) |
+| `/app/analytics/[siteId]/all-pages` | [src/app/(dashboard)/app/analytics/[siteId]/all-pages/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/all-pages/page.tsx) |
+| `/app/analytics/[siteId]/campaigns` | [src/app/(dashboard)/app/analytics/[siteId]/campaigns/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/campaigns/page.tsx) |
+| `/app/analytics/[siteId]/channels/channel` | [src/app/(dashboard)/app/analytics/[siteId]/channels/channel/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/channels/channel/page.tsx) |
+| `/app/analytics/[siteId]/channels` | [src/app/(dashboard)/app/analytics/[siteId]/channels/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/channels/page.tsx) |
+| `/app/analytics/[siteId]/connection` | [src/app/(dashboard)/app/analytics/[siteId]/connection/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/connection/page.tsx) |
+| `/app/analytics/[siteId]/conversions` | [src/app/(dashboard)/app/analytics/[siteId]/conversions/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/conversions/page.tsx) |
+| `/app/analytics/[siteId]/events/event` | [src/app/(dashboard)/app/analytics/[siteId]/events/event/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/events/event/page.tsx) |
+| `/app/analytics/[siteId]/events` | [src/app/(dashboard)/app/analytics/[siteId]/events/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/events/page.tsx) |
+| `/app/analytics/[siteId]/funnel` | [src/app/(dashboard)/app/analytics/[siteId]/funnel/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/funnel/page.tsx) |
+| `/app/analytics/[siteId]/landing-pages/page` | [src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page/page.tsx) |
+| `/app/analytics/[siteId]/landing-pages` | [src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page.tsx) |
+| `/app/analytics/[siteId]/live` | [src/app/(dashboard)/app/analytics/[siteId]/live/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/live/page.tsx) |
+| `/app/analytics/[siteId]` | [src/app/(dashboard)/app/analytics/[siteId]/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/page.tsx) |
+| `/app/analytics/[siteId]/products` | [src/app/(dashboard)/app/analytics/[siteId]/products/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/products/page.tsx) |
+| `/app/analytics/[siteId]/tracking-health/check` | [src/app/(dashboard)/app/analytics/[siteId]/tracking-health/check/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/tracking-health/check/page.tsx) |
+| `/app/analytics/[siteId]/tracking-health` | [src/app/(dashboard)/app/analytics/[siteId]/tracking-health/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/tracking-health/page.tsx) |
+| `/app/analytics/[siteId]/visitors` | [src/app/(dashboard)/app/analytics/[siteId]/visitors/page.tsx](../../src/app/(dashboard)/app/analytics/[siteId]/visitors/page.tsx) |
+| `/app/analytics` | [src/app/(dashboard)/app/analytics/page.tsx](../../src/app/(dashboard)/app/analytics/page.tsx) |
+| `/app/arcade/ronins-run` | [src/app/(dashboard)/app/arcade/ronins-run/page.tsx](../../src/app/(dashboard)/app/arcade/ronins-run/page.tsx) |
+| `/app/arcade/ronins-run-3d` | [src/app/(dashboard)/app/arcade/ronins-run-3d/page.tsx](../../src/app/(dashboard)/app/arcade/ronins-run-3d/page.tsx) |
+| `/app/assistant/[threadId]` | [src/app/(dashboard)/app/assistant/[threadId]/page.tsx](../../src/app/(dashboard)/app/assistant/[threadId]/page.tsx) |
+| `/app/assistant` | [src/app/(dashboard)/app/assistant/page.tsx](../../src/app/(dashboard)/app/assistant/page.tsx) |
+| `/app/bing-webmaster/[siteId]/against-google` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/against-google/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/against-google/page.tsx) |
+| `/app/bing-webmaster/[siteId]/connection` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/connection/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/connection/page.tsx) |
+| `/app/bing-webmaster/[siteId]/crawling` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/crawling/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/crawling/page.tsx) |
+| `/app/bing-webmaster/[siteId]/keywords/keyword` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/keywords/keyword/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/keywords/keyword/page.tsx) |
+| `/app/bing-webmaster/[siteId]/keywords` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/keywords/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/keywords/page.tsx) |
+| `/app/bing-webmaster/[siteId]` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/page.tsx) |
+| `/app/bing-webmaster/[siteId]/pages/page` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/pages/page/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/pages/page/page.tsx) |
+| `/app/bing-webmaster/[siteId]/pages` | [src/app/(dashboard)/app/bing-webmaster/[siteId]/pages/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/[siteId]/pages/page.tsx) |
+| `/app/bing-webmaster` | [src/app/(dashboard)/app/bing-webmaster/page.tsx](../../src/app/(dashboard)/app/bing-webmaster/page.tsx) |
+| `/app/calls/[id]` | [src/app/(dashboard)/app/calls/[id]/page.tsx](../../src/app/(dashboard)/app/calls/[id]/page.tsx) |
+| `/app/calls` | [src/app/(dashboard)/app/calls/page.tsx](../../src/app/(dashboard)/app/calls/page.tsx) |
+| `/app/clarity/[siteId]/connection` | [src/app/(dashboard)/app/clarity/[siteId]/connection/page.tsx](../../src/app/(dashboard)/app/clarity/[siteId]/connection/page.tsx) |
+| `/app/clarity/[siteId]/errors` | [src/app/(dashboard)/app/clarity/[siteId]/errors/page.tsx](../../src/app/(dashboard)/app/clarity/[siteId]/errors/page.tsx) |
+| `/app/clarity/[siteId]` | [src/app/(dashboard)/app/clarity/[siteId]/page.tsx](../../src/app/(dashboard)/app/clarity/[siteId]/page.tsx) |
+| `/app/clarity/[siteId]/pages/page` | [src/app/(dashboard)/app/clarity/[siteId]/pages/page/page.tsx](../../src/app/(dashboard)/app/clarity/[siteId]/pages/page/page.tsx) |
+| `/app/clarity/[siteId]/pages` | [src/app/(dashboard)/app/clarity/[siteId]/pages/page.tsx](../../src/app/(dashboard)/app/clarity/[siteId]/pages/page.tsx) |
+| `/app/clarity/[siteId]/recordings` | [src/app/(dashboard)/app/clarity/[siteId]/recordings/page.tsx](../../src/app/(dashboard)/app/clarity/[siteId]/recordings/page.tsx) |
+| `/app/clarity` | [src/app/(dashboard)/app/clarity/page.tsx](../../src/app/(dashboard)/app/clarity/page.tsx) |
+| `/app/governance/audit-trail` | [src/app/(dashboard)/app/governance/audit-trail/page.tsx](../../src/app/(dashboard)/app/governance/audit-trail/page.tsx) |
+| `/app/governance` | [src/app/(dashboard)/app/governance/page.tsx](../../src/app/(dashboard)/app/governance/page.tsx) |
+| `/app/governance/policies` | [src/app/(dashboard)/app/governance/policies/page.tsx](../../src/app/(dashboard)/app/governance/policies/page.tsx) |
+| `/app/governance/register` | [src/app/(dashboard)/app/governance/register/page.tsx](../../src/app/(dashboard)/app/governance/register/page.tsx) |
+| `/app/hakken-tasks` | [src/app/(dashboard)/app/hakken-tasks/page.tsx](../../src/app/(dashboard)/app/hakken-tasks/page.tsx) |
+| `/app/helpful-content/[articleId]` | [src/app/(dashboard)/app/helpful-content/[articleId]/page.tsx](../../src/app/(dashboard)/app/helpful-content/[articleId]/page.tsx) |
+| `/app/helpful-content` | [src/app/(dashboard)/app/helpful-content/page.tsx](../../src/app/(dashboard)/app/helpful-content/page.tsx) |
+| `/app/insights/ai-search` | [src/app/(dashboard)/app/insights/ai-search/page.tsx](../../src/app/(dashboard)/app/insights/ai-search/page.tsx) |
+| `/app/insights/cannibalisation/group` | [src/app/(dashboard)/app/insights/cannibalisation/group/page.tsx](../../src/app/(dashboard)/app/insights/cannibalisation/group/page.tsx) |
+| `/app/insights/cannibalisation` | [src/app/(dashboard)/app/insights/cannibalisation/page.tsx](../../src/app/(dashboard)/app/insights/cannibalisation/page.tsx) |
+| `/app/insights/enquiries` | [src/app/(dashboard)/app/insights/enquiries/page.tsx](../../src/app/(dashboard)/app/insights/enquiries/page.tsx) |
+| `/app/insights/enquiries/source` | [src/app/(dashboard)/app/insights/enquiries/source/page.tsx](../../src/app/(dashboard)/app/insights/enquiries/source/page.tsx) |
+| `/app/insights/experiments` | [src/app/(dashboard)/app/insights/experiments/page.tsx](../../src/app/(dashboard)/app/insights/experiments/page.tsx) |
+| `/app/insights/findings/[findingId]` | [src/app/(dashboard)/app/insights/findings/[findingId]/page.tsx](../../src/app/(dashboard)/app/insights/findings/[findingId]/page.tsx) |
+| `/app/insights/findings` | [src/app/(dashboard)/app/insights/findings/page.tsx](../../src/app/(dashboard)/app/insights/findings/page.tsx) |
+| `/app/insights/findings/sections/[section]` | [src/app/(dashboard)/app/insights/findings/sections/[section]/page.tsx](../../src/app/(dashboard)/app/insights/findings/sections/[section]/page.tsx) |
+| `/app/insights/funnel` | [src/app/(dashboard)/app/insights/funnel/page.tsx](../../src/app/(dashboard)/app/insights/funnel/page.tsx) |
+| `/app/insights/leaderboards/[league]` | [src/app/(dashboard)/app/insights/leaderboards/[league]/page.tsx](../../src/app/(dashboard)/app/insights/leaderboards/[league]/page.tsx) |
+| `/app/insights/leaderboards` | [src/app/(dashboard)/app/insights/leaderboards/page.tsx](../../src/app/(dashboard)/app/insights/leaderboards/page.tsx) |
+| `/app/insights/measurement` | [src/app/(dashboard)/app/insights/measurement/page.tsx](../../src/app/(dashboard)/app/insights/measurement/page.tsx) |
+| `/app/insights/opportunities` | [src/app/(dashboard)/app/insights/opportunities/page.tsx](../../src/app/(dashboard)/app/insights/opportunities/page.tsx) |
+| `/app/insights/page-plan` | [src/app/(dashboard)/app/insights/page-plan/page.tsx](../../src/app/(dashboard)/app/insights/page-plan/page.tsx) |
+| `/app/insights/page-reviews/page` | [src/app/(dashboard)/app/insights/page-reviews/page/page.tsx](../../src/app/(dashboard)/app/insights/page-reviews/page/page.tsx) |
+| `/app/insights/page-reviews` | [src/app/(dashboard)/app/insights/page-reviews/page.tsx](../../src/app/(dashboard)/app/insights/page-reviews/page.tsx) |
+| `/app/insights` | [src/app/(dashboard)/app/insights/page.tsx](../../src/app/(dashboard)/app/insights/page.tsx) |
+| `/app/insights/reports/[reportId]` | [src/app/(dashboard)/app/insights/reports/[reportId]/page.tsx](../../src/app/(dashboard)/app/insights/reports/[reportId]/page.tsx) |
+| `/app/insights/reports` | [src/app/(dashboard)/app/insights/reports/page.tsx](../../src/app/(dashboard)/app/insights/reports/page.tsx) |
+| `/app/insights/sources` | [src/app/(dashboard)/app/insights/sources/page.tsx](../../src/app/(dashboard)/app/insights/sources/page.tsx) |
+| `/app/insights/strategy` | [src/app/(dashboard)/app/insights/strategy/page.tsx](../../src/app/(dashboard)/app/insights/strategy/page.tsx) |
+| `/app/insights/strategy/service` | [src/app/(dashboard)/app/insights/strategy/service/page.tsx](../../src/app/(dashboard)/app/insights/strategy/service/page.tsx) |
+| `/app/insights/summary` | [src/app/(dashboard)/app/insights/summary/page.tsx](../../src/app/(dashboard)/app/insights/summary/page.tsx) |
+| `/app/insights/this-week` | [src/app/(dashboard)/app/insights/this-week/page.tsx](../../src/app/(dashboard)/app/insights/this-week/page.tsx) |
+| `/app/insights/track-record` | [src/app/(dashboard)/app/insights/track-record/page.tsx](../../src/app/(dashboard)/app/insights/track-record/page.tsx) |
+| `/app/insights/your-month` | [src/app/(dashboard)/app/insights/your-month/page.tsx](../../src/app/(dashboard)/app/insights/your-month/page.tsx) |
+| `/app/keyword-research/[lookupId]/ai` | [src/app/(dashboard)/app/keyword-research/[lookupId]/ai/page.tsx](../../src/app/(dashboard)/app/keyword-research/[lookupId]/ai/page.tsx) |
+| `/app/keyword-research/[lookupId]/ideas` | [src/app/(dashboard)/app/keyword-research/[lookupId]/ideas/page.tsx](../../src/app/(dashboard)/app/keyword-research/[lookupId]/ideas/page.tsx) |
+| `/app/keyword-research/[lookupId]` | [src/app/(dashboard)/app/keyword-research/[lookupId]/page.tsx](../../src/app/(dashboard)/app/keyword-research/[lookupId]/page.tsx) |
+| `/app/keyword-research/[lookupId]/results` | [src/app/(dashboard)/app/keyword-research/[lookupId]/results/page.tsx](../../src/app/(dashboard)/app/keyword-research/[lookupId]/results/page.tsx) |
+| `/app/keyword-research/competitor/[rivalSiteId]` | [src/app/(dashboard)/app/keyword-research/competitor/[rivalSiteId]/page.tsx](../../src/app/(dashboard)/app/keyword-research/competitor/[rivalSiteId]/page.tsx) |
+| `/app/keyword-research/lists/[listId]` | [src/app/(dashboard)/app/keyword-research/lists/[listId]/page.tsx](../../src/app/(dashboard)/app/keyword-research/lists/[listId]/page.tsx) |
+| `/app/keyword-research/lists/[listId]/rename` | [src/app/(dashboard)/app/keyword-research/lists/[listId]/rename/page.tsx](../../src/app/(dashboard)/app/keyword-research/lists/[listId]/rename/page.tsx) |
+| `/app/keyword-research/lists/new` | [src/app/(dashboard)/app/keyword-research/lists/new/page.tsx](../../src/app/(dashboard)/app/keyword-research/lists/new/page.tsx) |
+| `/app/keyword-research` | [src/app/(dashboard)/app/keyword-research/page.tsx](../../src/app/(dashboard)/app/keyword-research/page.tsx) |
+| `/app/knowledge/[articleId]` | [src/app/(dashboard)/app/knowledge/[articleId]/page.tsx](../../src/app/(dashboard)/app/knowledge/[articleId]/page.tsx) |
+| `/app/knowledge` | [src/app/(dashboard)/app/knowledge/page.tsx](../../src/app/(dashboard)/app/knowledge/page.tsx) |
+| `/app/news/[itemId]` | [src/app/(dashboard)/app/news/[itemId]/page.tsx](../../src/app/(dashboard)/app/news/[itemId]/page.tsx) |
+| `/app/news` | [src/app/(dashboard)/app/news/page.tsx](../../src/app/(dashboard)/app/news/page.tsx) |
+| `/app` | [src/app/(dashboard)/app/page.tsx](../../src/app/(dashboard)/app/page.tsx) |
+| `/app/profile/integrations/telegram` | [src/app/(dashboard)/app/profile/integrations/telegram/page.tsx](../../src/app/(dashboard)/app/profile/integrations/telegram/page.tsx) |
+| `/app/profile` | [src/app/(dashboard)/app/profile/page.tsx](../../src/app/(dashboard)/app/profile/page.tsx) |
+| `/app/reception` | [src/app/(dashboard)/app/reception/page.tsx](../../src/app/(dashboard)/app/reception/page.tsx) |
+| `/app/search-console/[siteId]/almost-there` | [src/app/(dashboard)/app/search-console/[siteId]/almost-there/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/almost-there/page.tsx) |
+| `/app/search-console/[siteId]/brand-and-non-brand` | [src/app/(dashboard)/app/search-console/[siteId]/brand-and-non-brand/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/brand-and-non-brand/page.tsx) |
+| `/app/search-console/[siteId]/click-rate-by-position` | [src/app/(dashboard)/app/search-console/[siteId]/click-rate-by-position/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/click-rate-by-position/page.tsx) |
+| `/app/search-console/[siteId]/connection` | [src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx) |
+| `/app/search-console/[siteId]/countries-and-devices` | [src/app/(dashboard)/app/search-console/[siteId]/countries-and-devices/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/countries-and-devices/page.tsx) |
+| `/app/search-console/[siteId]/demand-by-service` | [src/app/(dashboard)/app/search-console/[siteId]/demand-by-service/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/demand-by-service/page.tsx) |
+| `/app/search-console/[siteId]/google-updates` | [src/app/(dashboard)/app/search-console/[siteId]/google-updates/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/google-updates/page.tsx) |
+| `/app/search-console/[siteId]/indexing` | [src/app/(dashboard)/app/search-console/[siteId]/indexing/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/indexing/page.tsx) |
+| `/app/search-console/[siteId]/keywords/keyword/countries` | [src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx) |
+| `/app/search-console/[siteId]/keywords/keyword` | [src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/page.tsx) |
+| `/app/search-console/[siteId]/keywords` | [src/app/(dashboard)/app/search-console/[siteId]/keywords/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/keywords/page.tsx) |
+| `/app/search-console/[siteId]/missed-demand` | [src/app/(dashboard)/app/search-console/[siteId]/missed-demand/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/missed-demand/page.tsx) |
+| `/app/search-console/[siteId]/new-and-lost` | [src/app/(dashboard)/app/search-console/[siteId]/new-and-lost/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/new-and-lost/page.tsx) |
+| `/app/search-console/[siteId]` | [src/app/(dashboard)/app/search-console/[siteId]/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/page.tsx) |
+| `/app/search-console/[siteId]/pages/page/countries` | [src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx) |
+| `/app/search-console/[siteId]/pages/page` | [src/app/(dashboard)/app/search-console/[siteId]/pages/page/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages/page/page.tsx) |
+| `/app/search-console/[siteId]/pages` | [src/app/(dashboard)/app/search-console/[siteId]/pages/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages/page.tsx) |
+| `/app/search-console/[siteId]/pages-competing` | [src/app/(dashboard)/app/search-console/[siteId]/pages-competing/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages-competing/page.tsx) |
+| `/app/search-console/[siteId]/position-bands` | [src/app/(dashboard)/app/search-console/[siteId]/position-bands/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/position-bands/page.tsx) |
+| `/app/search-console/[siteId]/real-against-estimated` | [src/app/(dashboard)/app/search-console/[siteId]/real-against-estimated/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/real-against-estimated/page.tsx) |
+| `/app/search-console/[siteId]/rich-results` | [src/app/(dashboard)/app/search-console/[siteId]/rich-results/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/rich-results/page.tsx) |
+| `/app/search-console/[siteId]/shown-but-not-clicked` | [src/app/(dashboard)/app/search-console/[siteId]/shown-but-not-clicked/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/shown-but-not-clicked/page.tsx) |
+| `/app/search-console/[siteId]/tracked/keywords` | [src/app/(dashboard)/app/search-console/[siteId]/tracked/keywords/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/tracked/keywords/page.tsx) |
+| `/app/search-console/[siteId]/tracked/pages` | [src/app/(dashboard)/app/search-console/[siteId]/tracked/pages/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/tracked/pages/page.tsx) |
+| `/app/search-console/[siteId]/types` | [src/app/(dashboard)/app/search-console/[siteId]/types/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/types/page.tsx) |
+| `/app/search-console/[siteId]/volatility` | [src/app/(dashboard)/app/search-console/[siteId]/volatility/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/volatility/page.tsx) |
+| `/app/search-console/[siteId]/wins-and-losses` | [src/app/(dashboard)/app/search-console/[siteId]/wins-and-losses/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/wins-and-losses/page.tsx) |
+| `/app/search-console` | [src/app/(dashboard)/app/search-console/page.tsx](../../src/app/(dashboard)/app/search-console/page.tsx) |
+| `/app/settings/auth-diagnostics` | [src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx](../../src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx) |
+| `/app/settings/billing` | [src/app/(dashboard)/app/settings/billing/page.tsx](../../src/app/(dashboard)/app/settings/billing/page.tsx) |
+| `/app/settings` | [src/app/(dashboard)/app/settings/page.tsx](../../src/app/(dashboard)/app/settings/page.tsx) |
+| `/app/settings/team` | [src/app/(dashboard)/app/settings/team/page.tsx](../../src/app/(dashboard)/app/settings/team/page.tsx) |
+| `/app/sites/[siteId]/ai/answers/answer` | [src/app/(dashboard)/app/sites/[siteId]/ai/answers/answer/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/answers/answer/page.tsx) |
+| `/app/sites/[siteId]/ai/answers` | [src/app/(dashboard)/app/sites/[siteId]/ai/answers/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/answers/page.tsx) |
+| `/app/sites/[siteId]/ai/businesses` | [src/app/(dashboard)/app/sites/[siteId]/ai/businesses/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/businesses/page.tsx) |
+| `/app/sites/[siteId]/ai/demand` | [src/app/(dashboard)/app/sites/[siteId]/ai/demand/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/demand/page.tsx) |
+| `/app/sites/[siteId]/ai/mentions` | [src/app/(dashboard)/app/sites/[siteId]/ai/mentions/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/mentions/page.tsx) |
+| `/app/sites/[siteId]/ai/read/page` | [src/app/(dashboard)/app/sites/[siteId]/ai/read/page/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/read/page/page.tsx) |
+| `/app/sites/[siteId]/ai/read` | [src/app/(dashboard)/app/sites/[siteId]/ai/read/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/read/page.tsx) |
+| `/app/sites/[siteId]/ai/searched` | [src/app/(dashboard)/app/sites/[siteId]/ai/searched/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/searched/page.tsx) |
+| `/app/sites/[siteId]/ai/share-of-voice` | [src/app/(dashboard)/app/sites/[siteId]/ai/share-of-voice/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/share-of-voice/page.tsx) |
+| `/app/sites/[siteId]/ai/sources` | [src/app/(dashboard)/app/sites/[siteId]/ai/sources/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/ai/sources/page.tsx) |
+| `/app/sites/[siteId]/assets` | [src/app/(dashboard)/app/sites/[siteId]/assets/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/assets/page.tsx) |
+| `/app/sites/[siteId]/audit` | [src/app/(dashboard)/app/sites/[siteId]/audit/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/audit/page.tsx) |
+| `/app/sites/[siteId]/audit/problem` | [src/app/(dashboard)/app/sites/[siteId]/audit/problem/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/audit/problem/page.tsx) |
+| `/app/sites/[siteId]/backlinks/all` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/all/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/all/page.tsx) |
+| `/app/sites/[siteId]/backlinks/anchors/anchor` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/anchors/anchor/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/anchors/anchor/page.tsx) |
+| `/app/sites/[siteId]/backlinks/anchors` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/anchors/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/anchors/page.tsx) |
+| `/app/sites/[siteId]/backlinks/broken` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/broken/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/broken/page.tsx) |
+| `/app/sites/[siteId]/backlinks/compared` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/compared/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/compared/page.tsx) |
+| `/app/sites/[siteId]/backlinks/domains/domain` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/domains/domain/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/domains/domain/page.tsx) |
+| `/app/sites/[siteId]/backlinks/domains` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/domains/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/domains/page.tsx) |
+| `/app/sites/[siteId]/backlinks/ips` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/ips/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/ips/page.tsx) |
+| `/app/sites/[siteId]/backlinks/new-lost` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/new-lost/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/new-lost/page.tsx) |
+| `/app/sites/[siteId]/backlinks` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/page.tsx) |
+| `/app/sites/[siteId]/backlinks/quality` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/quality/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/quality/page.tsx) |
+| `/app/sites/[siteId]/backlinks/where` | [src/app/(dashboard)/app/sites/[siteId]/backlinks/where/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/backlinks/where/page.tsx) |
+| `/app/sites/[siteId]/competitors/gap` | [src/app/(dashboard)/app/sites/[siteId]/competitors/gap/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/competitors/gap/page.tsx) |
+| `/app/sites/[siteId]/competitors/map` | [src/app/(dashboard)/app/sites/[siteId]/competitors/map/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/competitors/map/page.tsx) |
+| `/app/sites/[siteId]/competitors/organic` | [src/app/(dashboard)/app/sites/[siteId]/competitors/organic/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/competitors/organic/page.tsx) |
+| `/app/sites/[siteId]/competitors` | [src/app/(dashboard)/app/sites/[siteId]/competitors/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/competitors/page.tsx) |
+| `/app/sites/[siteId]/competitors/rival` | [src/app/(dashboard)/app/sites/[siteId]/competitors/rival/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/competitors/rival/page.tsx) |
+| `/app/sites/[siteId]/competitors/suggested` | [src/app/(dashboard)/app/sites/[siteId]/competitors/suggested/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/competitors/suggested/page.tsx) |
+| `/app/sites/[siteId]/drafts/[draftId]` | [src/app/(dashboard)/app/sites/[siteId]/drafts/[draftId]/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/drafts/[draftId]/page.tsx) |
+| `/app/sites/[siteId]/google/above` | [src/app/(dashboard)/app/sites/[siteId]/google/above/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/above/page.tsx) |
+| `/app/sites/[siteId]/google/fan-out` | [src/app/(dashboard)/app/sites/[siteId]/google/fan-out/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/fan-out/page.tsx) |
+| `/app/sites/[siteId]/google/features/feature` | [src/app/(dashboard)/app/sites/[siteId]/google/features/feature/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/features/feature/page.tsx) |
+| `/app/sites/[siteId]/google/features` | [src/app/(dashboard)/app/sites/[siteId]/google/features/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/features/page.tsx) |
+| `/app/sites/[siteId]/google/moves` | [src/app/(dashboard)/app/sites/[siteId]/google/moves/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/moves/page.tsx) |
+| `/app/sites/[siteId]/google/questions` | [src/app/(dashboard)/app/sites/[siteId]/google/questions/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/questions/page.tsx) |
+| `/app/sites/[siteId]/google/searches` | [src/app/(dashboard)/app/sites/[siteId]/google/searches/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/google/searches/page.tsx) |
+| `/app/sites/[siteId]/keywords/bands/moved` | [src/app/(dashboard)/app/sites/[siteId]/keywords/bands/moved/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/bands/moved/page.tsx) |
+| `/app/sites/[siteId]/keywords/bands` | [src/app/(dashboard)/app/sites/[siteId]/keywords/bands/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/bands/page.tsx) |
+| `/app/sites/[siteId]/keywords/keyword` | [src/app/(dashboard)/app/sites/[siteId]/keywords/keyword/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/keyword/page.tsx) |
+| `/app/sites/[siteId]/keywords/new-lost` | [src/app/(dashboard)/app/sites/[siteId]/keywords/new-lost/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/new-lost/page.tsx) |
+| `/app/sites/[siteId]/keywords` | [src/app/(dashboard)/app/sites/[siteId]/keywords/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/page.tsx) |
+| `/app/sites/[siteId]/keywords/pages/page` | [src/app/(dashboard)/app/sites/[siteId]/keywords/pages/page/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/pages/page/page.tsx) |
+| `/app/sites/[siteId]/keywords/pages` | [src/app/(dashboard)/app/sites/[siteId]/keywords/pages/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/pages/page.tsx) |
+| `/app/sites/[siteId]/keywords/structure` | [src/app/(dashboard)/app/sites/[siteId]/keywords/structure/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/keywords/structure/page.tsx) |
+| `/app/sites/[siteId]/local/activity` | [src/app/(dashboard)/app/sites/[siteId]/local/activity/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/activity/page.tsx) |
+| `/app/sites/[siteId]/local/listings` | [src/app/(dashboard)/app/sites/[siteId]/local/listings/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/listings/page.tsx) |
+| `/app/sites/[siteId]/local/maps` | [src/app/(dashboard)/app/sites/[siteId]/local/maps/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/maps/page.tsx) |
+| `/app/sites/[siteId]/local/maps/search` | [src/app/(dashboard)/app/sites/[siteId]/local/maps/search/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/maps/search/page.tsx) |
+| `/app/sites/[siteId]/local/market/business` | [src/app/(dashboard)/app/sites/[siteId]/local/market/business/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/market/business/page.tsx) |
+| `/app/sites/[siteId]/local/market` | [src/app/(dashboard)/app/sites/[siteId]/local/market/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/market/page.tsx) |
+| `/app/sites/[siteId]/local/offices` | [src/app/(dashboard)/app/sites/[siteId]/local/offices/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/offices/page.tsx) |
+| `/app/sites/[siteId]/local` | [src/app/(dashboard)/app/sites/[siteId]/local/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/local/page.tsx) |
+| `/app/sites/[siteId]/mentions/listed` | [src/app/(dashboard)/app/sites/[siteId]/mentions/listed/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/mentions/listed/page.tsx) |
+| `/app/sites/[siteId]/mentions` | [src/app/(dashboard)/app/sites/[siteId]/mentions/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/mentions/page.tsx) |
+| `/app/sites/[siteId]/mentions/rivals` | [src/app/(dashboard)/app/sites/[siteId]/mentions/rivals/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/mentions/rivals/page.tsx) |
+| `/app/sites/[siteId]` | [src/app/(dashboard)/app/sites/[siteId]/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/page.tsx) |
+| `/app/sites/[siteId]/paid/keywords` | [src/app/(dashboard)/app/sites/[siteId]/paid/keywords/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/paid/keywords/page.tsx) |
+| `/app/sites/[siteId]/paid` | [src/app/(dashboard)/app/sites/[siteId]/paid/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/paid/page.tsx) |
+| `/app/sites/[siteId]/radar/gaps` | [src/app/(dashboard)/app/sites/[siteId]/radar/gaps/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/radar/gaps/page.tsx) |
+| `/app/sites/[siteId]/radar` | [src/app/(dashboard)/app/sites/[siteId]/radar/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/radar/page.tsx) |
+| `/app/sites/[siteId]/radar/question` | [src/app/(dashboard)/app/sites/[siteId]/radar/question/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/radar/question/page.tsx) |
+| `/app/sites/[siteId]/radar/sources` | [src/app/(dashboard)/app/sites/[siteId]/radar/sources/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/radar/sources/page.tsx) |
+| `/app/sites/[siteId]/radar/sources/website` | [src/app/(dashboard)/app/sites/[siteId]/radar/sources/website/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/radar/sources/website/page.tsx) |
+| `/app/sites/[siteId]/reviews` | [src/app/(dashboard)/app/sites/[siteId]/reviews/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/reviews/page.tsx) |
+| `/app/sites/[siteId]/reviews/rivals` | [src/app/(dashboard)/app/sites/[siteId]/reviews/rivals/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/reviews/rivals/page.tsx) |
+| `/app/sites/[siteId]/reviews/say` | [src/app/(dashboard)/app/sites/[siteId]/reviews/say/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/reviews/say/page.tsx) |
+| `/app/sites/[siteId]/your-pages` | [src/app/(dashboard)/app/sites/[siteId]/your-pages/page.tsx](../../src/app/(dashboard)/app/sites/[siteId]/your-pages/page.tsx) |
+| `/app/sites` | [src/app/(dashboard)/app/sites/page.tsx](../../src/app/(dashboard)/app/sites/page.tsx) |
+| `/app/tasks` | [src/app/(dashboard)/app/tasks/page.tsx](../../src/app/(dashboard)/app/tasks/page.tsx) |
+| `/app/usage/coming-up` | [src/app/(dashboard)/app/usage/coming-up/page.tsx](../../src/app/(dashboard)/app/usage/coming-up/page.tsx) |
+| `/app/usage` | [src/app/(dashboard)/app/usage/page.tsx](../../src/app/(dashboard)/app/usage/page.tsx) |
+| `/app/usage/statement` | [src/app/(dashboard)/app/usage/statement/page.tsx](../../src/app/(dashboard)/app/usage/statement/page.tsx) |
+| `/app/usage/websites` | [src/app/(dashboard)/app/usage/websites/page.tsx](../../src/app/(dashboard)/app/usage/websites/page.tsx) |
+| `/app/usage/work` | [src/app/(dashboard)/app/usage/work/page.tsx](../../src/app/(dashboard)/app/usage/work/page.tsx) |
+| `/app/who-to-follow` | [src/app/(dashboard)/app/who-to-follow/page.tsx](../../src/app/(dashboard)/app/who-to-follow/page.tsx) |
+| `/` | [src/app/(public)/page.tsx](../../src/app/(public)/page.tsx) |
+| `/kiosk/[widgetId]` | [src/app/kiosk/[widgetId]/page.tsx](../../src/app/kiosk/[widgetId]/page.tsx) |
+| `/local-test-auth` | [src/app/local-test-auth/page.tsx](../../src/app/local-test-auth/page.tsx) |
+| `/login` | [src/app/login/page.tsx](../../src/app/login/page.tsx) |
+| `/sandbox/[widgetId]` | [src/app/sandbox/[widgetId]/page.tsx](../../src/app/sandbox/[widgetId]/page.tsx) |
+| `/unsubscribe` | [src/app/unsubscribe/page.tsx](../../src/app/unsubscribe/page.tsx) |
+| `/verify` | [src/app/verify/page.tsx](../../src/app/verify/page.tsx) |
+| `/w/[widgetId]` | [src/app/w/[widgetId]/page.tsx](../../src/app/w/[widgetId]/page.tsx) |
 
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/admin/companies/[id]/ai` | Company AI readiness overview. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/prompt` | Company instructions. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/ai/models` | Company model routing/defaults. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/companies/[id]/ai/rules` and children | Company AI rules. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/ai/knowledge` and document detail | Company knowledge source archive behind Wiki receipts. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
-| `/admin/companies/[id]/ai/knowledge/[documentId]` | Company knowledge source document detail. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
-| `/admin/companies/[id]/ai/pages` | Company Wiki page list, import, reviews, open questions, and progress. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/companies/[id]/ai/pages/[pageId]` | Company Wiki page detail, editing, pins, receipts, and history. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/companies/[id]/ai/pages/map` | Company Wiki map. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/companies/[id]/ai/diary` | Company Wiki learning diary. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/companies/[id]/ai/unanswered` | Company unanswered Wiki demand. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/companies/[id]/ai/chat-logs` | Company chat logs. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new` | Create a company check from a chat thread. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new` | Create a memory candidate from a chat thread. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/evals` and children | Company checks and check results. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/evals/new` | New company check. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/evals/[evalCaseId]` | Company check detail/results. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/evals/[evalCaseId]/edit` | Company check edit. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/memory` | Company memories and memory suggestions. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/skills` and children | Company skills. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/skills/new` | New company skill. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/saved-answers` | Legacy saved-answers address; redirects to company Wiki pages. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/companies/[id]/ai/rules/new` | New company AI rule in Company AI area. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/ai/rules/[ruleId]` | Company AI rule detail/edit in Company AI area. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/ai/usage` | Company AI usage. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/companies/[id]/ai/money` | Company AI money view. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
+## Next Route Handlers
 
-## Global AI Routes
-
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/admin/ai` | Global AI landing. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/ai/costs`, `/admin/ai/usage/costs` | Global AI cost analytics. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/ai/money` | Global AI money view. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/ai/chat-logs`, `/admin/ai/usage/chat-logs` | Global chat-log review. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/ai/diary` | Platform Wiki learning diary. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/ai/decisions` | The judgments the platform makes on its own, their weekly counts and their mode (Off, Ask a person, Acts on its own). `/admin/ai/decisions/[key]` shows the question and the last runs. | [Decisions plan](../plans/active/decisions-typesafe-plan.md) |
-| `/admin/ai/unanswered` | Platform and company unanswered Wiki demand. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/ai/evals` | Platform-level AI checks. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/ai/evals/new` | New platform AI check. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/ai/evals/[evalCaseId]` | Platform AI check detail. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/ai/evals/[evalCaseId]/edit` | Platform AI check editing. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/ai/system-prompt` | Global system prompt. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/rules` | Global AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/rules/new` | New global AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/rules/[id]` | Global AI rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/global-knowledge` | Old Global Knowledge address; redirects to `/admin/ai/knowledge`. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/ai/knowledge` | Platform Wiki page list, import, reviews, open questions, and progress. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/ai/knowledge/[pageId]` | Platform Wiki page detail, editing, pins, receipts, and history. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/ai/knowledge/map` | Platform Wiki map. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
-| `/admin/ai/voice` | Workspace spoken voice choice and preview. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
-| `/admin/ai/widget` | Global widget configuration, including Receptionist screen opt-in. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md), [Receptionist Screen](../end-user/receptionist-screen.md) |
-| `/admin/ai/models` and children | Model catalogue, providers, defaults, detail. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/ai/models/catalogue` | Model catalogue. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/ai/models/providers` | Provider settings. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/ai/models/defaults` | Model defaults. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/ai/models/[id]` | Model detail. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/ai/tools` and children | Tool catalogue and connectors. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
-| `/admin/ai/tools/new` | New AI tool. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
-| `/admin/ai/tools/[id]` | AI tool detail/edit. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
-| `/admin/ai/tools/connectors/[id]` | Tool connector detail. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
-| `/admin/ai/tool-servers` | Connected tool-server management, discovery, import, status, and disconnect surface. | [Tool Servers](../end-user/tool-servers.md), [Tool Servers Developer Guide](./tool-servers.md) |
-| `/admin/ai/skills` | Canonical Skill Center surface for reusable agent skills. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-
-## Governance Routes
-
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/admin/governance` | Platform governance overview. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/admin/governance/register` | Platform AI register. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/admin/governance/policies` | Platform active-policy view. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/admin/governance/audit-trail` | Platform audit trail with filters and export. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/admin/governance/audit-trail/[id]` | Governance audit event detail. | [Governance And Trust](../end-user/governance-and-trust.md), [Audit Log Service](./audit-log-service.md) |
-| `/admin/governance/approvals` | Governance-facing agent approvals queue. | [Governance And Trust](../end-user/governance-and-trust.md), [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-
-## Agent Routes
-
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/admin/agents` | Agent list and creation. | [Agents](../end-user/agents.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/new` | New agent creation screen. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-| `/admin/agents/skills` | Legacy exact-match Skill Center address; middleware redirects it to `/admin/ai/skills`. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
-| `/admin/agents/[id]` | Agent detail overview. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/[id]/settings` | Agent settings. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-| `/admin/agents/[id]/interfaces` | Agent interfaces. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-| `/admin/agents/[id]/system-prompt` | Agent prompt. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/[id]/rules` and children | Agent rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/[id]/rules/new` | New agent rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/[id]/rules/[ruleId]` | Agent rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/[id]/skills` | Agent-bound skills. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-| `/admin/agents/[id]/knowledge` | Agent knowledge. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md) |
-| `/admin/agents/[id]/memory` | Agent memory review. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-| `/admin/agents/[id]/runs` | Agent run history. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-| `/admin/agents/[id]/observability` and run detail | Agent observability and job detail. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Run Observatory Developer Guide](./run-observatory.md) |
-| `/admin/agents/[id]/observability/[runId]` | Agent observability run detail. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Run Observatory Developer Guide](./run-observatory.md) |
-| `/admin/agents/[id]/logs` and log detail | Raw agent logs. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-| `/admin/agents/[id]/logs/[logId]` | Raw agent log detail. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-| `/admin/agents/[id]/evals` and fixture detail | Agent checks/evals. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-| `/admin/agents/[id]/evals/[fixtureId]` | Agent check fixture detail. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
-
-## Workflow, Settings, Operations, And Users
-
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/admin/workflows` and workflow detail | Workflow builder and workflow records. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Automation Developer Guide](./workflow-automation.md) |
-| `/admin/workflows/[id]` | Workflow detail/builder. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Automation Developer Guide](./workflow-automation.md) |
-| `/admin/workflows/executions` and detail | Workflow run review. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Runtime Internals](./workflow-runtime-internals.md) |
-| `/admin/workflows/executions/[id]` | Workflow execution detail. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Runtime Internals](./workflow-runtime-internals.md) |
-| `/admin/workflows/schedules` and children | Workflow schedules. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Automation Developer Guide](./workflow-automation.md) |
-| `/admin/workflows/schedules/new` | New workflow schedule. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Automation Developer Guide](./workflow-automation.md) |
-| `/admin/workflows/schedules/[id]` | Workflow schedule detail/edit. | [Workflow Automation](../end-user/workflow-automation.md), [Workflow Automation Developer Guide](./workflow-automation.md) |
-| `/admin/settings` | Forwards to the first settings screen; also maps legacy `?tab=` links. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Platform Operations Settings Developer Guide](./platform-operations-settings.md) |
-| `/admin/settings/identity` and `/admin/settings/identity/aesthetics` | Core identity and global aesthetics. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Platform Operations Settings Developer Guide](./platform-operations-settings.md) |
-| `/admin/settings/security`, `/admin/settings/security/retention`, and `/admin/settings/security/purge-history` | PII masking, log-retention settings, and purge history. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Data Retention And Purges](./data-retention-and-purges.md) |
-| `/admin/settings/options`, `/admin/settings/options/self-improvement`, and `/admin/settings/options/approvals` | Developer diagnostics, learning switches, and the agent approval window. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Self-Improvement Plan](../plans/active/self-improvement-plan.md) |
-| `/admin/settings/plans` | Platform plans and quotas. | [Platform Plans And Quotas](../end-user/platform-plans-and-quotas.md), [Platform Plans And Quotas Developer Guide](./platform-plans-and-quotas.md) |
-| `/admin/settings/api-keys` | Public API key management. | [Public API And Webhooks](../end-user/public-api-and-webhooks.md), [Public API And Webhooks Developer Guide](./public-api-and-webhooks.md) |
-| `/admin/settings/analytics` | Analytics settings. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Platform Operations Settings Developer Guide](./platform-operations-settings.md) |
-| `/admin/settings/scripts` and detail | Maintenance scripts. | [System Health And Maintenance](../end-user/system-health-and-maintenance.md), [Maintenance Scripts Developer Guide](./maintenance-scripts.md) |
-| `/admin/settings/scripts/[scriptId]` | Maintenance script detail/run review. | [System Health And Maintenance](../end-user/system-health-and-maintenance.md), [Maintenance Scripts Developer Guide](./maintenance-scripts.md) |
-| `/admin/health` | System health. | [Health](../end-user/health.md), [System Health And Platform Alerts](./system-health-and-platform-alerts.md) |
-| `/admin/connections` | External dependency probes and scheduled-job recency. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Platform Operations Settings Developer Guide](./platform-operations-settings.md) |
-| `/admin/auth-diagnostics` | Admin auth diagnostics. | [Operational Diagnostics And Retention](../end-user/operational-diagnostics-and-retention.md), [Auth Diagnostics](./auth-diagnostics.md) |
-| `/admin/audit-logs/[id]` | Audit log detail. | [Administration User Guide](../end-user/administration.md), [Audit Log Service](./audit-log-service.md) |
-| `/admin/users` and children | Global users and invitations. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/users/invite` | Global user invitation. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/users/[id]` | Global user detail/edit. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/super-admins` and children | System admin management. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/super-admins/invite` | System admin invitation. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/super-admins/[id]` | System admin detail/edit. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
-
-## Movement Demo Routes
-
-The movement demo is frozen unless the user explicitly reopens it or a required
-gate is broken. Before changing movement behavior or documentation semantics,
-read Movement Mirror And Side-Ownership Contract (not included in this copy)
-and Movement Definitive Plan (not included in this copy).
-
-| Route | Purpose | Owning docs |
-| --- | --- | --- |
-| `/demos/movements/[id]` | Movement detail. | Movement docs and active plan. |
-| `/demos/movements/[id]/play` | Movement game/play surface. | Movement docs and active plan. |
-| `/demos/movements/information` | Public-facing movement info page inside app shell. | Temporary Posture Studio Demo (not included in this copy) |
-| `/demos/movements/replay-lab` | Replay Alignment/Replay Studio. | Movement Demo Replay Lab Plan (not included in this copy), active movement plan. |
-| `/demos/movements/squat-proof` | Squat proof route. | Movement proof docs and tests. |
-| `/demos/movement-capture` and children | Capture, deep capture, benchmark, readiness, hand/face proof routes. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/deep` | Deep movement capture route. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/benchmark` | Movement benchmark route. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/benchmark/device` | Movement benchmark device route. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/readiness-proof` | Movement readiness proof route. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/face-model-proof` | Face model proof route. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/hand-model-proof` | Hand model proof route. | Movement docs, proof scripts, active movement plan. |
-| `/demos/movement-capture/hand-recovery-proof` | Hand recovery proof route. | Movement docs, proof scripts, active movement plan. |
+| URL shape | Repository source |
+| --- | --- |
+| `/api/e2e-auth` | [src/app/api/e2e-auth/route.ts](../../src/app/api/e2e-auth/route.ts) |
+| `/api/e2e-fixture/face-proof` | [src/app/api/e2e-fixture/face-proof/route.ts](../../src/app/api/e2e-fixture/face-proof/route.ts) |
+| `/api/e2e-fixture/hand-proof` | [src/app/api/e2e-fixture/hand-proof/route.ts](../../src/app/api/e2e-fixture/hand-proof/route.ts) |
+| `/api/email-preview` | [src/app/api/email-preview/route.ts](../../src/app/api/email-preview/route.ts) |
+| `/api/health` | [src/app/api/health/route.ts](../../src/app/api/health/route.ts) |

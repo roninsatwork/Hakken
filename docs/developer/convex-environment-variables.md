@@ -1,8 +1,20 @@
+---
+product: Hakken
+documentation_type: Developer reference
+feature_area: Environment variable names and ownership
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/convex-environment-variables.md
+last_reviewed: '2026-10-26T14:54:15+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Convex Environment Variables Reference
 
-Last reviewed: 2026-08-30
-Status: matches the variables set on the deployment and the code that reads them
-Audience: engineers and operators configuring or auditing a Convex deployment.
+> **Product:** Hakken · **Document type:** Developer reference · **Feature area:** Environment variable names and ownership
+> **Reviewed:** 26 October 2026, 14:54:15 GMT (Europe/London)
+> **Source path:** `docs/developer/convex-environment-variables.md` · **Status:** Current
+
 
 ## Purpose
 
@@ -153,25 +165,10 @@ Notes:
 
 See [Knowledge Management](./knowledge-management.md).
 
-## Connector OAuth (Gmail)
+## Retained Generic Connector OAuth
 
-| Variable | What it is for |
-| --- | --- |
-| `CONNECTOR_GOOGLE_CLIENT_ID` | The app's own Google OAuth client, used when a tenant connects a Gmail mailbox. |
-| `CONNECTOR_GOOGLE_CLIENT_SECRET` | That client's secret. |
-| `CONNECTOR_TOKEN_ENCRYPTION_KEY` | 32-byte base64 key that encrypts tenant OAuth tokens before they are stored (`convex/connectorTokenCrypto.ts`). |
+The Gmail mailbox feature is retired; these connector variables are not instructions to restore its watcher or mailbox screen. Generic connector OAuth/token-encryption support remains. Review `connectorOAuthProviders.ts`, connector definitions and [Tool servers](./tool-servers.md) for the enabled connector's actual credential names and scopes. Rotating an encryption key can invalidate retained tokens and requires an explicit operational plan. See the [Gmail retirement record](./gmail-mailbox.md) for historical context.
 
-Notes:
-
-- All three must be present together or absent together; partial configuration
-  is treated as a setup problem and the Connect mailbox flow refuses to start.
-- Losing or rotating `CONNECTOR_TOKEN_ENCRYPTION_KEY` makes every stored
-  connector token unreadable — tenants must reconnect their mailboxes.
-- Per-connector secrets follow the `CONNECTOR_SECRET_*` naming scheme resolved
-  by `convex/connectorSecretResolver.ts` (for example
-  `CONNECTOR_SECRET_TWILIO_AUTH_TOKEN`).
-
-See [Gmail Mailbox](./gmail-mailbox.md).
 
 ## Spoken Channels And Phone Calls
 
@@ -255,3 +252,96 @@ Local stream and integration tests are not live deployment acceptance. When
 releasing, verify a 50 MiB upload and an over-limit rejection through the deployed
 HTTP endpoint, attachment ownership, and the cleanup job. Any in-flight legacy
 direct-upload URL must be replaced by requesting a new permission.
+
+## Current Static Runtime Name Inventory
+
+The following names are direct `process.env.NAME` references in non-test JavaScript/TypeScript under Convex, frontend, scripts and services. They are variable names only; no environment files or values were read to generate this table. Static name presence does not mean a value is required for every deployment. Some names are CI/local-test controls, public browser settings, optional integration keys, or compatibility aliases. Dynamic property access, destructuring, SDK defaults and platform-injected variables may not appear, so this is a reproducible discovery scope rather than a claim of every possible environment dependency.
+
+Use the feature sections above and the owning guide to decide where a value belongs. NEXT_PUBLIC variables are browser-visible; backend secrets must never be placed there merely to satisfy a frontend build. A production profile should validate required providers without printing values, and local test bypasses must remain explicitly local. Presence/shape validation is not live provider acceptance.
+
+| Variable name | Example source using the name |
+| --- | --- |
+| `ANALYTICS_ALERT_EMAIL` | [convex/platformAlerts.ts](../../convex/platformAlerts.ts) |
+| `ANALYTICS_ALERT_EMAILS` | [convex/platformAlerts.ts](../../convex/platformAlerts.ts) |
+| `ANTHROPIC_API_KEY` | [convex/anthropicAgentProvider.ts](../../convex/anthropicAgentProvider.ts) |
+| `APIFY_API_TOKEN` | [convex/apify.ts](../../convex/apify.ts) |
+| `APIFY_WEBHOOK_SECRET` | [convex/apify.ts](../../convex/apify.ts) |
+| `AUTH_GOOGLE_ID` | [convex/auth.ts](../../convex/auth.ts) |
+| `AUTH_GOOGLE_SECRET` | [convex/auth.ts](../../convex/auth.ts) |
+| `BUILD_SHA` | [src/app/api/health/route.ts](../../src/app/api/health/route.ts) |
+| `CONVEX_DEPLOYMENT` | [src/app/api/health/route.ts](../../src/app/api/health/route.ts) |
+| `CONVEX_SITE_URL` | [convex/aiVoiceSession.ts](../../convex/aiVoiceSession.ts) |
+| `DATAFORSEO_LOGIN` | [convex/dataForSeoRest.ts](../../convex/dataForSeoRest.ts) |
+| `DATAFORSEO_PASSWORD` | [convex/dataForSeoRest.ts](../../convex/dataForSeoRest.ts) |
+| `DATAFORSEO_SANDBOX` | [convex/dataForSeoRest.ts](../../convex/dataForSeoRest.ts) |
+| `E2E_AUTH_ENABLED` | [src/app/api/health/route.ts](../../src/app/api/health/route.ts) |
+| `FACE_PROOF_FIXTURE_PATH` | [src/app/api/e2e-fixture/face-proof/route.ts](../../src/app/api/e2e-fixture/face-proof/route.ts) |
+| `FIRECRAWL_API_KEY` | [convex/knowledgeActions.ts](../../convex/knowledgeActions.ts) |
+| `FIRECRAWL_COST_PER_PAGE_USD` | [convex/utils/autoSetupAgent.ts](../../convex/utils/autoSetupAgent.ts) |
+| `GITHUB_ACTIONS` | [scripts/check-theme-record.mjs](../../scripts/check-theme-record.mjs) |
+| `GITHUB_STEP_SUMMARY` | [scripts/check-coverage-thresholds.mjs](../../scripts/check-coverage-thresholds.mjs) |
+| `GOOGLE_CLIENT_EMAIL` | [convex/aiModelsActions.ts](../../convex/aiModelsActions.ts) |
+| `GOOGLE_CLOUD_LOCATION` | [convex/aiModelsActions.ts](../../convex/aiModelsActions.ts) |
+| `GOOGLE_CLOUD_PROJECT` | [convex/aiModelsActions.ts](../../convex/aiModelsActions.ts) |
+| `GOOGLE_PRIVATE_KEY` | [convex/aiModelsActions.ts](../../convex/aiModelsActions.ts) |
+| `HAND_PROOF_FIXTURE_PATH` | [src/app/api/e2e-fixture/hand-proof/route.ts](../../src/app/api/e2e-fixture/hand-proof/route.ts) |
+| `INITIAL_SUPER_ADMIN_EMAIL` | [convex/authEvents.ts](../../convex/authEvents.ts) |
+| `IS_TEST` | [convex/utils/uploadPolicy.ts](../../convex/utils/uploadPolicy.ts) |
+| `LOCAL_DEMO_SEED_CONVEX_URL` | [scripts/local-demo-seed.mjs](../../scripts/local-demo-seed.mjs) |
+| `LOCAL_DEMO_SEED_ENABLED` | [convex/localDemoSeed.ts](../../convex/localDemoSeed.ts) |
+| `LOCAL_DEMO_SEED_ENVIRONMENT` | [convex/localDemoSeed.ts](../../convex/localDemoSeed.ts) |
+| `LOCAL_DEMO_SEED_SECRET` | [convex/localDemoSeed.ts](../../convex/localDemoSeed.ts) |
+| `LOCAL_TEST_AUTH_BASE_URL` | [scripts/local-test-auth.mjs](../../scripts/local-test-auth.mjs) |
+| `LOCAL_TEST_AUTH_CONVEX_URL` | [scripts/local-test-auth.mjs](../../scripts/local-test-auth.mjs) |
+| `LOCAL_TEST_AUTH_ENABLED` | [convex/auth.ts](../../convex/auth.ts) |
+| `LOCAL_TEST_AUTH_ENVIRONMENT` | [convex/auth.ts](../../convex/auth.ts) |
+| `LOCAL_TEST_AUTH_SECRET` | [convex/localTestAuth.ts](../../convex/localTestAuth.ts) |
+| `NEXT_PUBLIC_APP_URL` | [convex/invites.ts](../../convex/invites.ts) |
+| `NEXT_PUBLIC_COMPANY_URL` | [src/app/(public)/_components/PublicFooter.tsx](../../src/app/(public)/_components/PublicFooter.tsx) |
+| `NEXT_PUBLIC_CONTACT_URL` | [src/app/(public)/_components/ContactLink.tsx](../../src/app/(public)/_components/ContactLink.tsx) |
+| `NEXT_PUBLIC_CONVEX_URL` | [scripts/local-demo-seed.mjs](../../scripts/local-demo-seed.mjs) |
+| `NEXT_PUBLIC_E2E_AUTH_ENABLED` | [src/context/ConvexClientProvider.tsx](../../src/context/ConvexClientProvider.tsx) |
+| `NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT` | [src/context/ConvexClientProvider.tsx](../../src/context/ConvexClientProvider.tsx) |
+| `NEXT_PUBLIC_SENTRY_DSN` | [src/lib/errorMonitoring.ts](../../src/lib/errorMonitoring.ts) |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | [src/lib/errorMonitoring.ts](../../src/lib/errorMonitoring.ts) |
+| `NEXT_PUBLIC_SENTRY_RELEASE` | [src/lib/errorMonitoring.ts](../../src/lib/errorMonitoring.ts) |
+| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | [src/lib/errorMonitoring.ts](../../src/lib/errorMonitoring.ts) |
+| `NODE_ENV` | [convex/utils/uploadPolicy.ts](../../convex/utils/uploadPolicy.ts) |
+| `OPENAI_API_KEY` | [convex/aiVoiceSession.ts](../../convex/aiVoiceSession.ts) |
+| `OPENAI_KEY` | [convex/openaiAgentProvider.ts](../../convex/openaiAgentProvider.ts) |
+| `OPENROUTER_API_KEY` | [convex/openrouterAgentProvider.ts](../../convex/openrouterAgentProvider.ts) |
+| `OPEN_AI_API_KEY` | [convex/aiVoiceSession.ts](../../convex/aiVoiceSession.ts) |
+| `PAGESPEED_API_KEY` | [convex/moneyPageChecks.ts](../../convex/moneyPageChecks.ts) |
+| `PATH` | [scripts/product-setup.test.mjs](../../scripts/product-setup.test.mjs) |
+| `PLATFORM_ALERT_EMAIL` | [convex/platformAlerts.ts](../../convex/platformAlerts.ts) |
+| `PLATFORM_ALERT_EMAILS` | [convex/platformAlerts.ts](../../convex/platformAlerts.ts) |
+| `PORT` | [services/voice-relay/server.mjs](../../services/voice-relay/server.mjs) |
+| `RESEND_API_KEY` | [convex/aiToolExecutionService.ts](../../convex/aiToolExecutionService.ts) |
+| `RESEND_FROM_EMAIL` | [convex/invites.ts](../../convex/invites.ts) |
+| `RESEND_WEBHOOK_SECRET` | [convex/emailHttp.ts](../../convex/emailHttp.ts) |
+| `SEO_TEST_DATA_RESET` | [convex/seoTestDataReset.ts](../../convex/seoTestDataReset.ts) |
+| `SITE_URL` | [convex/auth.ts](../../convex/auth.ts) |
+| `STRIPE_SECRET_KEY` | [convex/billingAdmin.ts](../../convex/billingAdmin.ts) |
+| `STRIPE_WEBHOOK_SECRET` | [convex/billingAdmin.ts](../../convex/billingAdmin.ts) |
+| `TELEGRAM_BOT_TOKEN` | [convex/telegramActions.ts](../../convex/telegramActions.ts) |
+| `TELEGRAM_WEBHOOK_SECRET` | [convex/telegramActions.ts](../../convex/telegramActions.ts) |
+| `TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR` | [convex/telephony.ts](../../convex/telephony.ts) |
+| `TELEPHONY_MAX_CONCURRENT_CALLS` | [convex/telephony.ts](../../convex/telephony.ts) |
+| `TELEPHONY_NUMBER_OWNERS` | [convex/telephony.ts](../../convex/telephony.ts) |
+| `TELEPHONY_PUBLIC_URL` | [convex/telephony.ts](../../convex/telephony.ts) |
+| `TELEPHONY_STATUS_PUBLIC_URL` | [convex/telephony.ts](../../convex/telephony.ts) |
+| `TELEPHONY_STREAM_URL` | [convex/telephony.ts](../../convex/telephony.ts) |
+| `TWILIO_ACCOUNT_SID` | [convex/connectionProbes.ts](../../convex/connectionProbes.ts) |
+| `TWILIO_AUTH_TOKEN` | [convex/connectionProbes.ts](../../convex/connectionProbes.ts) |
+| `TYPESAFE_API_KEY` | [convex/typesafeProviderService.ts](../../convex/typesafeProviderService.ts) |
+| `VITEST` | [convex/utils/uploadPolicy.ts](../../convex/utils/uploadPolicy.ts) |
+| `VOICE_KNOWLEDGE_URL` | [services/voice-relay/server.mjs](../../services/voice-relay/server.mjs) |
+| `VOICE_RELAY_SECRET` | [convex/aiVoiceSession.ts](../../convex/aiVoiceSession.ts) |
+| `VOICE_RELAY_URL` | [convex/aiVoiceSession.ts](../../convex/aiVoiceSession.ts) |
+| `VOICE_TURNS_URL` | [services/voice-relay/server.mjs](../../services/voice-relay/server.mjs) |
+| `WEBSITE_ICONS_IN_TESTS` | [convex/websiteIcons.ts](../../convex/websiteIcons.ts) |
+| `WEB_SEARCH_COST_USD` | [convex/utils/autoSetupAgent.ts](../../convex/utils/autoSetupAgent.ts) |
+| `WIDGET_EMBED_SIGNING_SECRET` | [convex/widgets.ts](../../convex/widgets.ts) |
+| `X` | [src/lib/errorMonitoring.ts](../../src/lib/errorMonitoring.ts) |
+| `X_BEARER_TOKEN` | [convex/newsCollectorRun.ts](../../convex/newsCollectorRun.ts) |
+| `X_READ_COST_USD` | [convex/xRead.ts](../../convex/xRead.ts) |

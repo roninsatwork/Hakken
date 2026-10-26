@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: System health and maintenance
+audience: authorized administrators and operators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/system-health-and-maintenance.md
+last_reviewed: '2026-10-26T14:35:25+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # System Health And Maintenance
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** System health and maintenance
+> **Reviewed:** 26 October 2026, 14:35:25 GMT (Europe/London)
+> **Source path:** `docs/end-user/system-health-and-maintenance.md` · **Status:** Current
 
 System health and maintenance scripts are Hakken operator tools for finding operational drift and running allowlisted repairs. Use them before and after launches, after provider incidents, when scheduled work looks stuck, when agent runs or approvals look wrong, or when dashboard data appears inconsistent.
 
@@ -58,7 +73,7 @@ Treat the downloaded JSON as operational evidence. It can include ids and exampl
 
 ## Maintenance Scripts
 
-Maintenance scripts are super-admin-only allowlisted actions, not arbitrary commands. The current registry includes `inventory-rollup-rebuild`, which recalculates admin overview inventory and MRR metrics from current companies, users, and plans.
+Maintenance scripts are super-admin-only allowlisted actions, not arbitrary commands. The current registry includes `inventory-rollup-rebuild`, which recalculates admin overview inventory and plan-derived value estimates from current companies, users, and plans.
 
 The script list shows:
 
@@ -120,3 +135,23 @@ High-cost agents counts AI model spend only; data an agent buys is not included.
 For failed scheduled executions, inspect the target workflow or agent run, repair the configuration, then rerun manually if appropriate.
 
 For analytics drift, use analytics settings and the data-health guidance rather than running unrelated maintenance scripts.
+
+## Read Bounds And Dates With The Result
+
+Health is a bounded local report. Most collections inspect at most 10,000 rows and show up to ten examples; some source families have smaller bounds. A count or an empty example list does not establish exhaustive platform history. The normal screen asks for seven days, while backend lookbacks are clamped to one through ninety days. Keep the checked time, scope, and window with an exported report so another operator can reproduce the question being asked.
+
+Current warning thresholds include 60 minutes for stale running work, 30 minutes for pending approvals, 15 minutes for overdue schedules, and five dollars of AI model spend in the window for a high-cost agent. Run and company-message budget pressure begins at 80 percent of the configured allowance. These are investigation signals, not automatic cancellation, extra purchased capacity, or proof that a customer was overcharged.
+
+High-cost agent signals intentionally exclude paid service purchases such as collected SEO data and X reads. Other cost views can include those services, so different totals are not automatically a reconciliation failure. Compare identical sources and windows before describing a cost spike. Customer Stripe billing and revenue remain separate from supplier model expenditure.
+
+A stale pending approval can be waiting for a legitimate human decision. A missing next-run time can indicate disabled or incomplete schedule configuration. Open the original record and use its actual controls after reviewing consequences. Downloading a report or opening Health does not itself retry a workflow, call a model, refresh provider credentials, purge data, or repair a stalled run.
+
+## Platform Alerts And Monitoring
+
+The saved cron registers health alerts daily at 00:25 UTC, after analytics snapshots at 00:05 UTC. Alert processing builds the local report, decides whether a signal exists, and queues a platform alert in the Outbox. A healthy report can produce no alert. Configured recipient addresses take precedence; otherwise the implementation falls back to up to ten super-admin email records. Missing recipients are reported separately from a healthy result.
+
+Queued means the alert reached the delivery queue, not that an external mailbox accepted it. Its identity includes alert type and report-window dates to limit duplicate queueing. The Outbox has its own sending run and delivery evidence. Do not use a missing inbox message as the only evidence that Health found nothing; check the report, alert outcome, queue, and actual delivery state.
+
+Optional Sentry monitoring is a separate path for unexpected browser/server errors. It depends on a configured DSN and does not substitute for the company-scoped business-health report. Neither a locally configured monitoring client nor a passing source test proves the deployed service is sending reports. Do not add customer content, secrets, or raw credentials to an exported diagnostic context.
+
+The maintenance registry and inventory rebuilding behavior are documented in [Maintenance scripts](../developer/maintenance-scripts.md) and [Analytics rollups](../developer/analytics-rollups.md). A registry repair can change saved summaries and must be assessed by its actual guidance. This documentation review performed no repairs, connection probes, scheduled dispatch, email send, Sentry test, or live acceptance test.

@@ -1,6 +1,21 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Audit log service and evidence
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/audit-log-service.md
+last_reviewed: '2026-10-26T15:01:33+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Audit Log Service Developer Guide
 
-Audit logs are Hakken's durable record for privileged administrative and operational actions. Feature modules usually write audit rows directly, while `convex/auditLogs.ts` provides an internal write helper, recent-feed reads, actor-name enrichment, and a separate audit-log purge configuration.
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Audit log service and evidence
+> **Reviewed:** 26 October 2026, 15:01:33 GMT (Europe/London)
+> **Source path:** `docs/developer/audit-log-service.md` · **Status:** Current
+
+Audit logs are Hakken's durable record for privileged administrative and operational actions. Feature modules usually write audit rows directly, while `convex/auditLogs.ts` provides an internal write helper, recent-feed reads, actor-name enrichment, and governance-scoped audit projections.
 
 Read this before changing audit log schema, audit feed behavior, audit detail routing, audit purge configuration, or the way privileged mutations record evidence. For broader platform operations, see [Platform Operations Settings](./platform-operations-settings.md). For unified retention purges, see [Data Retention And Purges](./data-retention-and-purges.md).
 
@@ -8,11 +23,11 @@ Read this before changing audit log schema, audit feed behavior, audit detail ro
 
 - `src/ui/components/governance/AuditLogsTable.tsx` renders the audit feed inside System Settings.
 - `src/app/(dashboard)/admin/audit-logs/[id]/page.tsx` renders one audit log detail from the recent feed.
-- `convex/auditLogs.ts` owns the internal log helper, audit purge config, audit purge dispatcher, recursive audit purge, and recent log reads.
+- `convex/auditLogs.ts` owns the internal helper, recent read, indexed governance page/export, and direct governance entry read.
 - `convex/auditLogService.ts` owns audit purge config helpers, monthly schedule calculations, cutoff calculation, serialization, and actor-name enrichment.
 - `convex/schema.ts` defines `auditLogs` and its indexes.
 
-Audit feed and purge configuration are super-admin-only. Non-super-admin users receive `null` for config and an empty recent log list.
+Audit read functions check governance roles and scope ordinary callers to their active company. Retention configuration uses the separate current purge contracts.
 
 ## Data Model
 
@@ -49,38 +64,22 @@ Write the audit row in the same mutation as the state change when possible. If t
 
 ## Recent Feed And Detail Route
 
-`getRecentLogs` requires a super admin. It reads the latest 500 audit rows by timestamp and enriches each row with `actorName` using the actor's name, then email, then `Unknown Admin`.
+`getRecentLogs` allows the configured governance read roles, with platform-wide scope only for SUPER_ADMIN and active-company scope otherwise. It reads the latest 500 audit rows by timestamp and enriches each row with `actorName` using the actor's name, then email, then `Unknown Admin`.
 
 The settings audit table:
 
 - shows 15 rows per page through the shared admin page size
 - searches by action type and actor name
 - links rows to `/admin/audit-logs/{id}`
-- falls back to static mock rows when the database feed is empty
+- shows the actual empty state when the supplied feed has no rows
 
-The detail route also reads `getRecentLogs` and finds the requested id in the returned feed. This means very old rows outside the latest 500 records are not reachable from the current detail route. There is no dedicated `getById` query yet.
+The detail route also reads `getRecentLogs` and finds the requested id in the returned feed. This means very old rows outside the latest 500 records are not reachable from the current detail route. The Governance detail route instead uses the existing `getAuditEntry` direct-ID query.
 
-If exact historical detail lookup becomes a requirement, add a backend `getById` query with super-admin authorization instead of widening the recent feed indefinitely.
+Use the existing authorized Governance entry route for historical detail rather than widening the old recent-feed route or inventing another direct-ID API.
 
-## Audit Purge Configuration
+## Audit Retention And Historical Helpers
 
-`convex/auditLogs.ts` contains an older audit-specific purge scheduler under `AUDIT_PURGE_CONFIG`.
-
-Config fields are:
-
-- `enabled`
-- `retentionDays`
-- `dayOfMonth`
-- `hourOfDay`
-- `nextRunTimestamp`
-
-`getConfig` returns defaults when no config is stored and only returns data to super admins. `updateConfig` requires a super admin, computes the next monthly run timestamp, upserts the system config row, and writes `UPDATE_AUDIT_PURGE_CONFIG`.
-
-The dispatcher runs hourly from `convex/crons.ts`. When due, it schedules `executePurge`, advances the next monthly run timestamp, and patches the config.
-
-`executePurge` deletes up to 500 old audit rows by timestamp. If it deletes a full batch, it schedules another pass after 1000 ms.
-
-This audit-specific purge path is separate from the unified purge engine's `auditLogs` pipeline. The audit-specific path does not create `purgeHistory` rows and does not support per-run cancellation.
+The current deletion path is the unified audit retention pipeline in `purges.ts`, including protected purge-summary evidence. Older audit configuration/service helpers do not establish an active hourly dispatcher: current `auditLogs.ts` exports read/write evidence projections and the internal log helper, and the dedicated old scheduler was not found in current cron registration. Preserve historical notes, but use [Data retention](./data-retention-and-purges.md) for actual configured cleanup, cancellation and bounded batches.
 
 ## Authorization
 
@@ -137,3 +136,15 @@ npm run check
 npm run build
 git diff --check
 ```
+
+## Current Read And Export Contracts
+
+`getAuditPage` applies the authorized platform/company/date scope through indexes, then formats the feed for governance UI. `getAuditEntry` reads an ID directly and checks governance role plus company ownership before returning enriched fields, changes and details. This differs from `/admin/audit-logs/[id]`, whose compatibility screen still searches the 500-row recent feed. A missing entry on that older route is not proof the row was deleted.
+
+`getAuditExport` reads at most 5,001 candidates to detect the 5,000-row export ceiling, then applies supported filters and records export evidence. An export is bounded; search/action/actor filtering after candidate selection does not reconstruct an unlimited archive. Super-admin platform reach and an ordinary oversight user's active-company reach must be preserved independently for list, detail and export.
+
+`auditLogService.ts` formats field changes and recognized metadata using allowlisted/shortened values, including the 120-character value limit. Not every arbitrary raw metadata key belongs in a human detail/export. New audit writers should minimize data and avoid credentials, prompts, tokens, private memory content and uploaded documents. Personal-note audit deliberately records the event without its words.
+
+Audit rows are evidence of what the application recorded, not a guarantee every privileged historical path wrote a complete row. Effects in actions and later audit writes can have separate failure points. Success of an export mutation does not prove an outside recipient received it or that every referenced entity still exists; deleted targets can require fallback labels. No export, purge, role change, record deletion or live verification was executed during this documentation review.
+
+The current authority comes from `GOVERNANCE_READ_ROLES`, active-company helpers, and the owning handler; older prose listing only super-admin reads is superseded by these contracts. Relevant tests in auditLogs/auditLogService and governance UI provide local examples. Keep historical verification records separate from later API behavior and source fixes.

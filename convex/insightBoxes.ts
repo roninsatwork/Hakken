@@ -1,3 +1,4 @@
+import { appError } from "./utils/appError";
 import { v, type Infer } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -12,6 +13,7 @@ import { BOXES, BOX_FORMAT, BOX_SCREENS, boxScreenValidator, boxScreensAt, boxes
 import { decisionFacts, funnelFacts, trackFacts } from "./utils/insightBoxFacts";
 import { COMPETING_REASONS } from "./utils/insightDecisions";
 import { savedDecisionsOf } from "./insightDecisions";
+import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
 
 /**
  * The screens' "What Hakken sees" boxes (utils/insightBoxes.ts;
@@ -45,27 +47,34 @@ export async function writeBoxes(
   const held = factsByKey(facts);
   const written: Array<{ screen: BoxScreen; says: string[]; role: string; period?: string }> = [];
   const failed: string[] = [];
+  const completed: BoxScreen[] = [];
   await Promise.all([...screensByRole(now)].map(async ([role, screens]) => {
     // A period screen's box is written for the period it opens on; without one, it isn't written.
     const asked = screens.filter((screen) => !BOXES[screen].period || period);
     const given = [...new Map(asked.flatMap((screen) => factsForBox(screen, facts)).map((fact) => [fact.key, fact])).values()];
-    if (asked.length === 0 || given.length === 0) return;
+    if (asked.length === 0 || given.length === 0) { completed.push(...screens); return; }
     try {
       const system = [rules, briefFor(role, member(role)?.instructions), BOX_FORMAT].filter(Boolean).join("\n\n");
       const about = (screen: BoxScreen) => (saved.about as Partial<Record<BoxScreen, unknown>>)[screen];
       const prompt = JSON.stringify({ website: run.host, screens: asked.map((screen) => ({ screen, wants: BOXES[screen].wants, ...(about(screen) ? { about: about(screen) } : {}) })), facts: factLines(given) });
-      const answer = await ask(ctx, run, member(role) ?? member("INSIGHTS_HEAD_OF_STRATEGY"), `the ${role} boxes`, system, prompt);
+      const accepts = (answer: unknown) => {
+        const rows = answer && typeof answer === "object" && "boxes" in answer && Array.isArray(answer.boxes) ? answer.boxes : [];
+        return asked.every((screen) => rows.some((row: { screen?: unknown; says?: unknown }) => row?.screen === screen && Array.isArray(row.says)));
+      };
+      const answer = await ask(ctx, run, member(role) ?? member("INSIGHTS_HEAD_OF_STRATEGY"), `the ${role} boxes`, system, prompt, undefined, accepts);
+      completed.push(...asked);
       for (const box of boxesFrom(answer, asked, held)) written.push({ ...box, role, ...(BOXES[box.screen].period && period ? { period } : {}) });
     } catch (error) {
       failed.push(`${role}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }));
-  await ctx.runMutation(internal.insightBoxes.saveBoxes, { holdId: run.holdId, week, boxes: written, screens: now });
+  await ctx.runMutation(internal.insightBoxes.saveBoxes, { holdId: run.holdId, runId: run.runId, chainBooking: run.chainBooking, week, boxes: written, screens: now, completedScreens: completed });
   await ctx.runMutation(internal.roleRuns.logRunLine, {
     runId: run.runId, companyId: run.companyId, heading: afterDecisions ? "Page decisions' box" : "Screens' boxes",
     detail: `${written.length} of ${now.length} screens' boxes written by their specialists${written.length > 0 ? `: ${written.map((box) => box.screen.toLowerCase()).join(", ")}` : ""}.${failed.length > 0 ? ` Not reached, so those screens keep their own words: ${failed.join("; ")}.` : ""}`.slice(0, 900),
     failed: written.length === 0 && failed.length > 0,
   });
+  if (failed.length > 0) throw appError("UPSTREAM_FAILURE", `Some specialist summaries failed: ${failed.join("; ")}`);
 }
 
 /** What a box is told about its screen, in words. */
@@ -110,13 +119,15 @@ export const boxFactsInternal = internalQuery({
 
 /** The boxes written now kept, each of those screens' last replaced; a screen not written this time keeps none, so it says its own. */
 export const saveBoxes = internalMutation({
-  args: { holdId: v.id("companyWebsites"), week: v.string(), boxes: v.array(boxValidator), screens: v.optional(v.array(boxScreenValidator)) },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites"), week: v.string(), boxes: v.array(boxValidator), screens: v.optional(v.array(boxScreenValidator)), completedScreens: v.optional(v.array(boxScreenValidator)) },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const hold = await ctx.db.get(args.holdId);
     if (!hold) return null;
     const now = Date.now();
-    for (const screen of args.screens ?? BOX_SCREENS) {
+    // Publish completed replacements only; a failed writer leaves the prior week's words readable.
+    for (const screen of new Set([...args.boxes.map((box) => box.screen), ...(args.completedScreens ?? [])])) {
       const old = await ctx.db.query("insightScreenBoxes").withIndex("by_hold_screen", (q) => q.eq("companyWebsiteId", args.holdId).eq("screen", screen)).take(5);
       for (const row of old) await ctx.db.delete(row._id);
     }

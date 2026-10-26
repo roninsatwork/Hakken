@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: local-test-auth-runbook
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/local-test-auth-runbook.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Local Test Auth Runbook
+
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** local-test-auth-runbook
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/local-test-auth-runbook.md` · **Status:** Current
 
 Use this runbook when an operator or developer needs real Convex Auth browser sessions for local Playwright checks without using production identities. The local test auth flow is for local development and test verification only. It must never be enabled for production or customer environments.
 
@@ -71,7 +86,7 @@ If the local Convex URL is not discoverable from `.env.local`, pass it explicitl
 LOCAL_TEST_AUTH_CONVEX_URL=http://127.0.0.1:3210 LOCAL_TEST_AUTH_SECRET=replace-with-local-secret npm run auth:local:seed
 ```
 
-The seed creates or updates one deterministic company and three deterministic users.
+The seed creates or updates one deterministic company and three deterministic users. The CLI resolves the backend URL from `LOCAL_TEST_AUTH_CONVEX_URL`, then process `NEXT_PUBLIC_CONVEX_URL`, then `.env.local`, then the local default. The backend guard checks the explicit environment label and secret; it does not establish that a supplied deployment URL is physically local. Confirm the target before any mutation.
 ## Clear The Seeded Data
 
 The seeded identities are fixtures and are meant to persist; the threads,
@@ -82,8 +97,7 @@ without removing the identities:
 LOCAL_TEST_AUTH_SECRET=replace-with-local-secret npm run auth:local:cleanup
 ```
 
-It queues the same purge the platform runs when a user is deleted, so the three
-users and `Local Test Company` survive and stay signed-in-able. CI runs this
+It queues `users.purgeUserEntitiesInternal` for the three matching email identities. The users and `Local Test Company` survive and stay signed-in-able. This is asynchronous deletion: the purge clears their login rows, rules, personal notes/sweep marker, threads and messages in bounded batches, then schedules more work when needed. A queued response does not prove that cleanup has finished. CI runs this
 after every real-auth job, passing or failing.
 
 
@@ -164,6 +178,6 @@ If the state command cannot connect to Convex, confirm `npm run convex:dev` is r
 
 ## Cleanup And Reuse
 
-The seeded users are local test identities. Re-running the seed is the normal repair path. If you need a fully clean state, reset the local Convex deployment and regenerate storage states.
+The seeded users are local test identities. Re-running the seed is the normal repair path. For a full reset, use a separately reviewed local database reset procedure and regenerate storage states. That destructive operation removes more than this helper's fixture-owned rows and is not a prerequisite for routine reuse.
 
 Do not commit `e2e/.auth/` storage state files, generated local secrets, or local environment files. Treat browser storage states as local test artifacts, not durable documentation or product data.

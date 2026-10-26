@@ -1,8 +1,23 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Auxiliary app experiences
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/auxiliary-app-experiences.md
+last_reviewed: '2026-10-26T14:44:07+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Auxiliary App Experiences
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Auxiliary app experiences
+> **Reviewed:** 26 October 2026, 14:44:07 GMT (Europe/London)
+> **Source path:** `docs/developer/auxiliary-app-experiences.md` · **Status:** Current
 
 ## Implementation Scope
 
-This guide covers implemented dashboard experiences that sit outside the primary assistant, admin, workflow, property, and reporting product areas:
+This guide covers implemented dashboard experiences that sit outside the primary assistant, admin, workflow, and website insights product areas:
 
 - Ronin's Run arcade route: `src/app/(dashboard)/app/arcade/ronins-run/page.tsx`
 - Ronin's Run game canvas and engine: `src/app/(dashboard)/app/arcade/ronins-run/`
@@ -195,3 +210,21 @@ For UI changes, verify:
 - [Agents](./agents.md)
 - [AI Administration](./ai-administration.md)
 - [Platform Operations Settings](./platform-operations-settings.md)
+
+## First-Person Route And Current Sandbox Boundary
+
+`ronins-run-3d/page.tsx` dynamically loads `FirstPersonCanvas` with SSR disabled and uses `useGameViewport`. The canvas holds district selection, completion results, sound/map/reduced-motion/quality preferences in React state. `DistrictGame` constructs and disposes `engine/FirstPersonGame`, which owns focused keyboard/pointer/touch input, graphics, and local simulation. The completion callback updates the component's result map. This route contains no Arcade API mutation/query for persisted progress or leaderboard scores, and must not inherit persistence claims from the separate 2D Night Heist page.
+
+The first-person controls include WASD, Q/E, mouse look/pointer lock, Space, Escape, and M; touch UI supplies another input path. Graphics and pointer-lock failures are browser conditions handled in the view. Render/engine tests are local implementation evidence, not proof of accepted performance on every phone or browser. Documentation maintenance did not open either game or run browser measurements.
+
+Night Heist's server formula is 4,500 escape points, optional 750 treasure points, up to 1,200 time points reduced by five per second, and up to twenty alarm deductions of fifty. `finishNightHeistRun` validates receipt user/company, elapsed range, wall-time plausibility, alarm range, and a one-day receipt lifetime before saving score and completion together. It does not validate authoritative replay. `getScoresCount` takes at most 10,000; the page's search filters loaded cursor rows, so filtered counts are not a server search over all history.
+
+Sandbox `agents.list` is an authorized agent-catalog query; route authentication alone does not guarantee ordinary users can retrieve global agents. The selection defaults from available agents and Any mode uses routing confidence greater than 0.65. The route creates a thread once, then sends `dynamicAgentId` through the normal chat mutation. Reset only clears local thread/composer state. It does not delete persisted messages, run effects, or cost evidence. Loading labels cycle every 1.5 seconds and are not a runtime progress API. This surface is distinct from explicit rehearsal evals, which intentionally suppress certain effects.
+
+## Possibly Deprecated Verticals And Residual Evidence
+
+A current route-file and navigation search did not find Sales Data, Properties, movement/posture, or Swarm feature screens. Backend filename searches likewise did not locate their primary feature modules. `companyModules.ts` has no optional vertical definitions, and `coreModules.ts` exposes tasks, calls, reception, and Wiki. Historical comments mention earlier modules; they are not current flags that restore removed code. PRODUCT identity remains Hakken regardless of inherited framework terminology.
+
+Residual `swarmLogs` schema/purge and generic workflow table allowlist references remain. They are compatibility/data-lifecycle evidence, not proof of a runnable Swarm product mode. Do not delete those tables, old guides, or dated records based on route absence alone. Mark possibly deprecated/not found, list these checked areas, and require manual review for any deletion. The retained plans remain historical/planned context rather than implementation completion claims.
+
+`convex/arcade.test.ts` covers sample tenant, receipt, scoring and progress behavior; game engine tests cover local simulation/control/render contracts. No provider, score write, replay, live capture, source rename, or application change was performed in this pass. Saved scores/runs have their own retained lifecycle and personal-data erasure ownership; local 3D component state has a different lifetime.

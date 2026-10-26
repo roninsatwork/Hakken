@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: operator runbook
+feature_area: local-demo-seed-runbook
+audience: operators
+source_repository: roninsatwork/Hakken
+source_path: docs/operator/local-demo-seed-runbook.md
+last_reviewed: '2026-10-26T15:10:08+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Local Demo Seed Runbook
+
+> **Product:** Hakken · **Document type:** operator runbook · **Feature area:** local-demo-seed-runbook
+> **Reviewed:** 26 October 2026, 15:10:08 GMT (Europe/London)
+> **Source path:** `docs/operator/local-demo-seed-runbook.md` · **Status:** Current
 
 Use this runbook when an operator needs a local, no-production-credentials demo tenant for trying the governed agentic app foundation. The seed is for local development and demo preparation only. It must not be used to prepare production customer data.
 
@@ -107,7 +122,7 @@ Seeded agent foundation:
 
 After the seed completes:
 
-1. Open the admin dashboard with the demo super-admin or company-admin identity supported by the local auth setup.
+1. Use a separately configured authentication method for the demo identities. The seed writes users; it does not create passwords, sessions, or browser storage states. Use the demo super-admin for platform Admin; the company admin belongs in the company frontend and has no platform Admin access.
 2. Confirm the demo company exists.
 3. Confirm the demo company admin is scoped to the demo company.
 4. Confirm AI model defaults exist for agent, workflow, chat, report, and embedding.
@@ -125,7 +140,7 @@ Common failure messages:
 - `Local demo seed is disabled.`: set `LOCAL_DEMO_SEED_ENABLED=1` in the Convex environment for the local deployment.
 - `Local demo seed secret is not configured.`: configure `LOCAL_DEMO_SEED_SECRET` in the Convex environment.
 - `Invalid local demo seed secret.`: the script secret does not match the Convex environment secret.
-- `Local demo seed is not available in production.`: the production guard is active; do not bypass it for production.
+- `Local demo seed is available only in an explicitly local environment.`: set the exact local label only on the intended local deployment. The backend checks the label and secret, rather than independently proving deployment identity.
 
 If the script cannot connect to Convex, confirm `npm run convex:dev` is running and set `LOCAL_DEMO_SEED_CONVEX_URL` explicitly.
 
@@ -133,4 +148,4 @@ If the script cannot connect to Convex, confirm `npm run convex:dev` is running 
 
 The seed is designed for repeatable local use, not cleanup. Re-running it updates the deterministic demo records and only creates missing eval fixtures. If you need a clean demo database, reset the local Convex deployment rather than deleting individual records manually.
 
-Before using the seeded state in a customer-facing recording or rehearsal, replace or clearly explain fake records and local-only identities. The seeded users, handbook, and connector tasks are sample data.
+Before using the seeded state in a customer-facing recording or rehearsal, replace or clearly explain fake records and local-only identities. The seeded users, handbook, tool binding and eval fixtures are sample data. Provider/model rows are configuration metadata, not usable credentials or proof that a live model call will succeed. This runbook was verified by reading implementation and tests; no seeding, sign-in or provider call was performed by documentation maintenance.

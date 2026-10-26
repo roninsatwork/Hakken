@@ -1,5 +1,4 @@
-import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { v, type Infer } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -10,7 +9,7 @@ import { startRoleRun } from "./roleRuns";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertSeoInterval } from "./seoScheduleService";
 import { appError } from "./utils/appError";
-import { factValidator } from "./utils/insightFacts";
+import { shiftDay, factValidator } from "./utils/insightFacts";
 import { EARLIER_BRIEFS, INSIGHT_BRIEFS, fixedRulesFor } from "./utils/insightBriefs";
 import { changeKindValidator, changeResultValidator } from "./utils/insightTrack";
 import { clockValidator, pageSeenValidator, progressValidator } from "./utils/insightClock";
@@ -19,6 +18,9 @@ import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils
 import { measurementValidator } from "./utils/insightMeasurement";
 import { planValidator } from "./utils/insightPlan";
 import { insightSpecialistValidator, insightSureValidator } from "./insightsSchema";
+import { bookStep, stepKey } from "./collectionSteps";
+import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
+import { openFinding, openFindingValidator } from "./insightsTrackParts";
 
 /**
  * The Insights team's records (docs/plans/active/insights-analyst-plan.md
@@ -220,22 +222,29 @@ export const startWebsiteRun = internalMutation({
     companyId: v.id("companies"),
     host: v.string(),
     delayMs: v.number(),
+    refreshReports: v.optional(v.boolean()),
   },
   returns: v.union(v.null(), v.id("agentRuns")),
   handler: async (ctx, args) => {
     const parent = await ctx.db.get(args.parentRunId);
     if (!parent) return null;
-    return await beginWebsiteRun(ctx, parent.agentId, args, args.delayMs);
+    return await beginWebsiteRun(ctx, parent.agentId, { ...args, refreshReports: args.refreshReports ?? parent.triggerType === "MANUAL" }, args.delayMs);
   },
 });
 
 async function beginWebsiteRun(
   ctx: MutationCtx,
   agentId: Id<"agents">,
-  site: { holdId: Id<"companyWebsites">; companyId: Id<"companies">; host: string },
+  site: { holdId: Id<"companyWebsites">; companyId: Id<"companies">; host: string; refreshReports?: boolean },
   delayMs: number,
 ): Promise<Id<"agentRuns">> {
   const now = Date.now();
+  const hold = await ctx.db.get(site.holdId);
+  if (!hold || hold.companyId !== site.companyId) throw appError("NOT_FOUND", "The website is not in this company.");
+  const key = stepKey("INSIGHTS", site.holdId);
+  const held = await ctx.db.query("collectionSteps").withIndex("by_key", (q) => q.eq("key", key)).unique();
+  const active = held?.runId ? await ctx.db.get(held.runId) : null;
+  if (held && held.closedAt === undefined && active && (active.status === "RUNNING" || active.status === "QUEUED")) return active._id;
   const runId = await ctx.db.insert("agentRuns", {
     agentId,
     triggerType: "EVENT",
@@ -253,13 +262,7 @@ async function beginWebsiteRun(
     status: "RUNNING",
     startedAt: now,
   });
-  await ctx.scheduler.runAfter(delayMs, internal.insightsRun.runWebsite, {
-    runId,
-    workflowExecutionId,
-    holdId: site.holdId,
-    companyId: site.companyId,
-    host: site.host,
-  });
+  await bookStep(ctx, { key, chain: "INSIGHTS", runId, delayMs, place: "GATHER:0", args: { runId, workflowExecutionId, holdId: site.holdId, companyId: site.companyId, host: site.host, stage: "GATHER", ...(site.refreshReports ? { refreshReports: true } : {}) } });
   return runId;
 }
 
@@ -296,6 +299,8 @@ export const MOST_A_WEEK = 30;
  */
 export const saveWeek = internalMutation({
   args: {
+    analysisComplete: v.optional(v.boolean()),
+    chainBooking: v.optional(v.number()),
     holdId: v.id("companyWebsites"),
     companyId: v.id("companies"),
     week: v.string(),
@@ -312,7 +317,12 @@ export const saveWeek = internalMutation({
   /** The published findings' ids, in their order, for the week's brief. */
   returns: v.array(v.id("insightFindings")),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const now = Date.now();
+    if (args.analysisComplete === false) {
+      await saveReadings(ctx, args, now);
+      return [];
+    }
     const old = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", args.week)).take(MOST_A_WEEK * 2);
     for (const finding of old) await ctx.db.delete(finding._id);
     const published: Array<Id<"insightFindings">> = [];
@@ -337,6 +347,22 @@ export const saveWeek = internalMutation({
     };
     if (week) await ctx.db.replace(week._id, record);
     else await ctx.db.insert("insightWeeks", record);
+    await saveReadings(ctx, args, now);
+    // Two years kept (I7): the website's weeks and findings older than that go as each new week is saved.
+    const cutoff = new Date(now - KEPT_MS).toISOString().slice(0, 10);
+    const oldWeeks = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).lt("week", cutoff)).take(10);
+    for (const oldWeek of oldWeeks) {
+      await ctx.db.delete(oldWeek._id);
+      const gone = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", oldWeek.week)).take(MOST_A_WEEK * 2);
+      for (const finding of gone) await ctx.db.delete(finding._id);
+    }
+    return published;
+  },
+});
+
+
+/** Persist successful independent readings even when a specialist prevents replacing the weekly analysis. */
+async function saveReadings(ctx: MutationCtx, args: { holdId: Id<"companyWebsites">; companyId: Id<"companies">; week: string; measurement?: Infer<typeof measurementValidator>; plan?: Infer<typeof planValidator> }, now: number) {
     // The Measurement check, the newest only: one row a website.
     if (args.measurement) {
       const held = await ctx.db.query("insightMeasurements").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
@@ -351,17 +377,7 @@ export const saveWeek = internalMutation({
       if (held) await ctx.db.replace(held._id, row);
       else await ctx.db.insert("insightPlans", row);
     }
-    // Two years kept (I7): the website's weeks and findings older than that go as each new week is saved.
-    const cutoff = new Date(now - KEPT_MS).toISOString().slice(0, 10);
-    const oldWeeks = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).lt("week", cutoff)).take(10);
-    for (const oldWeek of oldWeeks) {
-      await ctx.db.delete(oldWeek._id);
-      const gone = await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", oldWeek.week)).take(MOST_A_WEEK * 2);
-      for (const finding of gone) await ctx.db.delete(finding._id);
-    }
-    return published;
-  },
-});
+}
 
 /** The run's cost so far, for the week's record. */
 export const runCost = internalQuery({
@@ -429,9 +445,36 @@ export const reportsDue = internalQuery({
   },
 });
 
+const reportTargetValidator = v.object({ period: v.string(), from: v.string(), to: v.string(), previous: v.union(reportBodyValidator, v.null()) });
+
+/** Manual full refreshes include the latest saved reports, keeping their original dates and evidence. */
+export const reportTargetsForRun = internalQuery({
+  args: { holdId: v.id("companyWebsites"), today: v.string(), refreshLatest: v.optional(v.boolean()) },
+  returns: v.object({ month: v.union(reportTargetValidator, v.null()), board: v.union(reportTargetValidator, v.null()) }),
+  handler: async (ctx, args) => {
+    const month = previousMonth(args.today), quarter = quarterKey(args.today);
+    const currentMonth = await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "MONTHLY").eq("period", month)).first();
+    const currentBoard = await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "BOARD").eq("period", quarter)).first();
+    const latest = async (kind: "MONTHLY" | "BOARD") => args.refreshLatest
+      ? await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", kind)).order("desc").first()
+      : null;
+    const keptMonth = args.refreshLatest ? currentMonth ?? await latest("MONTHLY") : null;
+    const keptBoard = args.refreshLatest ? currentBoard ?? await latest("BOARD") : null;
+    const saved = (row: Doc<"insightReports">) => ({ period: row.period, from: row.from, to: row.to, previous: row.body });
+    const [year, number] = month.split("-").map(Number);
+    return {
+      month: keptMonth ? saved(keptMonth) : !currentMonth && Number(args.today.slice(8, 10)) >= 4
+        ? { period: month, from: `${month}-01`, to: new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10), previous: null } : null,
+      board: keptBoard ? saved(keptBoard) : !currentBoard
+        ? { period: quarter, from: shiftDay(args.today, -90), to: shiftDay(args.today, -1), previous: null } : null,
+    };
+  },
+});
+
 /** A report, saved as written; the same website's report of the same kind and period replaced. Reports older than two years go (I7). */
 export const saveReport = internalMutation({
   args: {
+    chainBooking: v.optional(v.number()),
     holdId: v.id("companyWebsites"),
     companyId: v.id("companies"),
     kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))),
@@ -444,8 +487,9 @@ export const saveReport = internalMutation({
   },
   returns: v.id("insightReports"),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const now = Date.now();
-    const { holdId, ...rest } = args;
+    const { holdId, chainBooking: _chainBooking, ...rest } = args;
     const old = await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", holdId).eq("kind", args.kind).eq("period", args.period)).first();
     if (old) await ctx.db.delete(old._id);
     const reportId = await ctx.db.insert("insightReports", { ...rest, companyWebsiteId: holdId, status: "WRITTEN", createdAt: now });
@@ -473,17 +517,7 @@ export const openFindings = internalQuery({
   args: { holdId: v.id("companyWebsites") },
   returns: v.object({
     origin: v.union(v.string(), v.null()),
-    findings: v.array(v.object({
-      findingId: v.id("insightFindings"),
-      specialist: v.string(),
-      watch: v.object({ key: v.string(), direction: v.union(v.literal("UP"), v.literal("DOWN")) }),
-      then: v.union(v.null(), factValidator),
-      written: v.string(),
-      checkInDays: v.number(),
-      clock: v.union(v.null(), clockValidator),
-      checkOn: v.union(v.string(), v.null()),
-      pageSeen: v.union(v.null(), pageSeenValidator),
-    })),
+    findings: v.array(openFindingValidator),
     changes: v.array(v.object({ page: v.string(), day: v.string() })),
   }),
   handler: async (ctx, args) => {
@@ -496,14 +530,7 @@ export const openFindings = internalQuery({
     const changes = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id)).take(CHANGES_READ);
     return {
       origin: originOf(website, console),
-      findings: rows.map((finding) => {
-        const written = new Date(finding.createdAt).toISOString().slice(0, 10);
-        return {
-          findingId: finding._id, specialist: finding.specialist, watch: finding.watch!, then: finding.facts.find((fact) => fact.key === finding.watch!.key) ?? null,
-          written, checkInDays: finding.checkOn ? Math.round((Date.parse(finding.checkOn) - Date.parse(written)) / 86_400_000) : 56,
-          clock: finding.clock ?? null, checkOn: finding.checkOn ?? null, pageSeen: finding.pageSeen ?? null,
-        };
-      }),
+      findings: rows.map(openFinding),
       changes: changes.flatMap((change) => (change.from ? [{ page: change.from, day: change.day ?? change.week }] : [])),
     };
   },
@@ -512,6 +539,7 @@ export const openFindings = internalQuery({
 /** How each checked finding turned out, and the company's tally — kept after the findings go (I7). */
 export const scoreFindings = internalMutation({
   args: {
+    ...insightsPublicationArgs, holdId: v.optional(v.id("companyWebsites")),
     companyId: v.id("companies"),
     outcomes: v.array(v.object({ findingId: v.id("insightFindings"), specialist: v.string(), outcome: v.union(v.literal("RIGHT"), v.literal("WRONG"), v.literal("TOO_EARLY")), note: v.string() })),
     /** Each open finding's week: its clock, its day, its figure so far, its page as read (utils/insightClock.ts). */
@@ -521,12 +549,15 @@ export const scoreFindings = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    if (args.holdId) await assertInsightsPublisher(ctx, { ...args, holdId: args.holdId });
     const now = Date.now();
     for (const { findingId, ...fields } of args.updates ?? []) {
       const finding = await ctx.db.get(findingId);
-      if (finding && !finding.outcome && Object.keys(fields).length > 0) await ctx.db.patch(findingId, fields);
+      if (finding && finding.companyId === args.companyId && (!args.holdId || finding.companyWebsiteId === args.holdId) && !finding.outcome && Object.keys(fields).length > 0) await ctx.db.patch(findingId, fields);
     }
     for (const scored of args.outcomes) {
+      const finding = await ctx.db.get(scored.findingId);
+      if (!finding || finding.companyId !== args.companyId || (args.holdId && finding.companyWebsiteId !== args.holdId) || finding.outcome) continue;
       await ctx.db.patch(scored.findingId, { outcome: scored.outcome, outcomeNote: scored.note });
       const tally = await ctx.db.query("insightTally").withIndex("by_company_specialist", (q) => q.eq("companyId", args.companyId).eq("specialist", scored.specialist)).first();
       const add = { right: scored.outcome === "RIGHT" ? 1 : 0, wrong: scored.outcome === "WRONG" ? 1 : 0, unclear: scored.outcome === "TOO_EARLY" ? 1 : 0 };
@@ -569,9 +600,10 @@ async function learnFrom(ctx: MutationCtx, kind: string, companyId: Id<"companie
  * years go with their findings.
  */
 export const saveChanges = internalMutation({
-  args: { holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), changes: v.array(changeValidator), notRemoved: v.optional(v.array(v.string())) },
+  args: { ...insightsPublicationArgs, holdId: v.id("companyWebsites"), companyId: v.id("companies"), week: v.string(), changes: v.array(changeValidator), notRemoved: v.optional(v.array(v.string())) },
   returns: v.number(),
   handler: async (ctx, args) => {
+    await assertInsightsPublisher(ctx, args);
     const now = Date.now();
     let added = 0;
     // A page logged as removed that had visits after all was never removed: it leaves the log.

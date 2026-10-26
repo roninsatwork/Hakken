@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: AI rules and prompts
+audience: developer
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/ai-rules-and-prompts.md
+last_reviewed: '2026-10-26T14:26:52+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # AI Rules And Prompts Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** AI rules and prompts
+> **Reviewed:** 26 October 2026, 14:26:52 GMT (Europe/London)
+> **Source path:** `docs/developer/ai-rules-and-prompts.md` · **Status:** Current
 
 AI rules and prompts are the configurable instruction layer for Hakken's assistant, agents, workflows, widgets, and tenant-specific AI behavior. The implementation spans global admin routes, company admin routes, Convex prompt/rule modules, audit logging, and prompt assembly helpers.
 
@@ -75,7 +90,7 @@ System prompts are stored in `systemConfig`. The global prompt uses a dedicated 
 Preserve these boundaries when changing the system:
 
 - Global prompt updates require super-admin access.
-- Global rule reads and writes require super-admin access.
+- Global rule detail/writes require super-admin access; soft-list exceptions needing source review are recorded below.
 - Company rule reads and writes require admin access to the relevant company.
 - Non-super-admin access to agent rules must stay company-scoped.
 - Runtime prompt assembly may read configuration internally, but user-facing queries and mutations must still enforce role and company boundaries.
@@ -129,3 +144,25 @@ Focused test areas include:
 - UI tests under `src/app/(dashboard)/admin/ai/rules/` and company AI routes where present.
 
 When changing localized rule or prompt UI text, keep `messages/en.json` and `messages/it.json` in parity. Documentation-only changes should at least run `git diff --check`; code changes must follow the full repository verification gate in `AGENTS.md`.
+
+## Current Assembly And Selection Bounds
+
+`aiPromptAssembly.buildAssistantSystemInstruction` begins with platform safety and the configured/fallback identity, then company instructions, optional agent behavior/skills, company skills, always memories, personal context, and compiled rules. The declared semantic safety priority remains above configurable content even where physical sections are appended later. Rules compile as priority/trigger/instruction text in supplied order; this helper does not implement a deterministic trigger engine or sort by priority. Do not describe prompt language as enforceable authorization.
+
+`shouldInjectPersonalNote` excludes widget threads, EVAL-purpose threads, and threads without a signed-in owner. Callers still own the subject association. `buildUntrustedConversationHistory` and knowledge wrapping neutralize delimiter-shaped input; that is defense in depth, not a complete proof against prompt injection or model disclosure.
+
+`getRules` returns at most 100 newest scope rows. `getOffsetPaginatedRules` reads up to 1,000 before filtering name/trigger/instruction and slicing pages. Totals are bounded-list totals. `getActiveRulesInternal` reads up to 1,000 global, company, and agent active rows separately and deduplicates IDs. Company selection includes rules carrying that company; agent selection is by agent ID and does not additionally filter each row's company association. Mixed-scope records can therefore be selected through more than one route, with deduplication preventing repetition but not independently proving tenant applicability.
+
+## Authority Discrepancies Requiring Source Review
+
+`system.getSystemPrompt` and `updateSystemPrompt` are super-admin operations, while runtime uses `getInternalSystemPrompt`. `companies.updateCompanyPrompt` is also a super-admin mutation; it must not be documented as an ordinary company-admin write simply because company rule CRUD supports authorized admins.
+
+Rule mutations use tenant wrappers plus `assertAdminCanAccessCompany` on the supplied or existing record company. `getRuleById` applies its own checks, rejecting ordinary callers for global/global-agent details. Soft list handlers differ: unauthenticated callers get empty results, but a signed-in role other than ADMIN follows the non-ADMIN agent-list branch, which reads by agent alone. Thus a signed-in USER with an agent ID is not uniformly restricted like the detail/write path. This discrepancy and the internal agent-rule company filter need a separate application investigation/fix. No source change or sensitive rule extraction was performed for documentation.
+
+`getAssistantSafetyWarnings` matches hidden-instruction, permission-bypass, and cross-tenant text patterns. Rule create/update audits capture these categories, but the mutation does not block solely because they appear. `evaluateAssistantSafety` provides a refusal decision for consumers that call it; the existence of the function does not make every provider path automatically invoke it. Preserve that call-site distinction.
+
+## Lifecycle And Evidence
+
+Deactivating a rule excludes it from future active assembly; deleting removes the rule record and audits intent. Neither operation removes text already recorded in historical prompts, responses, logs, versions, or audit metadata. Rules themselves follow their record lifetime; related runtime evidence has independent retention. Configuration introduces no new provider credentials and must not contain secret values.
+
+The source tests in `aiRules.test.ts`, `aiPromptAssembly.test.ts`, and `aiSafetyPolicy.test.ts` demonstrate selected scope, assembly, and pattern cases. They do not justify claiming exhaustive rule-read isolation, deterministic natural-language compliance, or deployed integration acceptance. This guide was refreshed from source only; no configuration mutation, model generation, or live service operation ran.

@@ -223,7 +223,7 @@ type ReadPart = Unpacked<Pick<Doc<"searchConsolePeriods">, "clicks" | "impressio
  * one object a row, field by field: at five times morehandles.co.uk a list is hundreds of
  * thousands of rows, and a row copied through spreads, twice, was a third of its read.
  */
-function rowsOfPart(part: ReadPart, rows: PeriodRow[]): void {
+export function rowsOfPart(part: ReadPart, rows: PeriodRow[]): void {
   const brands = part.brands ? unpackNumbers(part.brands) : null;
   const { keys, pages, counts, tops, kinds, volumes, estimates } = part;
   const clicks = unpackNumbers(part.clicks);

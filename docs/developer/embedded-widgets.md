@@ -1,10 +1,25 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: embedded chat widgets
+audience: developers and platform operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/embedded-widgets.md
+last_reviewed: '2026-10-26T10:28:26+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Embedded Widgets
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** embedded chat widgets
+> **Reviewed:** 26 October 2026, 10:28:26 GMT (Europe/London)
+> **Source path:** `docs/developer/embedded-widgets.md` · **Status:** Current
 
 Embedded widgets are the public chat surface implemented by `public/embed.js`, `/w/[widgetId]`, `/sandbox/[widgetId]`, admin widget setup screens, `src/proxy.ts`, `convex/utils/widgetEmbedPass.ts`, `convex/utils/widgetOriginPolicy.ts`, and `convex/widgets.ts`. The implementation supports global widgets, company-scoped widgets, anonymous widget threads, server-minted embed passes, per-widget `frame-ancestors`, domain allowlists, public iframe configuration, widget photo upload validation, and photo-action confirmation through shared chat/task infrastructure.
 
 ## Route Map
 
-- `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget. It is super-admin-only through the admin layout and calls `api.widgets.getPrimaryGlobalWidget` and `api.widgets.saveWidget`.
+- `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget. It is restricted to super admins for global management and calls `api.widgets.getPrimaryGlobalWidget` and `api.widgets.saveWidget`.
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the primary company widget for a company workspace.
 - `src/app/(dashboard)/admin/_features/widget-config/*` contains the shared widget configuration sections, tab helpers, preview panel, empty state, embed snippet builder, and their tests. Both the global and the company widget route import from here; it is the only copy. A byte-for-byte duplicate of these components once sat under the company route at `_components/`, unimported and carrying the only tests, and was removed on 2026-08-17. Edit the shared files, and do not reintroduce a route-local copy.
 - `src/app/w/[widgetId]/page.tsx` renders the public iframe chat experience server shell, reads the request referrer, and mints the signed widget embed pass passed into the client.
@@ -20,7 +35,7 @@ Embedded widgets are the public chat surface implemented by `public/embed.js`, `
 
 - `getWidgetsByCompany` lists widgets for an admin-accessible company.
 - `getPrimaryWidgetByCompany` returns the latest company widget by creation time.
-- `getGlobalWidgets` and `getPrimaryGlobalWidget` are super-admin-only global widget queries.
+- `getGlobalWidgets` and `getPrimaryGlobalWidget` use `superAdminQuery`, admitting SUPER_ADMIN and READ_ONLY readers; global writes remain SUPER_ADMIN-only.
 - `getWidgetById` is public and returns only iframe-safe configuration for active widgets.
 - `saveWidget` creates or updates widgets and writes `CREATE_WIDGET` or `UPDATE_WIDGET` audit logs.
 - `deleteWidget` deletes widgets and writes `DELETE_WIDGET` audit logs.
@@ -115,7 +130,7 @@ Widget uploads are deliberately narrower than normal authenticated uploads:
 - the widget must exist and be active
 - the target thread must belong to the widget
 - the caller must present the matching widget access token for that thread
-- a thread can have at most ten messages with attachments
+- each thread can request at most ten upload URLs, including abandoned uploads
 - stored uploads are validated by `validateWidgetAttachmentMetadata`
 
 Do not bypass these checks from the frontend. Anonymous visitors can reach this flow, so validation belongs in Convex.
@@ -157,3 +172,15 @@ If domain matching or embed-pass behavior changes, update `src/proxy.ts`,
 together. The browser-enforced frame policy, server-minted pass, and Convex
 checks should stay conceptually aligned, while Convex remains the authoritative
 session guard.
+
+## Admission, Upload Reservations And Lifecycle Boundaries
+
+The page's HMAC embed pass has a twelve-hour lifetime and carries widget identity, observed referring host and issuance time. Verification refuses a timestamp more than one minute in the future. The pass is reusable during its lifetime; it is not a one-use capability or a trustworthy proof that a request came from a particular physical browser. `sourceUrl` is stored context, not the authority for the host check. `WIDGET_EMBED_SIGNING_SECRET` must agree between Next.js and Convex. No value belongs in documentation, browser code or customer support messages.
+
+The proxy's frame policy fails closed when it cannot obtain the widget policy: unavailable configuration produces a refusal instead of a permissive ancestor list. Empty domain lists deny framing; a concrete hostname admits that host and dot-separated subdomains, while an explicit wildcard broadens access. The embed script checks `event.origin` against its Hakken host before consuming configuration messages. That check should not be described as an additional verified `event.source` binding.
+
+`generateWidgetUploadUrl` increments `widgetUploadUrlCount` in the mutation that issues the reservation. The maximum is ten issuances, not ten successfully attached messages. It calls `issueUpload` with the thread/company owner and `widget` purpose. Finalization rechecks the widget, thread mapping and raw token, then calls `requireOwnedUpload` without attaching the file and validates stored image metadata. The one MiB widget policy is narrower than signed-in chat. An abandoned or removed preview does not refund an issuance slot. Shared gateway expiry and abandoned-upload cleanup are described in the knowledge/upload documentation; widget deletion is not a substitute for those mechanisms.
+
+`canAccessThread` and `assertCanAccessThread` reload the widget and require it to be active for anonymous access, as well as checking the SHA-256 token hash. Thus disabling the widget affects existing anonymous sessions, not just thread creation. The browser's partial-session recovery clears a lone stored identifier or token; it does not automatically validate and replace every fully stored but unusable pair. Reset clears local state rather than deleting messages. `deleteWidget` deletes the configuration row and audits the action; it does not traverse all associated threads and files.
+
+`reserveWidgetMessageSeat` enforces an aggregate 600-message hourly allowance across widget threads, in addition to the 120-thread minting window and per-thread burst checks. Company quota refusal remains deliberately generic for anonymous visitors. These controls reduce exposure but do not prove deployed acceptance, user identity, complete data erasure or an externally completed rename. Current source and test declarations were inspected without running a browser, provider request or application test.

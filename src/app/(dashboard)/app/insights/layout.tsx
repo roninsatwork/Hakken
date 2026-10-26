@@ -10,6 +10,7 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { InsightsMenu } from "./_components/InsightsMenu";
 import { useInsightsHome, useInsightsPeriodChoice, useInsightsPeriodView } from "./_components/useInsights";
+import { InsightsRefreshNotice } from "./_components/InsightsRefreshNotice";
 import { periodWords } from "./_components/insightPeriodWords";
 
 /**
@@ -67,6 +68,7 @@ export default function InsightsLayout({ children }: { children: React.ReactNode
             </div>
           ) : undefined}
         />
+        <InsightsRefreshNotice />
         {home === null ? (
           <HakkenEmptyState icon={Lightbulb} title={t("noCompanyTitle")} description={t("noCompanyDescription")} />
         ) : (

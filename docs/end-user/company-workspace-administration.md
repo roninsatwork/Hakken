@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: user guide
+feature_area: company and user administration
+audience: company admins, platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/company-workspace-administration.md
+last_reviewed: '2026-10-26T09:45:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Company Workspace Administration
+
+> **Product:** Hakken · **Document type:** User guide · **Feature area:** Company and user administration
+> **Reviewed:** 26 October 2026, 09:45:20 GMT (Europe/London)
+> **Source path:** `docs/end-user/company-workspace-administration.md` · **Status:** Current
 
 Company workspace administration covers tenant setup, directory users, invitations, organization settings, personal profiles, and safe handoff between super admins and company admins. Use this guide when supporting a tenant workspace or preparing a customer handoff.
 
@@ -16,37 +31,30 @@ Tenant-facing routes:
 Super-admin company routes:
 
 - `/admin/companies`: company list.
+- `/admin/companies/new`: dedicated Add company page, saving the company name and website together.
 - `/admin/companies/[id]`: company detail.
 - `/admin/companies/[id]/overview`: company overview.
 - `/admin/companies/[id]/features`: workspace feature gates beyond plan defaults.
 - `/admin/companies/[id]/directory/users`: company users.
 - `/admin/companies/[id]/directory/invites`: company invitations.
 - `/admin/companies/[id]/calls`: company call review.
-- `/admin/companies/[id]/mailbox`: company mailbox review.
+- Gmail mailbox review is retired; see [Gmail Mailbox](./gmail-mailbox.md) for the removal record.
 
 Company pages are tenant-boundary surfaces. Always confirm the company id and company name before editing users, invites, prompts, rules, models, knowledge, widgets, or chat logs.
 
 ## Organization Dashboard
 
-The organization dashboard shows company-scoped usage and cost signals for the signed-in user's company. It includes a timeframe selector, metric cards, usage timeline, provider distribution, top users, and top agents. For longer historical windows, treat provider distribution as partial because stored daily snapshots currently carry model metrics rather than provider totals.
-
-Use it to answer:
-
-- is the tenant actively using the platform?
-- which users or agents are driving usage?
-- which providers are being used?
-- is cost moving unexpectedly?
-- does message volume match the customer story?
+The organization dashboard reads the signed-in user's company and a selected calendar period. It shows activity and message figures and can show an incomplete-figures notice. Usage charts and provider distribution have moved out of this screen; the company's Usage surface reports credits. Do not interpret an organisation card as a reconciled Stripe revenue statement or provider invoice. For plan, credits and billing distinctions, use [Platform Plans And Quotas](./platform-plans-and-quotas.md).
 
 If the signed-in user is not linked to a company, the page reports that no organization is linked. Fix the user-company assignment before interpreting missing analytics as low usage.
 
 ## Team Management
 
-Company admins use `/app/settings/team` to manage tenant users and pending invitations. The supported tenant roles are `USER` and `ADMIN`.
+Company admins use `/app/settings/team` to manage tenant users and review pending invitations. The current Add action directly creates a user record through `addUser`; despite invite-style wording in the editor, it does not itself dispatch an invitation email. Dedicated invitation pages use the email-dispatch workflow. The supported tenant roles are `USER` and `ADMIN`.
 
 Use `USER` for normal workspace users. Use `ADMIN` for people who manage team membership, organization settings, and company-scoped operational surfaces.
 
-Tenant admins cannot grant or manage super-admin privileges. Super-admin assignment is a platform operation, not a company team task.
+Tenant admins cannot grant or manage platform roles: `SUPER_ADMIN`, `READ_ONLY`, and `AUDITOR`. They also cannot edit or remove existing platform-role accounts. Those roles belong to platform administration, even when the account is attached to a company.
 
 ## Invite Users
 
@@ -135,3 +143,25 @@ Before handing a workspace to a customer admin:
 - plan usage expectations are explained
 
 Workspace administration is primarily about safe scope. Most mistakes in this area come from editing the wrong company, over-granting roles, or treating a global setting as tenant-specific.
+
+## Creating And Configuring A Company
+
+Open Add company from Manage Companies. The form asks for a name and website, then saves into the new company's detail area. The backend creates the company and, when a website is supplied, establishes its own-website holding in the same mutation. A rejected website address rolls back that mutation rather than deliberately leaving a half-created company. The website is a shared identity with a company-specific holding; adding it is not a promise that Google connections, paid collection, or product research have already completed.
+
+Configure the plan, feature access, assistant instructions and directory in their own sections after creation. Saving one section does not save another tab's draft. Changes to profile descriptions clear the AI-authorship note for the changed field because a person now owns that wording. Feature switches change which optional sections the workspace can use. They do not stand in for a paid subscription or for a connected external account.
+
+For a Stripe-managed company, manual plan assignment is refused. Company billing belongs in the frontend Billing page; platform setup is a separate operator responsibility. Likewise, the backend blocks company deletion when Stripe billing history exists and tells the operator to reconcile and archive billing first. Do not try to bypass that protection by deleting directory users or changing plan fields separately.
+
+## Invitation Outcomes And Re-Adding People
+
+Invitation dispatch can report that it created a new pending invitation, reissued an existing invitation, or found an already active account. An accepted invitation with a current account is not made pending again: that person should sign in. An accepted invitation whose account is missing can be reissued with fresh workspace, role, token and date. The new invitation uses `/login`; access follows the authenticated email rather than a visible token in the link.
+
+A successful dispatch result may be simulated when the environment has no configured mail credential. It establishes a record outcome, not delivery to a real inbox. Even with a provider credential, email sending and the subsequent record mutation are separate operations. Check both the reported outcome and the pending directory entry when investigating a handoff. Repeating a send blindly can produce another message without solving an identity conflict. Never share sign-in codes or raw invitation records containing credentials in support notes.
+
+## Deletion And Cleanup Boundaries
+
+Deleting an individual user runs a dedicated identity cleanup before deleting the user row. It removes sessions, refresh tokens, linked provider accounts, unredeemed verification codes and matching canonical-email invitations. Content cleanup is separately scheduled for logins, rules, personal assistant notes and chat threads. Re-adding someone should begin with a fresh account or invitation, rather than relying on an old accepted record. Historic audit evidence and unrelated operational records are not covered by a promise of universal erasure.
+
+Company deletion schedules batches for its users, invitations and website holdings, removes the company record, and retains shared website identities. The company batch directly deletes user rows; it does not call the same inline identity-purge helper as individual deletion. That implementation difference needs application follow-up before promising identical authentication cleanup or retention outcomes. A missing company row is not proof that all scheduled batches succeeded or that every related integration record has disappeared.
+
+These procedures were reviewed from source only. No account was created, invitation sent, role changed, company deleted, or cleanup job invoked. Current implementation still uses a field editor dialog in the tenant team screen; it does not yet follow the repository's page-editor convention. This guide describes that behavior without changing the interface.

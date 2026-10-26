@@ -115,7 +115,7 @@ const sameSide = (a: readonly string[], b: readonly string[], cut: string | null
 
 /** One website's view of a period: every figure, the months, and why. */
 export async function periodView(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, host: string, choice: string | undefined) {
-  const records = await historyOf(ctx, hold._id);
+  const records = await historyOf(ctx, hold._id, ["GA_SOURCES", "GA_PAGES", "SC_PAGES", "GA_MONTHS", "DAYS"]);
   const kindOf = await pageKindsOf(ctx, hold._id);
   const months = monthsOf(records, kindOf);
   const whole = new Set(months.filter((month) => month.whole).map((month) => month.month));
@@ -497,7 +497,7 @@ export const insightsEnquiries = tenantQuery({
  * people to.
  */
 export async function enquirySourceView(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, name: string, choice: string | undefined) {
-  const records = await historyOf(ctx, hold._id);
+  const records = await historyOf(ctx, hold._id, ["GA_SOURCES", "GA_PAGE_SOURCES"]);
   const kindOf = await pageKindsOf(ctx, hold._id);
   const months = monthsOf(records, kindOf);
   const whole = new Set(months.filter((month) => month.whole).map((month) => month.month));

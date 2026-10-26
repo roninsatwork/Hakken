@@ -69,7 +69,7 @@ export const logRunLine = internalMutation({
 /** A line on a run's timeline and in its log, from inside a mutation (`logRunLine`). */
 export async function writeRunLine(
   ctx: MutationCtx,
-  args: { runId: Id<"agentRuns">; companyId?: Id<"companies">; heading: string; detail: string; failed: boolean },
+  args: { runId: Id<"agentRuns">; companyId?: Id<"companies">; heading: string; detail: string; failed: boolean; requestKey?: string },
 ): Promise<void> {
   const run = await ctx.db.get(args.runId);
   if (!run) return;
@@ -90,6 +90,7 @@ export async function writeRunLine(
     interactionType: args.heading,
     promptContent: "",
     responseContent: args.detail,
+    ...(args.requestKey ? { requestKey: args.requestKey } : {}),
     outcome: args.failed ? "FAILED" : "SUCCESS",
     createdAt: Date.now(),
   });
@@ -275,6 +276,7 @@ export const recordRunModelCall = internalMutation({
     promptContent: v.string(),
     responseContent: v.string(),
     failed: v.optional(v.boolean()),
+    requestKey: v.optional(v.string()),
   },
   returns: v.object({ costUsd: v.number(), runCostUsd: v.number(), limitReached: v.boolean() }),
   handler: async (ctx, args) => {
@@ -326,6 +328,7 @@ export const recordRunModelCall = internalMutation({
       interactionType: args.actionContext,
       promptContent: args.promptContent.slice(0, 8_000),
       responseContent: args.responseContent.slice(0, 8_000),
+      ...(args.requestKey ? { requestKey: args.requestKey, completeResponse: args.responseContent } : {}),
       outcome,
       createdAt: now,
     });

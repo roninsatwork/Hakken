@@ -19448,6 +19448,27 @@
     }
   },
   "insights": {
+    "refresh": {
+      "updating": "Updating Insights for {host}: {complete} of {total} sections complete. Completed results remain available.",
+      "completed": "Insights for {host}: all sections refreshed {when}.",
+      "unfinished": "Insights for {host} has not fully refreshed. Unfinished: {sections}. Previously completed results remain available.",
+      "unrecorded": "The last Insights run for {host} has no complete record for each section. Its saved results remain available; a full refresh has not been verified.",
+      "stages": {
+        "History": "source history",
+        "Track record": "track record",
+        "Measurement": "measurement",
+        "Opportunities": "opportunities and page plan",
+        "Keyword cannibalisation": "competing pages",
+        "Analysis": "weekly analysis",
+        "Reports": "reports",
+        "Drafts": "drafted fixes",
+        "Buyer questions": "buyer questions",
+        "Page reviews": "page reviews",
+        "Page decisions": "page decisions",
+        "Page decisions' box": "page decisions summary",
+        "Screens' boxes": "specialist summaries"
+      }
+    },
     "section": {
       "title": "Insights",
       "description": "{company}, read the way an agency would: Google, AI answers, your Business Profile, Search Console and Google Analytics, against your rivals.",

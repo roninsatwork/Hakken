@@ -18,6 +18,9 @@ import { EVERY_DEVICE, slotKey, splitChannelKey } from "./googleAnalyticsLists";
 import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { DEFAULT_CLIENT_SCHEDULE } from "./utils/insightTeam";
+import { stepKey } from "./collectionSteps";
+import { insightStagesOf } from "./insightsRunState";
+import { insightRunStageValidator } from "./utils/insightRunStages";
 
 /**
  * What the Insights screens read (docs/plans/active/insights-analyst-plan.md
@@ -31,6 +34,28 @@ const siteValidator = v.object({ siteId: v.id("companyWebsites"), host: v.string
 
 /** Two years of weeks (I7): the most a website keeps. */
 const MOST_WEEKS_KEPT = 110;
+
+/** Every section shares this refresh status. A saved week alone does not establish whole-section freshness. */
+export const sectionRefresh = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), status: v.string(), updatedAt: v.number(), recorded: v.boolean(), stages: v.array(v.object({ stage: insightRunStageValidator, status: v.union(v.literal("SUCCESS"), v.literal("FAILED"), v.literal("PENDING")) })) })),
+  handler: async (ctx, args) => {
+    if (!ctx.companyId) return [];
+    if (args.siteId) await requireMySite(ctx, args.siteId);
+    const holds = (await companyHolds(ctx, ctx.companyId)).filter((site) => site.hold.relationship === "OWNED" && (!args.siteId || site.hold._id === args.siteId));
+    const rows = [];
+    for (const site of holds) {
+      const chain = await ctx.db.query("collectionSteps").withIndex("by_key", (q) => q.eq("key", stepKey("INSIGHTS", site.hold._id))).unique();
+      const week = chain?.runId ? null : await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", site.hold._id)).order("desc").first();
+      const runId = chain?.runId ?? week?.runId;
+      const run = runId ? await ctx.db.get(runId) : null;
+      if (!run || run.companyId !== ctx.companyId) continue;
+      const stages = (await insightStagesOf(ctx, run._id)).map(({ stage, status }) => ({ stage, status }));
+      rows.push({ siteId: site.hold._id, host: site.summary.host, status: run.status, updatedAt: run.completedAt ?? run.updatedAt, recorded: chain !== null, stages });
+    }
+    return rows;
+  },
+});
 
 /** The section's frame: the company, its own websites, when the team last looked, and the menu's numbers. */
 export const insightsHome = tenantQuery({

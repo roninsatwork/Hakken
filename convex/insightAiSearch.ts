@@ -133,7 +133,7 @@ export async function aiSearchView(ctx: Reader, hold: Doc<"companyWebsites">, ho
   if (!site) return null;
 
   // Are you growing in AI: the assistants' visits and enquiries, from the history (16 months).
-  const records = await historyOf(ctx, hold._id);
+  const records = await historyOf(ctx, hold._id, ["GA_SOURCES", "GA_PAGE_SOURCES"]);
   const kindOf = await pageKindsOf(ctx, hold._id);
   const whole = monthsOf(records, kindOf).filter((month) => month.whole).map((month) => month.month).sort();
   const lists = listsOf(records, kindOf);

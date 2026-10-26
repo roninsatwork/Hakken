@@ -1,304 +1,70 @@
-# Hakken Platform Overview
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: Platform overview
+audience: users administrators and operators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/platform-overview.md
+last_reviewed: '2026-10-26T14:48:56+00:00'
+reviewed_against: current implementation
+status: Current
+---
+# Platform Overview
 
-> **What Hakken is, and why it exists, is defined in [PRODUCT.md](../../PRODUCT.md).**
-> That document is the single source of truth. This page is the customer-facing
-> tour of the platform: who uses it, what each area does, and where to find
-> things. Where the two ever disagree, PRODUCT.md is right and this page needs
-> correcting.
->
-> **Scope note.** This page describes the **platform capabilities that exist
-> today** — the agentic foundation. The Hakken product described in PRODUCT.md
-> Part One (asset P&L, AI-visibility monitoring, the weekly fixing loop) is not
-> built yet and is not described here.
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Platform overview
+> **Reviewed:** 26 October 2026, 14:48:56 GMT (Europe/London)
+> **Source path:** `docs/end-user/platform-overview.md` · **Status:** Current
 
-## In Short
+Hakken is the product described in [PRODUCT.md](../../PRODUCT.md): understanding which digital assets contribute to leads and sales, identifying a broken stage, and proving improvement. This tour describes workflows found in the current repository, including the inherited platform foundations and newer website/Insights implementation. PRODUCT.md still distinguishes foundations from planned product surface; its older unbuilt statements disagree with some newer code. That needs a product-owner reconciliation. This guide does not declare all of Part Three delivered or change the roadmap.
 
-Hakken is a multi-tenant AI platform for organisations that need controlled,
-configurable, and auditable AI assistance — across teams, companies, workflows,
-and customer-facing experiences.
+Use the [documentation front door](../index.md) for current coverage and the audience indexes for detailed guides. A route or saved configuration found locally is evidence of implementation, not proof that a deployed account has enabled modules, accepted provider connections, current data, or completed the rename cutover in PRODUCT.md section 33. The public landing page also retains framework-oriented copy that does not establish product direction.
 
-It brings an AI assistant, admin governance, agent configuration, knowledge
-management, workflow automation, analytics, and tenant management into one
-system. Each company gets its own users, rules, knowledge, prompts, AI settings,
-and reporting, while the whole platform is managed from a central super-admin
-layer.
+## Your Workspace And Access
 
-It is built around three ideas:
+The authenticated customer area is under `/app`. Your company context determines private records and available operations. A platform operator can impersonate a company where the implementation supports it; the selected workspace matters for private lists, tasks, conversations, and company-owned website holdings. Shared supplier measurements do not make a company's tracking choices public to every other company.
 
-- Give users an AI assistant that answers questions, works with uploaded files,
-  and understands company-specific context.
-- Give admins real control over users, companies, models, prompts, rules,
-  knowledge, widgets, and usage.
-- Give platform operators visibility into cost, activity, health, audit history,
-  and workflow execution.
+Standard users work with the customer features allowed by their role and company. Company administrators additionally manage workspace/team functions and frontend billing. Super-admins operate the platform console. Read-only console readers and auditors have narrower evidence-oriented access where explicitly allowed. A visible menu is guidance, not the server permission boundary; a link can be unavailable because of role, module, or current configuration.
 
-Hakken is **model-agnostic**. It runs across Google Vertex, Anthropic, OpenAI,
-and OpenRouter, so a product built on it is not tied to one AI vendor.
+The app landing route contains a platform introduction rather than a complete report of your business. Use the actual navigation destinations and their dated evidence to investigate a website. Do not interpret introductory illustration figures or product prose as measured results for your company. [Access and authentication](./login-access-and-authentication.md) and [Company workspace administration](./company-workspace-administration.md) explain those boundaries in detail.
 
-## Who Uses It
+## Websites And Their Measurement Connections
 
-### End Users
+Sites is the estate and visibility workspace. It distinguishes a website host from a company's holding of that site, its ownership relationship, competitors, and private tracking lists. Begin with [Websites and visibility](./websites-and-visibility.md). The holding is central to access: knowing a shared host or search identifier does not authorize another company's tracked terms or AI questions.
 
-End users work in the main app workspace. They can use the Hakken assistant,
-upload files, view reports, use the tools their organisation has enabled, and
-access organisation features according to their role.
+Google Analytics, Search Console, Bing Webmaster, and Microsoft Clarity have their own connection and reporting paths. They differ in provider permissions, stored windows, limits, expiry/disconnection behavior, and what zero or missing data means. A connected account alone is not evidence that a complete year of data exists. Use [Analytics](./google-analytics.md), [Search Console](./search-console.md), [Bing](./bing-webmaster.md), and [Clarity](./microsoft-clarity.md) before interpreting source comparisons.
 
-### Company Admins
+Visibility reports cover organic keywords/pages, paid search, backlinks, AI answers/citations, brand radar, competitors, local maps/business profiles, reviews, technical audits, and web mentions. The detailed guides describe which values are supplier estimates, held snapshots, personal tracking membership, or inferred recommendations. These are distinct evidence sources rather than a single guaranteed live scan of the internet.
 
-Company admins manage their own organisation workspace: team members,
-organisation settings, diagnostics, and everything inside their company
-boundary.
+## Insights And Practical Follow-Through
 
-### Super Admins
+Insights Findings explains a recommendation, supporting facts, alternatives ruled out, an action, and a later check. [Insights findings](./insights-findings.md) covers that core journey. The advanced screens provide reports/exports, strategy/planning, measurement/enquiries, page reviews/experiments, competing-page decisions, page creation candidates, leaderboards, and AI growth/buyer questions. Each guide records current selection bounds rather than assuming every screen is exhaustive.
 
-Super admins manage the whole platform: companies, users, super-admin access,
-AI settings, agents, workflows, system settings, plans, analytics, maintenance
-scripts, and platform health.
+A recommendation is not automatically a published website edit. Approved local/review/link drafts have a separate preparation and approval path. Task handoff creates work to review and perform; it does not prove a third-party change was accepted. Some experiment and attribution screens have important limits, including saved-period comparisons and shared campaign counts. Read the actual values and evidence notes before presenting a business outcome.
 
-## Main User Features
+[Track record](./insights-track-record.md) combines findings, acknowledged actions, observed changes, and later figures. Its company and selected-site tally scopes differ. Page replacements can be inferred, campaign totals can overlap across drafts, and aggregate learnings are contextual rather than controlled causal proof. The documented zero-to-zero growth-label edge case is another reason to report figures with labels. A record of advice being right is not a complete sales-attribution or revenue account.
 
-### Dashboard
+## Assistant, Photos, And Spoken Channels
 
-The dashboard at `/app` is the main entry point after login. It is a product
-overview rather than an operational report — it introduces what the platform
-can do and routes users to the assistant or to the reporting and cost screens.
+Ask Hakken stores conversations and can use authorized knowledge, company instructions, skills, and memory. A selected agent can bring governed tools and its own execution path. [Assistant chat](./assistant-chat.md) explains normal conversation flow, attachments, errors, and persistence. Retrieved source text is reference material; it does not grant extra access or automatically become an authorized instruction.
 
-It includes a primary call to open the assistant, feature cards for model
-choice, private knowledge, workflows, widget governance, visibility and cost
-control, and sections covering AI safety, tenant privacy, automated checks,
-observability, and audit history.
+[Photo actions](./photo-actions.md) attach image evidence to a turn and can offer a reasoned follow-up task. Confirmation files the stored proposal; merely seeing the card does not create work. Supported image processing depends on the actual vision path, and the widget uses smaller upload limits. A conversation attachment is not automatically a searchable company document or an immediately deleted file.
 
-For signed-in super admins, the dashboard also redirects to `/admin` once per
-browser session as a convenience. This is a handoff, not a security boundary —
-admin access is enforced by the admin layout and by backend checks.
+Voice, inbound phone calls, Telegram, and embedded widgets are separate channels with their own credentials, delivery/session rules, ownership and external acceptance. Do not assume one successful web answer proves phone, bot, or widget readiness. A widget reset clears local session state rather than certifying removal of every server record. Follow [Spoken channels](./spoken-channels.md), [Telegram](./telegram.md), and [Embedded widgets](./embedded-widgets.md) for the current contracts.
 
-### Ask Hakken Assistant
+## Knowledge, Reading, And Personal Context
 
-The assistant is the main AI surface. Users can:
+Knowledge management imports documents, text, and supported web material through bounded processing paths. Company Wiki turns approved knowledge into maintained pages with receipts, corrections, links, review questions, and answer context. [Company Wiki](./company-wiki.md) distinguishes human-owned text, source notes, staff maintenance, unanswered demand, and check/report limits. A checked timestamp is not always a declaration that every claim is supported.
 
-- hold chat conversations, and start or continue threads;
-- upload files for the assistant to work with;
-- use voice-to-text input;
-- choose from the AI models an administrator has made available;
-- choose a thinking level for quicker or deeper answers;
-- draw on company knowledge automatically through the backend.
+The Reading room provides published platform content, retained articles, news, and followed people. Readership analytics is a super-admin editorial tool rather than a customer cross-company report. Keeping a news article and deleting a news story have different retained-copy effects. See [Reading room](./reading-room.md) for customer controls and the operator guide for interpretation of engagement counts.
 
-### Reports
+Personal notes, company memories, and agent memories are separate layers. A count of personal notes learned in a weekly report does not expose their contents to administrators. Account/profile and workspace settings also have different owners. The relevant guide explains how a saved note is applied and how it can be removed; no general promise that all historical prompts or records disappear follows from deleting one current memory.
 
-Hakken includes a reports area, currently covering sales reporting.
+## Tasks, Automation, And Platform Administration
 
-### Property Tools
+Customer tasks and Hakken's suggestion/task workflows track assignments and progress. Finishing an application task is a saved state change, not automatic verification of outside work. Notifications can link a person to the record needing attention. [Tasks and notifications](./tasks-and-notifications.md) and [Hakken tasks](./hakken-tasks.md) explain the different sources and audiences.
 
-For organisations using the property vertical: property search, collected
-property data, data detail pages, and collection logs.
+Platform agents and visual workflows support repeated work, limits, approvals, execution evidence, and recovery. Readiness warnings are advisory in current agent activation. Contract checks, model-graded checks, and rehearsals prove different things, and normal evaluations can invoke real runtime work. A manual workflow run uses its saved graph, while the schedule-list workflow force-run retains a simulation distinction. Use the detailed agent/workflow guides before relying on unattended side effects.
 
-### Organisation Settings
+Company administrators use Billing at `/app/settings/billing`; platform setup and oversight are super-admin tasks. Stripe handles hosted payments/invoices. Paid-company and covered-user counts differ from revenue and per-seat billing, and assigned-plan inventory value is only a formula. Supplier credits and model spend are separate again. [Plans and quotas](./platform-plans-and-quotas.md) and [Credits and usage](./credits-and-usage.md) describe those measures.
 
-Company admins get an organisation dashboard, team member management, and auth
-diagnostics.
-
-### Profile
-
-Every user has a profile area for their own account information and settings.
-
-## Admin Features
-
-### Admin Dashboard
-
-The admin dashboard gives super admins a business and client-health overview:
-projected monthly revenue against AI spend, seats in use, clients needing
-attention, recent activity, sign-in bands, plan distribution, a client table,
-and follow-up items such as pending invitations or clients without a plan.
-Detailed provider, model, and usage analysis lives in the AI cost and usage
-screens.
-
-### Company Management
-
-Super admins manage tenant companies. The company record is the foundation of
-tenant isolation. Company-level areas cover overview, users, invites,
-knowledge, AI models, AI rules, system prompt, chat logs, and widget
-configuration.
-
-### User Management
-
-Admins manage users and invitations across three roles — super admins, admins,
-and users. The backend prevents privilege escalation, particularly around
-super-admin permissions.
-
-### Super Admin Management
-
-Super admins can manage other super admins and invite new system
-administrators.
-
-### Company Impersonation
-
-Super admins can impersonate a company workspace to inspect or troubleshoot a
-tenant's experience. Impersonation is recorded server-side and written to the
-audit log.
-
-### Audit Logs
-
-Administrative actions are recorded in an audit ledger, giving the platform
-traceability for sensitive changes to users, companies, agents, rules, and
-settings.
-
-### Auth Diagnostics
-
-Diagnostics for troubleshooting login, invite, and authentication state issues.
-
-## AI Platform Features
-
-### AI Model Management
-
-Models are configured through stored records rather than hardcoded runtime
-choices, across four providers:
-
-- Google Vertex AI
-- Anthropic
-- OpenAI
-- OpenRouter
-
-Admins manage which models are available, which are default, and their
-provider configuration. The OpenRouter catalogue can be synced into the
-platform, which is what turns a handful of configured models into a large
-library.
-
-### AI Running Costs
-
-The platform tracks AI usage and estimated running costs. Admins can review
-cost dashboards, usage over time, and cost and activity leaders such as top
-companies and top users.
-
-### Global AI Rules
-
-Super admins create and manage platform-wide rules that define boundaries and
-behaviour for AI responses.
-
-### System Prompts
-
-Both global and company-specific system prompts are supported, shaping how the
-assistant and agents behave.
-
-### Knowledge Management
-
-Hakken includes a knowledge system for uploaded documents and retrieval. Knowledge
-exists at four scopes:
-
-- global knowledge, available to every tenant;
-- company knowledge, restricted to one workspace;
-- agent knowledge, bound to a specific agent;
-- chat knowledge, belonging to a single conversation.
-
-The backend stores documents, extracts their content, creates knowledge chunks,
-and applies tenant-aware filtering so knowledge cannot leak across company
-boundaries.
-
-### AI Tools And Connectors
-
-Admins define the tools and connectors agents may use. Tools carry metadata,
-schemas, handler mappings, and access controls.
-
-Tool execution is guarded: the platform validates the tool, checks permissions,
-validates the inputs, and enforces the tenant boundary before anything an AI
-model requested is allowed to run.
-
-### Agent Management
-
-Agents are configurable AI entities with their own setup — creation and
-deletion, dashboard, settings, model, system prompt, rules, schemas, knowledge,
-tools, run limits, and logs, including individual log detail pages.
-
-### Chat Logs
-
-Admins can inspect chat logs globally and per company, for monitoring,
-debugging, auditability, and cost analysis.
-
-## Workflow And Automation
-
-### Workflow Management
-
-A visual, graph-based editor for AI orchestration, using nodes and connections
-to define an automated process.
-
-### Workflow Runtime
-
-Each node runs as its own scheduled step, with state saved between steps. That
-means a workflow is not limited by any single function's execution time and
-survives a restart. Approval nodes genuinely pause a run until an administrator
-decides.
-
-### Workflow Scheduling
-
-Admins can schedule workflows and review schedule detail, so repeatable AI or
-operational tasks run automatically.
-
-## Embedded Widgets
-
-Hakken supports embeddable AI chat widgets for use outside the main app — on a
-customer website or a tenant-owned page.
-
-Widget surfaces include the public widget route, a sandbox route, admin widget
-configuration, company widget configuration, and the embed snippet.
-
-Each widget only loads on domains its owner has approved; a widget with no
-domains configured cannot be embedded anywhere, and blocked attempts are
-audit-logged.
-
-## Platform Settings And Maintenance
-
-- **System settings** — branding, routing flags, theme configuration, and
-  platform behaviour.
-- **Plans** — subscription tiers and monthly AI quotas.
-- **Analytics settings** — analytics configuration and behaviour.
-- **Maintenance scripts** — controlled operational and repair tasks.
-- **System health** — surfaces agent failures, schedule failures, stale runs,
-  overdue schedules, and other operational risks.
-
-## Security And Governance
-
-Hakken is built around strict role and tenant boundaries:
-
-- Super admins manage the whole platform.
-- Admins are scoped to their assigned company.
-- Users cannot reach administrative routes.
-- Convex queries and mutations verify role and tenant access.
-- Company data does not cross tenant boundaries.
-- Admin mutations prevent privilege escalation.
-- AI tools are validated and authorised before execution.
-- Configuration changes are auditable.
-
-The platform also carries personal-data rights handling, retention and purge
-controls, an AI register with risk classification, and exportable evidence
-packs. For the full governance picture, see
-[Governance And Trust](./governance-and-trust.md) and §11 of
-[PRODUCT.md](../../PRODUCT.md).
-
-## Technical Foundation
-
-Hakken is built with:
-
-- Next.js App Router for the frontend;
-- React for the user interface;
-- Tailwind CSS and Framer Motion for the design system and animation;
-- Convex for queries, mutations, actions, storage, scheduling, and realtime
-  data;
-- Convex document storage for the database;
-- provider-backed AI execution through Convex actions;
-- Google Cloud Run for production deployment.
-
-The dashboard presents Google Cloud, AWS, and Azure as hosting-positioning
-options for customer conversations. Those cards are positioning copy — Google
-Cloud Run is the implemented production deployment path unless a separate
-hosting migration is built and documented.
-
-## Temporary And Diagnostic Areas
-
-Some routes are temporary, diagnostic, or gated by settings:
-
-- movement demo routes;
-- movement capture and playback tools;
-- the arcade route for Ronin's Run;
-- the local test auth route.
-
-The movement demo is frozen. Do not refactor or expand it unless explicitly
-asked.
+Governance, audit, health, retention, and settings are evidence and operating controls. Reports are bounded, exports can contain sensitive records, and a successful local test does not establish a deployed deletion or provider acceptance. Known source issues are recorded in the central inventory for separate application decisions. Optional arcade/sandbox experiences remain auxiliary; Sales Data, Properties, movement/posture and Swarm screens were not found in the reviewed current routes. Their residual records require manual review before deletion. This tour was refreshed without running an app, modifying behavior, calling providers, or changing historical plans.

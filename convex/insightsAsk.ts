@@ -9,6 +9,7 @@ import { appError } from "./utils/appError";
 import { fillFacts, formatFact, type Fact } from "./utils/insightFacts";
 import { typedNumbers } from "./utils/insightEditor";
 import { GROUND_RULES, SHOP_RULE } from "./utils/insightTeam";
+import { stableStringify } from "./utils/lang";
 
 /**
  * How the Insights team asks a model (moved out of `insightsRun.ts` on 12
@@ -21,7 +22,7 @@ import { GROUND_RULES, SHOP_RULE } from "./utils/insightTeam";
 export type AskRun = { runId: Id<"agentRuns">; companyId: Id<"companies">; host: string };
 
 /** A website's weekly run, as each of its steps is given it; a shop is read in sales (I40). */
-export type InsightsRunArgs = AskRun & { holdId: Id<"companyWebsites">; shop?: boolean };
+export type InsightsRunArgs = AskRun & { holdId: Id<"companyWebsites">; shop?: boolean; chainBooking?: number; refreshReports?: boolean };
 
 /** What each step of a website's week is started with (`insightsRun.ts`, `insightsRunAfter.ts`, `insightsRunSteps.ts`). */
 export const insightsStepArgs = {
@@ -30,6 +31,8 @@ export const insightsStepArgs = {
   holdId: v.id("companyWebsites"),
   companyId: v.id("companies"),
   host: v.string(),
+  chainBooking: v.optional(v.number()),
+  refreshReports: v.optional(v.boolean()),
 };
 
 /** The ground rules every brief starts from, with a shop read in sales (I40). */
@@ -76,10 +79,20 @@ async function modelFor(ctx: ActionCtx, args: AskRun, member: TeamMember | undef
 }
 
 /** Ask the model, record the call and its cost on the run, and give back its JSON (or null). */
-export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined, what: string, system: string, prompt: string, limitMs: number = ASK_LIMIT_MS): Promise<unknown> {
+export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined, what: string, system: string, prompt: string, limitMs: number = ASK_LIMIT_MS, accepts?: (answer: unknown) => boolean, cachedOnly = false): Promise<unknown> {
+  const model = await modelFor(ctx, args, member);
+  // The system brief and resolved configuration are part of the identity: changed instructions never reuse an old answer.
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(stableStringify({ what, system, prompt, model, temperature: 0.2 })));
+  const requestKey = Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const held = await ctx.runQuery(internal.insightsRunSteps.modelAnswer, { runId: args.runId, companyId: args.companyId, requestKey });
+  if (held.answer !== null) {
+    const answer = readJson(held.answer);
+    if (!accepts || accepts(answer)) return answer;
+  }
+  if (held.failures >= 2) throw appError("UPSTREAM_FAILURE", `Two recorded attempts failed for ${what}; this run will not ask it again.`);
+  if (cachedOnly) throw appError("CONFLICT", `The prepared answer for ${what} is missing or its inputs changed. Previous completed results are kept.`);
   const spend = await ctx.runQuery(internal.roleRuns.runSpendLeft, { runId: args.runId });
   if (spend.limitReached) throw appError("CONFLICT", `The run reached its spend limit ($${spend.spentUsd.toFixed(2)}), so ${what} was not asked.`);
-  const model = await modelFor(ctx, args, member);
   let text = "";
   let tokens = { input: 0, output: 0 };
   let failed = false;
@@ -96,7 +109,8 @@ export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | und
     failed = true;
     text = failureSummary(error);
   }
-  const parsed = failed ? null : readJson(text);
+  let parsed = failed ? null : readJson(text);
+  if (accepts && !accepts(parsed)) parsed = null;
   await ctx.runMutation(internal.roleRuns.recordRunModelCall, {
     runId: args.runId,
     companyId: args.companyId,
@@ -109,8 +123,10 @@ export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | und
     promptContent: prompt,
     responseContent: text,
     failed: failed || parsed === null,
+    requestKey,
   });
   if (failed) throw appError("UPSTREAM_FAILURE", text);
+  if (parsed === null) throw appError("UPSTREAM_FAILURE", `The model did not give a complete valid answer for ${what}.`);
   return parsed;
 }
 

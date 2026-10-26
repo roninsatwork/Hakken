@@ -21,8 +21,10 @@ export type HistoryRecord = { kind: HistoryKind; month: string; from: string; to
 const RECORDS_MOST = 200;
 
 /** A website's whole history, in one bounded read. */
-export async function historyOf(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">): Promise<HistoryRecord[]> {
-  const rows = await ctx.db.query("insightHistory").withIndex("by_hold_kind_month", (q) => q.eq("companyWebsiteId", holdId)).take(RECORDS_MOST);
+export async function historyOf(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">, kinds?: readonly HistoryKind[]): Promise<HistoryRecord[]> {
+  const rows = kinds
+    ? (await Promise.all(kinds.map(async (kind) => await ctx.db.query("insightHistory").withIndex("by_hold_kind_month", (q) => q.eq("companyWebsiteId", holdId).eq("kind", kind)).take(RECORDS_MOST)))).flat()
+    : await ctx.db.query("insightHistory").withIndex("by_hold_kind_month", (q) => q.eq("companyWebsiteId", holdId)).take(RECORDS_MOST);
   return rows.map(({ kind, month, from, to, rows: lines }) => ({ kind, month, from, to, rows: lines }));
 }
 
@@ -48,8 +50,8 @@ export function sourceOf(key: string): { group: SourceGroup; name: string } {
 }
 
 /** Each page path the history names, sorted into the company's classifications; Not sorted while it has none. */
-export async function pageKindsOf(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">): Promise<(path: string) => PageKind> {
-  const kinds = await readPageKinds(ctx, holdId);
+export async function pageKindsOf(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">, options: { pages?: readonly string[] } = {}): Promise<(path: string) => PageKind> {
+  const kinds = await readPageKinds(ctx, holdId, options);
   const notSorted: PageKind = { key: NOT_SORTED_KIND, name: null, type: "NOT_SORTED" };
   const notRecorded: PageKind = { key: NOT_RECORDED_KIND, name: null, type: "NOT_RECORDED" };
   const seen = new Map<string, PageKind>();

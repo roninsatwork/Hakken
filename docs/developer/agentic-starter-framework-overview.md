@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Product extension and setup
+audience: developers and product operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/agentic-starter-framework-overview.md
+last_reviewed: '2026-10-26T15:05:19+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Agentic Starter Framework Overview
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Product extension and setup
+> **Reviewed:** 26 October 2026, 15:05:19 GMT (Europe/London)
+> **Source path:** `docs/developer/agentic-starter-framework-overview.md` · **Status:** Current
 
 This is the practical starting point for building a new governed agentic app on this foundation.
 
@@ -18,7 +33,7 @@ Hakken is a reusable foundation for agentic applications with:
 - Configurable agents with model defaults, system prompts, tools, approval policy, knowledge, runs, versions, memory, eval fixtures, and improvement suggestions.
 - A durable agent runtime that records steps, model calls, tool calls, approvals, final output, failures, cost, and latency.
 - An allowlisted tool dispatcher for internal and connector-backed handlers; execution support is handler-specific.
-- Connector install state, secret references, Gmail OAuth code exchange, encrypted token storage, refresh/revocation, diagnostics and connection logs (`convex/connectorOAuth.ts`).
+- Connector install state, secret references, generic connector OAuth code exchange, encrypted token storage, refresh/revocation, diagnostics and connection logs (`convex/connectorOAuth.ts`).
 - MCP tool-server configuration, discovery/import and governed execution (`convex/mcpServers.ts`, `convex/mcpToolCall.ts`); see [Tool Servers](./tool-servers.md).
 - [Product Setup](../operator/product-setup.md) for previewing and applying clone identity and provider requirements.
 - [Feature Generator](./feature-generator.md) for complete tenant-scoped CRUD, forms, relationships and access/navigation wiring.
@@ -135,3 +150,15 @@ git diff --check
 ```
 
 For frontend changes, start the app and inspect the changed route with the in-app browser. For Convex schema or API changes, run `npx convex codegen`.
+
+## Current Implementation And Review Boundaries
+
+These procedures describe local creation tools for an explicitly requested new product or feature. They are not authorization to generate application files during Hakken documentation maintenance. This run inspected scripts only: it did not create a clone, apply a recipe, generate a schema, install dependencies, write product defaults, create tenants or deploy anything. The current Hakken repository and its separate upstream remain distinct identities.
+
+`template.verticals.json` currently has no optional vertical definitions; base and Arcade are retained. Older instructions describing four opt-in application areas or restored Sales/Properties/movement routes do not match this checkout. Residual schema/callback compatibility must be inspected independently, and absence of a screen does not authorize deletion of historical records.
+
+Agent setup uses the current scratch Add page sharing Settings sections. The retained template API and local demo seed are different entry points, not proof the old guided builder is available. Passed evals and release policy are readiness advice in the current activation path. A recommended review checklist should never be presented as backend refusal unless the source actually enforces it.
+
+Stored configuration and catalog capability do not prove live integration acceptance. General text adapters include Google Vertex, OpenAI, Anthropic and OpenRouter; TypeSafe is Decision-only, and specific media/grounding/embedding jobs have narrower requirements. Live voice and phone paths must follow [Spoken channels](./spoken-channels.md), while Gmail mailbox polling is retired. Do not revive old features because a retained generic connector/configuration key still exists.
+
+For a real implementation task, use current [AGENTS.md](../../AGENTS.md) gates including coverage and browser smoke where required, rather than an abbreviated gate list copied into an old checklist. Product intent/acceptance changes need their own agreement. Local source/tests, generated test files and a passing configuration validator are separate from a deployed provider/account accepting the actual customer workflow.

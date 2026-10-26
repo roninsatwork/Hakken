@@ -70,6 +70,8 @@ function stepFunction(chain: StepChain) {
       return internal.searchConsoleSteps.fillSiteStep;
     case "SC_SETTLE":
       return internal.searchConsoleSettle.settlePart;
+    case "INSIGHTS":
+      return internal.insightsRunWorker.continueRun;
   }
 }
 
@@ -151,7 +153,7 @@ const bookingArgs = {
  * A step's memory noted (RR5): the chain's peak kept, and a warning line on the
  * run past half of what a step may hold — once a run, at its first step past it.
  */
-async function noteMemory(ctx: MutationCtx, held: Doc<"collectionSteps">, memory: number | undefined, now: number): Promise<number | undefined> {
+export async function noteStepMemory(ctx: MutationCtx, held: Doc<"collectionSteps">, memory: number | undefined, now: number): Promise<number | undefined> {
   if (memory === undefined) return held.peakMb;
   const peak = Math.max(held.peakMb ?? 0, memory);
   if (memory > MEMORY_WARNING_MB && (held.peakMb ?? 0) <= MEMORY_WARNING_MB && held.runId) {
@@ -182,7 +184,7 @@ export const handOn = internalMutation({
     const { from, memoryMb, ...booking } = args;
     const held = await stepOf(ctx, booking.key);
     if (from !== undefined && (!held || held.booking !== from || held.closedAt !== undefined)) return false;
-    if (held) await noteMemory(ctx, held, memoryMb, Date.now());
+    if (held) await noteStepMemory(ctx, held, memoryMb, Date.now());
     await bookStep(ctx, { ...booking, args: withoutBooking(booking.args) });
     return true;
   },
@@ -238,7 +240,7 @@ export const notePlace = internalMutation({
     const held = await stepOf(ctx, args.key);
     if (!held || held.closedAt !== undefined || held.booking !== args.booking) return false;
     const now = Date.now();
-    await noteMemory(ctx, held, args.memoryMb, now);
+    await noteStepMemory(ctx, held, args.memoryMb, now);
     await ctx.db.patch(held._id, {
       args: { ...withoutBooking(args.args), booking: args.booking },
       place: args.place,
@@ -266,7 +268,7 @@ export const closeChain = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const held = await stepOf(ctx, args.key);
-    if (held && held.closedAt === undefined) await noteMemory(ctx, held, args.memoryMb, Date.now());
+    if (held && held.closedAt === undefined) await noteStepMemory(ctx, held, args.memoryMb, Date.now());
     await closeStep(ctx, args.key, args.booking);
     return null;
   },

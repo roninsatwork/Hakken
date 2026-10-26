@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: spoken channels
+audience: workspace users, operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/spoken-channels.md
+last_reviewed: '2026-10-26T10:22:32+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Spoken Channels
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Spoken channels
+> **Reviewed:** 26 October 2026, 10:22:32 GMT (Europe/London)
+> **Source path:** `docs/developer/spoken-channels.md` · **Status:** Current
 
 Spoken Channels cover real-time voice in Ask Hakken, inbound telephony, call records, the receptionist screen, the shared spoken voice setting, and the voice relay knowledge endpoint. They are implemented across `convex/aiVoiceSession.ts`, `convex/voiceRelay.ts`, `convex/voiceSettings.ts`, `convex/voicePreview.ts`, `convex/telephony.ts`, `convex/telephonyActions.ts`, `convex/telephonyService.ts`, `convex/kiosk.ts`, `convex/kioskActions.ts`, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, and the `/app/calls`, `/app/reception`, `/kiosk/[widgetId]`, and `/admin/ai/voice` routes.
 
@@ -133,13 +148,13 @@ The connector path uses `TWILIO_VOICE_CONNECTOR_KEY` and `TWILIO_AUTH_TOKEN_SECR
 
 - summarizes the call using the configured `fast-chat` model
 - falls back to a plain transcript task summary if the model call fails
-- matches the caller against `salesDataCustomers.phone` or `mobile` after number normalization
+- calls `customerIdentity.customerKeyForPhone`; the current lookup registry is empty, so this returns null rather than reading a delivered CRM table
 - assigns the follow-up to a company admin or the earliest company member
 - creates a task through `internal.tasks.createTaskInternal`
 - writes the summary and optional task id back to the call row
 - schedules `internal.wikiActions.rewriteCustomerPageAfterEvent` for matched customers
 
-Each step degrades independently. Do not make task creation, Wiki rewrite, or summary generation a reason to lose the call record or transcript.
+Summary and task errors are caught locally; customer matching and assignee lookup are not independently caught in this action. Do not make task creation, Wiki rewrite, or summary generation a reason to lose the call record or transcript.
 
 ## Spoken Voice Setting
 
@@ -155,7 +170,7 @@ The Receptionist screen is the kiosk version of Hakken's live voice experience.
 It uses a widget's company, linked agent, and branding, but opens as a top-level
 Hakken page instead of an iframe. `convex/kioskActions.ts` creates Google relay
 tickets for anonymous kiosk visitors after `convex/kiosk.ts` validates the
-widget token. Ticket minting holds one pending slot; only relay redemption
+widget token. Ticket minting holds no shared pending slot; relay redemption
 increments the hourly/lifetime session counters and converts it to an active
 lease. Open-mic silence is not a turn. Each completed voice turn consumes one
 unit from the company plan through the relay control endpoint, and the next
@@ -213,4 +228,26 @@ Preserve these invariants:
 - Voice relay tickets are signed by the platform, redeemed once before provider access, and verified before knowledge or transcript writes.
 - Phone calls spend from company conversation allowance, not a hidden separate unlimited budget.
 - Post-call failures must not erase the transcript.
-- Spoken voice is one company setting shared by Ask Hakken, phone, and reception.
+- The Google relay paths share the company spoken voice; direct OpenAI defaults to its provider voice separately.
+
+## Current Transport, Configuration And Persistence Differences
+
+`createRealtimeVoiceSession` first loads the thread and requires caller ownership plus current-workspace compatibility, then reserves ten session requests per minute. It resolves the realtime job without company scope. Google mints an encrypted one-minute relay ticket containing trusted instructions/tool declarations; OpenAI calls the client-secret endpoint and returns the provider’s restricted session credential for WebRTC. Google reads company `spokenVoice`; OpenAI currently uses an explicit argument or `marin`. Its input transcription model remains a source literal. These differences are implementation evidence to report, not invitations to change runtime configuration in a documentation pass.
+
+The Google relay's session cap is fifteen minutes, its caller WebSocket frame cap 128 KiB and its initial authentication deadline five seconds. Only `/`, `/live` and `/twilio` select public protocol doors. Knowledge calls have an eight-second relay wait, while backend lookup admission limits ten per minute and sixty per redeemed session. The one-time ticket, relay-only HMAC, persisted redemption and local replay guard solve different parts of admission; do not describe browser possession of a ticket as authority for direct knowledge calls.
+
+`RealtimeVoiceOverlay.flushTurn` catches transcript-save failures and lets speech continue. `chat.recordVoiceTurn` checks thread access, trims text, inserts message rows and updates the thread; its assistant `providerKey` is currently fixed to OpenAI regardless of transport. It does not run the ordinary text-send quota path. `recordVoiceUsage` separately clamps browser-reported counts and writes Assistant spend for direct OpenAI replies. Google close accounting records once through the redeemed-session control path; loss of close delivery can lose that cost row. Neither writer is a provider invoice reconciliation or a universal deduplication guarantee for repeated browser reports.
+
+## Telephone Admission And Post-Call Failure Boundaries
+
+`admitCall` reads the newest hundred company calls. Defaults are four concurrent rows and six calls from a normalized number in an hour, configurable through the named environment ceilings. It then increments finite-plan message usage. `upsertCallOnAnswer` deduplicates by provider call ID later in the HTTP path; this does not make admission itself idempotent per call. Ticket creation errors after charging return spoken refusal without an inspected refund path. Do not claim successful admission means a provider conversation completed or a refused later handshake consumed no allowance.
+
+Terminal status callbacks use `markCallEnded`, which ignores already terminal rows and schedules the after-call action only for a newly ended call. Transcript callbacks validate authentic encrypted company tickets and call-company equality but do not use the knowledge endpoint’s separate relay HMAC/redemption gate. They accept up to forty turns per request, two thousand characters per turn and four hundred call turns, with append semantics rather than a turn-level dedupe key.
+
+`runAfterCallStep` skips silent calls, summarizes at most twelve thousand characters on fast-chat and catches summary failure. Its task detail combines summary with up to six thousand transcript characters, exceeding `tasks.assertValidTaskFields`' two-thousand-character detail cap for longer calls. Task failure is caught; summary attachment proceeds if intervening matching/assignee calls succeeded. `customerIdentity.ts` has no registered phone/email lookup in this checkout, so matching and match-driven customer Wiki handoff are hooks rather than a functioning CRM integration. Preserve the transcript as evidence and report missing follow-up explicitly.
+
+Call list/detail use the calls module and active-company equality. The list returns at most fifty masked rows; detail intentionally returns the full caller number and transcript. Other fields can still contain PII, so masked caller numbers do not make a public display automatically safe. No complete phone-record retention/erasure contract was established in this source review.
+
+## Verification Scope
+
+The existing tests describe admission, ticket forgery/replay, lookup quota, transcript bounds and after-call behavior. They were inspected and not run. Relay code and backend source were read without opening a socket or resolving credentials. Product acceptance still requires a separately authorized coordinated backend/relay deployment and real provider checks; this documentation does not assert either occurred. Detailed reception admission is covered in the [Receptionist Screen](./receptionist-screen.md) pair.

@@ -1,8 +1,20 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Company AI readiness and checks
+audience: developer
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/company-ai-readiness-and-checks.md
+last_reviewed: '2026-10-26T14:37:23+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Company AI Readiness And Checks Developer Guide
 
-Last reviewed: 2026-08-22 01:00 BST +0100
-Status: current; related readiness and checks plans are still active
-Audience: engineers and agents changing company AI readiness, checks, memory, skills, drift, or company AI routes.
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Company AI readiness and checks
+> **Reviewed:** 26 October 2026, 14:37:23 GMT (Europe/London)
+> **Source path:** `docs/developer/company-ai-readiness-and-checks.md` · **Status:** Current
+
 
 ## Implementation Scope
 
@@ -272,3 +284,25 @@ git diff --check
 Also verify the browser paths for overview, checks, memory, skills, and model
 routing because the area states are meant to be understandable to non-technical
 admins.
+
+## Reviewed Readiness Projection And Limits
+
+`companyReadiness.getCompanyAiReadiness` is an admin query that calls `requireCompanyAccess`, builds the eight area rows, and derives READY only when no row is NEEDS_ATTENTION. It is not a deployment gate or model-quality score. The projection reads knowledge 500, active rules 200, approved/proposed memory 1,000 each, skills 1,000, enabled bindings up to 1,000 per surface, active evals 1,000, and unresolved drift 100. `formatCount` exposes a plus sign at supported caps; do not turn the projection into exact lifetime inventory.
+
+Skills are considered unsafe only when actively bound and meeting the implemented missing-tools/policy conditions; parsing an approval-policy JSON value is not external enforcement proof. Never-run cases are counted independently of passes. Only failing BLOCKER cases drive that check warning branch, while never-run cases can remain SET_HERE with explanatory text. The newest created widget supplies the widget summary, and saved `isActive` is not a live health probe.
+
+`recordCompanyAiDriftEvent` inserts typed source changes. Automatic resolution reads at most 1,000 unresolved rows; explicit `resolveDriftEvents` can narrow by source after the bounded read. Resolving is an audited state transition and does not by itself execute a model or prove a passing eval. Preserve this distinction in readiness and support language.
+
+## Current Company Evaluation Execution
+
+Public admin actions are `companyEvalRuns.runCheck` and `runBatch`, with company authorization before the Node worker. `companyEvalRunActions.runCompanyCheck` loads an active case, creates an EVAL-purpose thread, and calls `hakkenAssistant.answerInternal`. It records answer evidence from the runtime, then chooses a text-capable grader, preferring independence. Sample count is clamped one through five and the loop can stop after failure. Empty answers fail without spending a judge call; exceptions record not-tested evidence with no invented verdict.
+
+`companyEvals` limits names to 140 characters, prompt/expected behavior to 4,000 each, answers to 12,000, and JSON evidence fields to 8,000. Batch selection is 100 cases, summary reads are 2,000, and must-pass/starter scans take 200. Estimates use two provider calls per sample but actual runtime tools/retrieval can add work. Required-source/memory/skill grading depends on runtime IDs that reached the model, not a search against answer wording alone. A WIDGET target label does not create a real widget session in the worker; all supported labels must be interpreted through the actual answer entry point.
+
+Graded results store model/token/cost evidence in USD. Deleting a case removes at most 500 run records before the parent; it is not an unbounded cascade proof. Check archives, cases, run evidence, and EVAL threads have separate lifecycle ownership. This pass performed no eval, side effect, or privacy erasure operation.
+
+## Central Skills And Memory Application
+
+`companySkills` imports links from the active central catalog rather than supporting independent arbitrary local instruction editing. Runtime `sourceAgentSkillId` resolution uses current central name/instruction/category/risk, excludes missing/archived central records, and returns at most `MAX_SKILLS_PER_COMPANY` (two) with an isCapped flag when appropriate. A central replacement can affect linked tenants without a separate copy synchronization task.
+
+`companyMemories` separates ALWAYS from WHEN_RELEVANT. `MAX_ALWAYS_MEMORIES` is five, and legacy unstamped rows are resolved through application-mode defaults before the final cap. The company suggestion path shares safety, duplicate, rejection-fingerprint, and autonomous-memory policy. Those are distinct from agent skill versions and from the requesting administrator's private notes. Source tests in companyReadiness, companyEvals, companySkills, companyMemories, and suggestion modules provide local examples, not exhaustive live acceptance. No provider or saved-data operation ran during this review.

@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: MCP tool servers
+audience: company admins, platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/tool-servers.md
+last_reviewed: '2026-10-26T10:03:16+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Tool Servers
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** MCP tool servers
+> **Reviewed:** 26 October 2026, 10:03:16 GMT (Europe/London)
+> **Source path:** `docs/developer/tool-servers.md` · **Status:** Current
 
 A tool server is an address that publishes its own list of tools. A company
 connects one, and the tools it offers become tools an agent can be given —
@@ -135,11 +150,11 @@ The approval message tells the reviewer the request leaves the platform.
 Three names, three jobs, and they are not interchangeable:
 
 - `name` — the administrator's label. Screens only.
-- `modelName` — what the model is offered. Chosen, unique, never derived.
+- `modelName` — what the model is offered. The import path currently assigns the generated prefixed name explicitly.
 - `handlerMapping` — where the call is routed. Internal.
 
 Imported tools get a model name prefixed by their server (`finance_get_invoice`)
-so two servers offering `search` stay apart, and `mcpToolName` holds what the
+to distinguish servers offering `search`, subject to normalization and collision checks, and `mcpToolName` holds what the
 server itself calls it. All of them route through the single `mcp.call` entry on
 the dispatcher's allowlist.
 
@@ -179,3 +194,19 @@ Existing authenticated servers need operator grants when deploying this change.
 Anonymous (`NONE`) servers do not. No grants are created automatically. Connector
 and MCP responses must be uncompressed; the transport requests identity encoding
 and rejects encoded responses. Workflow HTTP uses the same pinned transport.
+
+## Current CRUD And Rebuild Boundaries
+
+`listServers` uses `adminQuery` plus `requireTenant` and reads at most one hundred rows through `by_company`. Platform read-only accounts pass the builder but still need an active company for that list. Server reads/writes use `requireOwnServer`; super admins have the handler's explicit exception, while scoped callers must match ownership. `createServer` validates name, normalized URL, coherent authentication/reference and duplicate naming, then creates DISABLED without network activity. The current CRUD mutations do not write a universal audit event for every operation; do not invent one in operator acceptance notes.
+
+`rebuildServerTools` removes the old imported set, then creates new `aiTools` rows from discovered entries. It assigns company/server ownership, supplier `mcpToolName`, generated `modelName`, schemas and `mcp.call` mapping, plus the conservative imported defaults. Normalized-name collisions within the rebuild are skipped. Reimport is replacement, not an idempotent patch preserving classifications or bindings. `removeServerTools` reads at most two hundred tools and at most two hundred bindings per tool. `deleteServer` also removes at most two hundred discovery rows. Those caps require follow-up for oversized historical data rather than a complete unbounded-cascade claim.
+
+`discoverServerTools` uses an admin action and checks company access before obtaining operator-approved credential authorization. It negotiates a session and follows a bounded tool list. Discovery failures record an error state; imported tool execution still requires CONNECTED state. A recorded list and an enabled server are different state transitions. Secrets remain backend references; the grant compares the exact normalized URL, including path and query.
+
+`callServerTool` rechecks company ownership from its trusted run argument against the tool/server, validates the schema, resolves the grant and normalizes the URL before opening a session. Returned text uses `buildUntrustedToolResult`; structured data can also be returned in the internal result shape. The reviewed function itself does not reread every runtime enablement or approval condition: the caller's dispatch and approval path remain part of the full contract. Do not describe a standalone internal helper as the entire security boundary.
+
+## Transport Evidence And Review Scope
+
+`mcpTransport.postJsonRpc` delegates to `internal.outboundHttp.request`, carrying protocol/session headers and expected request identity. The shared Node transport bounds response bytes and time, rejects redirects and encoded responses, and applies DNS/address protections. The existing transport tests are relevant source evidence, but were not executed for this refresh. No DNS lookup, discovery, provider credential resolution or actual external tool call was performed.
+
+This pair covers MCP server lifecycle, promotion, call policy and transport boundaries. Generic connector OAuth, HTTP connector definitions and other AI tools are separate capabilities whose guides still need review. Platform source naming and local tests do not prove the accepted external rename cutover is complete. Historical tool-server plans remain unchanged and must not be presented as live acceptance evidence.

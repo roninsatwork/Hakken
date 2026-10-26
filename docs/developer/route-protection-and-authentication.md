@@ -1,6 +1,21 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: authentication and access
+audience: developers and operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/route-protection-and-authentication.md
+last_reviewed: '2026-10-26T09:42:59+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Route Protection And Authentication Developer Guide
 
-Route protection and authentication in Hakken are implemented through Convex Auth providers, client-side layout guards, deterministic test-auth helpers, Next.js route aliases/security headers, and backend Convex authorization checks. There is currently no root `middleware.ts`; route access is enforced by app layouts and by every sensitive query, mutation, and action.
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Authentication and access
+> **Reviewed:** 26 October 2026, 09:42:59 GMT (Europe/London)
+> **Source path:** `docs/developer/route-protection-and-authentication.md` · **Status:** Current
+
+Route protection and authentication in Hakken are implemented through Convex Auth providers, client-side layout guards, deterministic test-auth helpers, Next.js route aliases/security headers, and backend Convex authorization checks. `src/proxy.ts` supplies the Next.js request boundary, app layouts apply role-aware navigation, and sensitive Convex handlers enforce backend authorization. The absence of a root `middleware.ts` does not mean request protection is absent.
 
 Read this before changing `next.config.ts`, `convex/auth.ts`, `convex/authUserProvisioning.ts`, `convex/authEvents.ts`, `convex/authz.ts`, `convex/actionAuth.ts`, `convex/localTestAuth.ts`, `convex/oneTimeCodes.ts`, `convex/magicLinkUrlService.ts`, `src/app/login/page.tsx`, `src/app/verify/page.tsx`, dashboard layouts, admin layouts, or E2E auth helpers. For support diagnostics events, see [Auth Diagnostics](./auth-diagnostics.md). For user and invite lifecycle rules, see [Company And User Management](./company-user-management.md).
 
@@ -10,6 +25,7 @@ Read this before changing `next.config.ts`, `convex/auth.ts`, `convex/authUserPr
 
 - Google sign-in through `@auth/core/providers/google`
 - Resend email magic links through `@auth/core/providers/resend`
+- typed codes through Convex Auth `Email`, with provider ID `one-time-code`
 - an optional local-test credentials provider when local test auth is explicitly enabled
 
 The auth callback `createOrUpdateUser` is `createOrUpdateHakkenAuthUser` from `convex/authUserProvisioning.ts`. That callback is the invite-only provisioning gate for real auth providers.
@@ -20,8 +36,8 @@ The auth callback `createOrUpdateUser` is `createOrUpdateHakkenAuthUser` from `c
 
 `src/app/login/page.tsx` is the public login screen. It supports:
 
-- Google sign-in with `signIn("google", { redirectTo: "/app" })`
-- email magic-link sign-in with `signIn("resend", { email, redirectTo: "/app" })`
+- Google sign-in with `signIn("google", { redirectTo })`
+- email magic-link sign-in with `signIn("resend", { email, redirectTo })`
 - typed one-time-code sign-in through public `oneTimeCodes` mutations
 - preflight auth diagnostics through `api.authEvents.recordMagicLinkRequestAttempt`
 
@@ -32,7 +48,7 @@ If diagnostics logging fails, the login page catches that failure and still proc
 The actual send boundary is the exported `auth:signIn` action in
 `convex/auth.ts`. Before either `resend` or `one-time-code` invokes its email
 provider, it atomically calls `internal.authEvents.reserveAuthEmailSend`.
-Magic links and codes share a five-send rolling 15-minute limit and a 30-send
+The reservation occurs before eligibility checks, so an admitted reservation is not proof of an actual mail send. `canStartEmailSignIn` returns a generic refusal for unknown, revoked, expired or ambiguous new identities before invoking the provider. Magic links and codes share a five-send rolling 15-minute limit and a 30-send
 hourly limit per normalized address, plus a 60-send-per-minute platform
 backstop. A refused call returns the same generic `started` shape and never
 invokes the provider. The page-level checks remain useful early feedback and
@@ -53,12 +69,11 @@ page.
 
 `convex/oneTimeCodes.ts` supports typed code sign-in with one public mutation for
 request throttling. The rules live in `convex/oneTimeCodeService.ts`: six digits,
-ten-minute expiry, five attempts, a five-request rolling window per email, an
+ten-minute configured provider expiry, a five-request rolling window per email, an
 hourly per-email cap, and a 60-request-per-minute global backstop. Successful
 verification is recorded only by the trusted Convex Auth callback in
 `convex/authUserProvisioning.ts`; the browser cannot submit success or failure
-telemetry for an arbitrary address. The code path is deliberately immune to link
-scanners because there is no link in the email that can spend the code.
+telemetry for an arbitrary address. The emailed code contains no redemption link for scanners to follow. `checkCode` and `MAX_ATTEMPTS` describe a five-attempt helper rule, but the current login path submits directly to Convex Auth rather than calling that helper. Do not claim that helper alone proves the provider enforces five attempts. Provider-specific verification behavior needs separate runtime/library evidence. The UI normalizes input and reports a generic incorrect-code message on framework failure.
 
 ## Invite-Only Provisioning
 
@@ -69,7 +84,8 @@ It extracts email, name, and image from provider payloads, lowercases the email,
 - returns existing users and logs `USER_FOUND`
 - logs `MAGIC_LINK_STARTED` for unverified email-provider starts
 - logs `ONE_TIME_CODE_VERIFIED` only after the one-time-code provider verifies the email
-- accepts pending invites only after the provider reports a verified email
+- accepts compatible pending invites after verified email or OAuth/OIDC authentication; OAuth is treated as verified because Google’s mapped profile omits the email verification flag
+- rejects ambiguous canonical users or invitations, missing linked identities, linked-email mismatch and cross-workspace pending invitations
 - creates the initial super admin when `INITIAL_SUPER_ADMIN_EMAIL` matches
 - rejects new users without an invitation
 - rejects expired pending invites after seven days
@@ -96,7 +112,7 @@ Public magic-link attempts call `recordMagicLinkRequestAttempt`, which records:
 - `INVITE_EXPIRED`
 - `INVITE_STALE_ACCEPTED_RECOVERED`
 
-Provisioning callbacks record additional events such as `MAGIC_LINK_STARTED` and `MAGIC_LINK_VERIFIED`.
+Provisioning callbacks record additional events such as `MAGIC_LINK_STARTED`, `MAGIC_LINK_VERIFIED`, `ONE_TIME_CODE_VERIFIED` and `OAUTH_VERIFIED`. OAuth acceptance must not be recorded as if a magic link was sent.
 `AUTH_EMAIL_SEND_RESERVED` records an admitted provider send at the server
 boundary; it deliberately covers both link and code providers.
 
@@ -119,7 +135,7 @@ The root layout wraps the app with:
 
 `src/app/(dashboard)/layout.tsx` provides the authenticated dashboard shell and sidebar. It does not itself perform role checks.
 
-`src/app/(dashboard)/admin/layout.tsx` is the main admin route guard. It reads `api.users.getMe`, redirects non-super-admin users to `/app`, and returns `null` while loading or redirecting to prevent admin UI flashing.
+`src/app/(dashboard)/admin/layout.tsx` is the main admin route guard. It reads `api.users.getMe`, admits `SUPER_ADMIN` and `READ_ONLY`, admits `AUDITOR` only under `/admin/governance`, and returns `null` while loading or redirecting to prevent admin UI flashing. Auditors elsewhere go to Governance; other rejected roles go to `/app`. `AccessLevelProvider` removes write controls from oversight roles; the backend independently rejects writes.
 
 Several nested admin layouts and pages also read `api.users.getMe` or use backend super-admin queries. These are secondary UI protections. Backend Convex authorization remains mandatory.
 
@@ -153,7 +169,7 @@ Do not authorize sensitive behavior with UI checks alone. Every privileged Conve
 3. It records user agent, IP, and location through `api.users.recordLogin`.
 4. If the IP lookup fails, it records concealed or unknown fallback values.
 
-`recordLogin` throttles repeated identical device/IP rows for 60 minutes and writes `SYSTEM_AUTHENTICATION` audit logs for admin and super-admin users.
+`recordLogin` collapses records from the same device within 60 minutes regardless of IP, updates `lastLoginAt` only on insert, and writes `SYSTEM_AUTHENTICATION` audit logs for every inserted user session. It also records the reader language. The IP lookup is aborted after 1.5 seconds and falls back to unknown values. This best-effort telemetry is not the authentication authority. Explicit logout audits remain restricted to admin and super-admin users.
 
 Logout calls `api.users.recordLogout`, then Convex Auth `signOut`, then hard-navigates to `/`. The hard navigation is intentional so logout still leaves deep admin pages even if auth loss triggers a client-side exception.
 
@@ -172,7 +188,7 @@ Local test auth is intentionally gated. The credentials provider is added only w
 
 `api.localTestAuth.seed` creates or updates a deterministic `Local Test Company` and three deterministic users. `internal.localTestAuth.authorize` verifies the shared secret, checks that the requested user exists with the expected role, and ensures tenant users have a company.
 
-This provider must never be enabled in production. Tests assert that it fails closed unless the environment is explicitly labelled local.
+This provider must never be enabled in production. The guard checks explicit local enablement, the local label and the configured shared secret. Unlike the E2E runtime helper, this guard does not separately inspect `NODE_ENV`; do not claim that a production runtime independently overrides mislabelled local settings. No seed or cleanup was invoked in this review.
 
 ## E2E Mock Auth
 
@@ -189,7 +205,7 @@ This is not the same as Convex local test auth. E2E mock auth requires both serv
 Current implemented redirects include:
 
 - `/app` redirects super admins to `/admin` once per session.
-- `/admin` routes redirect non-super-admin users to `/app` through the admin layout.
+- `/admin` admits platform operators and read-only accounts; auditors reach Governance, and other rejected roles return to `/app`.
 - `/admin/agents/skills` redirects exactly to `/admin/ai/skills` through
   `src/lib/legacyAdminRedirect.ts`; nested paths under the old address are not
   redirected.
@@ -226,7 +242,8 @@ Preserve these boundaries:
 
 - Public login must not reveal whether an email has a user or invite.
 - New real-auth users require an invite unless they match `INITIAL_SUPER_ADMIN_EMAIL`.
-- Admin UI routes are super-admin-only under `/admin`.
+- Admin write access remains privileged; read-only accounts can inspect allowed Admin surfaces and auditors are restricted to Governance.
+- `superAdminQuery` includes `READ_ONLY`, while `superAdminMutation` admits `SUPER_ADMIN` alone. Company-specific read handlers may impose further scoping.
 - Tenant admins work from `/app/settings` routes and backend-scoped mutations.
 - Company admins must not see unscoped or cross-company auth events.
 - Local test auth must fail closed when disabled or marked production.
@@ -246,12 +263,12 @@ Focused tests include:
 - `convex/localTestAuth.test.ts` for deterministic seeding, secret validation, and fail-closed behavior.
 - `e2e/auth-journey.spec.ts`, `e2e/auth.setup.ts`, and `e2e/helpers/auth.ts` for deterministic browser auth route journeys.
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+The focused test sources were inspected, not executed. This documentation pass used Markdown checks and `git diff --check`; it did not run browser authentication, seed accounts, send mail, or inspect live sessions. Before implementation merges or pushes, use the current full gates in AGENTS.md rather than a shortened copied command list.
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Request Boundary And Identity Limits
+
+`src/proxy.ts` checks authentication for `/app` and `/admin`, sends anonymous requests to `/login?redirectTo=…`, and sends signed-in requests away from `/` and `/login`. `sanitizeAuthRedirect` accepts only local `/app` or `/admin` paths, preserving safe query/hash values and falling back to `/app` for external or unrelated destinations. Request authentication does not determine the user's role; the layout and backend still do that. Widget frame policy runs before these branches and is covered separately in the widget guides.
+
+`usersForCanonicalEmail` combines the exact email index with a bounded legacy search fallback, filters canonical matches, and detects ambiguous identities. It reads up to three exact rows and one hundred search candidates. Invitations use `by_email`; preflight and provisioning refuse multiple matches rather than selecting arbitrarily. Existing-user handling occurs before new-invite expiry checks. `acceptPendingInvite` checks workspace compatibility, whereas the seven-day pending expiry rule is applied to new-user provisioning. Preserve this distinction when changing support copy.
+
+The auth tables and session lifecycle are managed by Convex Auth. This review does not establish a custom maximum session lifetime or a universal account-deletion retention guarantee. Read user lifecycle and identity-purge implementation before making either claim. Auth diagnostic events use `by_type`, `by_email_type_timestamp`, `by_timestamp`, and company-scoped indexes for bounded reads. A retained event is evidence of that stage, not proof that all subsequent provider and session operations succeeded.

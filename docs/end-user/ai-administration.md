@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: AI administration
+audience: end-user
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/ai-administration.md
+last_reviewed: '2026-10-26T14:50:15+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # AI Administration
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** AI administration
+> **Reviewed:** 26 October 2026, 14:50:15 GMT (Europe/London)
+> **Source path:** `docs/end-user/ai-administration.md` · **Status:** Current
 
 AI administration is where Hakken operators govern the assistant, agent, workflow, widget, and model behavior that users experience across the platform. These controls decide which AI engines are available, which model is used by default for each use case, what global and company prompts apply, which rules are active, what knowledge can be retrieved, which tools and connectors agents may use, how embedded widgets look, and how cost and chat activity are monitored.
 
@@ -54,7 +69,7 @@ When troubleshooting AI behavior, review the layers in this order: user or compa
 
 ## Models, Providers, And Defaults
 
-The model screen manages available AI models. It includes provider controls for Google Vertex AI, OpenAI, Anthropic, and OpenRouter. Operators can sync supported model catalogs from those providers, test provider connectivity, enable or disable a provider, search and filter models, and enable or disable individual models.
+The model screen manages available AI models. It includes provider controls for Google Vertex AI, OpenAI, Anthropic, OpenRouter, and TypeSafe for Decisions. Operators can sync supported model catalogs from those providers, test provider connectivity, enable or disable a provider, search and filter models, and enable or disable individual models.
 
 Models can be filtered by active or inactive status, provider, capability, and supported use case. Capabilities include text, reasoning, vision, audio, tool calling, JSON mode, streaming, embeddings, and transcription. Use cases include chat, agent, workflow, report, router, title, embedding, transcription, real-time voice, vision, and tool calling.
 
@@ -132,3 +147,13 @@ Change one layer at a time when possible. If a tenant wants different behavior, 
 Before enabling a new model or provider for production use, confirm provider connectivity, supported use cases, pricing values, and a simple assistant test. Before exposing a widget, confirm allowed domains, greeting, gateway requirements, and sandbox behavior. Before enabling tools for agents, confirm side-effect levels, role requirements, schemas, and approval behavior.
 
 AI administration changes can affect live users quickly. Make the smallest clear change, test the affected user journey, and leave enough context for the next operator to understand why it changed.
+
+## Current Detailed Contracts
+
+The broad AI area includes model configuration, Decisions, rules, knowledge, company/agent context, tools, channels, usage and evidence. Read [models and Decisions](./ai-models-providers-and-costs.md), [rules and prompts](./ai-rules-and-prompts.md), and [company readiness](./company-ai-readiness-and-checks.md) for the current boundaries. Catalog sync uses live listing and can enable a provider; a connection probe updates health without enabling it. Neither proves every model or feature works. TypeSafe is Decision-only, while supported text adapters can serve configured Decisions with stricter confidence treatment.
+
+Agent creation uses its current Add page, and readiness checks are advisory. Markdown skill upload can update/roll out a matching active skill; runtime instruction text is not universally frozen by a saved version pointer. Autonomous memory and human-approved suggestions have distinct application rules. Contract-only evaluation, normal model-graded evaluation, and explicitly labeled rehearsal have different costs and effect contracts. Use the detailed agent guides before treating a successful check as production acceptance.
+
+Widget embedding uses server framing policy and signed/session credentials in addition to browser presentation. Upload issuance has its own bound, and reset is not backend erasure. Global prompt and company prompt write authority is narrower than ordinary company rule administration. Known rule-list and subject-access discrepancies are documented for separate application repair rather than hidden behind a general security claim.
+
+Supplier model spend is USD and Decision calls have a separate accounting ledger. Company plan value, Stripe paid-company/covered-user counts, and collected revenue are different measures. Usage snapshots and current-day data have bounded coverage; provider distribution can be derived from stored model metrics through the current catalog. None of these admin reports proves external rename cutover or live deployment acceptance. No AI configuration, prompt, skill, memory, model, check, or provider state was changed in this documentation pass.

@@ -28,7 +28,7 @@ Arcade remains part of the framework.
   opened from **Billing in the normal user sidebar**, as well as Company Settings.
   Company admins have **zero access to platform Admin**. Members, read-only users and impersonating
   platform administrators cannot purchase or open another company's portal.
-- Webhook signatures and provider mirrors use `@convex-dev/stripe` 0.1.6.
+- Webhook signatures and provider mirrors use `@convex-dev/stripe` 0.1.7.
   Stripe SDK 22.6.2 is pinned (the newest 22; Hakken still sends the API version below, though the SDK is
   typed for 2026-08-26.dahlia, and 23 moves to 2026-09-30.endive, a billing decision of its own); configure the endpoint API version as
   **2026-05-27.dahlia**. Hakken additionally caps webhook bodies at 256 KiB and
@@ -349,8 +349,9 @@ records, not an invoice ledger or proof of live Stripe acceptance.
 The webhook adapter uses the pinned Convex registered handler's `_handler`
 bridge because the component currently reads an unbounded body itself. Its
 installed-package signature/mirror tests must pass when upgrading Convex or
-the component. The package's advertised `/test` export is absent in 0.1.6, so
-the tests register its published component sources directly.
+the component. The tests register the component's published sources directly, following the
+missing `/test` export encountered with 0.1.6. Recheck the adapter and fixtures
+against the current 0.1.7 pin when upgrading; the older observation is historical.
 
 Local verification evidence is recorded in the
 [foundations plan](../plans/active/product-building-foundations-plan.md).

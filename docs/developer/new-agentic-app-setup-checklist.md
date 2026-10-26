@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer checklist
+feature_area: Product extension and setup
+audience: developers and product operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/new-agentic-app-setup-checklist.md
+last_reviewed: '2026-10-26T15:05:19+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # New Agentic App Setup Checklist
+
+> **Product:** Hakken · **Document type:** Developer checklist · **Feature area:** Product extension and setup
+> **Reviewed:** 26 October 2026, 15:05:19 GMT (Europe/London)
+> **Source path:** `docs/developer/new-agentic-app-setup-checklist.md` · **Status:** Current
 
 Use this checklist when creating a new customer setup, demo tenant, or vertical app on top of the Hakken foundation.
 
@@ -171,3 +186,15 @@ Record:
 - Workflow ids and activation status, if applicable.
 - Smoke eval run ids.
 - Known gaps or intentionally deferred production credentials.
+
+## Current Implementation And Review Boundaries
+
+These procedures describe local creation tools for an explicitly requested new product or feature. They are not authorization to generate application files during Hakken documentation maintenance. This run inspected scripts only: it did not create a clone, apply a recipe, generate a schema, install dependencies, write product defaults, create tenants or deploy anything. The current Hakken repository and its separate upstream remain distinct identities.
+
+`template.verticals.json` currently has no optional vertical definitions; base and Arcade are retained. Older instructions describing four opt-in application areas or restored Sales/Properties/movement routes do not match this checkout. Residual schema/callback compatibility must be inspected independently, and absence of a screen does not authorize deletion of historical records.
+
+Agent setup uses the current scratch Add page sharing Settings sections. The retained template API and local demo seed are different entry points, not proof the old guided builder is available. Passed evals and release policy are readiness advice in the current activation path. A recommended review checklist should never be presented as backend refusal unless the source actually enforces it.
+
+Stored configuration and catalog capability do not prove live integration acceptance. General text adapters include Google Vertex, OpenAI, Anthropic and OpenRouter; TypeSafe is Decision-only, and specific media/grounding/embedding jobs have narrower requirements. Live voice and phone paths must follow [Spoken channels](./spoken-channels.md), while Gmail mailbox polling is retired. Do not revive old features because a retained generic connector/configuration key still exists.
+
+For a real implementation task, use current [AGENTS.md](../../AGENTS.md) gates including coverage and browser smoke where required, rather than an abbreviated gate list copied into an old checklist. Product intent/acceptance changes need their own agreement. Local source/tests, generated test files and a passing configuration validator are separate from a deployed provider/account accepting the actual customer workflow.

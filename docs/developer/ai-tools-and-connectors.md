@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: AI tools and connector configuration
+audience: company admins, platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/ai-tools-and-connectors.md
+last_reviewed: '2026-10-26T10:05:24+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # AI Tools And Connectors Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** AI tools and connector configuration
+> **Reviewed:** 26 October 2026, 10:05:24 GMT (Europe/London)
+> **Source path:** `docs/developer/ai-tools-and-connectors.md` · **Status:** Current
 
 AI tools and connectors are Hakken's governed action layer for agent runs. The implementation separates admin catalog records, connector install state, model-facing declarations, deterministic authorization, argument validation, and registered backend handlers.
 
@@ -21,7 +36,7 @@ Agent tool binding UI is part of agent administration and consumes the same `aiT
 
 - `getConnectorMarketplace` merges built-in connector definitions with visible install records.
 - `installConnector` installs or syncs a built-in connector and its generated tools.
-- `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions are guarded by provider credential availability; no connector in the catalogue uses them since Gmail went on 2026-10-09.
+- `getConnectorInstallDetails`, `updateConnectorInstall`, and `validateConnectorConfiguration` manage connector state. OAuth functions are guarded by provider credential availability; no connector in the catalogue uses them since Gmail went on 2026-10-09.
 - `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Hakken action tools.
 - `getAgentTools` supports agent tool binding reads.
 
@@ -55,9 +70,9 @@ Relevant schema areas include:
 
 Connector installs can be global or tenant-restricted. Tenant-restricted connector installs carry a company id. Global connector installs must not carry a company id.
 
-There is no implemented dedicated MCP tool creation route in the current app. Custom or connector-style behavior must go through the implemented tool creation route, connector detail pages, and the registered runtime handler system. Do not document MCP proxy creation as live behavior unless a concrete route and runtime handler are added.
+MCP servers use the separate `/admin/ai/tool-servers` surface and discovery/promotion/runtime modules documented in [Tool Servers](./tool-servers.md). They are not created by inventing a general tool mapping.
 
-The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Hakken-native tools plus external systems such as Slack, Google Drive, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Gmail was the live exception until it was removed on 2026-10-09 ([Gmail Mailbox](./gmail-mailbox.md)). Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
+The current `toolConnectorDefinitions.ts` catalog contains native data, task, HTTP, notification, voice and Assistant-facing capability groups. It no longer contains the old broad list of generic SaaS scaffolds or the retired Gmail connector. `REGISTERED_TOOL_HANDLERS` includes concrete scrape, DataForSEO, Apify, knowledge, company-profile, generic-task, notification, MCP and HTTP paths plus Assistant handlers. Inspect `getRegisteredToolHandlerMappings` for the actual set rather than copying an older list as universal live support.
 
 ## Tool Contract Validation
 
@@ -65,7 +80,7 @@ Tool input and output schemas are stored as JSON strings. `validateToolJsonSchem
 
 `normalizeToolExecutionPolicy` forces confirmation for `WRITE`, `DESTRUCTIVE`, and `EXTERNAL` tools. `READ` tools can opt into confirmation but do not require it by default.
 
-Provider-facing function names are normalized from handler mappings, so keep handler mappings stable and explicit. Changing a mapping can break model-call resolution and registered handler dispatch.
+Provider-facing declarations use the tool model-name contract; handler mapping remains separate internal dispatch identity. Keep both stable and explicit. Changing a mapping can break model-call resolution and registered handler dispatch.
 
 ## Authorization And Runtime Safety
 
@@ -77,23 +92,23 @@ The central runtime rule is that model tool calls are requests, not authority. `
 - company boundary checks for non-super-admin users
 - explicit confirmation when required
 
-Super admins may execute across companies, but confirmation is still required when policy requires it. Standard users cannot execute tools. Admin users cannot execute tools across tenant boundaries.
+Super admins pass the tool company branch; confirmation is required unless explicitly granted or the caller supplies the agent’s permitted autonomous result. The runtime computes MCP non-read autonomy separately in `autonomyAppliesToTool`; passing a raw autonomy flag can bypass the intended server-tool restriction. Standard users have an explicit `MEMBER_READABLE_HANDLERS` exception only for listed handler mappings with READ policy and no super-admin requirement. The set includes company-figure reads and personal task proposal/read/change entry points whose downstream contracts preserve their own confirmation semantics. Admin callers remain subject to tenant checks.
 
 Preserve these checks even when adding provider-specific tool-call formats. Provider adapters may format declarations differently, but execution must pass through the deterministic policy path.
 
 ## Registered Handlers
 
-Current registered handler mappings include:
+The current registry includes these concrete paths, among the Assistant-facing handlers:
 
-- `knowledge.search`: queries scoped knowledge through `internal.aiToolReadTools.searchKnowledge`.
-- `company.overview.update`: updates company overview state through `internal.aiToolWriteTools.updateCompanyOverview`.
-- `workflow.task.create`: connector stub.
-- `http.request`: connector stub.
-- `notification.send`: connector stub.
-- `slack.message.send`: connector stub.
-- `google_drive.search`: connector stub.
+- `knowledge.search`: scoped knowledge reads.
+- `company.overview.update`: company profile updates.
+- `task.create`: generic company task creation through the task service.
+- `notification.send`: checks tenant recipients and sender/provider configuration, then queues `AGENT_EMAIL` through the Outbox and records dispatch evidence. Queueing is not delivery.
+- `http.request`: bounded requests under the configured base address.
+- `web.scrape`, DataForSEO operations and Apify actor operations: feature-specific external work.
+- `mcp.call`: imported server-tool dispatch through its separate ownership, credential and approval policy.
 
-Stub handlers return a normalized not-implemented result. Other generated built-in connector mappings, including Calendar, Outlook, Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify mappings, currently have connector definitions but no registered runtime handler. Those mappings fail through `Unknown or unimplemented tool handler mapping.` if an agent run reaches execution. Do not document a catalog scaffold as a live external integration. When implementing a connector for real, add a concrete handler, register it in `REGISTERED_TOOL_HANDLERS`, preserve tenant checks, validate arguments, and add tests.
+Gmail, Slack and Drive mappings listed in earlier guides are not registered active integrations here. Unknown mappings fail as unknown or unimplemented. New handlers need a concrete registry entry, tenant checks, argument validation and relevant tests; a catalog label cannot provide that implementation.
 
 ## Connector Secret References
 
@@ -138,3 +153,21 @@ Focused tests include:
 - `src/app/(dashboard)/admin/ai/tools/page.test.tsx`
 
 When changing tool UI labels, keep `messages/en.json` and `messages/it.json` in parity. When changing execution policy or handler dispatch, run the full repository verification gate from `AGENTS.md`; documentation-only edits should at least run `git diff --check`.
+
+## Configuration Validation Is Local
+
+`validateConnectorConfiguration` replaces the former misleading connection-test name. It loads the current built-in definition, checks active/install state, required reference presence and OAuth connected state where applicable, then updates `testStatus`, `lastTestedAt`, install status and `toolConnectorTestLogs`. A successful message is “Configuration valid — not yet verified against the provider.” No provider request or secret decryption occurs in this mutation. Preserve that distinction in UI and acceptance records; the legacy table/field name does not establish a network test.
+
+`getConnectorMarketplace` and install detail use admin read builders and handler company policy. Install is super-admin-only; connector update/validation use admin writes with explicit company checks. Tool list/detail reads use platform read builders, including READ_ONLY; tool CRUD and agent binding mutations remain super-admin-only. Company-scoped install data and global catalog data must not be treated as the same authorization scope.
+
+## Residual OAuth And HTTP Boundaries
+
+`beginConnectorOAuth` requires a current built-in definition with OAUTH mode, a supported configured provider and matching install access. The reviewed built-in catalog contains no such current offering following Gmail removal. The generic code remains useful infrastructure, not an active mailbox capability. It creates a PENDING connection and single-use state; `getPendingConnectionByState` rejects non-pending or more-than-fifteen-minute-old rows. Provider callback exchanges and finalization occur server-side; the old client-callable token-reference completion mutation is absent.
+
+`connectorOAuthTokens` holds AES-256-GCM ciphertext under `CONNECTOR_TOKEN_ENCRYPTION_KEY`. Provider credentials are resolved by registry-specific environment names; Google's generic entry can fall back from `CONNECTOR_GOOGLE_CLIENT_ID`/`CONNECTOR_GOOGLE_CLIENT_SECRET` to the auth client pair. Search Console, X and Bing entries have their own configuration and consumers. An access token less than a minute from expiry is refreshed internally. Refresh omission preserves an existing refresh token. Failed renewal can mark the connection dead; no token values belong in diagnostic output or documentation.
+
+The `http.request` handler resolves `base_url` and optional authorization from the configured tool's connector references. Model arguments supply method, relative path and optional JSON body. `resolveHttpConnectorTarget` rejects another host, full URL, backslash and base-path escape. `outboundHttp.request` invokes the checked Node transport. HTTP policy currently uses fifteen seconds, one hundred twenty-eight KiB response and sixty-four KiB request limits. The target response is returned with status and `ok`; non-2xx is not automatically a transport exception. No automatic exactly-once external write guarantee follows from this handler.
+
+## Review Evidence And Remaining Work
+
+This refresh read the current catalog, runtime policy and handler registry, install/configuration validation, residual OAuth state/token flow and bounded HTTP dispatch. Tests in these modules remain local source references; no integration was installed, token exchanged, provider reached or tool executed. Feature-specific DataForSEO, voice, scraping, notifications and personal tasks have their own guides and remaining review queue. A configured mapping is not proof of deployed reachability or completed external rename cutover.

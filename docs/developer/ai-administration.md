@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: AI administration
+audience: developer
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/ai-administration.md
+last_reviewed: '2026-10-26T14:50:15+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # AI Administration Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** AI administration
+> **Reviewed:** 26 October 2026, 14:50:15 GMT (Europe/London)
+> **Source path:** `docs/developer/ai-administration.md` · **Status:** Current
 
 AI administration is the implementation surface for Hakken's model catalog, provider controls, AI defaults, global and company prompts, rules, knowledge, widgets, tools/connectors, chat logs, and cost reporting. It is split across global admin routes under `src/app/(dashboard)/admin/ai/`, company-scoped routes under `src/app/(dashboard)/admin/companies/[id]/`, public widget routes under `src/app/w/[widgetId]/` and `src/app/sandbox/[widgetId]/`, and Convex modules that enforce authorization and runtime resolution.
 
@@ -68,7 +83,7 @@ Keep sparse scope fields meaningful. A global knowledge document has no company 
 
 `convex/aiModels.ts` is the main model catalog module. Public selector queries such as `getModels`, `getActiveModels`, and `getModelPickerOptions` are readable by authenticated users because normal chat, agent, and workflow screens need model choices without downloading full catalog rows. Administrative catalog queries and mutations such as `getPaginatedModels`, `getProviders`, provider enablement, global defaults, model enforcement, legacy default changes, model detail, and pricing updates require `requireSuperAdmin`.
 
-`convex/aiModelsActions.ts` contains provider sync and test actions for Google, OpenAI, Anthropic, OpenRouter, and Vertex aliases. Provider sync updates catalog metadata; provider testing records health status and messages. Keep provider-specific API details in provider services and actions, not scattered through runtime callers.
+`convex/aiModelsActions.ts` contains provider sync and test actions for Google, OpenAI, Anthropic, OpenRouter, TypeSafe Decisions, and Vertex aliases. Provider sync updates catalog metadata; provider testing records health status and messages. Keep provider-specific API details in provider services and actions, not scattered through runtime callers.
 
 Defaults are use-case based. Global defaults are keyed by use case and scope. Company defaults override global defaults for the same use case. Runtime resolution should go through `convex/aiModelService.ts` and related internal query paths rather than reading model rows directly in feature code. This is a repo guardrail: runtime paths should not hardcode model literals. The `realtime` use case is the live spoken-channel default used by Ask Hakken voice, the phone line, and voice previews; it needs a compatible speech-to-speech model and the relay/provider configuration documented in [Spoken Channels](./spoken-channels.md).
 
@@ -76,7 +91,7 @@ The model admin page filters by status, provider, capability, use case, and sear
 
 ## Prompts And Rules
 
-`convex/system.ts` stores and reads the global system prompt. `getSystemPrompt` is an admin query and `updateSystemPrompt` is super-admin-only. `getInternalSystemPrompt` is used by runtime assembly. System prompt updates write audit metadata.
+`convex/system.ts` stores and reads the global system prompt. `getSystemPrompt` is a super-admin query and `updateSystemPrompt` is super-admin-only. `getInternalSystemPrompt` is used by runtime assembly. System prompt updates write audit metadata.
 
 `convex/aiRules.ts` stores rules. Rules can be global, company-scoped, or agent-scoped. Global rules are only visible and manageable by super admins. Company rules can be read and managed by admins with access to that company. Agent rules for standard admins must still be company-scoped; global agent rules are super-admin territory. `getActiveRulesInternal` combines active global, company, and agent rules and deduplicates them before runtime use.
 
@@ -161,3 +176,13 @@ git diff --check
 ```
 
 When touching localized admin UI, keep `messages/en.json` and `messages/it.json` in parity. When touching widgets, manually verify the admin preview, sandbox page, iframe route, allowed-domain behavior, gateway fields, and a normal widget message path.
+
+## Current Detailed Contracts
+
+The broad AI area includes model configuration, Decisions, rules, knowledge, company/agent context, tools, channels, usage and evidence. Read [models and Decisions](./ai-models-providers-and-costs.md), [rules and prompts](./ai-rules-and-prompts.md), and [company readiness](./company-ai-readiness-and-checks.md) for the current boundaries. Catalog sync uses live listing and can enable a provider; a connection probe updates health without enabling it. Neither proves every model or feature works. TypeSafe is Decision-only, while supported text adapters can serve configured Decisions with stricter confidence treatment.
+
+Agent creation uses its current Add page, and readiness checks are advisory. Markdown skill upload can update/roll out a matching active skill; runtime instruction text is not universally frozen by a saved version pointer. Autonomous memory and human-approved suggestions have distinct application rules. Contract-only evaluation, normal model-graded evaluation, and explicitly labeled rehearsal have different costs and effect contracts. Use the detailed agent guides before treating a successful check as production acceptance.
+
+Widget embedding uses server framing policy and signed/session credentials in addition to browser presentation. Upload issuance has its own bound, and reset is not backend erasure. Global prompt and company prompt write authority is narrower than ordinary company rule administration. Known rule-list and subject-access discrepancies are documented for separate application repair rather than hidden behind a general security claim.
+
+Supplier model spend is USD and Decision calls have a separate accounting ledger. Company plan value, Stripe paid-company/covered-user counts, and collected revenue are different measures. Usage snapshots and current-day data have bounded coverage; provider distribution can be derived from stored model metrics through the current catalog. None of these admin reports proves external rename cutover or live deployment acceptance. No AI configuration, prompt, skill, memory, model, check, or provider state was changed in this documentation pass.

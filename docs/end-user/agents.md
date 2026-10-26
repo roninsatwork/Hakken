@@ -1,4 +1,22 @@
+---
+product: Hakken
+documentation_type: user guide
+feature_area: agent configuration and core runtime
+audience: platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/agents.md
+last_reviewed: '2026-10-26T15:14:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Agents
+
+> **Product:** Hakken · **Document type:** user guide · **Feature area:** agent configuration and core runtime
+> **Reviewed:** 26 October 2026, 15:14:20 GMT (Europe/London)
+> **Source path:** `docs/end-user/agents.md` · **Status:** Current
+
+
+Core configuration/runtime and approval behavior were revalidated in this pass. Detailed skill, learning, eval and release sections remain separate review work; this document is not a claim that those whole subsystems are current.
 
 Agents are Hakken's governed AI workers. They can be configured with a purpose, model behavior, reusable skills, knowledge, rules, schemas, integrations, evals, approvals, release controls, and run history. In the current product, agent creation and most agent administration live in the super-admin area. Company admins can participate in some company-scoped operational review flows, such as run evidence, evals, approvals, and memory review when backend permissions allow their company scope.
 
@@ -8,7 +26,7 @@ This guide describes the feature as it is implemented now. It does not describe 
 
 Agent administration is under the admin area:
 
-- `/admin/agents` lists agents, searches them, creates agents, and deletes agents.
+- `/admin/agents` lists and searches agents and offers permitted deletion actions. `/admin/agents/new` is the dedicated creation page.
 - `/admin/agents/[id]` opens an agent dashboard with usage, token, and cost summaries.
 - `/admin/agents/[id]/runs` shows runs, feedback, replay, cancellation, eval creation, memory candidates, reflections, and improvement suggestions.
 - `/admin/agents/[id]/evals` manages eval fixtures, smoke eval history, release-gate comparisons, and eval suite presets.
@@ -36,7 +54,7 @@ Agents are useful for work such as research triage, support preparation, tool-ba
 
 The agent list shows agents in a paginated admin table with search, model information, status, and row actions. The table follows the admin pagination standard of 15 rows per page.
 
-Creating an agent opens a guided builder. The builder can start from a template or create a custom agent. It asks for mission and audience details, policy choices, model behavior preference, knowledge and tool planning choices, and readiness acknowledgement. Template-based creation can seed an agent with a behavior prompt, trigger type, approval settings, temperature, recommended tools, and eval fixtures. Newly created template agents can start inactive so they can be configured and tested before use.
+Creating an agent opens its own page using the same form sections as Settings. Enter its name, purpose and accountable owner, then choose the model behavior, risk, approval needs and budgets. The server requires purpose and an existing accountable person for a new custom agent. The normal starting state is draft, but the operator can choose active. Separate template-creation support exists in the backend; do not expect the old step-by-step template wizard on the current Add page.
 
 Deleting an agent is a destructive admin action. Treat it as a configuration removal rather than routine cleanup. If an agent has generated runs, logs, or operational evidence, review those records before removing the agent from active use.
 
@@ -48,7 +66,7 @@ The runs tab is the main operational review area. Runs can be filtered by status
 
 The evals tab manages tests for the agent. Evals can be manually created or generated from runs and reflections. The implemented fixture types cover happy paths, approval pauses, rejected actions, prompt injection, tenant boundary checks, bad tool arguments, cancellation, replayed failures, tool plans, and cost or latency budgets. Smoke evals and eval suites provide evidence for readiness and release gates.
 
-The settings tab controls agent identity and runtime behavior. It includes name, description, avatar, model selection mode, reasoning effort, thinking mode, internet access, and whether the agent is a draft or live. An agent cannot be switched live until it has passed a check: the screen names the one reason it is held back and links to the checks that fix it. Having no tools or no knowledge documents is not a reason to hold an agent back.
+The settings tab controls agent identity and runtime behavior. It includes name, description, avatar, model selection mode, reasoning effort, thinking mode, internet access, and whether the agent is a draft or live. Readiness checks report what has or has not been proven; they do not block the active switch. An operator can activate an untested agent. Model selection, risk and approval policies remain enforced separately. Having no tools or knowledge documents is not by itself a fault.
 
 The skills tab attaches active reusable skills to one agent. A skill is a capability package with instructions, risk level, tool requirements, and suggested evals. Skill bindings can be enabled, disabled, upgraded to the latest version, or removed.
 
@@ -58,7 +76,7 @@ The memory tab supports controlled learning. It shows active memories, memory qu
 
 ## Approvals
 
-Agents can pause when a tool call requires human review. The approvals page lists pending approvals with the tool name, side-effect level, preview JSON, agent, run objective, and actions. An administrator can approve, reject, or cancel the pending tool call. Approving records the decision and allows the run to resume. Rejecting or cancelling records a decision and prevents the tool call from continuing as originally planned.
+Agents can pause when a tool call requires human review. The approvals page lists pending approvals with the tool name, side-effect level, preview JSON, agent, run objective, and actions. A super admin can approve, reject, or cancel the pending tool call. Read-only platform accounts can inspect the approval query but cannot decide it; company admins cannot make this platform approval decision. Approval schedules the tool to execute. Rejection denies that tool and gives the refusal back to the agent so it can continue another way; cancellation stops the run. Neither operation reverses side effects already completed.
 
 Approvals are important for data-changing, external, destructive, or otherwise sensitive actions. They are not a substitute for good tool configuration. Agents should still be configured with appropriate tools, rules, model choices, and release evidence before being used operationally.
 
@@ -66,7 +84,7 @@ Approvals are important for data-changing, external, destructive, or otherwise s
 
 The skill catalog at `/admin/ai/skills` manages reusable agent capabilities. It shows catalog health, adoption, upgrade lag, validation status, and skills needing attention. Super admins can seed starter skills, create new skills, import skill bundles, export bundles from individual skills, clone skills, archive skills, and review learning analytics.
 
-A skill can be draft, active, or archived. Only active skills can be attached to agents. Risk level matters: high-risk skills require stronger evidence before they should be relied on, and activation checks can block agents whose enabled high-risk skills do not have current smoke evidence.
+A skill can be draft, active, or archived. Only active skills can be attached to agents. Risk level matters: high-risk skills need stronger evidence before operators rely on them. Missing tool mappings and skill evidence appear in readiness reports; those reports do not themselves veto agent activation.
 
 ## Agentic Testing Sandbox
 
@@ -74,11 +92,11 @@ The agentic testing sandbox at `/app/agentic-testing` lets a user choose a speci
 
 ## Permissions And Boundaries
 
-Agent creation, template creation, agent list access, and core agent updates are super-admin functions in the current backend. Several run, eval, memory, approval, transaction, and log views use admin-level access with company scoping. Standard company admins must have a company context, and backend checks prevent them from reviewing or changing records outside their company.
+Agent creation, template creation and core updates are super-admin writes. Agent list/get queries also admit read-only platform accounts. Several run, eval, memory, approval, transaction, and log views use admin-level access with company scoping. Standard company admins must have a company context, and backend checks prevent them from reviewing or changing records outside their company.
 
 Raw tool arguments are more sensitive than summarized run evidence. The run detail backend only exposes raw tool arguments to super admins. Company-scoped admins receive scoped views where applicable.
 
-Model choices are resolved from configured AI model settings. Users should not assume that a raw provider model name entered somewhere will always be used; model defaults, active model status, and allowed override rules affect runtime selection. Current agent execution also requires the resolved model to be compatible with the Google Vertex runtime path, so enabling another provider in the catalog does not by itself make that provider usable for live agent runs.
+Model choices are resolved from configured AI model settings. Users should not assume that a raw provider model name entered somewhere will always be used; model defaults, active model status, and allowed override rules affect runtime selection. The agent adapter registry currently supports Google Vertex, Anthropic, OpenAI and OpenRouter. TypeSafe decision models cannot run an agent. Capability restrictions still apply: the reviewed image path and workflow Google grounding have narrower Google-specific requirements, so provider support does not mean every model supports every input or tool.
 
 ## Practical Guidance
 
@@ -87,3 +105,21 @@ Treat agents as governed assets. Before activating an agent, confirm its mission
 For support and customer success teams, the most useful agent evidence is usually the run history, approval history, eval status, and release state. These explain what the agent tried to do, whether it used tools, whether a human paused or rejected an action, and why the agent is considered ready or blocked.
 
 Agents connect to assistant chat, workflows, schedules, tools, knowledge, AI model configuration, release management, and audit logs. Changes in any of those areas can affect an agent's behavior. Review agents after changing model defaults, tool definitions, knowledge policies, company rules, or workflow/schedule entry points.
+
+## Roles, Risk And Limits
+
+An agent's Role is a stored job identity, separate from its name and from a human user's access role. Assignable jobs include DataForSEO planning and collection, keyword research, News collection, weekly digests, Search Console, Google Analytics, Bing and the Insights team. One agent holds an assignable role at a time; if another already has it, the save is refused with that holder's name. Renaming an agent does not change its job key. Built-in roles such as Wiki staff and Decisions cannot be reassigned through this dropdown.
+
+An agent holding any system role cannot be deleted directly. Switch it off, or return an assignable role to General agent first. Switching off a role holder stops eligible future work through the relevant role consumer; it does not prove that an already executing provider call has been interrupted. The specific collection and content guides explain those workers' behavior. The collector roles use specialized implementations rather than a universal promise that every setting has the same effect on every worker.
+
+A high-risk agent cannot be configured for autonomous tool execution. Trying to turn autonomy on at high risk is refused. Raising an already autonomous agent to high risk is accepted and turns autonomy off, with a separate risk-change audit entry. Older unrated records are not automatically classified as high risk. Keep the purpose and accountable owner meaningful; a risk label describes and constrains execution, but does not replace review of the actual tools.
+
+Run budgets cover steps, tool calls, elapsed runtime, accumulated input tokens and configured model cost. Empty or unusable override values revert to platform defaults, while excessive values are clamped to ceilings. An unpriced model receives more conservative limits because an estimated zero cost cannot safely bound spending. These are application estimates and run controls, not a supplier invoice cap. A stopped or cancelled run may already have spent tokens or completed approved actions.
+
+Approvals normally expire after twenty-four hours, with platform configuration and a per-agent override between one and seven hundred twenty hours. Expiry cancels pending work; it never approves it automatically. A stale browser cannot approve an already expired or reviewed request. When several tools are waiting, approving one does not mean the whole run is free of pending approvals. Review the run and each remaining request before assuming execution finished.
+
+This refresh verifies core configuration, roles, provider dispatch, readiness reporting, run continuation and approval decisions. Detailed skill authoring, learning-policy internals, eval grading, release workflows and the separate agent configuration/operations guides remain a follow-up review. No model was called, run launched, approval decided or role changed while preparing this guide. Existing local source and tests do not establish deployment or live supplier acceptance.
+
+## Detailed configuration and operations coverage
+
+Use [Agent setup and configuration](./agent-setup-and-configuration.md) for the catalog/binding lifecycle and [Agent operations and review](./agent-operations-and-review.md) for learning, evals, versions and release evidence. These specialist reviews now complement the core guide.

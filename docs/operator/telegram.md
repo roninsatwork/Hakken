@@ -7,6 +7,8 @@ profile → Integrations → Telegram, in one tap ("Open Telegram") or with a
 ten-minute code ([outbox-and-preferences-plan.md](../plans/active/outbox-and-preferences-plan.md), C2).
 Until the bot is set up, Integrations lists no apps.
 
+For personal linking and use, see [Telegram](../end-user/telegram.md). For webhook authentication, replay receipts and conversation ownership, see the [developer guide](../developer/telegram.md). The plan links above are dated implementation context, not evidence of live bot acceptance.
+
 ## What you need
 
 - A Telegram account, on your phone or at web.telegram.org.

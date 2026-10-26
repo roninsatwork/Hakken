@@ -1,13 +1,14 @@
 import { v } from "convex/values";
+import { pathOf } from "./insightsReadingParts";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
+import { internalAction, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { decodePages } from "./holdPageRefs";
 import { holdAiSummary } from "./holdLists";
 import { conversionsOf, countedOf, readSlot } from "./googleAnalyticsRows";
 import { EVERY_DEVICE, slotKey, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { channelOf } from "./utils/aiAssistants";
-import { SERIES_PERIOD, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
+import { healthResultValidator, SERIES_PERIOD, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { daysOf } from "./searchConsoleReads";
@@ -23,7 +24,7 @@ import { factKey, factValidator, percentOf, shiftDay, spanDays, spansOf, type Fa
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
 import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
 import { sharedSearchFacts, sharedSearches, type RankedRow } from "./utils/insightOwnSites";
-import { CHANGE_DAYS, changeKindValidator, changeResultValidator, pageChangeResult, pageChanges, profileChangesOf, type Change, type PageYear } from "./utils/insightTrack";
+import { CHANGE_DAYS, changeKindValidator, changeResultValidator, pageChangeResult, profileChangesOf, type Change } from "./utils/insightTrack";
 import { landingByPath } from "./insightsConversion";
 import { readListingActivity } from "./localListings";
 import { fastEnough, missingStructuredData } from "./utils/moneyPageChecks";
@@ -306,15 +307,7 @@ function byChannelOf(rows: readonly ListRow[], people = false): Map<string, List
   return byChannel;
 }
 
-/** A page's path, for words: the address without its scheme and host. */
-function pathOf(address: string): string {
-  try {
-    const url = new URL(address);
-    return `${url.pathname}${url.search}`;
-  } catch {
-    return address;
-  }
-}
+
 
 // ---------------------------------------------------------------------------
 // The market: the website and its rivals (DataForSEO), AI mentions and answers, reviews, the site audit
@@ -517,7 +510,7 @@ const MEASUREMENT_DAYS = 56;
 export const measurementInternal = internalQuery({
   args: holdArgs,
   returns: v.object({
-    health: v.union(v.null(), v.array(v.object({ check: v.string(), passing: v.boolean(), names: v.optional(v.array(v.string())), count: v.optional(v.number()), share: v.optional(v.number()) }))),
+    health: v.union(v.null(), v.array(healthResultValidator)),
     byDay: v.array(v.object({ day: v.string(), clicks: v.number(), visits: v.number() })),
   }),
   handler: async (ctx, args) => {
@@ -921,29 +914,17 @@ export const strategyInternal = internalQuery({
  * of the last 12 months and the 12 before (`utils/insightTrack.ts`), and the
  * pages logged as removed that had visits after all — dropped from the log.
  */
-export const pageChangesInternal = internalQuery({
+/** One stored annual list part, decoded in isolation for the large-site change worker. */
+export { pageYearPart, type PageYearPart } from "./insightsReadingParts";
+
+/** Annual page comparisons run outside the database query's one-second budget. */
+export const pageChangesInternal = internalAction({
   args: holdArgs,
   returns: v.object({
     changes: v.array(v.object({ kind: changeKindValidator, from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), day: v.optional(v.string()), before: v.number(), after: v.number(), result: changeResultValidator })),
     notRemoved: v.array(v.string()),
   }),
-  handler: async (ctx, args) => {
-    const hold = await ctx.db.get(args.holdId);
-    const connection = hold ? await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first() : null;
-    if (!hold || !connection?.property) return { changes: [], notRemoved: [] };
-    const counted = countedOf(connection);
-    const yearOf = async (which: "NOW" | "YEAR"): Promise<PageYear[] | null> => {
-      const landing = await readSlot(ctx, hold._id, slotKey("landing", "365", which, EVERY_DEVICE));
-      if (!landing) return null;
-      const addresses = await decodePages(ctx, hold._id, landing.rows.map((row) => row.key));
-      return landing.rows.map((row, index) => ({ path: pathOf(addresses[index]), visits: row.visits, enquiries: conversionsOf(row, counted).conversions }));
-    };
-    const [now, year] = [await yearOf("NOW"), await yearOf("YEAR")];
-    if (!now || !year) return { changes: [], notRemoved: [] };
-    const live = new Set(now.filter((page) => page.visits > 0).map((page) => page.path));
-    const removed = await ctx.db.query("insightChanges").withIndex("by_hold_kind_from", (q) => q.eq("companyWebsiteId", hold._id).eq("kind", "REMOVED")).take(200);
-    return { changes: pageChanges(now, year), notRemoved: removed.map((change) => change.from).filter((from): from is string => from !== null && live.has(from)) };
-  },
+  handler: async (ctx, args): Promise<{ changes: Change[]; notRemoved: string[] }> => await ctx.runAction(internal.insightsReadingSteps.pageChanges, args),
 });
 
 /** Own Google profiles read for their changes at most. */

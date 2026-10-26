@@ -1,4 +1,40 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: Platform operations settings
+audience: platform administrators
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/platform-operations-settings.md
+last_reviewed: '2026-10-26T14:33:53+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Platform Operations Settings
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Platform operations settings
+> **Reviewed:** 26 October 2026, 14:33:53 GMT (Europe/London)
+> **Source path:** `docs/end-user/platform-operations-settings.md` · **Status:** Current
+
+
+## Inherited Collection And Display Limits
+
+This section covers the current Limits screens for super admins. The broader operational topics retained below still need separate revalidation. A company's Limits screen is an operator view inside platform Admin; its company-specific name does not grant company admins access. Subscription plans and quotas have a separate purpose and guide: [Platform Plans And Quotas](./platform-plans-and-quotas.md).
+
+Open `/admin/settings/limits` to change the platform defaults. From a company's Websites section, open `/admin/companies/[id]/websites/limits` to inspect that company's values. An individual holding has `/admin/companies/[id]/websites/site/[companyWebsiteId]/limits`. Use the company and website selected in Admin rather than substituting another company's identifiers in a copied address. Missing company or holding records produce a not-found message. The read queries also admit read-only platform accounts; saving is restricted to super admins. Company admins do not gain access to these controls.
+
+Each limit follows its own chain. A website uses its explicit value if it has one; otherwise it follows its company. A company without its own value follows the platform. The platform uses a saved setting or the built-in starting value. Inheritance is per field: one website can keep its own keyword count while following the company for backlinks. Choosing the same number as the parent explicitly still creates an override; choose the inherited option when the intention is to follow future parent changes.
+
+Company dropdowns identify the platform default and its number. Website dropdowns identify the company setting and its number. The platform has no inherited option. Pick an available number, then save the relevant topic card. Each topic has its own save controls: changes left in another topic are not included. A successful save clears the local edits for that card and shows saved feedback. If saving fails, read the inline error and check the saved value before retrying. The screen uses guarded admin actions to prevent overlapping duplicate saves; that is not evidence that downstream collection has already completed.
+
+The topics cover personal Hakken task counts, Google keywords and backlinks, local offices and map research, brand radar, AI questions, matching pages to topics, Search Console tracked lists and reports, page classifications, keyword research, whole-company limits, and shared platform processing. Only applicable topics appear. A competitor holding has the data limits the backend permits for competitors, rather than the full own-website research configuration. A limit about the whole company cannot be set on an individual website.
+
+Some numbers belong only to the platform because the underlying work is shared. They include sources and businesses kept from an AI answer, discoveries from a shared purchase, and maximum rows in a download. Company pages show these values with a link to the platform setting. Website pages do not offer them as overrides. Raising a company setting cannot bypass a platform-only limit.
+
+Treat the setting's description and units as part of the decision. A number of rows shown, a number of days read, and a number of purchased searches constrain different work. Setting a larger report window is not a guarantee of older data availability. Increasing a collection allowance does not prove that a provider purchase has run or that its quota permits it. Decreasing a setting does not by itself establish that previously stored rows were erased. These mutations save configuration and audit evidence; retention and collection consumers must be checked for their particular effect.
+
+The screen lists lower-level overrides and links to their owners. Use that information when a platform change seems to leave one company or website unaffected. The platform summary reads bounded override tables, so absence from that summary is not an unlimited census of every override in a very large deployment. Inspect the specific company or holding when investigating a discrepancy.
+
+Before raising an allowance, identify whether the relevant workflow buys external data, asks an AI provider, or only reads existing data. More capacity can increase cost when that consumer next runs. Google quotas and provider balances remain independent constraints. No live supplier checks or collection runs were performed for this documentation review. The verified evidence is the Limits pages, their shared screen, and `convex/platformLimits.ts`, `companyDataLimits.ts`, `fanOutLimits.ts`, and `sharedLimits.ts`.
 
 Platform operations settings are the internal controls for API keys, maintenance scripts, system health, connection checks, auth diagnostics, and audit review. These screens help operators run Hakken safely after launch. They are not everyday customer-user workflows.
 
@@ -110,3 +146,11 @@ Audit coverage is broad but not perfect. Some older surfaces may not have the sa
 For integration launches, create a tenant-scoped API key with only the scopes required, record the one-time secret securely, then review public API request and webhook delivery evidence after the first test.
 
 For operational incidents, start with system health. Open the linked runbook target, inspect run timelines or schedule state, then use maintenance scripts only when the script matches the symptom. Record the reason for any key revocation, release rollback, or manual repair in the relevant operational notes.
+
+## Identity And Global Aesthetics
+
+The settings root redirects to `/admin/settings/identity`. Appearance lives at `/admin/settings/identity/aesthetics`; security, retention, and options each have their own route. Retained `?tab=` bookmarks redirect to supported current sections. Audit history belongs in Governance. A bookmark opening identity does not imply that an old tab or packaging panel still exists.
+
+Platform identity and aesthetics affect every workspace consuming shared branding. Only super-admins can write these saved settings. The login page receives a limited public name/logo/theme projection; commercial fields and sender addresses use a separate privileged read. A normal company administrator's billing access does not grant global settings permission.
+
+Use the current controls for typography and theme tokens rather than old descriptions of retired base-font-size/radius fields. The saved look and the repository's theme record have an explicit maintenance workflow; a successful identity save is not a deployment or external DNS change. Logo uploads and removal also have storage ownership and validation steps. No settings, theme, sender domain, or external integration were changed by this documentation pass.

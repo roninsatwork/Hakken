@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Workflow designer and runtime contracts
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/workflow-runtime-internals.md
+last_reviewed: '2026-10-26T14:22:10+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Workflow Runtime Internals
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Workflow designer and runtime contracts
+> **Reviewed:** 26 October 2026, 14:22:10 GMT (Europe/London)
+> **Source path:** `docs/developer/workflow-runtime-internals.md` · **Status:** Current
 
 This guide documents the backend runtime that executes Hakken workflow graphs. It is implementation-focused and complements [Workflow Automation](./workflow-automation.md), which covers the full admin product surface and visual builder.
 
@@ -86,12 +101,13 @@ The runtime recognizes these node behaviors:
 | `approvalNode` | Produces a system halt. The step becomes `PENDING_APPROVAL` and downstream nodes are not scheduled until approval resumes it. |
 | `iteratorNode` | Converts a configured list into item payloads and fans out downstream pending steps. |
 | `mergeNode` | Reads execution steps and combines successful upstream outputs. |
-| `emailNode` | Builds a branded email. It sends through Resend when configured and records a simulated email output when `RESEND_API_KEY` is absent. |
+| `emailNode` | Builds escaped/branded email content and queues `AUTOMATION_EMAIL` in the Outbox; node success is queuing, not provider delivery. |
+| `taskNode` | Resolves the workflow workspace and creates a human task through the shared task service; missing workspace is refused. |
 | Unknown type | Bypasses the node and records the node type plus resolved input. |
 
 Node config parsing and defaulting belong in `workflowRuntimeService.ts`. Keep new runtime node behavior split the same way: pure config and output helpers in the service file, Convex side effects in runtime actions or engine mutations.
 
-Workflow agent nodes inherit the agent runtime model caveat: `runTriggeredAgentObjective` resolves the `workflow` model use case through stored configuration, then requires a Google Vertex provider model id before executing the agent. A workflow default that resolves to a non-Vertex provider is not currently enough for graph agent execution.
+Workflow agent nodes resolve stored workflow model configuration through supported provider adapters. Google internet grounding is narrower: when `allowInternetAccess` is enabled, the workflow path requires a compatible Google Vertex model. Do not describe all workflow agent execution as Vertex-only or assume every provider supports internet grounding.
 
 Template interpolation is intentionally simple. `resolveTemplate` replaces `{{ path.to.value }}` strings from the current runtime payload, supports array-index paths such as `items[0]`, converts objects to JSON strings when a string template needs them, and recursively resolves arrays and objects. Missing values resolve to an empty string in string templates. Do not treat this helper as a sandboxed expression language; add explicit parser support and tests before accepting operators, filters, arbitrary code, or unbounded path behavior.
 
@@ -265,3 +281,23 @@ When extending the runtime:
 - Update both workflow docs if runtime behavior changes in a way users must understand.
 - Update locale files when changing workflow UI labels or messages.
 - Do not touch frozen movement demo implementation files as part of workflow work.
+
+## Designer State And Mapping Contracts
+
+`ConfigDrawer.tsx` edits node-specific configuration and supports standard-mode mapping assistance and developer-mode mapping/template fields. `ConfigDrawerEntryPanels.tsx`, `ConfigDrawerDataPanels.tsx`, and `ConfigDrawerHumanPanels.tsx` split entry/action, data/control, and human/wait/email forms. Runtime keys such as `_agentId`, `_actionConfig`, `_dbConfig`, `_logicRules`, `_iteratorConfig`, `_mergeConfig`, `_waitConfig`, `_approvalConfig`, `_emailConfig`, and `_taskConfig` are executable configuration contracts, not merely canvas labels. Do not rename them in documentation examples without updating their actual consumers.
+
+The designer saves serialized nodes and edges through `workflows.updateWorkflow`, deriving the trigger type from the trigger node. Manual Run is a separate call to `triggerManualRun`; its handler does not save pending canvas changes first. Save the graph before running when testing an edited configuration. A node's locally updated drawer values and a persisted graph execution are different states. Backend graph validation still applies to submitted graph JSON.
+
+Developer mapping uses paths such as `{{nodes.<nodeId>.output.<field>}}`; template interpolation is not arbitrary JavaScript. Standard-mode generation calls `workflowNodeConfig.generateNodeConfig`, then writes returned mapping/template strings into node data. The helper limits prompts to 4,000 characters, available nodes to 100, graph context to 12,000 characters, and permits 12 requests per five-minute rate window. Its stored global workflow model selection is independent of a tenant-specific override. Generation has model cost and writes no proof that a produced mapping references the intended semantic field.
+
+Data forms expose selected tables and supported indexed selects. Engine authorization derives from the workflow creator and enforces company ownership for restricted creators; a super-admin-created workflow has broader supported-table access. A trigger payload's company-looking field is not an authorization grant. Recheck creator context and actual indexed contract before using a database node to change customer data.
+
+## Fan-Out Effects And Email Idempotency
+
+Iterator fan-out refuses more than 100 items. It creates separate pending steps carrying item, index, and list context, but downstream output is still also written under the node ID in shared execution state. Per-step input is the useful item-specific evidence; one node-level final output should not be mistaken for a complete aggregate of every item. Merge readiness uses latest dependency steps and its configured all/any policy; it is not an automatic guarantee of all-item aggregation after arbitrary fan-out shapes.
+
+`executeEmailRuntimeNode` templates recipients/subject/body, builds branded escaped content, and queues through `outbox.queueWrittenEmailInternal`. Its idempotency key is `workflow-email:<executionId>:<nodeId>`. The key does not include the claimed step ID, item index, or recipient set. Multiple iterator attempts of the same email node within one execution can therefore share an idempotency identity and suppress intended distinct emails. Retry deduplication and legitimate repeated-item delivery need a separate implementation decision; documentation does not repair this behavior.
+
+A queued count of zero can reflect existing queued identity rather than provider failure. The Outbox has its own delivery, eligibility, and configuration rules. `RESEND_API_KEY` is not a switch that makes this node directly send or simulate: it belongs to downstream delivery configuration. Never report email-node SUCCESS as recipient delivery acceptance. Task creation likewise creates a workflow handoff record rather than executing the assigned person's work.
+
+`workflowRuntime.test.ts` covers the queue-only email path, and workflow engine/retry tests cover bounded fan-out and retry decisions. The detailed drawer and mapping tests demonstrate local configuration examples. No workflow, email queue, task, provider request, or live webhook was executed during this documentation pass. Read [the main workflow implementation guide](./workflow-automation.md) for the previously reviewed entry/approval/recovery boundaries and [email system](./email-system.md) for downstream delivery.

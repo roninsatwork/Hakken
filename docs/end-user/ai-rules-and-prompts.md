@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: End-user guide
+feature_area: AI rules and prompts
+audience: end-user
+source_repository: roninsatwork/Hakken
+source_path: docs/end-user/ai-rules-and-prompts.md
+last_reviewed: '2026-10-26T14:26:52+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # AI Rules And Prompts
+
+> **Product:** Hakken · **Document type:** End-user guide · **Feature area:** AI rules and prompts
+> **Reviewed:** 26 October 2026, 14:26:52 GMT (Europe/London)
+> **Source path:** `docs/end-user/ai-rules-and-prompts.md` · **Status:** Current
 
 Hakken uses prompts and rules to shape AI behavior without changing application code. These controls are powerful because they affect assistant, agent, workflow, and widget responses, so they should be changed deliberately and tested after each update.
 
@@ -99,7 +114,7 @@ Avoid using rules to store secrets, API keys, customer-private credentials, or i
 
 ## Permissions And Audit Trail
 
-Global prompt changes require super-admin access. Global rule management is super-admin controlled. Company-scoped rules require admin access to the company. Company prompt controls follow company admin access.
+Global prompt changes require super-admin access. Global rule management is super-admin controlled. Company-scoped rules require admin access to the company. Company prompt writes currently require super-admin access; company rule administration has its own company-admin contract.
 
 Hakken records audit events for global system prompt updates and rule creation, update, activation toggles, and deletion. Audit metadata can include safety warning categories when risky wording is detected.
 
@@ -115,3 +130,19 @@ If AI behavior does not match a prompt or rule, check:
 - Whether a model or workflow path is using a different prompt assembly path.
 
 If behavior changed after an edit, review the prompt or rule audit log, then compare chat logs or agent run evidence before changing another layer.
+
+## What Trigger And Priority Actually Mean
+
+A rule trigger is instruction text handed to the model, not a separate guaranteed event matcher. The model receives priority, trigger, and instruction together. Saving a CRITICAL rule does not install a new backend authorization check, and the assembly does not mechanically resolve every conflict by sorting on that priority. Avoid overlapping rules whose intended precedence only exists in an administrator's head.
+
+The current assistant assembly can include agent behavior, agent skills, company skills, always-applied company/agent memories, and the signed-in asker's personal notes in addition to the layers above. Personal notes are excluded from widget visitor and evaluation conversations by the relevant thread check. They influence tone and emphasis, not access. A response difference can therefore involve more than the global prompt or one rule. Investigate the actual conversation path before deleting a seemingly unused rule.
+
+The company prompt mutation currently requires super-admin authority. Company-scoped rule administration and company prompt editing are different permissions. A company admin who can maintain rules should not assume that the company prompt editor grants the same write access. A saved prompt is used by later assembly; it does not rewrite historical messages or regenerate previous answers.
+
+## Bounded Lists And Review Boundaries
+
+The small rule-list query reads at most 100 records in its selected scope. The offset-paginated administration list searches within up to 1,000 loaded scope rows. A missing older rule in that search is not proof it was deleted. Runtime assembly also has per-scope limits and combines active records rather than reading an unbounded catalog. Keep the number of rules purposeful and review duplicated policies when behavior becomes difficult to explain.
+
+The reviewed implementation has a rule-access discrepancy that needs a separate source fix: signed-in soft-list queries do not uniformly impose the same admin-only checks as detail/write queries, and an internal agent-rule read does not independently narrow every agent rule by company. Do not treat this guide as a certification that every rule read is private merely because its administration screen is role-gated. The documentation records the issue; it does not change permissions or expose private rule contents.
+
+Safety warnings are based on a small set of text patterns. They can flag legitimate discussion of risky instructions, and they can miss wording outside those patterns. Review warnings in context and keep backend permissions as the actual access boundary. This maintenance pass read local implementation and tests without changing prompts, running an agent, or contacting a model. Local evidence does not establish a live provider rollout or completion of the external rename cutover in [PRODUCT.md](../../PRODUCT.md).

@@ -1,10 +1,23 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Photo actions
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/photo-actions.md
+last_reviewed: '2026-10-26T14:32:14+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Photo Actions Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Photo actions
+> **Reviewed:** 26 October 2026, 14:32:14 GMT (Europe/London)
+> **Source path:** `docs/developer/photo-actions.md` · **Status:** Current
 
 Photo actions cover image-bearing chat turns, widget image attachments, model
 vision routing, structured follow-up proposals, and human-confirmed task
-creation. The current implementation delivers Phases A-C of
-[Show Hakken A Photo And It Acts](../plans/active/photo-actions-plan.md). The
-remaining plan proof is Anthony's own phone demo against a reachable widget.
+creation. The [dated photo plan](../plans/active/photo-actions-plan.md) is historical/planned context. This guide records reviewed implementation without changing plan completion or claiming live phone/widget acceptance.
 
 ## Implementation Surface
 
@@ -55,7 +68,7 @@ Widget chat:
 - uses `generateWidgetUploadUrl` and `finalizeWidgetUpload`
 - requires an active widget, matching widget thread, and valid widget access
   token
-- enforces the widget attachment-message quota before finalizing
+- counts the widget upload-issuance allowance before issuing a URL, then validates finalization
 
 Do not route image files through document parsing or persistent knowledge
 ingestion. If a future product flow needs OCR or knowledge filing from photos,
@@ -97,8 +110,8 @@ carry an image. The model is asked to end its answer with a fenced
 
 `extractPhotoActionProposal` removes the block from visible assistant text,
 validates the three required fields, bounds their lengths, and stores the result
-on `messages.photoActionProposal`. Malformed blocks are removed without failing
-the answer. A proposal without reasoning is discarded.
+on `messages.photoActionProposal`. Closed malformed blocks are removed without failing
+the answer; unterminated fences remain visible. A proposal without reasoning is discarded.
 
 Proposal extraction is gated by `photoTurn` when assistant messages are saved or
 streaming replies are finished. A normal text turn cannot smuggle a
@@ -118,8 +131,8 @@ The mutation:
 - returns the existing `photoActionTaskId` on repeat taps
 - requires a company-scoped thread
 - files signed-in confirmations as a person task assigned to the confirming user
-- files anonymous widget confirmations through the shared inbound assignee used
-  by telephony
+- files anonymous widget confirmations through the shared inbound assignee lookup used
+  by telephony, allowing an unassigned task when nobody is found
 - patches `messages.photoActionTaskId` after the task is created
 
 The widget path remains anonymous but not unauthenticated: access is gated by
@@ -157,3 +170,15 @@ Focused coverage includes:
 For documentation-only edits, run `git diff --check`. For code changes, also
 run the focused tests above and at least one manual browser pass for signed-in
 chat and one widget photo send when UI behavior changes.
+
+## Current Confirmation And Parser Edge Cases
+
+`confirmPhotoAction` is a public mutation because a widget visitor need not have an account. It retrieves the message and thread, requires an assistant message, and calls `assertCanAccessThread` with the current user or widget credential before trusting the stored proposal. It returns the existing `photoActionTaskId` on a repeated confirmation, then requires `thread.companyId` for first filing. The company-less error is INVALID_INPUT rather than an invitation to select a different active company.
+
+Signed-in filing calls `filePersonTask` with the confirming user's ID as creator/assignee and `/app/assistant/<threadId>` as source. Its common tenant/assignee checks and audit apply. Anonymous filing queries `telephony.findCallAssignee` and passes an assignee only when found; the internal task path can create an unassigned AGENT-source task. Do not turn a shared inbound lookup into a guaranteed-owner assertion. The stored message marker is patched in the same mutation path after creation, providing repeat-tap idempotency for that proposal, not semantic deduplication across different messages.
+
+The parser selects the last closed `photo-action` block. Valid fields are trimmed and capped at title 200, detail 2,000, and reasoning 500 characters. A closed malformed block is removed without yielding a proposal. An unterminated block is deliberately left visible, so the older claim that every malformed fence is always hidden is too broad. The photo-turn gate prevents ordinary text-only saves from becoming this task chip. Extraction is deterministic and adds no extra model request beyond the image answer.
+
+Widget upload allowance is counted at URL issuance in `widgets.generateWidgetUploadUrl`; abandoned posts/finalization attempts still consume it. `finalizeWidgetUpload` validates the actual uploaded object and session/ownership. Shared upload reservation policies must remain aligned with frontend type/size controls. Plain Assistant images are message attachments rather than knowledge-ingestion documents; this does not establish immediate deletion of storage or message history. Task and attachment cleanup have separate owners.
+
+The plain image path can reroute through stored vision selection, while agent execution only inlines bytes through its supported Google path and reports unread images otherwise. Configured provider metadata and actual byte support must both be checked. This refresh read `photoActionService.test.ts`, photo-confirmation cases in `tasks.test.ts`, and relevant chat/widget/runtime source. It ran no uploads, browser capture, task mutation, or provider call. The dated photo plan is historical/planned context and is not updated or marked accepted by these documentation edits.

@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Frontend architecture
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/frontend.md
+last_reviewed: '2026-10-26T14:48:56+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Frontend Development
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Frontend architecture
+> **Reviewed:** 26 October 2026, 14:48:56 GMT (Europe/London)
+> **Source path:** `docs/developer/frontend.md` · **Status:** Current
 
 Hakken's frontend is a Next.js App Router application with authenticated dashboard routes, super-admin routes, public widget routes, and a small number of support pages. This guide covers current layout, styling, component, and verification expectations.
 
@@ -11,13 +26,13 @@ Primary UI lives under `src/app/`:
 - `src/app/(public)/page.tsx`: public landing page with marketing copy, public product sections, and `/login` entry links.
 - `src/app/(dashboard)/app/**`: authenticated customer workspace routes.
 - `src/app/(dashboard)/admin/**`: super-admin platform routes.
-- `src/app/(dashboard)/demos/**`: frozen temporary movement demo routes.
+- Optional arcade routes live under `/app/arcade`; movement-demo routes were not found in this checkout.
 - `src/app/login/page.tsx`: public sign-in.
 - `src/app/w/[widgetId]/page.tsx`: public widget iframe.
 - `src/app/sandbox/[widgetId]/page.tsx`: widget sandbox host page.
 - `src/app/local-test-auth/page.tsx`: local E2E support route.
 
-Dashboard routes share layout context, sidebar state, system settings, theme, and Convex auth state. Do not create a parallel app shell for normal feature pages unless the feature has a documented reason, such as the temporary movement demo's immersive presentation routes.
+Dashboard routes share layout context, sidebar state, system settings, theme, and Convex auth state. Do not create a parallel app shell for normal feature pages unless the feature has a documented reason, such as the isolated arcade canvases.
 
 ## Shell And Navigation
 
@@ -35,7 +50,7 @@ The root application layout in `src/app/layout.tsx` wraps the app in `ThemeProvi
 
 `src/ui/components/layout/SidebarNavigation.tsx` is the sidebar shell. It maps route prefixes to active items, holds the open/closed state of each section, handles impersonation exit and the workspace switcher, and chooses which of the two navigation trees to render. It also defines the shared `NavItem` and `SubNavItem` parts the trees are built from.
 
-The trees themselves are `AdminNavTree` and `UserNavTree` in `src/ui/components/layout/SidebarNavTrees.tsx`. That is where the links live, and with them diagnostic routing visibility, arcade navigation, movement demo visibility, organization routes, and admin sections. When adding a durable route, add the link to the right tree and the active-route mapping in the shell, with navigation copy, in the same change.
+The trees themselves are `AdminNavTree` and `UserNavTree` in `src/ui/components/layout/SidebarNavTrees.tsx`. That is where the links live, and with them diagnostic routing visibility, arcade navigation, organization routes, and admin sections. When adding a durable route, add the link to the right tree and the active-route mapping in the shell, with navigation copy, in the same change.
 
 `src/app/(dashboard)/app/page.tsx` is the authenticated app dashboard. It is a localized product-overview route with assistant, platform-depth, hosting-positioning, assurance, governance, benefit, and use-case sections. Its primary action routes to `/app/assistant`; the benefits action routes super admins to `/admin/ai/costs` and other users to `/app/reports`. The page redirects super admins to `/admin` once per browser session through `sessionStorage.admin_redirected`; treat that as a convenience redirect only, not an authorization boundary. If dashboard copy changes, keep the `dashboard` namespace in `messages/en.json` and `messages/it.json` in parity.
 
@@ -97,9 +112,9 @@ Prefer existing shared components before creating page-local variants:
 - Settings: `JsonSchemaBuilder`, settings sections, white-label components.
 - Navigation: `Header`, `SidebarNavigation` with the `SidebarNavTrees` it renders, and the workspace switcher in the sidebar. Theme selection lives in the profile's preferences, not a standalone toggle.
 
-`src/ui/components/layout/AnalyticsProvider.tsx` is mounted by the root layout and selects Google Tag Manager for ids starting with `GTM-`, or Google Analytics for ids starting with `G-` or `AW-`. 
+`src/ui/components/layout/AnalyticsProvider.tsx` is mounted by the root layout and selects Google Tag Manager for ids starting with `GTM-`, or Google Analytics for ids starting with `G-` or `AW-`.
 
-The movement demo's generated `gltfjsx` avatar components live inside the demo boundary; keep them there. The authenticated dashboard header is `src/ui/components/layout/Header.tsx`; the old public-shell `header.tsx`/`footer.tsx` pair no longer exists.
+Historical movement-demo components are not evidence of current routed product scope; no movement route was found in this checkout. The authenticated dashboard header is `src/ui/components/layout/Header.tsx`; the old public-shell `header.tsx`/`footer.tsx` pair no longer exists.
 
 Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use `HakkenModal` or inline feedback patterns.
 
@@ -212,3 +227,13 @@ git diff --check
 ```
 
 For documentation-only changes, this automation runs Markdown link validation and `git diff --check`.
+
+## Current Product Routing And Evidence
+
+The route inventory includes substantial Sites, source measurement, Insights, reading/editorial and Hakken task surfaces alongside the inherited Assistant/admin framework. Route groups are organizational folders; actual URLs omit `(dashboard)` and `(system)`. Dynamic identifiers usually refer to company holdings or records whose tenant access is verified on the backend. A shared host ID, hidden sidebar entry, or client-supplied company field is not an access grant.
+
+System Settings now uses separate identity, aesthetics, security, retention and options routes. The old root/tab query is a redirect compatibility layer, with unknown tabs landing at identity. Admin layout admits the defined platform/evidence roles rather than every company administrator. Company billing remains in the frontend app. Use the current [route reference](./route-reference.md) and [access guide](./route-protection-and-authentication.md) for exact destinations.
+
+Client screens often show held projections, capped searches, loaded-page filtering or derived statuses. Loading labels are not automatically backend progress events; an overdue finding can display too early before an outcome is saved. Downloads can export a returned filtered population larger than a page while still bounded by the server query. Preserve these distinctions in UI descriptions and do not turn visual completion into deployed/provider acceptance.
+
+This review read source without opening an app, capturing screenshots, running canvas tests or changing the approved theme. Source-level component tests remain local evidence, and external integration cutover is separate from rendering a page successfully.

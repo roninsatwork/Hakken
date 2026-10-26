@@ -1,4 +1,22 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: workflows and schedules
+audience: platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/workflow-automation.md
+last_reviewed: '2026-10-26T15:14:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Workflow Automation
+
+> **Product:** Hakken · **Document type:** developer guide · **Feature area:** workflows and schedules
+> **Reviewed:** 26 October 2026, 15:14:20 GMT (Europe/London)
+> **Source path:** `docs/developer/workflow-automation.md` · **Status:** Current
+
+
+Core execution entry points, mail queueing, role boundaries, approval expiry and retry policy were refreshed. Detailed designer/node configuration and related runtime guides remain queued for deeper review.
 
 Workflow automation is Hakken's super-admin orchestration surface for building, scheduling, and triggering graph-based AI and integration runs. It is implemented as an administrative feature, not as a tenant admin or standard user feature. The implementation currently combines a React Flow designer, inline agent configuration, external action nodes, database nodes, schedule records, webhook triggers, backend execution records, and a Convex runtime that advances node steps through the graph.
 
@@ -64,7 +82,7 @@ Indexes matter for scale and correctness. Workflows use `by_createdAt` and `sear
 
 ## Authorization And Tenancy
 
-Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts` uses `requireSuperAdmin` for list, paginated list, get, create, update, delete, manual trigger, and webhook-secret read. `convex/scheduler.ts` also uses `requireSuperAdmin` for schedule list, get, create, update, toggle, delete, force run, and execution record queries. `convex/workflowRuntime.ts` uses the super-admin action guard for approval resumption, and the execution browser is exposed at `/admin/workflows/executions`.
+Workflow and schedule list/get/execution reads use `superAdminQuery`, which also admits `READ_ONLY`. CRUD, manual run and schedule mutation paths use `superAdminMutation`; approval resumption uses `superAdminAction`. Those writes/actions require `SUPER_ADMIN`. Read permission must not be described as authority to run a graph. `getWebhookSecret` is a separate platform read rather than part of ordinary workflow return shapes, and uses the same query read-role set. Treat that secret as a credential despite its narrow read API.
 
 Database nodes have a separate runtime guard in `convex/workflowEngine.ts`. The runtime loads the workflow creator and treats a creator with `SUPER_ADMIN` as unrestricted for database operations. If the creator is not a super admin, database operations are limited to an allowlist and force or verify the creator's company id. Non-super-admin database selects must use supported indexed query contracts or a document id that belongs to the creator's company. Inserts and updates force the creator company id and reject attempts to cross company boundaries. This matters even though the public UI currently limits workflow authoring to super admins, because runtime paths and tests cover tenant boundary behavior defensively.
 
@@ -106,7 +124,8 @@ Manual runs from the designer call `api.workflows.triggerManualRun`. The mutatio
 - `approvalNode` returns a system halt, which sets the step to `PENDING_APPROVAL`.
 - `iteratorNode` converts the configured list target into items and creates one pending downstream step per item.
 - `mergeNode` collects successful upstream step outputs.
-- `emailNode` resolves email fields and either sends via Resend or records a simulated email output when `RESEND_API_KEY` is absent.
+- `emailNode` resolves email fields, renders through `buildAutomationEmail`, and calls `internal.outbox.queueWrittenEmailInternal` with `AUTOMATION_EMAIL`. Its key is `workflow-email:${executionId}:${nodeId}`. Output reports queueing; provider delivery occurs later.
+- `taskNode` calls `internal.tasks.createTaskFromWorkflow` using the workflow creator’s company, never a template-supplied company. A creator without a company fails with `NO_ACTIVE_COMPANY`. This backend node was not found in the reviewed node-library UI.
 - Unknown node types are bypassed with a structured output recording the node type and received input.
 
 After a successful node, `finalizeNodeStep` updates the step, appends the parsed output into execution state under `nodes[nodeId].output`, computes downstream readiness, creates pending downstream steps, and returns node ids that should be scheduled. If no pending, running, or approval steps remain, the execution is marked `SUCCESS`.
@@ -121,7 +140,7 @@ Approval resumption is action-based. `/admin/workflows/executions/[id]` calls `a
 
 Standalone schedules can target either a workflow graph or an autonomous agent. The schedule list reads at most 100 schedules, enriches each row with workflow or agent names, filters in the client, and paginates locally with 15 rows per page. The create and edit screens use the schedule builder, default to agent payload mode, require a schedule name and selected target, and validate the schedule draft before writing.
 
-The current schedule config v2 supports recurring hourly, daily, weekly, monthly, and targeted local times. `scheduleConfig.ts` uses the browser timezone while editing, serializes to JSON, and displays UTC previews. `convex/workflowScheduleService.ts` validates timezones, converts local times to UTC candidates, deduplicates targeted times, and calculates both the most recent and next eligible run. It also retains support for legacy interval strings such as `daily`, `hourly`, `every 4 hours`, and legacy JSON modes.
+The current schedule config v2 supports recurring hourly, daily, weekly, fortnightly, monthly, and targeted local times. `scheduleConfig.ts` uses the browser timezone while editing, serializes to JSON, and displays UTC previews. `convex/workflowScheduleService.ts` validates timezones, converts local times to UTC candidates, deduplicates targeted times, and calculates both the most recent and next eligible run. It also retains support for legacy interval strings such as `daily`, `hourly`, `every 4 hours`, and legacy JSON modes.
 
 `convex/crons.ts` runs `internal.workflowEngine.scheduleDispatcher` every minute. The dispatcher queries active schedules whose `nextRunAt` is due, up to 500 per tick. Agent schedules create a queued `agentRuns` record and a linked `workflowExecutions` record, then start the run through `startAgentRun` (`convex/agentRunStartService.ts`), the same helper the Run button (`scheduler.manualRunSchedule`) uses, so the two cannot start an agent differently: a wiki staff agent does its round (`wikiStaffRunActions.runStaffNow`), a DataForSEO agent its role's fixed job (`seoAgentRuns.runSeoRoleNow`), and every other agent its objective on the model loop (`agentRuntime.runTriggeredAgentObjective`). Workflow schedules only run when the target workflow exists, is active, and has trigger type `SCHEDULE`; they create a workflow execution and schedule `workflowRuntime.startWorkflow`. After dispatching, the schedule records `lastRunTs` and calculates the next run. Companies' Collection schedules (rows with `companyId`) are left out of the query itself by `seoScheduleService.startsRuns`: they start nothing, and rows that never advance must not fill the batch.
 
@@ -141,17 +160,9 @@ What the Planner does for a company that is due is open a cycle and stop. It sen
 
 Two screens are called Data Collection and they are not the same screen. `/admin/companies/[id]/websites/data` is the company's cadence setting. `/admin/websites/collection` is the platform's queue, its history and its cost, and it is global because the queue is one shared pipeline and every figure on it is the operator's own spend. Keep costs, queues and runs off the company screen: that workspace becomes customer-facing.
 
-## AI Citations
+## Related Website And AI Visibility Work
 
-The questions a company puts to the AI engines live on that company's view of a website, beside its competitors: `/admin/companies/[id]/websites/site/[companyWebsiteId]` holds them, and "See what the engines answered" opens `.../citations`, one row per answer with the question, the engine, whether the site was named and where, and everyone else who was. That last column names rivals nobody thought to list, and it costs nothing extra because the answer named them anyway. Chips for a name nobody holds are marked apart from those somebody is already tracking.
-
-"See what the engines searched for" opens `.../fan-out`. An engine does not answer the question it is given: it expands it into related searches, reads what those return, and writes from that. Those searches come back in `fan_out_queries` on every answer already bought, so this screen costs nothing to fill. Most persistent first, with the engines that reached each one and the same intent judgment the rankings screen uses. It is the bridge between the two halves: a fan-out search is a search, so anything worth ranking for can be tracked like any other.
-
-Brand names sit on the global website record at `/admin/websites/[websiteId]`, up to five with one primary and each tagged as a correct name or a known misspelling, super-admin only because the list is shared by everyone tracking the host. Location sits on the company's view, because there two companies genuinely differ.
-
-The allowance is on the plan, beside the message limit: how many questions each owned website on that tier may track. Absent means the platform default; zero means the tier does not include it. A website holding more than its plan now allows, after a downgrade, is shown as such rather than trimmed, and cannot add more.
-
-The questions are written by admins and, later, clients. Nothing generates them.
+Website holdings, private tracking lists, citations and fan-out reports are covered in [Websites And Visibility](./websites-and-visibility.md), [Tenancy Enforcement](./tenancy-enforcement.md) and [Collection Operations](./collection-operations.md). They use shared purchases and company-private list membership; do not infer a current allowance or list-generation policy from older workflow examples. Specialized collector roles have their own dispatch and recovery contracts.
 
 ## Verification
 
@@ -168,14 +179,16 @@ Relevant tests include:
 - `src/app/(dashboard)/admin/_lib/scheduleConfig.test.ts` for schedule draft serialization and hydration.
 - `src/ui/components/workflows/WorkflowComponents.test.tsx` for workflow UI components.
 
-For local verification, run targeted tests around the changed area first, then the full project gate before merging documentation or code changes:
+The focused test sources are implementation evidence, not executed proof in this pass. Use current AGENTS.md gates for implementation work. Documentation validation used changed-file word counts, metadata, relative links, placeholder review and `git diff --check`; no app or browser was run.
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Approval Expiry, Throttling And Delivery Semantics
 
-When touching this area, also inspect both locale files because workflow UI strings live under the admin workflow namespaces in `messages/en.json` and `messages/it.json`. Keep the movement demo freeze in `AGENTS.md` in mind only because it shares the admin app shell; workflow work does not require touching the frozen movement demo.
+`workflowEngine.expireStaleWorkflowApprovals` reads the platform `APPROVAL_EXPIRY_CONFIG` and the shared twenty-four-hour default. It reads bounded `PENDING_APPROVAL` steps through `by_status_started`, checks their `startedAt`, and fails waiting steps and the running parent execution once the window has elapsed. `crons.ts` invokes the workflow approval expiry job every fifteen minutes through the job ledger. It does not apply an agent-specific expiry override. This differs from the separate agent tool-approval subsystem; preserve the two behaviors in UI and operator language.
+
+`resumeApprovalStep` loads the execution itself and derives `workflowId` from it. Callers supply an execution and node, not a second workflow identity that could redirect continuation. Approval calls `resumeNodeStep` and schedules returned nodes; rejection calls `rejectNodeApproval` with the reason and returns false. The execution report exposes both choices, with a rejection confirmation. A rejected graph fails rather than silently choosing an alternate branch. No already completed API/database/mail action is rolled back by this decision.
+
+`handleWebhook` checks workflow existence, active state and WEBHOOK trigger, then compares the header secret, then reads the bounded payload. Only authenticated-secret requests reserve the rolling workflow allowance through `reserveWebhookTrigger`: sixty starts per hour. Refusal returns 429 and `Retry-After`. Accepted calls create an execution as the workflow creator and call `startWorkflow`; final node completion is asynchronous. The separate API-key trigger helper checks the supplied company against `workflow.companyId`. These are different entry paths with different credentials, not interchangeable authorization evidence.
+
+The email node's Outbox key deduplicates one execution/node combination. This is not a universal guarantee for intentionally repeated nodes: iterator iterations sharing the same node key need manual review before promising one distinct email per item. Conversely, starting another execution changes the key and can queue messages again. Queue success does not prove preference eligibility, sender readiness or provider acceptance. For full delivery retry and suppression behavior, read the [Email System](./email-system.md).
+
+The current core review covered workflow definition mutations, request boundaries, node dispatch, claim/requeue policy, schedule dispatcher, manual-run simulation and graph approval recovery. The subsequent detailed review covered canvas forms, mapping generation and node contracts in [Workflow Runtime Internals](./workflow-runtime-internals.md); provider collection behavior is covered by [Collection Operations](./collection-operations.md). Do not treat this scoped refresh as a full orchestration audit or live integration test.

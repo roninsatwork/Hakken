@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: System health and platform alerts
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/system-health-and-platform-alerts.md
+last_reviewed: '2026-10-26T14:35:25+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # System Health And Platform Alerts Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** System health and platform alerts
+> **Reviewed:** 26 October 2026, 14:35:25 GMT (Europe/London)
+> **Source path:** `docs/developer/system-health-and-platform-alerts.md` · **Status:** Current
 
 System health is Hakken's in-product operational risk report for analytics drift, agent failures, schedules, approvals, tool failures, provider failures, and cost pressure. Platform alerts are the daily email path built from the same health report. Optional Sentry monitoring covers unexpected Next.js browser/server errors separately; see [Infrastructure And Deployment](./deployment.md#error-monitoring).
 
@@ -82,7 +97,7 @@ Health examples are intentionally capped. The page and email should show enough 
 
 Budget health checks two pressure points:
 
-- agent runs above 80 percent of configured `maxCostGBP`
+- agent runs above 80 percent of configured `maxCostUsd`
 - companies above 80 percent of assigned plan message limits
 
 Examples include target name, target type, used amount, limit, percent used, summary, optional timestamp, and id. Treat these as operational warnings, not automatic quota changes. Operators should inspect model choice, retrieval breadth, usage patterns, and plan assignment before raising limits.
@@ -128,8 +143,8 @@ Dispatch flow:
 5. Where none of those are set, fall back to every super admin's email address, via `internal.platformAlertRecipients.getPlatformAlertFallbackRecipients`. That query lives in a module of its own on purpose: a query and its caller in the same module resolve their types through the generated api and back again, and that cycle widens every `ctx.db.get` in the codebase to a union of every table.
 6. Return `missing_recipients` only when there are no configured recipients and no super admins — previously this was the normal outcome on any deployment without the environment variables set, which meant the job decided the platform was unhealthy every day and wrote it to a log nobody reads.
 6. Build system health alert HTML.
-7. Simulate dispatch when `RESEND_API_KEY` is missing.
-8. Otherwise load email branding, build the sender address, and send through Resend with an idempotency key based on alert type and report window.
+7. Load branding, build escaped alert content and queue `PLATFORM_ALERT` through the Outbox.
+8. Use `platform-alert:<type>:<window-start>:<checked-date>` as the queue idempotency identity; delivery happens separately under Outbox policy.
 
 Alert emails include the summary, window, analytics counts, operational counts, signal rows, example details, and runbook text. Keep email content concise and escaped through the existing helpers.
 
@@ -170,12 +185,20 @@ Focused tests include:
 - `convex/platformAlertService.test.ts` where present for alert decision and email helpers.
 - `src/app/(dashboard)/admin/health/page.test.tsx` for loading, healthy, warning, budget, rule, and company-scope UI states.
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+For documentation-only edits, run `git diff --check`. For implementation changes use the current complete gates in [AGENTS.md](../../AGENTS.md).
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Current Report And Dispatch Limits
+
+`systemHealth.getSystemHealthForAdmin` uses the admin wrapper, returns platform scope to super-admins and active-company scope to ordinary admins, and rejects a missing active company. The standalone analytics-data-health admin query is super-admin-only. Do not substitute it into a company screen under the assumption that all Health queries have identical scope.
+
+`HEALTH_COLLECTION_LIMIT` is 10,000 and examples stop at ten. Snapshot, message, transaction, run, approval, schedule, and tool sources have their own indexed windows and caps, including smaller 5,000-row reads in analytics checks. Reports can be partial; absence of examples is weaker than a complete historical audit. Returned checked/window timestamps and thresholds describe the query's actual scope. Company reports omit global purge-configuration warnings, which belong only to platform scope.
+
+Budget checks use `run.costUsd` and positive `run.maxCostUsd`, plus plan message limits. Service transactions are excluded from high-cost AI-agent aggregation. Decision calls have their own ledger and health integration, so consumers must preserve owning-source accounting rather than count a question row as an independent model request. The local source tests `systemHealthCost.test.ts`, `systemHealthDecisions.test.ts`, and platform alert tests cover selected accounting cases; no live costs were fetched here.
+
+`dispatchPlatformAlerts` reads a seven-day report by default, builds an alert decision, and returns healthy before queueing when no signals exist. Environment recipient precedence is `PLATFORM_ALERT_EMAILS`, `PLATFORM_ALERT_EMAIL`, `ANALYTICS_ALERT_EMAILS`, `ANALYTICS_ALERT_EMAIL`, then `INITIAL_SUPER_ADMIN_EMAIL`. Parsed recipients win; otherwise `platformAlertRecipients.getPlatformAlertFallbackRecipients` reads up to ten super-admins and keeps addresses. No recipient yields `missing_recipients`, not a fabricated successful delivery.
+
+The action queues written email through `outbox.queueWrittenEmailInternal`; it does not directly use Resend or simulate delivery based on a missing key. Repeated same-type/report-date queue identity is deduplicated by the shared path, while subsequent report dates can produce new alerts. Inspect Outbox results independently when delivery matters. The cron runs through the job ledger, daily at 00:25 UTC; comments describing a weekly cron are stale relative to the registration and must not override it.
+
+`src/instrumentation.ts` and `src/instrumentation-client.ts` initialize optional error monitoring for server/edge and browser startup. Sentry request-error and router-transition hooks are separate from Convex health data. `src/lib/errorMonitoring.ts` resolves enabled state from configuration; `initErrorMonitoring.ts` forwards reports and optional context. Callers must not attach personal data or secret values. A missing DSN produces a no-op and does not establish that the application is free of errors.
+
+This documentation pass read source, tests, and cron configuration only. No probes, alerts, telemetry checks, repair mutations, app sessions, or provider requests ran. The runbooks describe local implementation and preserve the distinct live deployment and external integration acceptance requirements.

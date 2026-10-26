@@ -1,147 +1,87 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: operational retention and bounded purges
+audience: platform operators and developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/data-retention-and-purges.md
+last_reviewed: '2026-10-26T10:34:20+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Data Retention And Purges Developer Guide
 
-Hakken has two purge paths: the unified data purge engine for configurable product and operations data, and a legacy audit-log purge scheduler. Both are super-admin-controlled retention tools. They delete old records in bounded Convex transactions, record operational history where implemented, and avoid arbitrary shell execution.
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Operational retention and bounded purges
+> **Reviewed:** 26 October 2026, 10:34:20 GMT (Europe/London)
+> **Source path:** `docs/developer/data-retention-and-purges.md` · **Status:** Current
 
-Read this before changing purge schedules, retention floors, purge recursion, purge history, audit-log retention, or the System Settings purge UI. For the broader settings surface, see [Platform Operations Settings](./platform-operations-settings.md).
+Hakken's current configurable retention engine is `convex/purges.ts`, with schedule and default policy in `convex/purgeScheduleService.ts`. This guide describes the implementation rather than promising that any deployed database has run its jobs. The existing user orientation is [Operational Diagnostics And Retention](../end-user/operational-diagnostics-and-retention.md). Personal erasure follows the separate manifest described in [Governance And Trust](./governance-and-trust.md).
 
-## Product Surface
+## Entry Points, Roles And Storage
 
-- `src/app/(dashboard)/admin/settings/page.tsx` includes the Settings `purges` tab.
-- `src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx` renders pipeline configuration, manual purge actions, cancellation, and recent purge history.
-- `convex/purges.ts` owns unified purge configuration, history, manual runs, scheduled dispatch, recursive deletion, and cancellation.
-- `convex/purgeScheduleService.ts` owns purge defaults, parsing, retention validation, cutoff calculation, and next-run calculation.
-- `convex/auditLogs.ts` owns the older audit-specific purge config, dispatcher, and recursive audit-log deletion.
-- `convex/auditLogService.ts` owns audit purge config helpers and monthly scheduling calculations.
-- `convex/crons.ts` runs both `audit-log-purge-dispatcher` and `unified-data-purge-dispatcher` hourly.
+The retained configuration is JSON in `systemConfig` under `PURGE_PIPELINES_CONFIG`, selected through `by_key`. `getPipelineConfig`, `getPurgePreviewCounts`, `getRunningPurges` and `getPurgeHistoryPaginated` use `superAdminQuery`, which includes READ_ONLY readers. Configuration update, manual start and cancellation use `superAdminMutation`, which permits SUPER_ADMIN alone. Do not copy the old guide's assertion that all history reads are restricted to super admins.
 
-All purge configuration and execution controls require super-admin privileges. Standard admins and users must not be able to configure, trigger, cancel, or inspect platform-wide purge history.
+The routes are `/admin/settings/security/retention` and `/admin/settings/security/purge-history`. `RetentionRulesSection.tsx` owns configuration, preview and action state; `RetentionRuleDialogs.tsx` supplies edit/confirmation dialogs. Their presence is current behavior even though the repository convention asks for pages for field editing. `PurgeHistorySection.tsx` uses `usePaginatedQuery` and fifteen-row display pages. Pipeline/status filters are sent to the server; free-text search operates on loaded results. The displayed known total is not a maintained whole-table count.
 
-## Unified Purge Pipelines
+`purgeHistory` stores pipeline, MANUAL or SCHEDULED trigger, status, parent-record count, start/progress/completion timestamps, optional actor, error and leaked storage identifiers. `by_started` supports the ledger; `by_pipeline_started` supports pipeline-specific history and running checks. The UI's running-job query scans fifty newest history rows. The stale-run reaper scans the newest hundred, so neither should be described as an unbounded search for every old stuck job.
 
-The unified purge engine supports these pipeline keys:
+## Pipeline Defaults
 
-- `agentLogs`
-- `workflowLogs`
-- `userLogins`
-- `chatHistory`
-- `auditLogs`
+All eighteen default pipelines are enabled and daily at 02:00 UTC. Saved values merge over defaults; an older saved `enabled: false` remains false. The configured minimum is thirty days. The defaults are:
 
-Default unified purge configs are disabled. Defaults set retention to 90 days for agent logs, workflow logs, and audit logs, and 180 days for user logins and chat history. The minimum retention floor is 30 days.
+| Pipeline | Days | Main data |
+| --- | ---: | --- |
+| agentLogs | 90 | agentLogs |
+| workflowLogs | 90 | workflowExecutions and steps |
+| userLogins | 180 | logins |
+| chatHistory | 180 | threads and inspected children |
+| auditLogs | 90 | auditLogs with protected purge evidence |
+| publicApiRequests | 90 | publicApiRequests |
+| authEvents | 180 | authEvents |
+| aiActionRequests | 30 | aiActionRequests |
+| analyticsSnapshots | 400 | analyticsDailySnapshots |
+| webhookDeliveries | 90 | webhookDeliveries |
+| agentRunHistory | 180 | terminal agentRuns and bounded children |
+| agentTransactions | 90 | agentTransactions |
+| phoneCalls | 90 | phoneCalls |
+| decisionRuns | 90 | decisionRuns |
+| hakkenTaskChecks | 90 | hakkenTaskChecks |
+| sentEmails | 60 | settled outboxMessages |
+| readingEvents | 90 | readingEvents |
+| purgeHistory | 365 | older terminal history outside protected newest rows |
 
-The config is stored in `systemConfig` under `PURGE_PIPELINES_CONFIG`. `getPipelineConfig` parses the saved JSON and merges it over defaults. Invalid or missing JSON falls back to defaults. `updatePipelineConfig` normalizes the submitted JSON, recalculates `nextRunTimestamp` for enabled pipelines, clears `nextRunTimestamp` for disabled pipelines, upserts the config row, and writes an `UPDATE_PURGE_PIPELINES` audit log.
+`normalizePurgePipelineConfigForUpdate` rejects invalid JSON, intervals outside Hourly/Daily/Weekly/Monthly, hours outside zero through twenty-three, weekday outside zero through six, and monthly day outside one through twenty-eight. It enforces the retention floor and recalculates enabled next-run timestamps, zeroing disabled ones. Update writes `UPDATE_PURGE_PIPELINES`. The parser's fallback is not proof that a saved malformed setting was deliberately approved.
 
-## Scheduling
+## Dispatch, Concurrency And Cutoffs
 
-Unified purge intervals are `Hourly`, `Daily`, `Weekly`, and `Monthly`.
+`crons.ts` runs `unified-data-purge-dispatcher` hourly at minute fifteen through the job ledger. The dispatcher seeds missing configuration and returns; zero next-run times are initialized before due work. Each enabled due pipeline checks for an existing running purge, creates history, schedules `executePurgeRecursive` and advances its next scheduled time. A running chain prevents a second chain over the same pipeline. Schedule evaluation uses UTC; an interval is an eligibility rule rather than exact wall-clock execution assurance.
 
-`calculateNextPurgeRun` uses UTC scheduling:
+`runManualPurge` applies the same running guard and retention floor, calculates its cutoff, inserts history, audits `MANUAL_PURGE_TRIGGER` and schedules the first batch immediately. The cutoff is passed through later batches, not recalculated from configuration each time. The internal proof variants exist for explicitly authorized live proof work; this documentation pass did not invoke them. They do not grant browser clients anonymous purge permission.
 
-- hourly schedules run at the next UTC hour boundary
-- daily schedules run at the configured UTC hour today or tomorrow
-- weekly schedules run on the next configured UTC weekday and hour
-- monthly schedules run on the next configured UTC day-of-month and hour
+## Batch Deletion And Cascades
 
-`internal.purges.dispatcher` runs hourly. It loads the unified config, skips disabled pipelines, initializes missing `nextRunTimestamp` values, starts due scheduled purges, advances the next-run timestamp, and patches the config when it changes.
+Most simple table pipelines delete at most 500 old rows through a time-leading index, then schedule another pass when full. Phone calls age by `startedAt`, including stuck in-progress rows; settled email selection explicitly includes SENT, FAILED and SKIPPED, leaving pending/sending rows. Snapshot and task-check cutoffs use date keys. Workflow deletion takes up to 200 old executions and collects each execution's steps; linked agent runs age through their own pipeline. The parent ceiling is not a universal bounded-child guarantee because step collection is unbounded within that execution loop.
 
-Scheduled unified purge runs insert a `purgeHistory` row with `triggerType: "SCHEDULED"` and `status: "RUNNING"`, then schedule `executePurgeRecursive` immediately through the Convex scheduler.
+Agent history considers twenty-five old completed candidates, verifies terminal status and uses a nominal 400-row budget between runs. `deleteAgentRunCascade` takes up to 200 per child table for steps, tool calls, reflections, memory use and feedback, retaining a parent when a child collection hits its ceiling. Because the budget is checked between runs, one run can exceed the nominal budget across child tables. Approvals, separate finance rows and learned artifacts intentionally survive; optional source references may then dangle. Do not rerun the memory-outcome backfill after its source usage rows have expired.
 
-## Manual Purges
+Chat history considers twenty-five old threads with a 500-message budget and a storage-file threshold of 200. It reads one extra message to detect partial threads. It removes up to fifty feedback rows per message, attempts attachment deletion, then deletes the message. The file threshold is checked between portions of the thread loop rather than enforced as an absolute per-file transaction ceiling. Partly drained threads remain for a subsequent pass. Memory-use rows drain in batches of 500 before the parent goes; swarm logs are collected and deleted. These details matter when evaluating transaction size or promising complete unusual-data cleanup.
 
-`runManualPurge` requires a super admin, loads the current unified config, resolves the pipeline retention days, enforces the 30-day minimum retention floor, calculates the cutoff timestamp, inserts a running `purgeHistory` row, writes a `MANUAL_PURGE_TRIGGER` audit log, and schedules recursive deletion immediately.
+Storage deletion failures are caught and appended to `leakedStorageIds` in purge history and completion audit. The corresponding message can still be deleted. A SUCCESS status with leaked identifiers is therefore not proof of full blob deletion. `recordsPurged` counts completed parent threads or runs in cascade pipelines, not all child deletions or storage bytes.
 
-Manual purge metadata includes pipeline key, retention days, and cutoff timestamp. Keep this metadata compact but sufficient for incident review.
+Audit retention uses cursor pagination so protected prior purge-summary rows cannot trap the worker in the same oldest batch. `isAuditPurgeRecord` preserves those records. Purge-history retention protects the newest two hundred, the current run and running rows. This evidence deliberately outlives ordinary deletion windows; do not equate a remaining summary with a failed generic retention rule.
 
-Do not add generic command execution or arbitrary collection deletion to this system. New purge capabilities should be explicit pipeline keys with bounded deletion logic, tests, UI labels, and audit evidence.
+## Progress, Errors And Cancellation
 
-## Recursive Deletion
+Every batch first reloads history and stops unless it is RUNNING. Partial work updates counts, progress time and leaked identifiers before scheduling another mutation after one second. Completion sets SUCCESS and records `RECORDS_PURGED` or the audit-purge action when anything was removed or leaked. In-handler exceptions set FAILED, but a commit-time abort can roll back that failure patch too.
 
-`executePurgeRecursive` is an internal mutation that deletes bounded batches and reschedules itself when more data remains.
+`reapStalePurges` is scheduled every ten minutes and marks inspected running records FAILED after thirty minutes without progress. It records the interruption; it does not resume deletion automatically. Operator recovery remains necessary and already removed rows stay removed. `cancelPurge` sets CANCELLED, completion time and a `MANUAL_PURGE_CANCEL` audit record. Future batches refuse that status. No cancellation rolls back previous committed work.
 
-Pipeline behavior:
+## Previews, Measurements And Historical Paths
 
-- `agentLogs`: deletes up to 500 `agentLogs` rows older than the cutoff using `by_createdAt`.
-- `userLogins`: deletes up to 500 `logins` rows older than the cutoff using `by_timestamp`.
-- `auditLogs`: deletes up to 500 `auditLogs` rows older than the cutoff using `by_timestamp`.
-- `workflowLogs`: deletes up to 200 old `workflowExecutions` using `by_startedAt` and cascades each execution's `workflowExecutionSteps` before deleting the execution.
-- `chatHistory`: deletes up to 100 old `threads` using `by_updatedAt`, cascades messages, message attachment storage files, and swarm logs, then deletes the thread.
+Preview reads are capped at 5,001 candidates per pipeline and report capped counts. They describe potential parent records, not exact cascaded rows or bytes. Additional execution predicates and protected records can change final results. Keep those limits visible when interpreting a preview or a small filtered history result.
 
-Chat history has an additional storage-file safety cap. When a batch reaches 200 deleted storage files, the mutation stops before deleting the partially processed thread and schedules another pass. This avoids deleting a thread before all of its messages, attachments, and related swarm logs are removed.
+The old audit-specific `AUDIT_PURGE_CONFIG` dispatcher/execution and hourly registration described in the previous guide were not found in current `auditLogs.ts` or `crons.ts`. `auditLogService.ts` still has legacy parsing/default helpers and an event label. Treat the old live scheduler as possibly deprecated, retain historical operational evidence and request manual review before deleting residual helpers. The current unified audit pipeline is the implemented path inspected here.
 
-Each recursive pass checks that the `purgeHistory` row still exists and has `status: "RUNNING"`. If the run is no longer running, recursion stops. Successful partial batches update `recordsPurged` and schedule the next pass after 1000 ms. A completed run is patched to `SUCCESS` with `completedAt`. Errors patch the run to `FAILED` with the error message and completion timestamp.
+`storageMeasure.measureEveryTable` is an internal read action over tables declared by `KEEP_RULES`. It pages at 200 rows initially, halves the same-page size on any query error until one row, uses Convex document/value size functions and returns sorted table/field totals. The catch is broader than a size-only error. This operation reads whole tables and consumes database read allowance; it is not a cheap health check or storage deletion. Its result measures database document bytes, not all file-storage objects or supplier costs. No measurement was executed.
 
-## Cancellation
-
-`cancelPurge` requires a super admin and only accepts running `purgeHistory` rows. It patches the run to `CANCELLED`, sets `completedAt`, and writes a `MANUAL_PURGE_CANCEL` audit log containing the pipeline key and records purged so far.
-
-Cancellation does not roll back records already deleted by prior recursive passes. It stops future passes because `executePurgeRecursive` checks the history status before deleting the next batch.
-
-## Purge History
-
-`getRecentPurges` returns up to 500 recent purge history rows to super admins and enriches manual runs with actor names. Non-super-admin callers receive an empty list.
-
-`getPurgeHistoryPaginated` exposes paginated purge history for super admins. The settings UI currently uses recent history and paginates client-side with the standard 15-row admin page size.
-
-The `purgeHistory` record is operational evidence. Preserve `pipelineKey`, `triggerType`, `status`, `recordsPurged`, `startedAt`, `completedAt`, actor id, and error fields when changing the schema or UI.
-
-## Audit-Only Purge Path
-
-`convex/auditLogs.ts` also contains a separate audit purge config under `AUDIT_PURGE_CONFIG`.
-
-This older path stores:
-
-- `enabled`
-- `retentionDays`
-- `dayOfMonth`
-- `hourOfDay`
-- `nextRunTimestamp`
-
-`updateConfig` requires a super admin, writes `AUDIT_PURGE_CONFIG`, and records `UPDATE_AUDIT_PURGE_CONFIG`. The audit dispatcher runs hourly, checks whether the monthly schedule is due, schedules `executePurge`, and advances the next run to the following month.
-
-`executePurge` deletes up to 500 old audit logs and reschedules itself after 1000 ms when the batch is full. Unlike unified purges, this path does not create `purgeHistory` rows and does not have per-run cancellation.
-
-Because unified purges also include an `auditLogs` pipeline, be careful when changing audit retention UI. Do not make both systems appear to be the same operational control unless the implementation has actually been consolidated.
-
-## Authorization And Audit
-
-Unified purge operations use `requireSuperAdmin` for config update, manual run, history pagination, and cancellation. `getRecentPurges` returns data only for super admins.
-
-Audit events written by purge code include:
-
-- `UPDATE_PURGE_PIPELINES`
-- `MANUAL_PURGE_TRIGGER`
-- `MANUAL_PURGE_CANCEL`
-- `UPDATE_AUDIT_PURGE_CONFIG`
-
-Avoid storing raw deleted data in audit metadata. Metadata should describe the operation, retention policy, cutoff, actor, and target pipeline, not the deleted record contents.
-
-## Adding A New Pipeline
-
-When adding a purge pipeline:
-
-1. Add the key to `PurgePipelineKey` and `DEFAULT_PURGE_CONFIGS`.
-2. Keep the default disabled unless there is a product decision to enable it.
-3. Enforce the 30-day minimum retention floor unless a deliberate policy change updates tests and operator docs.
-4. Add explicit bounded deletion logic in `executePurgeRecursive`.
-5. Cascade child rows before parent rows where needed.
-6. Update the settings UI labels and locale dictionaries in both English and Italian.
-7. Add tests for config parsing, retention validation, manual run metadata, recursive deletion, cancellation behavior if applicable, and retention of newer records.
-8. Update this guide and the platform operations guide.
-
-## Verification
-
-Focused tests include:
-
-- `convex/purgeScheduleService.test.ts` for schedule calculation, config parsing, retention fallback, normalization, and cutoff calculation.
-- `convex/purges.test.ts` for super-admin enforcement, retention-floor enforcement, cancellation, manual run history/audit metadata, recursive deletion, child-row retention, and newer-record retention.
-- `convex/auditLogs.test.ts` and `convex/auditLogService.test.ts` for audit purge configuration, scheduling, and audit log behavior.
-- `src/app/(dashboard)/admin/settings/_components/SettingsSections.test.tsx` and related settings tests for purge UI rendering.
-
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
-
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+Relevant source tests are `purgeScheduleService.test.ts`, `purges.test.ts`, `auditLogService.test.ts`, `keepRules.test.ts` and the retention/history UI tests. They cover policy parsing, scheduling, auth, cascades, stalling, evidence protection and display behavior. This documentation pass used source inspection and Markdown validation only. Implementation gates remain in current AGENTS.md; no old abbreviated command list here supersedes them.

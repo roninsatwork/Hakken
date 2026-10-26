@@ -1,6 +1,21 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: build, CI, container release and deployment evidence
+audience: developers and release operators
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/deployment.md
+last_reviewed: '2026-10-26T10:49:59+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Infrastructure And Deployment
 
-Hakken is designed for high availability and continuous delivery via Google Cloud Platform and GitHub.
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** build, CI, container release and deployment evidence
+> **Reviewed:** 26 October 2026, 10:49:59 GMT (Europe/London)
+> **Source path:** `docs/developer/deployment.md` · **Status:** Current
+
+Hakken has a GitHub-driven release path that deploys a Next.js container to Google Cloud Run and separately deploys its Convex backend. This guide describes repository configuration, not a verified live deployment or high-availability guarantee.
 
 ## 🚢 Hosting Environment
 
@@ -19,7 +34,7 @@ Strict adherence to branching rules is required to protect the production enviro
 
 Two GitHub Actions workflows protect the repository:
 
-- `.github/workflows/ci.yml` runs on pushes and pull requests targeting `dev` or `main`.
+- `.github/workflows/ci.yml` runs on pushes to `dev`, pull requests targeting `dev` or `main`, and an on-demand real-auth lane.
 - `.github/workflows/deploy.yml` runs only on pushes to `main` and deploys production after its own gate passes.
 
 Both workflows use Node `24.22.1` and `npm ci`. Both currently install `@rollup/rollup-linux-x64-gnu --no-save` after `npm ci` as a workaround for the npm optional dependency issue that can affect Rollup-based builds in CI.
@@ -33,7 +48,7 @@ the failure will look unrelated to whatever you changed.
 
 ### CI Workflow
 
-The `CI` workflow has two jobs.
+The `CI` workflow defines Checks, an on-demand Real Auth Smoke job, and a main-PR Full Gate. Their conditions decide which execute.
 
 **Checks** — every push and PR to `dev`, and every PR to `main`:
 
@@ -77,8 +92,7 @@ cloud cost with `npm run test:e2e:real-auth`. Steps, when it does run:
 5. `npm run auth:local:cleanup` (runs even when the tests fail)
 
 Every other browser job runs against a mocked backend: `next.config.ts` aliases
-`convex/react` to `src/e2e/convexReactMock.tsx` whenever
-`NEXT_PUBLIC_E2E_AUTH_ENABLED=1` and `NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT=local`, so those jobs prove the screens render but
+`convex/react` to `src/e2e/convexReactMock.tsx` when `E2E_AUTH_ENABLED=1`, `E2E_AUTH_ENVIRONMENT=local` and the build is non-production, so those jobs prove the screens render but
 never prove the wiring between the screens and Convex. This job is the only one
 that signs in through real Convex Auth, writes through real mutations, and reads
 back through real reactive queries. The mocked suite stays as the fast
@@ -111,7 +125,7 @@ identities into it, clears data out of it, and leaves the test-login door
 switched on there permanently. Pointed at `dev` that lands on Anthony's own
 working data while he is using it.
 
-**Not currently configured, by decision.** A dedicated deployment is a second
+**Historical decision, 2026-08-26; current remote configuration unverified.** A dedicated deployment is a second
 paid deployment plus its own auth keys, and the check it buys duplicates one
 Anthony performs by hand before he ships. He declined it on 2026-08-26 and the
 job was switched to manual. Nothing below is wrong — it is what to do if that
@@ -143,16 +157,9 @@ Failed Playwright runs upload `playwright-report/`. Coverage runs upload `covera
 
 ### Coverage Scope
 
-`npm run coverage:check` gates on **platform code only**. The movement demo
-(`src/app/(dashboard)/demos`, `src/lib/movements`, `convex/movements*`,
-`scripts/movement-debug`) is reported alongside but not gated.
+`npm run coverage:check` gates on **platform code only**. The checker retains historical movement-demo exclusion patterns (`src/app/(dashboard)/demos`, `src/lib/movements`, `convex/movements*`, `scripts/movement-debug`) and would report matching files separately. Those routes/modules are not present in this copy; retained patterns do not establish a current demo feature.
 
-That split exists because the demo is roughly half of non-test `src/` and is
-better covered than the platform is (74% versus 62% lines as of 2026-07-25), so
-a single repo-wide number would let platform coverage fall while the headline
-figure stayed healthy. Thresholds live in `coverage-thresholds.json`; `current`
-is the gate and may never be set below `floor`, so the ratchet only turns one
-way.
+The current configured platform thresholds are 80% lines, 77% statements, 65% branches and 72% functions. These are thresholds in `coverage-thresholds.json`, not measurements from this documentation run. The checker refuses a missing summary or a vacuous platform set, and warns when coverage output is at least one day old. Its stale-data warning does not itself fail the check. `current` cannot be set below `floor`; `nextRatchet` is a future target, not an automatically applied floor.
 
 ### Production Deploy Workflow
 
@@ -172,7 +179,7 @@ The deployment sequence is managed by `.github/workflows/deploy.yml`:
    would let unchecked code through. The walk is why the deploy checks out with
    `fetch-depth: 50` rather than the default single commit.
 2. Convex synchrony: `npx convex deploy` with `CONVEX_DEPLOY_KEY`.
-3. Container build: Docker image built by buildx with `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` build args. Layers are cached between releases in the registry under a third tag, `:buildcache`, so the `npm ci` layer is reused whenever the lockfile has not moved. That tag is machine-written and carries no releases — never deploy it, and do not prune it unless you want the next build to start cold.
+3. Container build: Docker image built by buildx with `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONTACT_URL`, `CONVEX_SITE_URL`, `CONVEX_DEPLOYMENT` and `BUILD_SHA` build args. Layers are cached between releases in the registry under a third tag, `:buildcache`, so the `npm ci` layer is reused whenever the lockfile has not moved. That tag is machine-written and carries no releases — never deploy it, and do not prune it unless you want the next build to start cold.
 4. Registry push: buildx publishes straight to Google Artifact Registry with `--push`, so the image is never loaded into the local daemon only to be uploaded again.
 5. Cloud Run rollout: image deployed to the `hakken-app` service in `us-central1` with port `3000`.
 
@@ -205,15 +212,7 @@ Every image is tagged twice: with the commit SHA and with `latest`. Cloud Run is
 deployed from the **SHA tag**, so each revision records exactly which image is
 serving traffic and previous images remain addressable.
 
-The audit step is scoped with `--omit=dev` because the gate exists to block
-shipping a vulnerable artifact, and devDependencies are not part of the deployed
-image. It is not a blanket `npm audit`: the ESLint 9 toolchain transitively pins
-`minimatch@3` -> `brace-expansion@1`, and advisory GHSA-mh99-v99m-4gvg has no
-patched 1.x release. ESLint 10 resolves it, but `eslint-plugin-react` and
-`eslint-plugin-jsx-a11y` still cap their peer range at ESLint 9, so the dev chain
-cannot currently be made clean. `.github/workflows/security-audit.yml` runs
-weekly and reports the full tree so the debt is tracked rather than hidden;
-promote its full-tree step to blocking once those plugins support ESLint 10.
+The production audit is scoped with `--omit=dev --audit-level=high` and always runs, even when previous CI covers unchanged source. The weekly security-audit workflow separately reports the full dependency tree. Workflow comments explain historical dev-tool advisory debt; they are not a current vulnerability assessment, and this review neither queried advisories nor ran an audit. Keep live dependency security findings separate from the source-level description of the release gate.
 
 ## Health Checks
 
@@ -221,8 +220,7 @@ promote its full-tree step to blocking once those plugins support ESLint 10.
   is what the container `HEALTHCHECK` uses; a failure means restarting the
   container is reasonable.
 - `GET /api/health?deps=1` — readiness. Also confirms the Convex deployment
-  answers over HTTP. Use this for external monitoring. A failure here is *not*
-  fixed by a restart.
+  answers over HTTP within its two-second request timeout. Any HTTP response, including an error status, counts as reachable. This proves a network path, not successful authenticated queries, healthy database contents or provider availability. A restart does not repair an external outage.
 
 Both return `version` (the commit SHA the image was built from) so a running
 container can be tied back to an exact revision. Neither returns configuration
@@ -297,26 +295,9 @@ Per-widget `frame-ancestors` enforcement also requires
 `NEXT_PUBLIC_CONVEX_URL` at request time so `src/proxy.ts` can read the widget's
 allowed domains before serving `/w/[widgetId]`.
 
-## Connector OAuth And Gmail
+## Residual Connector OAuth And Gmail Retirement
 
-The Gmail mailbox connector needs connector OAuth configuration in addition to
-normal outbound email settings. The app can install the connector without these
-values, but the Connect mailbox flow will refuse to start until the provider is
-fully configured.
-
-Required for the Google Gmail connector:
-
-- `CONNECTOR_GOOGLE_CLIENT_ID`
-- `CONNECTOR_GOOGLE_CLIENT_SECRET`
-- `CONNECTOR_TOKEN_ENCRYPTION_KEY`
-
-The connector OAuth validator treats partial configuration as a setup problem:
-all three values must be present or all three must be absent. A connected
-mailbox also needs the `google-gmail` connector installed for the tenant, the
-Convex site origin reachable for `/api/connectors/oauth/authorize` and
-`/api/connectors/oauth/callback`, and a dedicated Gmail account approved through
-Google's consent screen. See [Gmail Mailbox](./gmail-mailbox.md) for the runtime
-contract.
+The Gmail mailbox surface and polling are retired; see the [retirement note](./gmail-mailbox.md). Do not configure a fresh mailbox or advertise a Connect mailbox workflow from this deployment guide. Generic OAuth infrastructure and provider requirement names remain, including `CONNECTOR_GOOGLE_CLIENT_ID`, `CONNECTOR_GOOGLE_CLIENT_SECRET` and `CONNECTOR_TOKEN_ENCRYPTION_KEY`. Their presence does not prove an offered Gmail catalog item or running inbox watcher. Partial provider groups can still be reported by setup validation. The current connector runtime is covered in [AI Tools And Connectors](./ai-tools-and-connectors.md).
 
 ## Rolling Back
 
@@ -350,7 +331,7 @@ that follows that rule is safe to roll back; one that does not is forward-only.
 Schema deploys never touch existing rows, so adding a field to live data needs a
 backfill. `convex/dataMigrations.ts` holds a registry of named migrations, each
 processing one page per transaction and recording progress in the `dataMigrations`
-table, so a run resumes from its cursor instead of restarting.
+table, so ordinary scheduled batches continue from a saved cursor. Restarting a failed migration through the maintenance script resets it to the beginning; that is different from normal continuation.
 
 **Preferred: run them from the admin UI.** Settings → Scripts → *Apply pending
 data migrations* starts every registered migration that has not completed, and
@@ -366,7 +347,7 @@ List what is registered and what has run:
 npx convex run dataMigrations:listStatus '{}'
 ```
 
-Run one (safe to re-run; migrations must be idempotent):
+Start one only after inspecting its current runner and prerequisites (ordinary completed/running runs are returned unchanged unless forced):
 
 ```bash
 npx convex run dataMigrations:run '{"name":"2026-07-25-swarm-logs-company-id"}'
@@ -381,6 +362,7 @@ Rules for adding a migration:
 - Leave rows alone when the source data is genuinely absent rather than
   inventing a value.
 - A completed migration will not re-run without `force: true`.
+- Script SUCCESS can mean the background worker was scheduled, not that the migration completed. Check the named ledger and the [maintenance orchestration guide](./maintenance-scripts.md). Failed or stalled worker recovery and historical input retention require their own review.
 
 ## Pre-Deployment Setup Validation
 
@@ -392,19 +374,11 @@ npm run setup:validate -- --profile=production
 
 The validator is implemented in `scripts/validate-setup.mjs`. It reads `.env`, then `.env.local`, then the current process environment, with later sources taking precedence. It validates shape and presence only; it does not contact providers or print secret values.
 
-The validator checks:
+The validator derives provider requirements from `hakken.product.json`, `scripts/provider-requirements.mjs` and optional billing configuration. Selected production capabilities require their configured credential groups; partial groups can fail even when the capability was not selected. It checks key presence and specific URL/email/billing-mode shapes, not that arbitrary stored credentials authenticate. Product selection and backend-saved settings can differ, so this does not replace the owning feature's operator acceptance.
 
-- Convex deployment URL and deployment name.
-- Public app URL and bootstrap super-admin fallback.
-- At least one production auth provider.
-- At least one live AI provider credential group.
-- Optional ingestion providers such as Firecrawl and Apify, with `APIFY_WEBHOOK_SECRET` required when `APIFY_API_TOKEN` is configured.
+Production requires public HTTPS URLs without embedded credentials for the checked origins, rejects loopback addresses and anonymous local Convex deployment names, and compares configured app origins where applicable. It validates a bootstrap email when provided and checks an explicitly configured sender's shape. Billing-enabled validation checks origin agreement and Stripe key mode without making a payment request. Missing local optional capabilities can be warnings instead of failures. `--strict` makes warnings block setup handoff.
 
-For production, `NEXT_PUBLIC_APP_URL` and `INITIAL_SUPER_ADMIN_EMAIL` are required. Production validation fails when `NEXT_PUBLIC_CONVEX_URL` or `NEXT_PUBLIC_APP_URL` points at localhost, or when `CONVEX_DEPLOYMENT` starts with `anonymous:`. It warns when the Convex URL does not look like a hosted `.convex.cloud` URL.
-
-Auth provider readiness accepts either complete Google OAuth credentials (`AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`) or `RESEND_API_KEY`. Partial Google OAuth configuration is a failure. AI provider readiness accepts complete Google Vertex credentials (`GOOGLE_CLIENT_EMAIL` and `GOOGLE_PRIVATE_KEY`), OpenAI credentials (`OPENAI_API_KEY`, `OPEN_AI_API_KEY`, or `OPENAI_KEY`), or `ANTHROPIC_API_KEY`. The validator warns when a Google private key does not look like a service-account key.
-
-It reports pass, warning, and failure rows without printing secret values. Use `-- --profile=production --strict` when warnings should block handoff.
+`verify:deployment` is a separate command that calls the selected Convex environment through the CLI and checks setting names. It is not purely local setup validation and was not run here. Neither command proves live Google/Stripe acceptance, rename cutover, current auth sessions or a functioning voice relay. Runtime variables belong in the correct Next.js, Convex or relay service rather than being assumed propagated from one environment to all three.
 
 ## 🔐 Required GitHub Secrets
 
@@ -416,6 +390,8 @@ The automation requires the following secrets to be configured in GitHub Actions
 - `NEXT_PUBLIC_CONVEX_URL`: Passed to the Docker build and Cloud Run service.
 - `CONVEX_SITE_URL`: Passed to the Docker build and Cloud Run service for HTTP action links.
 - `CONVEX_DEPLOYMENT`: Passed to the Docker build and Cloud Run service.
+- `NEXT_PUBLIC_CONTACT_URL`: Optional public contact destination passed into the browser build; absent uses the app fallback.
+- `SOCKET_SECURITY_API_KEY`: Used by the separate dev-push dependency scan in CI, not by the production app.
 
 The Cloud Run environment currently receives only `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` from this workflow. Runtime secrets for auth, AI providers, Resend, Firecrawl, Apify, and platform alerts must be configured in the target Convex/Cloud Run environment as appropriate; do not assume adding a GitHub secret automatically exposes it to the running service.
 
@@ -435,3 +411,15 @@ After deployment:
 
 > [!CAUTION]
 > **Vercel Prohibited**: Never deploy Hakken to Vercel. The infrastructure relies exclusively on the Google Cloud / Convex synchrony.
+
+## Release Evidence And Failure Boundaries
+
+Direct pushes to `dev` also run the Socket dependency security scan before the normal gates. It installs the isolated `tools/socket-ci` dependency tree and calls its CLI with `SOCKET_SECURITY_API_KEY`; pull requests do not run that secret-dependent step. The root package cache and the Socket tool installation are separate. Documentation-only dev pushes skip CI under the current path filters, but pull requests do not skip merely because they contain Markdown.
+
+The deploy's reuse check reads up to one hundred workflow runs and walks at most fifty ancestors. It accepts a successful CI result for the current SHA, or an ancestor whose difference is limited to `docs/` and Markdown paths. If it cannot establish coverage, it runs its listed source gates itself. The filter is source-based; it is not a claim that the current SHA underwent a fresh browser or live-provider test. Branch-protection configuration and required-check settings are external state and were not queried in this review.
+
+Backend deployment happens before Docker build and frontend release. If a later image build or Cloud Run update fails, the backend may already be newer. Image rollback changes the frontend image only; it does not reverse data migrations, backend deployment or supplier-side state. The Docker image's SHA tag is an addressable release handle, not proof that a registry retention policy will keep it forever. Confirm availability before any separately authorized recovery action.
+
+The runner image uses a non-root user, standalone Next output and port 3000. Its liveness probe does not request dependencies. Default health can return 200 with absent Convex configuration because that mode skips the dependency check; inspect the configured flags as well as the status. Readiness's network result is intentionally weaker than an authenticated backend smoke test. No health URL was requested here.
+
+This source review covered workflow triggers/steps, Docker stages and exclusions, package/version gates, coverage configuration, mocked versus real-auth lanes, health implementation, setup validation and the existing migration/runtime configuration references. It did not install dependencies, run application gates, inspect GitHub secrets, deploy, query a live service or perform rollback. PRODUCT.md section 33's external rename cutover remains a separate acceptance concern. The voice relay lives under `services/voice-relay` and is excluded from this frontend Docker context; this app deployment does not implicitly release that service.

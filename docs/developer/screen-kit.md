@@ -1,4 +1,20 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: shared screen kit, hooks and theme checks
+audience: frontend developers and platform maintainers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/screen-kit.md
+last_reviewed: '2026-10-26T10:48:18+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Screen Kit Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** shared screen kit, hooks and theme checks
+> **Reviewed:** 26 October 2026, 10:48:18 GMT (Europe/London)
+> **Source path:** `docs/developer/screen-kit.md` · **Status:** Current
+
 
 The screen kit provides the table, pagination, modal, detail-layout, settings-section, empty-state, save-feedback, rule-list, and schema-builder patterns used across Hakken. Use them before adding another page-specific table, modal, confirmation flow, or settings block.
 
@@ -111,7 +127,7 @@ Shared backend helpers for admin-style listing behavior live in `convex/adminQue
 
 That distinction is not a style preference. Sixty-four screens each imported the loose parts and wired them together, and every fault found while reading thirty of them closely lived in the wiring rather than the parts: a footer that only appeared when there was more to load, a search box drawn inside a second border, a loading state written as a sentence where a row goes, an empty message conditioned so it never showed when the list was actually empty. None of it was visible in the code. The build now fails on a new screen that assembles its own — see below.
 
-Use `TableShell` for admin tables. It supplies the bordered glass shell, horizontal overflow, and optional footer slot. The default minimum table width is `min-w-[1000px]`; pass `minWidthClassName` only when a table truly needs a different fixed scanning width.
+Use `TableShell` for admin tables. It supplies the bordered glass shell, horizontal overflow, and optional footer slot. The current default is `min-w-[720px] lg:min-w-0`: the table fits without a minimum width at large breakpoints, while a narrow phone viewport can scroll horizontally. `minWidthClassName` is an implementation escape hatch, not permission to introduce a fixed-width desktop layout. The mobile fallback differs from the broad no-sideways-scrolling wording in the drawing instructions; report that discrepancy before changing either policy or UI.
 
 Use:
 
@@ -178,7 +194,7 @@ page count for cursor data.
 
 ## Modals And Forms
 
-Use `HakkenModal` for custom modal surfaces. It renders through a `document.body` portal, uses a black blurred backdrop, Framer Motion entrance/exit animation, and size classes:
+Use `HakkenModal` for permitted yes/no confirmation surfaces. The repository instruction is that a form with fields belongs on its own route; existing modal form helpers describe retained implementation, not the standard for creating new field editors. It renders through a `document.body` portal, uses a black blurred backdrop, Framer Motion entrance/exit animation, and size classes:
 
 - `sm`: `max-w-md`
 - `md`: `max-w-xl`
@@ -189,7 +205,7 @@ Do not use native `alert`, `confirm`, or `prompt` dialogs in app UI. A current s
 
 Use `ConfirmationModal` for destructive actions. It wraps `HakkenModal`, supports optional warning copy, shows `ModalFormError`, disables cancel/confirm buttons while submitting, and prevents close while submitting.
 
-Use `ModalFormField`, `ModalFormError`, `ModalFormActions`, `modalInputClassName`, and `modalTextareaClassName` for form content inside modals. `ModalFormActions` keeps the submit button typed as `submit` and disables cancel/submit while saving.
+Existing forms use `ModalFormField`, `ModalFormError`, `ModalFormActions`, `modalInputClassName`, and `modalTextareaClassName`; reuse their field/error behavior when maintaining those existing flows, without treating that as approval for a new modal editor. `ModalFormActions` keeps the submit button typed as `submit` and disables cancel/submit while saving.
 
 ## Detail Layouts And Subnavigation
 
@@ -284,7 +300,7 @@ The broader settings storage and runtime token behavior is documented in [System
 
 ## Rule Tables And Safety Warnings
 
-`AdminRulesTable` is the shared rule-list table for global and company AI rules. It uses `TableShell`, `TableLoadingRow`, `TableEmptyRow`, and `PaginationFooter`.
+`AdminRulesTable` is the shared rule-list table for global and company AI rules. Its current implementation composes `DataTable`, including loading/empty behavior and a paged footer, with `StatusLabel` priority cells.
 
 Rows are clickable and navigate with `router.push`. Toggle, edit, and delete controls stop propagation so action clicks do not trigger row navigation. Priority values map to visual tones for `CRITICAL`, `HIGH`, `NORMAL`, and fallback priorities.
 
@@ -305,9 +321,9 @@ The panel is advisory UI. Backend authorization and tenant isolation must still 
 - description
 - required flag
 
-It parses an initial schema only when the JSON has `type: "OBJECT"` and a `properties` object. Invalid JSON is ignored after logging an error, and the UI falls back to its empty state.
+It reads an initial schema with lowercase `type: "object"` or legacy uppercase `"OBJECT"`, plus a `properties` object. Invalid JSON is ignored after logging an error, and the UI falls back to its empty state.
 
-When all properties are removed or blank, it emits an empty string. When properties exist, it emits pretty-printed JSON with `type: "OBJECT"`, `properties`, and `required` only when required keys exist. Key names are sanitized by replacing non-alphanumeric/underscore characters with underscores.
+When all properties are removed or blank, it emits an empty string. When properties exist, it emits standard lowercase JSON Schema: `type: "object"` and property types `string`, `number` or `boolean`, with `required` only when required keys exist. Key names are sanitized by replacing non-alphanumeric/underscore characters with underscores.
 
 ## Extension Rules
 
@@ -316,7 +332,7 @@ When adding a new screen, under `/admin` or `/app`:
 1. Build a list screen in the order set out in [Anatomy Of A List Screen](#anatomy-of-a-list-screen) — header, explanation, search, table, footer, save. The build enforces the header; the rest is the standard the reference screens follow.
 2. Use `TABLE_PAGE_SIZE` for tables and feeds — except a Sites table, which pages through `useSitePager` or the Sites server pager (see [Pagination](#pagination)).
 3. Use shared table components for searchable/paginated records.
-4. Use `HakkenModal` or `ConfirmationModal` instead of native dialogs.
+4. Use `HakkenModal` or `ConfirmationModal` for yes/no decisions instead of native dialogs; new field editors belong on their own page.
 5. Surface backend errors with `SaveError`, `ModalFormError`, or `SaveFeedback`.
 6. Keep row action buttons labelled and stop propagation when the row itself navigates.
 7. Keep destructive actions confirmation-gated.
@@ -476,6 +492,8 @@ A screen supplies only its own figures and words; the kit draws the rest, the sa
 - **Better or worse** (`CompactList`): each line's latest whole step against the one before, the last three against
   the three before, and, for This Year, against the same three a year before. A step still going is left out.
 
+**Span-total bars are also implemented.** `ChartExplorer` accepts `bars` for horizontal totals over the chosen dates, optionally stacked, with the same toolbar and readout table. Bars do not receive the step scorecard. For line mode, callers supply data, stable series, calendar step and already calculated scores; the component does not fetch analytics or infer tenant scope. `waiting` has three states: undefined leaves chart content absent, a string explains unavailable figures, and null admits the normal controls/content. `nothingTicked` replaces chart and scorecard with guidance. The current rule helper treats changes under two percent as about the same and cannot give a percentage verdict from a zero baseline. These display judgments do not establish statistically significant change or a causal product result.
+
 The approved look is the page screen's (`docs/plans/assets/analytics-page-screen/look/Page.txt`); the drawings are
 on the canvas "Hakken — a page's channels, alternatives", rows "Visits for one conversion: one chart, every
 dimension" and "Hover B, following the dropdowns".
@@ -490,7 +508,7 @@ Every Sites chart that runs over dates marks the Google updates inside its dates
 
 ## Approved Looks And Their Look Tests
 
-Every screen Anthony approved from a drawing is held by a **look test**
+Approved screens are intended to be held by a **look test**
 (design-drift-plan D4, 2026-10-04): the screen, rendered with sample rows in
 English, reads as an outline — its kit parts top to bottom, nested as they
 nest, each with its title, and each table's column headings — that must equal
@@ -505,8 +523,7 @@ does.
   `table`, `table-bar`, `table-footer`, `compact-list`, `settings-card`,
   `download`, `save`, `primary-action`, `tabs`, `record-header`), and its title
   `data-part-title` or `data-part-label`. A new kit part gets one the day it
-  is written; `src/look-tests-drift.test.ts` fails a kit part that loses its
-  marker. A screen's own part that Anthony approved, like the News front page's
+  is written; `src/look-tests-drift.test.ts` checks an explicit list of parts for their marker strings; it is not an automatic inventory of every newly added component. A screen's own part that Anthony approved, like the News front page's
   dateline and lead story, may carry one too.
 - **The reader** is `src/test/lookOutline.ts` (`lookOutline`,
   `expectApprovedLook`); the tests sit beside the screens, named `…Look….test.tsx`.
@@ -521,7 +538,6 @@ does.
   Add an article once its page is read, and an article
   (`admin/content/helpful-content/libraryLook.test.tsx`).
 
-## What The Build Enforces
 ## What The Build Enforces
 
 `scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns, or assembles a list screen in the wrong order. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.
@@ -574,12 +590,36 @@ Focused tests include:
 - `src/ui/components/settings/JsonSchemaBuilder.test.tsx`
 - `scripts/check-screen-kit.test.mjs`
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+For documentation-only edits, use focused Markdown validation and `git diff --check`. For separately authorized implementation work, follow the current full verification gates in AGENTS.md. A static drift test, rendered outline and browser acceptance answer different questions; none was run in this documentation pass.
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Shared Hooks And Enforcement Boundaries
+
+The current core source review checked `DataTable.tsx`, `Table.tsx`, `PageHeader.tsx`, `DetailLayout.tsx`, label primitives, access controls, modal confirmation and shared paging/action hooks. The continuation also checked chart step/score rules, marker routing, schema output, rule tables, drawing generation/checking and look-outline tests. This is a review of shared component contracts and their enforcement boundaries; it is not an assertion that every consuming screen or approved image matches its implementation.
+
+`DetailHeader` is exported from `PageHeader.tsx`; it is not a separate `DetailHeader.tsx` module. The stacked, path and compact layouts belong to that implementation. `PageHeader` has an optional divider defaulting false, and `DetailLayout` owns its section rule. Use those explicit props rather than reproducing the border and heading recipe in a caller. `PagePrimaryAction` and `WriteButton` hide according to `useCanWriteHere`; this context is a frontend presentation rule. It does not replace the backend role/company checks, and hidden controls do not prove an endpoint refuses a caller.
+
+`DataTable` renders rows and headings and dispatches sorting intent; it does not fetch an entire dataset or sort all server records for a caller. Its footer variants include paged, cursor and load-more forms. Keep the count source aligned with the chosen pager. An exact backend Sites total and a count of pages loaded through a generic cursor hook are different facts, even when their footers look similar.
+
+`useServerPagedTable` defaults to fifteen rows, fetches the next server page when the reader moves beyond loaded results and resets page state when serialized query arguments change. `loadedCount` is precisely the number fetched, while `totalPages` includes one speculative next page when the backend has more. It is not an exact unseen total. `isBusy` includes both first load and later loading. With `fill: true`, the hook keeps requesting until the visible page is filled or the backend ends, useful when server-side filtering returns short pages. It does not add missing authorization or change what the underlying query filters.
+
+`usePagedRows` provides the same loaded-count idea when a caller already owns accumulated rows and a load-more function. Its `resetKey` is caller-supplied, so changing a search without changing that key need not reset its local page. `useDebounce` accepts a string and delay and cancels its timeout when inputs change or the hook unmounts. It delays a displayed/query value; it does not cancel an already sent backend request. `useNow` starts at the current time and updates every thirty seconds by default, clearing its interval on unmount. A display tick is not a server scheduler or evidence that time-dependent permissions are rechecked at that interval.
+
+`useAdminAction` holds an immediate in-flight set keyed per row or a page-level default. A second same-key call returns a deduplicated failure-shaped outcome without running the operation. Successful and failed calls return an outcome that the screen must inspect; a caught backend failure is converted to user-facing wording and reported. This is local double-click protection, not a durable idempotency key across tabs, page reloads or repeated network requests. Backend destructive writes still need their own concurrency policy.
+
+The hook supports inline error rendering through `suppressErrorToast`, avoiding duplicate text while retaining error reporting. Its background retry suppression is keyed and cleared after success. In the inspected implementation, the already-reported check suppresses the explicit reporter in the inline branch; the normal toast branch still calls `showErrorToast`. Do not promise that `backgroundRetry` universally silences every repeated toast/report path. It also does not itself retry an operation: the caller owns any timer or resubmission.
+
+## Theme Verification Is A Backend Read
+
+`check:theme` reads saved development settings through `readSavedTheme` in `scripts/theme-record.mjs`, which invokes the Convex CLI. On GitHub it exits successfully after a skip message; when a saved development theme cannot be read, it warns and exits successfully without comparison. Therefore an exit code of zero alone is not proof that the file matches a backend setting. Read the diagnostic text and distinguish compared, skipped and unavailable outcomes.
+
+`theme:pull` uses the same saved-setting read and writes `hakken.theme.json`. It is not a harmless Markdown check, and it was not run here. The theme-record drift tests establish a different local source invariant from live saved-setting equality. The documentation-only loop reads those implementations without changing the theme record or contacting a backend. Drawing-kit generation, board publishing and browser comparison remain separately authorized workflows covered by the existing drawing guide.
+
+## Drawing And Look-Test Assurance
+
+The drawing generator compiles `globals.css` with the saved theme record and renders `scripts/drawing-kit/parts.tsx` through esbuild. Its aliases stub navigation, image, localization, animation, Convex and auth providers so the parts can render without starting the application. Those static examples establish the reusable visual parts; they do not demonstrate a live query, permission boundary, keyboard interaction or successful mutation. Generated output stays under the kit build directory rather than becoming a second source of theme truth.
+
+`check:drawing` compares classes and colors against the stylesheet/theme inputs, checks fonts and minimum widths, and refuses canvas branch/repeat tags inside table markup. It permits the existing phone-only minimum width when a large-breakpoint reset is present and recognizes an explicit approved-sideways marker. It is a structural/style check, not a rendered screenshot comparison or a way to grant approval to a new layout. The remaining broad no-sideways wording is a policy-versus-implementation discrepancy, not permission to change the app during a documentation task.
+
+`lookOutline` walks marked DOM parts, skips table bodies and masks numeric title data. It retains hierarchy, selected titles and table headings; it deliberately omits record rows and much visual detail. `expectApprovedLook` compares that outline with a saved plan asset using a file snapshot. The drift test verifies registered markers, that saved looks have matching test source references, and coverage of a particular approved Search Console board set. It does not discover every approved drawing across every external canvas or prove pixel-level equality. Updating an outline without the required design approval would remove evidence rather than fix a layout fault.
+
+Current color controls support optional alpha and default reset: the source can compose eight-digit hex when transparency is enabled. A schema builder's uppercase UI type names are separate from its lowercase wire format. Keep those distinctions when reading an old example or editing a new call site. No drawing, screenshot, browser, theme pull, saved-look update or test was performed by this documentation pass; examples and test declarations were read as implementation evidence.

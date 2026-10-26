@@ -19448,6 +19448,27 @@
     }
   },
   "insights": {
+    "refresh": {
+      "updating": "Aggiornamento di Insights per {host}: {complete} sezioni completate su {total}. I risultati completati restano disponibili.",
+      "completed": "Insights per {host}: tutte le sezioni aggiornate il {when}.",
+      "unfinished": "Insights per {host} non è stato aggiornato completamente. Sezioni non completate: {sections}. I risultati precedenti restano disponibili.",
+      "unrecorded": "L'ultima esecuzione di Insights per {host} non contiene un resoconto completo di ogni sezione. I risultati salvati restano disponibili; un aggiornamento completo non è stato verificato.",
+      "stages": {
+        "History": "cronologia delle fonti",
+        "Track record": "risultati nel tempo",
+        "Measurement": "misurazione",
+        "Opportunities": "opportunità e piano delle pagine",
+        "Keyword cannibalisation": "pagine in competizione",
+        "Analysis": "analisi settimanale",
+        "Reports": "rapporti",
+        "Drafts": "correzioni preparate",
+        "Buyer questions": "domande dei clienti",
+        "Page reviews": "revisioni delle pagine",
+        "Page decisions": "decisioni sulle pagine",
+        "Page decisions' box": "riepilogo delle decisioni sulle pagine",
+        "Screens' boxes": "riepiloghi degli specialisti"
+      }
+    },
     "section": {
       "title": "Insights",
       "description": "{company}, letta come farebbe un'agenzia: Google, le risposte dell'IA, il profilo dell'attività, Search Console e Google Analytics, a confronto con i concorrenti.",

@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: AI provider and tool extension
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/ai-provider-tool-extension.md
+last_reviewed: '2026-10-26T14:30:19+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # AI Provider And Tool Extension Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** AI provider and tool extension
+> **Reviewed:** 26 October 2026, 14:30:19 GMT (Europe/London)
+> **Source path:** `docs/developer/ai-provider-tool-extension.md` · **Status:** Current
 
 Read this before changing AI model provider selection, provider adapters, the AI tool catalog, connector installs, OAuth connector state, or runtime tool execution. The current implementation has a provider-neutral model catalog and shared provider adapter layer for some text-generation paths, but several production runtime paths still call Google Vertex-specific helpers after model resolution. Tool metadata is separated from tool execution.
 
@@ -37,9 +52,9 @@ The model resolution flow is:
 3. `resolveExecutionModel` in `convex/aiModelService.ts` prefers an enabled requested model, then an enabled configured default, then the failsafe Google Vertex model.
 4. Runtime code receives `modelId`, `providerKey`, `providerModelId`, and a `source` value of `requested`, `default`, or `failsafe`.
 
-`convex/aiModelService.ts` currently defines default use cases for chat, fast chat, reasoning, agents, workflows, reports, routing, title generation, transcription, and embeddings. Provider metadata is resolved through `providerKey` and `providerModelId`. The existing Google Vertex adapter still supports legacy Google model ids by defaulting missing provider metadata to the Google provider, but new code should preserve explicit provider metadata.
+`convex/aiModelService.ts` currently defines default use cases for chat, fast chat, reasoning, agents, workflows, reports, routing, title generation, transcription, vision, speech, decision, and embeddings. Provider metadata is resolved through `providerKey` and `providerModelId`. The existing Google Vertex adapter still supports legacy Google model ids by defaulting missing provider metadata to the Google provider, but new code should preserve explicit provider metadata.
 
-`convex/aiProviderRegistry.ts` is the shared text-generation adapter boundary for provider-neutral calls. It currently routes Google, OpenAI, and Anthropic generation requests through provider adapters. The shared request and response contracts live in `convex/aiRuntimeTypes.ts`.
+`convex/aiProviderRegistry.ts` is the shared text-generation adapter boundary for provider-neutral calls. It currently routes Google Vertex, OpenAI, Anthropic, and OpenRouter generation requests through provider adapters. The shared request and response contracts live in `convex/aiRuntimeTypes.ts`.
 
 `convex/googleProviderAdapter.ts` adapts the shared generation contract to Google Vertex. `convex/vertexProviderService.ts` remains the lower-level Google client and retry boundary: it builds the Google client from environment credentials, normalizes escaped private keys, and wraps generate and embedding calls with `withProviderRetry` from `convex/aiProviderRetryService.ts`.
 
@@ -50,7 +65,7 @@ The model resolution flow is:
 Current runtime caveats:
 
 - Assistant chat response generation and thread-title generation use `generateTextWithResolvedModel`.
-- Assistant RAG search, knowledge ingestion, embeddings, voice transcription, workflow node-config generation, agent runtime, workflow agent nodes, swarm actions, report generation, router/orchestrator selection, and model-graded eval actions still use Google Vertex helpers directly or require `getGoogleVertexProviderModelId`. The Gmail mailbox watcher's answer decision uses `generateTextWithResolvedModel` with the `fast-chat` use case.
+- Agent and workflow text execution use supported adapters; workflow internet grounding, voice/media and embeddings have narrower feature-specific provider constraints. Follow the current subsystem guides before extending one. Gmail mailbox polling is retired; no new watcher should be inferred from retained generic integration code.
 - Embedding paths intentionally require Google Vertex-compatible 768-dimensional embeddings until the vector schema and existing data expectations change.
 
 When documenting provider support, distinguish "catalog/provider can be configured" from "this runtime path can execute through that provider today."
@@ -59,9 +74,9 @@ When documenting provider support, distinguish "catalog/provider can be configur
 
 Provider administration actions live in `convex/aiModelsActions.ts` and require super-admin access.
 
-Google Vertex catalog sync currently seeds a curated production model list instead of relying on a live Vertex model index. The curated list includes Google text and multimodal model rows plus the `text-embedding-004` embedding row. Sync also backfills legacy Google model rows so provider metadata is explicit.
+Google Vertex sync lists the live catalog for the configured account/location, walks provider pages, derives capabilities where needed, and backfills legacy provider metadata. It does not substitute a hardcoded successful catalog on failure.
 
-OpenAI catalog sync first tries to read the live `/v1/models` catalogue. If live sync fails, it can seed a curated text-generation catalogue and mark provider health as degraded or error depending on the failure. The curated OpenAI model list is a model-administration convenience; it does not prove every seeded model can execute under the current API key until the provider connection and selected runtime path are tested.
+OpenAI sync reads the live model catalog and rejects an empty response. It classifies returned identifiers; there is no curated fallback that turns failed discovery into success. Listed capabilities still need the actual runtime adapter.
 
 Anthropic catalog sync reads the live model catalogue and stores text-generation rows from the response. No provider carries a fallback catalogue: a hardcoded list decides what exists, goes stale without saying so, and turns a failed sync into one that looks successful. A sync that cannot reach its provider throws and marks the provider unhealthy.
 
@@ -293,3 +308,11 @@ When extending this area, add or update tests for:
 8. Registered handler behavior for real and scaffolded connector mappings.
 
 Before shipping new provider or connector functionality, confirm the operator-facing docs describe what actually executes and what is still scaffolded. Do not present catalog scaffolds as live external integrations until their handlers perform the downstream action and the tests cover the real behavior.
+
+## Current Discovery And Decision References
+
+Use [AI models, providers, costs and Decisions](./ai-models-providers-and-costs.md) for the reviewed live-list sync contracts, provider enablement side effects, health probes, confidence bands, fallback behavior and separate Decision ledger. Catalog sync can enable the provider while leaving newly discovered model rows disabled; connection testing updates health without enabling it. This distinction matters when extending a provider integration or describing rollout scope.
+
+The general text registry includes OpenRouter and rejects TypeSafe with a Decision-only explanation. OpenAI's streaming path can use chat completions while its non-listener/structured path uses Responses. Adapter content constraints still apply independently of a synced capability tag. A provider ID displayed in the picker is not evidence that images, tool calls, streaming, embeddings, or Google grounding all work through that provider.
+
+Keep future extension work tied to the existing registry, provider service, policy, stored configuration, cost accounting, and test injection boundaries described above. Portable tool metadata does not execute a handler, and adding a catalog row does not install runtime capability. This documentation review changed no adapter, connector, credentials, schema, deployment, or provider settings and performed no external request.

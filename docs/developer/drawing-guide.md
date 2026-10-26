@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: drawing kit and approved-look workflow
+audience: frontend developers and design maintainers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/drawing-guide.md
+last_reviewed: '2026-10-26T10:48:18+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Drawing and building screens — read before either
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** drawing kit and approved-look workflow
+> **Reviewed:** 26 October 2026, 10:48:18 GMT (Europe/London)
+> **Source path:** `docs/developer/drawing-guide.md` · **Status:** Current
 
 Every screen Anthony sees is drawn first and built second, and both must look
 exactly like the app. On 2026-10-04 a set of drawings copied an older
@@ -108,5 +123,18 @@ were redrawn on 2026-10-04.
 Admin → System Settings → Global Aesthetics, then `npm run theme:pull`,
 `npm run test:run -- src/theme-record-drift.test.ts` (it names the copies in
 the code to update), `npm run drawing-kit`, and re-upload `kit.css` to the
-canvases in use. `npm run check` fails while the saved look and the record
-differ.
+canvases in use. When the saved theme can be read and differs, `check:theme` fails. A skipped or unavailable comparison can exit successfully; read its message rather than treating exit status alone as a live equality proof.
+
+## What The Tooling Actually Verifies
+
+The current drawing generator reads `hakken.theme.json`, compiles the application stylesheet and renders the real component examples in `scripts/drawing-kit/parts.tsx`. Its build aliases replace application navigation, provider hooks, localization and motion with controlled substitutes. This makes a useful parts catalog without running a customer workflow. It does not establish that a real company can read a query, save a record, upload a file or complete a provider operation. Keep such functional acceptance separate from the drawing review.
+
+The generated `kit.css`, `parts.html` and build metadata belong in `docs/design/drawing-kit/build`. They are generated working output, not manually maintained design specifications. A change to a component can require rebuilding the kit even when a drawing's words have not changed. The metadata records build inputs, but a file existing on disk alone is not proof that it was rebuilt against the code currently under review.
+
+Theme comparison has a live boundary. `readSavedTheme` invokes the Convex CLI against development settings. `check:theme` skips on GitHub and warns then exits successfully if it cannot read that saved setting. `theme:pull` writes the local theme record after reading the saved configuration. Therefore these commands are not passive Markdown checks, and a successful skipped comparison is not proof of deployed design acceptance. This documentation-only review read their source without invoking them or changing the record.
+
+The current table shell retains a 720-pixel minimum on narrow screens and clears it at the large breakpoint. The drawing checker explicitly recognizes that phone-only fallback. It also has an approved-sideways marker for the existing exceptional wide table. This differs from the broad instruction that tables never scroll sideways. Preserve the owner-approved design intent, report the difference when it matters and obtain a separate decision before changing the responsive implementation or its acceptance rule. Do not silently remove the fallback while updating this guide.
+
+A look test compares an outline of marked component parts, their ordering, titles and table headings with a saved file. It skips body rows and masks some data, so it is not a screenshot comparison or proof of every color, spacing, overflow or hover state. The drift guard checks an explicit marker list and registered saved-look/test references, plus the approved Search Console boards. It does not independently discover all external drawings. A newly approved screen still needs its own deliberate test and saved asset; passing unrelated outline tests does not complete that obligation.
+
+For a separately authorized design task, follow the earlier steps and the [Screen Kit](./screen-kit.md) together. For repository documentation maintenance, use source inspection, local links and Markdown validation instead. No browser capture, download, kit generation, board publication or application test was performed in this pass. Historical plans and their approved drawing assets were left unchanged.

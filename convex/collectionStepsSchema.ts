@@ -14,6 +14,7 @@ export const stepChainValidator = v.union(
   v.literal("SC_RUN"),
   v.literal("SC_FILL"),
   v.literal("SC_SETTLE"),
+  v.literal("INSIGHTS"),
 );
 export type StepChain = Infer<typeof stepChainValidator>;
 

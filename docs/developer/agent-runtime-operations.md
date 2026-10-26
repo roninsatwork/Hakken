@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: Agent operations learning and evaluation
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/agent-runtime-operations.md
+last_reviewed: '2026-10-26T14:20:25+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # Agent Runtime Operations Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Agent operations learning and evaluation
+> **Reviewed:** 26 October 2026, 14:20:25 GMT (Europe/London)
+> **Source path:** `docs/developer/agent-runtime-operations.md` · **Status:** Current
 
 Agent runtime operations cover durable run execution, run detail evidence, approval decisions, feedback, eval fixtures, memory candidates, reflections, improvement suggestions, version snapshots, and release readiness. This guide splits those implementation details out of the broad Agents guide.
 
@@ -94,7 +109,7 @@ Feedback, reflections, memory candidates, and improvement suggestions are intent
 - `convex/agentMemories.ts` stores active memories and memory quality/usage signals.
 - `convex/agentImprovementSuggestions.ts` proposes reviewed improvements.
 
-Generated prompt, rule, tool-schema, routing, approval-policy, skill, and eval changes must stay reviewable. Memory candidates follow `SELF_IMPROVEMENT_CONFIG.autonomousMemory`: when enabled they can become active memories immediately after the existing safety, duplicate, and rejection-fingerprint checks. Auto-applied memory is labelled, audited, and removable. When disabled, the existing candidate approval/rejection queue remains in force.
+Generated prompt, rule, tool-schema, routing, approval-policy, skill, and eval changes must stay reviewable. Memory candidates follow `SELF_IMPROVEMENT_CONFIG.autonomousMemory`: when enabled they can become active memories immediately after the existing safety, duplicate, and rejection-fingerprint checks, without applying the separate low-risk-only predicate. Auto-applied memory is labelled, audited, and removable. When disabled, the candidate queue remains, with an explicit human-triggered `autoApplyLowRisk` fallback still able to apply low-risk FACT/SUMMARY candidates.
 
 The memory review inbox combines memory candidates, improvement suggestions, and reflections. It supports open, reviewed, high-risk, and all modes, plus reviewer filtering. Keep review decisions company-scoped.
 
@@ -126,9 +141,9 @@ The super-admin settings route `/admin/settings/options/self-improvement` update
 
 ## Version Snapshots
 
-`convex/agentVersioningService.ts` and `convex/agentVersions.ts` create and read version snapshots. Snapshots hash prompt, tools, skills, memories, rules, model config, and policy state, so a check result can be tied to the exact agent that produced it.
+`convex/agentVersioningService.ts` and `convex/agentVersions.ts` create and read version snapshots. Snapshots hash bounded prompt, tool, skill, memory, rule, model, and policy projections. They tie evidence to a recorded projection; they do not freeze all external state or guarantee every runtime reader consumes the same snapshot.
 
-Activation logic in `convex/agents.ts` must stay aligned with must-pass check evidence, smoke eval status, and high-risk skill readiness.
+Activation in `convex/agents.ts` reports readiness advice; missing smoke/release/skill evidence does not universally refuse an active-state write. Keep readiness computation and actual enforcement distinct.
 
 ## Authorization And Tenant Scope
 
@@ -163,3 +178,27 @@ Focused tests include:
 - UI tests under `src/app/(dashboard)/admin/agents/[id]/runs`, `evals`, `memory`, and `settings`
 
 When changing visible strings, keep `messages/en.json` and `messages/it.json` in parity. Documentation-only changes should run `git diff --check`; runtime changes should run the full verification gate in `AGENTS.md`.
+
+## Learning Lifecycle And Application Semantics
+
+`agentRunReflectionService.ts:reflectRun` is deterministic classification over failed/cancelled evidence. It uses bounded details and updates an existing reflection rather than treating every request as a new independent root cause. The public reflection mutation checks admin/company access and reports eligibility errors. The internal wrapper catches reflection failures and always schedules candidate generation afterwards, so disabling `autoReflection` does not disable that later pass.
+
+`agentMemoryCandidates.generateForRun` and its internal counterpart share the generation path. Rehearsal runs return empty results. Evidence reads generally take 200 rows per source. The automatic path applies backpressure at ten proposed candidates for the agent; an actor-requested pass bypasses that backlog refusal. Normalized content, existing candidates/memories, and `by_agent_rejected_fingerprint` limit ordinary duplicate proposals. Bounded reads mean this is not a complete semantic deduplication proof.
+
+Candidate content is whitespace-normalized, limited to 4,000 characters, and rejected by `getAssistantSafetyWarnings` when unsafe categories are found. Confidence is clamped before becoming importance. `applyCandidateMemory` writes an active `agentMemories` row, resolves its application mode, marks the candidate applied, and audits the action. `config.autonomousMemory` enters this application path without `shouldAutoApply`; the latter low-risk FACT/SUMMARY predicate applies to the manual fallback when the platform switch is off. Do not merge these two admission policies in UI or tests.
+
+A platform-triggered pass omits `createdBy` and uses `autoApplied`; a requested pass carries its actual user actor. `decideCandidate` accepts proposed/approved records, rejects with a persistent wording fingerprint or approves and applies in the same mutation. Already reviewed applied/rejected rows refuse a new review. The combined review inbox reads bounded per-status populations and returns at most 50 entries of each artifact class, scoped by company for ordinary admins; it is not the entire retained archive.
+
+`agentImprovementSuggestions.decideSuggestion` separates approval from application through the `apply` argument. Applying a shared skill change requires super-admin authority and appends instruction text plus a skill snapshot. A prompt change appends to the system prompt; an approval-policy change sets human approval and disables autonomy. Other supported categories insert active `aiRules` using the proposed fields or fallback description. A title referring to a tool or routing change is therefore not proof that a tool schema or provider router was directly rewritten. Applied configuration gets snapshot evidence and the suggestion stores its applied identifiers.
+
+## Eval Modes, Cost, And Currency
+
+`createSmokeEvalRun` first evaluates the contract. Contract failures finish as failed without queueing model grading. A contract pass can finish successfully in contract-only mode; this is not fresh model behavior. Model-graded mode queues `agentEvalGradingActions.gradeSmokeEvalWithModel`, which creates an EVAL-purpose thread under the requesting user and invokes the normal `runAgentObjective` path for each sample. It does not pass the rehearsal flag on this path. Model execution, reads, and permitted effects must therefore be assessed under runtime policy rather than presumed simulated.
+
+The fixture sample count is clamped from one to five. The grading service prefers another enabled text-capable model, otherwise falls back and records the lack of independence. Answer/grading token usage and catalog rates contribute to cost; a graded check is not free configuration validation. Invalid grading output is handled as grading failure rather than a silent pass. Rehearsal remains separate: `gradeRehearsalToolPlan` requires successful completion and inclusion of all expected handlers among successful/rehearsed calls, tolerates extra handlers, and treats an empty expected plan as completion-only evidence.
+
+Suite runs accept up to 50 fixtures; discovery reads up to 200 active fixture rows before tag filtering. Model-graded history and release comparison use bounded run reads. `getReleaseCandidateComparison` chooses fixtures from tag or preset policy, reports policy warnings, and classifies missing, stale, active, failed, passed, and model-required evidence. Its per-fixture `isCurrent` check compares run start with fixture update time; it is not full equality of agent snapshot hashes. Skill evidence has its own stronger fixture/version currency checks. Do not assume the two definitions are interchangeable.
+
+`agentVersioningService.ensureAgentVersionSnapshot` takes up to 200 tool bindings, rules, memories, and skill bindings per projection, serializes a stable snapshot, reuses the agent/hash match, and otherwise allocates the next version. The hash includes recorded agent update metadata as well as component content. `agentVersions` scopes ordinary-admin list/detail access by company. Version detail reads up to 200 runs and fixtures and computes success rate over terminal runs; its cost/count figures are bounded history rather than lifetime revenue or billing.
+
+Keep rules retain candidate/suggestion/version evidence indefinitely, memories and fixture records for their own lifetime, and reflections with runs; agent logs and transactions use 90-day cleanup. Evidence removal must follow the actual owner-specific purge path. `agentMemoryCandidates.test.ts`, `agentImprovementSuggestions.test.ts`, `agentRunReflections.test.ts`, `agentEvalFixtures.test.ts`, `agentVersions.test.ts`, and grading/rehearsal tests provide local examples. No model, rehearsal, feedback write, candidate generation, or live integration operation was run for this documentation review.

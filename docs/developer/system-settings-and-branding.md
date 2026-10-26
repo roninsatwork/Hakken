@@ -1,4 +1,19 @@
+---
+product: Hakken
+documentation_type: Developer guide
+feature_area: System settings and branding
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/system-settings-and-branding.md
+last_reviewed: '2026-10-26T14:33:53+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # System Settings And Branding Developer Guide
+
+> **Product:** Hakken · **Document type:** Developer guide · **Feature area:** System settings and branding
+> **Reviewed:** 26 October 2026, 14:33:53 GMT (Europe/London)
+> **Source path:** `docs/developer/system-settings-and-branding.md` · **Status:** Current
 
 System settings are Hakken's global configuration surface for platform identity, logos, email sender defaults, theme tokens, diagnostic routing, audit/PII controls, and analytics tracking. The implementation is split across the `systemSettings` table for branding and visual/runtime options, and the `systemConfig` table for keyed operational values such as system prompt, analytics id, and PII redaction.
 
@@ -6,16 +21,9 @@ Read this before changing `convex/settings.ts`, `convex/settingsService.ts`, `co
 
 ## Product Surface
 
-- `/admin/settings` renders the main system settings page for identity, appearance, security, audit, purges, and options.
-- `/admin/settings?tab=identity` manages platform name, light logo, dark logo, email sender name, and email sender address.
-- `/admin/settings?tab=appearance` manages typography, brand color, and light/dark theme color tokens.
-- `/admin/settings?tab=security` manages PII redaction settings and the older audit purge schedule controls.
-- `/admin/settings?tab=audit` renders recent audit log rows.
-- `/admin/settings?tab=purges` renders the unified purge engine controls.
-- `/admin/settings?tab=options` manages diagnostic routing and renders white-label readiness, handoff, preset, navigation, custom-domain, and packaging panels.
-- `/admin/settings/analytics` manages the Google Analytics or Google Tag Manager tracking id and analytics data-health reporting.
+`/admin/settings` is a redirect entry, not the old single-page tab editor. `settingsTabs.ts` maps retained `?tab=` bookmarks to current routes. Identity is `/admin/settings/identity`; Global Aesthetics is `/admin/settings/identity/aesthetics`; security is `/admin/settings/security`; retention is `/admin/settings/security/retention`; options is `/admin/settings/options`. Audit history lives in Governance. Unknown legacy tabs return to identity rather than creating a missing settings section.
 
-All writes from the main settings page are privileged. The settings page itself is an admin surface, but global settings mutation paths must remain super-admin-only unless a product requirement deliberately changes that boundary.
+The route group `(system)` owns shared navigation. Main identity/theme writes are super-admin-only. Company-admin billing remains separately in `/app/settings/billing`; platform settings access is not granted by company billing authority. Dedicated API key, analytics, script, plan, billing, and option pages use their own reviewed backend contracts, linked from [Platform operations](./platform-operations-settings.md).
 
 ## Storage Model
 
@@ -43,7 +51,7 @@ Do not move keyed operational values into `systemSettings` without a migration p
 
 `convex/settings.ts` owns `systemSettings` access.
 
-`settings.get` reads the first settings row, resolves storage-backed logo ids through `ctx.storage.getUrl`, and merges stored values with defaults. If no row exists, it returns `DEFAULT_SETTINGS`.
+`settings.get` is intentionally public for login/branding, reads the first row, resolves storage logo IDs through `ctx.storage.getUrl`, and merges values with defaults before allowlist projection. It returns only `PUBLIC_SETTINGS_FIELDS`, including the default-backed projection when no row exists. The full row is separately available through super-admin `getForAdmin`.
 
 `settings.update`:
 
@@ -70,7 +78,7 @@ Global non-themed overrides include:
 
 Dark and light theme overrides include the main background, radial colors, text colors, card/sidebar colors, borders, hover background, muted text, success color, destructive color, and focus ring.
 
-The provider also sets wrapper `fontFamily` and `fontSize` from settings values. Because it mutates global CSS variables, changes can affect every tenant and every route using shared tokens.
+Legacy typography fields remain readable for compatibility, but `fontFamily`, `fontSizeBase`, `subTextSizeGlobal`, and `borderRadius` were retired from the update API. Current heading/body choices use shared font resolution; do not document removed controls as writable. Because it mutates global CSS variables, changes can affect every tenant and every route using shared tokens.
 
 `UserNavTree` in `src/ui/components/layout/SidebarNavTrees.tsx` reads `diagnosticRoutingEnabled` through `useSystemSettings`. When enabled, it shows diagnostic/temporary navigation such as the Arcade route. This is presentation behavior, not authorization. Do not rely on the setting as a security boundary.
 
@@ -141,7 +149,7 @@ System settings writes create audit evidence:
 
 Audit metadata should stay compact. Store field names, lengths, categories, or small configuration summaries. Do not add raw secrets, logo file contents, large JSON payloads, or unbounded values.
 
-The security tab also includes older audit purge controls through `api.auditLogs.getConfig` and `api.auditLogs.updateConfig`. Unified purge pipelines are documented separately in [Data Retention And Purges](./data-retention-and-purges.md).
+Retained audit-purge configuration is not proof of an active independent scheduler. Use the current unified retention routes and [Data retention](./data-retention-and-purges.md) for the verified deletion chain.
 
 ## Access Control Rules
 
@@ -166,12 +174,18 @@ Focused tests include:
 - `src/app/(dashboard)/admin/settings/_components/SettingsSections.test.tsx` for identity, appearance, and white-label component behavior.
 - `src/context/SystemSettingsContext.tsx` consumers should be checked when adding CSS variables or theme-token behavior.
 
-For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+For documentation-only edits, run `git diff --check`. For implementation changes, use the current complete gates in [AGENTS.md](../../AGENTS.md).
 
-```bash
-npm run verify:env
-npm run lint:all
-npm run check
-npm run build
-git diff --check
-```
+## Public Projection, Theme Record, And Logo Lifecycle
+
+Public settings deliberately exclude commercial pricing, sales contacts, and sender addresses. They include identity/theme fields needed before sign-in. A public color or platform name is not a secret; adding a new backend setting requires an explicit decision about whether it belongs in `PUBLIC_SETTINGS_FIELDS`, the privileged editor projection, or a separate keyed configuration reader. Neither projection should contain provider credential values.
+
+`settings.update` preserves false/zero values through patch construction and applies privileged logo validation for storage-backed references. Upload reservations and metadata verification belong to the existing shared upload policy, not arbitrary client URL acceptance. `clearLogo` is a separate super-admin operation that clears the selected field and attempts deletion of a storage reference; replacement/removal must be assessed using the actual current mutation, not an assumption that editing a visible URL proves every old blob was removed. Settings changes audit modified field names.
+
+`DEFAULT_SETTINGS` imports the repository's theme record, `hakken.theme.json`, while runtime saved settings override default-backed values. The context updates root CSS variables as the current light/dark mode changes. Brand RGB derivation accepts plain three- or six-digit hex; invalid values clear that derived override. `onBrandFor` selects dark foreground for a sufficiently pale brand using the implemented 3:1 white-contrast threshold. That helper is a narrow rendering rule, not a whole-site accessibility certification.
+
+The stored look and the repository record have a controlled synchronization workflow described in [Drawing guide](./drawing-guide.md) and [Screen kit](./screen-kit.md). Documentation housekeeping did not run `theme:pull`, mutate theme configuration, or restyle screens. A color in an old diagram is not an alternative source of truth. Diagnostic navigation visibility likewise remains presentation behavior; route/backend authorization must stand independently.
+
+Prompt, tracking ID, PII controls, self-improvement switches, approval expiry, and retention settings have separate keyed records/read policies. A tracking ID is intended for browser script mounting and is public by design; it is not a Google Analytics property-connection credential. Saving a PII policy affects the implemented message-write path going forward, not automatic retroactive redaction of every existing record, upload, or external log.
+
+`settings.test.ts`, `settingsService.test.ts`, `system.test.ts`, context/theme tests, and current settings screen tests provide local evidence. This refresh inspected implementation without changing saved settings, uploading logos, running an app, or executing live integrations. The [deployment guide](./deployment.md) and PRODUCT.md cutover record remain separate from local configuration presence.
