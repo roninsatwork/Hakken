@@ -30,6 +30,8 @@ import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { FigureCell } from "../local/_components/LocalParts";
+import { periodOrOpening } from "../../_components/siteRange";
+import { useOpeningPeriod } from "../../_components/useCalendarPeriod";
 
 type Row = { url: string; host: string; title: string | null; day: string; kind: number; tone: number; strength: number; linked: number };
 
@@ -69,7 +71,9 @@ export default function WebMentionsPage() {
   const siteId = useSiteId();
   const site = useSite();
   const range = useSiteRange();
-  const data = useQuery(api.siteWebMentions.webMentions, { siteId, period: range.period });
+  // Custom dates are not offered here (sitePages.ts, PERIOD_ONLY_SEGMENTS): the address carrying them reads as the opening period.
+  const period = periodOrOpening(range, useOpeningPeriod());
+  const data = useQuery(api.siteWebMentions.webMentions, { siteId, period: period });
   const [search, setSearch, term] = useSiteSearch();
   const [tone, setTone] = useSiteParam<(typeof TONE_FILTERS)[number] | "">("tone", "", TONE_FILTERS);
   const [kind, setKind] = useSiteParam<(typeof KIND_FILTERS)[number] | "">("kind", "", KIND_FILTERS);
@@ -100,9 +104,9 @@ export default function WebMentionsPage() {
 
       {data ? (
         <FigureRow>
-          <Figure label={t("figures.new")} emphasis value={last.length} detail={<><Change by={last.length - before.length} arrow={last.length >= before.length ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${range.period}`)}</span></>} />
+          <Figure label={t("figures.new")} emphasis value={last.length} detail={<><Change by={last.length - before.length} arrow={last.length >= before.length ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${period}`)}</span></>} />
           <Figure label={t("figures.well")} value={last.length > 0 ? `${Math.round((well / last.length) * 100)}%` : "–"} detail={<span className="text-secondary">{t("figures.wellDetail", { count: well, of: last.length })}</span>} />
-          <Figure label={t("figures.badly")} value={badly.length} detail={<span className="text-secondary">{badlyKinds.length === 1 ? t("figures.badlyOn", { kind: t(`kindsMany.${badlyKinds[0]}`) }) : tp(range.period)}</span>} />
+          <Figure label={t("figures.badly")} value={badly.length} detail={<span className="text-secondary">{badlyKinds.length === 1 ? t("figures.badlyOn", { kind: t(`kindsMany.${badlyKinds[0]}`) }) : tp(period)}</span>} />
           <Figure label={t("figures.noLink")} value={last.filter((row) => row.linked === 0).length} detail={<span className="text-secondary">{t("figures.noLinkDetail")}</span>} />
         </FigureRow>
       ) : null}

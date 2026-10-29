@@ -101,7 +101,7 @@ export function DatesMenu({ value, newest, oldest, label, ...rest }: DatesMenuPr
         <ChevronDown className={cn("pointer-events-none h-4 w-4", narrowed ? "text-foreground" : "text-muted")} aria-hidden="true" />
       </Button>
       {open ? (
-        <div id={panelId} role="menu" aria-label={name} className={cn("absolute left-0 top-full mt-1 flex w-max min-w-[220px] flex-col gap-0.5 rounded-[10px] border border-border-dim bg-card p-2 shadow-lg", LAYER.PAGE_MENU)}>
+        <div id={panelId} role="menu" aria-label={name} className={cn("absolute right-0 top-full mt-1 flex w-max min-w-[220px] flex-col gap-0.5 rounded-[10px] border border-border-dim bg-card p-2 shadow-lg", LAYER.PAGE_MENU)}>
           {CALENDAR_PERIODS.map((period) => {
             const span = periodSpan(period, today, end);
             const chosen = !isCustomDates(value) && value.period === period;
@@ -167,7 +167,9 @@ export function DatesMenu({ value, newest, oldest, label, ...rest }: DatesMenuPr
  * "29 Jul – 28 Oct" within a year, "29 Oct 2025 – 28 Oct 2026" across two.
  */
 export function spanWords(from: string, to: string, locale: string): string {
-  const day = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { timeZone: "UTC", ...options }).format(new Date(`${iso}T00:00:00Z`));
+  // The app's day order: day before month, as every screen's dates (siteFormat.ts); Italian in Italian.
+  const tag = locale.toLowerCase().startsWith("it") ? "it-IT" : "en-GB";
+  const day = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(tag, { timeZone: "UTC", ...options }).format(new Date(`${iso}T00:00:00Z`));
   if (from === to) return day(to, { day: "numeric", month: "short", year: from.slice(0, 4) === ukDay().slice(0, 4) ? undefined : "numeric" });
   if (from.slice(0, 7) === to.slice(0, 7)) return `${day(from, { day: "numeric" })}–${day(to, { day: "numeric", month: "short" })}`;
   if (from.slice(0, 4) === to.slice(0, 4)) return `${day(from, { day: "numeric", month: "short" })} – ${day(to, { day: "numeric", month: "short" })}`;

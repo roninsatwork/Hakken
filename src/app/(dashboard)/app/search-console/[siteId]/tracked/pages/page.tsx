@@ -31,7 +31,7 @@ export default function SearchConsoleTrackedPagesPage() {
 
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="trackedPages" seen={list.summary ? trackedSees(list.summary, list.range.period, "pages") : null} />}
+      sees={<SearchConsoleSees screen="trackedPages" seen={list.summary && list.range.period !== "custom" ? trackedSees(list.summary, list.range.period, "pages") : null} />}
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("tracked.pages.title")}
       description={t("tracked.pages.description")}

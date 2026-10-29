@@ -25,8 +25,8 @@ import {
  * one, so Back leaves the page instead of undoing a filter.
  */
 
-/** The keys every Sites page shares — the date menu's period (calendar-periods-plan.md), its step, "compare with" — everything else is one page's own. */
-export const SITE_SHARED_KEYS = ["period", "step", "compare"] as const;
+/** The keys every Sites page shares — the Dates menu's period and custom dates' first and last day (sees-header-and-rolling-dates-plan.md), its step, "compare with" — everything else is one page's own. */
+export const SITE_SHARED_KEYS = ["period", "from", "to", "step", "compare"] as const;
 
 /**
  * The table's page, kept in the address with the filters so that Back from a

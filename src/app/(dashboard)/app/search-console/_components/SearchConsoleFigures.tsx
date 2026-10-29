@@ -16,7 +16,7 @@ import {
   useResultKind,
   useSearchConsoleCountry,
   useSearchConsolePeriodWords,
-  useSearchConsoleRange,
+  periodArg, useSearchConsoleRange,
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
   type ResultKind,
@@ -158,7 +158,7 @@ export function SearchConsoleSiteFigures() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const { figures, problem, retry } = useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to, period: range.period } : null);
+  const { figures, problem, retry } = useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to, ...periodArg(range) } : null);
   if (problem) return <LiveProblem problem={problem} retry={retry} />;
   if (figures === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   return <SearchConsoleFigures totals={figures.totals} previous={figures.previous} days={range.days} />;

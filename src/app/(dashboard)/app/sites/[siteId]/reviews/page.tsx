@@ -26,6 +26,8 @@ import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { FigureCell, LocalSetupNotice, OfficeSwitch, ratingText, useOfficeId } from "../local/_components/LocalParts";
+import { periodOrOpening } from "../../_components/siteRange";
+import { useOpeningPeriod } from "../../_components/useCalendarPeriod";
 
 type Row = { listingId: string; id: string; day: string; stars: number; text: string | null; name: string | null; guide: boolean; replyDay: string | null; replyRough: boolean };
 
@@ -53,12 +55,14 @@ export default function YourReviewsPage() {
   const tr = useTranslations("sites.reviews");
   const tp = useTranslations("common.periods");
   const range = useSiteRange();
+  // Custom dates are not offered here (sitePages.ts, PERIOD_ONLY_SEGMENTS): the address carrying them reads as the opening period.
+  const period = periodOrOpening(range, useOpeningPeriod());
   const siteId = useSiteId();
   const site = useSite();
   const router = useRouter();
   const drafts = useSiteDrafts(siteId, "REVIEWS", site?.host ?? "site");
   const officeId = useOfficeId();
-  const data = useQuery(api.siteReviews.yourReviews, { siteId, ...(officeId ? { officeId } : {}), period: range.period, step: range.step });
+  const data = useQuery(api.siteReviews.yourReviews, { siteId, ...(officeId ? { officeId } : {}), period: period, step: range.step });
   const [search, setSearch, term] = useSiteSearch();
   const [listing, setListing] = useSiteParam<string>("listing", "");
   const [stars, setStars] = useSiteParam<(typeof STARS)[number] | "">("stars", "", STARS);
@@ -120,10 +124,10 @@ export default function YourReviewsPage() {
             label={t("figures.new")}
             emphasis
             value={figures.newIn}
-            detail={<><Change by={figures.newIn - figures.newBefore} arrow={figures.newIn >= figures.newBefore ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${range.period}`)}</span></>}
+            detail={<><Change by={figures.newIn - figures.newBefore} arrow={figures.newIn >= figures.newBefore ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${period}`)}</span></>}
           />
           <Figure label={t("figures.waiting")} value={figures.waiting} detail={<span className="text-secondary">{figures.oldestWaitingDays === null ? t("figures.noneWaiting") : t("figures.oldestWaiting", { days: figures.oldestWaitingDays })}</span>} />
-          <Figure label={t("figures.daysToAnswer")} value={figures.daysToAnswer === null ? "–" : Math.round(figures.daysToAnswer)} detail={<span className="text-secondary">{t("figures.daysToAnswerDetail", { period: tp(`inline.${range.period}`) })}</span>} />
+          <Figure label={t("figures.daysToAnswer")} value={figures.daysToAnswer === null ? "–" : Math.round(figures.daysToAnswer)} detail={<span className="text-secondary">{t("figures.daysToAnswerDetail", { period: tp(`inline.${period}`) })}</span>} />
         </FigureRow>
       ) : null}
 

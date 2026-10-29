@@ -28,7 +28,7 @@ import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/Search
 import { CountryNotReady, ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { filePosition, formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { countryArg, useResultKind, useSearchConsoleCountry, periodArg, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { newLostSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
@@ -75,7 +75,7 @@ export default function SearchConsoleNewLostPage() {
       searchType: kind,
       from: range.from,
       to: range.to,
-      period: range.period,
+      ...periodArg(range),
       step: range.step,
       ...countryArg(country),
       ...(term ? { q: term } : {}),
@@ -106,7 +106,7 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description", { days: status?.limits.lostAfterDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="newLost" seen={counts ? newLostSees(counts, range.period) : null} />
+          <SearchConsoleSees screen="newLost" seen={counts ? (range.period === "custom" ? null : newLostSees(counts, range.period)) : null} />
           <ResultKindSwitch />
           {list.result?.notKept ? <p className="text-[13px] text-secondary">{t("newLost.notKept")}</p> : country && list.result?.notReady ? <CountryNotReady country={country} /> : (
             <>

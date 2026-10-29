@@ -21,14 +21,16 @@ import { useSearchConsoleRange } from "./useSearchConsole";
 export function SearchConsoleCatchUp({ siteId, newestDay }: { siteId: Id<"companyWebsites">; newestDay: string | null | undefined }) {
   const t = useTranslations("searchConsole.catchUp");
   const range = useSearchConsoleRange(newestDay);
-  const dates = { siteId, from: range.from, to: range.to, period: range.period };
+  // Custom dates have no ready-made list to catch up: they are asked of Google live, so no period is sent.
+  const period = range.period === "custom" ? undefined : range.period;
+  const dates = { siteId, from: range.from, to: range.to, ...(period ? { period } : {}) };
   const state = useQuery(api.searchConsoleCatchUp.searchConsoleCatchUp, dates);
   const request = useMutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp);
   const behind = state?.behind === true;
   useEffect(() => {
     // Asked once for these dates; the server asks for the work at most once in ten minutes whoever else is looking.
-    if (behind) request({ siteId, from: range.from, to: range.to, period: range.period }).catch(() => undefined);
-  }, [behind, request, siteId, range.from, range.to, range.period]);
+    if (behind) request({ siteId, from: range.from, to: range.to, ...(period ? { period } : {}) }).catch(() => undefined);
+  }, [behind, request, siteId, range.from, range.to, period]);
   if (!state?.behind || !state.heldTo || !state.newest) return null;
   const share = state.progress && state.progress.parts > 0 ? state.progress.done / state.progress.parts : 0;
   return (

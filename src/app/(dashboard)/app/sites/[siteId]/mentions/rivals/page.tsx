@@ -22,6 +22,8 @@ import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRec
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { FigureCell } from "../../local/_components/LocalParts";
+import { periodOrOpening } from "../../../_components/siteRange";
+import { useOpeningPeriod } from "../../../_components/useCalendarPeriod";
 
 type Business = { host: string; you: boolean; mentions: number; before: number; well: number; badly: number; noLink: number; series: number[]; share: number | null };
 
@@ -49,13 +51,15 @@ export default function MentionsAgainstRivalsPage() {
   const tm = useTranslations("sites.mentions");
   const tp = useTranslations("common.periods");
   const range = useSiteRange();
+  // Custom dates are not offered here (sitePages.ts, PERIOD_ONLY_SEGMENTS): the address carrying them reads as the opening period.
+  const period = periodOrOpening(range, useOpeningPeriod());
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   const listHref = useSiteListHref(siteId);
   const site = useSite();
-  const data = useQuery(api.siteWebMentions.mentionsAgainstRivals, { siteId, period: range.period, step: range.step });
-  const periodWords = tp(`inline.${range.period}`);
+  const data = useQuery(api.siteWebMentions.mentionsAgainstRivals, { siteId, period: period, step: range.step });
+  const periodWords = tp(`inline.${period}`);
   const total = (data?.businesses ?? []).reduce((sum, row) => sum + row.mentions, 0);
   const businesses = data?.businesses.map((row) => ({ ...row, share: total > 0 ? row.mentions / total : null })) as Business[] | undefined;
   const { rows: sorted, tableSort } = useSiteSortedList(businesses, SORTS, { opening: "mentions", name: hostOf });
@@ -83,7 +87,7 @@ export default function MentionsAgainstRivalsPage() {
           <Figure
             label={t("figures.fastest")}
             value={fastest ? shortName(fastest) : "–"}
-            detail={fastest ? <><Change by={fastest.mentions - fastest.before} arrow={fastest.mentions >= fastest.before ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${range.period}`)}</span></> : <span className="text-secondary">–</span>}
+            detail={fastest ? <><Change by={fastest.mentions - fastest.before} arrow={fastest.mentions >= fastest.before ? "up" : "down"} /> <span className="text-secondary">{tp(`versus.${period}`)}</span></> : <span className="text-secondary">–</span>}
           />
           <Figure label={t("figures.worst")} value={worst && worst.badly > 0 ? shortName(worst) : "–"} detail={<span className="text-secondary">{worst && worst.badly > 0 ? t("figures.worstDetail", { count: worst.badly, of: worst.mentions }) : t("figures.noneBadly")}</span>} />
         </FigureRow>

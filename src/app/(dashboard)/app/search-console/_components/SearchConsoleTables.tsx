@@ -32,7 +32,7 @@ import {
   isReadyMade,
   useResultKind,
   useSearchConsoleCountry,
-  useSearchConsoleRange,
+  periodArg, useSearchConsoleRange,
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
 } from "./useSearchConsole";
@@ -179,7 +179,7 @@ export function useSearchConsoleList(options: {
     ...(within ? { within } : {}),
     from: range.from,
     to: range.to,
-    period: range.period,
+    ...periodArg(range),
     ...countryArg(country),
   };
   // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready,
@@ -278,7 +278,7 @@ export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view
   const [kind] = useResultKind();
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const base = { siteId, searchType: kind, from: range.from, to: range.to, period: range.period, ...ask, ...countryArg(country) };
+  const base = { siteId, searchType: kind, from: range.from, to: range.to, ...periodArg(range), ...ask, ...countryArg(country) };
   const held = Boolean(status?.connection?.newestDay);
   const readyMade = isReadyMade(range, status?.connection?.newestDay);
   const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held && readyMade ? { ...base, page: 1, rows: 25 } : "skip");

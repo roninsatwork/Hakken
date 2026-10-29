@@ -31,6 +31,8 @@ import { useSiteSearch } from "../../_components/useSiteParam";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { periodOrOpening } from "../../_components/siteRange";
+import { useOpeningPeriod } from "../../_components/useCalendarPeriod";
 
 type Figures = { websiteId: string; host: string; estimatedTraffic: number | null; keywords: number | null; referringDomains: number | null };
 const hostOf = (row: Figures) => row.host;
@@ -65,6 +67,8 @@ export default function SiteSideBySidePage() {
   const siteId = useSiteId();
   const site = useSite();
   const range = useSiteRange();
+  // Custom dates are not offered here (sitePages.ts, PERIOD_ONLY_SEGMENTS): the address carrying them reads as the opening period.
+  const period = periodOrOpening(range, useOpeningPeriod());
   const figures = useQuery(api.siteCharts.siteAndRivals, { siteId });
   const [search, setSearch, settled] = useSiteSearch();
   const lower = settled.toLowerCase();
@@ -98,12 +102,12 @@ export default function SiteSideBySidePage() {
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
   const tm = useTranslations("sites.rivalMoves");
   const tp = useTranslations("common.periods");
-  const moves = useQuery(api.siteRivalMoves.rivalMoves, { siteId, period: range.period });
+  const moves = useQuery(api.siteRivalMoves.rivalMoves, { siteId, period: period });
   // Rivals are checked once a month: a week between two checks says so rather than showing noughts.
   const lastRivalCheck = moves && moves.length > 0 && moves.every((row) => !row.checked)
     ? moves.reduce<string | null>((newest, row) => (row.lastCheck && (!newest || row.lastCheck > newest) ? row.lastCheck : newest), null)
     : null;
-  const newHeader = tm("columns.new", { period: tp(`inline.${range.period}`) });
+  const newHeader = tm("columns.new", { period: tp(`inline.${period}`) });
   const [moveSearch, setMoveSearch, moveTerm] = useSiteSearch("mq", "moves");
   const moveMatches = moves?.filter((row) => !moveTerm || row.host.toLowerCase().includes(moveTerm.toLowerCase()));
   const { rows: moveRows, tableSort: moveSort } = useSiteSortedList(moveMatches, MOVE_SORTS, { opening: "new", name: (row) => row.host, table: "moves" });

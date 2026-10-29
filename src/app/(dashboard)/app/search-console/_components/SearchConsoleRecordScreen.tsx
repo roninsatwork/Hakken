@@ -37,7 +37,7 @@ import {
   useResultKind,
   useSearchConsoleCountry,
   useSearchConsoleHref,
-  useSearchConsoleRange,
+  periodArg, useSearchConsoleRange,
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
 } from "./useSearchConsole";
@@ -85,7 +85,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const ready = Boolean(status && hasFigures(status) && key);
   // The country chosen narrows the days and the devices; the splits' countries are every country still.
   const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...countryArg(country) };
-  const series = useLiveAsk(api.searchConsoleLists.searchConsoleKeySeries, ready ? { ...ask, period: range.period } : null);
+  const series = useLiveAsk(api.searchConsoleLists.searchConsoleKeySeries, ready ? { ...ask, ...periodArg(range) } : null);
   const splits = useLiveAsk(api.searchConsoleLists.searchConsoleKeySplits, ready ? ask : null);
   const days = series.answer === undefined ? undefined : series.answer.ok ? series.answer : { days: [], totals: null, previous: null, previousHeld: false };
   const other = dimension === "query" ? "page" : "query";
@@ -140,7 +140,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
       />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="record" seen={days ? recordSees(title, days.totals, days.previous, range.period) : null} />
+          <SearchConsoleSees screen="record" seen={days && range.period !== "custom" ? recordSees(title, days.totals, days.previous, range.period) : null} />
           <ResultKindSwitch />
           {days === undefined ? (
             <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />

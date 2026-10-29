@@ -17,7 +17,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { periodSpan, ukDay } from "@/convex/utils/calendarPeriods";
 import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
-import { useCalendarPeriod } from "../sites/_components/useCalendarPeriod";
+import { useDateChoice } from "../sites/_components/useCalendarPeriod";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 import type { ReadCoverage } from "@/convex/utils/readCoverage";
@@ -87,10 +87,10 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
 
 export default function CompanySettingsDashboard() {
   const t = useTranslations('admin.overview');
-  // The seven periods every section's Dates menu offers (sees-header-and-rolling-dates-plan.md), its days to today.
-  const [period, setPeriod] = useCalendarPeriod();
+  // The Dates menu every section shares (sees-header-and-rolling-dates-plan.md), its days to today; custom dates too.
+  const [choice, setChoice] = useDateChoice();
   const today = ukDay();
-  const span = periodSpan(period, today, today) ?? { from: today, to: today };
+  const span = choice.period === "custom" ? { from: choice.from, to: choice.to } : periodSpan(choice.period, today, today) ?? { from: today, to: today };
 
   const user = useQuery(api.users.getMe);
   const companyId = user?.companyId;
@@ -135,7 +135,7 @@ export default function CompanySettingsDashboard() {
         </div>
 
         <div className="flex flex-col items-end gap-3 z-20">
-          <DatesMenu value={{ period }} newest={null} custom={false} onChange={(choice) => setPeriod(choice.period)} />
+          <DatesMenu value={choice} newest={null} onChange={setChoice} />
         </div>
       </header>
 

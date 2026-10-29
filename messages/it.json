@@ -152,7 +152,8 @@
       "customFrom": "Primo giorno",
       "customTo": "a",
       "customToLabel": "Ultimo giorno",
-      "customShow": "Mostra"
+      "customShow": "Mostra",
+      "customName": "Queste date"
     }
   },
   "landing": {

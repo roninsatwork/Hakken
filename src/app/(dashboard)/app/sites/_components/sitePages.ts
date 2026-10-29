@@ -225,6 +225,19 @@ export function showsDates(pathname: string, siteId: string): boolean {
   return DATED_SEGMENTS.has(restOf(pathname, siteId));
 }
 
+/**
+ * The dated screens that read a period itself rather than its days — reviews, mentions, local activity and rivals'
+ * moves ask the server by period — so custom dates are not offered on them; the address carrying custom dates reads
+ * there as the period the website opens on (`periodOrOpening`).
+ */
+export const PERIOD_ONLY_SEGMENTS: ReadonlySet<string> = new Set(["reviews", "reviews/rivals", "mentions", "mentions/rivals", "local/activity", "competitors"]);
+
+/** Whether the screen at a path offers custom dates. */
+export function offersCustomDates(pathname: string, siteId: string): boolean {
+  const rest = restOf(pathname, siteId);
+  return DATED_SEGMENTS.has(rest) && !PERIOD_ONLY_SEGMENTS.has(rest);
+}
+
 /** Whether a path is one of the menu's own pages, rather than a record's screen under one. */
 export function isSiteMenuPath(pathname: string, siteId: string): boolean {
   const rest = restOf(pathname, siteId);

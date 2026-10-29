@@ -15,7 +15,7 @@ import { formatDay } from "../_components/siteFormat";
 import { heldIcon } from "../_components/siteGroups";
 import { SiteMark } from "../_components/SiteMark";
 import { SiteMenu } from "../_components/SiteMenu";
-import { isSiteMenuPath, setupMet, setupPaused, showsDates, sitePageForPath, switchHref } from "../_components/sitePages";
+import { isSiteMenuPath, setupMet, setupPaused, offersCustomDates, showsDates, sitePageForPath, switchHref } from "../_components/sitePages";
 import { SiteSwitcher } from "../_components/SiteSwitcher";
 import { useListBack } from "../_components/siteRecordLinks";
 import { OpeningPeriodContext } from "../_components/useCalendarPeriod";
@@ -103,7 +103,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               )}
             </>
           }
-          action={showsDates(pathname, siteId) ? <SiteDateRange /> : undefined}
+          action={showsDates(pathname, siteId) ? <SiteDateRange custom={offersCustomDates(pathname, siteId)} /> : undefined}
         />
 
         {!site.checked && (

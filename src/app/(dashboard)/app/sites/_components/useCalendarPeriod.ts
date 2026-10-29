@@ -1,8 +1,10 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { CALENDAR_PERIODS, OPENING_PERIOD, type MenuPeriod } from "@/convex/utils/calendarPeriods";
-import { useSiteParam } from "./useSiteParam";
+import { useSearchParams } from "next/navigation";
+import { CALENDAR_PERIODS, OPENING_PERIOD, isCalendarPeriod, ukDay, type MenuPeriod } from "@/convex/utils/calendarPeriods";
+import type { DateChoice } from "@/src/ui/components/screens/DatesMenu";
+import { useSetSiteParams, useSiteParam } from "./useSiteParam";
 
 /**
  * The date menu every section shares (docs/plans/active/sees-header-and-rolling-dates-plan.md, part two; the kit's
@@ -28,4 +30,30 @@ export function useOpeningPeriod(): MenuPeriod {
 export function useCalendarPeriod(opening?: MenuPeriod): [MenuPeriod, (next: MenuPeriod) => void] {
   const given = useOpeningPeriod();
   return useSiteParam<MenuPeriod>(CALENDAR_PERIOD_KEY, opening ?? given, CALENDAR_PERIODS);
+}
+
+/**
+ * The Dates menu's whole choice from the address — a period, or custom dates
+ * (`period=custom&from=&to=`, within what the screen holds, `newest`) — and its
+ * setter, for a screen that answers custom dates from its own days (the
+ * Settings overview, Governance). A Sites or Search Console screen reads
+ * `useSiteRange` instead, which parses the same keys.
+ */
+export function useDateChoice(newest: string | null = null): [DateChoice, (next: DateChoice) => void] {
+  const params = useSearchParams();
+  const setParams = useSetSiteParams();
+  const opening = useOpeningPeriod();
+  const raw = params.get(CALENDAR_PERIOD_KEY);
+  const from = params.get("from");
+  const to = params.get("to");
+  const isDay = (value: string | null): value is string => value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const end = newest ?? ukDay();
+  const choice: DateChoice = raw === "custom" && isDay(from) && isDay(to) && from <= to && to <= end
+    ? { period: "custom", from, to }
+    : { period: isCalendarPeriod(raw) ? raw : opening };
+  const setChoice = (next: DateChoice) => {
+    if (next.period === "custom") setParams({ [CALENDAR_PERIOD_KEY]: "custom", from: next.from, to: next.to });
+    else setParams({ [CALENDAR_PERIOD_KEY]: next.period === opening ? null : next.period, from: null, to: null });
+  };
+  return [choice, setChoice];
 }

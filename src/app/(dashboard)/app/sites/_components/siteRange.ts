@@ -1,4 +1,4 @@
-import { OPENING_PERIOD, isCalendarPeriod, periodSpan, spanBefore, stepOf, ukDay, type MenuPeriod } from "@/convex/utils/calendarPeriods";
+import { OPENING_PERIOD, customSpans, isCalendarPeriod, periodSpan, spanBefore, stepOf, ukDay, type MenuPeriod } from "@/convex/utils/calendarPeriods";
 
 /**
  * The date menu's period and the step every Sites and Search Console page
@@ -12,7 +12,8 @@ export type SiteStep = "day" | "week" | "month";
 
 /** A calendar period's days on a Sites page, and the step its charts are drawn in. */
 export type SitePeriodRange = {
-  period: MenuPeriod;
+  /** The menu's period, or `custom` for a first and a last day of the reader's own (sees-header-and-rolling-dates-plan.md, part two, rule 4). */
+  period: MenuPeriod | "custom";
   /** Inclusive, `YYYY-MM-DD`. */
   from: string;
   to: string;
@@ -32,11 +33,18 @@ export type SitePeriodRange = {
  */
 export function parseSitePeriod(params: URLSearchParams, now: Date = new Date(), opening: MenuPeriod = OPENING_PERIOD): SitePeriodRange {
   const raw = params.get("period");
-  const period = isCalendarPeriod(raw) ? raw : opening;
   const today = ukDay(now.getTime());
+  const stepParam = params.get("step");
+  // Custom dates: a first and a last day, within what is held (to today here), set against the same number of days before.
+  const from = params.get("from");
+  const to = params.get("to");
+  if (raw === "custom" && isDay(from) && isDay(to) && from <= to && to <= today) {
+    const custom = customSpans(from, to);
+    return { period: "custom", from, to, step: isStep(stepParam) ? stepParam : custom.step, whole: true, before: { from: custom.before.from, to: custom.before.to } };
+  }
+  const period = isCalendarPeriod(raw) ? raw : opening;
   // Today falls in or after every period, so a period always has its days here.
   const span = periodSpan(period, today, today) ?? { from: today, to: today, whole: false };
-  const stepParam = params.get("step");
   const before = spanBefore(period, span);
   return { period, from: span.from, to: span.to, step: isStep(stepParam) ? stepParam : stepOf(period), whole: span.whole, before: { from: before.from, to: before.to } };
 }
@@ -56,6 +64,13 @@ export function shiftMonth(month: string, by: number): string {
   const date = new Date(`${month}-01T00:00:00Z`);
   date.setUTCMonth(date.getUTCMonth() + by);
   return date.toISOString().slice(0, 7);
+}
+
+const isDay = (value: string | null): value is string => value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+/** The menu's period a screen reads when the address holds custom dates it cannot answer: the one the website opens on. */
+export function periodOrOpening(range: Pick<SitePeriodRange, "period">, opening: MenuPeriod): MenuPeriod {
+  return range.period === "custom" ? opening : range.period;
 }
 
 function isStep(value: string | null): value is SiteStep {

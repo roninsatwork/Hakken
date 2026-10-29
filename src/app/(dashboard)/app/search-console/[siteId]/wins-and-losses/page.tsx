@@ -29,7 +29,7 @@ export default function SearchConsoleWinsPage() {
   const summary = list.summary;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="moves" seen={list.summary ? movesSees(list.summary, list.range.period) : null} />}
+      sees={<SearchConsoleSees screen="moves" seen={list.summary && list.range.period !== "custom" ? movesSees(list.summary, list.range.period) : null} />}
       icon={<ArrowUpDown className="h-5 w-5 text-brand" />}
       title={t("moves.title")}
       description={t("moves.description", { period: periodWords.period, before: periodWords.before })}

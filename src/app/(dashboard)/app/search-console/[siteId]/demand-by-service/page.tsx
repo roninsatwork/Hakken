@@ -24,6 +24,7 @@ import { SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { countryArg, isReadyMade, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
+import { useOpeningPeriod } from "../../../sites/_components/useCalendarPeriod";
 
 /** Below this many before, a change is said as a count, not a share. */
 const SHARE_FROM = 10;
@@ -52,10 +53,12 @@ export default function SearchConsoleDemandPage() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const periodWords = useSearchConsolePeriodWords(range.period);
+  // Demand by service is prepared per period: custom dates read the period the website opens on.
+  const opening = useOpeningPeriod();
+  const period = range.period === "custom" ? opening : range.period;
+  const periodWords = useSearchConsolePeriodWords(period);
   const [country] = useSearchConsoleCountry();
   const readyMade = isReadyMade(range, status?.connection?.newestDay);
-  const period = range.period;
   const data = useQuery(api.searchConsoleDemand.searchConsoleDemand, status?.connection?.newestDay && readyMade ? { siteId, period, ...countryArg(country) } : "skip");
   const [search, setSearch, term] = useSiteSearch();
   // A service by its page's title before any "|", as Insights' Strategy names it; the home page by name.

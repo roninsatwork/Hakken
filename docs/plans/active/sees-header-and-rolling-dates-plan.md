@@ -127,6 +127,13 @@ until the build ends (no-pulls-until-build-ends); the first collection of the ne
   tracking-health page check reads Last 3 months; a shop is noted from Last 3 months and un-noted once they show no
   step; the action funnels' fallback and Insights' yearly reads are Last 12 months; Ask Hakken's period names are the
   menu's.
+- **Custom dates, as built**: offered where a section reads by first and last day. Sites' dated screens (the address
+  carries `period=custom&from=&to=`; the six screens that read a period itself — reviews, mentions, local activity,
+  rivals' moves — do not offer them and read the opening period if the address carries them), every Search Console
+  screen (totals and charts from the days held; the lists asked of Google live with no period, as other dates always
+  were; the box is not drawn for custom dates, since it speaks in the menu's periods; Demand by service reads the
+  opening period), the Settings overview and the evidence pack. Not yet: Google Analytics, Bing, Clarity and the
+  Governance activity chart, whose reads are prepared per period (`custom={false}`).
 - **Still to do before the retired periods go**: a clean-up that deletes the rows prepared for them (Search Console,
   Bing, Clarity and Google Analytics period tables) on Anthony's word, then the retired literals leave the validators
   and the type; and the first collection of the new periods, on his go (no-pulls-until-build-ends).

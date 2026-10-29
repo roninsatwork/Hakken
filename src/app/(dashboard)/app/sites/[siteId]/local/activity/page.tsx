@@ -24,6 +24,8 @@ import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { LocalSetupNotice, useOfficeName } from "../_components/LocalParts";
 import { useActivityWords } from "../_components/profileDetails";
+import { periodOrOpening } from "../../../_components/siteRange";
+import { useOpeningPeriod } from "../../../_components/useCalendarPeriod";
 
 type Kind = "POST" | "OFFER" | "EVENT" | "CATEGORY_ADDED" | "CATEGORY_REMOVED" | "HOURS_CHANGED" | "NAME_CHANGED" | "WEBSITE_CHANGED" | "RATING_CHANGE" | "PHOTOS_ADDED";
 type Line = { day: string; listingId: string; name: string; kind: Kind; text: string | null; from: number | null; to: number | null };
@@ -70,7 +72,9 @@ export default function LocalActivityPage() {
   const site = useSite();
   const officeName = useOfficeName();
   const range = useSiteRange();
-  const data = useQuery(api.siteLocalMarket.rivalActivity, { siteId, period: range.period });
+  // Custom dates are not offered here (sitePages.ts, PERIOD_ONLY_SEGMENTS): the address carrying them reads as the opening period.
+  const period = periodOrOpening(range, useOpeningPeriod());
+  const data = useQuery(api.siteLocalMarket.rivalActivity, { siteId, period: period });
   const [search, setSearch, term] = useSiteSearch();
   const [rival, setRival] = useSiteParam<string>("rival", "");
   const [what, setWhat] = useSiteParam<What | "">("what", "", WHATS);
@@ -103,8 +107,8 @@ export default function LocalActivityPage() {
 
       {figures ? (
         <FigureRow>
-          <Figure label={t("figures.posts")} emphasis value={figures.rivalPosts} detail={<span className="text-secondary">{t("figures.postsDetail", { count: figures.yourPosts, period: tp(range.period) })}</span>} />
-          <Figure label={t("figures.offers")} value={figures.offers} detail={<span className="text-secondary">{figures.offerNames.length > 0 ? figures.offerNames.join(", ") : t("figures.noOffers", { period: tp(`inline.${range.period}`) })}</span>} />
+          <Figure label={t("figures.posts")} emphasis value={figures.rivalPosts} detail={<span className="text-secondary">{t("figures.postsDetail", { count: figures.yourPosts, period: tp(period) })}</span>} />
+          <Figure label={t("figures.offers")} value={figures.offers} detail={<span className="text-secondary">{figures.offerNames.length > 0 ? figures.offerNames.join(", ") : t("figures.noOffers", { period: tp(`inline.${period}`) })}</span>} />
           <Figure label={t("figures.questions")} value={figures.openQuestions} detail={<span className="text-secondary">{t("figures.questionsDetail")}</span>} />
           <Figure label={t("figures.changes")} value={figures.profileChanges} detail={<span className="text-secondary">{t("figures.changesDetail")}</span>} />
         </FigureRow>

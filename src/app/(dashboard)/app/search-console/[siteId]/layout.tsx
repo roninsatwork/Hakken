@@ -111,7 +111,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             <div className="flex flex-wrap items-end gap-3">
               <SearchConsoleCountryPicker />
               {/* The date menu's seven calendar periods (calendar-periods-plan.md, phase 4). */}
-              <SiteDateRange newest={connection?.newestDay ?? null} />
+              <SiteDateRange newest={connection?.newestDay ?? null} custom />
             </div>
           }
           note={connection?.newestDay && state !== "CHOOSING" ? t("figuresTo", { day: formatDay(connection.newestDay) }) : null}
@@ -147,7 +147,7 @@ function PeriodDays({ siteId, newestDay, children }: { siteId: string; newestDay
   const source = useTranslations("sidebar")("searchConsole");
   const page = pageForPath(usePathname(), siteId);
   const range = useSearchConsoleRange(newestDay);
-  if (!range.waiting || !range.newest || OWN_DAYS.has(page)) return <>{children}</>;
+  if (!range.waiting || !range.newest || range.period === "custom" || OWN_DAYS.has(page)) return <>{children}</>;
   return (
     <>
       <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={tm(page)} />

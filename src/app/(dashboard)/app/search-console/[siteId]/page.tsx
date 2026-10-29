@@ -7,7 +7,7 @@ import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { SearchConsoleChart } from "../_components/SearchConsoleChart";
 import { SearchConsoleFigures, useSiteFiguresFor } from "../_components/SearchConsoleFigures";
 import { LiveProblem, NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../_components/SearchConsoleNotices";
-import { useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
+import { useResultKind, useSearchConsoleCountry, periodArg, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
 import { SearchConsoleSees } from "../_components/SearchConsoleSees";
 import { performanceSees } from "@/convex/utils/sees/searchConsoleScreens";
 
@@ -27,7 +27,7 @@ export default function SearchConsolePerformancePage() {
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const { figures: performance, problem, retry } = useSiteFiguresFor(
-    status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to, period: range.period } : null,
+    status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to, ...periodArg(range) } : null,
   );
   const totals = performance?.totals ?? null;
   // Google's sixteen months still coming in for the country read, and where its days start until then
@@ -42,7 +42,7 @@ export default function SearchConsolePerformancePage() {
       <PageHeader icon={<LineChart className="h-5 w-5 text-brand" />} title={t("performance.title")} description={t("performance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="performance" seen={performance && !problem ? performanceSees(totals, performance.previous, range.period) : null} />
+          <SearchConsoleSees screen="performance" seen={performance && !problem ? (range.period === "custom" ? null : performanceSees(totals, performance.previous, range.period)) : null} />
           <ResultKindSwitch />
           {problem ? (
             <LiveProblem problem={problem} retry={retry} />

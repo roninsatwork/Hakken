@@ -152,7 +152,8 @@
       "customFrom": "First day",
       "customTo": "to",
       "customToLabel": "Last day",
-      "customShow": "Show"
+      "customShow": "Show",
+      "customName": "These dates"
     }
   },
   "landing": {

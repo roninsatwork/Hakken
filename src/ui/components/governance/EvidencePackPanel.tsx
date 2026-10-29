@@ -10,8 +10,8 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { buildEvidencePackDocument } from "@/src/lib/evidencePackDocument";
-import { OPENING_PERIOD, periodSpan, ukDay, type MenuPeriod } from "@/convex/utils/calendarPeriods";
-import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
+import { OPENING_PERIOD, periodSpan, ukDay } from "@/convex/utils/calendarPeriods";
+import { DatesMenu, type DateChoice } from "@/src/ui/components/screens/DatesMenu";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -36,7 +36,7 @@ export function EvidencePackPanel() {
   const action = useAdminAction({ scope: "admin-evidence-pack" });
 
   // The Dates menu's seven periods (sees-header-and-rolling-dates-plan.md), opening on last month.
-  const [period, setPeriod] = useState<MenuPeriod>(OPENING_PERIOD);
+  const [choice, setChoice] = useState<DateChoice>({ period: OPENING_PERIOD });
   const [error, setError] = useState("");
   const isProducing = action.isBusy();
 
@@ -47,7 +47,7 @@ export function EvidencePackPanel() {
       async () => {
         // The period's days in the UK, to its last moment, or to now for one still going.
         const today = ukDay();
-        const span = periodSpan(period, today, today) ?? { from: today, to: today, whole: false };
+        const span = choice.period === "custom" ? { from: choice.from, to: choice.to, whole: true } : periodSpan(choice.period, today, today) ?? { from: today, to: today, whole: false };
         const from = new Date(`${span.from}T00:00:00`).getTime();
         const to = span.whole ? new Date(`${span.to}T00:00:00`).getTime() + DAY_MS - 1 : Date.now();
         const pack = await produce({ from, to });
@@ -96,7 +96,7 @@ export function EvidencePackPanel() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <DatesMenu label={t("periodLabel")} value={{ period }} newest={null} custom={false} onChange={(choice) => setPeriod(choice.period)} />
+        <DatesMenu label={t("periodLabel")} value={choice} newest={null} onChange={setChoice} />
 
         {/*
           An ordinary button rather than WriteButton: an auditor cannot

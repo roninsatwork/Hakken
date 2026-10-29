@@ -22,6 +22,8 @@ import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_co
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { BusinessCell, FigureCell, LocalSetupNotice, OfficeSwitch, ratingText, useOfficeId, useOfficeName } from "../../local/_components/LocalParts";
+import { periodOrOpening } from "../../../_components/siteRange";
+import { useOpeningPeriod } from "../../../_components/useCalendarPeriod";
 
 type Row = {
   listingId: string;
@@ -59,6 +61,8 @@ export default function ReviewsAgainstRivalsPage() {
   const tl = useTranslations("sites.local");
   const tp = useTranslations("common.periods");
   const range = useSiteRange();
+  // Custom dates are not offered here (sitePages.ts, PERIOD_ONLY_SEGMENTS): the address carrying them reads as the opening period.
+  const period = periodOrOpening(range, useOpeningPeriod());
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -66,7 +70,7 @@ export default function ReviewsAgainstRivalsPage() {
   const site = useSite();
   const officeId = useOfficeId();
   const officeName = useOfficeName();
-  const data = useQuery(api.siteReviews.reviewsAgainstRivals, { siteId, ...(officeId ? { officeId } : {}), period: range.period, step: range.step });
+  const data = useQuery(api.siteReviews.reviewsAgainstRivals, { siteId, ...(officeId ? { officeId } : {}), period: period, step: range.step });
   const rows = data?.rows as Row[] | undefined;
   const { rows: sorted, tableSort } = useSiteSortedList(rows, SORTS, { opening: "reviews", name: nameOf });
   const pager = useSitePager(sorted, { isLoading: data === undefined });
@@ -84,7 +88,7 @@ export default function ReviewsAgainstRivalsPage() {
     { day },
     Object.fromEntries((data?.lines ?? []).map((line) => [line.listingId, line.counts[at]])),
   ));
-  const newHeader = t("columns.new", { period: tp(`inline.${range.period}`) });
+  const newHeader = t("columns.new", { period: tp(`inline.${period}`) });
 
   return (
     <div className="flex flex-col gap-6">
@@ -115,7 +119,7 @@ export default function ReviewsAgainstRivalsPage() {
       ) : null}
 
       <SiteChartCard
-        title={t("chartTitle", { period: tp(`inline.${range.period}`) })}
+        title={t("chartTitle", { period: tp(`inline.${period}`) })}
         hint={t("chartHint", { byStep: tp("byStep", { step: range.step }) })}
         exportName={`${site?.host ?? "site"}-reviews-against-rivals-${range.from}-to-${range.to}`}
         csv={() => toCsv([tp("stepColumn", { step: range.step }), ...(data?.lines ?? []).map((line) => line.name)], chartRows.map((row) => [row.day, ...(data?.lines ?? []).map((line) => (row as Record<string, unknown>)[line.listingId] as number | null)]))}

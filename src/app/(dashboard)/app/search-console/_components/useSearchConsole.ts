@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
-import { periodBounds, periodSpan, spanBefore, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { periodBounds, periodSpan, spanBefore, ukDay, type CalendarPeriod, type MenuPeriod } from "@/convex/utils/calendarPeriods";
 import { useSiteRange } from "../../sites/_components/SiteDateRange";
 import { SITE_SHARED_KEYS, useSiteParam } from "../../sites/_components/useSiteParam";
 import { useTranslations } from "next-intl";
@@ -149,7 +149,8 @@ export function useSearchConsoleRange(newestDay: string | null | undefined): {
   to: string;
   days: number;
   step: "day" | "week" | "month";
-  period: CalendarPeriod;
+  /** The menu's period, or `custom` for a first and a last day: no ready-made list, so the lists ask Google live (`periodArg`). */
+  period: MenuPeriod | "custom";
   waiting: boolean;
   before: { from: string; to: string };
   /** The newest day the periods end on: a country kept ready has its own (§16). */
@@ -161,6 +162,12 @@ export function useSearchConsoleRange(newestDay: string | null | undefined): {
   // A country kept ready may be a day behind all countries: its periods end on its own newest day, so they read its ready-made figures.
   const newest = (country ? status?.connection?.countriesNewest.find((held) => held.country === country)?.newestDay : undefined) ?? newestDay ?? null;
   const today = ukDay();
+  if (range.period === "custom") {
+    // Custom dates, within what Google has sent (the menu's bound): the same number of days before them (part two, rule 4).
+    const to = newest && range.to > newest ? newest : range.to;
+    const days = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${range.from}T00:00:00Z`)) / 86_400_000) + 1;
+    return { from: range.from, to, days, step: range.step, period: "custom", waiting: false, before: range.before, newest };
+  }
   const span = newest ? periodSpan(range.period, today, newest) : null;
   if (!span) {
     const first = periodBounds(range.period, today).from;
@@ -188,7 +195,12 @@ export function isReadyMade(range: { to: string; days: number; waiting?: boolean
  * ("Last month", `name`), what it is set against ("the month before", `before`), and the change line's ending ("on the
  * month before", `versus`).
  */
-export function useSearchConsolePeriodWords(period: CalendarPeriod): { period: string; name: string; before: string; versus: string } {
+export function useSearchConsolePeriodWords(period: CalendarPeriod | "custom"): { period: string; name: string; before: string; versus: string } {
   const tp = useTranslations("common.periods");
-  return { period: tp(`inline.${period}`), name: tp(period), before: tp(`before.${period}`), versus: tp(`versus.${period}`) };
+  return { period: tp(`inline.${period}`), name: tp(period === "custom" ? "customName" : period), before: tp(`before.${period}`), versus: tp(`versus.${period}`) };
+}
+
+/** The period a query is asked with: none for custom dates, which have no ready-made list and are asked of Google live. */
+export function periodArg(range: { period: MenuPeriod | "custom" }): { period?: MenuPeriod } {
+  return range.period === "custom" ? {} : { period: range.period };
 }
