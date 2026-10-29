@@ -123,4 +123,14 @@ describe("AI cost charts", () => {
     expect(screen.getAllByTestId("chart-cell")).toHaveLength(4);
     expect(screen.queryByText("No Data")).not.toBeInTheDocument();
   });
+
+  it("folds a long list of use cases into six slices, so the legend stays in its card", () => {
+    render(
+      <AICostDistributionCharts
+        modelDistribution={Array.from({ length: 70 }, (_, i) => ({ name: `USE_CASE_${i}`, calls: 70 - i, cost: 0.01 }))}
+      />
+    );
+
+    expect(screen.getAllByTestId("chart-cell")).toHaveLength(6);
+  });
 });

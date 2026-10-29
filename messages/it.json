@@ -8315,7 +8315,8 @@
         "callsUnit": "chiamate",
         "inputSeries": "Input (contesto)",
         "outputSeries": "Output (generazione)",
-        "unknownProvider": "Sconosciuto / Legacy"
+        "unknownProvider": "Sconosciuto / Legacy",
+        "other": "Altri {count}"
       },
       "leaderboards": {
         "topAgents": "Agenti con più calcolo",

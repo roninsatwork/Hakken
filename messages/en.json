@@ -8315,7 +8315,8 @@
         "callsUnit": "calls",
         "inputSeries": "Input (Context)",
         "outputSeries": "Output (Gen)",
-        "unknownProvider": "Unknown / Legacy"
+        "unknownProvider": "Unknown / Legacy",
+        "other": "{count} more"
       },
       "leaderboards": {
         "topAgents": "Top Agents By Compute",

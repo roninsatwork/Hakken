@@ -13,7 +13,7 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import type { ModelDistributionRow, ProviderDistributionRow, TimelinePoint } from "./types";
-import { formatTokenAxisTick } from "./costFormatters";
+import { foldSmallSlices, formatTokenAxisTick } from "./costFormatters";
 
 /**
  * Both sequences are slices of the canonical order, so no chart can be given
@@ -65,6 +65,9 @@ type AICostDistributionChartsProps = {
 export function AICostDistributionCharts({ modelDistribution, providerDistribution, timeline }: AICostDistributionChartsProps) {
   const t = useTranslations("ai.costs.distribution");
   const providerChartData = withProviderNames(providerDistribution, t("unknownProvider"));
+  // The biggest five use cases and one slice for the rest: the pie has six colours. No legend on
+  // either pie — the hover names the slice (Anthony, 2026-10-29).
+  const modelChartData = modelDistribution && foldSmallSlices(modelDistribution, MODEL_COLORS.length, (count) => t("other", { count }));
 
   return (
     <div className="flex flex-col gap-6 mt-2">
@@ -91,21 +94,21 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                   {t("noData")}
                 </div>
               ) : (
-                <ChartReveal replay={revealKey(modelDistribution, "name")} motion="fade">
+                <ChartReveal replay={revealKey(modelChartData, "name")} motion="fade">
                   <ResponsiveContainer width="100%" height={260} debounce={50}>
                     <PieChart>
                       {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
                       <Pie isAnimationActive={false}
-                        data={modelDistribution}
+                        data={modelChartData}
                         cx="50%"
-                        cy="45%"
-                        innerRadius={65}
-                        outerRadius={85}
+                        cy="50%"
+                        innerRadius={76}
+                        outerRadius={100}
                         paddingAngle={5}
                         dataKey="calls"
                         stroke="none"
                       >
-                        {modelDistribution.map((_, index) => (
+                        {modelChartData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={MODEL_COLORS[index % MODEL_COLORS.length]} />
                         ))}
                       </Pie>
@@ -116,15 +119,6 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                             seriesLabel={() => t("callsUnit")}
                           />
                         }
-                      />
-                      <Legend
-                        iconType="circle"
-                        wrapperStyle={{
-                          fontSize: "11px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          color: "#888",
-                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -162,9 +156,9 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                       <Pie isAnimationActive={false}
                         data={providerChartData}
                         cx="50%"
-                        cy="45%"
-                        innerRadius={65}
-                        outerRadius={85}
+                        cy="50%"
+                        innerRadius={76}
+                        outerRadius={100}
                         paddingAngle={5}
                         dataKey="cost"
                         nameKey="name"
@@ -176,15 +170,6 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                       </Pie>
                       <Tooltip
                         content={<ChartTooltip formatValue={(value) => `$${value.toFixed(4)}`} />}
-                      />
-                      <Legend
-                        iconType="circle"
-                        wrapperStyle={{
-                          fontSize: "11px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          color: "#888",
-                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
