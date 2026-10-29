@@ -71,7 +71,7 @@ describe("Microsoft Clarity's screens", () => {
     });
     const overview = await t.withIdentity({ subject: userId }).query(api.clarityScreens.clarityOverview, { siteId: holdId, period: "lastMonth" });
 
-    expect(overview.period).toEqual({ now: { from: "2026-09-29", to: "2026-09-30", days: 2 }, before: { from: "2026-08-20", to: "2026-08-21", days: 2 }, firstDay: "2026-08-20", countedFrom: null, pages: null, cutDays: 0, expected: 30, waiting: false, newest: "2026-09-30" });
+    expect(overview.period).toEqual({ now: { from: "2026-09-29", to: "2026-09-30", days: 2 }, before: { from: "2026-08-20", to: "2026-08-21", days: 2 }, firstDay: "2026-08-20", countedFrom: null, pages: null, cutDays: 0, expected: 30, waiting: false, preparing: false, newest: "2026-09-30" });
     expect(overview.now).toMatchObject({ visits: 26, bots: 5, errors: 2, errorClicks: 1, quickBack: 3 });
     expect(overview.before).toMatchObject({ visits: 20, scroll: 30 });
     expect(overview.byDay.map((day) => [day.day, day.visits])).toEqual([["2026-09-29", 20], ["2026-09-30", 6]]);

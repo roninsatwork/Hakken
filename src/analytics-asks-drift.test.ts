@@ -7,16 +7,19 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from './test/driftUti
  * SF1; Anthony, 2026-10-14: "calling Google won't scale because of rate
  * limits"). Every figure a screen draws is read from what each collection
  * stores; the only asks left are Live, Google's realtime figures, and an
- * event's funnel, kept a week (SF8). A screen that starts asking again — a
- * new action called from a screen, a second public action beside the
- * funnel, a read that falls back to a list asked live — fails here.
+ * event's funnel, kept a week (SF8), and custom dates' lists, which no run
+ * prepares: asked once a day when a screen first asks for them, within the
+ * website's allowance (sees-header-and-rolling-dates-plan.md, part two, rule
+ * 4; Anthony, 2026-10-29: "i want custom dates"). A screen that starts asking
+ * again — a new action called from a screen, another public action beside
+ * these, a read that falls back to a list asked live — fails here.
  */
 
 const SCREENS = path.join(repoRoot, 'src/app/(dashboard)/app/analytics');
 const EXTENSIONS = new Set(['.ts', '.tsx']);
 
-/** The actions a Google Analytics screen may call: Live's realtime figures and an event's funnel. */
-const ALLOWED_ACTIONS = new Set(['googleAnalyticsRealtime.askGoogleAnalyticsRealtime', 'googleAnalyticsLive.askEventFunnel']);
+/** The actions a Google Analytics screen may call: Live's realtime figures, an event's funnel, and custom dates' lists (the layout, once a day). */
+const ALLOWED_ACTIONS = new Set(['googleAnalyticsRealtime.askGoogleAnalyticsRealtime', 'googleAnalyticsLive.askEventFunnel', 'googleAnalyticsLive.prepareAnalyticsCustom']);
 
 /**
  * Where a read may take a list kept with the live ones: the event funnel's, the module that reads it, and Conversions'
@@ -36,10 +39,13 @@ describe('no Google Analytics screen asks Google (SF1)', () => {
     expect(called.filter((call) => !ALLOWED_ACTIONS.has(call.action))).toEqual([]);
   });
 
-  test('the live module answers for the event funnel alone', () => {
+  test('the live module answers for the event funnel and custom dates alone', () => {
     const text = readRepoFile('convex/googleAnalyticsLive.ts');
     const actions = [...text.matchAll(/export const (\w+)\s*=\s*tenantAction\(/g)].map((match) => match[1]);
-    expect(actions).toEqual(['askEventFunnel']);
+    expect(actions).toEqual(['askEventFunnel', 'prepareAnalyticsCustom']);
+    // Only the layout asks for them, so a page cannot ask twice.
+    const askers = screenFiles().filter((file) => readRepoFile(relativePath(file)).includes('prepareAnalyticsCustom')).map((file) => relativePath(file));
+    expect(askers).toEqual(['src/app/(dashboard)/app/analytics/[siteId]/layout.tsx']);
   });
 
   test('no read falls back to a list asked live, but the event funnel', () => {
