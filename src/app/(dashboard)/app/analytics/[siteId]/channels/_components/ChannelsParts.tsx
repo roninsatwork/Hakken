@@ -13,7 +13,7 @@ import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { eventList } from "../../../_components/AnalyticsSees";
 import { formatMoney, formatPercent, formatTime } from "../../../_components/analyticsFormat";
 import { useEventName } from "../../../_components/useEventName";
-import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../../_components/useAnalytics";
+import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, periodWord } from "../../../_components/useAnalytics";
 
 /**
  * Channels above its table (docs/plans/active/ga-channel-pages-plan.md CH9):
@@ -88,7 +88,7 @@ export function ChannelsMap({ top, kindName }: { top: ChannelsTop | undefined; k
   return (
     <SearchConsoleChartCard
       title={t("title")}
-      hint={`${t("hint", { period: tf(`periods.${period}`) })}${top?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      hint={`${t("hint", { period: tf(`periods.${periodWord(period)}`) })}${top?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
       exportName="google-analytics-channel-map"
       csv={() => toCsv(["channel", ...columns.flatMap((column) => [column, `${column} · ${t("conversionsColumn")}`])], (top?.map.rows ?? []).map((row) => [row.channel, ...row.cells.flatMap((cell) => [cell.visits, cell.conversions])]))}
       host={status?.host ?? ""}

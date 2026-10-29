@@ -18,7 +18,7 @@ import { useKindName } from "../[siteId]/channels/_components/ChannelParts";
 import { formatMoney, formatPercent, formatPerConversion } from "./analyticsFormat";
 import { eventList } from "./AnalyticsSees";
 import { useEventName } from "./useEventName";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, periodWord } from "./useAnalytics";
 import { visitsPerConversion, type CostPoint, type CostRow } from "./visitsPerConversion";
 import { shiftDays } from "./stepScale";
 
@@ -109,7 +109,7 @@ export function ConversionFlowCard({ flow, currency }: { flow: Flow | null; curr
   return (
     <SearchConsoleChartCard
       title={t("title")}
-      hint={`${t("hint", { period: tf(`periods.${period}`) })}${flow.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      hint={`${t("hint", { period: tf(`periods.${periodWord(period)}`) })}${flow.everyDevice ? ` ${t("everyDevice")}` : ""}`}
       exportName="google-analytics-conversion-flow"
       csv={csv}
       host={status?.host ?? ""}
@@ -149,7 +149,7 @@ export function ConversionsByKind({ flow }: { flow: Flow | null }) {
   return (
     <SearchConsoleChartCard
       title={t("byKindTitle")}
-      hint={`${t("byKindHint", { period: tf(`periods.${period}`) })}${flow.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      hint={`${t("byKindHint", { period: tf(`periods.${periodWord(period)}`) })}${flow.everyDevice ? ` ${t("everyDevice")}` : ""}`}
       exportName="google-analytics-conversions-by-classification"
       csv={csv}
       host={status?.host ?? ""}
@@ -197,7 +197,7 @@ export function PageConversionsByChannel({ page }: { page: string }) {
   return (
     <SearchConsoleChartCard
       title={t("byChannelTitle")}
-      hint={`${t("byChannelHint", { period: tf(`periods.${period}`) })}${grid?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      hint={`${t("byChannelHint", { period: tf(`periods.${periodWord(period)}`) })}${grid?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
       exportName="google-analytics-page-conversions-by-channel"
       csv={csv}
       host={status?.host ?? ""}
@@ -308,9 +308,9 @@ function VisitsPerConversionChart({ days, events, figures, before, from, to, exp
   const held = before ? before.points.map((point) => ({ ...point, conversions: tickedOf(before.events, point.events, point.conversions) })) : null;
   const shift = before?.shift ?? 0;
   const rows = visitsPerConversion(now, held, step);
-  const periodName = tf(`periods.${period}`);
+  const periodName = tf(`periods.${periodWord(period)}`);
   // "the month before", as the figures at the top word it; at a sentence's start, "The month before".
-  const beforeName = tf(`before.${period}`);
+  const beforeName = tf(`before.${periodWord(period)}`);
   const BeforeName = beforeName.charAt(0).toLocaleUpperCase(locale) + beforeName.slice(1);
   const kinds = eventList(shown.map((kind) => kind.key).join(","), nameOf, locale);
   const series: SiteSeries[] = [

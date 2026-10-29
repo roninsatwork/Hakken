@@ -29,7 +29,7 @@ import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { useEventFunnel } from "../../../_components/AnalyticsListScreen";
 import { formatPercent, pathOf } from "../../../_components/analyticsFormat";
 import { useEventName } from "../../../_components/useEventName";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePageHref, usePeriod, type AnalyticsStatus, periodWord } from "../../../_components/useAnalytics";
 
 type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsEventReads.analyticsEvent>>;
 /** A row of what it was about, or of its pages: a page carries its title. */
@@ -96,7 +96,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
   const matching = rows?.filter((row) => !matches || matches(labelOf(row)) || matches(row.label));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "times", name: nameOfRow });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
-  const periodName = tf(`periods.${period}`);
+  const periodName = tf(`periods.${periodWord(period)}`);
   const bar = [periodName, tf(`devices.${device}`).toLowerCase()].join(" · ");
   const name = nameOf(event);
   const what = t.has(`what.${event}`) ? t(`what.${event}`, { host: status.host }) : null;

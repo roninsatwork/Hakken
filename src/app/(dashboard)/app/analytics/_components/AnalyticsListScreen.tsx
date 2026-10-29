@@ -25,7 +25,7 @@ import { formatPercent, formatPerVisit, formatTime, pathOf } from "./analyticsFo
 import { MOST_PLOTTED, MOVE_VIEWS, type PageMove } from "@/convex/utils/pageMoves";
 import { NO_PAGE_KIND } from "@/convex/utils/sees/analyticsChannel";
 import { AI_ASSISTANTS_CHANNEL } from "@/convex/utils/aiAssistants";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, periodWord } from "./useAnalytics";
 import { AnalyticsGate } from "./AnalyticsNotices";
 import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 
@@ -229,7 +229,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, move, pl
   // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
   const untagged = shown.result?.untagged ?? null;
   const bar = [
-    tf(`periods.${period}`), tf(`devices.${device}`).toLowerCase(),
+    tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase(),
     ...(list === "page" && !live ? [t("moveRule", { views: MOVE_VIEWS })] : []),
     live ? t("collecting") : untagged !== null ? t("untagged", { count: untagged }) : t("greyed"),
   ].join(" · ");

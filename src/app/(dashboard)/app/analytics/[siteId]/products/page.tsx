@@ -26,7 +26,7 @@ import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
 import { formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { leftWithout } from "@/convex/utils/sees/analyticsProducts";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
 
 type Product = FunctionReturnType<typeof api.googleAnalyticsProductReads.analyticsProductList>["rows"][number];
 
@@ -78,7 +78,7 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
   const was = answer?.before?.visits ?? null;
   const basketLeft = shoppers ? leftWithout(shoppers.basket, shoppers.bought) : null;
   const checkoutLeft = shoppers ? leftWithout(shoppers.checkout, shoppers.bought) : null;
-  const periodName = tf(`periods.${period}`);
+  const periodName = tf(`periods.${periodWord(period)}`);
   const of = (part: number, whole: number) => (whole > 0 ? formatPercent(Math.min(1, part / whole)) : "–");
   const inPoints = (value: number) => (value * 100).toFixed(1);
   const bar = [periodName, tf(`devices.${device}`).toLowerCase()].join(" · ");

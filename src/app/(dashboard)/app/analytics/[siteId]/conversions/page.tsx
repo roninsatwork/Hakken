@@ -27,7 +27,7 @@ import { BeforeLine } from "../../_components/AnalyticsFigures";
 import { AnalyticsSees, eventList } from "../../_components/AnalyticsSees";
 import { changeOf, formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
 import { ConversionsChart } from "../../_components/AnalyticsChart";
 import { BeforeConvertingCard, ConversionFlowCard, ConversionsByKind, VisitsPerConversionCard, useFlowKindName } from "../../_components/ConversionParts";
 
@@ -140,7 +140,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
               detail={(
                 <span className="text-[12px] text-secondary">
                   {rateBefore !== null
-                    ? t("rateBefore", { rate: formatPercent(rateBefore), before: tf(`before.${period}`) })
+                    ? t("rateBefore", { rate: formatPercent(rateBefore), before: tf(`before.${periodWord(period)}`) })
                     : t("ofVisits", { visits: formatNumber(answer.visits) })}
                 </span>
               )}
@@ -228,7 +228,7 @@ function EventsTable({ status }: { status: AnalyticsStatus }) {
   const matching = named?.filter((row) => (!kind || row.kind === kind) && (!matches || matches(row.name) || matches(row.eventName)));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "conversion", name: nameOfRow });
   const pager = useSitePager(sorted, { isLoading: answer === undefined || (answer?.live ?? false) });
-  const bar = [tf(`periods.${period}`), tf(`devices.${device}`).toLowerCase(), t("bar")].join(" · ");
+  const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase(), t("bar")].join(" · ");
   const href = (row: EventRow) => hrefFor("events/event", { key: row.eventName });
 
   return (

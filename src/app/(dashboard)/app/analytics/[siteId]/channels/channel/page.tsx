@@ -26,7 +26,7 @@ import { useEventName } from "../../../_components/useEventName";
 import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { AnalyticsTable } from "../../../_components/AnalyticsListScreen";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod } from "../../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, periodWord } from "../../../_components/useAnalytics";
 import { ChannelDayChart, ChannelFigures, ChannelKindBars, ChannelMovers, useKindName, type ChannelDays, type ChannelTop } from "../_components/ChannelParts";
 import { KeyEventsDailyChart, SourcesDailyChart } from "../_components/ChannelTableCharts";
 import { AssistantFiledBars, AssistantsChart } from "../_components/AssistantParts";
@@ -64,7 +64,7 @@ export default function AnalyticsChannelPage() {
         back={{ label: t("back"), href: hrefFor("channels") }}
         icon={<Waypoints className="h-5 w-5 text-brand" />}
         title={title}
-        description={t(known ? `description.${channel.replace(/\s+/g, "")}` : "description.other", { host: status?.host ?? "", before: tf(`before.${period}`) })}
+        description={t(known ? `description.${channel.replace(/\s+/g, "")}` : "description.other", { host: status?.host ?? "", before: tf(`before.${periodWord(period)}`) })}
       />
       {status ? (
         <AnalyticsGate status={status} siteId={siteId}>
@@ -264,7 +264,7 @@ function KeyEventsTable({ channel, counted, setCounted, filters, days }: {
         filters={filters(chip)}
         cardHeader={
           <TableBar footer={paged.footer} noun="keyEvents" actions={<DownloadButton label={t("download")} onClick={() => saveTextFile(csv(), "google-analytics-channel-key-events.csv")} />}>
-            <span className="text-[12px] text-secondary">{[tf(`periods.${period}`), tf("devices.all").toLowerCase(), t("everyEvent")].join(" · ")}</span>
+            <span className="text-[12px] text-secondary">{[tf(`periods.${periodWord(period)}`), tf("devices.all").toLowerCase(), t("everyEvent")].join(" · ")}</span>
           </TableBar>
         }
         empty={{ icon: <SearchX className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("noEvents") }}

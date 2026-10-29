@@ -7,7 +7,7 @@ import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { CampaignsDailyChart, ListTopBars } from "../../_components/AnalyticsChart";
-import { useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
+import { useAnalyticsStatus, usePeriod, periodWord } from "../../_components/useAnalytics";
 
 /** The table's two lists: the campaigns, and the words their links carry. */
 const VIEWS = ["campaign", "adKeyword"] as const;
@@ -28,7 +28,7 @@ export default function AnalyticsCampaignsPage() {
   const [view, setView] = useSiteParam<View>("view", "campaign", VIEWS);
   return (
     <AnalyticsListScreen
-      header={{ icon: <Megaphone className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${period}`) }) }}
+      header={{ icon: <Megaphone className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${periodWord(period)}`) }) }}
       head={(answer) => (
         <>
           <AnalyticsSees screen="campaigns" seen={answer?.seen} currency={currency} />

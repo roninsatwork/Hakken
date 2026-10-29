@@ -7,7 +7,7 @@ import { formatMonth, formatShortDay, toCsv } from "../../../../sites/_component
 import { SearchConsoleChartCard } from "../../../../search-console/_components/SearchConsoleChartCard";
 import { ChannelsChart } from "../../../_components/AnalyticsChart";
 import { useEventName } from "../../../_components/useEventName";
-import { useAnalyticsStatus, usePeriod, useStep, type Step } from "../../../_components/useAnalytics";
+import { useAnalyticsStatus, usePeriod, useStep, type Step, periodWord } from "../../../_components/useAnalytics";
 import { useBeforeName, type ChannelDays } from "./ChannelParts";
 import { coarserThanStep, perStep, stepKey } from "../../../_components/stepScale";
 
@@ -66,7 +66,7 @@ export function KeyEventsDailyChart({ days }: { days: ChannelDays | undefined })
   return (
     <SearchConsoleChartCard
       title={t(`title.${step}`)}
-      hint={`${t("hint", { beforeName, period: tf(`periods.${period}`).toLowerCase() })}${data.some((row) => row.coarse === true) ? ` ${tc(`coarse.${step}`)}` : ""}`}
+      hint={`${t("hint", { beforeName, period: tf(`periods.${periodWord(period)}`).toLowerCase() })}${data.some((row) => row.coarse === true) ? ` ${tc(`coarse.${step}`)}` : ""}`}
       exportName="google-analytics-channel-key-events-daily"
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number)]))}
       host={status?.host ?? ""}
@@ -97,7 +97,7 @@ export function SourcesDailyChart({ channel, days }: { channel: string; days: Ch
       to={days?.to ?? null}
       exportName="google-analytics-channel-sources-daily"
       updateKey={false}
-      title={{ ...(t.raw("title") as { day: string; week: string; month: string }), hint: t("hint", { period: tf(`periods.${period}`), channel }) }}
+      title={{ ...(t.raw("title") as { day: string; week: string; month: string }), hint: t("hint", { period: tf(`periods.${periodWord(period)}`), channel }) }}
     />
   );
 }

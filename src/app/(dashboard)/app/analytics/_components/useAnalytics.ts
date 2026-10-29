@@ -5,8 +5,10 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { CALENDAR_PERIODS, stepOf, type MenuPeriod } from "@/convex/utils/calendarPeriods";
-import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
+import { CALENDAR_PERIODS, customSpans, stepOf, type MenuPeriod } from "@/convex/utils/calendarPeriods";
+import { customPeriodKey, customRangeOf, type CustomPeriod } from "@/convex/utils/analyticsCustomPeriod";
+import type { DateChoice } from "@/src/ui/components/screens/DatesMenu";
+import { CALENDAR_PERIOD_KEY, useDateChoice } from "../../sites/_components/useCalendarPeriod";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
 
@@ -54,8 +56,20 @@ export function pageForPath(pathname: string, siteId: string): AnalyticsPageId {
 
 /** The ready-made periods: the date menu's seven calendar periods every section shares (calendar-periods-plan.md, phase 6). */
 export const PERIODS = CALENDAR_PERIODS;
-export type Period = MenuPeriod;
+/** What a page reads by: a menu period, or custom dates' key (`custom_from_to`), whose lists are asked of Google when first asked for. */
+export type Period = MenuPeriod | CustomPeriod;
 export const PERIOD_KEY = CALENDAR_PERIOD_KEY;
+
+/** The word a period is named by in the section's words: custom dates share one, `custom` ("these dates"). */
+export function periodWord(period: Period): MenuPeriod | "custom" {
+  return customRangeOf(period) ? "custom" : (period as MenuPeriod);
+}
+
+/** The step a period's charts open on (rule 8): custom dates step by their length, as every section's do. */
+export function stepOfPeriod(period: Period): Step {
+  const range = customRangeOf(period);
+  return range ? customSpans(range.from, range.to).step : stepOf(period as MenuPeriod);
+}
 
 /** Every device, or one (GA13). */
 export const DEVICES = ["all", "desktop", "mobile", "tablet"] as const;
@@ -79,7 +93,7 @@ export const STEP_KEY = "step";
 /** What travels between the section's pages: the dates, the device, the step and the home country. */
 export function analyticsQuery(params: URLSearchParams): string {
   const shared = new URLSearchParams();
-  for (const key of [PERIOD_KEY, DEVICE_KEY, STEP_KEY, COUNTRY_KEY]) {
+  for (const key of [PERIOD_KEY, "from", "to", DEVICE_KEY, STEP_KEY, COUNTRY_KEY]) {
     const value = params.get(key);
     if (value) shared.set(key, value);
   }
@@ -135,9 +149,23 @@ export function useAnalyticsStatus() {
   return useQuery(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
 }
 
-/** The calendar period chosen: the one the website opens on (rule 6) unless another is. */
-export function usePeriod(opening?: Period): [Period, (next: Period) => void] {
-  return useCalendarPeriod(opening);
+/**
+ * The Dates menu's choice (sees-header-and-rolling-dates-plan.md, part two): a period, the one the website opens on
+ * (rule 6) unless another is, or custom dates no later than the website's newest whole day.
+ */
+export function useAnalyticsDates(opening?: MenuPeriod): [DateChoice, (next: DateChoice) => void] {
+  const status = useAnalyticsStatus();
+  return useDateChoice(status?.connection?.newestDay ?? null, opening);
+}
+
+/** The period chosen, as a read takes it: the menu's, or custom dates' key. */
+export function usePeriod(opening?: MenuPeriod): [Period, (next: Period) => void] {
+  const [choice, setChoice] = useAnalyticsDates(opening);
+  const period: Period = choice.period === "custom" ? customPeriodKey(choice) : choice.period;
+  return [period, (next) => {
+    const range = customRangeOf(next);
+    setChoice(range ? { period: "custom", ...range } : { period: next as MenuPeriod });
+  }];
 }
 
 export function useDevice(): [Device, (next: Device) => void] {
@@ -147,7 +175,7 @@ export function useDevice(): [Device, (next: Device) => void] {
 /** How the charts step: the period's own (rule 8) unless another was chosen. */
 export function useStep(): [Step, (next: Step) => void] {
   const [period] = usePeriod();
-  return useSiteParam<Step>(STEP_KEY, stepOf(period), STEPS);
+  return useSiteParam<Step>(STEP_KEY, stepOfPeriod(period), STEPS);
 }
 
 /**

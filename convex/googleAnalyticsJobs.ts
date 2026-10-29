@@ -2,8 +2,8 @@ import type { Doc } from "./_generated/dataModel";
 import { shiftDay } from "./searchConsoleDays";
 import { ANALYTICS_DAYS_KEPT as DAYS_KEPT } from "./utils/analyticsHistory";
 import { VISITOR_LISTS, slotKey } from "./googleAnalyticsLists";
-import { SERIES_PERIOD, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
-import { CALENDAR_PERIODS, isRunning, periodSpan, spanBefore, spanYearBefore, type CalendarPeriod } from "./utils/calendarPeriods";
+import { SERIES_PERIOD, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich, customRangeOf } from "./googleAnalyticsSchema";
+import { CALENDAR_PERIODS, customSpans, isRunning, periodSpan, spanBefore, spanYearBefore, type CalendarPeriod , isCalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * What a website's Google Analytics run asks, and for which dates — plain
@@ -64,6 +64,15 @@ export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top:
     const to = which === "NOW" ? top : shiftDay(top, -365);
     return { from: shiftDay(to, -364), to };
   }
+  const custom = customRangeOf(period);
+  if (custom) {
+    // Custom dates, cut at the newest whole day; the same number of days before them; no year before.
+    const to = custom.to < top ? custom.to : top;
+    if (custom.from > to) return null;
+    const span = customSpans(custom.from, to);
+    return which === "NOW" ? { from: custom.from, to } : which === "BEFORE" ? { from: span.before.from, to: span.before.to } : null;
+  }
+  if (!isCalendarPeriod(period)) return null;
   const span = periodSpan(period, shiftDay(top, 1), top);
   if (!span) return null;
   const range = which === "NOW" ? span : which === "BEFORE" ? spanBefore(period, span) : spanYearBefore(period, span);
@@ -137,7 +146,7 @@ export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: A
  * all, already numbered (`numberPages`). Every event beside them (§18.6.5),
  * the campaigns and the words their links carry, and Visitors' lists (§18.6.6).
  */
-const PAGE_LISTS: readonly AnalyticsList[] = [
+export const PAGE_LISTS: readonly AnalyticsList[] = [
   "total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS,
   // Insights' two (insights-analyst-plan.md I35, §8): the channel that first brought each person, and each landing page by channel.
   "firstChannel", "landingChannel",

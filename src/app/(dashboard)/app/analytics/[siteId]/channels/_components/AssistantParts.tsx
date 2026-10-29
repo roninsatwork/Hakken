@@ -7,7 +7,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart, type SiteSeries } from "../../../../
 import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatMonth, formatNumber, formatShortDay, toCsv } from "../../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../../../search-console/_components/SearchConsoleChartCard";
-import { useAnalyticsStatus, usePeriod, useStep } from "../../../_components/useAnalytics";
+import { useAnalyticsStatus, usePeriod, useStep, periodWord } from "../../../_components/useAnalytics";
 import { coarserThanStep, perStep, stepKey } from "../../../_components/stepScale";
 import type { ChannelDays, ChannelTop } from "./ChannelParts";
 
@@ -56,7 +56,7 @@ export function AssistantsChart({ days }: { days: ChannelDays | undefined }) {
   return (
     <SearchConsoleChartCard
       title={t(`title.${step}`)}
-      hint={`${t("hint", { period: tf(`periods.${period}`) })}${coarse ? ` ${tc(`coarse.${step}`)}` : ""}${collecting ? ` ${t("collecting")}` : ""}`}
+      hint={`${t("hint", { period: tf(`periods.${periodWord(period)}`) })}${coarse ? ` ${tc(`coarse.${step}`)}` : ""}${collecting ? ` ${t("collecting")}` : ""}`}
       exportName="google-analytics-ai-assistants"
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
       host={status?.host ?? ""}

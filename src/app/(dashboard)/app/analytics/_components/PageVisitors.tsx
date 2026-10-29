@@ -13,7 +13,7 @@ import type { SiteSeries } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { pathOf } from "./analyticsFormat";
 import { useSourceName } from "./PageStory";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, periodWord } from "./useAnalytics";
 
 type By = "channel" | "source" | "returning" | "before" | "next";
 type Show = "visits" | "share" | "back" | "pages" | "read" | "views" | "viewsShare";
@@ -151,7 +151,7 @@ export function PageVisitorsCard({ page, story, before }: { page: string; story:
   const everyVisit = weighed("all", t("everyVisit"), story.sources);
   const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }): ChartReadoutTableProps => {
     const item = items.find((one) => one.key === row.key);
-    const head = t("heading", { name: String(heading), period: tf(`periods.${period}`).toLowerCase() });
+    const head = t("heading", { name: String(heading), period: tf(`periods.${periodWord(period)}`).toLowerCase() });
     if (!item) return { heading: head, columns: [], rows: [] };
     const count: ReadoutColumn = { key: "visits", label: ofVisits ? t("columns.visits") : t("columns.views"), tone: "band", icon: people, drawn: show === "visits" || show === "views" };
     const shareColumn: ReadoutColumn = { key: "share", label: t("columns.share"), tone: "quiet", drawn: shareShown };
@@ -213,7 +213,7 @@ export function PageVisitorsCard({ page, story, before }: { page: string; story:
   return (
     <ChartExplorer
       title={title}
-      hint={t(ofVisits ? "hintVisits" : "hintViews", { period: tf(`periods.${period}`) })}
+      hint={t(ofVisits ? "hintVisits" : "hintViews", { period: tf(`periods.${periodWord(period)}`) })}
       exportName="google-analytics-page-visitors"
       csv={csv}
       host={status?.host ?? ""}

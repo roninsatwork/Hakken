@@ -132,8 +132,22 @@ until the build ends (no-pulls-until-build-ends); the first collection of the ne
   rivals' moves — do not offer them and read the opening period if the address carries them), every Search Console
   screen (totals and charts from the days held; the lists asked of Google live with no period, as other dates always
   were; the box is not drawn for custom dates, since it speaks in the menu's periods; Demand by service reads the
-  opening period), the Settings overview and the evidence pack. Not yet: Google Analytics, Bing, Clarity and the
-  Governance activity chart, whose reads are prepared per period (`custom={false}`).
+  opening period), the Settings overview and the evidence pack.
+- **Custom dates where the reads are prepared per period** (Anthony, 2026-10-29: "i want custom dates"): each of
+  these builds the dates' figures when a screen first asks for them, under the key `custom|from|to` (Google
+  Analytics: `custom_from_to`), keeps them a day, and drops them in its tidy-up, so a screen reads them exactly as
+  it reads a period's. The layout asks for the build once per website and dates (`prepare…` effect), and a page
+  says "preparing" until the figures land.
+  - **Clarity** (`clarity.prepareCustomSpan`): the span and the same number of days before, built from the days
+    held (`buildSpan`), every kind the screens read.
+  - **Bing** (`bingWebmasterCollect.prepareBingCustom`): built from the weeks held, the weeks whose Monday falls
+    in the dates; no Google column, since Search Console's days are read live for custom dates.
+  - **Google Analytics** (`googleAnalyticsLive.prepareAnalyticsCustom`): its lists are not held by day, so every
+    list a run asks — Google's own answers, people included — is asked of Google for the dates and the same number
+    of days before (no year before), within the website's allowance (`openSession`); a refusal stops the build and is
+    said, never retried. About a twentieth of a night's asks. The nightly clean-up (`dropCountriesNotKept`) drops a
+    custom list a day old. The screens' words name the dates "these dates".
+  - **Not offered**: the Governance activity chart (`custom={false}`), which counts by period.
 - **The retired periods are gone** (2026-10-29, Anthony: "delete them"): a one-off clean-up deleted the 929 parts
   prepared for them across 55 websites' Search Console, Bing and Clarity tables, and Google Analytics' nightly
   clean-up of lists no run keeps (`dropCountriesNotKept`, which now judges those periods retired) cleared its 0 of
@@ -143,3 +157,4 @@ until the build ends (no-pulls-until-build-ends); the first collection of the ne
 ## Change log
 
 - 2026-10-29: plan written from the canvas and Anthony's "Build this"; phase 1 built and committed; phase 2 built, phase 3 under way.
+- 2026-10-29, later: custom dates in every section but Governance; the retired periods' rows deleted and their names gone.

@@ -675,6 +675,7 @@ import type * as utils_aiAssistants from "../utils/aiAssistants.js";
 import type * as utils_aiModelShapes from "../utils/aiModelShapes.js";
 import type * as utils_analyticsAccess from "../utils/analyticsAccess.js";
 import type * as utils_analyticsAddresses from "../utils/analyticsAddresses.js";
+import type * as utils_analyticsCustomPeriod from "../utils/analyticsCustomPeriod.js";
 import type * as utils_analyticsEvents from "../utils/analyticsEvents.js";
 import type * as utils_analyticsHistory from "../utils/analyticsHistory.js";
 import type * as utils_analyticsPageStory from "../utils/analyticsPageStory.js";
@@ -1624,6 +1625,7 @@ declare const fullApi: ApiFromModules<{
   "utils/aiModelShapes": typeof utils_aiModelShapes;
   "utils/analyticsAccess": typeof utils_analyticsAccess;
   "utils/analyticsAddresses": typeof utils_analyticsAddresses;
+  "utils/analyticsCustomPeriod": typeof utils_analyticsCustomPeriod;
   "utils/analyticsEvents": typeof utils_analyticsEvents;
   "utils/analyticsHistory": typeof utils_analyticsHistory;
   "utils/analyticsPageStory": typeof utils_analyticsPageStory;

@@ -9,7 +9,7 @@ import { datedRow } from "../../sites/_components/datedRows";
 import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
 import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
 import { currencySign, pathOf } from "./analyticsFormat";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, type Step } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, type Step, periodWord } from "./useAnalytics";
 import type { VisitorList } from "./AnalyticsListScreen";
 import { coarserThanStep, perStep, stepKey } from "./stepScale";
 
@@ -142,7 +142,7 @@ export function VisitsChart({ days, host, from, to, exportName, viewsOnly = fals
   return (
     <SearchConsoleChartCard
       title={t(viewsOnly ? `viewsOnlyTitle.${step}` : `viewsTitle.${step}`)}
-      hint={`${t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: tf(`periods.${period}`), step })}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
+      hint={`${t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: tf(`periods.${periodWord(period)}`), step })}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name), t("conversions")], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number), row.conversions as number]))}
       host={host}
@@ -300,7 +300,7 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
   return (
     <SearchConsoleChartCard
       title={title ? title[step] : t(`channelsTitle.${step}`)}
-      hint={`${title ? title.hint : t("channelsHint", { period: tf(`periods.${period}`) })}${coarse ? ` ${t(`coarse.${step}`)}` : ""}`}
+      hint={`${title ? title.hint : t("channelsHint", { period: tf(`periods.${periodWord(period)}`) })}${coarse ? ` ${t(`coarse.${step}`)}` : ""}`}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
       host={host}
@@ -336,7 +336,7 @@ export function ListTopBars({ list, sort, bars, nameOf }: {
   return (
     <TopBars
       title={t(`bars.${bars}.title`)}
-      hint={t(`bars.${bars}.hint`, { period: tf(`periods.${args.period}`) })}
+      hint={t(`bars.${bars}.hint`, { period: tf(`periods.${periodWord(args.period)}`) })}
       measure={t(`bars.${bars}.measure`)}
       rows={top?.rows.map((row) => ({ label: nameOf ? nameOf(row.label) : row.label, value: sort === "views" ? row.views : sort === "conversions" ? row.conversions : row.visits }))}
       exportName={`google-analytics-${bars}`}
@@ -386,7 +386,7 @@ export function CampaignsDailyChart() {
       from={null}
       to={null}
       exportName="google-analytics-campaigns-daily"
-      title={{ ...t.raw("campaignsTitle") as { day: string; week: string; month: string }, hint: t("campaignsHint", { period: tf(`periods.${args.period}`) }) }}
+      title={{ ...t.raw("campaignsTitle") as { day: string; week: string; month: string }, hint: t("campaignsHint", { period: tf(`periods.${periodWord(args.period)}`) }) }}
     />
   );
 }
@@ -446,7 +446,7 @@ export function PagesDailyChart({ pages }: { pages: readonly string[] }) {
     ...drawn.map((page, index) => ({ key: `page${index}`, name: pathOf(page.address), colour: page.colour })),
   ];
   const data = viewsByStep(step, series, [website?.points ?? [], ...drawn.map((page) => page.points)]);
-  const hint = `${t("hint", { period: tf(`periods.${period}`) })}${data.some((row) => row.coarse === true) ? ` ${tc(`coarse.${step}`)}` : ""}`;
+  const hint = `${t("hint", { period: tf(`periods.${periodWord(period)}`) })}${data.some((row) => row.coarse === true) ? ` ${tc(`coarse.${step}`)}` : ""}`;
   return (
     <SearchConsoleChartCard
       title={t(`title.${step}`)}

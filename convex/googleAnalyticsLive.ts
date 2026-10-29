@@ -7,10 +7,11 @@ import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { appError } from "./utils/appError";
-import { askFunnel, conversionTargetOf, countryIdOf, openSession, perVisitOf, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { askFunnel, collectPeriod, conversionTargetOf, countryIdOf, openSession, perVisitOf, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { PAGE_LISTS } from "./googleAnalyticsJobs";
 import { LIVE_PARTS, emptyRow, packList } from "./googleAnalyticsLists";
-import { analyticsPackedRows, analyticsPeriodValidator } from "./googleAnalyticsSchema";
-import { keptCountry } from "./googleAnalyticsCountries";
+import { analyticsPackedRows, analyticsPeriodValidator, customPeriodKey, customRangeOf } from "./googleAnalyticsSchema";
+import { CUSTOM_LISTS_KEPT_MS, keptCountry } from "./googleAnalyticsCountries";
 
 /**
  * The one figure a Google Analytics screen still asks Google for
@@ -158,5 +159,52 @@ export const askEventFunnel = tenantAction({
       cut: false,
     });
     return { ok: true, problem: null };
+  },
+});
+
+/** The website a custom build is for, when the caller's company holds it and Google Analytics is connected: its connection, newest whole day, and when its custom lists were last asked. */
+export const customTarget = internalQuery({
+  args: { companyId: v.id("companies"), siteId: v.id("companyWebsites"), period: analyticsPeriodValidator },
+  returns: v.union(v.null(), v.object({ connectionId: v.id("googleAnalyticsConnections"), newestDay: v.string(), askedAt: v.union(v.number(), v.null()) })),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.siteId);
+    if (!hold || hold.companyId !== args.companyId || isTrackedHold(hold)) return null;
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (!connection || connection.status !== "CONNECTED" || !connection.property || connection.clearing || !connection.newestDay) return null;
+    const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", hold._id).eq("key", slotKey("total", args.period, "NOW", ""))).first();
+    return { connectionId: connection._id, newestDay: connection.newestDay, askedAt: slot?.builtAt ?? null };
+  },
+});
+
+/**
+ * Custom dates' lists (sees-header-and-rolling-dates-plan.md, part two, rule 4): every list a run asks — Google's own
+ * answers, people included — for the dates and the same number of days before them, asked of Google when a screen
+ * first asks for them and once a day after (the nightly clean-up drops them a day old). About a twentieth of a
+ * night's asks, inside the website's allowance (openSession); a refusal stops the build and is said, never retried.
+ * The lists land under the custom key, so every screen reads them as it reads a period's.
+ */
+export const prepareAnalyticsCustom = tenantAction({
+  args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
+  returns: v.object({ building: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
+  handler: async (ctx, args): Promise<{ building: boolean; problem: null | "NOT_CONNECTED" | "GOOGLE_BUSY" | "GOOGLE_REFUSED" }> => {
+    const companyId = getActiveCompanyId(ctx.user);
+    if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
+    const period = customPeriodKey({ from: args.from, to: args.to });
+    if (!customRangeOf(period)) throw appError("INVALID_INPUT", "Custom dates need a first and a last day, in order.");
+    const found = await ctx.runQuery(internal.googleAnalyticsLive.customTarget, { companyId: companyId as Id<"companies">, siteId: args.siteId, period });
+    if (!found) return { building: false, problem: "NOT_CONNECTED" };
+    if (found.askedAt !== null && Date.now() - found.askedAt < CUSTOM_LISTS_KEPT_MS) return { building: false, problem: null };
+    const target = await ctx.runQuery(internal.googleAnalyticsCollect.collectTarget, { connectionId: found.connectionId });
+    if (!target?.property) return { building: false, problem: "NOT_CONNECTED" };
+    const opened = await openSession(ctx, found.connectionId);
+    if (!opened.ok) return { building: false, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" : "NOT_CONNECTED" };
+    const lists = target.shop ? [...PAGE_LISTS, "product" as const] : PAGE_LISTS;
+    for (const which of ["NOW", "BEFORE"] as const) {
+      for (const list of lists) {
+        const step = await collectPeriod(ctx, opened.session, found.connectionId, target, { list, period, which }, found.newestDay);
+        if (!step.ok) return { building: true, problem: step.busy ? "GOOGLE_BUSY" : "GOOGLE_REFUSED" };
+      }
+    }
+    return { building: true, problem: null };
   },
 });

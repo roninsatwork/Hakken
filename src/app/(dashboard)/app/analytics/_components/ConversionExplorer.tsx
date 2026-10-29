@@ -14,7 +14,7 @@ import { formatPerConversion } from "./analyticsFormat";
 import { CHANNEL_COLOURS } from "./AnalyticsChart";
 import { daysSpanned } from "./stepScale";
 import { useEventName } from "./useEventName";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, periodWord } from "./useAnalytics";
 import { bucketsOf, fewerIsBetter, linesOf, rowsOf, scoresOf, sumsOf, type Against, type Bucket, type Line, type LinesBy, type Measure } from "./explorerRule";
 import { useExplorerReadout } from "./ExplorerReadout";
 import { eventList } from "./AnalyticsSees";
@@ -149,7 +149,7 @@ export function ConversionExplorerCard({ page }: { page: string }) {
 
   const heldLate = answer?.heldFrom && answer.from && answer.heldFrom > answer.from;
   const hint = [
-    t("hint", { period: tf(`periods.${period}`), step }),
+    t("hint", { period: tf(`periods.${periodWord(period)}`), step }),
     measure === "perOne" ? t("fewerBetter") : null,
     answer?.everyDevice ? t("everyDevice") : null,
     heldLate ? t("heldFrom", { date: formatDay(answer.heldFrom) }) : null,

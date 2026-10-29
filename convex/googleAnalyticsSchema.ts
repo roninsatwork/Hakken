@@ -1,6 +1,8 @@
 import { defineTable } from "convex/server";
-import { v } from "convex/values";
-import { CALENDAR_PERIODS, calendarPeriodValidator, type CalendarPeriod } from "./utils/calendarPeriods";
+import { v, type VString } from "convex/values";
+import { CALENDAR_PERIODS, isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
+import { appError } from "./utils/appError";
+import { customRangeOf, type CustomPeriod } from "./utils/analyticsCustomPeriod";
 
 /**
  * The tables behind Google Analytics for a company's own websites
@@ -227,11 +229,25 @@ export const dayFactListValidator = v.union(
  * own answer for its days in the property's time zone. The screens ask by these.
  */
 export const ANALYTICS_PERIODS = CALENDAR_PERIODS;
-export const analyticsPeriodValidator = calendarPeriodValidator;
 /** The main home country's 12 months a day, and what needs a whole year (rule 10): a fixed last 12 months, never a menu choice. */
 export const SERIES_PERIOD = "365" as const;
+export { customPeriodKey, customRangeOf, type CustomPeriod } from "./utils/analyticsCustomPeriod";
 /** A ready-made list's period, as its key names it. */
-export type AnalyticsPeriod = CalendarPeriod | typeof SERIES_PERIOD;
+export type AnalyticsPeriod = CalendarPeriod | typeof SERIES_PERIOD | CustomPeriod;
+export function isAnalyticsPeriod(value: string): value is AnalyticsPeriod {
+  return isCalendarPeriod(value) || value === SERIES_PERIOD || customRangeOf(value) !== null;
+}
+/** The period a screen asked for: the menu's, or custom dates' key; anything else is refused. */
+export function analyticsPeriodOf(value: string): AnalyticsPeriod {
+  if (!isAnalyticsPeriod(value)) throw appError("INVALID_INPUT", "That is not a period the Dates menu offers.");
+  return value;
+}
+/**
+ * What a screen may ask by: a period the menu offers, or custom dates' key (`custom_from_to`). A key Convex cannot
+ * spell as a validator, so the check is `v.string()` carrying the period type: a period nobody offers reads
+ * nothing (`periodRange` gives it no days), never a crash, and a screen never sends one.
+ */
+export const analyticsPeriodValidator = v.string() as unknown as VString<AnalyticsPeriod>;
 
 /** The period itself, the span before it, and the same span a year before (§10, Q2). */
 export const analyticsWhichValidator = v.union(v.literal("NOW"), v.literal("BEFORE"), v.literal("YEAR"));

@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { CalendarClock, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
@@ -10,7 +13,7 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
-import { openingPeriod, periodSpan, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
+import { isCalendarPeriod, openingPeriod, periodSpan, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { shiftDay } from "../../sites/_components/siteRange";
 import { SiteMark } from "../../sites/_components/SiteMark";
@@ -18,7 +21,7 @@ import { AnalyticsFilters } from "../_components/AnalyticsFilters";
 import { AnalyticsMenu } from "../_components/AnalyticsMenu";
 import { AnalyticsConnectionBanner } from "../_components/AnalyticsNotices";
 import { OpeningPeriodContext } from "../../sites/_components/useCalendarPeriod";
-import { analyticsQuery, pageForPath, useAnalyticsSiteId, usePeriod, useAnalyticsStatus, type AnalyticsPageId } from "../_components/useAnalytics";
+import { analyticsQuery, pageForPath, useAnalyticsDates, useAnalyticsSiteId, usePeriod, useAnalyticsStatus, type AnalyticsPageId } from "../_components/useAnalytics";
 
 /**
  * One website in the Google Analytics section (docs/plans/active/google-analytics-plan.md
@@ -40,6 +43,13 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
   const params = useSearchParams();
   const siteId = useAnalyticsSiteId();
   const status = useAnalyticsStatus();
+  // Custom dates' lists are asked of Google when first asked for (googleAnalyticsLive.ts, prepareAnalyticsCustom): once a day.
+  const [choice] = useAnalyticsDates();
+  const prepare = useAction(api.googleAnalyticsLive.prepareAnalyticsCustom);
+  const custom = choice.period === "custom" ? choice : null;
+  useEffect(() => {
+    if (custom) prepare({ siteId, from: custom.from, to: custom.to }).catch(() => undefined);
+  }, [prepare, siteId, custom?.from, custom?.to]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (status === undefined) {
     return (
@@ -143,7 +153,8 @@ function PeriodDays({ siteId, newestDay, children }: { siteId: string; newestDay
   const source = useTranslations("sidebar")("googleAnalytics");
   const page = pageForPath(usePathname(), siteId);
   const [period] = usePeriod();
-  if (!newestDay || OWN_DAYS.has(page) || periodSpan(period, shiftDay(newestDay, 1), newestDay)) return <>{children}</>;
+  // Custom dates are never past the newest day (useAnalyticsDates), so always have days.
+  if (!newestDay || OWN_DAYS.has(page) || !isCalendarPeriod(period) || periodSpan(period, shiftDay(newestDay, 1), newestDay)) return <>{children}</>;
   return (
     <>
       <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={tm(page)} />

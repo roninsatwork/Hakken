@@ -24,7 +24,7 @@ import { PageLink } from "../../../_components/AnalyticsCells";
 import { VisitsChart } from "../../../_components/AnalyticsChart";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "../../../_components/analyticsFormat";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus, periodWord } from "../../../_components/useAnalytics";
 import { backTarget } from "../../../_components/analyticsBack";
 import { PageStoryCharts, PageStoryFigures, PageStoryNotices, useStoryClicksTable, useStorySourcesTable } from "../../../_components/PageStory";
 import { PageConversionsByChannel } from "../../../_components/ConversionParts";
@@ -101,7 +101,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   const matching = rows?.filter((entry) => !matches || matches(nameOf(entry)) || matches(entry.kind === "page" ? pathOf(entry.label) : entry.key));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "views", name: nameOf });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
-  const named = { period: tf(`periods.${period}`) };
+  const named = { period: tf(`periods.${periodWord(period)}`) };
   const description = answer ? (answer.title
     ? (answer.group ? t("descriptionInGroupTitled", { title: answer.title, host: status.host, group: answer.group }) : t("descriptionTitled", { title: answer.title, host: status.host }))
     : (answer.group ? t("descriptionInGroup", { host: status.host, group: answer.group }) : t("description", { host: status.host }))) : undefined;
@@ -141,7 +141,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
                   ? <span className="text-secondary">{t("madeElsewhere", { count: answer?.story.started?.conversions ?? 0 })}</span>
                   : null}
                 {row.conversions === 0 && row.conversionsBefore === 0
-                  ? <span className="text-[12px] text-muted">{t("noneEither", { before: tf(`before.${period}`) })}</span>
+                  ? <span className="text-[12px] text-muted">{t("noneEither", { before: tf(`before.${periodWord(period)}`) })}</span>
                   : <BeforeLine now={row.conversions} before={row.conversionsBefore} />}
               </span>
             )}

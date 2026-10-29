@@ -25,7 +25,7 @@ import { useEventName } from "../_components/useEventName";
 import { useHealthWords } from "../_components/useHealthWords";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useVisitorName } from "../_components/useVisitorName";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus, periodWord } from "../_components/useAnalytics";
 
 type Overview = NonNullable<FunctionReturnType<typeof api.googleAnalyticsReads.analyticsOverview>>;
 type Panels = NonNullable<FunctionReturnType<typeof api.googleAnalyticsOverviewReads.analyticsOverviewPanels>>
@@ -109,7 +109,7 @@ function useChangeWords(): (now: number, before: number | null | undefined) => s
   const t = useTranslations("googleAnalytics.overview");
   const tf = useTranslations("googleAnalytics.filters");
   const [period] = usePeriod();
-  const span = tf(`before.${period}`);
+  const span = tf(`before.${periodWord(period)}`);
   return (now, before) => {
     if (before === null || before === undefined || before === 0) return t("noBefore");
     if (now === before) return t("sameAs", { before: span });

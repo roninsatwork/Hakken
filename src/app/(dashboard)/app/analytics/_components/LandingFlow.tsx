@@ -7,7 +7,7 @@ import { MORE } from "@/convex/utils/landingFlow";
 import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "@/src/ui/components/screens/PageFlowChart";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../search-console/_components/SearchConsoleChartCard";
-import { useAnalyticsArgs, useAnalyticsStatus } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, periodWord } from "./useAnalytics";
 
 /**
  * Landing pages' "How visits moved through your website"
@@ -60,7 +60,7 @@ export function LandingFlowCard() {
   return (
     <SearchConsoleChartCard
       title={t("title")}
-      hint={t("hint", { period: tf(`periods.${args.period}`) })}
+      hint={t("hint", { period: tf(`periods.${periodWord(args.period)}`) })}
       exportName="google-analytics-landing-flow"
       csv={csv}
       host={status?.host ?? ""}

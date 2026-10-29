@@ -17,7 +17,7 @@ import { usePageKinds } from "../../../../_components/usePageKinds";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { formatPercent, formatTime, pathOf } from "../../../_components/analyticsFormat";
 import { coarserThanStep, perStep, shiftDays, stepKey } from "../../../_components/stepScale";
-import { useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, useStep, type Step } from "../../../_components/useAnalytics";
+import { useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, useStep, type Step, periodWord } from "../../../_components/useAnalytics";
 
 /**
  * A channel's own page, above its table (docs/plans/active/ga-channel-pages-plan.md
@@ -52,7 +52,7 @@ export function useKindName(kinds: ReadonlyArray<{ kind: string; name: string | 
 export function useBeforeName(): string {
   const t = useTranslations("googleAnalytics.channelPage");
   const [period] = usePeriod();
-  return t(`beforeName.${period}`);
+  return t(`beforeName.${periodWord(period)}`);
 }
 
 /**
@@ -169,7 +169,7 @@ export function ChannelDayChart({ channel, days }: { channel: string; days: Chan
   const collecting = days?.live || days?.liveBefore;
   return (
     <SearchConsoleChartCard
-      title={t(`title.${step}`, { channel, before: tf(`before.${period}`) })}
+      title={t(`title.${step}`, { channel, before: tf(`before.${periodWord(period)}`) })}
       hint={`${t(`hint.${measure}`, { step })}${coarse ? ` ${tc(`coarse.${step}`)}` : ""}${collecting ? ` ${t("collecting")}` : ""}`}
       controls={<SiteViewSwitch label={t("measureLabel")} options={MEASURES.map((value) => ({ value, label: t(`measures.${value}`) }))} value={measure} onChange={setMeasure} />}
       exportName="google-analytics-channel-daily"
@@ -212,7 +212,7 @@ export function ChannelKindBars({ channel, top, assistants = false }: {
   const beforeName = useBeforeName();
   const kinds = top?.kinds ?? [];
   const data = kinds.map((kind) => ({ label: kindName(kind.kind), now: kind.visits, before: kind.visitsBefore, kind }));
-  const nowName = tf(`periods.${period}`);
+  const nowName = tf(`periods.${periodWord(period)}`);
   const conversionsOf = (entry: { dataKey?: string | number; payload?: Record<string, unknown> }) => {
     const kind = entry.payload?.kind as Kind | undefined;
     return entry.dataKey === "before" ? kind?.conversionsBefore ?? 0 : kind?.conversions ?? 0;
@@ -220,7 +220,7 @@ export function ChannelKindBars({ channel, top, assistants = false }: {
   return (
     <SearchConsoleChartCard
       title={t(assistants ? "titleAssistants" : "title", { channel })}
-      hint={`${t(assistants ? (top?.everyAssistant ? "hintEveryAssistant" : "hintAssistants") : "hint", { before: tf(`before.${period}`) })}${top?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      hint={`${t(assistants ? (top?.everyAssistant ? "hintEveryAssistant" : "hintAssistants") : "hint", { before: tf(`before.${periodWord(period)}`) })}${top?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
       exportName="google-analytics-channel-classifications"
       csv={() => toCsv(["classification", nowName, beforeName, `${nowName} · ${t("conversions")}`, `${beforeName} · ${t("conversions")}`], kinds.map((kind) => [kindName(kind.kind), kind.visits, kind.visitsBefore, kind.conversions, kind.conversionsBefore]))}
       host={status?.host ?? ""}
@@ -261,14 +261,14 @@ export function ChannelMovers({ channel, top }: { channel: string; top: ChannelT
     label: nameOf(page.address),
     detail: `${formatNumber(page.visitsBefore)} → ${formatNumber(page.visits)}`,
     change: page.visits - page.visitsBefore,
-    hover: t("hover", { page: nameOf(page.address), before: formatNumber(page.visitsBefore), visits: formatNumber(page.visits), period: tf(`periods.${period}`).toLowerCase(), was: tf(`before.${period}`) }),
+    hover: t("hover", { page: nameOf(page.address), before: formatNumber(page.visitsBefore), visits: formatNumber(page.visits), period: tf(`periods.${periodWord(period)}`).toLowerCase(), was: tf(`before.${periodWord(period)}`) }),
     ...(page.key.startsWith("~") ? { href: pageHref(page.key) } : {}),
     ...(page.address === NOT_SET ? { muted: true } : {}),
   }));
   return (
     <SearchConsoleChartCard
       title={t("title")}
-      hint={t("hint", { channel, before: tf(`before.${period}`) })}
+      hint={t("hint", { channel, before: tf(`before.${periodWord(period)}`) })}
       exportName="google-analytics-channel-movers"
       csv={() => toCsv(["page", "before", "now"], movers.map((page) => [page.address, page.visitsBefore, page.visits]))}
       host={status?.host ?? ""}

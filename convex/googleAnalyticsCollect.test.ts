@@ -825,3 +825,52 @@ describe("collecting a website's Google Analytics", () => {
     expect(connection.historyFrom).toBeUndefined();
   });
 });
+
+/**
+ * Custom dates (sees-header-and-rolling-dates-plan.md, part two, rule 4): a screen's first ask builds the dates'
+ * lists from Google — the dates and the same number of days before them, no year before — once a day, read as a
+ * period's are; the nightly clean-up drops them a day old.
+ */
+describe("custom dates", () => {
+  test("built from Google when first asked for, read as a period's, not asked again within the day, dropped a day old", async () => {
+    vi.setSystemTime(Date.parse("2026-10-06T09:30:00Z"));
+    const t = harness();
+    const { siteId, admin } = await connected(t);
+    const google = fakeGoogle(history(70));
+    await save(admin, siteId);
+    await finishScheduled(t);
+
+    // 15 to 28 September: fourteen days, set against the fourteen before them.
+    const period = "custom_2026-09-15_2026-09-28";
+    expect(await admin.action(api.googleAnalyticsLive.prepareAnalyticsCustom, { siteId, from: "2026-09-15", to: "2026-09-28" })).toEqual({ building: true, problem: null });
+    const now = (await periodRows(t, siteId, `total|${period}|NOW|`))!;
+    expect(now.slot).toMatchObject({ from: "2026-09-15", to: "2026-09-28" });
+    let visits = 0;
+    for (let at = 0; at < 14; at++) visits += (await dayRows(t, siteId, "total", "", shiftDay("2026-09-15", at)))[0]?.visits ?? 0;
+    expect(visits).toBeGreaterThan(0);
+    expect(now.rows[0]).toMatchObject({ visits });
+    expect((await periodRows(t, siteId, `total|${period}|BEFORE|`))!.slot).toMatchObject({ from: "2026-09-01", to: "2026-09-14" });
+    expect(await periodRows(t, siteId, `total|${period}|YEAR|`)).toBeNull();
+    expect(await periodRows(t, siteId, `landing|${period}|NOW|`)).not.toBeNull();
+    // The overview reads them as it reads a period's.
+    const overview = await admin.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period, device: "" });
+    expect(overview).not.toBeNull();
+    expect(JSON.stringify(overview)).toContain(`"visits"`);
+
+    // Asked again within the day: nothing more asked of Google.
+    const asked = google.calls.length;
+    expect(await admin.action(api.googleAnalyticsLive.prepareAnalyticsCustom, { siteId, from: "2026-09-15", to: "2026-09-28" })).toEqual({ building: false, problem: null });
+    expect(google.calls.length).toBe(asked);
+    // Dates in the wrong order are refused before Google is asked.
+    await expect(admin.action(api.googleAnalyticsLive.prepareAnalyticsCustom, { siteId, from: "2026-09-28", to: "2026-09-15" })).rejects.toThrow();
+
+    // A day on, the nightly clean-up drops them; the next ask builds them again.
+    vi.setSystemTime(Date.parse("2026-10-07T09:31:00Z"));
+    await t.mutation(internal.googleAnalyticsCountries.dropCountriesNotKept, { companyWebsiteId: siteId });
+    await finishScheduled(t);
+    expect(await periodRows(t, siteId, `total|${period}|NOW|`)).toBeNull();
+    expect(await periodRows(t, siteId, `total|lastMonth|NOW|`)).not.toBeNull();
+    expect(await admin.action(api.googleAnalyticsLive.prepareAnalyticsCustom, { siteId, from: "2026-09-15", to: "2026-09-28" })).toEqual({ building: true, problem: null });
+    expect(google.calls.length).toBeGreaterThan(asked);
+  });
+});

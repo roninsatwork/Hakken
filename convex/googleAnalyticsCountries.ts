@@ -82,6 +82,14 @@ const RETIRED_PERIODS = new Set(["7", "30", "90", "thisQuarter", "lastQuarter", 
  * A list no run keeps: a retired list or day count, or a 12-month list other than Insights' own — those lists, every
  * device, the main home country, now and a year before (option C, `INSIGHTS_YEAR_LISTS`).
  */
+/** Custom dates' lists are kept this long after they were asked (sees-header-and-rolling-dates-plan.md, part two, rule 4). */
+export const CUSTOM_LISTS_KEPT_MS = 24 * 60 * 60 * 1000;
+
+/** A custom dates' list a day old: the next asker asks Google again, with the newest day in. */
+export function staleCustom(slot: { key: string; builtAt: number }): boolean {
+  return (slot.key.split("|")[1] ?? "").startsWith("custom_") && Date.now() - slot.builtAt >= CUSTOM_LISTS_KEPT_MS;
+}
+
 export function retired(key: string): boolean {
   const [list, period, which, device, country] = key.split("|");
   if (RETIRED_LISTS.has(list) || (list === "series" && key !== KEPT_SERIES)) return true;
@@ -110,7 +118,7 @@ export const dropCountriesNotKept = internalMutation({
     let removed = 0;
     for (const slot of page.page) {
       const country = countryOfKey(slot.key);
-      if ((!country || kept.has(country)) && !retired(slot.key)) continue;
+      if ((!country || kept.has(country)) && !retired(slot.key) && !staleCustom(slot)) continue;
       const parts = await ctx.db
         .query("googleAnalyticsPeriods")
         .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", hold._id).eq("key", slot.key))

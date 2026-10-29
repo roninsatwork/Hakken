@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
+import { DatesMenu, type DateChoice } from "@/src/ui/components/screens/DatesMenu";
 import { Select } from "@/src/ui/components/screens/Select";
 import { countryName } from "../../search-console/_components/countries";
 import { readerLanguage } from "../../search-console/_components/searchConsoleFormat";
@@ -18,8 +18,8 @@ import {
   pageForPath,
   useAnalyticsCountry,
   useAnalyticsSiteId,
+  useAnalyticsDates,
   useDevice,
-  usePeriod,
   useStep,
   type Device,
   type Step,
@@ -30,9 +30,10 @@ import {
  * The home country, the device, the dates and the step, at the top of every
  * page (GA13, GA31; §11, §18.6.1): the website's home countries — Search
  * Console's own choice, opening on the main one — every device or one, the
- * ready-made periods (§4.3), and how the charts step. Each is kept in the
+ * ready-made periods (§4.3) or custom dates, and how the charts step. Each is kept in the
  * address, so it travels with the menu. The dates are the seven calendar
- * periods every section shares (calendar-periods-plan.md, phase 6). Live counts every country, as
+ * periods every section shares (calendar-periods-plan.md, phase 6) and custom dates, whose
+ * lists are asked of Google when first asked for (sees-header-and-rolling-dates-plan.md, part two). Live counts every country, as
  * Google's own Realtime does (Anthony, 2026-10-13), so offers none (§18).
  */
 export function AnalyticsFilters() {
@@ -40,12 +41,14 @@ export function AnalyticsFilters() {
   const siteId = useAnalyticsSiteId();
   const pathname = usePathname();
   const [device, setDevice] = useDevice();
-  const [period] = usePeriod();
+  const [choice] = useAnalyticsDates();
   const status = useAnalyticsStatus();
   const opening = useOpeningPeriod();
   const setParams = useSetSiteParams();
-  // A new period draws in its own step (rule 8): a step chosen for the last one is dropped.
-  const choosePeriod = (next: string) => setParams({ [PERIOD_KEY]: next === opening ? null : next, [STEP_KEY]: null });
+  // A new period draws in its own step (rule 8): a step chosen for the last one is dropped. Custom dates travel as from and to.
+  const chooseDates = (next: DateChoice) => setParams(next.period === "custom"
+    ? { [PERIOD_KEY]: "custom", from: next.from, to: next.to, [STEP_KEY]: null }
+    : { [PERIOD_KEY]: next.period === opening ? null : next.period, from: null, to: null, [STEP_KEY]: null });
   const [step, setStep] = useStep();
   const [country, setCountry] = useAnalyticsCountry();
   const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId });
@@ -68,7 +71,7 @@ export function AnalyticsFilters() {
       </Select>
       {dated ? (
         <>
-          <DatesMenu value={{ period }} newest={status?.connection?.newestDay ?? null} custom={false} onChange={(choice) => choosePeriod(choice.period)} />
+          <DatesMenu value={choice} newest={status?.connection?.newestDay ?? null} onChange={chooseDates} />
           <Select aria-label={t("step")} value={step} onChange={(next) => setStep(next as Step)}>
             {STEPS.map((value) => <option key={value} value={value}>{t(`steps.${value}`)}</option>)}
           </Select>

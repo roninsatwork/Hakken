@@ -12,7 +12,7 @@ import { AnalyticsTable } from "../../_components/AnalyticsListScreen";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChannelsDailyChart } from "../../_components/AnalyticsChart";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, periodWord } from "../../_components/useAnalytics";
 import { useKindName } from "./_components/ChannelParts";
 import { ChannelsFigures, ChannelsMap, ChannelsWorth } from "./_components/ChannelsParts";
 
@@ -43,7 +43,7 @@ export default function AnalyticsChannelsPage() {
   const chosen = group !== EVERY && kinds.some((kind) => kind.kind === group) ? group : null;
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Waypoints className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { before: tf(`before.${period}`) })} />
+      <PageHeader icon={<Waypoints className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { before: tf(`before.${periodWord(period)}`) })} />
       {status ? (
         <AnalyticsGate status={status} siteId={siteId}>
           <div className="flex flex-col gap-4">

@@ -22,7 +22,7 @@ import { SearchConsoleChartCard } from "../../search-console/_components/SearchC
 import { ConversionsCell, PageLink, TextFigure } from "./AnalyticsCells";
 import { BeforeLine } from "./AnalyticsFigures";
 import { formatMoney, formatPercent, formatPerVisit, formatTime, pathOf } from "./analyticsFormat";
-import { usePeriod } from "./useAnalytics";
+import { usePeriod, periodWord } from "./useAnalytics";
 import { OTHER_ROWS } from "@/convex/utils/analyticsSharedLists";
 
 /**
@@ -44,7 +44,7 @@ function useStoryWords() {
   const t = useTranslations("googleAnalytics.page.story");
   const tf = useTranslations("googleAnalytics.filters");
   const [period] = usePeriod();
-  return { t, tf, period: tf(`periods.${period}`) };
+  return { t, tf, period: tf(`periods.${periodWord(period)}`) };
 }
 
 /** A source by the name people know it by, or typed in, or a channel's other sources added up, or not known. */

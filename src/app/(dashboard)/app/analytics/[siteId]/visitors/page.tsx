@@ -20,7 +20,7 @@ import { useFlowKindName } from "../../_components/ConversionParts";
 import { useVisitorName } from "../../_components/useVisitorName";
 import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
 import { formatPercent, formatPerVisit } from "../../_components/analyticsFormat";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, periodWord } from "../../_components/useAnalytics";
 
 /** The table's lists, in the order the switch offers them (§18.2 board 15). */
 const VIEWS = ["visitorType", "browser", "system", "age", "gender", "interest"] as const satisfies readonly VisitorList[];
@@ -106,7 +106,7 @@ function VisitorsHead({ map, kindName }: { map: VisitorMap | null; kindName: (ki
         from={null}
         to={null}
         exportName="google-analytics-new-and-returning"
-        title={{ ...t.raw("chartTitle") as { day: string; week: string; month: string }, hint: t("chartHint", { period: tf(`periods.${period}`) }) }}
+        title={{ ...t.raw("chartTitle") as { day: string; week: string; month: string }, hint: t("chartHint", { period: tf(`periods.${periodWord(period)}`) }) }}
       />
       <VisitorMapCard map={map} nameOf={nameOf} kindName={kindName} />
       {signalsOff ? (
@@ -144,7 +144,7 @@ function VisitorMapCard({ map, nameOf, kindName }: { map: VisitorMap | null; nam
     })),
   }));
   const visitsOf = new Map((map?.rows ?? []).map((row) => [row.key, row.visits]));
-  const hint = `${t(map?.conversions === false ? "hintNoConversions" : "hint", { period: tf(`periods.${period}`) })}${map?.thresholded ? ` ${t("privacy")}` : ""}`;
+  const hint = `${t(map?.conversions === false ? "hintNoConversions" : "hint", { period: tf(`periods.${periodWord(period)}`) })}${map?.thresholded ? ` ${t("privacy")}` : ""}`;
   return (
     <SearchConsoleChartCard
       title={t("title")}

@@ -5,7 +5,7 @@ import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { changeOf, formatMoney, formatPercent, formatPerVisit, formatTime } from "./analyticsFormat";
-import { usePeriod } from "./useAnalytics";
+import { usePeriod, periodWord } from "./useAnalytics";
 
 type Figures = {
   visits: number;
@@ -28,7 +28,7 @@ export function BeforeLine({ now, before }: { now: number; before: number | null
   if (change === null) return <span className="text-[12px] text-muted">{t("nothingBefore")}</span>;
   return (
     <ChangeLine by={change}>
-      {t(change > 0 ? "onBeforeUp" : change < 0 ? "onBeforeDown" : "onBeforeSame", { change: formatPercent(Math.abs(change)), before: tf(`before.${period}`) })}
+      {t(change > 0 ? "onBeforeUp" : change < 0 ? "onBeforeDown" : "onBeforeSame", { change: formatPercent(Math.abs(change)), before: tf(`before.${periodWord(period)}`) })}
     </ChangeLine>
   );
 }
@@ -46,7 +46,7 @@ export function PerVisitLine({ now, before, format, points = false, lowerIsBette
   const [period] = usePeriod();
   if (now === null || before === null) return <span className="text-[12px] text-muted">{t("nothingBefore")}</span>;
   const by = Math.round((now - before) * (points ? 1000 : 10)) / (points ? 1000 : 10);
-  const words = { change: format(Math.abs(by)), before: tf(`before.${period}`) };
+  const words = { change: format(Math.abs(by)), before: tf(`before.${periodWord(period)}`) };
   const key = by === 0 ? "onBeforeSame" : points ? (by > 0 ? "pointsUp" : "pointsDown") : by > 0 ? "onBeforeUp" : "onBeforeDown";
   return <ChangeLine by={lowerIsBetter ? -by : by}>{t(key, words)}</ChangeLine>;
 }
