@@ -1,8 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { CHART_ENGAGEMENT_RAMP } from "@/src/ui/components/charts/chartPalette";
 import { ChartCard } from "./ChartCard";
 import { ChannelMap, type ChannelMapRow } from "./ChannelMap";
+import { Select } from "./Select";
 
 /**
  * The Conversions map (docs/plans/active/conversion-charts-plan.md, agreed
@@ -17,7 +19,38 @@ import { ChannelMap, type ChannelMapRow } from "./ChannelMap";
  *
  * The part draws; the screen reads and chooses. `controls` is the row of
  * dropdowns (Count, Columns, Compare), kept in the address by the screen.
+ *
+ * Narrow, where a square would be under `NARROW_SQUARE` px (Anthony,
+ * 2026-10-29, at a 450px card: "this is still very unreadable"), the map
+ * becomes a list for one conversion at a time, chosen from a dropdown: each
+ * kind's full name, a bar in the row's shade, and its figure.
  */
+const NARROW_SQUARE = 60;
+
+/** A share of the row as the ramp's shade, brighter for more: the map's own rule, for the narrow bars. */
+function shadeOf(share: number): string {
+  if (share >= 0.5) return CHART_ENGAGEMENT_RAMP[4];
+  if (share >= 0.3) return CHART_ENGAGEMENT_RAMP[3];
+  if (share >= 0.15) return CHART_ENGAGEMENT_RAMP[2];
+  if (share >= 0.05) return CHART_ENGAGEMENT_RAMP[1];
+  return CHART_ENGAGEMENT_RAMP[0];
+}
+
+/**
+ * The width of the part's box, kept up to date, so it can choose the grid or the list. The box arrives with the
+ * figures, after the card's first render, so it is watched from whenever it mounts, not from the first render.
+ */
+function useWidth(): [(node: HTMLDivElement | null) => void, number] {
+  const [node, setNode] = useState<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => setWidth(Math.round(entries[0]?.contentRect.width ?? 0)));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [node]);
+  return [setNode, width];
+}
 export type ConversionsCount = "visits" | "rate" | "events";
 export type ConversionsMapColumn = { key: string; name: string; visits: number; visitsBefore: number | null };
 export type ConversionsMapCell = { visits: number; times: number; visitsBefore: number | null; timesBefore: number | null };
@@ -26,8 +59,8 @@ export type ConversionsMapRow = { eventName: string; name: string; counted: bool
 export type ConversionsMapWords = {
   /** The line under a row's name: its total in the unit shown. */
   rowTotal: (row: ConversionsMapRow, total: { visits: number; times: number; rate: number }) => string;
-  /** A square's hover words. */
-  hover: (row: ConversionsMapRow, column: ConversionsMapColumn, value: string) => string;
+  /** A square's hover words: the conversion, the kind, the value shown, and the square's own figures behind it. */
+  hover: (row: ConversionsMapRow, column: ConversionsMapColumn, value: string, cell: ConversionsMapCell) => string;
   /** The key: what the shades mean, and an empty square. */
   shades: string;
   empty: string;
@@ -54,7 +87,7 @@ export function changeWords(now: number, before: number | null, newWord: string)
   return `${by > 0 ? "▲" : "▼"} ${(100 * Math.abs(by)).toFixed(1)}%`;
 }
 
-export function ConversionsMap({ title, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText }: {
+export function ConversionsMap({ title, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven }: {
   title: string;
   controls: ReactNode;
   columns: readonly ConversionsMapColumn[];
@@ -71,7 +104,15 @@ export function ConversionsMap({ title, controls, columns, rows, count, compare,
   caption?: string;
   /** What the card says with nothing to draw. */
   emptyText?: string;
+  /** The narrow form's dropdown label: "Conversion". */
+  pickWord?: string;
+  /** The narrow form, forced: the drawing kit's example and tests; left out, the part measures itself. */
+  narrow?: boolean;
 }) {
+  const [box, width] = useWidth();
+  const narrow = narrowGiven ?? (width > 0 && width / (columns.length + 1) < NARROW_SQUARE);
+  const [picked, setPicked] = useState<string | null>(null);
+  const pickedRow = rows.find((row) => row.eventName === picked) ?? rows[0];
   const allVisits = columns.reduce((sum, column) => sum + column.visits, 0);
   const mapRows: ChannelMapRow[] = rows.map((row) => {
     const values = row.cells.map((cell, at) => cellValue(count, cell, columns[at]));
@@ -92,7 +133,7 @@ export function ConversionsMap({ title, controls, columns, rows, count, compare,
           // Empty where nothing happened, whatever the unit: the rate of nothing is nothing.
           visits: value.now > 0 ? Math.max(1, Math.round(value.now)) : 0,
           conversions: 0,
-          hover: words.hover(row, column, text),
+          hover: words.hover(row, column, text, cell),
           text,
           ...(note ? { note } : {}),
           // A rate shades against the row's highest; a count against the row's total.
@@ -102,17 +143,53 @@ export function ConversionsMap({ title, controls, columns, rows, count, compare,
       }),
     };
   });
+  const list = pickedRow ? (() => {
+    const values = pickedRow.cells.map((cell, at) => cellValue(count, cell, columns[at]));
+    const top = Math.max(0, ...values.map((value) => value.now));
+    const sum = values.reduce((total, value) => total + value.now, 0);
+    return (
+      <div className="flex flex-col gap-3">
+        {rows.length > 1 ? (
+          <Select chip={{ label: pickWord ?? "", choice: pickedRow.name, changed: false }} value={pickedRow.eventName} onChange={setPicked} aria-label={pickWord ?? pickedRow.name}>
+            {rows.map((row) => <option key={row.eventName} value={row.eventName}>{row.name}</option>)}
+          </Select>
+        ) : null}
+        <ul className="flex flex-col gap-2">
+          {columns.map((column, at) => {
+            const value = values[at];
+            const text = count === "rate" ? pct(value.now) : fmt(value.now);
+            const note = compare ? changeWords(value.now, value.before, newWord) : null;
+            const share = count === "rate" ? (top > 0 ? value.now / top : 0) : sum > 0 ? value.now / sum : 0;
+            const href = hrefFor?.(pickedRow, column);
+            const figure = <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-foreground">{value.now > 0 ? text : "–"}{note ? <span className="ml-2 text-[11px] font-normal text-secondary">{note}</span> : null}</span>;
+            return (
+              <li key={column.key} className="flex flex-col gap-1" title={words.hover(pickedRow, column, text, pickedRow.cells[at])}>
+                <div className="flex items-center justify-between gap-3 text-[12px]">
+                  {href && value.now > 0 ? <a href={href} className="min-w-0 truncate text-foreground hover:underline">{column.name}</a> : <span className="min-w-0 truncate text-foreground">{column.name}</span>}
+                  {figure}
+                </div>
+                <div className="h-2 w-full rounded-[3px] bg-foreground/10">
+                  {value.now > 0 ? <div className="h-2 rounded-[3px]" style={{ width: `${Math.max(2, Math.round(100 * (top > 0 ? value.now / top : 0)))}%`, backgroundColor: shadeOf(share) }} /> : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  })() : null;
   return (
     <ChartCard title={title} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={rows.length > 0} emptyText={emptyText}>
-      <div data-part="conversions-map">
-        <ChannelMap
+      <div data-part="conversions-map" ref={box}>
+        {narrow ? list : <ChannelMap
           columns={columns.map((column) => column.name)}
           rows={mapRows}
           rowVisits={() => 1}
           conversionsWord={() => ""}
           legend={{ shades: words.shades, empty: words.empty }}
           headingTooltips
-        />
+          cellTooltips
+        />}
       </div>
     </ChartCard>
   );

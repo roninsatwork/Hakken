@@ -33,11 +33,11 @@ describe("ConversionsMap", () => {
     expect(cellValue("events", rows[1].cells[0], columns[0])).toEqual({ now: 4227, before: 4300 });
     expect(cellValue("rate", rows[0].cells[0], columns[0]).now).toBeCloseTo(236 / 6568);
     const { unmount } = draw("rate");
-    expect(screen.getByTitle("Purchase → Cupboard Handles: 3.6%")).toHaveTextContent("3.6%");
-    expect(screen.getByTitle("Purchase → Brand: 5.7%")).toHaveTextContent("5.7%");
+    expect(screen.getByLabelText("Purchase → Cupboard Handles: 3.6%")).toHaveTextContent("3.6%");
+    expect(screen.getByLabelText("Purchase → Brand: 5.7%")).toHaveTextContent("5.7%");
     unmount();
     draw("events");
-    expect(screen.getByTitle("Added to basket → Cupboard Handles: 4,227")).toHaveTextContent("4,227");
+    expect(screen.getByLabelText("Added to basket → Cupboard Handles: 4,227")).toHaveTextContent("4,227");
   });
 
   it("says each square's change against the span before when compared, 'new' from nothing", () => {
@@ -47,14 +47,14 @@ describe("ConversionsMap", () => {
     expect(changeWords(0, 0, "new")).toBeNull();
     expect(changeWords(100, null, "new")).toBeNull();
     draw("visits", true);
-    expect(screen.getByTitle("Purchase → Cupboard Handles: 236")).toHaveTextContent("▲ 18.0%");
-    expect(screen.getByTitle("Purchase → Brand: 201")).toHaveTextContent("new");
+    expect(screen.getByLabelText("Purchase → Cupboard Handles: 236")).toHaveTextContent("▲ 18.0%");
+    expect(screen.getByLabelText("Purchase → Brand: 201")).toHaveTextContent("new");
   });
 
   it("names a column in full on its heading's tooltip, and leaves an empty square empty", () => {
     draw("visits");
     expect(screen.getAllByText("Cupboard Handles").length).toBeGreaterThan(0);
-    expect(screen.getByTitle("Added to basket → Brand: 0")).toBeEmptyDOMElement();
+    expect(screen.getByLabelText("Added to basket → Brand: 0")).toBeEmptyDOMElement();
     expect(screen.getByText("a smaller to a bigger share of the row")).toBeInTheDocument();
   });
 });

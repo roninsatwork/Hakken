@@ -167,7 +167,7 @@ describe("Google Analytics' approved looks", () => {
     await screen.findByText("One conversion, day by day");
     const map = (await screen.findByText("Service")).closest("[data-part='conversions-map']") as HTMLElement;
     // Visits, the start: the contact form from Service pages, twelve visits.
-    expect(within(map).getByTitle("Contact form sent → Service: 12")).toHaveTextContent("12");
+    expect(within(map).getByLabelText("Contact form sent → Service: 12")).toHaveTextContent("12");
     await expectApprovedLook(container, "ga-conversions-visitors", "Conversions", "Google Analytics → Conversions");
   });
 
@@ -191,15 +191,15 @@ describe("Google Analytics' approved looks", () => {
     };
     // A rate of the column's visits: 12 of 1,200 is 1.0%; 5 of 1,200 is 0.4%.
     let map = await mapAt("mapCount=rate");
-    expect(within(map).getByTitle("Contact form sent → Service: 1.0%")).toHaveTextContent("1.0%");
-    expect(within(map).getByTitle("Phone number clicked → Service: 0.4%")).toHaveTextContent("0.4%");
+    expect(within(map).getByLabelText("Contact form sent → Service: 1.0%, 12 of 1,200 visits")).toHaveTextContent("1.0%");
+    expect(within(map).getByLabelText("Phone number clicked → Service: 0.4%, 5 of 1,200 visits")).toHaveTextContent("0.4%");
     // Times: the phone clicks happened eight times in five visits.
     map = await mapAt("mapCount=events");
-    expect(within(map).getByTitle("Phone number clicked → Service: 8")).toHaveTextContent("8");
+    expect(within(map).getByLabelText("Phone number clicked → Service: 8")).toHaveTextContent("8");
     // Compared with the month before: the contact form up from nine to twelve; the phone clicks new.
     map = await mapAt("mapCompare=before");
-    expect(within(map).getByTitle("Contact form sent → Service: 12")).toHaveTextContent("▲ 33.3%");
-    expect(within(map).getByTitle("Phone number clicked → Service: 5")).toHaveTextContent("new");
+    expect(within(map).getByLabelText("Contact form sent → Service: 12")).toHaveTextContent("▲ 33.3%");
+    expect(within(map).getByLabelText("Phone number clicked → Service: 5")).toHaveTextContent("new");
     // The dropdowns name their choices.
     const card = map.closest("[data-chart-export-root]") as HTMLElement;
     expect(within(card).getByLabelText("Count")).toHaveValue("visits");

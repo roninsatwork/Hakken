@@ -59,6 +59,11 @@ counts times. "I don't want the chart by the times it happened, that's meaningle
   "Conversions by page classification" and "Visits needed for one conversion". Each card's choices live in the
   address (`mapCount`, `mapBy`, `mapCompare`; `linesEvent`, `linesCount`, `linesBy`; `timeEvent`,
   `timeShow`, `timeCompare`).
+- **Responsive, and hover as standard** (Anthony, 2026-10-29, at a 450px card: "still very unreadable"; "add hover
+  states to each grid item as standard"): where a square would be under 60px, the map becomes a list for one
+  conversion at a time, chosen from a dropdown, each kind as its full name, a bar and its figure; wide, the grid, whose
+  headings truncate with the full name in the app's tooltip and whose every square says its words in the same tooltip
+  (`ChannelMap`'s `headingTooltips` and `cellTooltips`).
 - **Not built tonight**: the screen a square opens (the pages behind it; squares carry no link yet); page kind a day
   at a time (landing pages are kept for the period, not by the day: the lines by kind offer channel, device and
   country); the same parts on Channels, Visitors and a page's own conversions.

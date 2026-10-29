@@ -97,11 +97,14 @@ export function ConversionsMapCard() {
       compare={compare === "before" && (map?.hasBefore ?? false)}
       words={{
         rowTotal: (row, total) => `${count === "rate" ? t("rowRate", { rate: `${(100 * total.rate).toFixed(1)}%` }) : count === "events" ? t("rowTimes", { count: total.times }) : t("rowVisits", { count: total.visits })}${row.counted ? "" : t("notCounted")}`,
-        hover: (row, column, value) => t("hover", { event: row.name, kind: column.name, value }),
+        hover: (row, column, value, cell) => count === "rate"
+          ? t("hoverRate", { event: row.name, kind: column.name, value, did: cell.visits, visits: column.visits })
+          : t("hover", { event: row.name, kind: column.name, value }),
         shades: count === "rate" ? t("shadesRate") : t("shadesCount"),
         empty: t("empty"),
       }}
       newWord={t("new")}
+      pickWord={t("conversion")}
       exportName="google-analytics-conversions-map"
       csv={csv}
       caption={status?.host}

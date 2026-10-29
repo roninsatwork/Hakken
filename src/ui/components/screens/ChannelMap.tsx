@@ -42,7 +42,7 @@ function shadeOf(share: number): string {
   return CHART_ENGAGEMENT_RAMP[0];
 }
 
-export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, headingTooltips = false }: {
+export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, headingTooltips = false, cellTooltips = false }: {
   columns: readonly string[];
   rows: readonly ChannelMapRow[];
   /** Each row's visits, to shade its squares by their share. */
@@ -56,6 +56,8 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
   legend: { visits?: string; conversions?: string; shades: string; empty: string };
   /** Column headings say their full name on hover, in the app's own tooltip: the Conversions map, whose kinds truncate. */
   headingTooltips?: boolean;
+  /** Each square says its words on hover in the app's own tooltip, standard on the Conversions map (Anthony, 2026-10-29). */
+  cellTooltips?: boolean;
 }) {
   // The name column gives way before the squares do, so eleven columns still fit a narrow card.
   const template = { gridTemplateColumns: `minmax(96px, 140px) repeat(${columns.length}, minmax(0, 1fr))` };
@@ -92,11 +94,16 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
                   {cell.note !== undefined ? <span className="text-[11px]">{cell.note}</span> : cell.conversions > 0 ? <span className="text-[11px]">{conversionsWord(cell.conversions)}</span> : null}
                 </>
               );
-              const squareClass = "flex h-11 min-w-0 flex-col items-center justify-center overflow-hidden rounded-md leading-tight";
-              return cell.href && !empty ? (
-                <Link key={columns[index] ?? index} href={cell.href} title={cell.hover} className={`${squareClass} hover:opacity-90`} style={style}>{inside}</Link>
+              const squareClass = "flex h-11 w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-md leading-tight";
+              const square = cell.href && !empty ? (
+                <Link href={cell.href} title={cellTooltips ? undefined : cell.hover} aria-label={cell.hover} className={`${squareClass} hover:opacity-90`} style={style}>{inside}</Link>
               ) : (
-                <span key={columns[index] ?? index} title={cell.hover} className={squareClass} style={style}>{inside}</span>
+                <span tabIndex={cellTooltips && !empty ? 0 : undefined} title={cellTooltips ? undefined : cell.hover} aria-label={cell.hover} className={squareClass} style={style}>{inside}</span>
+              );
+              return cellTooltips && !empty ? (
+                <Tooltip key={columns[index] ?? index} label={cell.hover} className="relative flex min-w-0">{square}</Tooltip>
+              ) : (
+                <span key={columns[index] ?? index} className="flex min-w-0">{square}</span>
               );
             })}
           </div>
