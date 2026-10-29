@@ -1,5 +1,5 @@
 import { defineTable } from "convex/server";
-import { calendarPeriodValidator } from "./utils/calendarPeriods";
+import { calendarPeriodValidator, type CalendarPeriod } from "./utils/calendarPeriods";
 import { v } from "convex/values";
 import { storedNumbersValidator } from "./searchConsoleSchema";
 
@@ -49,8 +49,14 @@ export const bingAttemptValidator = v.union(
 export const bingListValidator = v.union(v.literal("query"), v.literal("page"));
 
 /** The ready-made periods: the last week, 30 and 90 days, six months and a year, each ending on Bing's newest week. */
-/** A ready-made period: the Dates menu's periods, the retired ones still accepted while their rows go (sees-header-and-rolling-dates-plan.md). */
-export const bingPeriodValidator = calendarPeriodValidator;
+/** A ready-made period's key: one of the Dates menu's periods, or custom dates' `custom|from|to` (sees-header-and-rolling-dates-plan.md, part two, rule 4). */
+export const bingPeriodValidator = v.string();
+/** What a screen asks for: the menu's period, or a first and a last day. */
+export const bingPeriodArgValidator = v.union(calendarPeriodValidator, v.object({ from: v.string(), to: v.string() }));
+export type BingPeriodArg = CalendarPeriod | { from: string; to: string };
+/** The key custom dates' lists are kept under. */
+export const bingCustomKey = (span: { from: string; to: string }) => `custom|${span.from}|${span.to}`;
+export const bingPeriodKey = (period: BingPeriodArg): string => (typeof period === "string" ? period : bingCustomKey(period));
 
 /** How Bing read the website on one day (`GetCrawlStats`). */
 export const bingCrawlValidator = v.object({

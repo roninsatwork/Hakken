@@ -8,7 +8,7 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { BingFigures, BingSees } from "../../_components/BingParts";
 import { BingClicksChart } from "../../_components/BingCharts";
 import { BingListScreen, pathOf } from "../../_components/BingListTable";
-import { useBingHref, useBingSiteId, useBingStatus, usePeriod } from "../../_components/useBing";
+import { useBingHref, useBingSiteId, useBingStatus, useBingDates } from "../../_components/useBing";
 
 /**
  * Pages (bing-webmaster-plan.md §5, board 5): What Hakken sees; the four
@@ -24,7 +24,7 @@ export default function BingPagesPage() {
   const status = useBingStatus();
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
-  const [period] = usePeriod();
+  const { period } = useBingDates();
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
   return (
     <BingListScreen

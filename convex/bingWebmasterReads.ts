@@ -15,7 +15,8 @@ import { listOrder, pageOfList, sortDirectionArg, type ListSorts } from "./siteL
 import { unpackNumbers } from "./utils/searchConsolePacks";
 import { bingKeywordsAt, wholeBingBookInQuery } from "./bingWebmasterBook";
 import { bingStatusValidator } from "./bingWebmasterSchema";
-import { OPENING_PERIOD, calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
+import { OPENING_PERIOD, periodSpan, ukDay } from "./utils/calendarPeriods";
+import { bingPeriodArgValidator, bingPeriodKey, type BingPeriodArg } from "./bingWebmasterSchema";
 import { accessTokenFor } from "./bingWebmasterConnect";
 import { keywordPages, pageKeywords } from "./bingWebmasterApi";
 import { addUpRows, keywordMatch, pageNumberOf, pageRefOf, rowsOfBingPart, shiftBingDay, type BingRow } from "./utils/bingWebmasterWeeks";
@@ -129,12 +130,16 @@ function weekOf(day: string): string {
  * The days of a calendar period Bing's day totals hold: from its first day to Bing's newest, never past its end. Null
  * while Bing has sent none of it (rule 9) or nothing at all.
  */
-function daysOfPeriod(newestDay: string | undefined, period: CalendarPeriod): { from: string; to: string } | null {
-  return newestDay ? periodSpan(period, ukDay(), newestDay) : null;
+function daysOfPeriod(newestDay: string | undefined, period: BingPeriodArg): { from: string; to: string } | null {
+  if (!newestDay) return null;
+  if (typeof period === "string") return periodSpan(period, ukDay(), newestDay);
+  // Custom dates, cut at Bing's newest day.
+  const to = period.to < newestDay ? period.to : newestDay;
+  return period.from <= to ? { from: period.from, to } : null;
 }
 
 /** Performance's figures for a website over a calendar period: the screen and Ask Hakken read them alike. */
-export async function readPerformance(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, period: CalendarPeriod) {
+export async function readPerformance(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, period: BingPeriodArg) {
   const connection = await connectionOf(ctx, holdId);
   const span = daysOfPeriod(connection?.newestDay, period);
   if (!span) return null;
@@ -170,7 +175,7 @@ export async function readPerformance(ctx: { db: QueryCtx["db"] }, holdId: Id<"c
  * week Bing's share of the clicks from both.
  */
 export const bingPerformance = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
+  args: { siteId: v.id("companyWebsites"), period: bingPeriodArgValidator },
   returns: v.union(v.null(), v.object({
     from: v.string(),
     to: v.string(),
@@ -244,7 +249,7 @@ const rankName = (row: ListRow) => String(row.rank).padStart(9, "0");
 const listArgs = {
   siteId: v.id("companyWebsites"),
   list: v.union(v.literal("query"), v.literal("page")),
-  period: calendarPeriodValidator,
+  period: bingPeriodArgValidator,
   q: v.optional(v.string()),
   /** Position band, as Search Console's: "top3", "top10", "top20", "rest". */
   band: v.optional(v.string()),
@@ -259,10 +264,10 @@ const listArgs = {
 };
 
 /** A ready-made list's parts, the newest build's only. */
-async function periodParts(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, list: "query" | "page", period: Doc<"bingPeriods">["period"], which: "NOW" | "BEFORE" = "NOW") {
+async function periodParts(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, list: "query" | "page", period: BingPeriodArg, which: "NOW" | "BEFORE" = "NOW") {
   const parts = await ctx.db
     .query("bingPeriods")
-    .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", list).eq("period", period).eq("which", which))
+    .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", list).eq("period", bingPeriodKey(period)).eq("which", which))
     .take(200);
   const newest = Math.max(0, ...parts.map((part) => part.builtAt));
   return parts.filter((part) => part.builtAt === newest).sort((left, right) => left.part - right.part);
@@ -324,7 +329,7 @@ async function namesOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites"
 /** What a list asks for: its period, its search and filters, and its order. */
 export type ListAsk = {
   list: "query" | "page";
-  period: CalendarPeriod;
+  period: BingPeriodArg;
   q?: string;
   band?: string;
   google?: "both" | "onlyBing";
@@ -371,6 +376,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyW
     names,
     from: parts[0]?.from ?? null,
     to: parts[0]?.to ?? null,
+    /** Custom dates whose lists are not built yet (`prepareBingCustom`): the screen asks and waits. */
+    preparing: typeof args.period !== "string" && parts.length === 0,
     summary,
     /** The row bringing the most clicks from Bing, whatever is filtered or sorted: What Hakken sees reads it. */
     top: topOf(rows, (row) => row.clicks),
@@ -462,7 +469,7 @@ export const bingListPage = tenantQuery({
       pages: page.pages,
       size: page.size,
       cut: null,
-      preparing: false,
+      preparing: list.preparing,
       from: list.from,
       to: list.to,
       summary: { ...list.summary, ...(await summaryRows(ctx, site.hold._id, args.list, list)) },
@@ -493,7 +500,7 @@ export const bingListAll = tenantQuery({
  * reference, as the lists give it.
  */
 export const bingRecord = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), list: v.union(v.literal("query"), v.literal("page")), ref: v.string(), period: v.optional(calendarPeriodValidator) },
+  args: { siteId: v.id("companyWebsites"), list: v.union(v.literal("query"), v.literal("page")), ref: v.string(), period: v.optional(bingPeriodArgValidator) },
   returns: v.union(v.null(), v.object({
     key: v.string(),
     title: v.union(v.string(), v.null()),
@@ -620,7 +627,7 @@ export function liveAsk(list: "query" | "page", key: string): string {
 // ---------------------------------------------------------------------------
 
 /** Crawling and indexing's figures for a website over a calendar period: the screen and Ask Hakken read them alike. */
-export async function readCrawling(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, period: CalendarPeriod) {
+export async function readCrawling(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, period: BingPeriodArg) {
   const connection = await connectionOf(ctx, holdId);
   const span = connection ? daysOfPeriod(connection.newestDay, period) : null;
   if (!connection || !span) return null;
@@ -655,7 +662,7 @@ export async function readCrawling(ctx: { db: QueryCtx["db"] }, holdId: Id<"comp
 
 /** How Bing read the website day by day, and each money page in its index beside Google's. */
 export const bingCrawling = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
+  args: { siteId: v.id("companyWebsites"), period: bingPeriodArgValidator },
   returns: v.union(v.null(), v.object({
     from: v.string(),
     to: v.string(),

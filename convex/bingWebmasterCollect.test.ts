@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -175,6 +175,31 @@ describe("collecting a website's Bing Webmaster figures", () => {
     // The money pages, one in Bing's index and one not.
     const checks = await t.run(async (ctx) => await ctx.db.query("bingPageChecks").collect());
     expect(checks.map((check) => [check.page, check.inIndex, check.lastRead]).sort()).toEqual([["/", true, "2026-10-02"], ["/venture-studio/", false, null]]);
+  });
+
+  test("custom dates: the lists for the Bing weeks ending inside them are built when a screen first asks, once a day, without Google's columns (sees-header-and-rolling-dates-plan.md)", async () => {
+    const t = harness();
+    const { siteId, agentId } = await connected(t);
+    fakeBing();
+    await runCollector(t, agentId);
+    const userId = await t.run(async (ctx) => await ctx.db.insert("users", { email: "owner@ronins.test", role: "ADMIN", companyId: (await ctx.db.get(siteId))!.companyId }));
+    const asOwner = t.withIdentity({ subject: userId });
+    const custom = { from: "2026-10-05", to: "2026-10-11" };
+    // Not built yet: the list says it is preparing.
+    const empty = await asOwner.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: custom, page: 1, rows: 25 });
+    expect(empty).toMatchObject({ preparing: true, rows: [] });
+    expect(await asOwner.action(api.bingWebmasterCollect.prepareBingCustom, { siteId, ...custom })).toEqual({ building: true });
+    // Built: the one Bing week ending inside 5–11 October, its rows busiest first, no Google columns.
+    const built = await asOwner.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: custom, page: 1, rows: 25 });
+    expect(built).toMatchObject({ preparing: false, from: "2026-10-05", to: "2026-10-11" });
+    expect(built.rows.map((row) => row.key).sort()).toEqual(["internal and external stakeholders", "ronins", "what is a brand audit"]);
+    expect(built.rows.every((row) => row.googleClicks === null && row.googlePosition === null)).toBe(true);
+    // Its clicks are that week's alone, fewer than This month's two weeks.
+    expect(built.rows.reduce((sum, row) => sum + row.clicks, 0)).toBeLessThan(9);
+    // The same dates again that day build nothing; the menu's periods are untouched.
+    expect(await asOwner.action(api.bingWebmasterCollect.prepareBingCustom, { siteId, ...custom })).toEqual({ building: false });
+    const month = await asOwner.query(api.bingWebmasterReads.bingListPage, { siteId, list: "query", period: "thisMonth", page: 1, rows: 25 });
+    expect(month.rows.map((row) => row.clicks)).toEqual([5, 2, 2]);
   });
 
   test("the next morning, a week Bing gives again unchanged is not written again", async () => {

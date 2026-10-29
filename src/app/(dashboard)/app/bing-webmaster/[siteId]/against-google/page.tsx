@@ -10,7 +10,7 @@ import { formatPosition } from "../../../search-console/_components/searchConsol
 import { BingSees, formatShare } from "../../_components/BingParts";
 import { BingShareChart } from "../../_components/BingCharts";
 import { BingListScreen } from "../../_components/BingListTable";
-import { useBingHref, useBingSiteId, useBingStatus, usePeriod } from "../../_components/useBing";
+import { useBingHref, useBingSiteId, useBingStatus, useBingDates } from "../../_components/useBing";
 
 /**
  * Bing against Google (bing-webmaster-plan.md §5, board 6, §4.4): What Hakken
@@ -27,7 +27,7 @@ export default function BingVersusPage() {
   const status = useBingStatus();
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
-  const [period] = usePeriod();
+  const { period } = useBingDates();
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
   const bing = figures?.totals ?? null;
   const google = figures?.google ?? null;

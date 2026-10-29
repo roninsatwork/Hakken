@@ -18,7 +18,7 @@ import { useSiteParam, useSiteSearch } from "../../sites/_components/useSitePara
 import { useSiteSort } from "../../sites/_components/useSiteSort";
 import { CUT_COLUMN, RecordLinkCell } from "../../sites/_components/SiteCells";
 import { formatPosition, formatRate } from "../../search-console/_components/searchConsoleFormat";
-import { FEW_IMPRESSIONS, useBingHref, useBingSiteId, useBingStatus, usePeriod } from "./useBing";
+import { FEW_IMPRESSIONS, useBingHref, useBingSiteId, useBingStatus, useBingDates } from "./useBing";
 import { BingGate } from "./BingNotices";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
@@ -84,7 +84,7 @@ function BingListTable({ kind, head }: {
   const router = useRouter();
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
-  const [period] = usePeriod();
+  const { period, chosen } = useBingDates();
   const [search, setSearch, settled] = useSiteSearch();
   const [band, setBand] = useSiteParam<(typeof BANDS)[number]>("band", "all", BANDS);
   const [google, setGoogle] = useSiteParam<(typeof GOOGLES)[number]>("google", "all", GOOGLES);
@@ -146,8 +146,8 @@ function BingListTable({ kind, head }: {
             {/* A period is the Bing weeks ending inside it, so its days are named (calendar-periods-plan.md, phase 5). */}
             <span className="text-[12px] text-secondary">
               {paged.result?.from && paged.result.to
-                ? t("barWeeks", { period: tperiod(base.period), from: formatDay(paged.result.from), to: formatDay(paged.result.to) })
-                : t("bar", { period: tperiod(base.period) })}
+                ? t("barWeeks", { period: tperiod(chosen), from: formatDay(paged.result.from), to: formatDay(paged.result.to) })
+                : t("bar", { period: tperiod(chosen) })}
             </span>
           </TableBar>
         }

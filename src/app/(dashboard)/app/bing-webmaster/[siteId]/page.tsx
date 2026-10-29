@@ -9,7 +9,7 @@ import { formatNumber } from "../../sites/_components/siteFormat";
 import { BingGate } from "../_components/BingNotices";
 import { BingFigures, BingSees, formatCtr, formatShare } from "../_components/BingParts";
 import { BingClicksChart, BingShareChart, BingVersusChart } from "../_components/BingCharts";
-import { useBingHref, useBingSiteId, useBingStatus, usePeriod, useStep, type BingStatus } from "../_components/useBing";
+import { useBingHref, useBingSiteId, useBingStatus, useBingDates, useStep, type BingStatus } from "../_components/useBing";
 
 /**
  * Performance (bing-webmaster-plan.md §5, board 2): What Hakken sees; clicks,
@@ -40,7 +40,7 @@ function PerformanceBody({ status }: { status: BingStatus }) {
   const tl = useTranslations("bingWebmaster.seen.links");
   const siteId = useBingSiteId();
   const hrefFor = useBingHref(siteId);
-  const [period] = usePeriod();
+  const { period } = useBingDates();
   const [step] = useStep(period);
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, { siteId, period });
   const bing = figures?.totals ?? null;

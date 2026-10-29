@@ -5,8 +5,10 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { stepOf, type CalendarPeriod, type MenuPeriod } from "@/convex/utils/calendarPeriods";
-import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
+import type { BingPeriodArg } from "@/convex/bingWebmasterSchema";
+import { customSpans, stepOf, type MenuPeriod } from "@/convex/utils/calendarPeriods";
+import type { DateChoice } from "@/src/ui/components/screens/DatesMenu";
+import { CALENDAR_PERIOD_KEY, useCalendarPeriod, useDateChoice } from "../../sites/_components/useCalendarPeriod";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 
 /**
@@ -86,9 +88,23 @@ export function usePeriod(opening?: MenuPeriod): [MenuPeriod, (next: MenuPeriod)
   return useCalendarPeriod(opening);
 }
 
-/** The chart's step: the period's own (rule 8) unless another was chosen. */
-export function useStep(period: CalendarPeriod): [Step, (next: Step) => void] {
-  return useSiteParam<Step>(STEP_KEY, stepOf(period), STEPS);
+/** What the screens say their dates are: the menu's period, or `custom`. */
+export type BingChosen = MenuPeriod | "custom";
+
+/**
+ * The Dates menu's whole choice (sees-header-and-rolling-dates-plan.md, part two): the period, or custom dates within
+ * Bing's newest day — as the queries take it, and as the screens word it.
+ */
+export function useBingDates(opening?: MenuPeriod): { period: BingPeriodArg; chosen: BingChosen; choice: DateChoice; setChoice: (next: DateChoice) => void } {
+  const status = useBingStatus();
+  const [choice, setChoice] = useDateChoice(status?.connection?.newestDay ?? null, opening);
+  const period: BingPeriodArg = choice.period === "custom" ? { from: choice.from, to: choice.to } : choice.period;
+  return { period, chosen: choice.period, choice, setChoice };
+}
+
+/** The chart's step: the period's own (rule 8; custom dates' by their length) unless another was chosen. */
+export function useStep(period: BingPeriodArg): [Step, (next: Step) => void] {
+  return useSiteParam<Step>(STEP_KEY, typeof period === "string" ? stepOf(period) : customSpans(period.from, period.to).step, STEPS);
 }
 
 /** Whether the website has figures from Bing to show. */

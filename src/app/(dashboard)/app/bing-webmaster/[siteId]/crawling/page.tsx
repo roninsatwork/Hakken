@@ -22,7 +22,7 @@ import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { BingGate } from "../../_components/BingNotices";
 import { BingSees } from "../../_components/BingParts";
 import { BingCrawlChart } from "../../_components/BingCharts";
-import { useBingSiteId, useBingStatus, usePeriod, type BingStatus } from "../../_components/useBing";
+import { useBingSiteId, useBingStatus, useBingDates, type BingStatus } from "../../_components/useBing";
 
 type Crawling = NonNullable<FunctionReturnType<typeof api.bingWebmasterReads.bingCrawling>>;
 type PageRow = Crawling["pages"][number];
@@ -62,7 +62,7 @@ function CrawlingBody({ status }: { status: BingStatus }) {
   const t = useTranslations("bingWebmaster.crawling");
   const tw = useTranslations("bingWebmaster.seen.crawling");
   const siteId = useBingSiteId();
-  const [period] = usePeriod();
+  const { period } = useBingDates();
   const crawling = useQuery(api.bingWebmasterReads.bingCrawling, { siteId, period });
   const [search, setSearch, settled] = useSiteSearch();
   const [filter, setFilter] = useSiteParam<(typeof FILTERS)[number]>("index", "all", FILTERS);

@@ -10,15 +10,19 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
-import { openingPeriod, periodSpan, ukDay, unitOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { useEffect } from "react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { BingPeriodArg } from "@/convex/bingWebmasterSchema";
+import { openingPeriod, periodSpan, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { BingMenu } from "../_components/BingMenu";
 import { BingConnectionBanner } from "../_components/BingNotices";
-import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
+import { DatesMenu, type DateChoice } from "@/src/ui/components/screens/DatesMenu";
 import { OpeningPeriodContext } from "../../sites/_components/useCalendarPeriod";
 import { useSetSiteParams } from "../../sites/_components/useSiteParam";
-import { PERIOD_KEY, STEPS, STEP_KEY, bingQuery, pageForPath, usePeriod, useStep, useBingSiteId, useBingStatus, type BingPageId } from "../_components/useBing";
+import { STEPS, STEP_KEY, bingQuery, pageForPath, useBingDates, useStep, useBingSiteId, useBingStatus, type BingPageId } from "../_components/useBing";
 
 /**
  * One website in the Bing Webmaster section (docs/plans/active/bing-webmaster-plan.md
@@ -38,10 +42,19 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
   const setParams = useSetSiteParams();
   // A website whose Bing days begin this month opens on This month until the 1st (agreed 2026-10-20).
   const opening = openingPeriod(status?.connection?.oldestDay, ukDay());
-  const [period] = usePeriod(opening);
+  const { period, choice, setChoice } = useBingDates(opening);
   const [step, setStep] = useStep(period);
   // A new period draws in its own step (rule 8): a step chosen for the last one is dropped.
-  const choosePeriod = (next: string) => setParams({ [PERIOD_KEY]: next === opening ? null : next, [STEP_KEY]: null });
+  const chooseDates = (next: DateChoice) => {
+    setChoice(next);
+    setParams({ [STEP_KEY]: null });
+  };
+  // Custom dates' lists are built from the weeks held when first asked for (bingWebmasterCollect.ts, prepareBingCustom): once a day.
+  const prepare = useAction(api.bingWebmasterCollect.prepareBingCustom);
+  const custom = choice.period === "custom" ? choice : null;
+  useEffect(() => {
+    if (custom) prepare({ siteId, from: custom.from, to: custom.to }).catch(() => undefined);
+  }, [prepare, siteId, custom?.from, custom?.to]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (status === undefined) {
     return (
@@ -97,7 +110,7 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
                   {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
                 </Select>
               ) : null}
-              <DatesMenu value={{ period }} newest={connection?.newestDay ?? null} custom={false} onChange={(choice) => choosePeriod(choice.period)} />
+              <DatesMenu value={choice} newest={connection?.newestDay ?? null} onChange={chooseDates} />
               <Select aria-label={tf("step")} value={step} onChange={(next) => setStep(next as typeof step)} className="w-[140px]">
                 {STEPS.map((entry) => <option key={entry} value={entry}>{tf(`steps.${entry}`)}</option>)}
               </Select>
@@ -132,13 +145,14 @@ const WEEKLY: ReadonlySet<BingPageId> = new Set(["keywords", "pages", "versus"])
  * title and one plain line in place of an empty page (calendar-periods-plan.md, rule 9). Keywords and pages come a
  * Bing week at a time, so they wait for a week ending inside the period; the rest for a day.
  */
-function PeriodDays({ siteId, period, newestDay, newestWeek, children }: { siteId: string; period: CalendarPeriod; newestDay: string | null; newestWeek: string | null; children: React.ReactNode }) {
+function PeriodDays({ siteId, period, newestDay, newestWeek, children }: { siteId: string; period: BingPeriodArg; newestDay: string | null; newestWeek: string | null; children: React.ReactNode }) {
   const tm = useTranslations("bingWebmaster.menu");
   const tp = useTranslations("common.periods");
   const source = useTranslations("sidebar")("bingWebmaster");
   const page = pageForPath(usePathname(), siteId);
   const newest = WEEKLY.has(page) ? newestWeek : newestDay;
-  if (page === "connection" || !newest || periodSpan(period, ukDay(), newest)) return <>{children}</>;
+  // Custom dates always have their days; a period Bing has sent none of yet says so (rule 9).
+  if (page === "connection" || !newest || typeof period !== "string" || periodSpan(period, ukDay(), newest)) return <>{children}</>;
   return (
     <>
       <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={tm(page)} />

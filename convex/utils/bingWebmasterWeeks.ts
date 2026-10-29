@@ -1,4 +1,4 @@
-import { CALENDAR_PERIODS, isRunning, periodBounds, spanBefore, type CalendarPeriod } from "./calendarPeriods";
+import { CALENDAR_PERIODS, customSpans, isRunning, periodBounds, spanBefore, type CalendarPeriod } from "./calendarPeriods";
 import { packNumbers, unpackNumbers, type StoredNumbers } from "./searchConsolePacks";
 
 /**
@@ -116,14 +116,15 @@ export function shiftBingDay(day: string, days: number): string {
  * or, for one still going, its same days up to this period's newest week. Its days run from six days before its
  * oldest week's date to its newest's, so a month's first week may begin in the month before. Null with none held.
  */
-export function weeksOf(held: readonly string[], period: BingPeriod, which: "NOW" | "BEFORE", today: string): { weeks: string[]; from: string; to: string } | null {
+export function weeksOf(held: readonly string[], period: BingPeriod | { from: string; to: string }, which: "NOW" | "BEFORE", today: string): { weeks: string[]; from: string; to: string } | null {
   const sorted = [...new Set(held)].sort();
   const inside = (from: string, to: string) => sorted.filter((week) => week >= from && week <= to).reverse();
-  const bounds = periodBounds(period, today);
+  // Custom dates (sees-header-and-rolling-dates-plan.md, part two, rule 4): the weeks ending inside them, against the same number of days before.
+  const bounds = typeof period === "string" ? periodBounds(period, today) : period;
   const now = inside(bounds.from, bounds.to);
   if (now.length === 0) return null;
   const weeks = which === "NOW" ? now : (() => {
-    const before = spanBefore(period, { from: bounds.from, to: now[0], whole: !isRunning(period) });
+    const before = typeof period === "string" ? spanBefore(period, { from: bounds.from, to: now[0], whole: !isRunning(period) }) : customSpans(bounds.from, bounds.to).before;
     return inside(before.from, before.to);
   })();
   if (weeks.length === 0) return null;

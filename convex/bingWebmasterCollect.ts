@@ -1,10 +1,13 @@
 import { v } from "convex/values";
+import { appError } from "./utils/appError";
+import { getActiveCompanyId } from "./authz";
+import { tenantAction } from "./tenantFunctions";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { isTrackedHold } from "./utils/websitePairing";
-import { bingCrawlValidator, bingListValidator, bingPeriodValidator } from "./bingWebmasterSchema";
+import { bingCrawlValidator, bingCustomKey, bingListValidator, bingPeriodValidator } from "./bingWebmasterSchema";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { textsFrom, wholeBook } from "./searchConsolePeriodBooks";
 import { normalisePage } from "./utils/pageClassification";
@@ -297,28 +300,15 @@ export async function buildPeriods(ctx: ActionCtx, holdId: Id<"companyWebsites">
   const builtAt = Date.now();
   const today = ukDay(builtAt);
   let written = 0;
-  const book = await wholeBingBook(ctx, holdId);
-  const pages = await addressesOf(ctx, holdId, true);
+  const names = await namesForBuild(ctx, holdId);
   for (const list of ["query", "page"] as const) {
-    // A week at a time, newest first: the 13 months kept, which This Year and Last Quarter's span before can need.
-    const held: { week: string; hash: string }[] = await ctx.runQuery(internal.bingWebmasterCollect.weekHashes, { holdId, list });
-    const byWeek = new Map<string, BingRow[]>();
-    for (const { week } of held.sort((left, right) => right.week.localeCompare(left.week)).slice(0, WEEKS_READ_FOR_PERIODS)) {
-      const parts: StoredWeek[] = await ctx.runQuery(internal.bingWebmasterCollect.weekParts, { holdId, list, week });
-      byWeek.set(week, parts.flatMap(rowsOfBingPart));
-    }
+    const byWeek = await weeksForBuild(ctx, holdId, list);
     const google = new Map<string, Google | null>();
-    const matchOf = (key: number) => {
-      if (list === "query") return keywordMatch(book[key] ?? "");
-      const address = pages.addresses[key];
-      return address ? normalisePage(address) : pageRefOf(key);
-    };
     for (const period of BING_PERIODS as readonly BingPeriod[]) {
       for (const which of ["NOW", "BEFORE"] as const) {
         if (which === "BEFORE" && !WITH_BEFORE.has(period)) continue;
         const span = weeksOf([...byWeek.keys()], period, which, today);
         if (!span) continue;
-        const rows = addUpRows(span.weeks.map((week) => byWeek.get(week) ?? []));
         const googlePeriod = which === "NOW" ? period : undefined;
         let figures: Google | null = null;
         if (googlePeriod) {
@@ -328,31 +318,7 @@ export async function buildPeriods(ctx: ActionCtx, holdId: Id<"companyWebsites">
           }
           figures = google.get(googlePeriod) ?? null;
         }
-        const packed = packBingRows(rows);
-        const at = figures ? new Map(figures.keys.map((key, index) => [key, index])) : null;
-        const rankOf = nameRanksOf(rows.map((row) => row.key), (key) => (list === "query" ? book[key] ?? "" : pages.addresses[key] ?? pageRefOf(key)));
-        const withGoogle = packed.map((part) => {
-          const keys = unpackNumbers(part.keys);
-          const ranked = { ...part, nameRanks: packColumn(keys.map((key) => rankOf.get(key) ?? 0)) };
-          if (!figures || !at) return ranked;
-          const place = keys.map((key) => at.get(matchOf(key)) ?? -1);
-          const column = (values: number[]) => packColumn(place.map((index) => (index < 0 ? -1 : values[index] ?? -1)));
-          return { ...ranked, googleClicks: column(figures.clicks), googleImpressions: column(figures.impressions), googlePositionSums: column(figures.positionSums) };
-        });
-        // A few parts a call: a part is at most 2,000 rows.
-        for (let start = 0; start < withGoogle.length; start += 4) {
-          await ctx.runMutation(internal.bingWebmasterCollect.writePeriodParts, {
-            holdId,
-            list,
-            period,
-            which,
-            from: span.from,
-            to: span.to,
-            builtAt,
-            parts: withGoogle.slice(start, start + 4),
-          });
-        }
-        written += withGoogle.length;
+        written += await writeListPeriod(ctx, { holdId, list, period, which, span, byWeek, names, figures, builtAt });
       }
     }
   }
@@ -361,6 +327,140 @@ export async function buildPeriods(ctx: ActionCtx, holdId: Id<"companyWebsites">
   }
   return written;
 }
+
+/** The website's keyword book and page addresses, which name a list's rows for their A to Z order and Google's columns. */
+async function namesForBuild(ctx: ActionCtx, holdId: Id<"companyWebsites">) {
+  return { book: await wholeBingBook(ctx, holdId), pages: await addressesOf(ctx, holdId, true) };
+}
+
+/** A list's weeks held, each week's rows: the 13 months kept, newest first, which the longest spans before can need. */
+async function weeksForBuild(ctx: ActionCtx, holdId: Id<"companyWebsites">, list: "query" | "page"): Promise<Map<string, BingRow[]>> {
+  const held: { week: string; hash: string }[] = await ctx.runQuery(internal.bingWebmasterCollect.weekHashes, { holdId, list });
+  const byWeek = new Map<string, BingRow[]>();
+  for (const { week } of held.sort((left, right) => right.week.localeCompare(left.week)).slice(0, WEEKS_READ_FOR_PERIODS)) {
+    const parts: StoredWeek[] = await ctx.runQuery(internal.bingWebmasterCollect.weekParts, { holdId, list, week });
+    byWeek.set(week, parts.flatMap(rowsOfBingPart));
+  }
+  return byWeek;
+}
+
+/** One list over one span: its weeks added up, ranked by name, Google's columns beside where given, written a few parts a call. */
+async function writeListPeriod(ctx: ActionCtx, build: {
+  holdId: Id<"companyWebsites">;
+  list: "query" | "page";
+  /** The period's key: one of the menu's, or custom dates' `custom|from|to`. */
+  period: string;
+  which: "NOW" | "BEFORE";
+  span: { weeks: string[]; from: string; to: string };
+  byWeek: Map<string, BingRow[]>;
+  names: Awaited<ReturnType<typeof namesForBuild>>;
+  figures: Google | null;
+  builtAt: number;
+}): Promise<number> {
+  const { holdId, list, which, span, byWeek, figures, builtAt } = build;
+  const { book, pages } = build.names;
+  const matchOf = (key: number) => {
+    if (list === "query") return keywordMatch(book[key] ?? "");
+    const address = pages.addresses[key];
+    return address ? normalisePage(address) : pageRefOf(key);
+  };
+  const rows = addUpRows(span.weeks.map((week) => byWeek.get(week) ?? []));
+  const packed = packBingRows(rows);
+  const at = figures ? new Map(figures.keys.map((key, index) => [key, index])) : null;
+  const rankOf = nameRanksOf(rows.map((row) => row.key), (key) => (list === "query" ? book[key] ?? "" : pages.addresses[key] ?? pageRefOf(key)));
+  const withGoogle = packed.map((part) => {
+    const keys = unpackNumbers(part.keys);
+    const ranked = { ...part, nameRanks: packColumn(keys.map((key) => rankOf.get(key) ?? 0)) };
+    if (!figures || !at) return ranked;
+    const place = keys.map((key) => at.get(matchOf(key)) ?? -1);
+    const column = (values: number[]) => packColumn(place.map((index) => (index < 0 ? -1 : values[index] ?? -1)));
+    return { ...ranked, googleClicks: column(figures.clicks), googleImpressions: column(figures.impressions), googlePositionSums: column(figures.positionSums) };
+  });
+  // A few parts a call: a part is at most 2,000 rows.
+  for (let start = 0; start < withGoogle.length; start += 4) {
+    await ctx.runMutation(internal.bingWebmasterCollect.writePeriodParts, {
+      holdId, list, period: build.period, which, from: span.from, to: span.to, builtAt, parts: withGoogle.slice(start, start + 4),
+    });
+  }
+  return withGoogle.length;
+}
+
+/** Custom dates' lists are kept this long after they were built: the next collection's week makes them stale, and the nightly build's drop clears them. */
+const CUSTOM_BUILD_KEPT_MS = 24 * 60 * 60 * 1000;
+
+/** When a custom build was last written for a website, or null. */
+export const customBuiltAt = internalQuery({
+  args: { holdId: v.id("companyWebsites"), period: v.string() },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, args) => {
+    const part = await ctx.db.query("bingPeriods")
+      .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("list", "query").eq("period", args.period).eq("which", "NOW").eq("part", 0))
+      .first();
+    return part?.builtAt ?? null;
+  },
+});
+
+/** A custom build's older parts gone, once the new ones are written. */
+export const dropCustomBuild = internalMutation({
+  args: { holdId: v.id("companyWebsites"), period: v.string(), builtAt: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const list of ["query", "page"] as const) for (const which of ["NOW", "BEFORE"] as const) {
+      const parts = await ctx.db.query("bingPeriods")
+        .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("list", list).eq("period", args.period).eq("which", which))
+        .take(200);
+      for (const part of parts) if (part.builtAt < args.builtAt) await ctx.db.delete(part._id);
+    }
+    return null;
+  },
+});
+
+/** The website a custom build is for, when the caller's company holds it and Bing is connected. */
+export const customTarget = internalQuery({
+  args: { siteId: v.id("companyWebsites"), companyId: v.id("companies") },
+  returns: v.union(v.null(), v.object({ holdId: v.id("companyWebsites"), newestWeek: v.union(v.string(), v.null()) })),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.siteId);
+    if (!hold || hold.companyId !== args.companyId) return null;
+    const connection = await ctx.db.query("bingConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    if (!connection || connection.status !== "CONNECTED") return null;
+    return { holdId: hold._id, newestWeek: connection.newestWeek ?? null };
+  },
+});
+
+/**
+ * Custom dates' keyword and page lists (sees-header-and-rolling-dates-plan.md, part two, rule 4): the Bing weeks
+ * ending inside them added up, and the same number of days before, built from the weeks held when a screen first
+ * asks and once a day after; Google's columns are not beside them, since Search Console prepares no list for those
+ * dates. The nightly build's drop of older parts clears them in time.
+ */
+export const prepareBingCustom = tenantAction({
+  args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
+  returns: v.object({ building: v.boolean() }),
+  handler: async (ctx, args): Promise<{ building: boolean }> => {
+    const companyId = getActiveCompanyId(ctx.user);
+    if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
+    const isDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+    if (!isDay(args.from) || !isDay(args.to) || args.from > args.to) throw appError("INVALID_INPUT", "Custom dates need a first and a last day, in order.");
+    const target = await ctx.runQuery(internal.bingWebmasterCollect.customTarget, { siteId: args.siteId, companyId: companyId as Id<"companies"> });
+    if (!target) return { building: false };
+    const period = bingCustomKey({ from: args.from, to: args.to });
+    const last = await ctx.runQuery(internal.bingWebmasterCollect.customBuiltAt, { holdId: target.holdId, period });
+    if (last !== null && Date.now() - last < CUSTOM_BUILD_KEPT_MS) return { building: false };
+    const builtAt = Date.now();
+    const names = await namesForBuild(ctx, target.holdId);
+    for (const list of ["query", "page"] as const) {
+      const byWeek = await weeksForBuild(ctx, target.holdId, list);
+      for (const which of ["NOW", "BEFORE"] as const) {
+        const span = weeksOf([...byWeek.keys()], { from: args.from, to: args.to }, which, ukDay(builtAt));
+        if (!span) continue;
+        await writeListPeriod(ctx, { holdId: target.holdId, list, period, which, span, byWeek, names, figures: null, builtAt });
+      }
+    }
+    await ctx.runMutation(internal.bingWebmasterCollect.dropCustomBuild, { holdId: target.holdId, period, builtAt });
+    return { building: true };
+  },
+});
 
 /** Each key's place in its list's A to Z order by its name, as every list sorts names (`compareText`). */
 function nameRanksOf(keys: readonly number[], nameOf: (key: number) => string): Map<number, number> {
