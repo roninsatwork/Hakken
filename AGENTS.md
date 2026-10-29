@@ -173,8 +173,9 @@ coverage and runs ten times slower, so a fault that needs a slow machine shows
 only there: a screen's timer outliving its test passed three full local checks
 and failed CI #26. `test:coverage`, `coverage:check` and `test:e2e:smoke` are
 what `.github/workflows/ci.yml` runs on every push; a push is ready when they
-pass here as well. Stop the local frontend on port 3000 first — the smoke
-tests start their own.
+pass here as well. The smoke tests start their own server on port 3100 in its
+own build folder (`.next-e2e`, since 2026-10-29), so the app on port 3000
+stays up.
 
 **Two tests run only here, never on GitHub** (Anthony, 2026-09-25): the Sites
 speed test (`convex/sitesLoad.test.ts`) and the whole-company planning test in

@@ -67,7 +67,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
   const providerChartData = withProviderNames(providerDistribution, t("unknownProvider"));
   // The biggest five use cases and one slice for the rest: the pie has six colours. No legend on
   // either pie — the hover names the slice (Anthony, 2026-10-29).
-  const modelChartData = modelDistribution && foldSmallSlices(modelDistribution, MODEL_COLORS.length, (count) => t("other", { count }));
+  const modelChartData = modelDistribution ? foldSmallSlices(modelDistribution, MODEL_COLORS.length, (count) => t("other", { count })) : [];
 
   return (
     <div className="flex flex-col gap-6 mt-2">

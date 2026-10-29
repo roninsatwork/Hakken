@@ -9,7 +9,7 @@ import { writeProvenance } from "./framework-snapshot.mjs";
 const MARKER = /^\s*(?:\/\/|\{\/\*|<!--)\s*template:remove:(start|end)(?:[ \t]+([A-Za-z0-9_,]+))?/;
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".md"]);
 const EXCLUDED_DIRS = new Set([
-  "node_modules", ".git", ".hakken", ".next", ".next-arcade", ".claude", ".codex", ".agents", ".agent",
+  "node_modules", ".git", ".hakken", ".next", ".next-arcade", ".next-e2e", ".claude", ".codex", ".agents", ".agent",
   ".auth", ".vercel", ".vscode", ".idea", ".npm-cache", "tmp", "coverage", "out",
   "build", "dist", "playwright-report", "test-results", "dev-export", "output",
 ]);

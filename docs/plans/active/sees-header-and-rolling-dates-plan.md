@@ -152,7 +152,15 @@ until the build ends (no-pulls-until-build-ends); the first collection of the ne
   prepared for them across 55 websites' Search Console, Bing and Clarity tables, and Google Analytics' nightly
   clean-up of lists no run keeps (`dropCountriesNotKept`, which now judges those periods retired) cleared its 0 of
   3,814 slots; then the names left the type, the validator and the words. The clean-up code was removed with them.
-- **Still to do**: the first collection of the new periods, on his go (no-pulls-until-build-ends).
+- **The first collection of the new periods** ran on 2026-10-29 at about 14:50 UK on Anthony's "Go for all sites":
+  Clarity's periods rebuilt from the days held (`clarity.rebuildFigures`, nothing asked of Microsoft), Search
+  Console's six websites rebuilt 20 seconds apart (`searchConsoleSettle.rebuildSitePeriods`: the 7 and 30 days from
+  what is kept, the 90 days and 12 months asked of Google, free), and Google Analytics' collector run started by hand
+  (`scheduler.manualRunSchedule`), a run per website that budgets Google's allowance itself; the day's allowance
+  stood at about 195,000 of 200,000 tokens per property. No Bing website is connected on dev. The nightly schedules
+  (GA 01:00, SC 04:00, Clarity 05:50) were on throughout and carry the periods from here.
+- **The smoke tests run beside the app** since the same day: the e2e server builds in `.next-e2e`
+  (`next.config.ts`), as the Arcade check does in `.next-arcade`.
 
 ## Change log
 

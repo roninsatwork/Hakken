@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
   ...(process.env.HAKKEN_ARCADE_CHECK === '1'
     ? { distDir: '.next-arcade', typescript: { tsconfigPath: 'tsconfig.arcade.json' } }
     : {}),
+  // The browser tests' own server (playwright.config.ts, port 3100) builds in its own folder: Next
+  // allows one dev server per build folder, so the smoke tests run beside the app on port 3000
+  // (Anthony, 2026-10-29) instead of asking for it to be stopped.
+  ...(e2eAuthEnabled && process.env.HAKKEN_ARCADE_CHECK !== '1' ? { distDir: '.next-e2e' } : {}),
   env: {
     CONVEX_SITE_URL: process.env.CONVEX_SITE_URL,
   },

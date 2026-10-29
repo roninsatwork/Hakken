@@ -112,6 +112,7 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     ".next-arcade/**",
+    ".next-e2e/**",
     "out/**",
     "build/**",
     "node_modules/**",

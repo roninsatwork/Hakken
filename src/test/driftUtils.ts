@@ -132,6 +132,7 @@ export const ignoredRepoPathPrefixes = [
   '.claude/worktrees/',
   '.next/',
   '.next-arcade/',
+  '.next-e2e/',
   'node_modules/',
   'package-lock.json',
   'playwright-report/',

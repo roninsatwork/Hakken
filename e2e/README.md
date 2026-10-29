@@ -73,7 +73,8 @@ This starts the normal Playwright app server, creates deterministic auth storage
 Run `npx playwright test --config=playwright.arcade.config.ts` explicitly for the
 four-district first-person game. This uses a separate headless Chrome instance
 and the existing deterministic auth harness on port 3100. The dedicated
-`.next-arcade` output directory lets the normal local app remain running.
+`.next-arcade` output directory lets the normal local app remain running. The
+smoke and full suites' own server does the same in `.next-e2e` (2026-10-29).
 The routine metered CI suite does not include this pass.
 After the run, `npx next typegen` restores the shared `next-env.d.ts` references
 to the normal `.next` directory without stopping the local app.
