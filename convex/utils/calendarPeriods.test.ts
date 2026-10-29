@@ -3,7 +3,6 @@ import {
   openingPeriod,
   customSpans,
   CALENDAR_PERIODS,
-  RETIRED_PERIODS,
   isCalendarPeriod,
   periodBounds,
   periodSpan,
@@ -20,9 +19,8 @@ import {
 const TODAY = "2026-10-20";
 
 describe("calendar periods (calendar-periods-plan.md, rules 1–9; sees-header-and-rolling-dates-plan.md, part two)", () => {
-  it("names the seven, in the menu's order, with the quarters and the year retired (Anthony, 2026-10-29)", () => {
+  it("names the seven, in the menu's order, with the quarters and the year gone (Anthony, 2026-10-29)", () => {
     expect(CALENDAR_PERIODS).toEqual(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"]);
-    expect(RETIRED_PERIODS).toEqual(["thisQuarter", "lastQuarter", "thisYear"]);
     expect(isCalendarPeriod("lastMonth")).toBe(true);
     expect(isCalendarPeriod("lastQuarter")).toBe(false);
     expect(isCalendarPeriod("30")).toBe(false);
@@ -56,17 +54,13 @@ describe("calendar periods (calendar-periods-plan.md, rules 1–9; sees-header-a
     expect(customSpans("2025-10-01", "2026-10-28").step).toBe("month");
   });
 
-  it("bounds each period in calendar weeks from Monday, months, quarters and the year", () => {
+  it("bounds each period in calendar weeks from Monday and months", () => {
     expect(periodBounds("thisWeek", TODAY)).toEqual({ from: "2026-10-19", to: "2026-10-25" });
     expect(periodBounds("lastWeek", TODAY)).toEqual({ from: "2026-10-12", to: "2026-10-18" });
     expect(periodBounds("thisMonth", TODAY)).toEqual({ from: "2026-10-01", to: "2026-10-31" });
     expect(periodBounds("lastMonth", TODAY)).toEqual({ from: "2026-09-01", to: "2026-09-30" });
-    expect(periodBounds("thisQuarter", TODAY)).toEqual({ from: "2026-10-01", to: "2026-12-31" });
-    expect(periodBounds("lastQuarter", TODAY)).toEqual({ from: "2026-07-01", to: "2026-09-30" });
-    expect(periodBounds("thisYear", TODAY)).toEqual({ from: "2026-01-01", to: "2026-12-31" });
-    // A Sunday is the last day of its week, and January's last quarter is the year before's.
+    // A Sunday is the last day of its week.
     expect(periodBounds("thisWeek", "2026-10-25")).toEqual({ from: "2026-10-19", to: "2026-10-25" });
-    expect(periodBounds("lastQuarter", "2026-01-05")).toEqual({ from: "2025-10-01", to: "2025-12-31" });
     expect(periodBounds("lastMonth", "2026-03-31")).toEqual({ from: "2026-02-01", to: "2026-02-28" });
   });
 
@@ -87,24 +81,10 @@ describe("calendar periods (calendar-periods-plan.md, rules 1–9; sees-header-a
     // Cut at the end of a shorter month: This Month on 31 October against 1–30 September.
     expect(spanBefore("thisMonth", { from: "2026-10-01", to: "2026-10-31", whole: false })).toEqual({ from: "2026-09-01", to: "2026-09-30", whole: false });
     expect(spanBefore("thisWeek", { from: "2026-10-19", to: "2026-10-20", whole: false })).toEqual({ from: "2026-10-12", to: "2026-10-13", whole: false });
-    expect(spanBefore("thisQuarter", october)).toEqual({ from: "2026-07-01", to: "2026-07-19", whole: false });
-    expect(spanBefore("lastQuarter", periodSpan("lastQuarter", TODAY, "2026-10-19")!)).toEqual({ from: "2026-04-01", to: "2026-06-30", whole: true });
-    // This Year against the same days last year.
-    expect(spanBefore("thisYear", { from: "2026-01-01", to: "2026-10-19", whole: false })).toEqual({ from: "2025-01-01", to: "2025-10-19", whole: false });
-  });
-
-  it("sets only the quarters and This Year against a year before", () => {
-    const quarter = periodSpan("lastQuarter", TODAY, "2026-10-19")!;
-    expect(spanYearBefore("lastQuarter", quarter)).toEqual({ from: "2025-07-01", to: "2025-09-30", whole: true });
-    expect(spanYearBefore("thisQuarter", { from: "2026-10-01", to: "2026-10-19", whole: false })).toEqual({ from: "2025-10-01", to: "2025-10-19", whole: false });
-    expect(spanYearBefore("thisYear", { from: "2026-01-01", to: "2026-10-19", whole: false })).toEqual({ from: "2025-01-01", to: "2025-10-19", whole: false });
-    expect(spanYearBefore("lastMonth", periodSpan("lastMonth", TODAY, "2026-10-19")!)).toBeNull();
-    expect(spanYearBefore("thisWeek", { from: "2026-10-19", to: "2026-10-19", whole: false })).toBeNull();
   });
 
   it("draws weeks and months by the day, 3 and 6 months by the week and 12 months by the month", () => {
     expect(CALENDAR_PERIODS.map(stepOf)).toEqual(["day", "day", "day", "day", "week", "week", "month"]);
-    expect(RETIRED_PERIODS.map(stepOf)).toEqual(["week", "week", "month"]);
   });
 
   it("moves a day by months, keeping its day or the month's last", () => {

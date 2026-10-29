@@ -214,8 +214,8 @@ describe("Your reviews", () => {
   });
 
   test("every review answered; no profile", () => {
-    const box = yourReviewsSees({ listings: [{}], period: "thisQuarter", figures: { newIn: 5, newBefore: 2, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
-    expect(box).toEqual({ says: [{ code: "allAnswered" }, { code: "newReviews", a: 5, b: 2, period: "thisQuarter" }], steps: [] });
+    const box = yourReviewsSees({ listings: [{}], period: "last3Months", figures: { newIn: 5, newBefore: 2, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
+    expect(box).toEqual({ says: [{ code: "allAnswered" }, { code: "newReviews", a: 5, b: 2, period: "last3Months" }], steps: [] });
     expectWords("reviews", box);
     const quiet = yourReviewsSees({ listings: [{}], period: "lastWeek", figures: { newIn: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
     expect(quiet.says).toEqual([{ code: "allAnswered" }, { code: "noNewReviews", period: "lastWeek" }]);

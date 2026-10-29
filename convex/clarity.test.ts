@@ -127,4 +127,33 @@ describe("Clarity's figures, kept", () => {
     await t.run(async (ctx) => await ctx.db.insert("clarityFigures", { companyWebsiteId: holdId, span: "DAY", key: "2026-10-01", part: 0, from: "2026-10-01", to: "2026-10-01", days: 1, pages: packTotals([page("/old/", "PC", 4), page("/older/", "PC", 2)]), site: packTotals([device("PC", 6)]), builtAt: 1 }));
     expect(await t.run(async (ctx) => (await readPageRows(ctx, holdId, "DAY", undefined, "2026-10-01", "/old/")).map((row) => [row.page, row.visits]))).toEqual([["/old/", 4]]);
   });
+
+  test("custom dates: the screen says it is preparing, the span and the days before it are built once asked for, and read like a period (sees-header-and-rolling-dates-plan.md)", async () => {
+    vi.setSystemTime(Date.parse("2026-11-02T12:00:00Z"));
+    const t = harness();
+    const { userId, holdId } = await seed(t);
+    await keepDay(t, holdId, "2026-10-10", [page("/", "PC", 20)], [device("PC", 20)]);
+    await keepDay(t, holdId, "2026-10-11", [page("/", "PC", 10)], [device("PC", 10)]);
+    await keepDay(t, holdId, "2026-10-14", [page("/", "PC", 50), page("/ai-agency/", "Mobile", 9)], [device("PC", 50), device("Mobile", 9)]);
+    await keepDay(t, holdId, "2026-10-15", [page("/", "PC", 30)], [device("PC", 30)]);
+    const asOwner = t.withIdentity({ subject: userId });
+    const custom = { from: "2026-10-12", to: "2026-10-16" };
+    // Not built yet: the screen is told so, and asks.
+    const before = await asOwner.query(api.clarityScreens.clarityOverview, { siteId: holdId, period: custom });
+    expect(before.period).toMatchObject({ now: null, preparing: true, waiting: false });
+    expect(await asOwner.mutation(api.clarity.prepareCustomSpan, { siteId: holdId, ...custom })).toEqual({ building: true });
+    await finishScheduled(t);
+    // Built: 14 and 15 October's days, set against the five days before them, of which 10 and 11 October are held — as many days, so like against like.
+    const built = await asOwner.query(api.clarityScreens.clarityOverview, { siteId: holdId, period: custom });
+    expect(built.period).toMatchObject({ now: { from: "2026-10-14", to: "2026-10-15", days: 2 }, before: { from: "2026-10-10", to: "2026-10-11", days: 2 }, preparing: false });
+    expect(built.now.visits).toBe(89);
+    const byPage = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: custom, page: 1, rows: 25 });
+    expect(byPage.rows.map((row) => [row.page, row.now.visits])).toEqual([["/", 80], ["/ai-agency/", 9]]);
+    // Asked again the same day: nothing rebuilt.
+    expect(await asOwner.mutation(api.clarity.prepareCustomSpan, { siteId: holdId, ...custom })).toEqual({ building: false });
+    // A day later the morning's tidy clears it, so the next asker builds it from the days then held.
+    vi.setSystemTime(Date.parse("2026-11-03T13:00:00Z"));
+    await t.mutation(internal.clarity.tidyFigures, { holdId });
+    expect((await asOwner.query(api.clarityScreens.clarityOverview, { siteId: holdId, period: custom })).period.preparing).toBe(true);
+  });
 });

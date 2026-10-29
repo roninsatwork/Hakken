@@ -12,8 +12,8 @@ describe("All mentions", () => {
         row("news.example", "2026-10-05", 1, 420), row("forum.example", "2026-10-02", 2, 300), row("blog.example", "2026-09-20", 0, 150, 1),
         row("old.example", "2026-06-01", 0, 90), row("weak.example", "2026-10-01", 0, 20),
       ],
-    }, { from: "2026-07-01", to: "2026-10-10" }, "thisQuarter");
-    expect(box.says).toEqual([{ code: "newPages", a: 4, b: 5, period: "thisQuarter" }, { code: "badly", a: 1, text: "forum.example" }, { code: "noLink", a: 1, text: "news.example" }]);
+    }, { from: "2026-07-01", to: "2026-10-10" }, "last3Months");
+    expect(box.says).toEqual([{ code: "newPages", a: 4, b: 5, period: "last3Months" }, { code: "badly", a: 1, text: "forum.example" }, { code: "noLink", a: 1, text: "news.example" }]);
     expect(box.steps).toEqual([
       { code: "reply", text: "forum.example", link: "visitPage", to: { url: "https://forum.example/page" } },
       { code: "askForLink", text: "news.example", link: "visitPage", to: { url: "https://news.example/page" } },
@@ -43,8 +43,8 @@ describe("Against rivals", () => {
   });
 
   test("level is leading; nothing found", () => {
-    const box = mentionsRivalsSees({ period: "thisYear", businesses: [business("brightside.co.uk", 5, 2), business("ronins.co.uk", 5, 1, true)] });
-    expect(box.says).toEqual([{ code: "lead", a: 50 }, { code: "upMonth", a: 4, period: "thisYear" }]);
+    const box = mentionsRivalsSees({ period: "last12Months", businesses: [business("brightside.co.uk", 5, 2), business("ronins.co.uk", 5, 1, true)] });
+    expect(box.says).toEqual([{ code: "lead", a: 50 }, { code: "upMonth", a: 4, period: "last12Months" }]);
     expect(box.steps).toEqual([{ code: "getListed", link: "whereToGetListed", to: { segment: "mentions/listed" } }]);
     expectWords("mentionsRivals", box);
     expect(mentionsRivalsSees({ period: "lastMonth", businesses: [business("ronins.co.uk", 0, 0, true)] }).says).toEqual([{ code: "none" }]);

@@ -134,9 +134,11 @@ until the build ends (no-pulls-until-build-ends); the first collection of the ne
   were; the box is not drawn for custom dates, since it speaks in the menu's periods; Demand by service reads the
   opening period), the Settings overview and the evidence pack. Not yet: Google Analytics, Bing, Clarity and the
   Governance activity chart, whose reads are prepared per period (`custom={false}`).
-- **Still to do before the retired periods go**: a clean-up that deletes the rows prepared for them (Search Console,
-  Bing, Clarity and Google Analytics period tables) on Anthony's word, then the retired literals leave the validators
-  and the type; and the first collection of the new periods, on his go (no-pulls-until-build-ends).
+- **The retired periods are gone** (2026-10-29, Anthony: "delete them"): a one-off clean-up deleted the 929 parts
+  prepared for them across 55 websites' Search Console, Bing and Clarity tables, and Google Analytics' nightly
+  clean-up of lists no run keeps (`dropCountriesNotKept`, which now judges those periods retired) cleared its 0 of
+  3,814 slots; then the names left the type, the validator and the words. The clean-up code was removed with them.
+- **Still to do**: the first collection of the new periods, on his go (no-pulls-until-build-ends).
 
 ## Change log
 

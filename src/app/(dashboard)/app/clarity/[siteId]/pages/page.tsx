@@ -25,7 +25,7 @@ import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
 import { HeatmapLink, Judged, Points, duration, mono, percent, tooFew, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
-import { useClarityArgs, useClarityDevice, useClarityPageHref, useClaritySiteId, useClarityStatus } from "../../_components/useClarity";
+import { useClarityArgs, useClarityDevice, useClarityPageHref, useClaritySiteId, useClarityStatus, useClarityChosen } from "../../_components/useClarity";
 
 type Sort = "page" | "visits" | "scroll" | "change" | "time" | "quickBack" | "errors";
 const FIRSTS: Readonly<Record<Sort, "asc" | "desc">> = { page: "asc", visits: "desc", scroll: "asc", change: "asc", time: "asc", quickBack: "desc", errors: "desc" };
@@ -63,8 +63,9 @@ export default function ClarityPagesPage() {
   const list = useSiteListPage(api.clarityScreens.clarityPagesList, status?.connection?.newestDay ? filters : "skip");
   const answer = list.result;
   const { run, isBusy } = useAdminAction({ scope: "clarity-pages-download" });
-  const span = periodWords(answer?.period, args.period, "pages");
-  const waiting = waitingWords(answer?.period, args.period);
+  const chosen = useClarityChosen();
+  const span = periodWords(answer?.period, chosen, "pages");
+  const waiting = waitingWords(answer?.period, chosen);
 
   const says = !answer
     ? [t("sees.loading")]

@@ -21,7 +21,7 @@ import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
 import { HeatmapLink, Judged, Moved, wayOf, WatchLink, changeOf, duration, growthOf, mono, percent, tooFew, useBeforeWords, useClarityLinks, useDeviceName, usePeriodWords, useSourceName, useWaitingWords } from "../../../_components/ClarityParts";
 import { RecordingsList } from "../../../_components/RecordingsList";
-import { useClarityArgs, useClarityQuery, useClaritySiteId, useClarityStatus } from "../../../_components/useClarity";
+import { useClarityArgs, useClarityQuery, useClaritySiteId, useClarityStatus, useClarityChosen } from "../../../_components/useClarity";
 
 /**
  * A page's own screen in Clarity (docs/plans/active/agents-and-clarity-plan.md,
@@ -38,6 +38,7 @@ export default function ClarityPageScreen() {
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
   const args = useClarityArgs();
+  const chosen = useClarityChosen();
   const query = useClarityQuery();
   const path = useSearchParams().get("path") ?? "/";
   const links = useClarityLinks();
@@ -61,7 +62,6 @@ export default function ClarityPageScreen() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
 
   const { now, before, website, group, period } = data;
-  const chosen = args.period;
   const span = periodWords(period, chosen, "pages");
   const against = beforeWords(period, chosen);
   const waiting = waitingWords(period, chosen);

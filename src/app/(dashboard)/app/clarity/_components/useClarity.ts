@@ -4,8 +4,9 @@ import { useQuery } from "convex/react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import type { CalendarPeriod } from "@/convex/utils/calendarPeriods";
-import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
+import type { ClarityPeriodArg } from "@/convex/clarity";
+import type { MenuPeriod } from "@/convex/utils/calendarPeriods";
+import { CALENDAR_PERIOD_KEY, useDateChoice } from "../../sites/_components/useCalendarPeriod";
 
 /**
  * Microsoft Clarity's section (docs/plans/active/agents-and-clarity-plan.md,
@@ -37,9 +38,20 @@ export function useClarityStatus() {
   return useQuery(api.clarity.clarityStatus, { siteId });
 }
 
-/** The calendar period chosen: Last month unless the address says another. */
-export function useClarityPeriod(): CalendarPeriod {
-  return useCalendarPeriod()[0];
+/** What the screens say their dates are: the menu's period, or `custom` (sees-header-and-rolling-dates-plan.md, part two). */
+export type ClarityChosen = MenuPeriod | "custom";
+
+/** The Dates menu's choice: Last month unless the address says another, or custom dates within Clarity's newest day. */
+export function useClarityPeriod(): ClarityPeriodArg {
+  const status = useClarityStatus();
+  const [choice] = useDateChoice(status?.connection?.newestDay ?? null);
+  return choice.period === "custom" ? { from: choice.from, to: choice.to } : choice.period;
+}
+
+/** The choice as the screens word it. */
+export function useClarityChosen(): ClarityChosen {
+  const period = useClarityPeriod();
+  return typeof period === "string" ? period : "custom";
 }
 
 /** The device chosen, or none for every device. */
@@ -60,7 +72,7 @@ export function useClarityArgs() {
 export function useClarityQuery(): string {
   const params = useSearchParams();
   const kept = new URLSearchParams();
-  for (const key of [CALENDAR_PERIOD_KEY, "device"]) {
+  for (const key of [CALENDAR_PERIOD_KEY, "from", "to", "device"]) {
     const value = params.get(key);
     if (value) kept.set(key, value);
   }
@@ -74,7 +86,7 @@ export function useClarityPageHref(): (page: string) => string {
   const params = useSearchParams();
   return (page) => {
     const next = new URLSearchParams();
-    for (const key of [CALENDAR_PERIOD_KEY, "device"]) {
+    for (const key of [CALENDAR_PERIOD_KEY, "from", "to", "device"]) {
       const value = params.get(key);
       if (value) next.set(key, value);
     }

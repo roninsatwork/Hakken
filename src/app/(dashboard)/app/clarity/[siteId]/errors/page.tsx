@@ -26,7 +26,7 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { Judged, Moved, wayOf, WatchLink, mono, percent, quiet, tooFew, useBeforeWords, useCountedWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
-import { useClarityArgs, useClarityPageHref, useClarityStatus } from "../../_components/useClarity";
+import { useClarityArgs, useClarityPageHref, useClarityStatus, useClarityChosen } from "../../_components/useClarity";
 
 type ErrorRow = FunctionReturnType<typeof api.clarityScreens.clarityErrors>["pages"][number];
 type Sort = "page" | "visits" | "errors" | "share" | "clicks";
@@ -55,6 +55,7 @@ export default function ClarityErrorsPage() {
   const router = useRouter();
   const status = useClarityStatus();
   const args = useClarityArgs();
+  const chosen = useClarityChosen();
   const pageHref = useClarityPageHref();
   const deviceName = useDeviceName();
   const periodWords = usePeriodWords();
@@ -72,7 +73,6 @@ export default function ClarityErrorsPage() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
 
   const { now, before, period } = data;
-  const chosen = args.period;
   // Errors are counted from the first day they were read: the days kept before hold none.
   const span = countedWords(period, chosen, data.byDay);
   const against = beforeWords(period, chosen);

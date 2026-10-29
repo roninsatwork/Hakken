@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
+import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { MousePointerClick } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
@@ -15,7 +18,7 @@ import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
-import { OpeningPeriodContext, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
+import { OpeningPeriodContext, useDateChoice } from "../../sites/_components/useCalendarPeriod";
 import { formatWhen, useDeviceName } from "../_components/ClarityParts";
 import { CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
 
@@ -38,7 +41,13 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const deviceName = useDeviceName();
   // A website whose Clarity days begin this month opens on This month until the 1st (agreed 2026-10-20).
   const opening = openingPeriod(status?.connection?.oldestDay, ukDay());
-  const [period, setPeriod] = useCalendarPeriod(opening);
+  const [choice, setChoice] = useDateChoice(status?.connection?.newestDay ?? null, opening);
+  const prepare = useMutation(api.clarity.prepareCustomSpan);
+  // Custom dates are built from the days held when first asked for (clarity.ts, prepareCustomSpan): the server builds once a day.
+  const custom = choice.period === "custom" ? choice : null;
+  useEffect(() => {
+    if (custom) prepare({ siteId, from: custom.from, to: custom.to }).catch(() => undefined);
+  }, [prepare, siteId, custom?.from, custom?.to]); // eslint-disable-line react-hooks/exhaustive-deps
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...CLARITY_DEVICES]);
   if (status === undefined) return <><Header /><div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (status === null || !status.owned) return <><Header /><HakkenEmptyState icon={MousePointerClick} title={t("site.notFoundTitle")} description={t("site.notFoundDescription")} /></>;
@@ -75,7 +84,7 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
                   </Select>
                 )}
                 {current === "recordings" ? null : (
-                  <DatesMenu value={{ period }} newest={connection?.newestDay ?? null} custom={false} onChange={(choice) => setPeriod(choice.period)} />
+                  <DatesMenu value={choice} newest={connection?.newestDay ?? null} onChange={setChoice} />
                 )}
               </div>
             )

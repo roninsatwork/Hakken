@@ -67,8 +67,9 @@ describe("adding weeks up", () => {
     // A month still going is set against the same days of the one before: 1–18 September for 1–18 October.
     expect(weeksOf(held, "thisMonth", "NOW", today)?.weeks).toEqual(["2026-10-18", "2026-10-11", "2026-10-04"]);
     expect(weeksOf(held, "thisMonth", "BEFORE", today)?.weeks).toEqual(["2026-09-13", "2026-09-06"]);
-    expect(weeksOf(held, "lastQuarter", "NOW", today)?.weeks).toHaveLength(13);
-    expect(weeksOf(held, "lastQuarter", "BEFORE", today)?.weeks).toEqual(["2026-06-28"]);
+    expect(weeksOf(held, "last3Months", "NOW", today)?.weeks).toHaveLength(13);
+    // The 3 months before them, 22 April to 21 July: the four weeks held that end inside.
+    expect(weeksOf(held, "last3Months", "BEFORE", today)?.weeks).toEqual(["2026-07-19", "2026-07-12", "2026-07-05", "2026-06-28"]);
     expect(weeksOf([], "lastWeek", "NOW", today)).toBeNull();
   });
 

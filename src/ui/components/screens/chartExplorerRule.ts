@@ -21,7 +21,7 @@ const shift = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:0
  * page's step menu can change it, and the explorer follows the menu.
  */
 export function stepFor(period: string): ExplorerStep {
-  return period === "last12Months" || period === "thisYear" ? "month" : period === "last3Months" || period === "last6Months" || period === "thisQuarter" || period === "lastQuarter" ? "week" : "day";
+  return period === "last12Months" ? "month" : period === "last3Months" || period === "last6Months" ? "week" : "day";
 }
 
 /**
@@ -30,7 +30,7 @@ export function stepFor(period: string): ExplorerStep {
  * that miss the dates (Anthony, 2026-10-20: the audit; "fix all"; calendar-periods-plan.md, the chart explorer's
  * point 2: quarters compare with a year before in figures and tables only).
  */
-export const yearComparable = (period: string) => period === "last12Months" || period === "thisYear";
+export const yearComparable = (period: string) => period === "last12Months";
 
 /** A step's key for a day: the day, its week's Monday, or its month. */
 export const stepKey = (day: string, step: ExplorerStep) => (step === "day" ? day : step === "week" ? weekStart(day) : day.slice(0, 7));

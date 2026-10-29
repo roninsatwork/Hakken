@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { LayoutDashboard, MousePointerClick } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { sameDayBefore } from "@/convex/utils/calendarPeriods";
+import { shiftDay } from "../../sites/_components/siteRange";
 import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
@@ -47,7 +48,7 @@ import {
   useWaitingWords,
 } from "../_components/ClarityParts";
 import { RecordingsList } from "../_components/RecordingsList";
-import { useClarityArgs, useClarityPageHref, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
+import { useClarityArgs, useClarityPageHref, useClarityQuery, useClaritySiteId, useClarityStatus, useClarityChosen } from "../_components/useClarity";
 
 /**
  * Clarity's Overview (docs/plans/active/agents-and-clarity-plan.md, Part 4,
@@ -65,6 +66,7 @@ export default function ClarityOverviewPage() {
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
   const args = useClarityArgs();
+  const chosen = useClarityChosen();
   const query = useClarityQuery();
   const pageHref = useClarityPageHref();
   const links = useClarityLinks();
@@ -85,7 +87,6 @@ export default function ClarityOverviewPage() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
 
   const { now, before, period } = data;
-  const chosen = args.period;
   const held = period.now?.days ?? 0;
   const span = periodWords(period, chosen);
   const lineName = `${span.charAt(0).toUpperCase()}${span.slice(1)}`;
@@ -127,7 +128,9 @@ export default function ClarityOverviewPage() {
 
   // How far down visitors scroll, day by day: each day against the same day of the period before.
   const beforeDays = new Map(data.beforeByDay.map((day) => [day.day, day.scroll]));
-  const scrollDays = data.byDay.map((day) => datedRow({ day: day.day }, { now: day.scroll, before: beforeDays.get(sameDayBefore(chosen, day.day)) ?? null }));
+  // Each day beside its own in the span before (rule 4): a custom span's days sit the span's length back.
+  const dayBefore = (day: string) => (chosen === "custom" ? shiftDay(day, -(period.now?.days ?? 0)) : sameDayBefore(chosen, day));
+  const scrollDays = data.byDay.map((day) => datedRow({ day: day.day }, { now: day.scroll, before: beforeDays.get(dayBefore(day.day)) ?? null }));
   const hasBefore = data.beforeByDay.length > 0;
   const none = <StatusLabel tone="success">{tc("noneIn", { span })}</StatusLabel>;
 
@@ -161,7 +164,7 @@ export default function ClarityOverviewPage() {
         title={t("scrollChart.title")}
         hint={hasBefore ? t("scrollChart.hint", { span, before: beforeName(chosen) }) : t("scrollChart.hintAlone", { span })}
         exportName={`${status?.host ?? "site"}-clarity-scrolled`}
-        csv={() => toCsv(["day", t("scrollChart.now"), t("scrollChart.before")], data.byDay.map((day) => [day.day, day.scroll, beforeDays.get(sameDayBefore(chosen, day.day)) ?? null]))}
+        csv={() => toCsv(["day", t("scrollChart.now"), t("scrollChart.before")], data.byDay.map((day) => [day.day, day.scroll, beforeDays.get(dayBefore(day.day)) ?? null]))}
         enoughData={scrollDays.filter((row) => row.now !== null).length > 1}
         emptyText={t("scrollChart.empty")}
       >

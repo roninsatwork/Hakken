@@ -36,13 +36,15 @@ export function useCalendarPeriod(opening?: MenuPeriod): [MenuPeriod, (next: Men
  * The Dates menu's whole choice from the address — a period, or custom dates
  * (`period=custom&from=&to=`, within what the screen holds, `newest`) — and its
  * setter, for a screen that answers custom dates from its own days (the
- * Settings overview, Governance). A Sites or Search Console screen reads
+ * Settings overview, Governance, Clarity). A layout that works the opening
+ * period out itself passes it. A Sites or Search Console screen reads
  * `useSiteRange` instead, which parses the same keys.
  */
-export function useDateChoice(newest: string | null = null): [DateChoice, (next: DateChoice) => void] {
+export function useDateChoice(newest: string | null = null, openingGiven?: MenuPeriod): [DateChoice, (next: DateChoice) => void] {
   const params = useSearchParams();
   const setParams = useSetSiteParams();
-  const opening = useOpeningPeriod();
+  const given = useOpeningPeriod();
+  const opening = openingGiven ?? given;
   const raw = params.get(CALENDAR_PERIOD_KEY);
   const from = params.get("from");
   const to = params.get("to");

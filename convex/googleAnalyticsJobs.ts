@@ -3,7 +3,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { ANALYTICS_DAYS_KEPT as DAYS_KEPT } from "./utils/analyticsHistory";
 import { VISITOR_LISTS, slotKey } from "./googleAnalyticsLists";
 import { SERIES_PERIOD, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
-import { CALENDAR_PERIODS, YEAR_BEFORE_PERIODS, isRunning, periodSpan, spanBefore, spanYearBefore, type CalendarPeriod } from "./utils/calendarPeriods";
+import { CALENDAR_PERIODS, isRunning, periodSpan, spanBefore, spanYearBefore, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * What a website's Google Analytics run asks, and for which dates — plain
@@ -74,9 +74,9 @@ export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top:
 const RUNNING: readonly CalendarPeriod[] = CALENDAR_PERIODS.filter(isRunning);
 /** The finished periods: asked once they end, again once Google's figures settle, then kept. */
 export const FINISHED: readonly CalendarPeriod[] = CALENDAR_PERIODS.filter((period) => !isRunning(period));
-/** The spans each period is asked with: the retired quarters with a year before too; the 12 months' (and This Year's) span before is already the year before. */
-function whichOf(period: CalendarPeriod): readonly AnalyticsWhich[] {
-  return YEAR_BEFORE_PERIODS.includes(period) && period !== "thisYear" && period !== "last12Months" ? ["NOW", "BEFORE", "YEAR"] : ["NOW", "BEFORE"];
+/** The spans each period is asked with: itself and its span before; the 12 months' span before is already the year before, so no period asks a third. */
+function whichOf(_period: CalendarPeriod): readonly AnalyticsWhich[] {
+  return ["NOW", "BEFORE"];
 }
 /** Days Google's figures take to settle after a period ends (§2.5): it is asked again once this many have passed. */
 const SETTLE_DAYS = 2;

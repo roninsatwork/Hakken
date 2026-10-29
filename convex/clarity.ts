@@ -24,7 +24,7 @@ import {
 import { addUpBy, packDaily, packTotals, unpackDaily, unpackDailyRows, unpackTotals, type ClarityDayRow } from "./utils/clarityPacks";
 import { clarityRecordingKindValidator, clarityRecordingValidator, clarityRecordingsFrom, projectIdOf, type ClarityRecording, type ClarityRecordingKind } from "./utils/clarityRecordings";
 import { shiftDay } from "./utils/insightFacts";
-import { CALENDAR_PERIODS, OPENING_PERIOD, periodSpan, shiftMonths, spanBefore, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
+import { CALENDAR_PERIODS, OPENING_PERIOD, calendarPeriodValidator, customSpans, periodSpan, shiftMonths, spanBefore, ukDay, type CalendarPeriod, type PeriodSpan } from "./utils/calendarPeriods";
 
 /**
  * Microsoft Clarity, connected and read (docs/plans/active/insights-analyst-plan.md
@@ -181,6 +181,29 @@ async function recordsOf(ctx: Reader, holdId: Id<"companyWebsites">, span: Span,
 /** The ready-made span a screen reads: the period chosen, or what it is set against. */
 export const periodSpanName = (before = false): "PERIOD" | "PERIOD_BEFORE" => (before ? "PERIOD_BEFORE" : "PERIOD");
 
+/**
+ * What a screen reads over: the Dates menu's period, or custom dates — a first and a last day
+ * (sees-header-and-rolling-dates-plan.md, part two, rule 4), built on demand (`prepareCustomSpan`).
+ */
+export type ClarityPeriodArg = CalendarPeriod | { from: string; to: string };
+export const clarityPeriodArgValidator = v.union(calendarPeriodValidator, v.object({ from: v.string(), to: v.string() }));
+
+/** The key custom dates' records are kept under: `custom|from|to`. */
+export const customKey = (span: { from: string; to: string }) => `custom|${span.from}|${span.to}`;
+export const periodKeyOf = (period: ClarityPeriodArg): string => (typeof period === "string" ? period : customKey(period));
+
+/** The days a screen's period covers of what Clarity holds: the period's to the newest day (rule 2), or the custom dates, cut at the newest day. Null when none is held yet. */
+export function claritySpanOf(period: ClarityPeriodArg, today: string, newest: string): PeriodSpan | null {
+  if (typeof period === "string") return periodSpan(period, today, newest);
+  const to = period.to < newest ? period.to : newest;
+  return period.from <= to ? { from: period.from, to, whole: true } : null;
+}
+
+/** What a screen's period is set against: the period before (rule 4), or the same number of days before custom dates. */
+export function clarityBeforeOf(period: ClarityPeriodArg, span: PeriodSpan): PeriodSpan {
+  return typeof period === "string" ? spanBefore(period, span) : customSpans(span.from, span.to).before;
+}
+
 export type ClarityPeriodRead = { first: Doc<"clarityFigures">; pages: ClarityTotalsRow[] };
 
 /**
@@ -188,10 +211,11 @@ export type ClarityPeriodRead = { first: Doc<"clarityFigures">; pages: ClarityTo
  * website's figures (and, for the period's own figures, its days), and every
  * part's pages, unpacked. Nothing adds up days when it is read.
  */
-export async function readClarityPeriod(ctx: Reader, holdId: Id<"companyWebsites">, period: CalendarPeriod, options: { kind?: ClarityKind; before?: boolean; withPages?: boolean } = {}): Promise<ClarityPeriodRead | null> {
+export async function readClarityPeriod(ctx: Reader, holdId: Id<"companyWebsites">, period: ClarityPeriodArg, options: { kind?: ClarityKind; before?: boolean; withPages?: boolean } = {}): Promise<ClarityPeriodRead | null> {
   const span = periodSpanName(options.before);
+  const key = periodKeyOf(period);
   // The first parts of the period's kinds: one each a kind, read alone so the website's figures never read a page.
-  const firsts = await ctx.db.query("clarityFigures").withIndex("by_hold_span_part", (q) => q.eq("companyWebsiteId", holdId).eq("span", span).eq("part", 0).eq("key", period)).take(SPLIT_KINDS.length + 2);
+  const firsts = await ctx.db.query("clarityFigures").withIndex("by_hold_span_part", (q) => q.eq("companyWebsiteId", holdId).eq("span", span).eq("part", 0).eq("key", key)).take(SPLIT_KINDS.length + 2);
   const first = firsts.find((record) => record.kind === options.kind);
   if (!first) return null;
   if (options.withPages === false) return { first, pages: [] };
@@ -551,6 +575,39 @@ export const buildSpan = internalMutation({
   },
 });
 
+/** Custom dates' records are kept this long after they were built: the next morning's days make them stale. */
+const CUSTOM_SPAN_KEPT_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Custom dates (sees-header-and-rolling-dates-plan.md, part two, rule 4): their span and the same number of days
+ * before it built from the days and months held, as the morning builds every period, when a screen first asks for
+ * them; built again only once a day. The screen reads `preparing` until the records are in.
+ */
+export const prepareCustomSpan = tenantMutation({
+  args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
+  returns: v.object({ building: v.boolean() }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const isDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+    if (!isDay(args.from) || !isDay(args.to) || args.from > args.to) throw appError("INVALID_INPUT", "Custom dates need a first and a last day, in order.");
+    const connection = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first();
+    const newest = connection?.newestDay;
+    if (!newest) return { building: false };
+    const span = claritySpanOf({ from: args.from, to: args.to }, ukDay(), newest);
+    if (!span) return { building: false };
+    const key = customKey({ from: args.from, to: args.to });
+    const held = await recordsOf(ctx, holdId, "PERIOD", undefined, key);
+    if (held.some((record) => Date.now() - record.builtAt < CUSTOM_SPAN_KEPT_MS)) return { building: false };
+    for (const kind of [undefined, ...SPLIT_KINDS]) {
+      await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key, from: span.from, to: span.to });
+    }
+    const before = clarityBeforeOf({ from: args.from, to: args.to }, span);
+    await ctx.scheduler.runAfter(0, internal.clarity.buildSpan, { holdId, span: "PERIOD_BEFORE", key, from: before.from, to: before.to });
+    return { building: true };
+  },
+});
+
 /**
  * What is past keeping, a few at a time — each morning catches up: days older
  * than 180 (their month is kept), sources and browsers by day older than 90,
@@ -573,6 +630,13 @@ export const tidyFigures = internalMutation({
     for (const kind of [undefined, ...SPLIT_KINDS]) {
       const months = await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("span", "MONTH").eq("kind", kind).lt("key", firstKept)).take(10);
       for (const month of months) await ctx.db.delete(month._id);
+    }
+    // Custom dates' spans a day old: the next asker builds them again from the days now held.
+    for (const span of ["PERIOD", "PERIOD_BEFORE"] as const) {
+      for (const kind of [undefined, ...SPLIT_KINDS]) {
+        const custom = await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("span", span).eq("kind", kind).gte("key", "custom|").lt("key", "custom}")).take(40);
+        for (const record of custom) if (Date.now() - record.builtAt >= CUSTOM_SPAN_KEPT_MS) await ctx.db.delete(record._id);
+      }
     }
     const recordings = await ctx.db.query("clarityRecordings").withIndex("by_hold_day", (q) => q.eq("companyWebsiteId", args.holdId).lt("day", shiftDay(newest, -(CLARITY_RECORDING_DAYS_KEPT - 1)))).take(50);
     for (const recording of recordings) await ctx.db.delete(recording._id);

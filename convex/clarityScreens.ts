@@ -3,8 +3,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
-import { CLARITY_RECORDING_DAYS_KEPT, clarityDays, readClarityPeriod, readPageRows, type ClarityPeriodRead } from "./clarity";
-import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
+import { CLARITY_RECORDING_DAYS_KEPT, clarityDays, readClarityPeriod, readPageRows, type ClarityPeriodRead, clarityPeriodArgValidator, claritySpanOf, periodKeyOf, type ClarityPeriodArg } from "./clarity";
+import { ukDay } from "./utils/calendarPeriods";
 import { classifierFor } from "./googleAnalyticsChannelReads";
 import { titlesOf } from "./pageTitles";
 import { listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
@@ -33,7 +33,7 @@ type Reader = { db: QueryCtx["db"] };
 type HoldId = Id<"companyWebsites">;
 
 const nullableNumber = v.union(v.number(), v.null());
-const screenArgs = { siteId: v.id("companyWebsites"), period: calendarPeriodValidator, device: v.optional(v.string()) };
+const screenArgs = { siteId: v.id("companyWebsites"), period: clarityPeriodArgValidator, device: v.optional(v.string()) };
 
 /** The days a screen's figures cover, and the same number of days before them, as Clarity recorded them. */
 const spanValidator = v.object({ from: v.string(), to: v.string(), days: v.number() });
@@ -56,6 +56,8 @@ const periodValidator = v.object({
   expected: v.number(),
   /** Clarity has sent none of the period yet — This week on a Monday (calendar-periods-plan.md, rule 9) — and its newest day. */
   waiting: v.boolean(),
+  /** Custom dates whose span is not built yet (`prepareCustomSpan`): the screen asks for it and waits. */
+  preparing: v.boolean(),
   newest: v.union(v.string(), v.null()),
 });
 
@@ -74,7 +76,7 @@ const pagesOf = (read: ClarityPeriodRead | null, device: string | undefined): Ma
  * against like, never a month against 4 days (`stats-need-comparisons`).
  * Until then a screen says why it compares nothing.
  */
-async function readBefore(ctx: Reader, holdId: HoldId, period: CalendarPeriod, now: ClarityPeriodRead | null, withPages = true): Promise<ClarityPeriodRead | null> {
+async function readBefore(ctx: Reader, holdId: HoldId, period: ClarityPeriodArg, now: ClarityPeriodRead | null, withPages = true): Promise<ClarityPeriodRead | null> {
   const before = await readClarityPeriod(ctx, holdId, period, { before: true, withPages });
   return before && now && before.first.days >= now.first.days ? before : null;
 }
@@ -104,10 +106,10 @@ function countedFromOf(read: ClarityPeriodRead | null): string | null {
 }
 
 /** The period's figures and when its counted ones start: errors, people and pages a visit taken over the days that hold them. */
-async function periodOf(ctx: Reader, holdId: HoldId, period: CalendarPeriod, now: ClarityPeriodRead | null, before: ClarityPeriodRead | null) {
+async function periodOf(ctx: Reader, holdId: HoldId, period: ClarityPeriodArg, now: ClarityPeriodRead | null, before: ClarityPeriodRead | null) {
   const pages = now && now.first.pageDays !== undefined ? { days: now.first.pageDays, from: now.first.pagesFrom ?? null } : null;
   const newest = await newestOf(ctx, holdId);
-  const span = newest ? periodSpan(period, ukDay(), newest) : null;
+  const span = newest ? claritySpanOf(period, ukDay(), newest) : null;
   const expected = span ? Math.round((Date.parse(`${span.to}T00:00:00Z`) - Date.parse(`${span.from}T00:00:00Z`)) / 86_400_000) + 1 : 0;
   return {
     now: spanOf(now),
@@ -118,6 +120,7 @@ async function periodOf(ctx: Reader, holdId: HoldId, period: CalendarPeriod, now
     cutDays: now?.first.cutDays ?? 0,
     expected,
     waiting: newest !== null && span === null,
+    preparing: typeof period !== "string" && span !== null && now === null,
     newest,
   };
 }
@@ -237,9 +240,9 @@ async function recordingsOf(ctx: Reader, holdId: HoldId, from: string | null, to
 const errorRecordingOf = (recordings: readonly RecordingRow[], page: string) => recordings.find((row) => (row.kind === "ERRORS" || row.kind === "ERROR_CLICKS") && row.page === page)?.link ?? null;
 
 /** The span a screen's recordings are read over: the period's days, or the last days chosen while nothing is kept. */
-function recordingSpan(now: ClarityPeriodRead | null, period: CalendarPeriod, newest: string | null): { from: string | null; to: string | null } {
+function recordingSpan(now: ClarityPeriodRead | null, period: ClarityPeriodArg, newest: string | null): { from: string | null; to: string | null } {
   if (now) return { from: now.first.from, to: now.first.to };
-  const span = newest ? periodSpan(period, ukDay(), newest) : null;
+  const span = newest ? claritySpanOf(period, ukDay(), newest) : null;
   return span ? { from: span.from, to: span.to } : { from: null, to: null };
 }
 
@@ -439,7 +442,7 @@ export const clarityPage = tenantQuery({
     const others = lines.filter((one) => one.kind === kind && one.page !== args.page);
     const ownOn = (rows: readonly ClarityTotalsRow[]) => rows.filter(onDevice(args.device));
     const totalsNow = pagesOf(now, args.device);
-    const beforeRows = before ? ownOn(await readPageRows(ctx, holdId, "PERIOD_BEFORE", undefined, args.period, args.page)) : [];
+    const beforeRows = before ? ownOn(await readPageRows(ctx, holdId, "PERIOD_BEFORE", undefined, periodKeyOf(args.period), args.page)) : [];
     const websiteDays = daysOf(now, args.device);
     const byDay = [];
     for (const day of websiteDays) {
@@ -448,8 +451,8 @@ export const clarityPage = tenantQuery({
     }
     const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS", withPages: false });
     const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
-    const browserRows = browsers ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "BROWSERS", args.period, args.page)) : [];
-    const sourceRows = sources ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "SOURCES", args.period, args.page)) : [];
+    const browserRows = browsers ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "BROWSERS", periodKeyOf(args.period), args.page)) : [];
+    const sourceRows = sources ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "SOURCES", periodKeyOf(args.period), args.page)) : [];
     const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
     return {
       period: await periodOf(ctx, holdId, args.period, now, before),

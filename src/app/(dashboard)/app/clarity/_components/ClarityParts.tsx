@@ -10,8 +10,8 @@ import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatDateTime } from "@/src/lib/dates";
 import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
-import { useClarityStatus } from "./useClarity";
-import { unitOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { useClarityStatus, type ClarityChosen } from "./useClarity";
+import { unitOf } from "@/convex/utils/calendarPeriods";
 
 /**
  * The small parts every Clarity screen shares (docs/plans/active/agents-and-clarity-plan.md,
@@ -163,13 +163,14 @@ export type ClarityPeriod = {
   cutDays?: number;
   expected: number;
   waiting: boolean;
+  preparing?: boolean;
   newest: string | null;
 };
 
 /** A moment as the section says it: the day and the time, once, without seconds (CF5). */
 export const formatWhen = (at: number) => formatDateTime(at, { options: { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" } });
 
-export function usePeriodWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod, of?: "pages") => string {
+export function usePeriodWords(): (period: ClarityPeriod | undefined, chosen: ClarityChosen, of?: "pages") => string {
   const t = useTranslations("clarity.common");
   const tp = useTranslations("common.periods");
   return (period, chosen, of) => {
@@ -182,7 +183,7 @@ export function usePeriodWords(): (period: ClarityPeriod | undefined, chosen: Ca
 }
 
 /** What the chosen period is set against, in words (rule 4): "the month before", "the same days last month"; with a capital for a chart's line. */
-export function useBeforeName(): (chosen: CalendarPeriod, capital?: boolean) => string {
+export function useBeforeName(): (chosen: ClarityChosen, capital?: boolean) => string {
   const tp = useTranslations("common.periods");
   return (chosen, capital = false) => {
     const words = tp(`before.${chosen}`);
@@ -191,11 +192,11 @@ export function useBeforeName(): (chosen: CalendarPeriod, capital?: boolean) => 
 }
 
 /** Clarity has sent none of the period yet (rule 9): one line, with its newest day, in place of empty figures. */
-export function useWaitingWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod) => string | null {
+export function useWaitingWords(): (period: ClarityPeriod | undefined, chosen: ClarityChosen) => string | null {
   const tp = useTranslations("common.periods");
   // The product's name as the menu names it.
   const source = useTranslations("sidebar")("clarity");
-  return (period, chosen) => (period?.waiting && period.newest ? tp("noDaysYet", { source, unit: unitOf(chosen), day: formatDay(period.newest) }) : null);
+  return (period, chosen) => (period?.waiting && period.newest && chosen !== "custom" ? tp("noDaysYet", { source, unit: unitOf(chosen), day: formatDay(period.newest) }) : null);
 }
 
 /**
@@ -203,7 +204,7 @@ export function useWaitingWords(): (period: ClarityPeriod | undefined, chosen: C
  * first of them were kept before errors were read (`countedFrom`) — the days
  * since, never "none in 4 days" of one.
  */
-export function useCountedWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod, byDay: ReadonlyArray<{ visits: number; errors: number | null }>) => string {
+export function useCountedWords(): (period: ClarityPeriod | undefined, chosen: ClarityChosen, byDay: ReadonlyArray<{ visits: number; errors: number | null }>) => string {
   const t = useTranslations("clarity.common");
   const periodWords = usePeriodWords();
   return (period, chosen, byDay) => {
@@ -216,7 +217,7 @@ export function useCountedWords(): (period: ClarityPeriod | undefined, chosen: C
  * A figure's comparison with what the period is set against, in words, or why
  * there is none: Clarity was connected after those days began.
  */
-export function useBeforeWords(): (period: ClarityPeriod | undefined, chosen: CalendarPeriod) => string {
+export function useBeforeWords(): (period: ClarityPeriod | undefined, chosen: ClarityChosen) => string {
   const t = useTranslations("clarity.common");
   const tp = useTranslations("common.periods");
   return (period, chosen) => (period?.before && period.before.days > 0 ? tp(`versus.${chosen}`) : t("noBefore", { since: formatDay(period?.firstDay ?? null) }));

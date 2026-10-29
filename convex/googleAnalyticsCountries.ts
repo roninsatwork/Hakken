@@ -75,7 +75,8 @@ export async function prepareAnalyticsCountry(ctx: MutationCtx, connection: Doc<
 const RETIRED_LISTS = new Set(["eventSeries", "campaignSeries", "visitorSeries", "productSeries"]);
 const KEPT_SERIES = "series|365|NOW|";
 /** The day counts the calendar periods replaced (calendar-periods-plan.md): their lists go, Anthony 2026-10-21 ("yes"). */
-const RETIRED_PERIODS = new Set(["7", "30", "90"]);
+/** Periods no menu offers any more: the old day counts, and the quarters and This year retired on 2026-10-29 (sees-header-and-rolling-dates-plan.md). */
+const RETIRED_PERIODS = new Set(["7", "30", "90", "thisQuarter", "lastQuarter", "thisYear"]);
 
 /**
  * A list no run keeps: a retired list or day count, or a 12-month list other than Insights' own — those lists, every

@@ -16,17 +16,15 @@ import { monthStart, stepEnd, stepStart, weekStart, type ChartStep } from "./sea
  *   yet — against the same dates of the period before, cut at its end (rule 4: "same days").
  *
  * The quarters and This year left the menu on 2026-10-29 (Anthony: "what was built was the financial quarter. Which
- * is what I never asked for"). They stay in the type and the validator (`RETIRED_PERIODS`) only until the rows
- * prepared for them are gone — Convex refuses a schema that existing rows break — and no menu offers them.
+ * is what I never asked for"); the rows prepared for them were deleted the same day on his word, and the names went
+ * from the type and the validator with them.
  */
 
 /** The menu's periods, in its order. */
 export const CALENDAR_PERIODS = ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"] as const;
-/** Retired from every menu on 2026-10-29; still accepted while their prepared rows are cleared. */
-export const RETIRED_PERIODS = ["thisQuarter", "lastQuarter", "thisYear"] as const;
 export type MenuPeriod = (typeof CALENDAR_PERIODS)[number];
-export type RetiredPeriod = (typeof RETIRED_PERIODS)[number];
-export type CalendarPeriod = MenuPeriod | RetiredPeriod;
+/** The same list by its older name, which most of the code reads. */
+export type CalendarPeriod = MenuPeriod;
 
 export const calendarPeriodValidator = v.union(
   v.literal("thisWeek"),
@@ -36,32 +34,17 @@ export const calendarPeriodValidator = v.union(
   v.literal("last3Months"),
   v.literal("last6Months"),
   v.literal("last12Months"),
-  v.literal("thisQuarter"),
-  v.literal("lastQuarter"),
-  v.literal("thisYear"),
 );
 
 /** What a screen opens on (rule 6): whole, final and comparable — Insights' choice too. */
 export const OPENING_PERIOD: MenuPeriod = "lastMonth";
 
-/**
- * The periods set against the same period a year before as well (rule 5, narrowed 2026-10-29): Last 12 months, whose
- * year before is the 12 months before it; the retired quarters and year keep theirs until they go.
- */
-export const YEAR_BEFORE_PERIODS: readonly CalendarPeriod[] = ["last12Months", "thisQuarter", "lastQuarter", "thisYear"];
+/** The periods set against the same period a year before as well (rule 5, narrowed 2026-10-29): Last 12 months, whose year before is the 12 months before it. */
+export const YEAR_BEFORE_PERIODS: readonly CalendarPeriod[] = ["last12Months"];
 
 /** A value the menu offers today. */
 export function isCalendarPeriod(value: unknown): value is MenuPeriod {
   return typeof value === "string" && (CALENDAR_PERIODS as readonly string[]).includes(value);
-}
-
-/** A value a stored row may still carry: the menu's, or a retired one. */
-export function isStoredPeriod(value: unknown): value is CalendarPeriod {
-  return isCalendarPeriod(value) || (typeof value === "string" && (RETIRED_PERIODS as readonly string[]).includes(value));
-}
-
-export function isRetiredPeriod(period: CalendarPeriod): period is RetiredPeriod {
-  return (RETIRED_PERIODS as readonly string[]).includes(period);
 }
 
 /** A rolling period: the last so many whole months, back from the newest day held. */
@@ -75,13 +58,11 @@ export function monthsOf(period: CalendarPeriod): number {
   return 0;
 }
 
-export type PeriodUnit = "week" | "month" | "quarter" | "year" | "months";
+export type PeriodUnit = "week" | "month" | "months";
 
 export function unitOf(period: CalendarPeriod): PeriodUnit {
   if (period === "thisWeek" || period === "lastWeek") return "week";
   if (period === "thisMonth" || period === "lastMonth") return "month";
-  if (period === "thisQuarter" || period === "lastQuarter") return "quarter";
-  if (period === "thisYear") return "year";
   return "months";
 }
 
@@ -91,14 +72,11 @@ export function unitOf(period: CalendarPeriod): PeriodUnit {
  */
 export const isRunning = (period: CalendarPeriod) => period.startsWith("this") || isRolling(period);
 
-/**
- * The step a chart draws a period in (rule 8): days for weeks and months, weeks for 3 and 6 months (and the retired
- * quarters), months for 12 months (and the retired year).
- */
+/** The step a chart draws a period in (rule 8): days for weeks and months, weeks for 3 and 6 months, months for 12 months. */
 export function stepOf(period: CalendarPeriod): ChartStep {
   const unit = unitOf(period);
   if (unit === "months") return monthsOf(period) >= 12 ? "month" : "week";
-  return unit === "quarter" ? "week" : unit === "year" ? "month" : "day";
+  return "day";
 }
 
 /**
@@ -126,7 +104,7 @@ export function shiftMonths(day: string, months: number): string {
   return first.toISOString().slice(0, 10);
 }
 
-const MONTHS_IN: Record<Exclude<PeriodUnit, "week" | "months">, number> = { month: 1, quarter: 3, year: 12 };
+const MONTHS_IN: Record<Exclude<PeriodUnit, "week" | "months">, number> = { month: 1 };
 
 /** A day moved back or forward by whole units: seven days a week, else months with the day kept or cut. */
 function shiftUnits(day: string, unit: Exclude<PeriodUnit, "months">, by: number): string {
@@ -135,11 +113,7 @@ function shiftUnits(day: string, unit: Exclude<PeriodUnit, "months">, by: number
 
 /** The first day of the unit a day falls in. */
 function unitStart(day: string, unit: Exclude<PeriodUnit, "months">): string {
-  if (unit === "week") return weekStart(day);
-  if (unit === "month") return monthStart(day);
-  if (unit === "year") return `${day.slice(0, 4)}-01-01`;
-  const month = Number(day.slice(5, 7));
-  return `${day.slice(0, 4)}-${String(month - ((month - 1) % 3)).padStart(2, "0")}-01`;
+  return unit === "week" ? weekStart(day) : monthStart(day);
 }
 
 /** The whole unit starting on `start`: its first and last days. */
@@ -190,8 +164,8 @@ export function periodSpan(period: CalendarPeriod, today: string, newest: string
 }
 
 /**
- * The span `units` whole units before (1 the period before, a year as 12 months or 4 quarters): the whole one for a
- * whole period, the same dates of it — cut at its end — for one in part (This Month on 31 October: 1–30 September).
+ * The span `units` whole units before (1 the period before): the whole one for a whole period, the same dates of it
+ * — cut at its end — for one in part (This Month on 31 October: 1–30 September).
  */
 function spanBack(span: PeriodSpan, unit: Exclude<PeriodUnit, "months">, units: number): PeriodSpan {
   const from = shiftUnits(span.from, unit, -units);
@@ -215,14 +189,10 @@ export function spanBefore(period: CalendarPeriod, span: PeriodSpan): PeriodSpan
 
 /**
  * The same period a year before (rule 5): Last 12 months against the 12 months before it (the same as its span
- * before); the retired quarters against the whole quarter a year before, one still going against its same dates.
- * Null for weeks, months, and 3 or 6 months, which have none.
+ * before). Null for weeks, months, and 3 or 6 months, which have none.
  */
 export function spanYearBefore(period: CalendarPeriod, span: PeriodSpan): PeriodSpan | null {
-  if (!YEAR_BEFORE_PERIODS.includes(period)) return null;
-  const unit = unitOf(period);
-  if (unit === "months") return rollingBefore(span, 12);
-  return spanBack(span, unit, unit === "quarter" ? 4 : 1);
+  return YEAR_BEFORE_PERIODS.includes(period) ? rollingBefore(span, 12) : null;
 }
 
 /** The days of custom dates, and the same number of days straight before them (part two, rule 4). */
@@ -249,9 +219,8 @@ export function stepsOf(span: { from: string; to: string }, step: ChartStep): Ar
 }
 
 /**
- * A day's match in the period before (rule 4): seven days back for a week, the same day of the month a month,
- * quarter or year back — or that month's last — and so many months back for a rolling period, so a chart sets each
- * day beside its own.
+ * A day's match in the period before (rule 4): seven days back for a week, the same day of the month a month back —
+ * or that month's last — and so many months back for a rolling period, so a chart sets each day beside its own.
  */
 export function sameDayBefore(period: CalendarPeriod, day: string): string {
   const unit = unitOf(period);
