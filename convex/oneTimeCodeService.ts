@@ -100,11 +100,11 @@ export function describeVerdict(verdict: CodeVerdict): string {
 
   switch (verdict.reason) {
     case "expired":
-      return "That code has expired. Ask for a new one.";
+      return "That code has run out of time. Ask for a new one.";
     case "too-many-attempts":
       return "That code has been tried too many times. Ask for a new one.";
     case "wrong":
-      return "That code is not right. Check it and try again.";
+      return "That code doesn't match. Check the email and try again.";
   }
 }
 

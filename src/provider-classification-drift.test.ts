@@ -38,6 +38,10 @@ describe('Provider Classification Drift', () => {
       // and Perplexity as tracked platforms. Naming them is the subject, not
       // stale platform language.
       'PRODUCT.md',
+      // The home page names ChatGPT and Gemini as the assistants a buyer asks
+      // (Anthony's words, 2026-10-29): the subject of the sentence, as above.
+      'src/app/(public)/_components/home/HomeScreen.tsx',
+      'docs/plans/active/home-page-plan.md',
       'docs/product/ai-visibility-landscape-sept-2026.md',
       'docs/product/app-vision-v2.md',
       'docs/product/data-sources-and-integrations-sept-2026.md',

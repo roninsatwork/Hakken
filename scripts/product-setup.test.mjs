@@ -13,8 +13,7 @@ const roots = [];
 function temporary() { const root = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-product-test-")); roots.push(root); return root; }
 const targetFiles = [
   "src/no-client-specific-fallbacks.test.ts", "hakken.product.json", "package.json", "package-lock.json", "template.verticals.json", "AGENTS.md", "README.md",
-  "scripts/strip-verticals.mjs", "src/app/layout.tsx", "src/app/(public)/_components/PublicNav.tsx",
-  "src/app/(public)/_components/PublicFooter.tsx", "convex/settingsService.ts", ".github/workflows/deploy.yml",
+  "scripts/strip-verticals.mjs", "src/app/layout.tsx", "convex/settingsService.ts", ".github/workflows/deploy.yml",
 ];
 function fixture() {
   const root = temporary();
@@ -166,7 +165,6 @@ describe("product initialiser on temporary clones", () => {
     oldLock.name = config.identity.slug; oldLock.packages[""].name = config.identity.slug;
     expect(newLock).toEqual(oldLock);
     expect(fs.readFileSync(path.join(root, "template.verticals.json"), "utf8")).toBe(before["template.verticals.json"]);
-    expect(fs.readFileSync(path.join(root, "src/app/(public)/_components/PublicFooter.tsx"), "utf8")).toContain("Powered by Ronins");
     expect(fs.existsSync(path.join(root, ".env.local"))).toBe(false);
   });
   it("updates an initialised product from a revised configuration", () => {

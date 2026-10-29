@@ -1,0 +1,11 @@
+# Sign in — the approved look (board "Login" of docs/plans/assets/before-sign-in/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+sign-in
+  hero: Welcome back
+    field: Your email address
+    primary-action: Email me a sign-in link
+    action: Email me a code instead
+    action: Continue with Google
+    copyright
+  rain

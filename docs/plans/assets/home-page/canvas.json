@@ -1,0 +1,15 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-29T09:10:00Z" },
+  "title": "Hakken home page",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1 · Sonar", "expand": "fill", "is_interactive": true },
+    "Rain.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 900, "title": "2 · Rain on the ground", "expand": "fill", "is_interactive": true },
+    "Searchlight.dc.html": { "x": 3040, "y": 0, "w": 1440, "h": 900, "title": "3 · The searchlight", "expand": "fill", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "Rain.dc.html", "Searchlight.dc.html"],
+  "notes": {},
+  "designSystems": []
+}

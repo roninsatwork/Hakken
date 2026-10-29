@@ -558,18 +558,19 @@
   },
   "login": {
     "title": "Bentornato",
-    "subtitle": "Autenticazione Sicura",
+    "subtitle": "Accedi",
+    "emailLabel": "Il tuo indirizzo email",
     "emailPlaceholder": "Inserisci il tuo indirizzo email",
     "sendCode": "Inviami invece un codice",
-    "codeSent": "Abbiamo inviato un codice di sei cifre a quell'indirizzo. Digitalo qui sotto — puoi farlo su questo dispositivo anche se l'email si è aperta su un altro.",
+    "codeSent": "Ti abbiamo inviato per email un codice di sei cifre. Scrivilo qui. Funziona su questo dispositivo anche se hai aperto l'email altrove.",
     "codePlaceholder": "Codice di sei cifre",
     "signInWithCode": "Accedi",
-    "sendMagicLink": "Invia Magic Link",
+    "sendMagicLink": "Inviami un link per accedere",
     "or": "OPPURE",
     "continueWithGoogle": "Continua con Google",
     "thankYou": "Controlla la tua posta",
-    "magicLinkSent": "Se questa email è stata invitata, riceverai a breve un link di accesso.",
-    "tryDifferentEmail": "Prova un altro indirizzo email"
+    "magicLinkSent": "Se quell'indirizzo ha un account {platformName}, un link per accedere è in arrivo. Se non arriva entro un minuto, controlla la posta indesiderata.",
+    "tryDifferentEmail": "Usa un'altra email"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -19083,16 +19084,17 @@
     }
   },
   "unsubscribe": {
-    "title": "Vuoi interrompere le email «{kind}»?",
-    "body": "Non riceverai più le email «{kind}». Puoi riattivarle dal tuo profilo in qualsiasi momento.",
+    "eyebrow": "Le tue email",
+    "title": "Vuoi smettere di ricevere le email «{kind}»?",
+    "body": "Non riceverai più «{kind}». Puoi riattivarle in qualsiasi momento dal tuo profilo.",
     "stop": "Interrompi queste email",
     "working": "Interruzione in corso…",
-    "doneTitle": "Fatto",
-    "doneBody": "Non riceverai più le email «{kind}». Per riceverle di nuovo, attivale nel tuo profilo.",
+    "doneTitle": "Disiscrizione completata",
+    "doneBody": "Non riceverai più «{kind}». Per riceverle di nuovo, attivale nel tuo profilo.",
     "failedTitle": "Questo link non funziona più",
-    "failedBody": "Potrebbe essere stato modificato durante l'invio. Puoi disattivare le email «{kind}» dal tuo profilo.",
-    "incompleteTitle": "Questo link è incompleto",
-    "incompleteBody": "Potrebbe essere stato accorciato durante l'invio. Puoi scegliere le tue email dal tuo profilo."
+    "failedBody": "Puoi comunque disattivare «{kind}» dal tuo profilo.",
+    "incompleteTitle": "Questo link non è arrivato correttamente",
+    "incompleteBody": "Puoi scegliere quali email ricevere dal tuo profilo."
   },
   "learn": {
     "menu": {

@@ -1,0 +1,9 @@
+# From the email · link incomplete — the approved look (board "VerifyIncomplete" of docs/plans/assets/before-sign-in/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+verify
+  hero: This link didn't come through properly
+    hero-copy
+    primary-action: Back to sign in
+    copyright
+  rain

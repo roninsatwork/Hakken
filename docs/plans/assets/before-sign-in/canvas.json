@@ -1,0 +1,36 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-29T09:10:00Z" },
+  "title": "Hakken home page",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1 · Sonar", "expand": "fill", "is_interactive": true },
+    "Rain.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 900, "title": "2 · Rain on the ground (chosen)", "expand": "fill", "is_interactive": true },
+    "Searchlight.dc.html": { "x": 3040, "y": 0, "w": 1440, "h": 900, "title": "3 · The searchlight", "expand": "fill", "is_interactive": true },
+    "Login.dc.html": { "x": 0, "y": 1260, "w": 1440, "h": 900, "title": "Sign in", "expand": "fill", "is_interactive": true },
+    "LoginCode.dc.html": { "x": 1520, "y": 1260, "w": 1440, "h": 900, "title": "Sign in · type the code", "expand": "fill", "is_interactive": true },
+    "LoginCodeWrong.dc.html": { "x": 3040, "y": 1260, "w": 1440, "h": 900, "title": "Sign in · wrong code", "expand": "fill", "is_interactive": true },
+    "LoginSent.dc.html": { "x": 4560, "y": 1260, "w": 1440, "h": 900, "title": "Sign in · link sent", "expand": "fill", "is_interactive": true },
+    "VerifyConfirm.dc.html": { "x": 0, "y": 2500, "w": 1440, "h": 900, "title": "From the email · confirm it is you", "expand": "fill", "is_interactive": true },
+    "VerifyUsed.dc.html": { "x": 1520, "y": 2500, "w": 1440, "h": 900, "title": "From the email · link already used", "expand": "fill", "is_interactive": true },
+    "VerifyIncomplete.dc.html": { "x": 3040, "y": 2500, "w": 1440, "h": 900, "title": "From the email · link incomplete", "expand": "fill", "is_interactive": true },
+    "UnsubscribeAsk.dc.html": { "x": 0, "y": 3740, "w": 1440, "h": 900, "title": "Unsubscribe · stop these emails?", "expand": "fill", "is_interactive": true },
+    "UnsubscribeDone.dc.html": { "x": 1520, "y": 3740, "w": 1440, "h": 900, "title": "Unsubscribe · done", "expand": "fill", "is_interactive": true },
+    "UnsubscribeFailed.dc.html": { "x": 3040, "y": 3740, "w": 1440, "h": 900, "title": "Unsubscribe · link no longer works", "expand": "fill", "is_interactive": true },
+    "UnsubscribeIncomplete.dc.html": { "x": 4560, "y": 3740, "w": 1440, "h": 900, "title": "Unsubscribe · link incomplete", "expand": "fill", "is_interactive": true }
+  },
+  "order": [
+    "Main.dc.html", "Rain.dc.html", "Searchlight.dc.html",
+    "Login.dc.html", "LoginCode.dc.html", "LoginCodeWrong.dc.html", "LoginSent.dc.html",
+    "VerifyConfirm.dc.html", "VerifyUsed.dc.html", "VerifyIncomplete.dc.html",
+    "UnsubscribeAsk.dc.html", "UnsubscribeDone.dc.html", "UnsubscribeFailed.dc.html", "UnsubscribeIncomplete.dc.html"
+  ],
+  "notes": {
+    "home": { "x": 0, "y": -260, "text": "The home page — three symbols, rain chosen and built", "kind": "title1", "maxW": 4480 },
+    "signin": { "x": 0, "y": 1000, "text": "Signing in — the four states of /login", "kind": "title1", "maxW": 6000 },
+    "verify": { "x": 0, "y": 2240, "text": "From the sign-in email — the three states of /verify", "kind": "title1", "maxW": 4480 },
+    "unsubscribe": { "x": 0, "y": 3480, "text": "From an email's unsubscribe link — the four states of /unsubscribe", "kind": "title1", "maxW": 6000 }
+  },
+  "designSystems": []
+}

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in — wrong code</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/20338e920f53080f880424cc5f1725e4">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes hk-ripple{0%{transform:translate(-50%,-50%) scale(.04);opacity:0}4%{opacity:.9}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@keyframes hk-splash{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}3%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}14%{opacity:0;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0}}
+@keyframes hk-sheen{0%{transform:translateY(-8%)}100%{transform:translateY(8%)}}
+</style>
+</helmet>
+<div class="dark"><div class="bg-background text-foreground font-sans tracking-tight antialiased" style="min-height: 100vh; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr))">
+
+<section style="display: flex; flex-direction: column; justify-content: space-between; gap: 48px; padding: 44px 56px 40px 56px; min-height: min(100vh, 150vw); box-sizing: border-box">
+  <div aria-hidden="true" style="height: 36px"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 440px; width: 100%">
+    <span class="font-mono text-muted" style="font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase">Sign in</span>
+    <h1 style="margin: 0; line-height: 1.05"><span style="font-size: 48px; line-height: 1.05; font-weight: 600; letter-spacing: -0.03em">Welcome back</span></h1>
+    <p class="text-secondary" style="margin: 0; font-size: 14px; line-height: 1.6">We've emailed you a six-digit code. Type it here. It works on this device even if you opened the email somewhere else.</p>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span class="mt-1 text-[12px] font-medium text-secondary">Six-digit code</span>
+      <div role="group" aria-label="Six-digit code" style="display: flex; gap: 8px; align-items: center"><input aria-label="Digit 1" inputmode="numeric" maxlength="1" value="4" class="font-mono rounded-[12px] border border-destructive bg-black/20 text-foreground outline-none transition-colors focus:border-brand/50" style="width: 56px; height: 64px; padding: 0; text-align: center; font-size: 26px; font-weight: 500; box-sizing: border-box"><input aria-label="Digit 2" inputmode="numeric" maxlength="1" value="8" class="font-mono rounded-[12px] border border-destructive bg-black/20 text-foreground outline-none transition-colors focus:border-brand/50" style="width: 56px; height: 64px; padding: 0; text-align: center; font-size: 26px; font-weight: 500; box-sizing: border-box"><input aria-label="Digit 3" inputmode="numeric" maxlength="1" value="2" class="font-mono rounded-[12px] border border-destructive bg-black/20 text-foreground outline-none transition-colors focus:border-brand/50" style="width: 56px; height: 64px; padding: 0; text-align: center; font-size: 26px; font-weight: 500; box-sizing: border-box"><span aria-hidden="true" class="text-muted" style="width: 12px; text-align: center; font-size: 18px; line-height: 64px">·</span><input aria-label="Digit 4" inputmode="numeric" maxlength="1" value="9" class="font-mono rounded-[12px] border border-destructive bg-black/20 text-foreground outline-none transition-colors focus:border-brand/50" style="width: 56px; height: 64px; padding: 0; text-align: center; font-size: 26px; font-weight: 500; box-sizing: border-box"><input aria-label="Digit 5" inputmode="numeric" maxlength="1" value="1" class="font-mono rounded-[12px] border border-destructive bg-black/20 text-foreground outline-none transition-colors focus:border-brand/50" style="width: 56px; height: 64px; padding: 0; text-align: center; font-size: 26px; font-weight: 500; box-sizing: border-box"><input aria-label="Digit 6" inputmode="numeric" maxlength="1" value="3" class="font-mono rounded-[12px] border border-destructive bg-black/20 text-foreground outline-none transition-colors focus:border-brand/50" style="width: 56px; height: 64px; padding: 0; text-align: center; font-size: 26px; font-weight: 500; box-sizing: border-box"></div>
+    </div>
+    <span data-tone="danger" class="inline-flex w-fit font-normal text-foreground/85 items-center whitespace-nowrap gap-1.5 text-[12px]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x lucide-x-circle shrink-0 h-3.5 w-3.5 text-destructive" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>That code doesn't match. Check the email and try again.</span>
+    <a href="#" class="rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 22px; font-size: 15px; width: 100%; box-sizing: border-box; text-decoration: none"><span>Sign in</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right" style="width: 16px; height: 16px" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+    <a href="Login.dc.html" class="text-[13px] text-secondary hover:text-foreground" style="text-decoration: none; align-self: flex-start">Use a different email</a>
+  </div>
+
+  <p class="font-mono text-muted" style="margin: 0; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase">© 2026 Hakken. All rights reserved.</p>
+</section>
+
+<section class="bg-sidebar" style="position: relative; overflow: hidden; min-height: min(100vh, 120vw)">
+  <div aria-hidden="true" style="position: absolute; inset: -10% 0; background-image: linear-gradient(180deg, #18181A 0%, #222224 50%, #18181A 100%); animation: hk-sheen 9s ease-in-out infinite alternate"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0">
+    <sc-for list="{{drops}}" as="d" hint-placeholder-count="30">
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: 6px; height: 6px; border-radius: 3px; background-color: #FFFFFF; animation: hk-splash {{d.period}}s ease-out infinite; animation-delay: {{d.delay}}s"></span>
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: {{d.size}}px; height: {{d.size}}px; border-radius: 50%; border: 1.5px solid {{d.colour}}; animation: hk-ripple {{d.period}}s cubic-bezier(.16,.84,.44,1) infinite; animation-delay: {{d.delay}}s"></span>
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: {{d.size}}px; height: {{d.size}}px; border-radius: 50%; border: 1px solid {{d.colour}}; animation: hk-ripple {{d.period}}s cubic-bezier(.16,.84,.44,1) infinite; animation-delay: {{d.delay2}}s"></span>
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: {{d.size}}px; height: {{d.size}}px; border-radius: 50%; border: 1px solid #3A3A3C; animation: hk-ripple {{d.period}}s cubic-bezier(.16,.84,.44,1) infinite; animation-delay: {{d.delay3}}s"></span>
+    </sc-for>
+  </div>
+</section>
+
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const drops = [];
+    for (let i = 0; i < 34; i++) {
+      const a = Math.sin(i * 12.9898) * 43758.5453, b = Math.sin(i * 78.233) * 12345.678, c = Math.sin(i * 39.425) * 9876.543;
+      const r = (n) => n - Math.floor(n);
+      const hard = i % 7 === 3, period = 5 + Math.round(r(c) * 4), delay = -Math.round(r(a + b) * period * 10) / 10;
+      drops.push({ x: Math.round((r(a) * 90 + 5) * 10) / 10, y: Math.round((r(b) * 88 + 6) * 10) / 10, size: hard ? 260 : 120 + Math.round(r(c) * 80), colour: hard ? "#E8E4DC" : "#A1A1A6", period, delay, delay2: delay + 0.35, delay3: delay + 0.7 });
+    }
+    return { drops };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,20 +1,20 @@
 import { Loader2 } from "lucide-react";
 import { Suspense, type ReactNode } from "react";
+import "@/src/ui/components/public/rain.css";
 
+/** The page a sign-in email lands on wears the sign-in screen's look (docs/plans/active/before-sign-in-plan.md). */
 export default function VerifyLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-[16px] border border-border-dim bg-background p-8">
-        <Suspense
-          fallback={
-            <div className="flex justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-secondary" />
-            </div>
-          }
-        >
-          {children}
-        </Suspense>
-      </div>
-    </main>
+    <div className="dark public-home flex min-h-screen w-full flex-col bg-background text-foreground">
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-secondary" />
+          </div>
+        }
+      >
+        {children}
+      </Suspense>
+    </div>
   );
 }

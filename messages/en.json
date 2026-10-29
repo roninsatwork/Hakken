@@ -557,19 +557,20 @@
     }
   },
   "login": {
-    "title": "Welcome Back",
-    "subtitle": "Secure Authentication",
+    "title": "Welcome back",
+    "subtitle": "Sign in",
+    "emailLabel": "Your email address",
     "emailPlaceholder": "Enter your email address",
     "sendCode": "Email me a code instead",
-    "codeSent": "We have sent a six-digit code to that address. Type it below — you can do that on this device even if the email opened on another.",
+    "codeSent": "We've emailed you a six-digit code. Type it here. It works on this device even if you opened the email somewhere else.",
     "codePlaceholder": "Six-digit code",
     "signInWithCode": "Sign in",
-    "sendMagicLink": "Send Magic Link",
+    "sendMagicLink": "Email me a sign-in link",
     "or": "OR",
     "continueWithGoogle": "Continue with Google",
     "thankYou": "Check your inbox",
-    "magicLinkSent": "If this email is invited, you will receive a sign-in link shortly.",
-    "tryDifferentEmail": "Try a different email address"
+    "magicLinkSent": "If that address has a {platformName} account, a sign-in link is on its way. If it hasn't arrived in a minute, check your junk folder.",
+    "tryDifferentEmail": "Use a different email"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -19083,16 +19084,17 @@
     }
   },
   "unsubscribe": {
+    "eyebrow": "Your emails",
     "title": "Stop {kind} emails?",
-    "body": "You’ll no longer get {kind} emails. You can turn them back on from your profile at any time.",
+    "body": "You'll stop getting the {kind}. You can turn it back on any time in your profile.",
     "stop": "Stop these emails",
     "working": "Stopping…",
-    "doneTitle": "Done",
-    "doneBody": "You won’t get {kind} emails any more. To have them again, turn them on in your profile.",
-    "failedTitle": "That link no longer works",
-    "failedBody": "It may have been changed in transit. You can turn {kind} emails off from your profile instead.",
-    "incompleteTitle": "This link is incomplete",
-    "incompleteBody": "It may have been shortened in transit. You can choose your emails on your profile instead."
+    "doneTitle": "You're unsubscribed",
+    "doneBody": "You won't get the {kind} any more. To have it again, turn it on in your profile.",
+    "failedTitle": "This link doesn't work any more",
+    "failedBody": "You can still turn the {kind} off in your profile.",
+    "incompleteTitle": "This link didn't come through properly",
+    "incompleteBody": "You can choose which emails you get in your profile."
   },
   "learn": {
     "menu": {

@@ -1,0 +1,10 @@
+# Home — the approved look (board "Rain" of docs/plans/assets/home-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+home
+  hero: Hakken
+    hero-copy
+    primary-action: Sign in
+    copyright
+  rain
+    sign-in: Sign in

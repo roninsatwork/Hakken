@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/20338e920f53080f880424cc5f1725e4">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes hk-ripple{0%{transform:translate(-50%,-50%) scale(.04);opacity:0}4%{opacity:.9}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@keyframes hk-splash{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}3%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}14%{opacity:0;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0}}
+@keyframes hk-sheen{0%{transform:translateY(-8%)}100%{transform:translateY(8%)}}
+</style>
+</helmet>
+<div class="dark"><div class="bg-background text-foreground font-sans tracking-tight antialiased" style="min-height: 100vh; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr))">
+
+<section style="display: flex; flex-direction: column; justify-content: space-between; gap: 48px; padding: 44px 56px 40px 56px; min-height: min(100vh, 150vw); box-sizing: border-box">
+  <div aria-hidden="true" style="height: 36px"></div>
+
+  <form style="display: flex; flex-direction: column; gap: 22px; max-width: 440px; width: 100%">
+    <span class="font-mono text-muted" style="font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase">Sign in</span>
+    <h1 style="margin: 0; line-height: 1.05"><span style="font-size: 48px; line-height: 1.05; font-weight: 600; letter-spacing: -0.03em">Welcome back</span></h1>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="email" class="mt-1 text-[12px] font-medium text-secondary">Your email address</label>
+      <input id="email" type="email" placeholder="Enter your email address" class="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand/50">
+    </div>
+
+    <button type="button" class="rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 22px; font-size: 15px; width: 100%"><span>Email me a sign-in link</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right" style="width: 16px; height: 16px" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+
+    <a href="LoginCode.dc.html" class="rounded-[8px] border border-border-dim bg-white/[0.03] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; font-size: 13px; text-decoration: none"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round" style="width: 15px; height: 15px" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"></path><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>Email me a code instead</a>
+
+    <div style="display: flex; align-items: center; gap: 14px"><span class="border-border-dim" style="flex: 1; border-top: 1px solid"></span><span class="font-mono text-muted" style="font-size: 11px; letter-spacing: 0.2em">OR</span><span class="border-border-dim" style="flex: 1; border-top: 1px solid"></span></div>
+
+    <button type="button" class="rounded-[8px] border border-border-dim bg-white/[0.03] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; font-size: 13px"><svg viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>Continue with Google</button>
+  </form>
+
+  <p class="font-mono text-muted" style="margin: 0; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase">© 2026 Hakken. All rights reserved.</p>
+</section>
+
+<section class="bg-sidebar" style="position: relative; overflow: hidden; min-height: min(100vh, 120vw)">
+  <div aria-hidden="true" style="position: absolute; inset: -10% 0; background-image: linear-gradient(180deg, #18181A 0%, #222224 50%, #18181A 100%); animation: hk-sheen 9s ease-in-out infinite alternate"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0">
+    <sc-for list="{{drops}}" as="d" hint-placeholder-count="30">
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: 6px; height: 6px; border-radius: 3px; background-color: #FFFFFF; animation: hk-splash {{d.period}}s ease-out infinite; animation-delay: {{d.delay}}s"></span>
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: {{d.size}}px; height: {{d.size}}px; border-radius: 50%; border: 1.5px solid {{d.colour}}; animation: hk-ripple {{d.period}}s cubic-bezier(.16,.84,.44,1) infinite; animation-delay: {{d.delay}}s"></span>
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: {{d.size}}px; height: {{d.size}}px; border-radius: 50%; border: 1px solid {{d.colour}}; animation: hk-ripple {{d.period}}s cubic-bezier(.16,.84,.44,1) infinite; animation-delay: {{d.delay2}}s"></span>
+      <span style="position: absolute; left: {{d.x}}%; top: {{d.y}}%; width: {{d.size}}px; height: {{d.size}}px; border-radius: 50%; border: 1px solid #3A3A3C; animation: hk-ripple {{d.period}}s cubic-bezier(.16,.84,.44,1) infinite; animation-delay: {{d.delay3}}s"></span>
+    </sc-for>
+  </div>
+</section>
+
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const drops = [];
+    for (let i = 0; i < 34; i++) {
+      const a = Math.sin(i * 12.9898) * 43758.5453, b = Math.sin(i * 78.233) * 12345.678, c = Math.sin(i * 39.425) * 9876.543;
+      const r = (n) => n - Math.floor(n);
+      const hard = i % 7 === 3, period = 5 + Math.round(r(c) * 4), delay = -Math.round(r(a + b) * period * 10) / 10;
+      drops.push({ x: Math.round((r(a) * 90 + 5) * 10) / 10, y: Math.round((r(b) * 88 + 6) * 10) / 10, size: hard ? 260 : 120 + Math.round(r(c) * 80), colour: hard ? "#E8E4DC" : "#A1A1A6", period, delay, delay2: delay + 0.35, delay3: delay + 0.7 });
+    }
+    return { drops };
+  }
+}
+</script>
+</body>
+</html>

@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { ChevronRight, KeyRound, Loader2 } from "lucide-react";
+import { ArrowRight, KeyRound, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { CONSENT_CODE_PARAM } from "@/convex/magicLinkUrlService";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
+import { Button } from "@/src/ui/components/screens/Button";
+import { Eyebrow, IconDisc, RainSplit, ScreenCopy, ScreenTitle, primaryLinkClassName } from "@/src/ui/components/public/RainSplit";
 
 /**
  * The page a sign-in link lands on, which deliberately does nothing on arrival.
@@ -29,14 +32,20 @@ import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
  * Those exist and are rarer; if one turns up, the answer is not another round
  * of this arms race but the typed one-time code, which is immune by
  * construction because nothing in the email can spend it.
+ *
+ * Its three states — nearly there, link used, link incomplete — are drawn on
+ * the "Hakken home page" canvas, approved 2026-10-29 (before-sign-in-plan.md;
+ * verifyLook.test holds them), in plain words.
  */
 export default function VerifyPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { signIn } = useAuthActions();
+  const tLanding = useTranslations("landing");
   const code = searchParams.get(CONSENT_CODE_PARAM);
   const redirectTo = sanitizeAuthRedirect(searchParams.get("redirectTo"));
   const [state, setState] = useState<"idle" | "signingIn" | "failed">("idle");
+  const copyright = tLanding("copyright", { year: new Date().getFullYear() });
 
   const handleSignIn = async () => {
     if (!code || state === "signingIn") return;
@@ -65,57 +74,54 @@ export default function VerifyPage() {
   };
 
   if (!code || state === "failed") {
+    const used = state === "failed";
     return (
-      <div className="flex flex-col gap-4 text-center">
-        <h1 className="text-xl font-semibold">
-          {state === "failed" ? "That link has already been used" : "This link is incomplete"}
-        </h1>
-        <p className="text-sm text-secondary">
-          {state === "failed"
-            ? "A sign-in link works once. Ask for a new one, or sign in with a typed code instead."
-            : "It may have been shortened or rewritten in transit. Ask for a new one, or sign in with a typed code instead."}
-        </p>
-        <Link
-          href="/login"
-          className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-brand px-4 py-3 text-sm font-semibold"
-        >
-          Back to sign in
-          <ChevronRight className="h-4 w-4" />
+      <RainSplit name="verify" width="narrow" copyright={copyright}>
+        <Eyebrow>Sign in</Eyebrow>
+        <ScreenTitle>{used ? "This sign-in link has been used" : "This link didn't come through properly"}</ScreenTitle>
+        <ScreenCopy>
+          {used
+            ? "A sign-in link only works once. Go back and ask for a new one, or sign in with a code instead."
+            : "Part of it went missing on the way. Go back and ask for a new one, or sign in with a code instead."}
+        </ScreenCopy>
+        <Link href="/login" data-part="primary-action" className={primaryLinkClassName}>
+          <span>Back to sign in</span>
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
-      </div>
+      </RainSplit>
     );
   }
 
   return (
-    <div className="flex flex-col gap-5 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
-        <KeyRound className="h-5 w-5 text-brand" />
-      </div>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">Confirm it is you</h1>
-        <p className="text-sm text-secondary">
-          One more press and you are in. This step exists because some company mail systems open
-          links before you do, and a sign-in link only works once.
-        </p>
-      </div>
-      <button
-        type="button"
+    <RainSplit name="verify" width="narrow" copyright={copyright}>
+      <Eyebrow>Sign in</Eyebrow>
+      <IconDisc tone="brand">
+        <KeyRound className="h-5 w-5" />
+      </IconDisc>
+      <ScreenTitle>Nearly there</ScreenTitle>
+      <ScreenCopy>
+        Press the button to finish signing in. We ask for this because some work email systems open links by
+        themselves, and a sign-in link only works once.
+      </ScreenCopy>
+      <Button
+        variant="primary"
         onClick={handleSignIn}
+        data-part="primary-action"
         disabled={state === "signingIn"}
-        className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-brand px-4 py-3 text-sm font-semibold disabled:opacity-70"
+        className="flex w-max items-center gap-2.5 px-[22px] py-[13px] text-[15px]"
       >
         {state === "signingIn" ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Signing you in
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <span>Signing you in</span>
           </>
         ) : (
           <>
-            Sign in
-            <ChevronRight className="h-4 w-4" />
+            <span>Sign in</span>
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </>
         )}
-      </button>
-    </div>
+      </Button>
+    </RainSplit>
   );
 }

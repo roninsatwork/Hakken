@@ -1,0 +1,9 @@
+# From the email · confirm it is you — the approved look (board "VerifyConfirm" of docs/plans/assets/before-sign-in/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+verify
+  hero: Nearly there
+    hero-copy
+    primary-action: Sign in
+    copyright
+  rain

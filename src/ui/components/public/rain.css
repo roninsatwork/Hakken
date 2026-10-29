@@ -1,0 +1,132 @@
+/*
+ * The look of every screen before sign-in: the titles' sizes and the rain.
+ *
+ * Scoped under .public-home, which each of those routes' layouts wears.
+ * Colours are the app's theme variables (globals.css, from hakken.theme.json),
+ * never written here, so the pages follow the saved look like every screen
+ * behind sign-in. The approved drawings are docs/plans/assets/home-page/ and
+ * docs/plans/assets/before-sign-in/.
+ */
+
+/* globals.css fixes every h1 at the heading size with !important and leaves
+   --h1-size-override as the one way past it (the dashboard's hero uses it too). */
+.public-home .hk-home-title {
+  --h1-size-override: clamp(56px, 7vw, 76px);
+  font-size: clamp(56px, 7vw, 76px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.public-home .hk-screen-title {
+  --h1-size-override: clamp(36px, 4vw, 48px);
+  font-size: clamp(36px, 4vw, 48px);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* A slow sheen over the ground, so the dark half is never quite still. */
+.public-home .hk-rain-sheen {
+  background-image: linear-gradient(180deg, var(--bg-sidebar) 0%, var(--bg-main) 50%, var(--bg-sidebar) 100%);
+  animation: hk-sheen 9s ease-in-out infinite alternate;
+}
+
+/* A drop is a point; its splash and three rings are drawn around it. */
+.public-home .hk-drop {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.public-home .hk-splash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--text-primary);
+  opacity: 0;
+  animation: hk-splash var(--hk-period) ease-out infinite;
+  animation-delay: var(--hk-delay);
+}
+
+.public-home .hk-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--hk-size);
+  height: var(--hk-size);
+  border-radius: 50%;
+  border: 1.5px solid var(--hk-ring);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.04);
+  animation: hk-ripple var(--hk-period) cubic-bezier(0.16, 0.84, 0.44, 1) infinite;
+  animation-delay: var(--hk-delay);
+}
+
+.public-home .hk-ring-2 {
+  border-width: 1px;
+  animation-delay: calc(var(--hk-delay) + 0.35s);
+}
+
+.public-home .hk-ring-3 {
+  border-width: 1px;
+  border-color: var(--border-subtle);
+  animation-delay: calc(var(--hk-delay) + 0.7s);
+}
+
+@keyframes hk-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.04);
+    opacity: 0;
+  }
+  4% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes hk-splash {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  3% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+  }
+  14% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hk-sheen {
+  0% {
+    transform: translateY(-8%);
+  }
+  100% {
+    transform: translateY(8%);
+  }
+}
+
+/* Still rain for anyone who asks for it: faint rings where the drops would land. */
+@media (prefers-reduced-motion: reduce) {
+  .public-home .hk-rain-sheen,
+  .public-home .hk-splash,
+  .public-home .hk-ring {
+    animation: none;
+  }
+  .public-home .hk-ring-1 {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+}

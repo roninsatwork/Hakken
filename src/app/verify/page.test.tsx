@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, renderWithProviders as render, screen, waitFor } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import VerifyPage from "./page";
@@ -32,6 +32,7 @@ describe("VerifyPage", () => {
     signInMock.mockResolvedValue({ signingIn: true });
     render(<VerifyPage />);
 
+    expect(screen.getByRole("heading", { name: "Nearly there" })).toBeInTheDocument();
     expect(signInMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
@@ -41,11 +42,11 @@ describe("VerifyPage", () => {
     });
   });
 
-  it("shows the existing incomplete-link state without a code", () => {
+  it("shows the incomplete-link state without a code", () => {
     searchParamsGetMock.mockReturnValue(null);
     render(<VerifyPage />);
 
-    expect(screen.getByRole("heading", { name: "This link is incomplete" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "This link didn't come through properly" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /back to sign in/i })).toHaveAttribute(
       "href",
       "/login",
@@ -53,14 +54,14 @@ describe("VerifyPage", () => {
     expect(signInMock).not.toHaveBeenCalled();
   });
 
-  it("keeps the existing spent-link state when redemption fails", async () => {
+  it("shows the used-link state when redemption fails", async () => {
     signInMock.mockRejectedValue(new Error("spent"));
     render(<VerifyPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(
-      await screen.findByRole("heading", { name: "That link has already been used" }),
+      await screen.findByRole("heading", { name: "This sign-in link has been used" }),
     ).toBeInTheDocument();
     expect(replaceMock).not.toHaveBeenCalled();
   });

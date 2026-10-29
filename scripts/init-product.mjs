@@ -119,17 +119,6 @@ export function planProduct(root, config) {
   layout = replaceOnce(layout, 'description: "Hakken Living Dossier",', "description: productIdentity.description,", "Page description");
   add("src/app/layout.tsx", layout);
 
-  const navPath = "src/app/(public)/_components/PublicNav.tsx";
-  let nav = importIdentity(read(navPath), CONFIG_IMPORT, true);
-  nav = replaceOnce(nav, ">HAKKEN</span>", ">{productIdentity.name.toUpperCase()}</span>", "Public navigation name");
-  add(navPath, nav);
-  const footerPath = "src/app/(public)/_components/PublicFooter.tsx";
-  let footer = importIdentity(read(footerPath), CONFIG_IMPORT);
-  footer = replaceOnce(footer, ">HAKKEN</span>", ">{productIdentity.name.toUpperCase()}</span>", "Public footer name");
-  footer = replaceOnce(footer, "} Hakken. All rights reserved.", "} {productIdentity.name}. All rights reserved.", "Copyright name");
-  footer = replaceOnce(footer, "備え — to be prepared. The production layer behind AI products,\n              already built and running, so your budget goes on the part only\n              you can make.", "{productIdentity.tagline}", "Public footer description");
-  add(footerPath, footer);
-
   const settingsPath = "convex/settingsService.ts";
   let settings = importIdentity(read(settingsPath), BACKEND_IMPORT);
   settings = replaceOnce(settings, 'platformName: "Hakken",', "platformName: productIdentity.name,", "Default platform name");

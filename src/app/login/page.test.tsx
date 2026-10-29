@@ -23,6 +23,7 @@ vi.mock("convex/react", () => ({
   useMutation: () => recordMagicLinkRequestAttemptMock,
 }));
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("@/convex/_generated/api", () => ({
   api: {
     authEvents: {
@@ -34,24 +35,6 @@ vi.mock("@/convex/_generated/api", () => ({
   },
 }));
 
-vi.mock("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: (props: React.HTMLAttributes<HTMLDivElement> & {
-      initial?: unknown;
-      animate?: unknown;
-      exit?: unknown;
-      transition?: unknown;
-    }) => <div className={props.className}>{props.children}</div>,
-    form: (props: React.FormHTMLAttributes<HTMLFormElement> & {
-      initial?: unknown;
-      animate?: unknown;
-      exit?: unknown;
-      transition?: unknown;
-    }) => <form className={props.className} onSubmit={props.onSubmit}>{props.children}</form>,
-  },
-}));
-
 function renderLoginPage() {
   return render(
     <NextIntlClientProvider locale="en" messages={messages}>
@@ -59,6 +42,8 @@ function renderLoginPage() {
     </NextIntlClientProvider>
   );
 }
+
+const SENT = "If that address has a Hakken account, a sign-in link is on its way. If it hasn't arrived in a minute, check your junk folder.";
 
 describe("LoginPage", () => {
   beforeEach(() => {
@@ -68,15 +53,15 @@ describe("LoginPage", () => {
     searchParamsGetMock.mockReturnValue(null);
   });
 
-  it("requests email magic links with the app redirect and renders neutral success copy", async () => {
+  it("requests email sign-in links with the app redirect and renders neutral success copy", async () => {
     signInMock.mockResolvedValueOnce(undefined);
     recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true, allowed: true });
     renderLoginPage();
 
-    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+    fireEvent.change(screen.getByLabelText("Your email address"), {
       target: { value: "member@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send magic link/i }));
+    fireEvent.click(screen.getByRole("button", { name: /email me a sign-in link/i }));
 
     await waitFor(() => {
       expect(recordMagicLinkRequestAttemptMock).toHaveBeenCalledWith({
@@ -90,7 +75,7 @@ describe("LoginPage", () => {
     });
 
     expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
-    expect(screen.getByText("If this email is invited, you will receive a sign-in link shortly.")).toBeInTheDocument();
+    expect(screen.getByText(SENT)).toBeInTheDocument();
     expect(screen.queryByText(/member@example.com/)).not.toBeInTheDocument();
   });
 
@@ -99,13 +84,13 @@ describe("LoginPage", () => {
     recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true, allowed: true });
     renderLoginPage();
 
-    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+    fireEvent.change(screen.getByLabelText("Your email address"), {
       target: { value: "unknown@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send magic link/i }));
+    fireEvent.click(screen.getByRole("button", { name: /email me a sign-in link/i }));
 
     expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
-    expect(screen.getByText("If this email is invited, you will receive a sign-in link shortly.")).toBeInTheDocument();
+    expect(screen.getByText(SENT)).toBeInTheDocument();
     expect(screen.queryByText(/unknown@example.com/)).not.toBeInTheDocument();
   });
 
@@ -115,10 +100,10 @@ describe("LoginPage", () => {
     recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true, allowed: false });
     renderLoginPage();
 
-    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+    fireEvent.change(screen.getByLabelText("Your email address"), {
       target: { value: "busy@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send magic link/i }));
+    fireEvent.click(screen.getByRole("button", { name: /email me a sign-in link/i }));
 
     expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
     expect(signInMock).not.toHaveBeenCalled();
@@ -131,10 +116,10 @@ describe("LoginPage", () => {
     recordMagicLinkRequestAttemptMock.mockRejectedValueOnce(new Error("unavailable"));
     renderLoginPage();
 
-    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+    fireEvent.change(screen.getByLabelText("Your email address"), {
       target: { value: "member@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send magic link/i }));
+    fireEvent.click(screen.getByRole("button", { name: /email me a sign-in link/i }));
 
     await waitFor(() => {
       expect(signInMock).toHaveBeenCalledWith("resend", {
@@ -200,7 +185,7 @@ describe("LoginPage one-time code", () => {
   });
 
   const typeEmail = () => {
-    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+    fireEvent.change(screen.getByLabelText("Your email address"), {
       target: { value: "anthony@ronins.co.uk" },
     });
   };
@@ -208,13 +193,18 @@ describe("LoginPage one-time code", () => {
   const askForCode = async () => {
     typeEmail();
     fireEvent.click(screen.getByText("Email me a code instead"));
-    await waitFor(() => screen.getByPlaceholderText("Six-digit code"));
+    await waitFor(() => screen.getByRole("group", { name: "Six-digit code" }));
+  };
+
+  /** A code arrives as a paste or an auto-fill into the first box, as often as it is typed. */
+  const pasteCode = (code: string) => {
+    fireEvent.paste(screen.getByLabelText("Digit 1"), { clipboardData: { getData: () => code } });
   };
 
   it("offers a code without taking either other way in away", () => {
     renderLoginPage();
 
-    expect(screen.getByText("Send Magic Link")).toBeInTheDocument();
+    expect(screen.getByText("Email me a sign-in link")).toBeInTheDocument();
     expect(screen.getByText("Email me a code instead")).toBeInTheDocument();
     expect(screen.getByText("Continue with Google")).toBeInTheDocument();
   });
@@ -250,8 +240,8 @@ describe("LoginPage one-time code", () => {
     await askForCode();
     signInMock.mockClear();
 
-    fireEvent.change(screen.getByPlaceholderText("Six-digit code"), { target: { value: "123 456" } });
-    fireEvent.click(screen.getByText("Sign in"));
+    pasteCode("123 456");
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() =>
       expect(signInMock).toHaveBeenCalledWith("one-time-code", {
@@ -269,9 +259,20 @@ describe("LoginPage one-time code", () => {
     await askForCode();
 
     signInMock.mockRejectedValueOnce(new Error("refused"));
-    fireEvent.change(screen.getByPlaceholderText("Six-digit code"), { target: { value: "000000" } });
-    fireEvent.click(screen.getByText("Sign in"));
+    pasteCode("000000");
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await waitFor(() => expect(screen.getByText(/not right/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/doesn't match/)).toBeInTheDocument());
+  });
+
+  it("goes back to the email form from the code screen", async () => {
+    recordMagicLinkRequestAttemptMock.mockResolvedValue(true);
+    signInMock.mockResolvedValue(undefined);
+    renderLoginPage();
+    await askForCode();
+
+    fireEvent.click(screen.getByText("Use a different email"));
+
+    expect(screen.getByLabelText("Your email address")).toBeInTheDocument();
   });
 });

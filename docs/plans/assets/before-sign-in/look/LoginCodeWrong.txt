@@ -1,0 +1,11 @@
+# Sign in · wrong code — the approved look (board "LoginCodeWrong" of docs/plans/assets/before-sign-in/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+sign-in
+  hero: Welcome back
+    hero-copy
+    code-boxes: Six-digit code
+    primary-action: Sign in
+    link: Use a different email
+    copyright
+  rain

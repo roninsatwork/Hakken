@@ -297,8 +297,7 @@ Use the feature sections above and the owning guide to decide where a value belo
 | `LOCAL_TEST_AUTH_ENVIRONMENT` | [convex/auth.ts](../../convex/auth.ts) |
 | `LOCAL_TEST_AUTH_SECRET` | [convex/localTestAuth.ts](../../convex/localTestAuth.ts) |
 | `NEXT_PUBLIC_APP_URL` | [convex/invites.ts](../../convex/invites.ts) |
-| `NEXT_PUBLIC_COMPANY_URL` | [src/app/(public)/_components/PublicFooter.tsx](../../src/app/(public)/_components/PublicFooter.tsx) |
-| `NEXT_PUBLIC_CONTACT_URL` | [src/app/(public)/_components/ContactLink.tsx](../../src/app/(public)/_components/ContactLink.tsx) |
+| `NEXT_PUBLIC_CONTACT_URL` | Nothing since 2026-10-29: the home page rebuild removed the contact link that read it. `Dockerfile` and `deploy.yml` still pass it; harmless. |
 | `NEXT_PUBLIC_CONVEX_URL` | [scripts/local-demo-seed.mjs](../../scripts/local-demo-seed.mjs) |
 | `NEXT_PUBLIC_E2E_AUTH_ENABLED` | [src/context/ConvexClientProvider.tsx](../../src/context/ConvexClientProvider.tsx) |
 | `NEXT_PUBLIC_E2E_AUTH_ENVIRONMENT` | [src/context/ConvexClientProvider.tsx](../../src/context/ConvexClientProvider.tsx) |

@@ -2,6 +2,8 @@
 
 Last reviewed: 2026-07-30
 Status: active — Phase 0 in progress
+
+> **Superseded for the home page on 2026-10-29** by [home-page-plan.md](home-page-plan.md): `/` is now one dark screen in the app's own look, so the cream palette, the forest hero panel, the pill header, the nav and footer and the 2026-07-30 hero line below no longer apply to it. The login page still wears `public.css`. The rest of this plan (further public pages, contact) is unbuilt and stands as written.
 Audience: agents building the public (pre-login) marketing site. Read this whole document before touching `src/app/(public)` or any public-facing copy. Decisions below are Anthony's and are not to be re-litigated without asking him.
 
 ## Purpose

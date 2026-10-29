@@ -71,7 +71,6 @@
     "exceljs": "^4.4.0",
     "fflate": "^0.8.3",
     "framer-motion": "^14.6.0",
-    "gsap": "^3.15.0",
     "html2canvas": "^1.4.1",
     "intl-messageformat": "12.1.4",
     "lucide-react": "^1.61.0",

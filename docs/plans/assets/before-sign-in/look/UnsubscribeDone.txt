@@ -1,0 +1,8 @@
+# Unsubscribe · done — the approved look (board "UnsubscribeDone" of docs/plans/assets/before-sign-in/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+unsubscribe
+  hero: You're unsubscribed
+    hero-copy
+    copyright
+  rain

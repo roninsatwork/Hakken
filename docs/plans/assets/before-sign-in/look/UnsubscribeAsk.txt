@@ -1,0 +1,9 @@
+# Unsubscribe · stop these emails? — the approved look (board "UnsubscribeAsk" of docs/plans/assets/before-sign-in/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+unsubscribe
+  hero: Stop Weekly News Digest emails?
+    hero-copy
+    primary-action: Stop these emails
+    copyright
+  rain
