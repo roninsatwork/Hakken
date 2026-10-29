@@ -18142,7 +18142,7 @@
       "rowVisits": "{count, plural, one {# visit} other {# visits}}",
       "rowTimes": "{count, plural, one {# time} other {# times}}",
       "rowRate": "{rate} of all visits",
-      "hover": "{event} → {kind}: {value}",
+      "hover": "{event} → {kind}\n{value}",
       "shadesCount": "a smaller to a bigger share of the row",
       "shadesRate": "a lower to a higher rate",
       "empty": "none",
@@ -18156,8 +18156,8 @@
         "times": "Times",
         "rate": "Rate"
       },
-      "hoverRate": "{event} → {kind}: {value}, {did, number} of {visits, plural, one {# visit} other {# visits}}",
-      "hoverBefore": ", {before} {value} ({change})"
+      "hoverRate": "{event} → {kind}\n{value}\n{did, number} of {visits, plural, one {# visit} other {# visits}}",
+      "hoverBefore": "\n{before} {value} ({change})"
     }
   },
   "bingWebmaster": {

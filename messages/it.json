@@ -18142,7 +18142,7 @@
       "rowVisits": "{count, plural, one {# visita} other {# visite}}",
       "rowTimes": "{count, plural, one {# volta} other {# volte}}",
       "rowRate": "{rate} di tutte le visite",
-      "hover": "{kind} ← {event}: {value}",
+      "hover": "{kind} ← {event}\n{value}",
       "shadesCount": "da una quota minore a una maggiore della riga",
       "shadesRate": "da un tasso più basso a uno più alto",
       "empty": "nessuna",
@@ -18156,8 +18156,8 @@
         "times": "Volte",
         "rate": "Tasso"
       },
-      "hoverRate": "{kind} ← {event}: {value}, {did, number} su {visits, plural, one {# visita} other {# visite}}",
-      "hoverBefore": ", {before}: {value} ({change})"
+      "hoverRate": "{kind} ← {event}\n{value}\n{did, number} su {visits, plural, one {# visita} other {# visite}}",
+      "hoverBefore": "\n{before}: {value} ({change})"
     }
   },
   "bingWebmaster": {
