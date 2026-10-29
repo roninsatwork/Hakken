@@ -97,7 +97,7 @@ const connectionOf = (t: Harness, connectionId: Id<"googleAnalyticsConnections">
 
 /** Rows as plain objects, as a query hands them back. */
 const plain = (rows: ReturnType<typeof unpackPart>) =>
-  rows.map((row) => ({ ...row, counts: Object.fromEntries(row.counts), values: Object.fromEntries(row.values) }));
+  rows.map((row) => ({ ...row, counts: Object.fromEntries(row.counts), values: Object.fromEntries(row.values), eventVisits: Object.fromEntries(row.eventVisits ?? []), eventTimes: Object.fromEntries(row.eventTimes ?? []) }));
 
 /** A kept day's rows for a list and device. */
 const dayRows = (t: Harness, siteId: Id<"companyWebsites">, list: "total" | "channel", device: string, day: string) =>

@@ -43,6 +43,9 @@ export const analyticsChart = tenantQuery({
       /** Page views (GA26): Overview's chart leads with them. */
       views: v.number(),
       conversions: v.number(),
+      /** Each counted event's visits and times that day (conversion-charts-plan.md): Google's own count stands in on a day kept before both units were. */
+      eventVisits: v.optional(v.array(v.number())),
+      eventTimes: v.optional(v.array(v.number())),
       value: v.number(),
       events: v.array(v.number()),
     })),
@@ -63,7 +66,12 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   if (!connection?.newestDay) return { points: [], events };
   const point = (day: string, row: ListRow, lastDay?: string) => {
     const { conversions, value } = conversionsOf(row, counted);
-    return { day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
+    return {
+      day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, conversions, value,
+      events: events.map((event) => row.counts.get(event) ?? 0),
+      eventVisits: events.map((event) => row.eventVisits?.get(event) ?? row.counts.get(event) ?? 0),
+      eventTimes: events.map((event) => row.eventTimes?.get(event) ?? row.counts.get(event) ?? 0),
+    };
   };
   // The website's totals stored a day, then a week, then a month (ga-stored-figures-plan.md SF12): any dates.
   const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
@@ -108,7 +116,7 @@ export const analyticsPeriodBeforeChart = tenantQuery({
     held: v.boolean(),
     /** The days each point is moved forward by: the period's length. */
     shift: v.number(),
-    points: v.array(v.object({ day: v.string(), visits: v.number(), conversions: v.number(), events: v.array(v.number()) })),
+    points: v.array(v.object({ day: v.string(), visits: v.number(), conversions: v.number(), events: v.array(v.number()), eventVisits: v.optional(v.array(v.number())), eventTimes: v.optional(v.array(v.number())) })),
     /** The counted events, in the order of each point's `events`: the chart's own order. */
     events: v.array(v.string()),
   }),
@@ -144,6 +152,8 @@ export const analyticsPeriodBeforeChart = tenantQuery({
           visits: row.visits,
           conversions: conversionsOf(row, counted).conversions,
           events: events.map((event) => row.counts.get(event) ?? 0),
+          eventVisits: events.map((event) => row.eventVisits?.get(event) ?? row.counts.get(event) ?? 0),
+          eventTimes: events.map((event) => row.eventTimes?.get(event) ?? row.counts.get(event) ?? 0),
         };
       }),
       events,

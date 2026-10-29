@@ -18109,6 +18109,52 @@
       "perConversionRowDated": "{date}: {visits, plural, one {# visita} other {# visite}}, {conversions, plural, =0 {nessuna conversione} one {# conversione} other {# conversioni}}",
       "perConversionNone": "Nessuna delle conversioni spuntate è avvenuta in queste date, quindi non c'è un dato da disegnare.",
       "perConversionCsv": "Visite per una conversione"
+    },
+    "conversionsMap": {
+      "title": "Conversioni",
+      "linesTitle": "Conversioni nel tempo per tipo",
+      "timeTitle": "Una conversione, giorno per giorno",
+      "count": "Conteggio",
+      "counts": {
+        "visits": "Visite",
+        "rate": "Tasso di conversione",
+        "events": "Eventi"
+      },
+      "columns": "Colonne",
+      "columnsOf": {
+        "kind": "Tipo di pagina",
+        "channel": "Canale",
+        "device": "Dispositivo",
+        "country": "Paese"
+      },
+      "compare": "Confronta",
+      "compares": {
+        "none": "Niente"
+      },
+      "conversion": "Conversione",
+      "show": "Mostra",
+      "shows": {
+        "rate": "Tasso di conversione",
+        "per": "Visite per conversione"
+      },
+      "new": "nuovo",
+      "notCounted": " · non contata",
+      "rowVisits": "{count, plural, one {# visita} other {# visite}}",
+      "rowTimes": "{count, plural, one {# volta} other {# volte}}",
+      "rowRate": "{rate} di tutte le visite",
+      "hover": "{kind} ← {event}: {value}",
+      "shadesCount": "da una quota minore a una maggiore della riga",
+      "shadesRate": "da un tasso più basso a uno più alto",
+      "empty": "nessuna",
+      "nothing": "Nessuna conversione in queste date.",
+      "noDays": "Nessun giorno conservato per queste date.",
+      "detail": "{visits, plural, one {# visita} other {# visite}}, {did} con {event}",
+      "csv": {
+        "day": "giorno",
+        "visits": "visite",
+        "did": "visite con essa",
+        "times": "volte"
+      }
     }
   },
   "bingWebmaster": {

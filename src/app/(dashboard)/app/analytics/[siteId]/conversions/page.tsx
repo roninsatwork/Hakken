@@ -29,7 +29,8 @@ import { changeOf, formatMoney, formatPercent } from "../../_components/analytic
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
 import { ConversionsChart } from "../../_components/AnalyticsChart";
-import { BeforeConvertingCard, ConversionFlowCard, ConversionsByKind, VisitsPerConversionCard, useFlowKindName } from "../../_components/ConversionParts";
+import { BeforeConvertingCard, ConversionFlowCard, useFlowKindName } from "../../_components/ConversionParts";
+import { ConversionsByKindCard, ConversionsMapCard, ConversionsOverTimeCard } from "../../_components/ConversionsCards";
 
 /**
  * Conversions, with Events merged in (docs/plans/active/ga-conversions-visitors-plan.md
@@ -174,14 +175,10 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
         currency={currency}
       />
       <ConversionFlowCard flow={flow} currency={currency} />
-      <ConversionsByKind flow={flow} />
-      <VisitsPerConversionCard
-        days={chart?.points ?? []}
-        events={chart?.events ?? []}
-        figures={answer ? { visits: answer.visits, visitsBefore: answer.visitsBefore, kinds: answer.kinds } : null}
-        from={answer?.from ?? null}
-        to={answer?.to ?? null}
-      />
+      {/* The three shared parts (conversion-charts-plan.md, 2026-10-29): the map and the line in place of the grid and "Visits needed". */}
+      <ConversionsMapCard />
+      <ConversionsByKindCard />
+      <ConversionsOverTimeCard />
       <BeforeConvertingCard before={answer?.before ?? null} />
       <EventsTable status={status} />
     </div>

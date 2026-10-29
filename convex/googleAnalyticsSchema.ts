@@ -290,6 +290,13 @@ export const analyticsPackedRows = {
   counts: v.array(v.string()),
   /** The value Analytics gave each event, in hundredths, one packed column per event. */
   values: v.array(v.string()),
+  /**
+   * Each event's visits (`sessions` with the event, counted once a visit) and times (`eventCount`), one packed column
+   * per event, beside `counts` (Google's own unit for the event, which every older screen reads): the Conversions
+   * parts' Visits and Events counts (conversion-charts-plan.md). Missing on a part kept before 2026-10-29.
+   */
+  eventVisits: v.optional(v.array(v.string())),
+  eventTimes: v.optional(v.array(v.string())),
 };
 
 /** What Google said it left out of a list (§2.5): the screens say so. */

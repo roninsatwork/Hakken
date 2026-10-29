@@ -18109,6 +18109,52 @@
       "perConversionRowDated": "{date}: {visits, plural, one {# visit} other {# visits}}, {conversions, plural, =0 {no conversion} one {# conversion} other {# conversions}}",
       "perConversionNone": "None of the ticked conversions happened in these dates, so there is no figure to draw.",
       "perConversionCsv": "Visits for one conversion"
+    },
+    "conversionsMap": {
+      "title": "Conversions",
+      "linesTitle": "Conversions over time by kind",
+      "timeTitle": "One conversion, day by day",
+      "count": "Count",
+      "counts": {
+        "visits": "Visits",
+        "rate": "Conversion rate",
+        "events": "Events"
+      },
+      "columns": "Columns",
+      "columnsOf": {
+        "kind": "Page kind",
+        "channel": "Channel",
+        "device": "Device",
+        "country": "Country"
+      },
+      "compare": "Compare",
+      "compares": {
+        "none": "Nothing"
+      },
+      "conversion": "Conversion",
+      "show": "Show",
+      "shows": {
+        "rate": "Conversion rate",
+        "per": "Visits per conversion"
+      },
+      "new": "new",
+      "notCounted": " · not counted",
+      "rowVisits": "{count, plural, one {# visit} other {# visits}}",
+      "rowTimes": "{count, plural, one {# time} other {# times}}",
+      "rowRate": "{rate} of all visits",
+      "hover": "{event} → {kind}: {value}",
+      "shadesCount": "a smaller to a bigger share of the row",
+      "shadesRate": "a lower to a higher rate",
+      "empty": "none",
+      "nothing": "Nothing converted in these dates.",
+      "noDays": "No days are held for these dates.",
+      "detail": "{visits, plural, one {# visit} other {# visits}}, {did} with {event}",
+      "csv": {
+        "day": "day",
+        "visits": "visits",
+        "did": "visits with it",
+        "times": "times"
+      }
     }
   },
   "bingWebmaster": {

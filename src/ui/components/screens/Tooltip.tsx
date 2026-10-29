@@ -15,12 +15,12 @@ import { LAYER } from "@/src/ui/lib/layers";
  * keeps its own `aria-label`; the tooltip adds the description. Escape hides
  * it while the control keeps focus.
  */
-export function Tooltip({ label, children, shown: shownAtFirst = false }: { label: string; children: ReactElement<{ "aria-describedby"?: string }>; /** Shown from the start: the drawing kit's example. */ shown?: boolean }) {
+export function Tooltip({ label, children, shown: shownAtFirst = false, className = "relative inline-flex" }: { label: string; children: ReactElement<{ "aria-describedby"?: string }>; /** Shown from the start: the drawing kit's example. */ shown?: boolean; /** The wrapper's layout classes, for a wrapped part that must shrink or fill: never a colour. */ className?: string }) {
   const id = useId();
   const [shown, setShown] = useState(shownAtFirst);
   return (
     <span
-      className="relative inline-flex"
+      className={className}
       onMouseEnter={() => setShown(true)}
       onMouseLeave={() => setShown(false)}
       onFocus={() => setShown(true)}

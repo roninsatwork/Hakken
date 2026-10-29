@@ -12,7 +12,6 @@ import {
   LabelList,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -242,11 +241,23 @@ export function SiteLineChart({
   // Each scale once, coloured as its line when it holds only one.
   const axes = [...new Map(series.map((entry) => [axisOf(entry), entry])).entries()]
     .map(([id, entry]) => ({ id, entry, alone: series.filter((other) => axisOf(other) === id).length === 1 }));
+  // One line alone fills the area under it, its colour fading to nothing at the axis (Anthony, 2026-10-29, every line
+  // chart, from Ahrefs' organic traffic); two or more lines stay bare, a comparison line included.
+  const filled = series.length === 1 && !series[0].dashed ? series[0] : null;
+  const fillId = `fill-${(filled?.key ?? "none").replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
     <GoogleUpdateFrame google={google}>
       <ChartReveal replay={revealKey(data, xKey)}>
         <ResponsiveContainer width="100%" height={height} debounce={50}>
-          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            {filled ? (
+              <defs>
+                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={filled.colour} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={filled.colour} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+            ) : null}
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
             <XAxis {...AXIS_PROPS} minTickGap={24} {...google.axis(xKey)} />
             {sharedScale && !scaleOf ? (
@@ -272,6 +283,21 @@ export function SiteLineChart({
               content={readout ? <ChartReadoutTooltip title={google.readoutTitle} render={readout} /> : <ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={lineLegend(google, updateKey, marked)} />
+            {filled ? (
+              <Area
+                yAxisId={axisOf(filled)}
+                type="monotone"
+                dataKey={filled.key}
+                stroke="none"
+                fill={`url(#${fillId})`}
+                legendType="none"
+                tooltipType="none"
+                activeDot={false}
+                dot={false}
+                connectNulls={!breakGaps}
+                isAnimationActive={false}
+              />
+            ) : null}
             {series.map((entry) => (
               <Line
                 key={entry.key}
@@ -288,7 +314,7 @@ export function SiteLineChart({
               />
             ))}
             <GoogleUpdateMarkers google={google} />
-          </LineChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </ChartReveal>
     </GoogleUpdateFrame>

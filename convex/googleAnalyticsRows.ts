@@ -70,6 +70,9 @@ export function addInto(target: ListRow, row: ListRow) {
   if (row.converting !== undefined) target.converting = (target.converting ?? 0) + row.converting;
   for (const [event, count] of row.counts) target.counts.set(event, (target.counts.get(event) ?? 0) + count);
   for (const [event, value] of row.values) target.values.set(event, (target.values.get(event) ?? 0) + value);
+  // Each event's visits and times, where the row carries them (conversion-charts-plan.md).
+  if (row.eventVisits) for (const [event, count] of row.eventVisits) (target.eventVisits ??= new Map()).set(event, (target.eventVisits.get(event) ?? 0) + count);
+  if (row.eventTimes) for (const [event, count] of row.eventTimes) (target.eventTimes ??= new Map()).set(event, (target.eventTimes.get(event) ?? 0) + count);
 }
 
 export function blank(key: string): ListRow {

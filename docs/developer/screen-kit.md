@@ -626,3 +626,19 @@ The drawing generator compiles `globals.css` with the saved theme record and ren
 `lookOutline` walks marked DOM parts, skips table bodies and masks numeric title data. It retains hierarchy, selected titles and table headings; it deliberately omits record rows and much visual detail. `expectApprovedLook` compares that outline with a saved plan asset using a file snapshot. The drift test verifies registered markers, that saved looks have matching test source references, and coverage of a particular approved Search Console board set. It does not discover every approved drawing across every external canvas or prove pixel-level equality. Updating an outline without the required design approval would remove evidence rather than fix a layout fault.
 
 Current color controls support optional alpha and default reset: the source can compose eight-digit hex when transparency is enabled. A schema builder's uppercase UI type names are separate from its lowercase wire format. Keep those distinctions when reading an old example or editing a new call site. No drawing, screenshot, browser, theme pull, saved-look update or test was performed by this documentation pass; examples and test declarations were read as implementation evidence.
+
+
+## Conversions parts
+
+Three shared parts for conversions, agreed on the Conversion charts canvas (conversion-charts-plan.md, 2026-10-29).
+Each card is its heading, its dropdowns, the chart and the key, and nothing else.
+
+- `ConversionsMap`: each conversion down the side, a kind across (page kind, channel, device or country), a square
+  in visits, as a rate of the column's visits, or in times; brighter for a bigger share of the row or a higher rate;
+  with Compare on, each square's change against the span before. Built on `ChannelMap`.
+- `ConversionsByKindChart`: one conversion a day, a line per kind, a tick box per line above the chart.
+- `ConversionsOverTimeChart`: one conversion a day as the share of visits that did it or the visits for one, with the
+  span before as a dashed grey line when compared.
+
+Every line chart (`SiteLineChart`) fills the area under a lone line, fading to nothing at the axis; two or more lines
+stay bare. The screen reads and chooses (`analytics/_components/ConversionsCards.tsx`); the parts draw.

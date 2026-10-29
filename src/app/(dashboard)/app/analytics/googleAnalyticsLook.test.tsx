@@ -4,7 +4,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHART, CONVERSIONS, DAYS_BEFORE, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, OVERVIEW_PANELS, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
+import { CHART, CONVERSIONS, CONVERSIONS_LINES, CONVERSIONS_MAP, COUNTRY_CHOICES, DAYS_BEFORE, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, OVERVIEW_PANELS, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
@@ -145,24 +145,69 @@ describe("Google Analytics' approved looks", () => {
   it("7 · Conversions, with every event", async () => {
     at("/app/analytics/site_1/conversions");
     answer({
+      ...{
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      // A key event not counted, as the drawing shows: the fourth figure says so.
-      "googleAnalyticsReads:analyticsConversions": { ...CONVERSIONS, fired: [{ eventName: "sign_up", count: 5 }] },
+      "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
       "googleAnalyticsChartReads:analyticsChart": CHART,
       "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
       "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST,
+      "googleAnalyticsConversionsMap:analyticsConversionsMap": CONVERSIONS_MAP,
+      "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
+      "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
+    },
+      // A key event not counted, as the drawing shows: the fourth figure says so.
+      "googleAnalyticsReads:analyticsConversions": { ...CONVERSIONS, fired: [{ eventName: "sign_up", count: 5 }] },
     });
     const { container } = render(<AnalyticsConversionsPage />);
     await screen.findAllByText("Contact form sent");
     await screen.findByText("Key events not counted");
     await screen.findByText("Not counted");
-    // Visits needed for one conversion (Anthony, 2026-10-20): the same figures as the top, now and the 30 days before.
-    await screen.findByText("Visits needed for one conversion");
-    screen.getByText("Last month: 105 visits for each conversion (2,412 visits, 23 conversions). The month before: 117 (2,225 visits, 19 conversions). Fewer is better. A day with no conversion has no figure, so the line skips it.");
+    // The three shared parts (conversion-charts-plan.md, 2026-10-29): the map, the lines by kind, one conversion a day.
+    await screen.findByText("Conversions over time by kind");
+    await screen.findByText("One conversion, day by day");
+    const map = (await screen.findByText("Service")).closest("[data-part='conversions-map']") as HTMLElement;
+    // Visits, the start: the contact form from Service pages, twelve visits.
+    expect(within(map).getByTitle("Contact form sent → Service: 12")).toHaveTextContent("12");
     await expectApprovedLook(container, "ga-conversions-visitors", "Conversions", "Google Analytics → Conversions");
   });
 
-  it("7 · visits needed for one conversion: a tick box for each kind, the line and figures counting only those ticked", async () => {
+  it("7 · the Conversions map: Count turns the squares into a rate or times, Compare adds each square's change", async () => {
+    // Each choice lives in the address (`mapCount`, `mapBy`, `mapCompare`): the screen is opened at each.
+    const mapAt = async (search: string) => {
+      cleanup();
+      at("/app/analytics/site_1/conversions", search);
+      answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
+      "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
+      "googleAnalyticsChartReads:analyticsChart": CHART,
+      "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
+      "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST,
+      "googleAnalyticsConversionsMap:analyticsConversionsMap": CONVERSIONS_MAP,
+      "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
+      "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
+    });
+      render(<AnalyticsConversionsPage />);
+      return (await screen.findByText("Service")).closest("[data-part='conversions-map']") as HTMLElement;
+    };
+    // A rate of the column's visits: 12 of 1,200 is 1.0%; 5 of 1,200 is 0.4%.
+    let map = await mapAt("mapCount=rate");
+    expect(within(map).getByTitle("Contact form sent → Service: 1.0%")).toHaveTextContent("1.0%");
+    expect(within(map).getByTitle("Phone number clicked → Service: 0.4%")).toHaveTextContent("0.4%");
+    // Times: the phone clicks happened eight times in five visits.
+    map = await mapAt("mapCount=events");
+    expect(within(map).getByTitle("Phone number clicked → Service: 8")).toHaveTextContent("8");
+    // Compared with the month before: the contact form up from nine to twelve; the phone clicks new.
+    map = await mapAt("mapCompare=before");
+    expect(within(map).getByTitle("Contact form sent → Service: 12")).toHaveTextContent("▲ 33.3%");
+    expect(within(map).getByTitle("Phone number clicked → Service: 5")).toHaveTextContent("new");
+    // The dropdowns name their choices.
+    const card = map.closest("[data-chart-export-root]") as HTMLElement;
+    expect(within(card).getByLabelText("Count")).toHaveValue("visits");
+    expect(within(card).getByLabelText("Compare")).toHaveValue("before");
+  });
+
+  it("7 · one conversion, day by day: the month before is read only when asked for", async () => {
+    const asked = () => vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("analyticsPeriodBeforeChart"));
     at("/app/analytics/site_1/conversions");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
@@ -170,33 +215,34 @@ describe("Google Analytics' approved looks", () => {
       "googleAnalyticsChartReads:analyticsChart": CHART,
       "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
       "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST,
+      "googleAnalyticsConversionsMap:analyticsConversionsMap": CONVERSIONS_MAP,
+      "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
+      "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
     });
     render(<AnalyticsConversionsPage />);
-    const card = (await screen.findByText("Visits needed for one conversion")).closest("[data-part='chart-card']") as HTMLElement;
-    // Anthony, 2026-10-20: "filters the conversion type such as click to apply now". Only the contact form, now and last year.
-    fireEvent.click(within(card).getByLabelText("Phone number clicked"));
-    fireEvent.click(within(card).getByLabelText("Email address clicked"));
-    await within(card).findByText(/^Last month, counting “Contact form sent”: 172 visits for each one \(2,412 visits, 14 conversions\)\. The month before: 202 \(2,225 visits, 11 conversions\)\./);
-    // The last box stays ticked: a chart with nothing ticked says nothing.
-    fireEvent.click(within(card).getByLabelText("Contact form sent"));
-    expect((within(card).getByLabelText("Contact form sent") as HTMLInputElement).checked).toBe(true);
-  });
-
-  it("7 · visits needed for one conversion over the last 3 months: no line for the span before, and the words say why", async () => {
-    at("/app/analytics/site_1/conversions", "period=last3Months");
+    await screen.findByText("One conversion, day by day");
+    expect(asked().length).toBeGreaterThan(0);
+    expect(asked().every(([, args]) => args === "skip")).toBe(true);
+    cleanup();
+    vi.mocked(useQuery).mockClear();
+    at("/app/analytics/site_1/conversions", "timeCompare=before");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
       "googleAnalyticsChartReads:analyticsChart": CHART,
       "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
       "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST,
+      "googleAnalyticsConversionsMap:analyticsConversionsMap": CONVERSIONS_MAP,
+      "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
+      "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
     });
     render(<AnalyticsConversionsPage />);
-    // Anthony, 2026-10-20: "only keep the second line for another 30 days or below". Past 90 days no day is kept.
-    await screen.findByText(/^Last 3 months: 105 visits for each conversion .* The 3 months before: 117 .* The line for the span before is drawn for the weeks and months only, where every day is kept\.$/);
-    const asks = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("analyticsPeriodBeforeChart"));
-    expect(asks.length).toBeGreaterThan(0);
-    expect(asks.every(([, args]) => args === "skip")).toBe(true);
+    await screen.findByText("One conversion, day by day");
+    await waitFor(() => expect(asked().some(([, args]) => args !== "skip")).toBe(true));
+    // The lines by kind draw a tick box per line.
+    const lines = (await screen.findByText("Conversions over time by kind")).closest("[data-chart-export-root]") as HTMLElement;
+    expect(within(lines).getByLabelText("Organic Search")).toBeInTheDocument();
+    expect(within(lines).getByLabelText("Direct")).toBeInTheDocument();
   });
 
   it("18 · nothing counted yet", async () => {

@@ -20,6 +20,9 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { Change } from "@/src/ui/components/screens/Change";
 import { ChangeBars } from "@/src/ui/components/screens/ChangeBars";
 import { ChannelMap } from "@/src/ui/components/screens/ChannelMap";
+import { ConversionsMap } from "@/src/ui/components/screens/ConversionsMap";
+import { ConversionsByKindChart } from "@/src/ui/components/screens/ConversionsByKindChart";
+import { ConversionsOverTimeChart } from "@/src/ui/components/screens/ConversionsOverTimeChart";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
@@ -347,6 +350,69 @@ const PARTS: Part[] = [
           { key: "b", label: "No page recorded", detail: "15 → 32", change: 17, hover: "15 visits in the 30 days before, 32 in the last 30 days", muted: true },
           { key: "c", label: "/ai-agency/", detail: "49 → 33", change: -16, hover: "49 visits in the 30 days before, 33 in the last 30 days", href: "#" },
         ]}
+      />
+    ),
+  },
+  {
+    id: "conversions-map",
+    name: "ConversionsMap — each conversion by page kind, channel, device or country",
+    source: "src/ui/components/screens/ConversionsMap.tsx",
+    use: "Conversions down the side, a kind across; a square in visits, as a rate of the column's visits, or in times, brighter for a bigger share of the row or a higher rate; Count, Columns and Compare dropdowns under the heading; a square's change against the month before when compared (conversion-charts-plan.md).",
+    render: () => (
+      <ConversionsMap
+        title="Conversions"
+        controls={<div className="flex flex-wrap items-center gap-2"><span className="text-[12px] text-secondary">Count: Visits · Columns: Page kind · Compare: The month before</span></div>}
+        columns={[
+          { key: "cupboards", name: "Cupboard Handles", visits: 6568, visitsBefore: 6100 },
+          { key: "brand", name: "Brand", visits: 3534, visitsBefore: 3300 },
+          { key: "unsorted", name: "Unclassified", visits: 6036, visitsBefore: 5800 },
+        ]}
+        rows={[
+          { eventName: "purchase", name: "Purchase", counted: true, cells: [{ visits: 236, times: 236, visitsBefore: 205, timesBefore: 205 }, { visits: 201, times: 201, visitsBefore: 190, timesBefore: 190 }, { visits: 292, times: 292, visitsBefore: 260, timesBefore: 260 }] },
+          { eventName: "add_to_cart", name: "Added to basket", counted: true, cells: [{ visits: 959, times: 4227, visitsBefore: 900, timesBefore: 4000 }, { visits: 640, times: 2818, visitsBefore: 700, timesBefore: 3100 }, { visits: 777, times: 3427, visitsBefore: 0, timesBefore: 0 }] },
+        ]}
+        count="visits"
+        compare
+        words={{ rowTotal: (row, total) => `${total.visits.toLocaleString("en-GB")} visits`, hover: (row, column, value) => `${row.name} → ${column.name}: ${value}`, shades: "a smaller to a bigger share of the row", empty: "none" }}
+        newWord="new"
+        exportName="conversions-map"
+        csv={() => ""}
+      />
+    ),
+  },
+  {
+    id: "conversions-by-kind",
+    name: "ConversionsByKindChart — one conversion, a line a day per channel, device or country",
+    source: "src/ui/components/screens/ConversionsByKindChart.tsx",
+    use: "A tick box per line above the chart; one line alone fills the area under it; hover a day for every line's visits and conversions (conversion-charts-plan.md).",
+    render: () => (
+      <ConversionsByKindChart
+        title="Conversions over time by kind"
+        controls={<span className="text-[12px] text-secondary">Conversion: Purchase · Count: Visits · Columns: Channel</span>}
+        columns={[{ key: "Organic Search", name: "Organic Search" }, { key: "Direct", name: "Direct" }]}
+        points={["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"].map((day, at) => ({ day, cells: [{ visits: 400 + at * 20, did: 14 + at, times: 14 + at }, { visits: 150 + at * 5, did: 6, times: 6 }] }))}
+        count="visits"
+        step="day"
+        words={{ detail: (visits, did) => `${visits} visits, ${did} with Purchase`, csvHead: { day: "day", visits: "visits", did: "visits with it", times: "times" } }}
+        exportName="conversions-by-kind"
+      />
+    ),
+  },
+  {
+    id: "conversions-over-time",
+    name: "ConversionsOverTimeChart — one conversion a day, as a rate or visits for one",
+    source: "src/ui/components/screens/ConversionsOverTimeChart.tsx",
+    use: "The share of each day's visits that converted, or the visits it took for one; the span before as a dashed grey line when compared; alone, the line fills the area under it (conversion-charts-plan.md).",
+    render: () => (
+      <ConversionsOverTimeChart
+        title="Conversions over time"
+        controls={<span className="text-[12px] text-secondary">Conversion: Purchase · Show: Conversion rate · Compare: Nothing</span>}
+        points={["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"].map((day, at) => ({ day, visits: 1200 + at * 40, did: 40 + at * 3 }))}
+        before={null}
+        show="rate"
+        step="day"
+        words={{ now: "Last month", beforeName: "The month before", detail: (visits, did) => `${visits} visits, ${did} with Purchase`, csvHead: { day: "day", visits: "visits", did: "visits with it", figure: "Conversion rate" } }}
+        exportName="conversions-over-time"
       />
     ),
   },

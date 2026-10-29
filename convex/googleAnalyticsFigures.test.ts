@@ -64,7 +64,7 @@ const rowsIn = (t: Harness, siteId: Id<"companyWebsites">, key: string) =>
       .query("googleAnalyticsPeriods")
       .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", siteId).eq("key", key).eq("slot", slot.slot))
       .collect();
-    return parts.flatMap((part) => unpackPart(part)).map(({ counts: _counts, values: _values, ...figures }) => figures);
+    return parts.flatMap((part) => unpackPart(part)).map(({ counts: _counts, values: _values, eventVisits: _eventVisits, eventTimes: _eventTimes, ...figures }) => figures);
   });
 
 // The fake property's visits over last month, September's 30 days, on the website's own address: 10 a day on phones, 6 on computers.

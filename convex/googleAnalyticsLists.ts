@@ -265,10 +265,13 @@ export type ListRow = {
   /** Each key event's count and value (in hundredths), by the event's name. */
   counts: Map<string, number>;
   values: Map<string, number>;
+  /** Each event's visits and times, by name (conversion-charts-plan.md): missing on a row kept, or built by a test, before 2026-10-29. */
+  eventVisits?: Map<string, number>;
+  eventTimes?: Map<string, number>;
 };
 
 export function emptyRow(key: string): ListRow {
-  return { key, visits: 0, engaged: 0, seconds: 0, views: 0, purchases: 0, revenue: 0, people: 0, newPeople: 0, length: 0, counts: new Map(), values: new Map() };
+  return { key, visits: 0, engaged: 0, seconds: 0, views: 0, purchases: 0, revenue: 0, people: 0, newPeople: 0, length: 0, counts: new Map(), values: new Map(), eventVisits: new Map(), eventTimes: new Map() };
 }
 
 const hundredths = (value: number) => Math.round(value * 100);
@@ -436,6 +439,9 @@ export function listJoiner(list: AnalyticsList, lead: readonly Lead[], perVisit:
         for (const target of targets(row.keys)) {
           target.counts.set(eventName, (target.counts.get(eventName) ?? 0) + count);
           target.values.set(eventName, (target.values.get(eventName) ?? 0) + hundredths(row.values[1] ?? 0));
+          // Both units kept whatever Google's own: visits with the event, and its times.
+          (target.eventVisits ??= new Map()).set(eventName, (target.eventVisits.get(eventName) ?? 0) + (row.values[2] ?? 0));
+          (target.eventTimes ??= new Map()).set(eventName, (target.eventTimes.get(eventName) ?? 0) + (row.values[0] ?? 0));
         }
       }
     },
@@ -484,6 +490,9 @@ export type PackedPart = {
   events: string[];
   counts: string[];
   values: string[];
+  /** One packed column per event: its visits and its times (conversion-charts-plan.md); missing on older parts. */
+  eventVisits?: string[];
+  eventTimes?: string[];
 };
 
 /**
@@ -536,6 +545,8 @@ function packPart(slice: readonly ListRow[], columns: PackColumns, events: reado
     events: [...events],
     counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
     values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
+    eventVisits: events.map((event) => packNumbers(slice.map((row) => row.eventVisits?.get(event) ?? 0))),
+    eventTimes: events.map((event) => packNumbers(slice.map((row) => row.eventTimes?.get(event) ?? 0))),
   };
 }
 
@@ -558,11 +569,15 @@ export class CompactRows {
   private readonly converting: number[] = [];
   private readonly counts: number[][];
   private readonly values: number[][];
+  private readonly eventVisits: number[][];
+  private readonly eventTimes: number[][];
   private readonly columns: PackColumns = { timed: false, carted: false, converts: false };
 
   constructor(readonly events: readonly string[]) {
     this.counts = events.map(() => []);
     this.values = events.map(() => []);
+    this.eventVisits = events.map(() => []);
+    this.eventTimes = events.map(() => []);
   }
 
   get size(): number {
@@ -582,6 +597,8 @@ export class CompactRows {
       this.events.forEach((event, at) => {
         this.counts[at].push(row.counts.get(event) ?? 0);
         this.values[at].push(row.values.get(event) ?? 0);
+        this.eventVisits[at].push(row.eventVisits?.get(event) ?? 0);
+        this.eventTimes[at].push(row.eventTimes?.get(event) ?? 0);
       });
     }
   }
@@ -595,6 +612,8 @@ export class CompactRows {
     if (this.columns.converts) row.converting = this.converting[at];
     row.counts = new Map(this.events.map((event, column) => [event, this.counts[column][at]]));
     row.values = new Map(this.events.map((event, column) => [event, this.values[column][at]]));
+    row.eventVisits = new Map(this.events.map((event, column) => [event, this.eventVisits[column][at]]));
+    row.eventTimes = new Map(this.events.map((event, column) => [event, this.eventTimes[column][at]]));
     return row;
   }
 
@@ -636,6 +655,8 @@ export function unpackPart(part: PackedPart): ListRow[] {
   const converting = part.converting ? unpackNumbers(part.converting) : null;
   const counts = part.counts.map((column) => unpackNumbers(column));
   const values = part.values.map((column) => unpackNumbers(column));
+  const eventVisits = (part.eventVisits ?? []).map((column) => unpackNumbers(column));
+  const eventTimes = (part.eventTimes ?? []).map((column) => unpackNumbers(column));
   return part.keys.map((key, index) => ({
     key,
     visits: visits[index] ?? 0,
@@ -652,6 +673,8 @@ export function unpackPart(part: PackedPart): ListRow[] {
     ...(converting ? { converting: converting[index] ?? 0 } : {}),
     counts: new Map(part.events.map((event, at) => [event, counts[at][index] ?? 0])),
     values: new Map(part.events.map((event, at) => [event, values[at][index] ?? 0])),
+    eventVisits: new Map(part.eventVisits ? part.events.map((event, at) => [event, eventVisits[at][index] ?? 0]) : []),
+    eventTimes: new Map(part.eventTimes ? part.events.map((event, at) => [event, eventTimes[at][index] ?? 0]) : []),
   }));
 }
 

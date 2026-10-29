@@ -316,3 +316,32 @@ export const LANDING_PAGE = {
   points: CHART.points.map(({ events: _events, ...point }) => point),
   channels: [CHANNEL],
 };
+
+/** The Conversions map (conversion-charts-plan.md): three page kinds across, three events down, both units, the span before held. */
+export const CONVERSIONS_MAP = {
+  collecting: false,
+  everyDevice: false,
+  bothUnits: true,
+  hasBefore: true,
+  columns: [
+    { key: "service", name: "Service", visits: 1200, visitsBefore: 1100 },
+    { key: "unsorted", name: null, visits: 900, visitsBefore: 950 },
+    { key: "none", name: null, visits: 312, visitsBefore: 175 },
+  ],
+  rows: [
+    { eventName: "generate_lead", counted: true, cells: [{ visits: 12, times: 12, visitsBefore: 9, timesBefore: 9 }, { visits: 2, times: 2, visitsBefore: 2, timesBefore: 2 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
+    { eventName: "click_tel", counted: true, cells: [{ visits: 5, times: 8, visitsBefore: 0, timesBefore: 0 }, { visits: 1, times: 1, visitsBefore: 1, timesBefore: 1 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
+    { eventName: "click_email", counted: true, cells: [{ visits: 3, times: 3, visitsBefore: 4, timesBefore: 4 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
+  ],
+};
+
+/** The lines by kind: the contact form a day, a line for Organic Search and one for Direct. */
+export const CONVERSIONS_LINES = {
+  held: true,
+  everyDevice: false,
+  bothUnits: true,
+  columns: [{ key: "Organic Search", name: "Organic Search" }, { key: "Direct", name: "Direct" }],
+  points: CHART.points.map((point, index) => ({ day: point.day, cells: [{ visits: 50 + (index % 5), did: index % 3 === 0 ? 1 : 0, times: index % 3 === 0 ? 1 : 0 }, { visits: 20, did: 0, times: 0 }] })),
+};
+
+export const COUNTRY_CHOICES = { main: "gbr", ready: [] as string[] };

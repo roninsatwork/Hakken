@@ -15,12 +15,24 @@ chart-card: Conversions over time
   checkbox: Value (£)
 chart-card: How visits reached a conversion, by page classification
 page-flow
-chart-card: Conversions by page classification
-channel-map
-chart-card: Visits needed for one conversion
-  checkbox: Contact form sent
-  checkbox: Phone number clicked
-  checkbox: Email address clicked
+chart-card: Conversions
+  filter: Count
+  filter: Columns
+  filter: Compare
+conversions-map
+  channel-map
+chart-card: Conversions over time by kind
+  filter: Conversion
+  filter: Count
+  filter: Columns
+  checkbox: Organic Search
+  checkbox: Direct
+conversions-by-kind
+chart-card: One conversion, day by day
+  filter: Conversion
+  filter: Show
+  filter: Compare
+conversions-over-time
 chart-card: What people did before converting
 search: Find an event…
 filter: Kind
