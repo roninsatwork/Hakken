@@ -61,6 +61,8 @@ export type ConversionsMapWords = {
   rowTotal: (row: ConversionsMapRow, total: { visits: number; times: number; rate: number }) => string;
   /** A square's hover words: the conversion, the kind, the value shown, and the square's own figures behind it. */
   hover: (row: ConversionsMapRow, column: ConversionsMapColumn, value: string, cell: ConversionsMapCell) => string;
+  /** Added to the hover with Compare on: the span before's value and the change, "the month before 102 (▲ 8.8%)". */
+  hoverBefore: (before: string, change: string | null) => string;
   /** The key: what the shades mean, and an empty square. */
   shades: string;
   empty: string;
@@ -129,11 +131,12 @@ export function ConversionsMap({ title, controls, columns, rows, count, compare,
         const value = values[at];
         const text = count === "rate" ? pct(value.now) : fmt(value.now);
         const note = compare ? changeWords(value.now, value.before, newWord) : null;
+        const beforeText = compare && value.before !== null ? words.hoverBefore(count === "rate" ? pct(value.before) : fmt(value.before), note) : "";
         return {
           // Empty where nothing happened, whatever the unit: the rate of nothing is nothing.
           visits: value.now > 0 ? Math.max(1, Math.round(value.now)) : 0,
           conversions: 0,
-          hover: words.hover(row, column, text, cell),
+          hover: words.hover(row, column, text, cell) + beforeText,
           text,
           ...(note ? { note } : {}),
           // A rate shades against the row's highest; a count against the row's total.
@@ -161,9 +164,10 @@ export function ConversionsMap({ title, controls, columns, rows, count, compare,
             const note = compare ? changeWords(value.now, value.before, newWord) : null;
             const share = count === "rate" ? (top > 0 ? value.now / top : 0) : sum > 0 ? value.now / sum : 0;
             const href = hrefFor?.(pickedRow, column);
+            const beforeText = compare && value.before !== null ? words.hoverBefore(count === "rate" ? pct(value.before) : fmt(value.before), note) : "";
             const figure = <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-foreground">{value.now > 0 ? text : "–"}{note ? <span className="ml-2 text-[11px] font-normal text-secondary">{note}</span> : null}</span>;
             return (
-              <li key={column.key} className="flex flex-col gap-1" title={words.hover(pickedRow, column, text, pickedRow.cells[at])}>
+              <li key={column.key} className="flex flex-col gap-1" title={words.hover(pickedRow, column, text, pickedRow.cells[at]) + beforeText}>
                 <div className="flex items-center justify-between gap-3 text-[12px]">
                   {href && value.now > 0 ? <a href={href} className="min-w-0 truncate text-foreground hover:underline">{column.name}</a> : <span className="min-w-0 truncate text-foreground">{column.name}</span>}
                   {figure}

@@ -20,6 +20,7 @@ const rows: ConversionsMapRow[] = [
 const words = {
   rowTotal: (_row: ConversionsMapRow, total: { visits: number; times: number; rate: number }) => `${total.visits} visits`,
   hover: (row: ConversionsMapRow, column: ConversionsMapColumn, value: string) => `${row.name} → ${column.name}: ${value}`,
+  hoverBefore: (before: string, change: string | null) => `, the month before ${before} (${change ?? "–"})`,
   shades: "a smaller to a bigger share of the row",
   empty: "none",
 };
@@ -47,8 +48,9 @@ describe("ConversionsMap", () => {
     expect(changeWords(0, 0, "new")).toBeNull();
     expect(changeWords(100, null, "new")).toBeNull();
     draw("visits", true);
-    expect(screen.getByLabelText("Purchase → Cupboard Handles: 236")).toHaveTextContent("▲ 18.0%");
-    expect(screen.getByLabelText("Purchase → Brand: 201")).toHaveTextContent("new");
+    // The hover says the month before too.
+    expect(screen.getByLabelText("Purchase → Cupboard Handles: 236, the month before 200 (▲ 18.0%)")).toHaveTextContent("▲ 18.0%");
+    expect(screen.getByLabelText("Purchase → Brand: 201, the month before 0 (new)")).toHaveTextContent("new");
   });
 
   it("names a column in full on its heading's tooltip, and leaves an empty square empty", () => {

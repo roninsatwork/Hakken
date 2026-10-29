@@ -100,6 +100,7 @@ export function ConversionsMapCard() {
         hover: (row, column, value, cell) => count === "rate"
           ? t("hoverRate", { event: row.name, kind: column.name, value, did: cell.visits, visits: column.visits })
           : t("hover", { event: row.name, kind: column.name, value }),
+        hoverBefore: (before, change) => t("hoverBefore", { before: beforeName.toLowerCase(), value: before, change: change ?? "–" }),
         shades: count === "rate" ? t("shadesRate") : t("shadesCount"),
         empty: t("empty"),
       }}

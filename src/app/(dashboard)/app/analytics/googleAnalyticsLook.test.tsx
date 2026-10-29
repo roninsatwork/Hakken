@@ -198,8 +198,8 @@ describe("Google Analytics' approved looks", () => {
     expect(within(map).getByLabelText("Phone number clicked → Service: 8")).toHaveTextContent("8");
     // Compared with the month before: the contact form up from nine to twelve; the phone clicks new.
     map = await mapAt("mapCompare=before");
-    expect(within(map).getByLabelText("Contact form sent → Service: 12")).toHaveTextContent("▲ 33.3%");
-    expect(within(map).getByLabelText("Phone number clicked → Service: 5")).toHaveTextContent("new");
+    expect(within(map).getByLabelText("Contact form sent → Service: 12, the month before 9 (▲ 33.3%)")).toHaveTextContent("▲ 33.3%");
+    expect(within(map).getByLabelText("Phone number clicked → Service: 5, the month before 0 (new)")).toHaveTextContent("new");
     // The dropdowns name their choices.
     const card = map.closest("[data-chart-export-root]") as HTMLElement;
     expect(within(card).getByLabelText("Count")).toHaveValue("visits");

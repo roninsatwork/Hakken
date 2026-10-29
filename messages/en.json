@@ -18155,7 +18155,8 @@
         "did": "visits with it",
         "times": "times"
       },
-      "hoverRate": "{event} → {kind}: {value}, {did, number} of {visits, plural, one {# visit} other {# visits}}"
+      "hoverRate": "{event} → {kind}: {value}, {did, number} of {visits, plural, one {# visit} other {# visits}}",
+      "hoverBefore": ", {before} {value} ({change})"
     }
   },
   "bingWebmaster": {

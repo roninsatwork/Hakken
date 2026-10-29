@@ -373,7 +373,7 @@ const PARTS: Part[] = [
         ]}
         count="visits"
         compare
-        words={{ rowTotal: (row, total) => `${total.visits.toLocaleString("en-GB")} visits`, hover: (row, column, value) => `${row.name} → ${column.name}: ${value}`, shades: "a smaller to a bigger share of the row", empty: "none" }}
+        words={{ rowTotal: (row, total) => `${total.visits.toLocaleString("en-GB")} visits`, hover: (row, column, value) => `${row.name} → ${column.name}: ${value}`, hoverBefore: (before, change) => `, the month before ${before} (${change ?? "–"})`, shades: "a smaller to a bigger share of the row", empty: "none" }}
         newWord="new"
         exportName="conversions-map"
         csv={() => ""}

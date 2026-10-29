@@ -18155,7 +18155,8 @@
         "did": "visite con essa",
         "times": "volte"
       },
-      "hoverRate": "{kind} ← {event}: {value}, {did, number} su {visits, plural, one {# visita} other {# visite}}"
+      "hoverRate": "{kind} ← {event}: {value}, {did, number} su {visits, plural, one {# visita} other {# visite}}",
+      "hoverBefore": ", {before}: {value} ({change})"
     }
   },
   "bingWebmaster": {
