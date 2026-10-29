@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { MOST_SEARCHES, competingForAssistant, competingGroups, type CompetingPair, type KeptGroup, type PageFigures } from "./insightCompeting";
-import { COMPETING_ANSWER, SEARCHES_SHOWN, agentInputOf, applyAnswer, carryOver, signatureOf, summaryOf, usableWords } from "./insightCompetingAgent";
+import { BIG_AT_ONCE, BIG_GROUP_LIMIT_MS, COMPETING_ANSWER, SEARCHES_SHOWN, agentInputOf, applyAnswer, atTheCap, carryOver, nextPiece, signatureOf, summaryOf, usableWords } from "./insightCompetingAgent";
 
 /**
  * The Keyword cannibalisation specialist (insightCompetingAgent.ts): what it
@@ -114,5 +114,22 @@ describe("the Keyword cannibalisation specialist", () => {
     expect(carryOver(now, held, 0.04)).toBe(true);
     expect(summaryOf(now, span)).toEqual(summaryOf(held, span));
     expect(competingForAssistant([{ ...now, summary: summaryOf(now, span) }]).groups[0]).toMatchObject({ summary: `Three app pages split ${held.split} of your searches. Give each search one page.` });
+  });
+
+  test("a group at the cap is given four and a half minutes, and a piece asks no more than two of them together", () => {
+    const sized = (count: number) => ({ searches: Array.from({ length: count }, () => group().searches[0]!) });
+    const big = sized(MOST_SEARCHES), small = sized(59);
+    expect(BIG_GROUP_LIMIT_MS).toBe(270_000);
+    expect([atTheCap(big), atTheCap(small)]).toEqual([true, false]);
+    const groups = [big, big, big, small, big, big, small, small, small, small, small, small];
+    const pieces: number[] = [];
+    for (let at = 0; at < groups.length;) {
+      const piece = nextPiece(groups.slice(at), 8);
+      expect(piece.filter(atTheCap).length).toBeLessThanOrEqual(BIG_AT_ONCE);
+      pieces.push(piece.length);
+      at += piece.length;
+    }
+    expect(pieces).toEqual([2, 3, 7]);
+    expect(nextPiece(Array.from({ length: 12 }, () => small), 8)).toHaveLength(8);
   });
 });

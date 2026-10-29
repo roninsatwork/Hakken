@@ -27,6 +27,30 @@ export const SEARCHES_SHOWN = MOST_SEARCHES;
 export const SEARCHES_EXPLAINED = 60;
 const CHANGES_EXPLAINED = 40;
 
+/**
+ * A group at the cap on its searches reads and writes the most: on 29 October
+ * 2026 More Handles' five such groups, asked eight at a time with three minutes
+ * each, ran past the limit seven times and two never answered
+ * (insights-big-site-reliability-plan-2026-10-26.md, Anthony: "Yes, fix and
+ * rerun"). Each is given four and a half minutes, as the Head of Strategy is,
+ * and a piece asks no more than two of them together.
+ */
+export const BIG_GROUP_LIMIT_MS = 4.5 * 60 * 1000;
+export const BIG_AT_ONCE = 2;
+export const atTheCap = (group: Pick<CompetingGroup, "searches">) => group.searches.length >= MOST_SEARCHES;
+
+/** The groups the next piece asks, in order: up to `most`, with no more than BIG_AT_ONCE at the cap. */
+export function nextPiece<Group extends Pick<CompetingGroup, "searches">>(groups: readonly Group[], most: number): Group[] {
+  const piece: Group[] = [];
+  let big = 0;
+  for (const group of groups) {
+    if (piece.length >= most || (atTheCap(group) && big >= BIG_AT_ONCE)) break;
+    if (atTheCap(group)) big += 1;
+    piece.push(group);
+  }
+  return piece;
+}
+
 /** The shape of the specialist's answer, fixed in code so the run can read it (shown read-only on its Instructions page). */
 export const COMPETING_ANSWER = [
   "You are given one group of the website's pages that Google shows for the same searches: its pages — each one's path, title, kind, the place it is for, its visits and enquiries, and what the rule says to do with it — and every one of its searches, the most searched first, each with how often it is searched a month, the website's position, how often Google showed each page for it, and the page the rule chose and why. The group's figures are its facts, by key.",

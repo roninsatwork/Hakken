@@ -1,6 +1,6 @@
 # Reliable Insights for large websites
 
-**Approved for phased implementation, 26 October 2026. Overall: about 60%. The local repair and focused-verification slice is complete; the full local repository gates passed. Development deployment and a successful whole-section rerun remain. Anthony requested a pause at this phase boundary, then explicitly authorised committing all finished work in this checkout and pushing `dev` so he can change machines.**
+**Approved for phased implementation, 26 October 2026. Overall: about 80%. Deployed to the development backend on 29 October and run live on More Handles: every failure of 26 October held, but the run did not refresh the whole section — the two biggest competing-page groups ran past the model's 180 seconds twice (see "Live acceptance run — 29 October 2026"). A fix for those was made and deployed the same morning, and a second run was stopped by Anthony before it finished, because Insights is to read only data the sections have already downloaded (see "Second live run — 29 October 2026, stopped"). Acceptance now waits for `insights-sections-only-plan-2026-10-29.md`. Anthony requested a pause at this phase boundary, then explicitly authorised committing all finished work in this checkout and pushing `dev` so he can change machines.**
 
 Anthony approved working through the plan in manageable phases and asked for a durable handoff in case he needs to leave before it is finished. Save progress here after each meaningful milestone. The later instruction authorises one combined commit and push to `dev`, including the other agents' finished work. No push to `main` or production release is authorised. Pause after publishing that checkpoint; do not deploy the backend or start another live Insights run until Anthony resumes.
 
@@ -162,6 +162,98 @@ Deployed state and jobs: the repair has **not** been deployed to the development
 
 No further repair work or live data requests should continue after the checkpoint is published until Anthony resumes. Read-only GitHub monitoring for this checkpoint is authorised; report its terminal result and stop that monitor. Preserve all unrelated work included in the checkpoint; the combined commit is intentional.
 
+
+### Live acceptance run — 29 October 2026
+
+Anthony resumed ("ok go"). On another machine, after `npm ci` (Node 24.22.1, 51 locked direct dependencies verified):
+
+- **The deploy:** the checkpoint `4519f557` was deployed to the development backend at 08:49 with `npx convex dev --once`.
+- **The allowance:** `googleAnalyticsQuotaActions.readAllowance` for More Handles read 199,999 of 200,000 tokens left for
+  the day, 13,999 of 14,000 for the project's hour, and 120 thresholded asks.
+- **The cost estimate:** the history plan (`insightHistorySteps.planForRun`, read-only) was 89 pieces, 70 of them
+  Analytics. At about 5 tokens an ask that is about 2,000 tokens, so well over a fifth was kept in hand.
+- **The run:** More Handles' run `kn7a5tr86m7fct4wdd0yfq03rh8h6nz6`, started with `insightsTeam.startWebsiteRun`
+  (`refreshReports: true`), 08:51 to 09:31. It cost $0.851 against the lead's $2 limit. The most a step held was
+  47 MB. The watch never had to carry a step on, and the `INSIGHTS` chain closed.
+
+**The four failures of 26 October, each held:**
+
+| Work | 26 October | 29 October |
+| --- | --- | --- |
+| Insights history | Out of memory (64 MB) | 106 records from 141 asks to Google in 4 minutes, 47 MB at most |
+| Choosing a page for each search | One-second query limit | All 2,213 due searches asked; the model was sure of 1,357 |
+| Track record | One-second query limit | Page changes and open findings checked; 270 changes saved |
+| Conversion page reviews | No answer within 180 s | Completed |
+| Measurement | Return validation failed | Measurement results saved |
+
+Screen summaries were written for 8 of 8 screens; on 26 October it was 7 of 8. The opportunities and page plan, the page
+decisions (improve 13, keep 10,453, create 20; the specialist kept 12 of 13 and changed 1), the drafts and the buyer
+questions all completed.
+
+**Not accepted: the run ended FAILED, and said so.** Its summary: "The whole section has not refreshed. Unfinished:
+Keyword cannibalisation, Analysis, Reports. Completed results remain available."
+- The Keyword cannibalisation specialist was asked about More Handles' 20 competing-page groups, in three watched
+  pieces of up to eight, eight asks at a time.
+- Seven of its answers took longer than the 180-second limit (`ASK_LIMIT_MS`). Each was asked once more; five answered,
+  so 18 of the 20 groups had the specialist's review.
+- "front door knob" and "tubular latch sizes" failed twice, and the run did not ask them a third time.
+- Under the whole-section rule (phase 5), that failed the Keyword cannibalisation stage. The Analysis failed with it, on
+  its first try and its automatic continuation, so no Reports were written.
+- The week's findings and reports are therefore 26 October's, kept as they were; nothing wrong was published.
+
+**The cause, measured:** the groups that ran past 180 seconds are the biggest, at the cap on a group's searches.
+
+| Group | Searches | Pages | Group as asked, characters |
+| --- | --- | --- | --- |
+| tubular latch sizes | 200 | 6 | 137,522 |
+| how to fix a door handle | 200 | 6 | 127,143 |
+| black kitchen handles | 200 | 6 | 122,121 |
+| antique brass kitchen handles | 200 | 6 | 119,237 |
+| front door knob | 200 | 6 | 94,099 |
+
+Two smaller groups ("rim latch" with 59 searches, "disabled toilet handle" with 45) also ran past the limit once, in a
+batch of eight asked together, and answered when asked again.
+- Each answer explains up to `SEARCHES_EXPLAINED` (60) searches, so the biggest groups both read and write the most.
+- A group never holds more than `MOST_SEARCHES` (200), so the size of an ask does not grow with the website, and a
+  fix here holds for larger clients.
+
+**Next, for Anthony to choose:** how the biggest groups are asked, without examining less (the plan's rules forbid that).
+- Give a group at the cap longer to answer, as the Head of Strategy already has (`LEAD_ASK_LIMIT_MS`, 4½ minutes), and
+  ask fewer at once.
+- Or ask its searches in pieces.
+- Either way, More Handles is run again afterwards to accept it.
+
+**Noticed in the figures, outside this plan:**
+- The Analyst's "Sales rose to 28,623 in September". The Head of Strategy's own verdict says More Handles' checkout
+  tracking inflates its recorded sales, and the Measurement checklist names it (`enquiryCountUncertain`).
+- "Google clicks on product pages 0 against 0". This reads as product pages not recognised, not as no clicks.
+- The page decisions call the home page "broken" while the page reviews say it converts well.
+- The home page is reviewed both as `/home` and as `/`.
+
+### Second live run — 29 October 2026, stopped
+
+Anthony chose the fix ("Yes, fix and rerun"):
+- A group at the 200-search cap is given 4½ minutes (`BIG_GROUP_LIMIT_MS`).
+- A piece asks no more than two such groups together (`BIG_AT_ONCE`, `nextPiece` in
+  `convex/utils/insightCompetingAgent.ts`).
+- Every other group keeps three minutes, and up to eight groups a piece.
+
+The fix was tested and deployed to the development backend at 10:53. The allowance read 199,539 of 200,000 tokens left for
+the day and 13,999 of 14,000 for the hour.
+
+More Handles' run `kn71zxjxg1zz9xrsasa9v40vqx8h6xfq` started at 10:54:
+- **History:** 61 records from 66 asks to Google, at most 39 MB.
+- **Pages for each search:** all 2,213 choices kept from before.
+- **Groups, first two pieces:** "tubular latch sizes" and "front door knob", the two groups that failed twice on the first
+  run, both answered within the new limit. "front door knob" answered inside the 4½ minutes, but close to them: its piece began at 11:03 and its answer came at 11:08.
+- **Stopped at 11:04 by Anthony, after 5 of the 20 groups had been asked.** He restated the vision: Insights is to read
+  only what the sections have downloaded, and this run was asking Google for history. See
+  `insights-data-sources-audit-2026-10-29.md`.
+- **What the stop did:** it marked the run finished and closed its chain. No later step started and nothing was
+  published. The three asks already sent finished afterwards and were paid for: the run cost $0.221, about $0.13 of it after
+  the stop. A stop does not cut off a model ask already sent.
+
+The fix is therefore deployed but not accepted.
 
 ### Phase 1 measurements
 

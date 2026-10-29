@@ -8,7 +8,7 @@ import { searchConsoleTables } from "./searchConsoleSchema";
 import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
 import type { Fact } from "./utils/insightFacts";
 import { briefFor } from "./utils/insightBriefs";
-import { COMPETING_ANSWER, agentInputOf, applyAnswer, carryOver, signatureOf, summaryOf, usableWords } from "./utils/insightCompetingAgent";
+import { BIG_GROUP_LIMIT_MS, COMPETING_ANSWER, agentInputOf, applyAnswer, atTheCap, carryOver, nextPiece, signatureOf, summaryOf, usableWords } from "./utils/insightCompetingAgent";
 import { ownerJudge, ownerTallyLine } from "./insightCompetingJudge";
 import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
@@ -86,7 +86,7 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
   const signature = JSON.stringify(assigned.map((group) => [group.key, group.signature]));
   if (options.signature !== undefined && options.signature !== signature) throw appError("CONFLICT", "The competing-page inputs changed while their specialist was working. Previous completed results are kept.");
   const from = options.at ?? 0;
-  const given = assigned.slice(from, from + (options.most ?? assigned.length));
+  const given = options.most === undefined ? assigned.slice(from) : nextPiece(assigned.slice(from), options.most);
   const system = [rules, briefFor(COMPETING_ROLE, member?.instructions), OWNER_RULE, COMPETING_ANSWER].filter(Boolean).join("\n\n");
   const failed: string[] = [];
   let changed = 0, retried = 0;
@@ -102,11 +102,12 @@ export async function competingForRun(ctx: ActionCtx, run: CompetingRun, week: s
           return answer;
         };
         // A failed answer is asked once more while the specialist's time lasts; a run past its spend limit isn't.
-        const answer = await asked(ASK_LIMIT_MS).catch(async (error: unknown) => {
+        const limitMs = atTheCap(group) ? BIG_GROUP_LIMIT_MS : ASK_LIMIT_MS;
+        const answer = await asked(limitMs).catch(async (error: unknown) => {
           const left = COMPETING_FOR_MS - (Date.now() - started);
           if (options.cachedOnly || left < RETRY_LEAST_MS || /spend limit/.test(String(error))) throw error;
           retried += 1;
-          return await asked(Math.min(ASK_LIMIT_MS, left));
+          return await asked(Math.min(limitMs, left));
         });
         const applied = applyAnswer(group, answer, competing.websiteRate, week, { ownersChosen: Boolean(owners) });
         changed += applied.owners + applied.pages;
