@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { ConversionColumns } from "@/convex/googleAnalyticsConversionsMap";
-import { Select } from "@/src/ui/components/screens/Select";
 import { ConversionsMap, type ConversionsCount, type ConversionsMapRow } from "@/src/ui/components/screens/ConversionsMap";
 import { ConversionsByKindChart } from "@/src/ui/components/screens/ConversionsByKindChart";
 import { ConversionsOverTimeChart, type ConversionsOverTimeShow } from "@/src/ui/components/screens/ConversionsOverTimeChart";
@@ -13,8 +12,9 @@ import { readerLanguage } from "../../search-console/_components/searchConsoleFo
 import { formatDay } from "../../sites/_components/siteFormat";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { useFlowKindName } from "./ConversionParts";
+import { COMPARES, COUNTS, Choice, useBeforeName, useMapWords, type Compare } from "./ConversionsMapChoices";
 import { useEventName } from "./useEventName";
-import { periodWord, useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
+import { periodWord, useAnalyticsArgs, useAnalyticsHref, useAnalyticsStatus, useFromHere, usePeriod, useStep } from "./useAnalytics";
 
 /**
  * Conversions' three shared parts on the Conversions page
@@ -24,24 +24,13 @@ import { periodWord, useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } 
  * these read and choose.
  */
 
-const COUNTS = ["visits", "rate", "events"] as const;
-const COLUMNS = ["kind", "channel", "device", "country"] as const;
-const LINE_COLUMNS = ["channel", "device", "country"] as const;
-const COMPARES = ["none", "before"] as const;
+export const COLUMNS = ["kind", "channel", "device", "country"] as const;
+// Page kind too since the landing pages by kind are kept a day at a time (DAY_ONLY_LISTS); nothing to draw until the first night after 2026-10-29.
+const LINE_COLUMNS = ["kind", "channel", "device", "country"] as const;
 const SHOWS = ["rate", "per"] as const;
 
-
-/** The dropdowns a card wears: a label, its choices, and the words for each. */
-function Choice<T extends string>({ label, value, choices, word, onChange }: { label: string; value: T; choices: readonly T[]; word: (choice: T) => string; onChange: (next: T) => void }) {
-  return (
-    <Select chip={{ label, choice: word(value), changed: false }} value={value} onChange={(next) => onChange(next as T)} aria-label={label}>
-      {choices.map((choice) => <option key={choice} value={choice}>{word(choice)}</option>)}
-    </Select>
-  );
-}
-
 /** A column's name on screen: a page kind's, a channel's own, a device's word, a country's name (the main one for ""). */
-function useColumnName(columns: ConversionColumns, kinds: ReadonlyArray<{ kind: string; name: string | null }>, main: string | null) {
+export function useColumnName(columns: ConversionColumns, kinds: ReadonlyArray<{ kind: string; name: string | null }>, main: string | null) {
   const tf = useTranslations("googleAnalytics.filters");
   const kindName = useFlowKindName(kinds);
   const language = readerLanguage();
@@ -53,15 +42,6 @@ function useColumnName(columns: ConversionColumns, kinds: ReadonlyArray<{ kind: 
   };
 }
 
-/** The span before, named as the period's figures name it, at a sentence's start. */
-function useBeforeName(): string {
-  const tf = useTranslations("googleAnalytics.filters");
-  const locale = useLocale();
-  const [period] = usePeriod();
-  const before = tf(`before.${periodWord(period)}`);
-  return before.charAt(0).toLocaleUpperCase(locale) + before.slice(1);
-}
-
 export function ConversionsMapCard() {
   const t = useTranslations("googleAnalytics.conversionsMap");
   const args = useAnalyticsArgs();
@@ -69,10 +49,14 @@ export function ConversionsMapCard() {
   const nameOf = useEventName();
   const [count, setCount] = useSiteParam<ConversionsCount>("mapCount", "visits", COUNTS);
   const [columns, setColumns] = useSiteParam<ConversionColumns>("mapBy", "kind", COLUMNS);
-  const [compare, setCompare] = useSiteParam<(typeof COMPARES)[number]>("mapCompare", "none", COMPARES);
+  const [compare, setCompare] = useSiteParam<Compare>("mapCompare", "none", COMPARES);
   const map = useQuery(api.googleAnalyticsConversionsMap.analyticsConversionsMap, status?.connection?.newestDay ? { ...args, columns } : "skip");
   const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId: args.siteId });
   const beforeName = useBeforeName();
+  const words = useMapWords(count);
+  // A square opens the pages behind it, which come back here as this screen stands.
+  const hrefFor = useAnalyticsHref(args.siteId);
+  const from = useFromHere();
   const columnName = useColumnName(columns, (map?.columns ?? []).map((column) => ({ kind: column.key, name: column.name })), choices?.main ?? null);
   const named = (map?.columns ?? []).map((column) => ({ ...column, name: columnName(column.key) }));
   const rows: ConversionsMapRow[] = (map?.rows ?? []).map((row) => ({ ...row, name: nameOf(row.eventName) }));
@@ -95,15 +79,8 @@ export function ConversionsMapCard() {
       rows={rows}
       count={count}
       compare={compare === "before" && (map?.hasBefore ?? false)}
-      words={{
-        rowTotal: (row, total) => `${count === "rate" ? t("rowRate", { rate: `${(100 * total.rate).toFixed(1)}%` }) : count === "events" ? t("rowTimes", { count: total.times }) : t("rowVisits", { count: total.visits })}${row.counted ? "" : t("notCounted")}`,
-        hover: (row, column, value, cell) => count === "rate"
-          ? t("hoverRate", { event: row.name, kind: column.name, value, did: cell.visits, visits: column.visits })
-          : t("hover", { event: row.name, kind: column.name, value }),
-        hoverBefore: (before, change) => t("hoverBefore", { before: beforeName.toLowerCase(), value: before, change: change ?? "–" }),
-        shades: count === "rate" ? t("shadesRate") : t("shadesCount"),
-        empty: t("empty"),
-      }}
+      words={words}
+      hrefFor={(row, column) => hrefFor("conversions/pages", { event: row.eventName, by: columns, key: column.key, from })}
       newWord={t("new")}
       pickWord={t("conversion")}
       exportName="google-analytics-conversions-map"
@@ -165,7 +142,7 @@ export function ConversionsOverTimeCard() {
   const events = (status?.connection?.events ?? []).filter((event) => event.counted).map((event) => event.eventName);
   const [eventName, setEventName] = useSiteParam<string>("timeEvent", events[0] ?? "", events.length > 0 ? events : [""]);
   const [show, setShow] = useSiteParam<ConversionsOverTimeShow>("timeShow", "rate", SHOWS);
-  const [compare, setCompare] = useSiteParam<(typeof COMPARES)[number]>("timeCompare", "none", COMPARES);
+  const [compare, setCompare] = useSiteParam<Compare>("timeCompare", "none", COMPARES);
   const chosen = eventName || events[0] || "";
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, status?.connection?.newestDay ? args : "skip");
   const before = useQuery(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, status?.connection?.newestDay && compare === "before" ? args : "skip");

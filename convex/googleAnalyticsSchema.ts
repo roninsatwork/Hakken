@@ -163,6 +163,9 @@ export const ANALYTICS_LISTS = [
   "firstChannel", "landingChannel",
   // AI assistants' landing pages (ga-channel-pages-plan.md CH13): each landing page by Google's channel and the AI source, AI sources only.
   "landingAssistant",
+  // The landing pages by kind of page (conversion-charts-plan.md, 2026-10-29): a day list only (DAY_ONLY_LISTS), asked
+  // as the landing pages and folded by the website's classification as they arrive; never a period's list.
+  "landingKind",
   // The shared page lists (ga-stored-figures-plan.md SF13): each one fact keyed by page, sorted by it, a page's top 20.
   ...PAGE_FACT_LISTS,
 ] as const;
@@ -186,6 +189,7 @@ export const analyticsListValidator = v.union(
   v.literal("firstChannel"),
   v.literal("landingChannel"),
   v.literal("landingAssistant"),
+  v.literal("landingKind"),
   v.literal("landingSource"),
   v.literal("pageReferrer"),
   v.literal("pageNext"),
@@ -213,7 +217,7 @@ export const PAGE_SERIES_LISTS = ["landing", "page", "landingChannel", "landingA
 export type PageSeriesList = (typeof PAGE_SERIES_LISTS)[number];
 export const pageSeriesListValidator = v.union(v.literal("landing"), v.literal("page"), v.literal("landingChannel"), v.literal("landingAssistant"));
 
-export const DAY_FACT_LISTS = ["total", "channel", "event", "campaign", "visitorType", "product"] as const;
+export const DAY_FACT_LISTS = ["total", "channel", "event", "campaign", "visitorType", "product", "landingKind"] as const;
 export type DayFactList = (typeof DAY_FACT_LISTS)[number];
 export const dayFactListValidator = v.union(
   v.literal("total"),
@@ -222,7 +226,19 @@ export const dayFactListValidator = v.union(
   v.literal("campaign"),
   v.literal("visitorType"),
   v.literal("product"),
+  v.literal("landingKind"),
 );
+/**
+ * Kept as days only (conversion-charts-plan.md, 2026-10-29): the landing
+ * pages by kind of page — each day's landing pages, asked as pages and added
+ * up by the website's own classification as they arrive, a row a kind rather
+ * than a row a page, so a big website's days stay small — for Conversions'
+ * lines by page kind a day at a time. Never rolled into weeks or months, and
+ * never filled back two years: a day past 90 goes.
+ */
+export const DAY_ONLY_LISTS: readonly DayFactList[] = ["landingKind"];
+/** The day lists whose two years are filled and kept on as weeks and months. */
+export const FILLED_DAY_LISTS: readonly DayFactList[] = DAY_FACT_LISTS.filter((list) => !DAY_ONLY_LISTS.includes(list));
 
 /**
  * The ready-made periods (calendar-periods-plan.md, phase 6): the date menu's seven calendar periods, each Google's

@@ -9,6 +9,7 @@ import { OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
 import { FLOW_LEFT, FLOW_MORE } from "@/convex/utils/conversionFlow";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
+import { ConversionsMap, type ConversionsCount, type ConversionsMapColumn, type ConversionsMapRow } from "@/src/ui/components/screens/ConversionsMap";
 import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "@/src/ui/components/screens/PageFlowChart";
 import type { ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import { SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
@@ -18,6 +19,8 @@ import { useKindName } from "../[siteId]/channels/_components/ChannelParts";
 import { formatMoney, formatPercent, formatPerConversion } from "./analyticsFormat";
 import { eventList } from "./AnalyticsSees";
 import { useEventName } from "./useEventName";
+import { useSiteParam } from "../../sites/_components/useSiteParam";
+import { COMPARES, COUNTS, Choice, useBeforeName, useMapWords, type Compare } from "./ConversionsMapChoices";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, periodWord } from "./useAnalytics";
 import { visitsPerConversion, type CostPoint, type CostRow } from "./visitsPerConversion";
 import { shiftDays } from "./stepScale";
@@ -179,44 +182,41 @@ export function ConversionsByKind({ flow }: { flow: Flow | null }) {
 export function PageConversionsByChannel({ page }: { page: string }) {
   const t = useTranslations("googleAnalytics.conversionFlow");
   const tc = useTranslations("googleAnalytics.chart");
-  const tf = useTranslations("googleAnalytics.filters");
+  const tm = useTranslations("googleAnalytics.conversionsMap");
   const tp = useTranslations("googleAnalytics.page");
   const args = useAnalyticsArgs();
-  const [period] = usePeriod();
   const status = useAnalyticsStatus();
   const nameOf = useEventName();
+  const [count, setCount] = useSiteParam<ConversionsCount>("pageMapCount", "visits", COUNTS);
+  const [compare, setCompare] = useSiteParam<Compare>("pageMapCompare", "none", COMPARES);
   const grid = useQuery(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, status?.connection?.newestDay && page ? { ...args, page } : "skip");
-  const columns = (grid?.channels ?? []).map((entry) => entry.channel || tc("noChannel"));
-  const rows: ChannelMapRow[] = (grid?.rows ?? []).map((row) => ({
-    key: row.eventName,
-    label: nameOf(row.eventName),
-    total: !row.counted ? t("byKindNotCounted", { count: formatNumber(row.count) }) : row.count === 0 ? t("byKindNever") : t("byKindCounted", { count: row.count }),
-    cells: row.cells.map((count, at) => ({ visits: count, conversions: 0, hover: t("byChannelHover", { event: nameOf(row.eventName), channel: columns[at] ?? "", count }) })),
-  }));
-  const csv = () => toCsv(["event", ...columns], (grid?.rows ?? []).map((row) => [row.eventName, ...row.cells]));
+  const beforeName = useBeforeName();
+  const words = useMapWords(count);
+  const columns: ConversionsMapColumn[] = (grid?.channels ?? []).map((entry) => ({ key: entry.channel, name: entry.channel || tc("noChannel"), visits: entry.visits, visitsBefore: entry.visitsBefore }));
+  const rows: ConversionsMapRow[] = (grid?.rows ?? []).map((row) => ({ eventName: row.eventName, name: nameOf(row.eventName), counted: row.counted, cells: row.cells }));
+  const controls = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Choice label={tm("count")} value={count} choices={COUNTS} word={(choice) => tm(`counts.${choice}`)} onChange={setCount} />
+      <Choice label={tm("compare")} value={compare} choices={COMPARES} word={(choice) => (choice === "before" ? beforeName : tm("compares.none"))} onChange={setCompare} />
+    </div>
+  );
+  const csv = () => toCsv(["event", ...columns.map((column) => column.name)], rows.map((row) => [row.eventName, ...row.cells.map((cell) => (count === "events" ? cell.times : cell.visits))]));
   return (
-    <SearchConsoleChartCard
+    <ConversionsMap
       title={t("byChannelTitle")}
-      hint={`${t("byChannelHint", { period: tf(`periods.${periodWord(period)}`) })}${grid?.everyDevice ? ` ${t("everyDevice")}` : ""}`}
+      controls={controls}
+      columns={columns}
+      rows={rows}
+      count={count}
+      compare={compare === "before" && (grid?.hasBefore ?? false)}
+      words={words}
+      newWord={tm("new")}
+      pickWord={tm("conversion")}
       exportName="google-analytics-page-conversions-by-channel"
       csv={csv}
-      host={status?.host ?? ""}
-      from={null}
-      to={null}
-    >
-      {grid === undefined ? null
-        : grid === null ? <p className="py-10 text-center text-[12px] text-muted">{tp("collecting")}</p>
-          : columns.length === 0 ? <p className="py-10 text-center text-[12px] text-muted">{t("byChannelNone")}</p>
-            : (
-              <ChannelMap
-                columns={columns}
-                rows={rows}
-                rowVisits={(row) => grid.rows.find((one) => one.eventName === row.key)?.count ?? 0}
-                conversionsWord={() => ""}
-                legend={{ visits: t("byChannelLegend"), shades: t("byKindShades"), empty: t("byKindEmpty") }}
-              />
-            )}
-    </SearchConsoleChartCard>
+      caption={status?.host}
+      emptyText={grid === undefined ? undefined : grid === null ? tp("collecting") : t("byChannelNone")}
+    />
   );
 }
 

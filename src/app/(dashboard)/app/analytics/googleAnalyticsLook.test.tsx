@@ -4,13 +4,14 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHART, CONVERSIONS, CONVERSIONS_LINES, CONVERSIONS_MAP, COUNTRY_CHOICES, DAYS_BEFORE, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, OVERVIEW_PANELS, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
+import { CHART, CONVERSIONS, CONVERSIONS_LINES, CONVERSIONS_MAP, CONVERSIONS_PAGES, COUNTRY_CHOICES, DAYS_BEFORE, EVENT_LIST, NOTHING_COUNTED, OVERVIEW, OVERVIEW_PANELS, ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
 import AnalyticsLandingPagesPage from "./[siteId]/funnel/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
+import AnalyticsConversionPagesPage from "./[siteId]/conversions/pages/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
 import AnalyticsTrackingCheckPage from "./[siteId]/tracking-health/check/page";
 import AnalyticsConnectionPage from "./[siteId]/connection/page";
@@ -168,7 +169,30 @@ describe("Google Analytics' approved looks", () => {
     const map = (await screen.findByText("Service")).closest("[data-part='conversions-map']") as HTMLElement;
     // Visits, the start: the contact form from Service pages, twelve visits.
     expect(within(map).getByLabelText("Contact form sent → Service 12")).toHaveTextContent("12");
+    // A square opens the pages behind it, carrying this screen to come back to.
+    expect(within(map).getByLabelText("Contact form sent → Service 12").closest("a")).toHaveAttribute("href", "/app/analytics/site_1/conversions/pages?event=generate_lead&by=kind&key=service&from=conversions");
     await expectApprovedLook(container, "ga-conversions-visitors", "Conversions", "Google Analytics → Conversions");
+  });
+
+  it("7 · the pages behind a square: each landing page of the column that converted, the most first, back to Conversions", async () => {
+    at("/app/analytics/site_1/conversions/pages", "event=generate_lead&by=kind&key=service&from=conversions%3FmapCount%3Drate");
+    answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
+      "googleAnalyticsConversionsMap:analyticsConversionsPages": CONVERSIONS_PAGES,
+      "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
+    });
+    const { container } = render(<AnalyticsConversionPagesPage />);
+    await screen.findByText("Contact form sent → Service");
+    screen.getByText("Cupboard handles");
+    screen.getByText("Door handles");
+    // Back goes to Conversions as it stood, Count and all.
+    expect(screen.getByRole("link", { name: "Conversions" })).toHaveAttribute("href", "/app/analytics/site_1/conversions?mapCount=rate");
+    // A page opens its own screen, and comes back here.
+    const pageLink = screen.getByRole("link", { name: "/cupboard-handles/" }).getAttribute("href") ?? "";
+    expect(pageLink).toContain("/app/analytics/site_1/all-pages/page?");
+    expect(pageLink).toContain("key=%7E1");
+    expect(pageLink).toContain("from=conversions%2Fpages");
+    await expectApprovedLook(container, "ga-conversions-visitors", "Conversion pages", "Google Analytics → Conversions → the pages behind a square");
   });
 
   it("7 · the Conversions map: Count turns the squares into a rate or times, Compare adds each square's change", async () => {

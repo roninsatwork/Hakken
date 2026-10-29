@@ -21,6 +21,8 @@ export const BACK_SCREENS = {
   events: "events",
   "events/event": "event",
   conversions: "conversions",
+  // The pages behind a square of the Conversions map (conversion-charts-plan.md).
+  "conversions/pages": "conversionPages",
   products: "products",
   visitors: "visitors",
   "tracking-health": "trackingHealth",

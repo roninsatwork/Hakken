@@ -120,15 +120,31 @@ export const analyticsPageVisitsPerConversion = tenantQuery({
  * channel, for its bars ("it's the channels I want"). From the same landing
  * pages by channel Conversions' squares read, so they all say one thing. Null
  * until that list is kept.
+ *
+ * Since 2026-10-29 (conversion-charts-plan.md) each square carries both units
+ * — the visits that made the conversion and the times it happened — and the
+ * span before's, so the page's screen draws the Conversions map with Count and
+ * Compare. A row kept before the two units were stored carries Google's own
+ * count, which stands in for both until the next night's run.
  */
 export const analyticsPageConversionGrid = tenantQuery({
   args: pageArgs,
   returns: v.union(v.null(), v.object({
     /** One device's landing pages by channel not kept yet: every device's are shown. */
     everyDevice: v.boolean(),
+    /** Whether the span before's landing pages by channel are held, so Compare can show each square's change. */
+    hasBefore: v.boolean(),
+    /** Whether the rows carry both units yet. */
+    bothUnits: v.boolean(),
     /** Each channel's visits that started here and their counted conversions; the whole website's from it beside them. */
-    channels: v.array(v.object({ channel: v.string(), visits: v.number(), conversions: v.number(), websiteVisits: v.number(), websiteConversions: v.number() })),
-    rows: v.array(v.object({ eventName: v.string(), counted: v.boolean(), count: v.number(), cells: v.array(v.number()) })),
+    channels: v.array(v.object({ channel: v.string(), visits: v.number(), visitsBefore: v.union(v.number(), v.null()), conversions: v.number(), websiteVisits: v.number(), websiteConversions: v.number() })),
+    /** Each row's `count` is Google's own count over the channels; its cells carry both units, and the span before's. */
+    rows: v.array(v.object({
+      eventName: v.string(),
+      counted: v.boolean(),
+      count: v.number(),
+      cells: v.array(v.object({ visits: v.number(), times: v.number(), visitsBefore: v.union(v.number(), v.null()), timesBefore: v.union(v.number(), v.null()) })),
+    })),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -149,7 +165,20 @@ export const analyticsPageConversionGrid = tenantQuery({
       whole.visits += row.visits;
       whole.conversions += conversionsOf(row, countedEvents).conversions;
     }
+    // The span before's rows for this page, a channel each, where that span is held.
+    const wasByChannel = await landingByChannel(ctx, holdId, args.period, "BEFORE", country, args.device);
+    const ownBefore = new Map<string, ListRow>();
+    for (const row of wasByChannel?.rows ?? []) {
+      const { channel: page, source: channel } = splitChannelKey(row.key);
+      if (page === args.page) ownBefore.set(channel, row);
+    }
+    const hasBefore = wasByChannel !== null;
     const channels = [...own.entries()].sort((left, right) => right[1].visits - left[1].visits || left[0].localeCompare(right[0]));
+    // A square's two units: the visits with the event and its times, Google's own count standing in for both on an older row.
+    const unitsOf = (row: ListRow | undefined, event: string) => {
+      const count = row?.counts.get(event) ?? 0;
+      return { visits: row?.eventVisits?.get(event) ?? count, times: row?.eventTimes?.get(event) ?? count };
+    };
     const countOf = (event: string) => channels.reduce((sum, [, row]) => sum + (row.counts.get(event) ?? 0), 0);
     const counted = countedEvents.map((event) => event.eventName);
     const countedNames = new Set(counted);
@@ -157,15 +186,27 @@ export const analyticsPageConversionGrid = tenantQuery({
     const byCount = (left: string, right: string) => countOf(right) - countOf(left);
     return {
       everyDevice: byChannel.everyDevice,
+      hasBefore,
+      bothUnits: channels.some(([, row]) => (row.eventVisits?.size ?? 0) > 0),
       channels: channels.map(([channel, row]) => ({
         channel,
         visits: row.visits,
+        visitsBefore: hasBefore ? ownBefore.get(channel)?.visits ?? 0 : null,
         conversions: conversionsOf(row, countedEvents).conversions,
         websiteVisits: website.get(channel)?.visits ?? 0,
         websiteConversions: website.get(channel)?.conversions ?? 0,
       })),
       rows: [...[...counted].sort(byCount).map((event) => ({ event, counted: true })), ...notCounted.sort(byCount).map((event) => ({ event, counted: false }))]
-        .map(({ event, counted: isCounted }) => ({ eventName: event, counted: isCounted, count: countOf(event), cells: channels.map(([, row]) => row.counts.get(event) ?? 0) })),
+        .map(({ event, counted: isCounted }) => ({
+          eventName: event,
+          counted: isCounted,
+          count: countOf(event),
+          cells: channels.map(([channel, row]) => {
+            const now = unitsOf(row, event);
+            const before = hasBefore ? unitsOf(ownBefore.get(channel), event) : null;
+            return { visits: now.visits, times: now.times, visitsBefore: before?.visits ?? null, timesBefore: before?.times ?? null };
+          }),
+        })),
     };
   },
 });

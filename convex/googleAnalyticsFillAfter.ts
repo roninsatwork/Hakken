@@ -5,7 +5,7 @@ import { bookStep, chainGoing, stepKey } from "./collectionSteps";
 import { countriesKeptReady } from "./searchConsoleCountries";
 import { isTrackedHold } from "./utils/websitePairing";
 import { coverageOf, filledLists } from "./googleAnalyticsCoverage";
-import { DAY_FACT_LISTS } from "./googleAnalyticsSchema";
+import { FILLED_DAY_LISTS } from "./googleAnalyticsSchema";
 
 /**
  * Two years filled by themselves once a night's collection is in
@@ -25,7 +25,8 @@ export async function fillAfterCollection(ctx: MutationCtx, connection: Doc<"goo
     if (!coverage.newestDay) continue;
     const of = country ? { country } : {};
     const filled = filledLists(coverage);
-    const lists = DAY_FACT_LISTS.filter((list) => list !== "product" || connection.shop === true).filter((list) => !filled.includes(list));
+    // The landing pages by kind are kept as days only (DAY_ONLY_LISTS): never filled back.
+    const lists = FILLED_DAY_LISTS.filter((list) => list !== "product" || connection.shop === true).filter((list) => !filled.includes(list));
     // Each fill watched (collection-reliability-plan.md, RR1), and started once: one still going is left to go on (RR4).
     const days = fillStepKey("GA_FILL_DAYS", connection._id, country);
     if (lists.length > 0 && !(await chainGoing(ctx, days))) {

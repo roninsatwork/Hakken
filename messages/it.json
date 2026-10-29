@@ -16848,7 +16848,8 @@
         "otherSources": "Altre sorgenti"
       },
       "otherBefore": "Altre pagine e siti",
-      "otherBeforeLine": "Ognuno oltre i 20 più grandi, sommati"
+      "otherBeforeLine": "Ognuno oltre i 20 più grandi, sommati",
+      "backToConversionPages": "Le pagine dietro il quadrato"
     },
     "eventList": {
       "title": "Eventi",
@@ -17921,6 +17922,13 @@
         "classifications": "Vedi le classificazioni",
         "campaigns": "Campagne",
         "channel": "Vedi il canale"
+      },
+      "conversionPages": {
+        "none": "Nessuna pagina ha convertito qui in queste date.",
+        "pages": "{count, plural, =1 {Una pagina ha fatto} other {# pagine hanno fatto}} {countB, plural, =1 {l'unica conversione} other {le # conversioni}} qui.",
+        "topPage": "{text} ne ha fatte {a} su {b}.",
+        "weakest": "{text} converte meno tra le pagine più visitate: {aRate} delle sue {b} visite.",
+        "seeBest": "Vedi {text}, la pagina che converte di più qui."
       }
     },
     "pageVisitors": {
@@ -18157,7 +18165,24 @@
         "rate": "Tasso"
       },
       "hoverRate": "{kind} ← {event}\n{value}\n{did, number} su {visits, plural, one {# visita} other {# visite}}",
-      "hoverBefore": "\n{before}: {value} ({change})"
+      "hoverBefore": "\n{before}: {value} ({change})",
+      "pages": {
+        "title": "{kind} ← {event}",
+        "description": "Le pagine su cui sono arrivate le visite che hanno fatto questa conversione, {period}.",
+        "everyDevice": "Sono mostrate le pagine di arrivo di ogni dispositivo: quelle di questo dispositivo non sono conservate per queste date.",
+        "table": "Pagine",
+        "page": "Pagina",
+        "visits": "Visite",
+        "did": "Convertite",
+        "times": "Volte",
+        "rate": "Tasso",
+        "find": "Trova una pagina…",
+        "none": "Nessuna pagina ha convertito qui in queste date.",
+        "noMatch": "Nessuna pagina corrisponde.",
+        "cut": "Sono elencate le {count} pagine con più conversioni.",
+        "noPage": "Nessuna pagina registrata",
+        "download": "Scarica CSV"
+      }
     }
   },
   "bingWebmaster": {

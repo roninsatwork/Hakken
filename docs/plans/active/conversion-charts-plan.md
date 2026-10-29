@@ -64,9 +64,31 @@ counts times. "I don't want the chart by the times it happened, that's meaningle
   conversion at a time, chosen from a dropdown, each kind as its full name, a bar and its figure; wide, the grid, whose
   headings truncate with the full name in the app's tooltip and whose every square says its words in the same tooltip
   (`ChannelMap`'s `headingTooltips` and `cellTooltips`).
-- **Not built tonight**: the screen a square opens (the pages behind it; squares carry no link yet); page kind a day
-  at a time (landing pages are kept for the period, not by the day: the lines by kind offer channel, device and
-  country); the same parts on Channels, Visitors and a page's own conversions.
+- **Later the same night** (Anthony: "ok finish the code now and we can review when the data comes in, in the morning"):
+  - **A square's hover** stays on the screen (the app's `Tooltip` moves in from either window edge, measured once) and
+    reads deeper, not wider: three lines — the conversion and the kind, the figure (with its visits for a rate), the
+    month before when compared — wrapping at 14rem.
+  - **The pages behind a square** (`/app/analytics/[siteId]/conversions/pages`, read `analyticsConversionsPages`):
+    every square links to it, carrying the Conversions screen to come back to. It lists the landing pages of the
+    square's column on which a visit that made the conversion landed — page, visits, converted (visits), times, rate —
+    the most conversions first, with search, sorting headings and numbered pages; a page opens its own screen and
+    comes back. **Limit: the 500 pages with the most conversions** (`MOST_SQUARE_PAGES`); past it the screen says so.
+    A page kind's column reads the landing pages with the map's own fold (the 8 busiest kinds, the rest Other); a
+    channel's reads the landing pages by channel; a device's or a country's reads that device's or country's landing
+    pages. Its What Hakken sees (`conversionPagesSees`): how many pages made how many conversions, the page that
+    made most, the busy page converting least (50 visits or more, never an older row with more conversions than
+    visits), and a step to the best page.
+  - **A page's own conversions by channel** (All pages → a page) is the Conversions map now, with Count and Compare
+    (`pageMapCount`, `pageMapCompare`): `analyticsPageConversionGrid` carries both units and the span before.
+  - **Page kind a day at a time**: a new day list, `landingKind` (`DAY_ONLY_LISTS`), collected with the other day
+    lists every night — the landing pages asked by day and device and **added up by the website's classification as
+    they arrive, a row a kind, never a row a page**, so a 10,000-page website's day is a dozen rows. Kept as days only:
+    never rolled into weeks or months, never filled back two years; a day past 90 goes. One more Google ask a night
+    for each website and home country. The lines by page kind read it and fold as the map does; a day keeps the
+    classification as it stood the night it was collected (classifying a page later changes the map, which
+    classifies at read time, but not the days already kept). Nothing is held until the first 01:00 run after
+    2026-10-29, so the lines by page kind say "No days are held" until then.
+- **Still to come**: the same parts on Channels and Visitors.
 
 ## Open
 
@@ -76,3 +98,5 @@ counts times. "I don't want the chart by the times it happened, that's meaningle
 ## Change log
 
 - 2026-10-29: written from the canvas discussion; the Conversions map agreed as a standard part.
+- 2026-10-29, night: the pages behind a square, a page's conversions by channel on the map, the landing pages by kind
+  kept a day at a time, and the deeper hover; see "Later the same night" under As built.

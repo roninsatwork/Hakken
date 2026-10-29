@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DAY_ONLY_LISTS } from "./googleAnalyticsSchema";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
@@ -172,11 +173,15 @@ describe("channels over time", () => {
     const floors = historyFloors(newest);
     expect(after.days.every((day) => day.day >= floors.day)).toBe(true);
     expect(after.history.filter((record) => record.grain === "week").every((record) => record.start >= floors.week)).toBe(true);
-    // Every visit still held once, but those past two years.
-    const visits = (records: ReadonlyArray<PackedPart & { device: string }>) => records
-      .filter((record) => record.device === "")
+    // Every visit still held once, but those past two years — and a days-only list's days past 90 (DAY_ONLY_LISTS: the
+    // landing pages by kind), which go rather than roll on, and never reach the weeks and months.
+    const visits = (records: ReadonlyArray<PackedPart & { device: string; list: string }>) => records
+      .filter((record) => record.device === "" && !(DAY_ONLY_LISTS as readonly string[]).includes(record.list))
       .reduce((sum, record) => sum + unpackPart(record).reduce((all, row) => all + row.visits, 0), 0);
     const gone = before.history.filter((record) => record.grain === "month" && record.start < floors.month);
     expect(visits([...after.days, ...after.history])).toBe(visits([...before.days, ...before.history]) - visits(gone));
+    expect(before.days.some((day) => day.list === "landingKind" && day.day < floors.day)).toBe(true);
+    expect(after.days.filter((day) => day.list === "landingKind").every((day) => day.day >= floors.day)).toBe(true);
+    expect(after.history.some((record) => record.list === "landingKind")).toBe(false);
   });
 });

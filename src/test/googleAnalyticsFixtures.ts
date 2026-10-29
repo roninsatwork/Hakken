@@ -345,3 +345,21 @@ export const CONVERSIONS_LINES = {
 };
 
 export const COUNTRY_CHOICES = { main: "gbr", ready: [] as string[] };
+
+/** The pages behind a square: the contact form from Service pages, three pages, the most conversions first. */
+export const CONVERSIONS_PAGES = {
+  collecting: false,
+  everyDevice: false,
+  name: "Service",
+  cut: false,
+  visits: 1200,
+  seen: {
+    says: [{ code: "pages", a: 3, b: 12 }, { code: "topPage", text: "/cupboard-handles/", a: 7, b: 12 }],
+    steps: [{ code: "seeBest", text: "/cupboard-handles/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~1" } } }],
+  },
+  rows: [
+    { page: "~1", address: "https://www.acme-shop.test/cupboard-handles/", title: "Cupboard handles", visits: 420, did: 7, times: 7 },
+    { page: "~2", address: "https://www.acme-shop.test/door-handles/", title: "Door handles", visits: 310, did: 4, times: 5 },
+    { page: "~3", address: "https://www.acme-shop.test/contact/", visits: 95, did: 1, times: 1 },
+  ],
+};

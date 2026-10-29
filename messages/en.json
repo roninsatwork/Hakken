@@ -16848,7 +16848,8 @@
         "otherSources": "Other sources"
       },
       "otherBefore": "Other pages and websites",
-      "otherBeforeLine": "Each past the 20 biggest, added up"
+      "otherBeforeLine": "Each past the 20 biggest, added up",
+      "backToConversionPages": "The pages behind the square"
     },
     "eventList": {
       "title": "Events",
@@ -17921,6 +17922,13 @@
         "classifications": "See classifications",
         "campaigns": "Campaigns",
         "channel": "See the channel"
+      },
+      "conversionPages": {
+        "none": "No page converted here in these dates.",
+        "pages": "{count, plural, =1 {One page} other {# pages}} made {countB, plural, =1 {the one conversion} other {the # conversions}} here.",
+        "topPage": "{text} made {a} of the {b}.",
+        "weakest": "{text} converts least of the busy pages: {aRate} of its {b} visits.",
+        "seeBest": "See {text}, the page that converts most here."
       }
     },
     "pageVisitors": {
@@ -18157,7 +18165,24 @@
         "rate": "Rate"
       },
       "hoverRate": "{event} → {kind}\n{value}\n{did, number} of {visits, plural, one {# visit} other {# visits}}",
-      "hoverBefore": "\n{before} {value} ({change})"
+      "hoverBefore": "\n{before} {value} ({change})",
+      "pages": {
+        "title": "{event} → {kind}",
+        "description": "The pages where visits that made this conversion landed, {period}.",
+        "everyDevice": "Every device's landing pages are shown: this device's are not kept for these dates.",
+        "table": "Pages",
+        "page": "Page",
+        "visits": "Visits",
+        "did": "Converted",
+        "times": "Times",
+        "rate": "Rate",
+        "find": "Find a page…",
+        "none": "No page converted here in these dates.",
+        "noMatch": "No page matches.",
+        "cut": "The {count} pages with the most conversions are listed.",
+        "noPage": "No page recorded",
+        "download": "Download CSV"
+      }
     }
   },
   "bingWebmaster": {

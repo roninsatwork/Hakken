@@ -7,6 +7,8 @@ import { countriesKeptReady } from "./searchConsoleCountries";
 import { slotKey } from "./googleAnalyticsCollect";
 import { decodePages } from "./holdPageRefs";
 import { readPageKinds } from "./pageKinds";
+import { titlesOf } from "./pageTitles";
+import { landingByChannel } from "./googleAnalyticsChannelReads";
 import { EVERY_DEVICE, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { connectionOf, countedOf, readSlot } from "./googleAnalyticsRows";
@@ -14,6 +16,8 @@ import { readDayPoints } from "./googleAnalyticsHistory";
 import { periodRange } from "./googleAnalyticsJobs";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
+import { conversionPagesSees } from "./utils/sees/analytics";
+import { seenValidator } from "./utils/hakkenSees";
 
 /**
  * The Conversions map and the lines by kind (conversion-charts-plan.md, agreed 2026-10-29): each conversion
@@ -64,11 +68,17 @@ const sums = (): Sums => ({ visits: 0, visitsOf: new Map(), timesOf: new Map(), 
 /** The busiest page kinds drawn apart; the rest one column, Other, as the old grid folded them (MAP_KINDS). */
 const MAP_KINDS = 8;
 
+/** The named kinds folded into Other: every one past the `MAP_KINDS` busiest now, and any held only in the span before. */
+export function foldedKinds(visitsNow: ReadonlyMap<string, number>, keysBefore: Iterable<string> = []): Set<string> {
+  const named = [...visitsNow.keys()].filter((key) => key !== NOT_SORTED_KIND && key !== NO_PAGE_KIND && key !== OTHER_KIND).sort((left, right) => (visitsNow.get(right) ?? 0) - (visitsNow.get(left) ?? 0) || left.localeCompare(right));
+  const rest = new Set(named.slice(MAP_KINDS));
+  for (const key of keysBefore) if (!visitsNow.has(key) && key !== NOT_SORTED_KIND && key !== NO_PAGE_KIND && key !== OTHER_KIND) rest.add(key);
+  return rest;
+}
+
 /** The kinds past the busiest folded into Other, in both spans alike, so the columns match the drawing and the headings have room. */
 function foldKinds(now: Map<string, Sums>, before: Map<string, Sums>) {
-  const named = [...now.keys()].filter((key) => key !== NOT_SORTED_KIND && key !== NO_PAGE_KIND).sort((left, right) => (now.get(right)?.visits ?? 0) - (now.get(left)?.visits ?? 0) || left.localeCompare(right));
-  const rest = new Set(named.slice(MAP_KINDS));
-  for (const key of [...before.keys()]) if (!now.has(key) && key !== NOT_SORTED_KIND && key !== NO_PAGE_KIND) rest.add(key);
+  const rest = foldedKinds(new Map([...now].map(([key, one]) => [key, one.visits])), before.keys());
   if (rest.size === 0) return;
   for (const by of [now, before]) {
     const other = sums();
@@ -212,6 +222,117 @@ export async function readConversionsMap(ctx: SiteReader, args: { siteId: Id<"co
   };
 }
 
+// ---------- The pages behind a square ----------
+
+/** Pages listed behind a square, the most conversions first; past this the list says it was cut. */
+export const MOST_SQUARE_PAGES = 500;
+
+export const conversionsPagesValidator = v.object({
+  /** The list the square was drawn from is not held for these dates. */
+  collecting: v.boolean(),
+  everyDevice: v.boolean(),
+  /** The column's name where the read knows it: a page kind's classification. */
+  name: v.union(v.string(), v.null()),
+  /** More pages converted than are listed. */
+  cut: v.boolean(),
+  /** The column's visits, every landing page's together: the rate's base. */
+  visits: v.number(),
+  /** What Hakken sees of the pages listed. */
+  seen: seenValidator,
+  rows: v.array(v.object({
+    page: v.string(),
+    address: v.string(),
+    title: v.optional(v.string()),
+    visits: v.number(),
+    /** The visits that made the conversion, and the times it happened. */
+    did: v.number(),
+    times: v.number(),
+  })),
+});
+
+/**
+ * The pages behind a square (conversion-charts-plan.md, agreed 2026-10-29: "the pages behind it"): the landing pages
+ * in the square's column — a page kind, a channel, a device or a country — on which a visit that made the conversion
+ * landed, each with its visits and the conversion in both units, the most conversions first. Read from the landing
+ * pages the nightly runs keep, by the same column rule as the map, so a square and its list agree.
+ */
+export const analyticsConversionsPages = tenantQuery({
+  args: { ...mapArgs, key: v.string(), eventName: v.string() },
+  returns: conversionsPagesValidator,
+  handler: async (ctx, args) => await readConversionsPages(ctx, args),
+});
+
+export async function readConversionsPages(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string; columns: ConversionColumns; key: string; eventName: string }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const hold = site.hold;
+  const holdId = hold._id;
+  const country = await keptCountry(ctx, hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  const none = { collecting: true, everyDevice: false, name: null, cut: false, visits: 0, seen: conversionPagesSees([]), rows: [] };
+  if (!connection?.newestDay) return none;
+  let pages: Array<{ page: string; row: ListRow }> = [];
+  let everyDevice = false;
+  let name: string | null = null;
+  if (args.columns === "channel") {
+    const held = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
+    if (!held) return none;
+    everyDevice = held.everyDevice;
+    name = args.key;
+    for (const row of held.rows) {
+      const { channel: page, source: channel } = splitChannelKey(row.key);
+      if (channel === args.key) pages.push({ page, row });
+    }
+  } else {
+    // A device's column reads that device's landing pages; a country's, that country's; a kind's, the ones shown.
+    const device = args.columns === "device" ? args.key : args.device;
+    const code = args.columns === "country" ? args.key : country;
+    let slot = await readSlot(ctx, holdId, slotKey("landing", args.period, "NOW", device, code));
+    if (!slot && args.columns !== "device" && device !== EVERY_DEVICE) {
+      slot = await readSlot(ctx, holdId, slotKey("landing", args.period, "NOW", EVERY_DEVICE, code));
+      everyDevice = slot !== null;
+    }
+    if (!slot) return none;
+    if (args.columns === "kind") {
+      const kinds = await kindsOf(ctx, holdId, slot.rows.map((row) => row.key));
+      const visitsOf = new Map<string, number>();
+      for (const row of slot.rows) visitsOf.set(kinds.kindOf(row.key), (visitsOf.get(kinds.kindOf(row.key)) ?? 0) + row.visits);
+      const folded = foldedKinds(visitsOf);
+      const columnOf = (key: string) => (folded.has(kinds.kindOf(key)) ? OTHER_KIND : kinds.kindOf(key));
+      name = kinds.nameOf(args.key);
+      pages = slot.rows.filter((row) => columnOf(row.key) === args.key).map((row) => ({ page: row.key, row }));
+    } else {
+      pages = slot.rows.map((row) => ({ page: row.key, row }));
+    }
+  }
+  const event = args.eventName;
+  const unitsOf = (row: ListRow) => {
+    const count = row.counts.get(event) ?? 0;
+    return { did: row.eventVisits?.get(event) ?? count, times: row.eventTimes?.get(event) ?? count };
+  };
+  const visits = pages.reduce((sum, one) => sum + one.row.visits, 0);
+  const converted = pages
+    .map((one) => ({ ...one, ...unitsOf(one.row) }))
+    .filter((one) => one.did > 0 || one.times > 0)
+    .sort((left, right) => right.did - left.did || right.times - left.times || right.row.visits - left.row.visits || left.page.localeCompare(right.page));
+  const kept = converted.slice(0, MOST_SQUARE_PAGES);
+  const addresses = await decodePages(ctx, holdId, kept.map((one) => one.page));
+  const titles = await titlesOf(ctx, holdId, addresses);
+  const rows = kept.map((one, at) => {
+    const address = addresses[at] ?? one.page;
+    const title = titles.get(address);
+    return { page: one.page, address, ...(title ? { title } : {}), visits: one.row.visits, did: one.did, times: one.times };
+  });
+  return {
+    collecting: false,
+    everyDevice,
+    name,
+    cut: converted.length > kept.length,
+    visits,
+    seen: conversionPagesSees(rows.map((row) => ({ key: row.page, address: row.address, visits: row.visits, did: row.did }))),
+    rows,
+  };
+}
+
 // ---------- The lines by kind: one conversion, a day at a time, a line per column ----------
 
 export const conversionsByKindValidator = v.object({
@@ -267,8 +388,23 @@ export async function readConversionsByKind(ctx: SiteReader, args: { siteId: Id<
   let nameOf: (key: string) => string | null = () => null;
   const everyDevice = false;
   if (args.columns === "kind") {
-    // Landing pages are kept for the period, never by the day: no line a day by page kind until a day list is collected.
-    return none;
+    // The landing pages by kind, kept a day at a time (DAY_ONLY_LISTS): a row a kind, the website's classification
+    // as it stood the night each day was collected. The busiest kinds apart and the rest Other, as the map folds them.
+    const points = await readDayPoints(ctx, connection, "landingKind", args.device, range.from, range.to, country);
+    if (!points) return none;
+    const kinds = await readPageKinds(ctx, holdId);
+    nameOf = (key) => kinds?.nameOf(key) ?? null;
+    for (const point of points) for (const row of point.rows) addDay(cellAt(row.key, point.start, point.end), row, event, seen);
+    const visitsNow = new Map([...byColumn].map(([key, points]) => [key, [...points.values()].reduce((sum, one) => sum + one.cell.visits, 0)]));
+    for (const key of foldedKinds(visitsNow)) {
+      for (const [day, point] of byColumn.get(key) ?? []) {
+        const other = cellAt(OTHER_KIND, day, point.lastDay);
+        other.visits += point.cell.visits;
+        other.did += point.cell.did;
+        other.times += point.cell.times;
+      }
+      byColumn.delete(key);
+    }
   } else if (args.columns === "channel") {
     const points = await readDayPoints(ctx, connection, "channel", args.device, range.from, range.to, country);
     if (!points) return none;
@@ -295,7 +431,7 @@ export async function readConversionsByKind(ctx: SiteReader, args: { siteId: Id<
   const keys = args.columns === "device" ? DEVICES.filter((one) => byColumn.has(one))
     : args.columns === "country" ? [...byColumn.keys()].sort((left, right) => (left === "" ? -1 : right === "" ? 1 : left.localeCompare(right)))
       : [...byColumn.keys()].sort((left, right) => {
-        const last = (key: string) => (key === NOT_SORTED_KIND ? 1 : key === NO_PAGE_KIND ? 2 : 0);
+        const last = (key: string) => (key === OTHER_KIND ? 1 : key === NOT_SORTED_KIND ? 2 : key === NO_PAGE_KIND ? 3 : 0);
         return last(left) - last(right) || visitsOf(right) - visitsOf(left) || left.localeCompare(right);
       });
   const days = new Map<string, string | undefined>();

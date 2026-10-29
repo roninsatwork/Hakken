@@ -401,6 +401,32 @@ export function allPagesSees(rows: readonly ListRowFacts[], counting: boolean, m
   ]);
 }
 
+/** A page behind a square of the Conversions map: its address, visits, and the visits that made the conversion. */
+export type SquarePageFacts = { key: string; address: string; visits: number; did: number };
+
+/**
+ * The pages behind a square (conversion-charts-plan.md, 2026-10-29): how many
+ * pages the conversion was made from in that column and how many conversions
+ * that is; the page that made most of them and its share; and, among the pages
+ * with enough visits to judge, the one where the fewest visits convert. Its
+ * step: see the page that converts most.
+ */
+export function conversionPagesSees(rows: readonly SquarePageFacts[]): Seen {
+  if (rows.length === 0) return seen([{ code: "none" }]);
+  const total = sum(rows, (row) => row.did);
+  const best = [...rows].sort((left, right) => right.did - left.did || right.visits - left.visits)[0];
+  const judged = rows.filter((row) => row.visits >= LEAK_VISITS && row.did <= row.visits);
+  const weakest = [...judged].sort((left, right) => left.did / left.visits - right.did / right.visits)[0] ?? null;
+  const name = (row: SquarePageFacts) => pathOfAddress(row.address);
+  return seen([
+    { code: "pages", a: rows.length, b: total },
+    rows.length > 1 && { code: "topPage", text: name(best), a: best.did, b: total },
+    weakest && weakest.key !== best.key && { code: "weakest", text: name(weakest), a: weakest.did / weakest.visits, b: weakest.visits },
+  ], [
+    best.key.startsWith("~") && { code: "seeBest", text: name(best), link: "seePage", to: toPage("all-pages/page", { key: best.key }) },
+  ]);
+}
+
 /** Views with no page before reading as worth a sentence (§18.7): a fifth or more. */
 export const NO_PAGE_BEFORE_SHARE = 0.2;
 

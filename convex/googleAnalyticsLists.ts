@@ -116,6 +116,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   landingBrowser: ["landingPage", "browser"],
   landingSystem: ["landingPage", "operatingSystem"],
   landingInterest: ["landingPage", "brandingInterest"],
+  // The landing pages by kind (a day list, DAY_ONLY_LISTS): asked as the landing pages and folded as they arrive.
+  landingKind: ["landingPage"],
 };
 
 /**
@@ -145,6 +147,7 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   // A landing page's channels, for its own screen and a channel's page, for each device (SF5).
   landingChannel: true,
   landingAssistant: true,
+  landingKind: true,
   // The shared page lists: each device asked on its own (`googleAnalyticsPageLists`).
   landingSource: true,
   pageReferrer: true,

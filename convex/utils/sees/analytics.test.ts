@@ -6,6 +6,7 @@ import type { Seen } from "../hakkenSees";
 import {
   UNKNOWN_SHARE,
   allPagesSees,
+  conversionPagesSees,
   channelSees,
   channelsSees,
   chooseEventsSees,
@@ -723,5 +724,24 @@ describe("the rules' own measures", () => {
     expect(pathOfAddress("https://ronins.co.uk")).toBe("/");
     expect(pathOfAddress("Direct")).toBe("Direct");
     expect(UNKNOWN_SHARE).toBe(HEALTH_UNKNOWN_SHARE);
+  });
+});
+
+describe("the pages behind a square", () => {
+  test("how many pages and conversions, the page that made most, the busy page converting least, and a step to the best", () => {
+    const box = conversionPagesSees([
+      { key: "~1", address: "https://www.acme-shop.test/handles/", visits: 400, did: 7 },
+      { key: "~2", address: "https://www.acme-shop.test/knobs/", visits: 300, did: 4 },
+      { key: "~3", address: "https://www.acme-shop.test/contact/", visits: 20, did: 1 },
+    ]);
+    expect(box.says).toEqual([
+      { code: "pages", a: 3, b: 12 },
+      { code: "topPage", text: "/handles/", a: 7, b: 12 },
+      { code: "weakest", text: "/knobs/", a: 4 / 300, b: 300 },
+    ]);
+    expect(box.steps).toEqual([{ code: "seeBest", text: "/handles/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~1" } } }]);
+    // One page alone: no "made most", and a page with more conversions than visits (an older row) is never judged.
+    expect(conversionPagesSees([{ key: "~1", address: "https://www.acme-shop.test/handles/", visits: 5, did: 9 }]).says).toEqual([{ code: "pages", a: 1, b: 9 }]);
+    expect(conversionPagesSees([]).says).toEqual([{ code: "none" }]);
   });
 });

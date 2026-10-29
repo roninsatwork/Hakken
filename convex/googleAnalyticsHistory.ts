@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import { memoryNow } from "./utils/stepMemory";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { DAY_FACT_LISTS, analyticsPackedRows, dayFactListValidator, type DayFactList } from "./googleAnalyticsSchema";
+import { DAY_FACT_LISTS, DAY_ONLY_LISTS, analyticsPackedRows, dayFactListValidator, type DayFactList } from "./googleAnalyticsSchema";
 import { EVERY_DEVICE, groupKeys, packList, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { addInto, blank } from "./googleAnalyticsRows";
 import { DAYS_PER_STEP, SPLIT_ROWS, STEP_BUDGET_MS, askList, collectDays, countryIdOf, dayFactsOf, failed, openSession, slotKey, type StepResult } from "./googleAnalyticsCollect";
@@ -132,8 +132,9 @@ export const rollHistory = internalMutation({
         group.parts.push(day as PackedPart);
         groups.set(key, group);
       }
+      // A days-only list's days go rather than roll on (DAY_ONLY_LISTS).
       for (const group of groups.values()) {
-        if (!group.home || group.home.grain === "day") continue;
+        if (!group.home || group.home.grain === "day" || DAY_ONLY_LISTS.includes(list)) continue;
         await addIntoRecord(ctx, holdId, list, first.device, group.home.grain, group.home.start, rowsOfParts(group.parts), eventsOf(group.parts));
       }
       for (const day of days) await ctx.db.delete(day._id);
@@ -206,7 +207,8 @@ export async function readDayPoints(
   if (!newest || !coverage.oldestDay) return null;
   const floors = historyFloors(newest);
   const filledList = filledLists(coverage).includes(list);
-  if (!filledList && list !== "total" && list !== "channel") return null;
+  // A days-only list (DAY_ONLY_LISTS) is read as its days are held, never as weeks or months.
+  if (!filledList && list !== "total" && list !== "channel" && !DAY_ONLY_LISTS.includes(list)) return null;
   // Days held back to the 90 (or as far as the first collection reached); weeks and months beyond only once the
   // fill has run and the days reach the 90, so no stretch between them is missing.
   const daysFrom = coverage.oldestDay > floors.day ? coverage.oldestDay : floors.day;

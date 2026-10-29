@@ -26,7 +26,10 @@ filter: Lines
 filter: Against
 compact-list: Better or worse | Latest day | Against the one before | Last # days | Against the # before
 chart-card: Conversions by channel
-channel-map
+  filter: Count
+  filter: Compare
+conversions-map
+  channel-map
 chart-card: Visits, by channel
 filter: By
 filter: Show

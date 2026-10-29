@@ -9,6 +9,7 @@ describe("where a page's own screen goes back to", () => {
     });
     expect(backTarget("")).toEqual({ path: "", screen: "overview", name: null });
     expect(backTarget("conversions")).toMatchObject({ screen: "conversions" });
+    expect(backTarget("conversions/pages?event=generate_lead&by=kind&key=service")).toMatchObject({ screen: "conversionPages", name: null });
     // Funnel, at its address now and at the one it had as Landing pages.
     expect(backTarget("funnel?period=30")).toMatchObject({ path: "funnel?period=30", screen: "landingPages" });
   });

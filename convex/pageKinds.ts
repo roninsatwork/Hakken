@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import { internalQuery, type QueryCtx } from "./_generated/server";
 import { FAN_OUT_LIMITS } from "./fanOutLimits";
 import { readClassificationSetup, ruleInputs } from "./pageClassifications";
 import { classificationLineKindValidator, classificationTypeValidator } from "./pagesSchema";
@@ -132,6 +132,13 @@ export const pageKindSetupValidator = v.object({
   autos: v.optional(v.array(v.object({ page: v.string(), classificationId: v.string(), certainty: v.union(v.literal("SURE"), v.literal("FAIRLY_SURE")) }))),
   sitemap: v.array(v.object({ page: v.string(), file: v.string() })),
   sitemapCut: v.boolean(),
+});
+
+/** The setup for a collection to classify each day's landing pages as they arrive (`googleAnalyticsCollect.collectDays`). */
+export const pageKindSetupOf = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.union(v.null(), pageKindSetupValidator),
+  handler: async (ctx, args) => await readPageKindSetup(ctx, args.holdId),
 });
 
 /**

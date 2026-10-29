@@ -8,6 +8,7 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { PROPERTY, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
+import { NOT_SORTED_KIND } from "./utils/pageKinds";
 
 /**
  * The Conversions map and the lines by kind (conversion-charts-plan.md, 2026-10-29), read from what a first
@@ -94,8 +95,56 @@ describe("the Conversions map", () => {
     expect(lines.points.length).toBe(30);
     expect(lines.points[0].day).toBe("2026-09-01");
     expect(lines.points.some((point) => point.cells.some((cell) => cell.did > 0))).toBe(true);
-    // Page kinds are not kept by the day: nothing to draw, said so.
+    // Page kinds are kept by the day too since 2026-10-29 (the landing pages by kind, DAY_ONLY_LISTS): a line a day.
     const kinds = await admin.query(api.googleAnalyticsConversionsMap.analyticsConversionsByKindChart, { siteId, period: "lastMonth", device: "", columns: "kind", eventName: "generate_lead" });
-    expect(kinds.held).toBe(false);
+    expect(kinds.held).toBe(true);
+  });
+});
+
+describe("the pages behind a square, and the lines by page kind", () => {
+  test("a square's pages add up to it, by page kind and by channel; the landing pages kept by kind draw a line a day", async () => {
+    const t = harness();
+    const { siteId, admin } = await connected(t);
+    fakeGoogle(history(70));
+    await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, {
+      siteId,
+      events: [{ eventName: "generate_lead", counted: true, hakkenValue: 250 }, { eventName: "click_tel", counted: true, hakkenValue: 150 }],
+    });
+    await finishScheduled(t);
+    const period = { siteId, period: "lastMonth" as const, device: "" };
+
+    // By page kind: no classification yet, so every page is Unclassified; the pages behind that square are the
+    // landing pages a lead was made from, each a real address, the most leads first, adding up to the square.
+    const byKind = await admin.query(api.googleAnalyticsConversionsMap.analyticsConversionsMap, { ...period, columns: "kind" });
+    const at = byKind.columns.findIndex((column) => column.key === NOT_SORTED_KIND);
+    expect(at).toBeGreaterThanOrEqual(0);
+    const lead = byKind.rows.find((row) => row.eventName === "generate_lead")!;
+    const pages = await admin.query(api.googleAnalyticsConversionsMap.analyticsConversionsPages, { ...period, columns: "kind", key: NOT_SORTED_KIND, eventName: "generate_lead" });
+    expect(pages.collecting).toBe(false);
+    expect(pages.cut).toBe(false);
+    expect(pages.rows.length).toBeGreaterThan(0);
+    expect(pages.rows.every((row) => /^https?:\/\//.test(row.address))).toBe(true);
+    expect(pages.rows.reduce((sum, row) => sum + row.did, 0)).toBe(lead.cells[at].visits);
+    expect(pages.rows.reduce((sum, row) => sum + row.times, 0)).toBe(lead.cells[at].times);
+    for (let index = 1; index < pages.rows.length; index += 1) expect(pages.rows[index - 1].did).toBeGreaterThanOrEqual(pages.rows[index].did);
+    expect(pages.visits).toBe(byKind.columns[at].visits);
+
+    // By channel: the pages behind the first channel's square add up to it too.
+    const byChannel = await admin.query(api.googleAnalyticsConversionsMap.analyticsConversionsMap, { ...period, columns: "channel" });
+    const channel = byChannel.columns[0];
+    const leadByChannel = byChannel.rows.find((row) => row.eventName === "generate_lead")!;
+    const channelPages = await admin.query(api.googleAnalyticsConversionsMap.analyticsConversionsPages, { ...period, columns: "channel", key: channel.key, eventName: "generate_lead" });
+    expect(channelPages.collecting).toBe(false);
+    expect(channelPages.rows.reduce((sum, row) => sum + row.did, 0)).toBe(leadByChannel.cells[0].visits);
+
+    // The lines by page kind: the landing pages kept a day at a time, folded by kind as they arrived (DAY_ONLY_LISTS),
+    // one line for Unclassified over last month's days; their visits add up to the map's column for the same dates.
+    const lines = await admin.query(api.googleAnalyticsConversionsMap.analyticsConversionsByKindChart, { ...period, columns: "kind", eventName: "generate_lead" });
+    expect(lines.held).toBe(true);
+    const kindAt = lines.columns.findIndex((column) => column.key === NOT_SORTED_KIND);
+    expect(kindAt).toBeGreaterThanOrEqual(0);
+    expect(lines.points.length).toBeGreaterThan(20);
+    expect(lines.points.reduce((sum, point) => sum + point.cells[kindAt].visits, 0)).toBe(byKind.columns[at].visits);
+    expect(lines.points.reduce((sum, point) => sum + point.cells[kindAt].did, 0)).toBe(lead.cells[at].visits);
   });
 });

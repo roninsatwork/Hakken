@@ -1,0 +1,12 @@
+# Google Analytics → Conversions → the pages behind a square — the approved look (board "Conversion pages" of docs/plans/assets/ga-conversions-visitors/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Conversions
+  page-header: ‹the record's name›
+    sees-eye
+search: Find a page…
+table: Page | Visits | Converted | Times | Rate
+  table-bar: Pages
+    download: Download CSV
+  table-footer

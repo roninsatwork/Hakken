@@ -84,6 +84,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   const back = backTarget(useSearchParams().get("from"));
   const tm = useTranslations("googleAnalytics.menu");
   const backLabel = (to: NonNullable<typeof back>) => to.screen === "page" ? t("backToPage")
+    : to.screen === "conversionPages" ? t("backToConversionPages")
     : to.screen === "channel" ? to.name ?? tm("channels")
       : to.screen === "event" ? to.name ?? tm("events")
         : tm(to.screen);

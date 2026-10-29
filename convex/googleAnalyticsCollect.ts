@@ -11,6 +11,8 @@ import { coverageOf, withCoverage } from "./googleAnalyticsCoverage";
 import { closeConnection } from "./googleAnalyticsRunEnd";
 import { shiftDay } from "./searchConsoleDays";
 import { numberPages } from "./googleAnalyticsPageNumbers";
+import { askedAs, foldByKind } from "./googleAnalyticsLandingKinds";
+import { pageKindsFrom } from "./utils/pageKinds";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import type { ReportRow, Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
@@ -402,6 +404,7 @@ export function dayFactsOf(target: Pick<CollectTarget, "shop">): DayFactList[] {
   return DAY_FACT_LISTS.filter((list) => list !== "product" || target.shop);
 }
 
+
 /**
  * A week of days, newest first: each day fact by day and device (SF12), each
  * day written as one record per list and device. A day Google has nothing
@@ -426,17 +429,22 @@ export async function collectDays(
   for (let day = range.to; day >= range.from; day = shiftDay(day, -1)) days.push(day);
   const weeks: Record<string, { parts: number }> = await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, {
     companyWebsiteId: target.companyWebsiteId,
-    keys: lists.map((list) => slotKey(list, "lastWeek", "NOW", EVERY_DEVICE, country ?? "")),
+    keys: lists.map((list) => slotKey(askedAs(list), "lastWeek", "NOW", EVERY_DEVICE, country ?? "")),
   });
+  // The website's classification, read once a call, for the landing pages by kind.
+  const kinds = lists.includes("landingKind")
+    ? await ctx.runQuery(internal.pageKinds.pageKindSetupOf, { holdId: target.companyWebsiteId }).then((setup) => (setup ? pageKindsFrom(setup) : null))
+    : null;
   let rows = 0;
   let cut = false;
   // Each day's records, packed — Google's rows let go as each list is packed — and written once a day for every list.
   type DayRecord = { list: DayFactList; device: string; parts: PackedPart[]; folded: boolean; thresholded: boolean; cut: boolean };
   const byDay = new Map<string, DayRecord[]>(days.map((day) => [day, []]));
   for (const list of lists) {
-    const big = (weeks[slotKey(list, "lastWeek", "NOW", EVERY_DEVICE, country ?? "")]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS;
+    const asked_ = askedAs(list);
+    const big = (weeks[slotKey(asked_, "lastWeek", "NOW", EVERY_DEVICE, country ?? "")]?.parts ?? 0) * PART_ROWS > SPLIT_ROWS;
     for (const span of big ? days.map((day) => ({ from: day, to: day })) : [range]) {
-      const asked = await askList(session, asking, list, ["date", "deviceCategory"], span);
+      const asked = await askList(session, asking, asked_, ["date", "deviceCategory"], span);
       if (!asked.ok) return failed(session, asked);
       cut ||= asked.flags.cut;
       for (let day = span.to; day >= span.from; day = shiftDay(day, -1)) {
@@ -447,8 +455,9 @@ export async function collectDays(
         }
         if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
         for (const [device, groupRows] of devices) {
-          rows += groupRows.length;
-          byDay.get(day)!.push({ list, device: dayDevice(device, country), parts: packList(list, groupRows, target.events), ...asked.flags });
+          const dayRows = list === "landingKind" ? foldByKind(groupRows, kinds, target.origin) : groupRows;
+          rows += dayRows.length;
+          byDay.get(day)!.push({ list, device: dayDevice(device, country), parts: packList(asked_, dayRows, target.events), ...asked.flags });
         }
       }
     }

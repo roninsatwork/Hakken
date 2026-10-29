@@ -75,11 +75,13 @@ describe("a page's own conversions", () => {
     const grid = (await user.query(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, args))!;
     // Each channel whose visits started here, the most first; the lead from organic search; a key event not counted that never happened left off.
     // Organic search lands only on the home page: its visits and lead are the whole website's from that channel.
-    expect(grid.channels[0]).toEqual({ channel: "Organic Search", visits: 80, conversions: 8, websiteVisits: 80, websiteConversions: 8 });
+    expect(grid.channels[0]).toEqual({ channel: "Organic Search", visits: 80, visitsBefore: expect.any(Number), conversions: 8, websiteVisits: 80, websiteConversions: 8 });
+    expect(grid.hasBefore).toBe(true);
     expect(grid.channels.every((entry) => entry.websiteVisits >= entry.visits)).toBe(true);
     expect(grid.rows.map((row) => [row.eventName, row.counted, row.count])).toEqual([["generate_lead", true, 8], ["click_tel", true, 0], ["sign_up", true, 0]]);
-    expect(grid.rows[0].cells[0]).toBe(8);
-    expect(grid.rows[0].cells.reduce((sum, count) => sum + count, 0)).toBe(8);
+    // Each square in both units, with the span before's (conversion-charts-plan.md): the lead's visits never more than its times.
+    expect(grid.rows[0].cells[0]).toMatchObject({ visits: 8, times: 8, visitsBefore: expect.any(Number), timesBefore: expect.any(Number) });
+    expect(grid.rows[0].cells.reduce((sum, cell) => sum + cell.visits, 0)).toBe(8);
     expect(google.calls.length).toBe(asked);
   });
 });

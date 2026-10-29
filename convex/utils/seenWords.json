@@ -1288,6 +1288,13 @@
         "classifications": "See classifications",
         "campaigns": "Campaigns",
         "channel": "See the channel"
+      },
+      "conversionPages": {
+        "none": "No page converted here in these dates.",
+        "pages": "{count, plural, =1 {One page} other {# pages}} made {countB, plural, =1 {the one conversion} other {the # conversions}} here.",
+        "topPage": "{text} made {a} of the {b}.",
+        "weakest": "{text} converts least of the busy pages: {aRate} of its {b} visits.",
+        "seeBest": "See {text}, the page that converts most here."
       }
     },
     "searchConsole.seen": {
@@ -2785,6 +2792,13 @@
         "classifications": "Vedi le classificazioni",
         "campaigns": "Campagne",
         "channel": "Vedi il canale"
+      },
+      "conversionPages": {
+        "none": "Nessuna pagina ha convertito qui in queste date.",
+        "pages": "{count, plural, =1 {Una pagina ha fatto} other {# pagine hanno fatto}} {countB, plural, =1 {l'unica conversione} other {le # conversioni}} qui.",
+        "topPage": "{text} ne ha fatte {a} su {b}.",
+        "weakest": "{text} converte meno tra le pagine più visitate: {aRate} delle sue {b} visite.",
+        "seeBest": "Vedi {text}, la pagina che converte di più qui."
       }
     },
     "searchConsole.seen": {

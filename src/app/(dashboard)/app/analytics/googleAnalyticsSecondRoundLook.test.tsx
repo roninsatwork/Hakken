@@ -163,14 +163,16 @@ describe("Google Analytics' second-round looks", () => {
       },
       "googleAnalyticsPageConversions:analyticsPageConversionGrid": {
         everyDevice: false,
+        hasBefore: true,
+        bothUnits: true,
         channels: [
-          { channel: "Organic Search", visits: 452, conversions: 0, websiteVisits: 3100, websiteConversions: 40 },
-          { channel: "Direct", visits: 141, conversions: 1, websiteVisits: 900, websiteConversions: 20 },
+          { channel: "Organic Search", visits: 452, visitsBefore: 400, conversions: 0, websiteVisits: 3100, websiteConversions: 40 },
+          { channel: "Direct", visits: 141, visitsBefore: 120, conversions: 1, websiteVisits: 900, websiteConversions: 20 },
         ],
         rows: [
-          { eventName: "generate_lead", counted: true, count: 1, cells: [0, 1] },
-          { eventName: "click_tel", counted: true, count: 0, cells: [0, 0] },
-          { eventName: "click_email", counted: true, count: 0, cells: [0, 0] },
+          { eventName: "generate_lead", counted: true, count: 1, cells: [{ visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 1, times: 1, visitsBefore: 0, timesBefore: 0 }] },
+          { eventName: "click_tel", counted: true, count: 0, cells: [{ visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
+          { eventName: "click_email", counted: true, count: 0, cells: [{ visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
         ],
       },
       "googleAnalyticsPageReads:analyticsPage": {
