@@ -12,7 +12,8 @@
         "dev"
       ],
       "port": 3000,
-      "autoPort": true
+      "autoPort": true,
+      "url": "http://hakken.localhost:3000"
     },
     {
       "//": "The real app on 3001, for when 3000 is wanted for something else.",
@@ -27,7 +28,8 @@
         "-p",
         "3001"
       ],
-      "port": 3001
+      "port": 3001,
+      "url": "http://hakken.localhost:3001"
     },
     {
       "name": "next-dev-test-auth",
@@ -41,7 +43,8 @@
         "dev"
       ],
       "port": 3000,
-      "autoPort": true
+      "autoPort": true,
+      "url": "http://hakken.localhost:3000"
     },
     {
       "//": "Signs in via /api/e2e-auth?role=... with no secret required, so admin screens can be inspected visually. E2E_AUTH_ENABLED also swaps convex/react for src/e2e/convexReactMock.tsx, so data is fixture data: good for verifying layout, navigation and role-dependent rendering, not for verifying real query results.",
@@ -55,10 +58,11 @@
         "dev"
       ],
       "port": 3000,
-      "autoPort": true
+      "autoPort": true,
+      "url": "http://hakken.localhost:3000"
     },
     {
-      "//": "The production build, served locally. Use this to test anything that behaves differently in production \u2014 the content security policy in particular, which withholds 'unsafe-eval' on live and grants it in dev. Run `npm run build` first.",
+      "//": "The production build, served locally. Use this to test anything that behaves differently in production — the content security policy in particular, which withholds 'unsafe-eval' on live and grants it in dev. Run `npm run build` first.",
       "name": "next-prod",
       "runtimeExecutable": "env",
       "runtimeArgs": [
@@ -69,7 +73,8 @@
         "start"
       ],
       "port": 3000,
-      "autoPort": true
+      "autoPort": true,
+      "url": "http://hakken.localhost:3000"
     }
   ]
 }

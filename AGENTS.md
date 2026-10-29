@@ -59,6 +59,21 @@ Three things to hold onto:
 
 Before changing billing, read the [approved billing experience and handoff](docs/plans/active/optional-billing-starter-proposal.md#approved-billing-experience--2026-09-14) and [Stripe operator guide](docs/operator/stripe-billing.md). Company admins use **Billing in the user frontend** (`/app/settings/billing`) and have **zero access to platform Admin**. Super-admin setup and oversight live at `/admin/settings/billing`; Stripe owns hosted payments, invoices and customer financial management. Each clone uses one operator-owned Stripe account. Saved backend settings override the JSON clone defaults; credentials stay in the backend environment. Keep paid-company and covered-user counts distinct from revenue or per-seat billing. The [dated verification record](docs/plans/active/product-building-foundations-plan.md#billing-experience-verification--2026-09-14) separates local implementation from live Stripe acceptance and deployment; never treat one as proof of the other.
 
+## The Local App's Address
+
+**The local app is `http://hakken.localhost:3000`** (Anthony, 2026-10-29).
+Never `localhost:3000` and never `127.0.0.1:3000`. Convex's `SITE_URL` on the
+dev deployment has been `http://hakken.localhost:3000` since mid-October 2026,
+so Google sign-in only comes back to that address; any other hostname lands
+you on `/login` again. The separate hostname also keeps Hakken's sign-in
+cookies apart from the other Convex Auth apps on this machine, which share
+one cookie jar on plain `localhost` whatever the port. Every `.localhost`
+name resolves to the machine itself without a hosts-file entry.
+
+Start it with `npm run dev` and `npm run convex:dev` (or `.claude/launch.json`'s
+`next-dev`, which opens at that address), and open it in Anthony's Chrome,
+which is signed in there.
+
 ## Current Branch Rules
 
 - Daily development happens on `dev`.
@@ -310,7 +325,7 @@ separate build produced output nothing read; `deploy.yml` explains it inline.
 toolchain currently pins an unpatchable transitive advisory, which
 `.github/workflows/security-audit.yml` reports weekly without blocking.
 
-If the local frontend is running on port 3000, stop it before `npm run build`, then restart both services afterwards:
+If the local frontend is running on port 3000, stop it before `npm run build`, then restart both services afterwards and open `http://hakken.localhost:3000`:
 
 ```bash
 npm run dev

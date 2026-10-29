@@ -72,6 +72,11 @@ It previews product defaults and provider requirements before applying local fil
       npm run convex:dev
       ```
 
+    Then open **http://hakken.localhost:3000**. The dev deployment's Convex
+    `SITE_URL` is set to that address, so sign-in only completes there;
+    `localhost:3000` or `127.0.0.1:3000` sends you back to `/login`. The
+    `.localhost` name needs no hosts-file entry.
+
 ## Local Test Auth
 
 For deterministic local E2E sessions, use the local test-auth helpers only in an explicitly configured local environment:
