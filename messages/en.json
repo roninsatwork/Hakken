@@ -18151,9 +18151,10 @@
       "detail": "{visits, plural, one {# visit} other {# visits}}, {did} with {event}",
       "csv": {
         "day": "day",
-        "visits": "visits",
-        "did": "visits with it",
-        "times": "times"
+        "visits": "Visits",
+        "did": "Converted",
+        "times": "Times",
+        "rate": "Rate"
       },
       "hoverRate": "{event} → {kind}: {value}, {did, number} of {visits, plural, one {# visit} other {# visits}}",
       "hoverBefore": ", {before} {value} ({change})"

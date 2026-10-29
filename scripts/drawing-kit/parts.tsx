@@ -393,7 +393,7 @@ const PARTS: Part[] = [
         points={["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"].map((day, at) => ({ day, cells: [{ visits: 400 + at * 20, did: 14 + at, times: 14 + at }, { visits: 150 + at * 5, did: 6, times: 6 }] }))}
         count="visits"
         step="day"
-        words={{ detail: (visits, did) => `${visits} visits, ${did} with Purchase`, csvHead: { day: "day", visits: "visits", did: "visits with it", times: "times" } }}
+        words={{ detail: (visits, did) => `${visits} visits, ${did} with Purchase`, csvHead: { day: "day", visits: "Visits", did: "Converted", times: "Times", rate: "Rate" } }}
         exportName="conversions-by-kind"
       />
     ),

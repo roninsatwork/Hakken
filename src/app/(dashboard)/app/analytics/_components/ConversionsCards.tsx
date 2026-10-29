@@ -145,7 +145,7 @@ export function ConversionsByKindCard() {
       step={step}
       words={{
         detail: (visits, did, times) => t("detail", { visits, did: count === "events" ? times : did, event: nameOf(chosen) }),
-        csvHead: { day: t("csv.day"), visits: t("csv.visits"), did: t("csv.did"), times: t("csv.times") },
+        csvHead: { day: t("csv.day"), visits: t("csv.visits"), did: t("csv.did"), times: t("csv.times"), rate: t("csv.rate") },
       }}
       exportName="google-analytics-conversions-by-kind"
       caption={status?.host}

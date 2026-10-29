@@ -7,7 +7,7 @@ import { SiteLineChart, type SiteSeries } from "@/src/app/(dashboard)/app/sites/
 import { datedRow } from "@/src/app/(dashboard)/app/sites/_components/datedRows";
 import { formatMonth, formatShortDay } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
 import { stepKey } from "@/src/app/(dashboard)/app/analytics/_components/stepScale";
-import type { ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReadoutTable } from "@/src/ui/components/charts/ChartReadoutTable";
 import { CHART_COMPARATOR_GREY, CHART_PRIMARY_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_PALETTE } from "@/src/ui/components/charts/chartPalette";
 import type { ConversionsCount } from "./ConversionsMap";
 
@@ -38,8 +38,8 @@ export function ConversionsByKindChart({ title, controls, columns, points, count
   words: {
     /** Under a line's name in the readout: its visits and what it did that day. */
     detail: (visits: number, did: number, times: number) => string;
-    /** Google's update mark in the key. */
-    csvHead: { day: string; visits: string; did: string; times: string };
+    /** The readout's and the download's column words: visits, visits with the conversion, times, and the rate. */
+    csvHead: { day: string; visits: string; did: string; times: string; rate: string };
   };
   exportName: string;
   csv?: () => string;
@@ -64,7 +64,7 @@ export function ConversionsByKindChart({ title, controls, columns, points, count
     buckets.set(key, bucket);
   }
   const valueOf = (cell: { visits: number; did: number; times: number }) =>
-    count === "events" ? cell.times : count === "visits" ? cell.did : cell.visits > 0 ? cell.did / cell.visits : null;
+    count === "events" ? cell.times : count === "visits" ? cell.did : cell.visits > 0 ? (100 * cell.did) / cell.visits : null;
   const data = [...buckets.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([key, bucket]) => {
     const values: Record<string, unknown> = {};
     columns.forEach((column, at) => {
@@ -76,17 +76,33 @@ export function ConversionsByKindChart({ title, controls, columns, points, count
     return datedRow({ day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last }, values, step === "month" ? formatMonth(key) : formatShortDay(bucket.first));
   });
   const series: SiteSeries[] = shown.map((column) => ({ key: column.key, name: column.name, colour: COLOURS[columns.findIndex((other) => other.key === column.key) % COLOURS.length] }));
-  const formatValue = (value: number) => (count === "rate" ? pct(value) : value.toLocaleString("en-GB"));
-  const seriesLabel = (entry: ChartTooltipEntry) => {
-    const row = entry.payload as Record<string, number> | undefined;
-    const key = String(entry.dataKey ?? "");
-    return (
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate">{entry.name}</span>
-        {row ? <span className="truncate text-[11px] text-muted">{words.detail(row[`${key}__visits`] ?? 0, row[`${key}__did`] ?? 0, row[`${key}__times`] ?? 0)}</span> : null}
-      </span>
-    );
-  };
+  const formatValue = (value: number) => (count === "rate" ? `${value.toFixed(1)}%` : value.toLocaleString("en-GB"));
+  // The hover from the canvas (board 1d): the day, then a row per line with its visits, its conversions and its rate.
+  const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }) => (
+    <ChartReadoutTable
+      heading={heading}
+      columns={[
+        { key: "visits", label: words.csvHead.visits, tone: "quiet" },
+        { key: "did", label: count === "events" ? words.csvHead.times : words.csvHead.did, tone: "band" },
+        { key: "rate", label: words.csvHead.rate, tone: "quiet" },
+      ]}
+      rows={shown.map((column) => {
+        const visits = Number(row[`${column.key}__visits`] ?? 0);
+        const did = Number(row[`${column.key}__did`] ?? 0);
+        const times = Number(row[`${column.key}__times`] ?? 0);
+        return {
+          key: column.key,
+          name: column.name,
+          colour: COLOURS[columns.findIndex((other) => other.key === column.key) % COLOURS.length],
+          cells: {
+            visits: { text: visits.toLocaleString("en-GB"), quiet: true },
+            did: { text: (count === "events" ? times : did).toLocaleString("en-GB") },
+            rate: { text: visits > 0 ? pct(did / visits) : "–", quiet: true },
+          },
+        };
+      })}
+    />
+  );
   const ticks = (
     <div className="flex flex-wrap gap-x-5 gap-y-2">
       {columns.map((column) => (
@@ -121,7 +137,7 @@ export function ConversionsByKindChart({ title, controls, columns, points, count
       <div data-part="conversions-by-kind">
         {series.length === 0
           ? <p className="py-10 text-center text-[12px] text-muted">{emptyText}</p>
-          : <SiteLineChart data={data} series={series} sharedScale formatValue={formatValue} seriesLabel={seriesLabel} keepEmptyRows breakGaps />}
+          : <SiteLineChart data={data} series={series} sharedScale formatValue={formatValue} formatScale={(value) => (count === "rate" ? `${value}%` : String(value))} readout={readout} keepEmptyRows breakGaps />}
       </div>
     </ChartCard>
   );

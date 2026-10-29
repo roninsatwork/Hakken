@@ -6,7 +6,7 @@ import { SiteLineChart, type SiteSeries } from "@/src/app/(dashboard)/app/sites/
 import { datedRow } from "@/src/app/(dashboard)/app/sites/_components/datedRows";
 import { formatMonth, formatShortDay } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
 import { stepKey } from "@/src/app/(dashboard)/app/analytics/_components/stepScale";
-import type { ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReadoutTable } from "@/src/ui/components/charts/ChartReadoutTable";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 
 /**
@@ -22,8 +22,9 @@ import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/
 export type ConversionsOverTimeShow = "rate" | "per";
 export type ConversionsOverTimePoint = { day: string; lastDay?: string; visits: number; did: number };
 
+/** The figure drawn: the rate in percent (the scale marks whole numbers), or the visits for one. */
 const figureOf = (show: ConversionsOverTimeShow, visits: number, did: number): number | null =>
-  did <= 0 ? null : show === "rate" ? did / visits : visits / did;
+  did <= 0 ? null : show === "rate" ? (100 * did) / visits : visits / did;
 
 export function ConversionsOverTimeChart({ title, controls, points, before, show, step, words, exportName, caption, emptyText }: {
   title: string;
@@ -39,6 +40,8 @@ export function ConversionsOverTimeChart({ title, controls, points, before, show
     /** Under a line's name in the readout: that day's visits and conversions. */
     detail: (visits: number, did: number) => string;
     csvHead: { day: string; visits: string; did: string; figure: string };
+    /** The span before's day, for its readout row: "8 Aug". */
+    beforeDay?: (day: string) => string;
   };
   exportName: string;
   caption?: string;
@@ -68,15 +71,27 @@ export function ConversionsOverTimeChart({ title, controls, points, before, show
     { key: "now", name: words.now, colour: CHART_SERIES_ORANGE },
     ...(before ? [{ key: "before", name: words.beforeName, colour: CHART_COMPARATOR_GREY, dashed: true }] : []),
   ];
-  const formatValue = (value: number) => (show === "rate" ? `${(100 * value).toFixed(1)}%` : value.toFixed(1));
-  const seriesLabel = (entry: ChartTooltipEntry) => {
-    const row = entry.payload as Record<string, number> | undefined;
-    const isBefore = entry.dataKey === "before";
+  const formatValue = (value: number) => (show === "rate" ? `${value.toFixed(1)}%` : value.toFixed(1));
+  // The hover: the day, then the period's row and the span before's, each with its visits, its conversions and the figure.
+  const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }) => {
+    const figure = (value: unknown) => (typeof value === "number" ? formatValue(value) : "–");
+    const lines = [
+      { key: "now", name: words.now, colour: CHART_SERIES_ORANGE, visits: Number(row.visits ?? 0), did: Number(row.did ?? 0), figure: figure(row.now) },
+      ...(before ? [{ key: "before", name: words.beforeName, colour: CHART_COMPARATOR_GREY, visits: Number(row.visitsBefore ?? 0), did: Number(row.didBefore ?? 0), figure: figure(row.before) }] : []),
+    ];
     return (
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate">{entry.name}</span>
-        {row ? <span className="truncate text-[11px] text-muted">{words.detail(isBefore ? row.visitsBefore ?? 0 : row.visits ?? 0, isBefore ? row.didBefore ?? 0 : row.did ?? 0)}</span> : null}
-      </span>
+      <ChartReadoutTable
+        heading={heading}
+        columns={[
+          { key: "visits", label: words.csvHead.visits, tone: "quiet" },
+          { key: "did", label: words.csvHead.did, tone: "quiet" },
+          { key: "figure", label: words.csvHead.figure, tone: "band" },
+        ]}
+        rows={lines.map((line) => ({
+          key: line.key, name: line.name, colour: line.colour,
+          cells: { visits: { text: line.visits.toLocaleString("en-GB"), quiet: true }, did: { text: line.did.toLocaleString("en-GB"), quiet: true }, figure: { text: line.figure } },
+        }))}
+      />
     );
   };
   const csv = () => [
@@ -88,7 +103,7 @@ export function ConversionsOverTimeChart({ title, controls, points, before, show
     <ChartCard title={title} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={data.length > 0} emptyText={emptyText}>
       <div data-part="conversions-over-time">
         {drawn
-          ? <SiteLineChart data={data} series={series} sharedScale formatValue={formatValue} seriesLabel={seriesLabel} keepEmptyRows breakGaps formatScale={(value) => (show === "rate" ? `${Math.round(100 * value)}%` : String(value))} />
+          ? <SiteLineChart data={data} series={series} sharedScale formatValue={formatValue} readout={readout} keepEmptyRows breakGaps formatScale={(value) => (show === "rate" ? `${value}%` : String(value))} />
           : <p className="py-10 text-center text-[12px] text-muted">{emptyText}</p>}
       </div>
     </ChartCard>
