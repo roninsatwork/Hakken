@@ -54,6 +54,15 @@ Three things to hold onto:
 - **Everything in `docs/product/` is a dated record.** Do not edit those files
   to match later decisions. Supersede them with a new dated document, or record
   the change in PRODUCT.md's change log.
+- **Insights draws only on what the sections have downloaded** (Anthony,
+  2026-10-29). Its sources are five sections: Visibility, Search Console, Bing
+  Webmaster, Google Analytics and Microsoft Clarity. Insights reads their saved
+  data and never fetches anything itself; when something is missing, it goes
+  back to the relevant section, whose collector gets it. Never add a fetch to
+  Insights. Where today's code departs from this is recorded in
+  `docs/plans/active/insights-data-sources-audit-2026-10-29.md`; the plan to
+  correct it (recorded, not approved to build) is
+  `docs/plans/active/insights-sections-only-plan-2026-10-29.md`.
 
 ## Billing Framework Handoff
 
