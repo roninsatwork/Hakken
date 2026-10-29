@@ -7,6 +7,6 @@ detail-header (compact)
     title-switch: Choose a website
     select: Country
     select: Device
-    select: Dates
+    dates-menu: Dates
     select: Chart step
 select: Google Analytics pages

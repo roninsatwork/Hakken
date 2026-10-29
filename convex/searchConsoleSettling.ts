@@ -135,7 +135,7 @@ export const afterCompanyCollection = internalMutation({
 /** How old the 90 days may be before a night adds them up again: a week, less a little so the same night each week does. */
 export const LONG_EVERY_MS = 7 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000;
 
-/** Whether a kind of result's long periods — those asked of Google — are due tonight: This year never built, or a week old. */
+/** Whether a kind of result's long periods — those asked of Google — are due tonight: the 12 months never built, or a week old. */
 export const longPeriodsDue = internalQuery({
   args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator },
   returns: v.boolean(),
@@ -143,7 +143,7 @@ export const longPeriodsDue = internalQuery({
     const ninety = await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q
-        .eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "page").eq("period", "thisYear").eq("which", "NOW").eq("part", 0))
+        .eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "page").eq("period", "last12Months").eq("which", "NOW").eq("part", 0))
       .first();
     return !ninety || Date.now() - ninety.builtAt >= LONG_EVERY_MS;
   },

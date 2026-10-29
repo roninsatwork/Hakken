@@ -14,7 +14,8 @@ import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
-import { OpeningPeriodContext, useCalendarPeriod, useCalendarPeriodChoices } from "../../sites/_components/useCalendarPeriod";
+import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
+import { OpeningPeriodContext, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
 import { formatWhen, useDeviceName } from "../_components/ClarityParts";
 import { CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, useClarityQuery, useClaritySiteId, useClarityStatus } from "../_components/useClarity";
 
@@ -35,11 +36,9 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const pathname = useClarityPath();
   const query = useClarityQuery();
   const deviceName = useDeviceName();
-  const tp = useTranslations("common.periods");
   // A website whose Clarity days begin this month opens on This month until the 1st (agreed 2026-10-20).
   const opening = openingPeriod(status?.connection?.oldestDay, ukDay());
   const [period, setPeriod] = useCalendarPeriod(opening);
-  const periods = useCalendarPeriodChoices();
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...CLARITY_DEVICES]);
   if (status === undefined) return <><Header /><div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (status === null || !status.owned) return <><Header /><HakkenEmptyState icon={MousePointerClick} title={t("site.notFoundTitle")} description={t("site.notFoundDescription")} /></>;
@@ -76,9 +75,7 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
                   </Select>
                 )}
                 {current === "recordings" ? null : (
-                  <Select aria-label={tp("label")} value={period} onChange={(next) => setPeriod(next as typeof period)}>
-                    {periods.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
-                  </Select>
+                  <DatesMenu value={{ period }} newest={connection?.newestDay ?? null} custom={false} onChange={(choice) => setPeriod(choice.period)} />
                 )}
               </div>
             )

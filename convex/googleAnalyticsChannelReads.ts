@@ -382,11 +382,11 @@ export async function readChannelTop(ctx: SiteReader, args: ChannelArgs): Promis
   // AI assistants by assistant, and the channels Google filed each one's visits under (CH8).
   const assistants = ai ? assistantsOf(mine, mineBefore, counted) : [];
 
-  // R7: last quarter against the quarter before and the same quarter a year before, every device, Google's own
-  // answers; and the last 12 months against the 12 before, added up from the days, weeks and months held — visits add
-  // up where people do not (calendar-periods-plan.md, rule 10).
+  // R7: the last 3 months against the 3 before (there is no year before for them: sees-header-and-rolling-dates-plan.md,
+  // rule 2), every device, Google's own answers; and the last 12 months against the 12 before, added up from the days,
+  // weeks and months held — visits add up where people do not (calendar-periods-plan.md, rule 10).
   const span = async (which: "NOW" | "BEFORE" | "YEAR") => {
-    const rows = await rowsOf(ctx, holdId, key("channel", which, "lastQuarter"));
+    const rows = await rowsOf(ctx, holdId, key("channel", which, "last3Months"));
     return rows ? ofChannel(rows, args.channel).reduce((sum, row) => sum + row.visits, 0) : null;
   };
   const twelveMonths = async (to: string) => {

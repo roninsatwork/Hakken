@@ -110,6 +110,27 @@ swapped):
 Built section by section on `dev`, each committed, nothing pushed (no-push-until-told). Google is asked for nothing
 until the build ends (no-pulls-until-build-ends); the first collection of the new periods runs on Anthony's go.
 
+## As built (2026-10-29)
+
+- **Phase 1 committed** (67f0276f): the eye, the tooltip, the store, the box closed by default, 91 outlines re-saved.
+- **The period list**: `CALENDAR_PERIODS` is the menu's seven; the quarters and This year are `RETIRED_PERIODS`, still
+  in the type and the validators so the rows prepared for them do not break the schema, and no menu offers them. A
+  rolling period is "running" (asked every run, like This month) and always whole; its span before is the same number
+  of months before; only the 12 months have a year before, and it is their span before. `monthsOf` is 0 for any other
+  period.
+- **The Dates menu** is the kit part `DatesMenu` (the chip names the choice; the list shows each period's days to the
+  section's newest day; Custom dates are a first and a last day, within what the section holds, shown on Show). Every
+  section draws it through `SiteDateRange` (Sites, Search Console), its layout (Bing, Clarity), the Settings overview
+  and Governance. A section passes `custom={false}` until its reads answer custom dates.
+- **What read the quarters now reads the rolling periods**: Search Console's "lately" (`RECENT_PERIODS`, the keep rule,
+  Your pages, competing pages) is Last 3 months; the long-period settle stage and Bing's Google column follow; the
+  tracking-health page check reads Last 3 months; a shop is noted from Last 3 months and un-noted once they show no
+  step; the action funnels' fallback and Insights' yearly reads are Last 12 months; Ask Hakken's period names are the
+  menu's.
+- **Still to do before the retired periods go**: a clean-up that deletes the rows prepared for them (Search Console,
+  Bing, Clarity and Google Analytics period tables) on Anthony's word, then the retired literals leave the validators
+  and the type; and the first collection of the new periods, on his go (no-pulls-until-build-ends).
+
 ## Change log
 
-- 2026-10-29: plan written from the canvas and Anthony's "Build this"; phase 1 started.
+- 2026-10-29: plan written from the canvas and Anthony's "Build this"; phase 1 built and committed; phase 2 built, phase 3 under way.

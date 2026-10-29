@@ -26,7 +26,6 @@ export const FINISHED_ON_9_OCTOBER = {
   periodsFetched: [
     { key: "lastWeek", from: "2026-09-28", settled: true },
     { key: "lastMonth", from: "2026-09-01", settled: true },
-    { key: "lastQuarter", from: "2026-07-01", settled: true },
   ],
 };
 

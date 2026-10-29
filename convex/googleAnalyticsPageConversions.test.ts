@@ -69,8 +69,8 @@ describe("a page's own conversions", () => {
       ],
     });
     // Only the weeks and months are drawn with the span before: none for a quarter or the year.
-    expect((await user.query(api.googleAnalyticsPageConversions.analyticsPageVisitsPerConversion, { ...args, period: "lastQuarter" })).before).toBeNull();
-    expect((await user.query(api.googleAnalyticsPageConversions.analyticsPageVisitsPerConversion, { ...args, period: "thisYear" })).before).toBeNull();
+    expect((await user.query(api.googleAnalyticsPageConversions.analyticsPageVisitsPerConversion, { ...args, period: "last3Months" })).before).toBeNull();
+    expect((await user.query(api.googleAnalyticsPageConversions.analyticsPageVisitsPerConversion, { ...args, period: "last12Months" })).before).toBeNull();
 
     const grid = (await user.query(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, args))!;
     // Each channel whose visits started here, the most first; the lead from organic search; a key event not counted that never happened left off.

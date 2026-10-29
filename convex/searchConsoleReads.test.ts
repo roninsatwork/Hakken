@@ -155,12 +155,12 @@ describe("performance", () => {
       { day: "2026-10-05", clicks: 9, impressions: 90, position: 5 },
     ]);
     const reader = await person(t, companyId);
-    // This Quarter on 20 October is 1–19 October, against 1–19 July: 25 July and September are neither.
-    const quarter = await reader.query(api.searchConsoleReads.searchConsolePerformance, {
-      siteId, searchType: "web", from: "2026-10-01", to: "2026-10-19", period: "thisQuarter",
+    // This Month on 20 October is 1–19 October, against 1–19 September: 25 July and 5 July are neither.
+    const month = await reader.query(api.searchConsoleReads.searchConsolePerformance, {
+      siteId, searchType: "web", from: "2026-10-01", to: "2026-10-19", period: "thisMonth",
     });
-    expect(quarter.totals?.clicks).toBe(9);
-    expect(quarter.previous?.clicks).toBe(3);
+    expect(month.totals?.clicks).toBe(9);
+    expect(month.previous?.clicks).toBe(80);
   });
 
   test("reads back to Google's sixteen-month line once the days before collection are fetched, never stopping where collection began", async () => {
@@ -305,7 +305,7 @@ describe("the tables", () => {
 
   test("Pages competing over this year reads its own ready-made list, with how many pages Google showed (drift fixes, 2026-10-03)", async () => {
     const { t, siteId, reader } = await withSearches();
-    const year = { period: "thisYear" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
+    const year = { period: "last12Months" as const, which: "NOW" as const, from: "2025-09-27", to: "2026-09-26" };
     await period(t, siteId, "query", year, [
       ["plumber leeds", 10, 200, 3, 2, "https://acme-shop.test/plumbers/"],
       ["boiler repair", 1, 10, 9, 1, "https://acme-shop.test/boilers/"],
@@ -325,7 +325,7 @@ describe("the tables", () => {
       builtAt: Date.now(),
     });
     const competing = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
-      siteId, ...range, view: "competing", from: "2026-01-01", ...page,
+      siteId, ...range, view: "competing", from: "2025-09-27", ...page,
     });
     expect(competing).toMatchObject({ live: false, preparing: false, total: 1 });
     expect(competing.rows[0]).toMatchObject({ key: "plumber leeds", count: 2, top: "https://acme-shop.test/plumbers/", next: "https://acme-shop.test/" });
@@ -379,11 +379,11 @@ describe("the tables", () => {
 
   test("with the period before not held, no change is claimed", async () => {
     const { t, siteId, reader } = await withSearches();
-    const ninety = { period: "thisQuarter" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
+    const ninety = { period: "last3Months" as const, which: "NOW" as const, from: "2026-06-27", to: "2026-09-26" };
     await period(t, siteId, "query", ninety, [["plumber leeds", 20, 300, 4, 2, "https://acme-shop.test/plumbers/"]]);
-    const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, from: "2026-07-01", ...page });
-    // This quarter counts only what is held, and says so.
-    expect(list).toMatchObject({ comparable: false, from: "2026-09-01", to: "2026-09-26" });
+    const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, from: "2026-06-27", ...page });
+    // The last 3 months count only what is held, and say so.
+    expect(list).toMatchObject({ comparable: false, from: "2026-06-27", to: "2026-09-26" });
     expect(list.rows.every((row) => row.change === null && row.previousClicks === null)).toBe(true);
   });
 

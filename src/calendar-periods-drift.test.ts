@@ -7,10 +7,11 @@ import { CALENDAR_PERIOD_KEY } from "@/src/app/(dashboard)/app/sites/_components
 import { DATED_SEGMENTS } from "@/src/app/(dashboard)/app/sites/_components/sitePages";
 
 /**
- * Every date menu in the user frontend offers the same seven calendar periods
- * (docs/plans/active/calendar-periods-plan.md; Anthony, 2026-10-20): This week
- * to This year, from one list (`convex/utils/calendarPeriods.ts`), never a list
- * of days of its own — no "7, 30, 90" and no custom range.
+ * Every date menu in the user frontend is the kit's DatesMenu, offering the
+ * same seven periods (docs/plans/active/sees-header-and-rolling-dates-plan.md,
+ * part two; Anthony, 2026-10-29): This week to Last 12 months, from one list
+ * (`convex/utils/calendarPeriods.ts`), never a list of days of its own — no
+ * "7, 30, 90" — and custom dates only through that menu.
  *
  * The sections move one phase at a time, and none is ever half moved: a
  * section keeps its old menu until its data is ready. The files below still
@@ -19,8 +20,8 @@ import { DATED_SEGMENTS } from "@/src/app/(dashboard)/app/sites/_components/site
  */
 const SCREENS = ["src/app/(dashboard)/app", "src/ui/components/governance"];
 
-/** An old menu: a list of days opening 7, 30, 90, or the custom-range dropdown. */
-const OLD_MENU = /\[\s*"?7"?\s*,\s*"?30"?\s*,\s*"?90"?|TimeframeDropdown/;
+/** An old menu: a list of days opening 7, 30, 90, the custom-range dropdown, or the periods mapped into a plain Select rather than the kit's DatesMenu. */
+const OLD_MENU = /\[\s*"?7"?\s*,\s*"?30"?\s*,\s*"?90"?|TimeframeDropdown|useCalendarPeriodChoices|PERIODS\.map\(\(value\) => <option/;
 
 const NOT_YET_MOVED = new Set<string>([
 ]);

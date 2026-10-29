@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   openingPeriod,
+  customSpans,
   CALENDAR_PERIODS,
+  RETIRED_PERIODS,
   isCalendarPeriod,
   periodBounds,
   periodSpan,
   shiftMonths,
   spanBefore,
+  sameDayBefore,
   spanYearBefore,
   stepOf,
   stepsOf,
@@ -16,11 +19,41 @@ import {
 // Tuesday 20 October 2026.
 const TODAY = "2026-10-20";
 
-describe("calendar periods (calendar-periods-plan.md, rules 1–9)", () => {
-  it("names the seven, in the menu's order", () => {
-    expect(CALENDAR_PERIODS).toEqual(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"]);
+describe("calendar periods (calendar-periods-plan.md, rules 1–9; sees-header-and-rolling-dates-plan.md, part two)", () => {
+  it("names the seven, in the menu's order, with the quarters and the year retired (Anthony, 2026-10-29)", () => {
+    expect(CALENDAR_PERIODS).toEqual(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"]);
+    expect(RETIRED_PERIODS).toEqual(["thisQuarter", "lastQuarter", "thisYear"]);
     expect(isCalendarPeriod("lastMonth")).toBe(true);
+    expect(isCalendarPeriod("lastQuarter")).toBe(false);
     expect(isCalendarPeriod("30")).toBe(false);
+  });
+
+  it("runs a rolling period back from the newest day held, the same number of whole months, and sets it against the months before", () => {
+    // Thursday 29 October 2026, Google Analytics' newest day the 28th (the canvas of 2026-10-29).
+    expect(periodSpan("last3Months", "2026-10-29", "2026-10-28")).toEqual({ from: "2026-07-29", to: "2026-10-28", whole: true });
+    expect(periodSpan("last6Months", "2026-10-29", "2026-10-28")).toEqual({ from: "2026-04-29", to: "2026-10-28", whole: true });
+    expect(periodSpan("last12Months", "2026-10-29", "2026-10-28")).toEqual({ from: "2025-10-29", to: "2026-10-28", whole: true });
+    // Sites' newest day is today itself; a source ahead of today still ends on today.
+    expect(periodSpan("last3Months", "2026-10-29", "2026-10-29")).toEqual({ from: "2026-07-30", to: "2026-10-29", whole: true });
+    expect(periodBounds("last3Months", "2026-10-29")).toEqual({ from: "2026-07-30", to: "2026-10-29" });
+    const three = periodSpan("last3Months", "2026-10-29", "2026-10-28")!;
+    expect(spanBefore("last3Months", three)).toEqual({ from: "2026-04-29", to: "2026-07-28", whole: true });
+    const year = periodSpan("last12Months", "2026-10-29", "2026-10-28")!;
+    expect(spanBefore("last12Months", year)).toEqual({ from: "2024-10-29", to: "2025-10-28", whole: true });
+    // Only the 12 months have a year before: the 12 months before them.
+    expect(spanYearBefore("last12Months", year)).toEqual(spanBefore("last12Months", year));
+    expect(spanYearBefore("last3Months", three)).toBeNull();
+    expect(spanYearBefore("last6Months", periodSpan("last6Months", "2026-10-29", "2026-10-28")!)).toBeNull();
+    // A day's match in the months before.
+    expect(sameDayBefore("last3Months", "2026-10-15")).toBe("2026-07-15");
+    // The end of a shorter month: 31 May back three months is 28 February, so the span starts 1 March.
+    expect(periodSpan("last3Months", "2026-06-01", "2026-05-31")).toEqual({ from: "2026-03-01", to: "2026-05-31", whole: true });
+  });
+
+  it("gives custom dates the same number of days before them, and a step by their length", () => {
+    expect(customSpans("2026-09-01", "2026-09-30")).toEqual({ span: { from: "2026-09-01", to: "2026-09-30", whole: true }, before: { from: "2026-08-02", to: "2026-08-31", whole: true }, step: "day" });
+    expect(customSpans("2026-05-01", "2026-10-28").step).toBe("week");
+    expect(customSpans("2025-10-01", "2026-10-28").step).toBe("month");
   });
 
   it("bounds each period in calendar weeks from Monday, months, quarters and the year", () => {
@@ -69,8 +102,9 @@ describe("calendar periods (calendar-periods-plan.md, rules 1–9)", () => {
     expect(spanYearBefore("thisWeek", { from: "2026-10-19", to: "2026-10-19", whole: false })).toBeNull();
   });
 
-  it("draws weeks and months by the day, quarters by the week and the year by the month", () => {
+  it("draws weeks and months by the day, 3 and 6 months by the week and 12 months by the month", () => {
     expect(CALENDAR_PERIODS.map(stepOf)).toEqual(["day", "day", "day", "day", "week", "week", "month"]);
+    expect(RETIRED_PERIODS.map(stepOf)).toEqual(["week", "week", "month"]);
   });
 
   it("moves a day by months, keeping its day or the month's last", () => {

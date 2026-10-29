@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { stepOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { stepOf, type CalendarPeriod, type MenuPeriod } from "@/convex/utils/calendarPeriods";
 import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 
@@ -82,7 +82,7 @@ export function useBingStatus() {
 }
 
 /** The calendar period chosen: the one the website opens on (rule 6) unless another is. */
-export function usePeriod(opening?: CalendarPeriod): [CalendarPeriod, (next: CalendarPeriod) => void] {
+export function usePeriod(opening?: MenuPeriod): [MenuPeriod, (next: MenuPeriod) => void] {
   return useCalendarPeriod(opening);
 }
 

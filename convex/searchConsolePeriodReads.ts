@@ -1,3 +1,4 @@
+import { v } from "convex/values";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
@@ -261,12 +262,15 @@ export async function periodPartAsText(ctx: { db: QueryCtx["db"] }, part: Doc<"s
 }
 
 /**
- * The periods the background reads judge "lately" by, in place of the 90 days
- * they read until the calendar periods (calendar-periods-plan.md, phase 4):
- * this quarter and last together, always reaching 90 days back or more — the
- * keep rule, and Your pages' clicks.
+ * The period the background reads judge "lately" by — the keep rule, Your
+ * pages' clicks, competing pages: the rolling Last 3 months, which always
+ * reaches 90 days back (sees-header-and-rolling-dates-plan.md, part two; it
+ * was this quarter and last together until the quarters were retired on
+ * 2026-10-29).
  */
-export const RECENT_PERIODS = ["thisQuarter", "lastQuarter"] as const;
+export const RECENT_PERIODS = ["last3Months"] as const;
+export type RecentPeriod = (typeof RECENT_PERIODS)[number];
+export const recentPeriodValidator = v.literal("last3Months");
 
 /** The period whose parts hold a period's rows: itself, or the one it repeats when kept on its very days (`sameDaysAs`). */
 export async function holdingPeriod(

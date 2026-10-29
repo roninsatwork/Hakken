@@ -4,7 +4,7 @@
 detail-header
   back: Back to Local market
   page-header: ‹the record's name›
-settings-card: What Hakken sees
+    sees-eye
 figures
   figure: Named by Google's AI
   figure: Recommended by ChatGPT

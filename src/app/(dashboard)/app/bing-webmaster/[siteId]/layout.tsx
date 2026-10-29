@@ -15,7 +15,8 @@ import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { BingMenu } from "../_components/BingMenu";
 import { BingConnectionBanner } from "../_components/BingNotices";
-import { OpeningPeriodContext, useCalendarPeriodChoices } from "../../sites/_components/useCalendarPeriod";
+import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
+import { OpeningPeriodContext } from "../../sites/_components/useCalendarPeriod";
 import { useSetSiteParams } from "../../sites/_components/useSiteParam";
 import { PERIOD_KEY, STEPS, STEP_KEY, bingQuery, pageForPath, usePeriod, useStep, useBingSiteId, useBingStatus, type BingPageId } from "../_components/useBing";
 
@@ -34,9 +35,7 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
   const params = useSearchParams();
   const siteId = useBingSiteId();
   const status = useBingStatus();
-  const tp = useTranslations("common.periods");
   const setParams = useSetSiteParams();
-  const periods = useCalendarPeriodChoices();
   // A website whose Bing days begin this month opens on This month until the 1st (agreed 2026-10-20).
   const opening = openingPeriod(status?.connection?.oldestDay, ukDay());
   const [period] = usePeriod(opening);
@@ -98,9 +97,7 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
                   {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
                 </Select>
               ) : null}
-              <Select aria-label={tp("label")} value={period} onChange={choosePeriod} className="w-[160px]">
-                {periods.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
-              </Select>
+              <DatesMenu value={{ period }} newest={connection?.newestDay ?? null} custom={false} onChange={(choice) => choosePeriod(choice.period)} />
               <Select aria-label={tf("step")} value={step} onChange={(next) => setStep(next as typeof step)} className="w-[140px]">
                 {STEPS.map((entry) => <option key={entry} value={entry}>{tf(`steps.${entry}`)}</option>)}
               </Select>

@@ -25,7 +25,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
 const NEWEST = "2026-10-06";
 /** This year, on the fixed 7 October, to Google's newest day (calendar-periods-plan.md, phase 4). */
-const FROM = "2026-01-01";
+const FROM = "2025-10-07";
 const BUILT = 1_791_400_000_000;
 const KINDS = ["BUYING", "RESEARCHING", "BRANDED", "UNJUDGED"] as const;
 const WORDS = ["door", "handle", "acme", "lever", "knob", "brass"];
@@ -92,13 +92,13 @@ describe("a list of keywords read as columns", () => {
         lists.push({ slot, parts });
       };
       const range = (from: number, to: number) => Array.from({ length: to - from }, (_, at) => from + at);
-      make({ list: "query", which: "NOW", from: "2026-07-09", to: NEWEST }, range(0, 300), (index) => ({ key: keyword(index), top: page(index % 40) }));
+      make({ list: "query", which: "NOW", from: "2025-10-07", to: NEWEST }, range(0, 300), (index) => ({ key: keyword(index), top: page(index % 40) }));
       // The days before: half the keywords shown now, and sixty gone since.
-      make({ list: "query", which: "BEFORE", from: "2026-04-10", to: "2026-07-08" }, range(150, 360), (index) => ({ key: keyword(index) }));
+      make({ list: "query", which: "BEFORE", from: "2024-10-07", to: "2025-10-06" }, range(150, 360), (index) => ({ key: keyword(index) }));
       // Pages competing: the first 200 keywords with one to three pages, the third twice over for some.
       const pairs = range(0, 200).flatMap((index) => range(0, 1 + (index % 3)).map((at) => ({ index, at })));
       const pairIndexes = pairs.flatMap((pair, at) => (pair.index % 7 === 0 && pair.at === 2 ? [at, at] : [at]));
-      make({ list: "competing", which: "NOW", from: "2026-07-09", to: NEWEST }, pairIndexes, (at) => ({
+      make({ list: "competing", which: "NOW", from: "2025-10-07", to: NEWEST }, pairIndexes, (at) => ({
         key: keyword(pairs[at].index), page: page((pairs[at].index + pairs[at].at * 11) % 50),
       }));
 
@@ -114,7 +114,7 @@ describe("a list of keywords read as columns", () => {
         for (const [part, made] of parts.entries()) {
           const stored = inBook(slot.list, made, places, ["acme"]);
           // The keyword lists again as Volatility's own day (`VOLATILITY_PERIOD`), which its rule reads whatever the dates.
-          for (const period of slot.list === "query" ? (["thisYear", "1"] as const) : (["thisYear"] as const)) {
+          for (const period of slot.list === "query" ? (["last12Months", "1"] as const) : (["last12Months"] as const)) {
             await ctx.db.insert("searchConsolePeriods", {
               companyWebsiteId: holdId, searchType: "web", list: slot.list, period, which: slot.which, part, from: slot.from, to: slot.to,
               ...stored, ...packedColumns(stored), ...bookedColumns({ ...stored, list: slot.list }), builtAt: BUILT,

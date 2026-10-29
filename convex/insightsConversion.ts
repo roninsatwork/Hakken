@@ -32,7 +32,7 @@ type Reader = { db: QueryCtx["db"] };
  * Where each of Insights' spans is read from (calendar-periods-plan.md, phase 6, option C): last month, last quarter,
  * and Insights' own last 12 months against the 12 before — Google's answers, whose people can't be added up.
  */
-const LANDING_SOURCE = { "30": "lastMonth", "90": "lastQuarter", "365": SERIES_PERIOD } as const;
+const LANDING_SOURCE = { "30": "lastMonth", "90": "last3Months", "365": SERIES_PERIOD } as const;
 
 /** A page's visitors (people, over the year; visits over last month, for experiments) and enquiries in one of Analytics' landing lists, by path. */
 export async function landingByPath(ctx: Reader, holdId: Id<"companyWebsites">, period: "30" | "90" | "365", which: "NOW" | "YEAR") {

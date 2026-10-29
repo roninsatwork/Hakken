@@ -223,7 +223,7 @@ describe("the activity screen reads buckets and agrees with a hand-count", () =>
     await backfillAndRebuild(t);
 
     // 1 July to 18 August: the 40-day-old run is in it.
-    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisQuarter" });
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "last3Months" });
     expect(activity.runs.total).toBe(11);
   });
 
@@ -285,7 +285,7 @@ describe("the machinery is safe to re-run", () => {
     await seedActivity(t, seeded);
     await backfillAndRebuild(t);
 
-    const before = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisQuarter" });
+    const before = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "last3Months" });
 
     // A forced second pass over every day.
     await t.mutation(internal.dataMigrations.run, {
@@ -295,7 +295,7 @@ describe("the machinery is safe to re-run", () => {
     await finishScheduled(t);
     await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
 
-    const after = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "thisQuarter" });
+    const after = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { period: "last3Months" });
     expect(after).toEqual(before);
   });
 

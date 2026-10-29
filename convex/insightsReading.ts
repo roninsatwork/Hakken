@@ -89,7 +89,7 @@ async function searchConsoleFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
   }
   // Every country's clicks, from the country list (§7): said as worldwide, never set against one country's.
   // Search Console's lists are calendar periods (calendar-periods-plan.md, phase 4): last quarter and this year stand for the 90 days and 12 months.
-  for (const [period, named] of [["lastQuarter", "90"], ["thisYear", "365"]] as const) {
+  for (const [period, named] of [["last3Months", "90"], ["last12Months", "365"]] as const) {
     const world = await readPeriod(ctx, hold._id, "web", "country", period, "NOW");
     if (world) {
       facts.add({
@@ -101,8 +101,8 @@ async function searchConsoleFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
   // The pages and the searches, the biggest, against the span before.
   for (const list of ["page", "query"] as const) {
     const [now, before] = await Promise.all([
-      readPeriod(ctx, hold._id, "web", list, "lastQuarter", "NOW"),
-      readPeriod(ctx, hold._id, "web", list, "lastQuarter", "BEFORE"),
+      readPeriod(ctx, hold._id, "web", list, "last3Months", "NOW"),
+      readPeriod(ctx, hold._id, "web", list, "last3Months", "BEFORE"),
     ]);
     if (!now) continue;
     // What the pages add up to: the clicks Google ties to a page (S2), against the website's whole.
@@ -151,7 +151,7 @@ const GA_WHICH: Record<AnalyticsWhich, FactWhich> = { NOW: "now", BEFORE: "befor
 type FactPeriod = "30" | "90" | "365";
 
 /** Each fact period's list: last month, last quarter, and Insights' own last 12 months (calendar-periods-plan.md, option C). */
-const GA_SOURCE: Record<FactPeriod, AnalyticsPeriod> = { "30": "lastMonth", "90": "lastQuarter", "365": SERIES_PERIOD };
+const GA_SOURCE: Record<FactPeriod, AnalyticsPeriod> = { "30": "lastMonth", "90": "last3Months", "365": SERIES_PERIOD };
 
 const GA_SPANS: ReadonlyArray<{ period: FactPeriod; which: readonly AnalyticsWhich[] }> = [
   { period: "30", which: ["NOW", "BEFORE"] },
@@ -589,7 +589,7 @@ export const planInternal = internalQuery({
         if (row.status !== "LOST" && row.position !== undefined) ranked.push({ keyword: row.keyword, position: row.position, page: row.page, volume: row.volumeKnown ? row.volume : null });
       }
     }
-    const list = await readPeriod(ctx, hold._id, "web", "query", "lastQuarter", "NOW");
+    const list = await readPeriod(ctx, hold._id, "web", "query", "last3Months", "NOW");
     const near = (list?.rows ?? []).filter((row) => row.impressions > 0 && row.positionSum / row.impressions >= NEAR.from - 0.5 && row.positionSum / row.impressions <= NEAR.to + 0.5);
     const names = list?.book ? await new BookNames(ctx, list.book).textsOf(near.map((row) => row.key)) : null;
     const consoleSearches: ConsoleSearch[] = near.map((row) => ({ search: names?.get(row.key) ?? row.key, impressions: row.impressions, position: row.positionSum / row.impressions, brand: Boolean(row.brand) }));
@@ -885,7 +885,7 @@ export const strategyInternal = internalQuery({
     }
     let beforeHeld = false;
     for (const which of ["NOW", "BEFORE"] as const) {
-      const list = await readPeriod(ctx, hold._id, "web", "page", "lastQuarter", which);
+      const list = await readPeriod(ctx, hold._id, "web", "page", "last3Months", which);
       if (list && which === "BEFORE") beforeHeld = true;
       for (const row of list?.rows ?? []) {
         const held = entry(pathOf(row.key));

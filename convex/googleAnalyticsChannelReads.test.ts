@@ -199,7 +199,7 @@ describe("a channel's own page", () => {
     const t = harness();
     const { siteId, user, google } = await collectedWebsite(t, shifting("2026-09-30"), encryptConnectorToken);
     const asked = google.calls.length;
-    const held = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "lastQuarter", device: "", channel: "Organic Search" });
+    const held = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "last3Months", device: "", channel: "Organic Search" });
     expect(held).toMatchObject({ live: false, liveBefore: false, from: "2026-07-01", to: "2026-09-30" });
     expect(held.now).toHaveLength(92);
     expect(held.now.at(-1)?.visits).toBe(13);

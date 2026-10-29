@@ -28,6 +28,7 @@ import { Field } from "@/src/ui/components/screens/Field";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { HakkenSeesCard } from "@/src/ui/components/screens/HakkenSees";
 import { SeesEye } from "@/src/ui/components/screens/HakkenSeesEye";
+import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
 import { Meter } from "@/src/ui/components/screens/Meter";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
@@ -432,6 +433,13 @@ const PARTS: Part[] = [
         ]}
       />
     ),
+  },
+  {
+    id: "dates-menu",
+    name: "The Dates menu",
+    source: "src/ui/components/screens/DatesMenu.tsx",
+    use: "Every section's date menu: a chip naming its choice, opening the seven periods with the days each covers, then custom dates.",
+    render: () => <DatesMenu value={{ period: "lastMonth" }} newest="2026-10-28" onChange={noop} />,
   },
   {
     id: "sees-eye",

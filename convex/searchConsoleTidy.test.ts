@@ -113,7 +113,7 @@ describe("tidying the figures kept before 2026-10-05", () => {
 
     // The 90 days: "almost there" at position 12, "deep and lonely" at 35 on one page, neither clicked.
     await t.run(async (ctx) => await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: holdId, searchType: "web", list: "query", period: "thisQuarter", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
+      companyWebsiteId: holdId, searchType: "web", list: "query", period: "last3Months", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
       keys: ["almost there", "deep and lonely"], clicks: [0, 0], impressions: [10, 10], positionSums: [120, 350], counts: [1, 1], builtAt: 1,
     }));
     // "deep and lonely", and the setup's "plumber leeds", missing from the 90 days: each a line and a register row.

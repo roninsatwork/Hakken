@@ -34,8 +34,13 @@ type ScheduledFunctionHarness = { finishInProgressScheduledFunctions: () => Prom
 /** Rounds of "these scheduled more". A chain deeper than this is looping. */
 const MAX_ROUNDS = 100;
 
-export async function finishScheduled(t: ScheduledFunctionHarness): Promise<void> {
-  for (let round = 0; round < MAX_ROUNDS; round += 1) {
+/**
+ * `rounds`: how many hops of scheduling to allow before calling it a hang, for the rare chain that is long by
+ * design — a removed home country's lists cleared eight parts a call (googleAnalyticsCountries.test.ts). Every
+ * other test keeps the default.
+ */
+export async function finishScheduled(t: ScheduledFunctionHarness, { rounds = MAX_ROUNDS }: { rounds?: number } = {}): Promise<void> {
+  for (let round = 0; round < rounds; round += 1) {
     vi.runAllTimers();
 
     let done = false;
@@ -65,7 +70,7 @@ export async function finishScheduled(t: ScheduledFunctionHarness): Promise<void
     if (vi.getTimerCount() === 0) return;
   }
   throw new Error(
-    `finishScheduled: scheduled functions were still scheduling more after ${MAX_ROUNDS} rounds.`,
+    `finishScheduled: scheduled functions were still scheduling more after ${rounds} rounds.`,
   );
 }
 

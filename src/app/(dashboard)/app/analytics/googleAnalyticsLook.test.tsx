@@ -182,8 +182,8 @@ describe("Google Analytics' approved looks", () => {
     expect((within(card).getByLabelText("Contact form sent") as HTMLInputElement).checked).toBe(true);
   });
 
-  it("7 · visits needed for one conversion over last quarter: no line for the span before, and the words say why", async () => {
-    at("/app/analytics/site_1/conversions", "period=lastQuarter");
+  it("7 · visits needed for one conversion over the last 3 months: no line for the span before, and the words say why", async () => {
+    at("/app/analytics/site_1/conversions", "period=last3Months");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
@@ -193,7 +193,7 @@ describe("Google Analytics' approved looks", () => {
     });
     render(<AnalyticsConversionsPage />);
     // Anthony, 2026-10-20: "only keep the second line for another 30 days or below". Past 90 days no day is kept.
-    await screen.findByText(/^Last quarter: 105 visits for each conversion .* The quarter before: 117 .* The line for the span before is drawn for the weeks and months only, where every day is kept\.$/);
+    await screen.findByText(/^Last 3 months: 105 visits for each conversion .* The 3 months before: 117 .* The line for the span before is drawn for the weeks and months only, where every day is kept\.$/);
     const asks = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("analyticsPeriodBeforeChart"));
     expect(asks.length).toBeGreaterThan(0);
     expect(asks.every(([, args]) => args === "skip")).toBe(true);

@@ -36,17 +36,17 @@ describe("record screens and the way back", () => {
   });
 
   it("links to a record with the dates and the page, filters and table page it was opened from", () => {
-    at("/app/sites/site_1/keywords", "period=lastQuarter&step=month&band=p01_03&p=3");
+    at("/app/sites/site_1/keywords", "period=last3Months&step=month&band=p01_03&p=3");
     const { result } = renderHook(() => useSiteRecordHref("site_1"));
     const href = new URL(result.current({ kind: "keyword", keyword: "carp rods" }), "https://app.test");
 
     expect(href.pathname).toBe("/app/sites/site_1/keywords/keyword");
     expect(href.searchParams.get("keyword")).toBe("carp rods");
-    expect(href.searchParams.get("period")).toBe("lastQuarter");
+    expect(href.searchParams.get("period")).toBe("last3Months");
     expect(href.searchParams.get("step")).toBe("month");
     // A page's own filters travel only as the way back, never onto the record.
     expect(href.searchParams.get("band")).toBeNull();
-    expect(href.searchParams.get("back")).toBe("/app/sites/site_1/keywords?period=lastQuarter&step=month&band=p01_03&p=3");
+    expect(href.searchParams.get("back")).toBe("/app/sites/site_1/keywords?period=last3Months&step=month&band=p01_03&p=3");
   });
 
   it("links to a list narrowed by its filters, with the way back", () => {
@@ -90,8 +90,8 @@ describe("record screens and the way back", () => {
   });
 
   it("goes back to the page a record belongs to when opened from a bookmark, and never off the app", () => {
-    at("/app/sites/site_1/keywords/pages/page", "path=%2F&period=lastQuarter");
-    expect(renderHook(() => useSiteBackHref("site_1", "page")).result.current).toBe("/app/sites/site_1/keywords/pages?period=lastQuarter");
+    at("/app/sites/site_1/keywords/pages/page", "path=%2F&period=last3Months");
+    expect(renderHook(() => useSiteBackHref("site_1", "page")).result.current).toBe("/app/sites/site_1/keywords/pages?period=last3Months");
 
     for (const outside of ["https://elsewhere.test/", "//elsewhere.test/app/sites/x", "/admin/settings"]) {
       at("/app/sites/site_1/keywords/keyword", `keyword=korda&back=${encodeURIComponent(outside)}`);

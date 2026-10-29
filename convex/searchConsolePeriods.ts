@@ -413,9 +413,9 @@ export function slotsOf(newest: string, oldest: string, googleFrom: string = old
 
 const slotKey = (slot: Slot) => `${slot.period}|${slot.which}`;
 
-/** A long slot's group, each a settle stage of its own: This year's (`YEAR`), and every other period's (`QUARTERS`). */
+/** A long slot's group, each a settle stage of its own: the 12 months' (`YEAR`; the retired This year's too), and every other period's (`QUARTERS`, as the 3 and 6 months were the quarters' until 2026-10-29). */
 export type LongGroup = "QUARTERS" | "YEAR";
-const groupOf = (slot: Slot): LongGroup => (slot.period === "thisYear" ? "YEAR" : "QUARTERS");
+const groupOf = (slot: Slot): LongGroup => (slot.period === "last12Months" || slot.period === "thisYear" ? "YEAR" : "QUARTERS");
 
 /**
  * The period whose identical days a NOW slot repeats — This month and This

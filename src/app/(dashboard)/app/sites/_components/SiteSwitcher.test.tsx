@@ -6,7 +6,7 @@ import { groupHolds } from "./siteGroups";
 import { switchHref } from "./sitePages";
 import { SiteSwitcher } from "./SiteSwitcher";
 
-const { pathname, search } = vi.hoisted(() => ({ pathname: { current: "/app/sites/korda/paid/keywords" }, search: { current: "period=lastQuarter&step=month" } }));
+const { pathname, search } = vi.hoisted(() => ({ pathname: { current: "/app/sites/korda/paid/keywords" }, search: { current: "period=last3Months&step=month" } }));
 
 vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
@@ -41,7 +41,7 @@ describe("a company's websites, grouped (docs/plans/active/sites-website-switche
   });
 
   it("opens the same page on the next site, and a record's screen opens the page it sits under (W3)", () => {
-    expect(switchHref("/app/sites/korda/paid/keywords", "korda", "second", "?period=thisYear")).toBe("/app/sites/second/paid/keywords?period=thisYear");
+    expect(switchHref("/app/sites/korda/paid/keywords", "korda", "second", "?period=last12Months")).toBe("/app/sites/second/paid/keywords?period=last12Months");
     expect(switchHref("/app/sites/korda/keywords/keyword", "korda", "second", "")).toBe("/app/sites/second/keywords");
     expect(switchHref("/app/sites/korda", "korda", "second", "")).toBe("/app/sites/second");
   });
@@ -57,12 +57,12 @@ describe("the website switcher in a site's header (W2)", () => {
 
     expect(screen.getByRole("dialog", { name: "sites.switcher.title" })).toBeInTheDocument();
     expect(link("kordatackle.com")).toHaveAttribute("aria-current", "page");
-    expect(link("kordacarp.example")).toHaveAttribute("href", "/app/sites/second/paid/keywords?period=lastQuarter&step=month");
-    expect(link("nashtackle.co.uk")).toHaveAttribute("href", "/app/sites/nash/paid/keywords?period=lastQuarter&step=month");
+    expect(link("kordacarp.example")).toHaveAttribute("href", "/app/sites/second/paid/keywords?period=last3Months&step=month");
+    expect(link("nashtackle.co.uk")).toHaveAttribute("href", "/app/sites/nash/paid/keywords?period=last3Months&step=month");
     // Another website's competitors stay folded until asked for; one watched against none is listed on its own.
     expect(link("carpology.net")).not.toBeInTheDocument();
     expect(link("anglingdirect.co.uk")).toBeInTheDocument();
-    expect(link("sites.switcher.yourSites")).toHaveAttribute("href", "/app/sites?period=lastQuarter&step=month");
+    expect(link("sites.switcher.yourSites")).toHaveAttribute("href", "/app/sites?period=last3Months&step=month");
   });
 
   it("unfolds another website's competitors when asked", () => {

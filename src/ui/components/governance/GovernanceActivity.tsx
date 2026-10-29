@@ -10,8 +10,8 @@ import { api } from "@/convex/_generated/api";
 import type { RiskMix } from "@/convex/governanceActivityService";
 
 import { RISK_COLOURS, RUN_OUTCOME_COLOURS, SIDE_EFFECT_COLOURS } from "./governanceColours";
-import { Select } from "@/src/ui/components/screens/Select";
-import { CALENDAR_PERIODS, OPENING_PERIOD, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { OPENING_PERIOD, type MenuPeriod } from "@/convex/utils/calendarPeriods";
+import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
 
 const GovernanceRunsChart = dynamic(() =>
   import("./GovernanceRunsChart").then((module) => module.GovernanceRunsChart),
@@ -111,10 +111,8 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 export function GovernanceActivity({ riskMix, systems }: GovernanceActivityProps) {
   const t = useTranslations("admin.governance.dashboard.activity");
-  // The date menu's seven calendar periods (calendar-periods-plan.md, phase 7), opening on last month.
-  const [period, setPeriod] = useState<CalendarPeriod>(OPENING_PERIOD);
-  const tp = useTranslations("common.periods");
-  const periods = CALENDAR_PERIODS.map((value) => ({ value, label: tp(value) }));
+  // The Dates menu's seven periods (sees-header-and-rolling-dates-plan.md), opening on last month.
+  const [period, setPeriod] = useState<MenuPeriod>(OPENING_PERIOD);
   const activity = useQuery(api.governanceActivity.getGovernanceActivity, { period });
 
   if (activity === undefined) {
@@ -132,9 +130,7 @@ export function GovernanceActivity({ riskMix, systems }: GovernanceActivityProps
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] font-medium text-foreground">{t("title")}</p>
 
-        <Select aria-label={t("rangeLabel")} value={period} onChange={(next) => setPeriod(next as CalendarPeriod)}>
-          {periods.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
-        </Select>
+        <DatesMenu label={t("rangeLabel")} value={{ period }} newest={null} custom={false} onChange={(choice) => setPeriod(choice.period)} />
       </div>
 
       {activity.truncated ? (

@@ -47,7 +47,6 @@ type Harness = ReturnType<typeof harness>;
 const FETCHED = [
   { key: "lastWeek", from: "2026-09-28", settled: true },
   { key: "lastMonth", from: "2026-09-01", settled: true },
-  { key: "lastQuarter", from: "2026-07-01", settled: true },
 ];
 
 async function connected(t: Harness, withAgent = true, fetched: boolean | typeof FETCHED = false) {
@@ -158,76 +157,78 @@ describe("which days and lists a run asks for", () => {
     expect(periodRange("thisWeek", "BEFORE", NEWEST)).toEqual({ from: "2026-09-28", to: "2026-10-01" });
     expect(periodRange("thisMonth", "NOW", NEWEST)).toEqual({ from: "2026-10-01", to: NEWEST });
     expect(periodRange("thisMonth", "BEFORE", NEWEST)).toEqual({ from: "2026-09-01", to: "2026-09-08" });
-    expect(periodRange("thisQuarter", "YEAR", NEWEST)).toEqual({ from: "2025-10-01", to: "2025-10-08" });
-    expect(periodRange("thisYear", "NOW", NEWEST)).toEqual({ from: "2026-01-01", to: NEWEST });
-    expect(periodRange("thisYear", "BEFORE", NEWEST)).toEqual({ from: "2025-01-01", to: "2025-10-08" });
-    // A finished period whole, against the whole period before; the quarter against the same quarter a year before too.
+    // The rolling periods back from the newest day itself, against the same months before; only the 12 months have a
+    // year before, and it is those months (sees-header-and-rolling-dates-plan.md, part two).
+    expect(periodRange("last3Months", "NOW", NEWEST)).toEqual({ from: "2026-07-09", to: NEWEST });
+    expect(periodRange("last3Months", "BEFORE", NEWEST)).toEqual({ from: "2026-04-09", to: "2026-07-08" });
+    expect(periodRange("last3Months", "YEAR", NEWEST)).toBeNull();
+    expect(periodRange("last6Months", "NOW", NEWEST)).toEqual({ from: "2026-04-09", to: NEWEST });
+    expect(periodRange("last12Months", "NOW", NEWEST)).toEqual({ from: "2025-10-09", to: NEWEST });
+    expect(periodRange("last12Months", "BEFORE", NEWEST)).toEqual({ from: "2024-10-09", to: "2025-10-08" });
+    // A finished period whole, against the whole period before.
     expect(periodRange("lastWeek", "NOW", NEWEST)).toEqual({ from: "2026-09-28", to: "2026-10-04" });
     expect(periodRange("lastWeek", "BEFORE", NEWEST)).toEqual({ from: "2026-09-21", to: "2026-09-27" });
     expect(periodRange("lastMonth", "NOW", NEWEST)).toEqual({ from: "2026-09-01", to: "2026-09-30" });
     expect(periodRange("lastMonth", "BEFORE", NEWEST)).toEqual({ from: "2026-08-01", to: "2026-08-31" });
-    expect(periodRange("lastQuarter", "NOW", NEWEST)).toEqual({ from: "2026-07-01", to: "2026-09-30" });
-    expect(periodRange("lastQuarter", "BEFORE", NEWEST)).toEqual({ from: "2026-04-01", to: "2026-06-30" });
-    expect(periodRange("lastQuarter", "YEAR", NEWEST)).toEqual({ from: "2025-07-01", to: "2025-09-30" });
     // Weeks and months have no year before.
     expect(periodRange("lastMonth", "YEAR", NEWEST)).toBeNull();
     // Insights' 12 months a day end on the newest day.
     expect(periodRange("365", "NOW", NEWEST)).toEqual({ from: "2025-10-09", to: NEWEST });
     // And the 365 days before them, Insights' year before: no day in both.
     expect(periodRange("365", "YEAR", NEWEST)).toEqual({ from: "2024-10-09", to: "2025-10-08" });
-    // Google has sent none of it yet: This Week on a Monday (its newest day the Sunday), This Month and This Quarter on the 1st.
+    // Google has sent none of it yet: This Week on a Monday (its newest day the Sunday), This Month on the 1st; a rolling period always has its days.
     expect(periodRange("thisWeek", "NOW", "2026-10-11")).toBeNull();
     expect(periodRange("lastWeek", "NOW", "2026-10-11")).toEqual({ from: "2026-10-05", to: "2026-10-11" });
     expect(periodRange("thisMonth", "NOW", "2026-09-30")).toBeNull();
-    expect(periodRange("thisQuarter", "NOW", "2026-09-30")).toBeNull();
+    expect(periodRange("last3Months", "NOW", "2026-09-30")).toEqual({ from: "2026-07-01", to: "2026-09-30" });
   });
 
   test("the periods still going each run, the finished ones due, and Insights' 12 months a day with the weekly lists", () => {
     // Sixteen lists each — every event, the campaigns and their words, Visitors' six, Insights' first channel and
     // landing pages by channel, and AI assistants' landing pages among them (§18.6.5, §18.6.6; insights-analyst-plan.md
     // I35, §8; ga-channel-pages-plan.md CH13). The charts read the days, weeks and months kept (ga-stored-figures-plan.md
-    // SF12). Each period with its span before, the quarters a year before too: This Week 2, This Month 2, This Quarter
-    // 3, This Year 2 — and, weekly, Insights' 12 months a day.
+    // SF12). Each period with its span before: This Week, This Month and the last 3, 6 and 12 months, 2 each — and,
+    // weekly, Insights' 12 months a day.
     const LISTS = 16;
-    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength((2 + 2 + 3 + 2) * LISTS + 1);
+    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength((2 + 2 + 2 + 2 + 2) * LISTS + 1);
     // Not weekly: This Week and This Month alone.
     const daily = dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW);
     expect(daily).toHaveLength((2 + 2) * LISTS);
     expect(new Set(daily.map((job) => job.period))).toEqual(new Set(["thisWeek", "thisMonth"]));
     expect(daily.some((job) => job.list === "series")).toBe(false);
 
-    // Nothing fetched yet: every finished period is due — Last Week 2, Last Month 2, Last Quarter 3 — beside the rest.
+    // Nothing fetched yet: every finished period is due — Last Week 2, Last Month 2 — beside the rest.
     const finished = finishedDue([], NEWEST);
-    expect(finished).toEqual(["lastWeek", "lastMonth", "lastQuarter"]);
+    expect(finished).toEqual(["lastWeek", "lastMonth"]);
     const first = dueJobs({ weeklyPeriodsAt: undefined }, NOW, [], NEWEST, finished);
-    expect(first).toHaveLength((2 + 2 + 3 + 2 + 2 + 2 + 3) * LISTS + 1);
-    expect(first.filter((job) => job.period === "lastQuarter").map((job) => job.which)).toEqual([
-      ...Array(LISTS).fill("NOW"), ...Array(LISTS).fill("BEFORE"), ...Array(LISTS).fill("YEAR"),
+    expect(first).toHaveLength((2 + 2 + 2 + 2 + 2 + 2 + 2) * LISTS + 1);
+    expect(first.filter((job) => job.period === "last12Months").map((job) => job.which)).toEqual([
+      ...Array(LISTS).fill("NOW"), ...Array(LISTS).fill("BEFORE"),
     ]);
     expect(first.filter((job) => job.list === "series")).toEqual([{ list: "series", period: "365", which: "NOW" }]);
     // Insights' own 12 months, asked by the weekly run after the rest: seven lists, now and a year before (option C).
     expect(insightsYearJobs()).toHaveLength(7 * 2);
     expect(insightsYearJobs().every((job) => job.period === "365" && (job.which === "NOW" || job.which === "YEAR"))).toBe(true);
     // A shop's products beside them.
-    expect(dueJobs({ weeklyPeriodsAt: undefined, shop: true }, NOW, [], NEWEST, finished)).toHaveLength((2 + 2 + 3 + 2 + 2 + 2 + 3) * (LISTS + 1) + 1);
+    expect(dueJobs({ weeklyPeriodsAt: undefined, shop: true }, NOW, [], NEWEST, finished)).toHaveLength((2 + 2 + 2 + 2 + 2 + 2 + 2) * (LISTS + 1) + 1);
 
-    // On the 1st, Google has sent none of This Month or This Quarter: they are not asked.
+    // On the 1st, Google has sent none of This Month: it is not asked; the rolling periods always are.
     const firstOfMonth = dueJobs({ weeklyPeriodsAt: undefined }, NOW, [], "2026-09-30");
-    expect(new Set(firstOfMonth.map((job) => job.period))).toEqual(new Set(["thisWeek", "thisYear", "365"]));
+    expect(new Set(firstOfMonth.map((job) => job.period))).toEqual(new Set(["thisWeek", "last3Months", "last6Months", "last12Months", "365"]));
     // On a Monday, none of This Week.
     expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW, [], "2026-10-11").some((job) => job.period === "thisWeek")).toBe(false);
 
     // The shared page lists (ga-stored-figures-plan.md SF13) follow the same periods, each device's parts a job.
     const periodsOf = (jobs: ReturnType<typeof pageListJobs>) => [...new Set(jobs.map((job) => job.period))];
     expect(periodsOf(pageListJobs(false, [], NEWEST))).toEqual(["thisWeek", "thisMonth"]);
-    expect(periodsOf(pageListJobs(true, [], NEWEST, finished))).toEqual(["thisWeek", "thisMonth", "thisQuarter", "thisYear", "lastWeek", "lastMonth", "lastQuarter"]);
-    expect(periodsOf(pageListJobs(true, [], "2026-09-30"))).toEqual(["thisWeek", "thisYear"]);
+    expect(periodsOf(pageListJobs(true, [], NEWEST, finished))).toEqual(["thisWeek", "thisMonth", "last3Months", "last6Months", "last12Months", "lastWeek", "lastMonth"]);
+    expect(periodsOf(pageListJobs(true, [], "2026-09-30"))).toEqual(["thisWeek", "last3Months", "last6Months", "last12Months"]);
     // Every device's parts with its readers by country and its devices; each device's without its devices.
     expect(pageListJobs(false, [], NEWEST).filter((job) => job.period === "thisWeek")).toHaveLength(15 + 3 * 14);
     // Another home country's finished periods are its own record: due only where its own key is.
     const fra = pageListJobs(true, ["fra"], NEWEST, ["lastMonth|fra"]);
-    expect(periodsOf(fra.filter((job) => !job.country))).toEqual(["thisWeek", "thisMonth", "thisQuarter", "thisYear"]);
-    expect(periodsOf(fra.filter((job) => job.country === "fra"))).toEqual(["thisWeek", "thisMonth", "thisQuarter", "thisYear", "lastMonth"]);
+    expect(periodsOf(fra.filter((job) => !job.country))).toEqual(["thisWeek", "thisMonth", "last3Months", "last6Months", "last12Months"]);
+    expect(periodsOf(fra.filter((job) => job.country === "fra"))).toEqual(["thisWeek", "thisMonth", "last3Months", "last6Months", "last12Months", "lastMonth"]);
   });
 
   test("a finished period is asked once it ends, again once Google's figures settle two days later, then not again", () => {
@@ -236,8 +237,7 @@ describe("which days and lists a run asks for", () => {
     let fetched: Array<{ key: string; from: string; settled: boolean }> = [
       { key: "lastWeek", from: "2026-09-28", settled: true },
       { key: "lastMonth", from: "2026-09-01", settled: true },
-      { key: "lastQuarter", from: "2026-07-01", settled: true },
-    ];
+      ];
     const night = (top: string) => {
       const due = finishedDue(fetched, top);
       fetched = fetchedAfter(fetched, due, top);
@@ -256,8 +256,7 @@ describe("which days and lists a run asks for", () => {
     // The others untouched all the while.
     expect(fetched.filter((entry) => entry.key !== "lastWeek")).toEqual([
       { key: "lastMonth", from: "2026-09-01", settled: true },
-      { key: "lastQuarter", from: "2026-07-01", settled: true },
-    ]);
+      ]);
 
     // A run that missed the settling night asks it on the next; one first fetching a period already settled, once only.
     expect(finishedDue([{ key: "lastWeek", from: "2026-10-05", settled: false }], "2026-10-15")).toContain("lastWeek");
@@ -457,7 +456,7 @@ describe("collecting a website's Google Analytics", () => {
     await save(admin, siteId);
     await finishScheduled(t);
     await firstNight(t, connectionId);
-    const before = (await periodRows(t, siteId, "landing|thisQuarter|NOW|"))!.slot;
+    const before = (await periodRows(t, siteId, "landing|last3Months|NOW|"))!.slot;
 
     // The next morning: one new day, nothing else changed.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
@@ -485,8 +484,8 @@ describe("collecting a website's Google Analytics", () => {
     expect(dayAsks.map((ask) => ask.dateRanges[0])).toEqual(Array(9).fill({ startDate: "2026-10-07", endDate: "2026-10-09" }));
     // Every period still going every night (Anthony, 2026-10-14: "I want everything once a day"): this quarter moved on
     // a day too, rebuilt into the other slot.
-    expect((await periodRows(t, siteId, "landing|thisQuarter|NOW|"))!.slot.to).toBe("2026-10-09");
-    expect((await periodRows(t, siteId, "landing|thisQuarter|NOW|"))!.slot.slot).not.toBe(before.slot);
+    expect((await periodRows(t, siteId, "landing|last3Months|NOW|"))!.slot.to).toBe("2026-10-09");
+    expect((await periodRows(t, siteId, "landing|last3Months|NOW|"))!.slot.slot).not.toBe(before.slot);
     // This week moved on a day.
     expect((await periodRows(t, siteId, "total|thisWeek|NOW|"))!.slot.to).toBe("2026-10-09");
     // The finished periods, fetched and settled before, are not asked again (`finishedDue`'s own test).
@@ -515,7 +514,6 @@ describe("collecting a website's Google Analytics", () => {
     const { siteId, connectionId, admin, agentId } = await connected(t, true, [
       { key: "lastWeek", from: "2026-12-21", settled: true },
       { key: "lastMonth", from: "2026-12-01", settled: true },
-      { key: "lastQuarter", from: "2026-10-01", settled: true },
     ]);
     // Its two years noted as filled already: nothing here reads them, and the fill took this test past five seconds.
     await t.run(async (ctx) => {
@@ -592,8 +590,8 @@ describe("collecting a website's Google Analytics", () => {
     const lines = await t.run(async (ctx) => (await ctx.db.query("agentRunSteps").collect()).filter((step) => step.runId === site._id).map((step) => step.output ?? ""));
     expect(lines.some((line) => line.includes("Nothing more is asked of Google until"))).toBe(true);
     // Every list built, the last of them hours later.
-    expect((await periodRows(t, siteId, "pageWho|thisYear|NOW|tablet"))).not.toBeNull();
-    expect((await periodRows(t, siteId, "pageWho|lastQuarter|NOW|tablet"))).not.toBeNull();
+    expect((await periodRows(t, siteId, "pageWho|last12Months|NOW|tablet"))).not.toBeNull();
+    expect((await periodRows(t, siteId, "pageWho|last3Months|NOW|tablet"))).not.toBeNull();
     expect((await connectionOf(t, connectionId))?.weeklyPeriodsAt).toBeDefined();
   });
 
@@ -612,9 +610,10 @@ describe("collecting a website's Google Analytics", () => {
     await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId });
     await finishScheduled(t);
     expect(google.refused).toBe(0);
-    expect(google.spent.size).toBe(2);
+    // The rolling periods are one span more a night than the quarters and year were: a big website's run reaches a third hour's allowance.
+    expect(google.spent.size).toBeLessThanOrEqual(3);
     expect(Math.max(...[...google.spent.values()].map((hour) => hour.thresholded))).toBeLessThanOrEqual(120 - KEPT_BACK.thresholdedPerHour);
-    expect((await periodRows(t, siteId, "pageWho|thisYear|NOW|tablet"))!.slot.to).toBe("2026-10-09");
+    expect((await periodRows(t, siteId, "pageWho|last12Months|NOW|tablet"))!.slot.to).toBe("2026-10-09");
   });
 
   test("Google refusing for the hour (another tool used the allowance): the run asks nothing for an hour, then carries on", async () => {
@@ -719,7 +718,7 @@ describe("collecting a website's Google Analytics", () => {
     const browsers = (await periodRows(t, siteId, "landingBrowser|lastMonth|NOW|"))!.rows;
     expect(browsers.find((row) => splitChannelKey(row.key).source === "Safari")).toMatchObject({ visits: 300, counts: { generate_lead: 30, click_tel: 0 } });
     expect((await periodRows(t, siteId, "landingSystem|lastMonth|NOW|mobile"))!.rows.map((row) => [splitChannelKey(row.key).source, row.visits])).toEqual([["Macintosh", 300]]);
-    const interests = (await periodRows(t, siteId, "landingInterest|thisYear|NOW|"))!.rows;
+    const interests = (await periodRows(t, siteId, "landingInterest|last12Months|NOW|"))!.rows;
     expect(interests.find((row) => splitChannelKey(row.key).source === "Technology")).toMatchObject({ visits: 700, counts: {} });
 
     // The website's own rate over 12 months, from everyone who started a visit, and scrolling's funnel, every device,
@@ -763,7 +762,7 @@ describe("collecting a website's Google Analytics", () => {
     const lists = [
       { list: "page", period: "thisWeek", which: "NOW" },
       { list: "page", period: "thisMonth", which: "NOW" },
-      { pages: true, period: "thisQuarter", device: "" },
+      { pages: true, period: "last3Months", device: "" },
     ] as Parameters<typeof startingAt>[0];
     expect(startingAt(lists, undefined)).toEqual(lists);
     expect(startingAt(lists, jobKey(lists[2]))).toEqual([lists[2], lists[0], lists[1]]);

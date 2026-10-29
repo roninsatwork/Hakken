@@ -309,7 +309,7 @@ export const pagesSeenOf = internalQuery({
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {
     const counts: number[] = [];
-    for (const period of ["lastQuarter", "thisQuarter"] as const) {
+    for (const period of ["last3Months"] as const) {
       const key = slotKey("page", period, "NOW", EVERY_DEVICE, args.country ?? "");
       const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("key", key)).first();
       if (!slot) continue;

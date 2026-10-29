@@ -51,8 +51,8 @@ describe("Clarity's figures, kept", () => {
     const { userId, holdId } = await seed(t);
     await keepDay(t, holdId, "2026-10-14", [page("/", "PC", 50, { dead: 5 }), page("/ai-agency/", "Mobile", 9, { quickBack: 4, errors: 2 })], [device("PC", 52, { bots: 6 }), device("Mobile", 9)]);
     await keepDay(t, holdId, "2026-10-15", [page("/", "PC", 30), page("/", "Mobile", 10)], [device("PC", 31), device("Mobile", 10)]);
-    // On 2 November the days fall in last month, this quarter and this year; nothing is held of the periods before them.
-    expect(await spans(t, holdId)).toEqual(["DAY 2026-10-14", "DAY 2026-10-15", "MONTH 2026-10", "PERIOD lastMonth", "PERIOD thisQuarter", "PERIOD thisYear"]);
+    // On 2 November the days fall in last month and the last 3, 6 and 12 months; nothing is held of the periods before them.
+    expect(await spans(t, holdId)).toEqual(["DAY 2026-10-14", "DAY 2026-10-15", "MONTH 2026-10", "PERIOD last12Months", "PERIOD last3Months", "PERIOD last6Months", "PERIOD lastMonth"]);
 
     const asOwner = t.withIdentity({ subject: userId });
     const byPage = await asOwner.query(api.clarityScreens.clarityPagesList, { siteId: holdId, period: "lastMonth", page: 1, rows: 25 });

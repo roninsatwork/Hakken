@@ -27,7 +27,7 @@ function periodArg(args: Record<string, unknown>): CalendarPeriod {
   if (period && isCalendarPeriod(period)) return period;
   const days = numberArg(args, "days");
   if (days === undefined) return OPENING_PERIOD;
-  return days <= 7 ? "lastWeek" : days <= 31 ? "lastMonth" : days <= 92 ? "lastQuarter" : "thisYear";
+  return days <= 7 ? "lastWeek" : days <= 31 ? "lastMonth" : days <= 92 ? "last3Months" : days <= 184 ? "last6Months" : "last12Months";
 }
 
 

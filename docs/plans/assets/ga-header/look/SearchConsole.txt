@@ -6,7 +6,7 @@ detail-header (compact)
   page-header: ‹the record's name›
     title-switch: Choose a website
     select: Country
-    select: Dates
+    dates-menu: Dates
     select: Step
 select: Search Console pages
 field: Jump to a page

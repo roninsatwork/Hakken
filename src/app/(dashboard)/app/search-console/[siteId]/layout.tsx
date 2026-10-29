@@ -111,7 +111,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             <div className="flex flex-wrap items-end gap-3">
               <SearchConsoleCountryPicker />
               {/* The date menu's seven calendar periods (calendar-periods-plan.md, phase 4). */}
-              <SiteDateRange />
+              <SiteDateRange newest={connection?.newestDay ?? null} />
             </div>
           }
           note={connection?.newestDay && state !== "CHOOSING" ? t("figuresTo", { day: formatDay(connection.newestDay) }) : null}

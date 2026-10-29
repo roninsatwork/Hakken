@@ -98,8 +98,8 @@ export async function fingerprintRows(rows: readonly BingRow[]): Promise<string>
 export const BING_PERIODS = CALENDAR_PERIODS;
 export type BingPeriod = CalendarPeriod;
 
-/** The periods built with the span before them: every one but This Year, whose same days a year before are past the 13 months of weeks kept. */
-export const WITH_BEFORE: ReadonlySet<BingPeriod> = new Set(CALENDAR_PERIODS.filter((period) => period !== "thisYear"));
+/** The periods built with the span before them: every one in the menu (the retired This Year had none: its same days a year before were past the 13 months of weeks kept). */
+export const WITH_BEFORE: ReadonlySet<BingPeriod> = new Set(CALENDAR_PERIODS);
 
 /** The weeks a build reads at most, newest first: the 13 months kept. */
 export const WEEKS_READ_FOR_PERIODS = 57;

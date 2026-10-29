@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { CALENDAR_PERIODS, stepOf, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { CALENDAR_PERIODS, stepOf, type MenuPeriod } from "@/convex/utils/calendarPeriods";
 import { CALENDAR_PERIOD_KEY, useCalendarPeriod } from "../../sites/_components/useCalendarPeriod";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
@@ -54,7 +54,7 @@ export function pageForPath(pathname: string, siteId: string): AnalyticsPageId {
 
 /** The ready-made periods: the date menu's seven calendar periods every section shares (calendar-periods-plan.md, phase 6). */
 export const PERIODS = CALENDAR_PERIODS;
-export type Period = CalendarPeriod;
+export type Period = MenuPeriod;
 export const PERIOD_KEY = CALENDAR_PERIOD_KEY;
 
 /** Every device, or one (GA13). */

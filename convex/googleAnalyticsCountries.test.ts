@@ -31,7 +31,6 @@ const DAYS = 31;
 /** The finished periods the tests don't read, fetched already: last week from 21 December, last quarter from 1 October. */
 const FETCHED = ["", "|fra"].flatMap((country) => [
   { key: `lastWeek${country}`, from: "2026-12-21", settled: true },
-  { key: `lastQuarter${country}`, from: "2026-10-01", settled: true },
 ]);
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -75,7 +74,9 @@ async function dailyRun(t: Harness, agentId: Id<"agents">) {
     status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
   }));
   await t.action(internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId });
-  await finishScheduled(t);
+  // A home country taken off leaves every list of its five running periods, by device, to be cleared eight parts a
+  // call (dropCountriesNotKept): a long chain by design, past the helper's usual hundred hops.
+  await finishScheduled(t, { rounds: 600 });
 }
 
 /** A ready-made list's visits, read through its slot as a screen does; null when it is not kept. */

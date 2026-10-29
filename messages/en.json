@@ -84,6 +84,10 @@
       "lastWeek": "Last week",
       "thisMonth": "This month",
       "lastMonth": "Last month",
+      "last3Months": "Last 3 months",
+      "last6Months": "Last 6 months",
+      "last12Months": "Last 12 months",
+      "custom": "Custom dates…",
       "thisQuarter": "This quarter",
       "lastQuarter": "Last quarter",
       "thisYear": "This year",
@@ -92,6 +96,10 @@
         "lastWeek": "last week",
         "thisMonth": "this month",
         "lastMonth": "last month",
+        "last3Months": "the last 3 months",
+        "last6Months": "the last 6 months",
+        "last12Months": "the last 12 months",
+        "custom": "these dates",
         "thisQuarter": "this quarter",
         "lastQuarter": "last quarter",
         "thisYear": "this year"
@@ -105,6 +113,10 @@
         "lastWeek": "the week before",
         "thisMonth": "the same days last month",
         "lastMonth": "the month before",
+        "last3Months": "the 3 months before",
+        "last6Months": "the 6 months before",
+        "last12Months": "the 12 months before",
+        "custom": "the same number of days before",
         "thisQuarter": "the same days last quarter",
         "lastQuarter": "the quarter before",
         "thisYear": "the same days last year"
@@ -114,6 +126,10 @@
         "lastWeek": "on the week before",
         "thisMonth": "on the same days last month",
         "lastMonth": "on the month before",
+        "last3Months": "on the 3 months before",
+        "last6Months": "on the 6 months before",
+        "last12Months": "on the 12 months before",
+        "custom": "on the same number of days before",
         "thisQuarter": "on the same days last quarter",
         "lastQuarter": "on the quarter before",
         "thisYear": "on the same days last year"
@@ -123,10 +139,20 @@
         "lastWeek": "than the week before",
         "thisMonth": "than the same days last month",
         "lastMonth": "than the month before",
+        "last3Months": "than the 3 months before",
+        "last6Months": "than the 6 months before",
+        "last12Months": "than the 12 months before",
+        "custom": "than the same number of days before",
         "thisQuarter": "than the same days last quarter",
         "lastQuarter": "than the quarter before",
         "thisYear": "than the same days last year"
-      }
+      },
+      "noneYet": "none yet",
+      "customHint": "a first and a last day",
+      "customFrom": "First day",
+      "customTo": "to",
+      "customToLabel": "Last day",
+      "customShow": "Show"
     }
   },
   "landing": {
@@ -7667,11 +7693,11 @@
         "companies": "Companies"
       },
       "periods": {
-        "label": "Period",
         "7": "Last 7 days",
         "30": "Last 30 days",
         "90": "Last 90 days",
-        "365": "Last 12 months"
+        "365": "Last 12 months",
+        "label": "Period"
       },
       "overview": {
         "title": "Overview",
@@ -15884,6 +15910,10 @@
         "lastWeek": "Last week",
         "thisMonth": "This month",
         "lastMonth": "Last month",
+        "last3Months": "Last 3 months",
+        "last6Months": "Last 6 months",
+        "last12Months": "Last 12 months",
+        "custom": "Custom dates…",
         "thisQuarter": "This quarter",
         "lastQuarter": "Last quarter",
         "thisYear": "This year"
@@ -15898,6 +15928,10 @@
         "lastWeek": "the week before",
         "thisMonth": "the same days last month",
         "lastMonth": "the month before",
+        "last3Months": "the 3 months before",
+        "last6Months": "the 6 months before",
+        "last12Months": "the 12 months before",
+        "custom": "the same number of days before",
         "thisQuarter": "the same days last quarter",
         "lastQuarter": "the quarter before",
         "thisYear": "the same days last year"
@@ -16539,6 +16573,10 @@
         "lastWeek": "The week before",
         "thisMonth": "The same days last month",
         "lastMonth": "The month before",
+        "last3Months": "The 3 months before",
+        "last6Months": "The 6 months before",
+        "last12Months": "The 12 months before",
+        "custom": "The same number of days before",
         "thisQuarter": "The same days last quarter",
         "lastQuarter": "The quarter before",
         "thisYear": "The same days last year"

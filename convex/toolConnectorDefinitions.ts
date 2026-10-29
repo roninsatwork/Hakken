@@ -537,7 +537,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Search Console",
         description:
-          "One of the company's own websites' Google Search Console figures — clicks, impressions, click-through rate and average position — over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, thisQuarter, lastQuarter or thisYear, weeks Monday to Sunday — set against the period before as the screens set it, for the whole website or the pages whose address contains `page`. Search Console's newest day is about three days behind, and Google gives these figures to a website's owner only, so a competitor has none: read its Sites overview instead. Give the figures with the link returned.",
+          "One of the company's own websites' Google Search Console figures — clicks, impressions, click-through rate and average position — over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months or last12Months, weeks Monday to Sunday — set against the period before as the screens set it, for the whole website or the pages whose address contains `page`. Search Console's newest day is about three days behind, and Google gives these figures to a website's owner only, so a competitor has none: read its Sites overview instead. Give the figures with the link returned.",
         handlerMapping: "assistant.searchConsole",
         modelName: "read_search_console",
         requiredRole: "ADMIN",
@@ -548,7 +548,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           required: ["website", "period"],
           properties: {
             website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
-            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"], description: "lastMonth when the question names no time." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"], description: "lastMonth when the question names no time." },
             page: { type: "string", description: "Part of a page's address, e.g. /boiler-repair. Leave out for the whole website." },
           },
         }),
@@ -600,7 +600,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Google Analytics",
         description:
-          "One Google Analytics screen of one of the company's own websites, over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, thisQuarter, lastQuarter or thisYear, weeks Monday to Sunday — with the figures the screen shows and its link. Screens: overview (visits, page views, people, conversions and value against the span before, visits by channel, what changed most); channels; channel (key: the channel's name, its sources); campaigns and adKeywords (visits from tagged links); landingPages; landingPage (key: the page's address or path, with where its visits came from); allPages; page (key: address or path, with the page or website visitors were on just before); events; event (key: Google's event name — click, scroll, form_submit — with what it was about, the pages it happened on and the people who converted after it); conversions; visitors (list: visitorType, browser, system, age, gender or interest); products (a shop's four steps and each product). Leave device out for every device; country is one of the website's other home countries, left out for the main one. Give the figures with the link returned; money is in the currency returned.",
+          "One Google Analytics screen of one of the company's own websites, over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months or last12Months, weeks Monday to Sunday — with the figures the screen shows and its link. Screens: overview (visits, page views, people, conversions and value against the span before, visits by channel, what changed most); channels; channel (key: the channel's name, its sources); campaigns and adKeywords (visits from tagged links); landingPages; landingPage (key: the page's address or path, with where its visits came from); allPages; page (key: address or path, with the page or website visitors were on just before); events; event (key: Google's event name — click, scroll, form_submit — with what it was about, the pages it happened on and the people who converted after it); conversions; visitors (list: visitorType, browser, system, age, gender or interest); products (a shop's four steps and each product). Leave device out for every device; country is one of the website's other home countries, left out for the main one. Give the figures with the link returned; money is in the currency returned.",
         handlerMapping: "assistant.googleAnalytics",
         modelName: "read_google_analytics",
         requiredRole: "ADMIN",
@@ -612,7 +612,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           properties: {
             website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
             screen: { type: "string", enum: ["overview", "channels", "channel", "campaigns", "adKeywords", "landingPages", "landingPage", "allPages", "page", "events", "event", "conversions", "visitors", "products"] },
-            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"], description: "lastMonth when the question names no time." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"], description: "lastMonth when the question names no time." },
             device: { type: "string", enum: ["desktop", "mobile", "tablet"], description: "One device. Leave out for every device." },
             country: { type: "string", description: "Another home country of the website, as a three-letter code (fra). Leave out for the main one." },
             key: { type: "string", description: "For channel, landingPage, page and event: the channel, the page's address or path, or the event's Google name." },
@@ -659,7 +659,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Bing Webmaster",
         description:
-          "One Bing Webmaster screen of one of the company's own websites, over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, thisQuarter, lastQuarter or thisYear — with the figures the screen shows and its link. Bing gives keywords and pages a week at a time, so a period's lists are the Bing weeks ending inside it. Every figure sits beside Google's for the same days or keyword, from Search Console. Screens: performance (Bing's clicks, impressions and click-through rate against Google's, and Bing's share of the website's search clicks week by week); keywords (each keyword with Bing's and Google's positions); pages (each page with Bing's clicks and Google's); versus (Bing against Google over the period: how many keywords each engine ranks higher, and each keyword with both positions); crawling (pages Bing read, its errors, and each money page in Bing's index against Google's). Rows from under 10 impressions are marked fewImpressions: too few to trust. Give the figures with the link returned.",
+          "One Bing Webmaster screen of one of the company's own websites, over one calendar period — the screens' own: thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months or last12Months — with the figures the screen shows and its link. Bing gives keywords and pages a week at a time, so a period's lists are the Bing weeks ending inside it. Every figure sits beside Google's for the same days or keyword, from Search Console. Screens: performance (Bing's clicks, impressions and click-through rate against Google's, and Bing's share of the website's search clicks week by week); keywords (each keyword with Bing's and Google's positions); pages (each page with Bing's clicks and Google's); versus (Bing against Google over the period: how many keywords each engine ranks higher, and each keyword with both positions); crawling (pages Bing read, its errors, and each money page in Bing's index against Google's). Rows from under 10 impressions are marked fewImpressions: too few to trust. Give the figures with the link returned.",
         handlerMapping: "assistant.bingWebmaster",
         modelName: "read_bing_webmaster",
         requiredRole: "ADMIN",
@@ -671,7 +671,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           properties: {
             website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
             screen: { type: "string", enum: ["performance", "keywords", "pages", "versus", "crawling"] },
-            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"], description: "lastMonth when the question names no time." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"], description: "lastMonth when the question names no time." },
             search: { type: "string", description: "Words to find in a list's keywords or pages. Optional." },
           },
         }),

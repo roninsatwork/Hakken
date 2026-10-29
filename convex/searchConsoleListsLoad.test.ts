@@ -169,7 +169,7 @@ describe("a large website's Search Console", () => {
       };
     });
     const competing = pairs.filter((pair) => pair.key < "search 02000");
-    const year = { period: "thisYear" as const, which: "NOW" as const, from: "2026-01-01", to: NEWEST };
+    const year = { period: "last12Months" as const, which: "NOW" as const, from: "2025-09-27", to: NEWEST };
     const siteId = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Co", createdAt: Date.now() });
       const websiteId = await ctx.db.insert("websites", { host: "big.co.uk", displayHost: "big.co.uk", firstSeenAt: Date.now() });

@@ -233,8 +233,8 @@ export const searchConsoleNewLost = tenantQuery({
     const pages = await read("page");
 
     // Each keyword's figures over the date menu's period (calendar-periods-plan.md, phase 4), read a keyword at a time
-    // (step 4b): other dates read last quarter, which holds every keyword shown in it.
-    const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "lastQuarter", country);
+    // (step 4b): other dates read the last 3 months, which hold every keyword shown in them.
+    const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "last3Months", country);
     // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
     // lost keyword looked up by its text, the book's records read once however many ask.
     const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;

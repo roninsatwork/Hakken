@@ -372,7 +372,7 @@ describe("collecting", () => {
     const web = settleJobs.filter((job) => job.searchType === "web").map((job) => job.stage ?? "FIRST");
     expect(web).toEqual(["FIRST", "NINETY", "YEAR"]);
     const periods = await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect());
-    expect(periods.some((row) => row.searchType === "web" && row.list === "page" && row.period === "thisQuarter")).toBe(true);
+    expect(periods.some((row) => row.searchType === "web" && row.list === "page" && row.period === "last3Months")).toBe(true);
     expect(periods.some((row) => row.searchType === "web" && row.list === "page" && row.period === "lastWeek")).toBe(true);
     // The settle ended: nothing left half-way to stop the next one.
     expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
@@ -406,7 +406,7 @@ describe("collecting", () => {
     const connection = (await connectionOf(t, siteId))!;
     // This quarter's lists as one job built them, but for when.
     const ninety = async () => (await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect()))
-      .filter((row) => row.period === "thisQuarter")
+      .filter((row) => row.period === "last3Months")
       .map(({ _id, _creationTime, builtAt, ...row }) => JSON.stringify(row))
       .sort();
     const whole = await ninety();
@@ -580,26 +580,26 @@ describe("collecting", () => {
         .collect());
       expect(pairsBefore).toEqual([]);
     }
-    // This year is asked of Google whole, back past the days collected (insights-intelligence-plan.md phase 9).
+    // The last 12 months are asked of Google whole, back past the days collected (insights-intelligence-plan.md phase 9).
     const year = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "thisYear").eq("which", "NOW"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "last12Months").eq("which", "NOW"))
       .collect());
-    expect(year).toEqual([expect.objectContaining({ from: "2026-01-01", to: NEWEST })]);
-    // Its pages are this quarter's here: nothing older was shown.
+    expect(year).toEqual([expect.objectContaining({ from: "2025-09-27", to: NEWEST })]);
+    // Its pages are the last 3 months' here: nothing older was shown.
     const listed = (from: string) => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "web", dimension: "page", from, to: NEWEST, page: 1, rows: 25 });
-    const twelveMonths = await listed("2026-01-01");
-    const ninety = await listed("2026-07-01");
+    const twelveMonths = await listed("2025-09-27");
+    const ninety = await listed("2026-06-27");
     type Listed = { key: string; change: number | null };
     expect(twelveMonths.rows.map((one: Listed) => one.key)).toEqual(["https://acme-shop.test/"]);
     const withoutChange = (rows: Listed[]) => rows.map(({ change: _change, ...row }) => row);
     expect(withoutChange(twelveMonths.rows)).toEqual(withoutChange(ninety.rows));
-    // This quarter is set against the same days of the quarter before, asked of Google (phase 9): a page gained from nothing.
-    // This year has none: the same days last year are past Google's sixteen months.
+    // The last 3 months are set against the 3 months before, asked of Google (phase 9): a page gained from nothing.
+    // The last 12 months have none: the 12 before are past Google's sixteen months.
     expect(ninety.rows.map((one: Listed) => one.change)).toEqual([8]);
     expect(twelveMonths.rows.map((one: Listed) => one.change)).toEqual([null]);
     // Google Images keeps no searches (store less round two, A): its keyword list says so; its pages still list.
-    const images = (dimension: "query" | "page") => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "image", dimension, from: "2026-07-01", to: NEWEST, page: 1, rows: 25 });
+    const images = (dimension: "query" | "page") => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "image", dimension, from: "2026-06-27", to: NEWEST, page: 1, rows: 25 });
     expect(await images("query")).toMatchObject({ noSearches: true, preparing: false, rows: [] });
     expect((await images("page")).noSearches).toBeUndefined();
     // The days, weeks and months the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
@@ -643,10 +643,10 @@ describe("collecting", () => {
     expect(pairs.every((ask) => shiftDay(ask.startDate, 6) >= ask.endDate)).toBe(true);
     const ninety = (await t.run(async (ctx) => await Promise.all((await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "thisQuarter").eq("which", "NOW"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "last3Months").eq("which", "NOW"))
       // Read back as text: a list holds places in its build's book (core-data-normalisation-plan.md §5.1).
       .collect()).map(async (part) => await periodPartAsText(ctx, part)))));
-    expect(ninety).toEqual([expect.objectContaining({ from: "2026-07-01", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] })]);
+    expect(ninety).toEqual([expect.objectContaining({ from: "2026-06-27", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] })]);
     // Its days are held 60 days, the first collection's older ones cleared once it was added up.
     const days = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).map((record) => record.start));
     expect(days.every((day) => day >= "2026-07-29")).toBe(true);
@@ -694,7 +694,7 @@ describe("collecting", () => {
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const builtAt = async (period: "lastWeek" | "thisYear") => (await t.run(async (ctx) => await ctx.db
+    const builtAt = async (period: "lastWeek" | "last12Months") => (await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", period).eq("which", "NOW").eq("part", 0))
       .first()))?.builtAt;
@@ -702,7 +702,7 @@ describe("collecting", () => {
     const first = await builtAt("lastWeek");
     expect(first).toBeDefined();
     // Each list is added up in its own step, a millisecond or more apart (`aboutMs`): this year's own time.
-    const firstYear = await builtAt("thisYear");
+    const firstYear = await builtAt("last12Months");
 
     // The next night's fetch brings a new day and adds nothing up.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
@@ -723,13 +723,13 @@ describe("collecting", () => {
     await finishScheduled(t);
     const second = await builtAt("lastWeek");
     expect(second).toBeGreaterThan(first!);
-    expect(await builtAt("thisYear")).toBe(firstYear);
+    expect(await builtAt("last12Months")).toBe(firstYear);
 
     // A week on, the sweep adds up the website whole.
     vi.setSystemTime(NOW + 8 * 24 * 60 * 60 * 1000);
     expect(await t.action(internal.searchConsoleSettling.weeklyRebuilds, {})).toBe(1);
     await finishScheduled(t);
-    expect(await builtAt("thisYear")).toBeGreaterThan(first!);
+    expect(await builtAt("last12Months")).toBeGreaterThan(first!);
     // Every job counted and the settle closed.
     expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
   });
@@ -744,9 +744,9 @@ describe("collecting", () => {
     google.figures[property].web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
     await collect(t);
     const newest = "2026-09-27";
-    // Monday 28 September: this month and this quarter to the newest day (calendar-periods-plan.md, phase 4).
-    const dates = (period: "thisMonth" | "thisQuarter") => ({ siteId, from: period === "thisMonth" ? "2026-09-01" : "2026-07-01", to: newest, period });
-    const slot = (period: "thisMonth" | "thisQuarter") => t.run(async (ctx) => await Promise.all((await ctx.db
+    // Monday 28 September: this month and the last 3 months to the newest day (sees-header-and-rolling-dates-plan.md).
+    const dates = (period: "thisMonth" | "last3Months") => ({ siteId, from: period === "thisMonth" ? "2026-09-01" : "2026-06-28", to: newest, period });
+    const slot = (period: "thisMonth" | "last3Months") => t.run(async (ctx) => await Promise.all((await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", period).eq("which", "NOW"))
       .collect()).map(async (part) => await periodPartAsText(ctx, part))));
@@ -758,13 +758,13 @@ describe("collecting", () => {
     await finishScheduled(t);
     expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates("thisMonth"))).toMatchObject({ behind: false });
     expect((await slot("thisMonth")).map((part) => part.to)).toEqual([newest]);
-    // Only the lists inside the days kept: this quarter, asked of Google, is still behind, and caught up when a screen reads it.
-    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates("thisQuarter"))).toMatchObject({ behind: true, heldTo: NEWEST });
+    // Only the lists inside the days kept: the last 3 months, asked of Google, are still behind, and caught up when a screen reads them.
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates("last3Months"))).toMatchObject({ behind: true, heldTo: NEWEST });
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000 + 3 * 60 * 1000);
-    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates("thisQuarter"))).toBe(true);
+    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates("last3Months"))).toBe(true);
     await finishScheduled(t);
-    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates("thisQuarter"))).toMatchObject({ behind: false });
-    const ninety = await slot("thisQuarter");
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates("last3Months"))).toMatchObject({ behind: false });
+    const ninety = await slot("last3Months");
     expect(ninety.map((part) => part.to)).toEqual([newest]);
     expect(ninety[0].keys).toContain("drain unblocking");
   });

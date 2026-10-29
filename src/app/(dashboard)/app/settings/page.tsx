@@ -15,9 +15,9 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Select } from "@/src/ui/components/screens/Select";
-import { periodSpan, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
-import { useCalendarPeriod, useCalendarPeriodChoices } from "../sites/_components/useCalendarPeriod";
+import { periodSpan, ukDay } from "@/convex/utils/calendarPeriods";
+import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
+import { useCalendarPeriod } from "../sites/_components/useCalendarPeriod";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 import type { ReadCoverage } from "@/convex/utils/readCoverage";
@@ -87,10 +87,8 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
 
 export default function CompanySettingsDashboard() {
   const t = useTranslations('admin.overview');
-  const tp = useTranslations("common.periods");
-  // The seven calendar periods every section's date menu offers (calendar-periods-plan.md, phase 7), its days to today.
+  // The seven periods every section's Dates menu offers (sees-header-and-rolling-dates-plan.md), its days to today.
   const [period, setPeriod] = useCalendarPeriod();
-  const periods = useCalendarPeriodChoices();
   const today = ukDay();
   const span = periodSpan(period, today, today) ?? { from: today, to: today };
 
@@ -137,9 +135,7 @@ export default function CompanySettingsDashboard() {
         </div>
 
         <div className="flex flex-col items-end gap-3 z-20">
-          <Select aria-label={tp("label")} value={period} onChange={(next) => setPeriod(next as CalendarPeriod)}>
-            {periods.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
-          </Select>
+          <DatesMenu value={{ period }} newest={null} custom={false} onChange={(choice) => setPeriod(choice.period)} />
         </div>
       </header>
 

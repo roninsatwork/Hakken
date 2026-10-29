@@ -6,7 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { searchTypeValidator, type SearchType } from "./searchConsoleSchema";
 import { unpackNumbers, unpackedPart, type Row } from "./utils/searchConsolePacks";
 import { wholeBookFromAction } from "./searchConsolePeriodBooks";
-import { RECENT_PERIODS, holdingPeriod } from "./searchConsolePeriodReads";
+import { RECENT_PERIODS, holdingPeriod, recentPeriodValidator } from "./searchConsolePeriodReads";
 
 /**
  * Which searches a website keeps line by line (docs/plans/active/
@@ -44,7 +44,7 @@ const TRACKED_READ = 500;
  * (core-data-normalisation-plan.md §5.1), named by the action from the book read once.
  */
 export const keptSearchesPart = internalQuery({
-  args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator, period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")), cursor: v.union(v.string(), v.null()) },
+  args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator, period: recentPeriodValidator, cursor: v.union(v.string(), v.null()) },
   returns: v.object({
     keys: v.array(v.string()),
     places: v.array(v.number()),
@@ -54,7 +54,7 @@ export const keptSearchesPart = internalQuery({
     isDone: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    // This quarter kept on this month's very days is read there (`holdingPeriod`).
+    // A period kept on another's very days is read there (`holdingPeriod`).
     const period = await holdingPeriod(ctx, { companyWebsiteId: args.holdId, country: args.country, searchType: args.searchType, list: "query" }, args.period);
     const page = await ctx.db
       .query("searchConsolePeriods")

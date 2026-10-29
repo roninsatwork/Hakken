@@ -788,13 +788,14 @@ const SPLIT_DEVICES = ["desktop", "mobile", "tablet"] as const;
 export const SPLIT_ROWS = 25_000;
 
 /**
- * A shop is one with any of its four steps this quarter or last (§18.6.6; calendar-periods-plan.md, phase 6): noted
- * a shop when either quarter's events show a step, and no longer one only when a whole quarter ended without any.
+ * A shop is one with any of its four steps in the last 3 months (§18.6.6; sees-header-and-rolling-dates-plan.md, part
+ * two; this quarter or last until 2026-10-29): noted a shop when those months' events show a step, and no longer one
+ * once they show none.
  */
 async function noteShopFrom(ctx: ActionCtx, connectionId: Id<"googleAnalyticsConnections">, target: CollectTarget, job: PeriodJob, asked: Extract<Asked, { ok: true }>) {
-  if ((job.period !== "thisQuarter" && job.period !== "lastQuarter") || job.which !== "NOW" || job.country) return;
+  if (job.period !== "last3Months" || job.which !== "NOW" || job.country) return;
   const shop = [...asked.groups.values()].flat().some((row) => (SHOP_STEPS as readonly string[]).includes(row.key) && (row.times ?? 0) > 0);
-  const changed = shop ? !target.shopNoted : target.shopNoted && job.period === "lastQuarter";
+  const changed = shop ? !target.shopNoted : target.shopNoted;
   if (changed) await ctx.runMutation(internal.googleAnalyticsCollect.noteShop, { connectionId, property: target.property!, shop });
 }
 

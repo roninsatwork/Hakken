@@ -1,6 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
-import { CALENDAR_PERIODS, type CalendarPeriod } from "./utils/calendarPeriods";
+import { CALENDAR_PERIODS, calendarPeriodValidator, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * The tables behind Search Console for a company's own websites
@@ -172,10 +172,7 @@ export const consoleScreenLimitFields = {
 /** The kind of result as the first- and last-seen register files it: web results carry none, as every row held before they all did. */
 export const seenType = (type: SearchType): SearchType | undefined => (type === "web" ? undefined : type);
 
-export const periodValidator = v.union(
-  v.literal("1"), v.literal("14"), v.literal("28"),
-  v.literal("thisWeek"), v.literal("lastWeek"), v.literal("thisMonth"), v.literal("lastMonth"), v.literal("thisQuarter"), v.literal("lastQuarter"), v.literal("thisYear"),
-);
+export const periodValidator = v.union(calendarPeriodValidator, v.literal(VOLATILITY_PERIOD), v.literal("14"), v.literal("28"));
 
 /**
  * One list's rows, packed: one record for a whole day (or week, or month)

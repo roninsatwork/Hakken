@@ -96,7 +96,7 @@ describe("each page over time", () => {
     // The fill ran once the first collection was in (ga-stored-figures-plan.md SF9): the pages held from two years back.
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.pageHistoryFrom).toBeDefined();
     const asked = google.calls.length;
-    const landing = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page: home, period: "thisYear", device: "" }))!;
+    const landing = (await user.query(api.googleAnalyticsPageReads.analyticsLandingPage, { siteId, page: home, period: "last12Months", device: "" }))!;
     expect(landing.live).toBe(false);
     // This year: the 92 days kept a day, then weeks back to January.
     expect(landing.points.filter((point) => !point.lastDay)).toHaveLength(92);
@@ -105,10 +105,10 @@ describe("each page over time", () => {
     // The plain day lands 10 visits on the home page from Organic Search, 2 from Direct, and the staging address's 2 are not the website's.
     const perDay = landing.points.find((point) => !point.lastDay)!.visits;
     expect(landing.points.reduce((sum, point) => sum + point.visits, 0)).toBe(perDay * landing.points.reduce((sum, point) => sum + daysOf(point), 0));
-    const page = (await user.query(api.googleAnalyticsPageReads.analyticsPage, { siteId, page: home, period: "lastQuarter", device: "" }))!;
+    const page = (await user.query(api.googleAnalyticsPageReads.analyticsPage, { siteId, page: home, period: "last3Months", device: "" }))!;
     // Last quarter on the 1st of the next: every one of its 92 days held a day at a time.
     expect(page.points).toHaveLength(92);
-    const daily = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, { siteId, period: "thisYear", device: "", pages: [home] });
+    const daily = await user.query(api.googleAnalyticsPageReads.analyticsPagesDaily, { siteId, period: "last12Months", device: "", pages: [home] });
     expect(daily.pages[0].points?.length).toBeGreaterThan(90);
     expect(google.calls.length).toBe(asked);
   });

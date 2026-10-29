@@ -74,9 +74,9 @@ export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top:
 const RUNNING: readonly CalendarPeriod[] = CALENDAR_PERIODS.filter(isRunning);
 /** The finished periods: asked once they end, again once Google's figures settle, then kept. */
 export const FINISHED: readonly CalendarPeriod[] = CALENDAR_PERIODS.filter((period) => !isRunning(period));
-/** The spans each period is asked with: the quarters with a year before too; This Year's span before is already last year's. */
+/** The spans each period is asked with: the retired quarters with a year before too; the 12 months' (and This Year's) span before is already the year before. */
 function whichOf(period: CalendarPeriod): readonly AnalyticsWhich[] {
-  return YEAR_BEFORE_PERIODS.includes(period) && period !== "thisYear" ? ["NOW", "BEFORE", "YEAR"] : ["NOW", "BEFORE"];
+  return YEAR_BEFORE_PERIODS.includes(period) && period !== "thisYear" && period !== "last12Months" ? ["NOW", "BEFORE", "YEAR"] : ["NOW", "BEFORE"];
 }
 /** Days Google's figures take to settle after a period ends (§2.5): it is asked again once this many have passed. */
 const SETTLE_DAYS = 2;

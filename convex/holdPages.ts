@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
-import { RECENT_PERIODS, holdingPeriod, periodFromParts } from "./searchConsolePeriodReads";
+import { RECENT_PERIODS, holdingPeriod, periodFromParts, recentPeriodValidator } from "./searchConsolePeriodReads";
 import { wholeBookFromAction } from "./searchConsolePeriodBooks";
 import { tokenPlace } from "./utils/searchConsoleTerms";
 import { dropCopies, writeListCopy } from "./siteListCopies";
@@ -156,10 +156,10 @@ export const rebuildHead = internalQuery({
     ]);
     const bing = await ctx.db.query("bingConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     const connected = connection?.status === "CONNECTED" && !connection.clearing && Boolean(connection.newestDay);
-    // Its dates are on the newest builds' first parts — last quarter's first day to this quarter's last — the whole period,
-    // and its book, read here until 2026-10-15 (RR3).
-    const [latest, earlier] = connected ? [await newestConsoleBuild(ctx, args.holdId, "thisQuarter"), await newestConsoleBuild(ctx, args.holdId, "lastQuarter")] : [null, null];
-    const period = latest || earlier ? { from: (earlier ?? latest)!.from, to: (latest ?? earlier)!.to } : null;
+    // Its dates are on the newest build's first part — the last 3 months, the whole period (the two quarters until
+    // 2026-10-29) — and its book, read here until 2026-10-15 (RR3).
+    const latest = connected ? await newestConsoleBuild(ctx, args.holdId, "last3Months") : null;
+    const period = latest ? { from: latest.from, to: latest.to } : null;
     return {
       websiteId,
       host: site.website.host,
@@ -286,7 +286,7 @@ async function newestConsoleBuild(ctx: QueryCtx, holdId: Id<"companyWebsites">, 
  * from was replaced since the first part; null when there is none.
  */
 export const consolePagesPart = internalQuery({
-  args: { holdId: v.id("companyWebsites"), period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")), builtAt: v.optional(v.number()), start: v.number() },
+  args: { holdId: v.id("companyWebsites"), period: recentPeriodValidator, builtAt: v.optional(v.number()), start: v.number() },
   returns: v.union(
     v.null(),
     v.object({ moved: v.literal(true) }),
@@ -386,7 +386,7 @@ const LANDING_READ_TRIES = 3;
  * in since the first part.
  */
 export const landingVisits = internalQuery({
-  args: { holdId: v.id("companyWebsites"), period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")), slot: v.optional(v.number()), start: v.optional(v.number()) },
+  args: { holdId: v.id("companyWebsites"), period: recentPeriodValidator, slot: v.optional(v.number()), start: v.optional(v.number()) },
   returns: v.union(
     v.null(),
     v.object({ moved: v.literal(true) }),
@@ -639,9 +639,9 @@ function copyMeta(head: Head, counts: ReturnType<typeof joinHoldPages>["counts"]
   };
 }
 
-/** One part of Bing's ready-made pages for this quarter or last: each page's number and its clicks (bing-webmaster-plan.md §4.3). */
+/** One part of Bing's ready-made pages for the last 3 months: each page's number and its clicks (bing-webmaster-plan.md §4.3). */
 export const bingPagesPart = internalQuery({
-  args: { holdId: v.id("companyWebsites"), part: v.number(), period: v.union(v.literal("thisQuarter"), v.literal("lastQuarter")) },
+  args: { holdId: v.id("companyWebsites"), part: v.number(), period: recentPeriodValidator },
   returns: v.union(v.null(), v.object({ numbers: v.array(v.number()), clicks: v.array(v.number()) })),
   handler: async (ctx, args) => {
     const parts = await ctx.db

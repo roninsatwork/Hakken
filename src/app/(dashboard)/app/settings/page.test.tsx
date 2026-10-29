@@ -19,6 +19,7 @@ vi.mock("next/image", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string, values?: Record<string, string | number>) => {
     const labels: Record<string, string> = {
       "charts.daily": "Daily",
@@ -166,11 +167,11 @@ describe("CompanySettingsDashboard", () => {
     expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(screen.getByText("Sales Agent")).toBeInTheDocument();
 
-    // The menu offers the seven calendar periods, and a choice is kept in the address.
-    const menu = screen.getByRole("combobox", { name: "label" }) as HTMLSelectElement;
-    expect([...menu.options].map((option) => option.value)).toEqual(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisQuarter", "lastQuarter", "thisYear"]);
-    fireEvent.change(menu, { target: { value: "thisYear" } });
-    expect(nav.replace).toHaveBeenCalledWith("/app/settings?period=thisYear", { scroll: false });
+    // The Dates menu offers the seven periods, and a choice is kept in the address (sees-header-and-rolling-dates-plan.md).
+    fireEvent.click(screen.getByRole("button", { name: /^label: lastMonth/ }));
+    expect(screen.getAllByRole("menuitemradio").map((item) => item.firstElementChild?.textContent)).toEqual(["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"]);
+    fireEvent.click(screen.getByRole("menuitemradio", { name: /^last12Months/ }));
+    expect(nav.replace).toHaveBeenCalledWith("/app/settings?period=last12Months", { scroll: false });
   });
 });
 

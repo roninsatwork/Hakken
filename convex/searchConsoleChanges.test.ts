@@ -56,7 +56,7 @@ async function setup(role: "USER" | "SUPER_ADMIN" = "USER") {
 const seen = (t: Harness, siteId: Id<"companyWebsites">, kind: "query" | "page", key: string, firstDay: string, lastDay: string) =>
   t.run(async (ctx) => await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, kind, key, firstDay, lastDay }));
 
-async function period(t: Harness, siteId: Id<"companyWebsites">, period: "thisMonth" | "lastQuarter", rows: [string, number, number, number][]) {
+async function period(t: Harness, siteId: Id<"companyWebsites">, period: "thisMonth" | "last3Months", rows: [string, number, number, number][]) {
   await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
     companyWebsiteId: siteId, searchType: "web", list: "query", period, which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
     keys: rows.map((row) => row[0]), clicks: rows.map((row) => row[1]), impressions: rows.map((row) => row[2]),
@@ -74,7 +74,7 @@ describe("New and lost", () => {
     await seen(t, siteId, "query", "still around", "2026-07-20", "2026-09-20");
     await seen(t, siteId, "page", "https://acme-shop.test/drains/", "2026-09-20", NEWEST);
     // Dates not a calendar period read last quarter's figures, which hold every keyword shown in it (calendar-periods-plan.md, phase 4).
-    await period(t, siteId, "lastQuarter", [["drain unblocking", 6, 200, 4.5], ["boiler repair", 3, 90, 12]]);
+    await period(t, siteId, "last3Months", [["drain unblocking", 6, 200, 4.5], ["boiler repair", 3, 90, 12]]);
 
     const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
     expect(answer.counts).toEqual({ newKeywords: 1, lostKeywords: 1, newPages: 1, lostPages: 0 });

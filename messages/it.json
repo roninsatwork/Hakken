@@ -84,6 +84,10 @@
       "lastWeek": "La settimana scorsa",
       "thisMonth": "Questo mese",
       "lastMonth": "Il mese scorso",
+      "last3Months": "Ultimi 3 mesi",
+      "last6Months": "Ultimi 6 mesi",
+      "last12Months": "Ultimi 12 mesi",
+      "custom": "Date personalizzate…",
       "thisQuarter": "Questo trimestre",
       "lastQuarter": "Il trimestre scorso",
       "thisYear": "Quest'anno",
@@ -92,6 +96,10 @@
         "lastWeek": "la settimana scorsa",
         "thisMonth": "questo mese",
         "lastMonth": "il mese scorso",
+        "last3Months": "gli ultimi 3 mesi",
+        "last6Months": "gli ultimi 6 mesi",
+        "last12Months": "gli ultimi 12 mesi",
+        "custom": "queste date",
         "thisQuarter": "questo trimestre",
         "lastQuarter": "il trimestre scorso",
         "thisYear": "quest'anno"
@@ -105,6 +113,10 @@
         "lastWeek": "la settimana precedente",
         "thisMonth": "gli stessi giorni del mese scorso",
         "lastMonth": "il mese precedente",
+        "last3Months": "i 3 mesi precedenti",
+        "last6Months": "i 6 mesi precedenti",
+        "last12Months": "i 12 mesi precedenti",
+        "custom": "lo stesso numero di giorni precedenti",
         "thisQuarter": "gli stessi giorni del trimestre scorso",
         "lastQuarter": "il trimestre precedente",
         "thisYear": "gli stessi giorni dell'anno scorso"
@@ -114,6 +126,10 @@
         "lastWeek": "rispetto alla settimana precedente",
         "thisMonth": "rispetto agli stessi giorni del mese scorso",
         "lastMonth": "rispetto al mese precedente",
+        "last3Months": "rispetto ai 3 mesi precedenti",
+        "last6Months": "rispetto ai 6 mesi precedenti",
+        "last12Months": "rispetto ai 12 mesi precedenti",
+        "custom": "rispetto allo stesso numero di giorni precedenti",
         "thisQuarter": "rispetto agli stessi giorni del trimestre scorso",
         "lastQuarter": "rispetto al trimestre precedente",
         "thisYear": "rispetto agli stessi giorni dell'anno scorso"
@@ -123,10 +139,20 @@
         "lastWeek": "rispetto alla settimana precedente",
         "thisMonth": "rispetto agli stessi giorni del mese scorso",
         "lastMonth": "rispetto al mese precedente",
+        "last3Months": "rispetto ai 3 mesi precedenti",
+        "last6Months": "rispetto ai 6 mesi precedenti",
+        "last12Months": "rispetto ai 12 mesi precedenti",
+        "custom": "rispetto allo stesso numero di giorni precedenti",
         "thisQuarter": "rispetto agli stessi giorni del trimestre scorso",
         "lastQuarter": "rispetto al trimestre precedente",
         "thisYear": "rispetto agli stessi giorni dell'anno scorso"
-      }
+      },
+      "noneYet": "ancora nessuno",
+      "customHint": "un primo e un ultimo giorno",
+      "customFrom": "Primo giorno",
+      "customTo": "a",
+      "customToLabel": "Ultimo giorno",
+      "customShow": "Mostra"
     }
   },
   "landing": {
@@ -7667,11 +7693,11 @@
         "companies": "Aziende"
       },
       "periods": {
-        "label": "Periodo",
         "7": "Ultimi 7 giorni",
         "30": "Ultimi 30 giorni",
         "90": "Ultimi 90 giorni",
-        "365": "Ultimi 12 mesi"
+        "365": "Ultimi 12 mesi",
+        "label": "Periodo"
       },
       "overview": {
         "title": "Panoramica",
@@ -15884,6 +15910,10 @@
         "lastWeek": "La settimana scorsa",
         "thisMonth": "Questo mese",
         "lastMonth": "Il mese scorso",
+        "last3Months": "Ultimi 3 mesi",
+        "last6Months": "Ultimi 6 mesi",
+        "last12Months": "Ultimi 12 mesi",
+        "custom": "Date personalizzate…",
         "thisQuarter": "Questo trimestre",
         "lastQuarter": "Il trimestre scorso",
         "thisYear": "Quest'anno"
@@ -15898,6 +15928,10 @@
         "lastWeek": "la settimana precedente",
         "thisMonth": "gli stessi giorni del mese scorso",
         "lastMonth": "il mese precedente",
+        "last3Months": "i 3 mesi precedenti",
+        "last6Months": "i 6 mesi precedenti",
+        "last12Months": "i 12 mesi precedenti",
+        "custom": "lo stesso numero di giorni precedenti",
         "thisQuarter": "gli stessi giorni del trimestre scorso",
         "lastQuarter": "il trimestre precedente",
         "thisYear": "gli stessi giorni dell'anno scorso"
@@ -16539,6 +16573,10 @@
         "lastWeek": "La settimana precedente",
         "thisMonth": "Gli stessi giorni del mese scorso",
         "lastMonth": "Il mese precedente",
+        "last3Months": "I 3 mesi precedenti",
+        "last6Months": "I 6 mesi precedenti",
+        "last12Months": "I 12 mesi precedenti",
+        "custom": "Lo stesso numero di giorni precedenti",
         "thisQuarter": "Gli stessi giorni del trimestre scorso",
         "lastQuarter": "Il trimestre precedente",
         "thisYear": "Gli stessi giorni dell'anno scorso"

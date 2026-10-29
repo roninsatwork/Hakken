@@ -60,24 +60,24 @@ describe("the fill's pieces", () => {
 });
 
 describe("channels over time", () => {
-  test("filled once: this year and the same days a year before read from what is held, by day, week and month, never asking Google", async () => {
+  test("filled once: the last 12 months and the 12 before read from what is held, by day, week and month, never asking Google", async () => {
     const t = harness();
     // Filled by its first night (ga-big-site-reliability-plan.md BR7).
     const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.historyFilled).toContain("channel");
     const asked = google.calls.length;
-    const year = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "thisYear", ...args });
-    expect(year).toMatchObject({ live: false, liveBefore: false, from: "2026-01-01", to: NEWEST });
+    const year = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "last12Months", ...args });
+    expect(year).toMatchObject({ live: false, liveBefore: false, from: "2025-10-09", to: NEWEST });
     // The last 92 days by day, the rest by week; every day once, the first week drawn whole as most of it is inside.
     expect(year.now.filter((point) => !point.lastDay)).toHaveLength(92);
     const daysOf = (point: { day: string; lastDay?: string }) => (point.lastDay ? (Date.parse(point.lastDay) - Date.parse(point.day)) / 86_400_000 + 1 : 1);
     expect(visitsOf(year.now)).toBe(10 * year.now.reduce((sum, point) => sum + daysOf(point), 0));
     expect(Date.parse(year.from!) - Date.parse(year.now[0].day)).toBeLessThanOrEqual(3 * 86_400_000);
-    // The same days a year before, 1 January to 8 October 2025: by month, then the week of 6 October, the first kept by week.
+    // The 12 months before, 9 October 2024 to 8 October 2025: by month, then by week where weeks are kept.
     expect(year.before.every((point) => point.lastDay !== undefined)).toBe(true);
     expect(year.before.length).toBeGreaterThanOrEqual(10);
-    expect(year.before[0]).toMatchObject({ day: "2025-01-01", lastDay: "2025-01-31" });
-    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChannelChart, { siteId, period: "thisYear", device: "" });
+    expect(year.before[0]).toMatchObject({ day: "2024-10-01", lastDay: "2024-10-31" });
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChannelChart, { siteId, period: "last12Months", device: "" });
     expect(chart.live).toBe(false);
     expect(google.calls.length).toBe(asked);
   });
@@ -86,7 +86,7 @@ describe("channels over time", () => {
     const t = harness();
     const { siteId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
     const asked = google.calls.length;
-    const year = { siteId, period: "thisYear" as const, device: "" };
+    const year = { siteId, period: "last12Months" as const, device: "" };
     const overview = await user.query(api.googleAnalyticsChartReads.analyticsChart, year);
     expect(overview.points.filter((point) => !point.lastDay)).toHaveLength(92);
     expect(overview.points.some((point) => point.lastDay !== undefined)).toBe(true);
@@ -130,7 +130,7 @@ describe("channels over time", () => {
     const visits = twoYears().map((visit) => (visit.date < shiftDay(NEWEST, -29) && visit.events?.generate_lead ? { ...visit, events: { generate_lead: [0, 0] as [number, number] } } : visit));
     const { siteId, user, google } = await collectedWebsite(t, visits, encryptConnectorToken, { firstNight: false });
     const asked = google.calls.length;
-    const before = (period: "lastWeek" | "thisMonth" | "lastMonth" | "lastQuarter") => user.query(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, { siteId, period, device: "" });
+    const before = (period: "lastWeek" | "thisMonth" | "lastMonth" | "last3Months") => user.query(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, { siteId, period, device: "" });
     // Last month, September, against August: August's 1st over September's 1st, and on, a day at a time.
     const month = await before("lastMonth");
     expect(month).toMatchObject({ held: true, shift: 31, events: ["generate_lead", "click_tel", "sign_up"] });
@@ -150,7 +150,7 @@ describe("channels over time", () => {
     expect(week.points.map((point) => point.day)).toEqual(Array.from({ length: 7 }, (_, at) => shiftDay("2026-09-28", at)));
     expect(week.points.every((point) => point.visits === 16 && point.conversions === 2)).toBe(true);
     // The quarters and the year are set against spans kept only as weeks and months: no line for them.
-    expect(await before("lastQuarter")).toEqual({ held: false, shift: 0, points: [], events: ["generate_lead", "click_tel", "sign_up"] });
+    expect(await before("last3Months")).toEqual({ held: false, shift: 0, points: [], events: ["generate_lead", "click_tel", "sign_up"] });
     expect(google.calls.length).toBe(asked);
   });
 

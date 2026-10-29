@@ -143,7 +143,7 @@ export const decisionSources = internalQuery({
     }
 
     // Search Console's showings and clicks of each page over last quarter.
-    const pages = await readPeriod(ctx, hold._id, "web", "page", "lastQuarter", "NOW");
+    const pages = await readPeriod(ctx, hold._id, "web", "page", "last3Months", "NOW");
     const consoleBy = new Map<string, { shown: number; clicks: number }>();
     for (const row of pages?.rows ?? []) {
       const key = keyOf(row.key);

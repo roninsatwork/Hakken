@@ -188,7 +188,8 @@ describe("the country choice", () => {
     });
     render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
     expect(screen.getByRole("combobox", { name: "searchConsole.country.label" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "common.periods.label" })).toBeInTheDocument();
+    // The Dates menu's chip names itself and its choice (sees-header-and-rolling-dates-plan.md).
+    expect(screen.getByRole("button", { name: /^common\.periods\.label: common\.periods\.lastMonth/ })).toBeInTheDocument();
   });
 });
 
@@ -378,7 +379,7 @@ describe("one country choice per page", () => {
 
 describe("charts in the dates and step chosen (2026-10-04)", () => {
   it("Position bands asks for the dates and step chosen, and says when days are drawn by week", () => {
-    at("/app/search-console/site_1/position-bands", "period=thisYear&step=day");
+    at("/app/search-console/site_1/position-bands", "period=last12Months&step=day");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleListPage": LIST,
@@ -388,12 +389,12 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
       },
     });
     render(<SearchConsoleBandsPage />);
-    expect(askedOf("searchConsoleChartFigures").at(-1)).toMatchObject({ from: "2026-01-01", to: "2026-09-26", step: "day" });
+    expect(askedOf("searchConsoleChartFigures").at(-1)).toMatchObject({ from: "2025-09-27", to: "2026-09-26", step: "day" });
     expect(screen.getByText("searchConsole.chart.byWeek")).toBeInTheDocument();
   });
 
   it("Position bands says how far the charts reach when the dates go further", () => {
-    at("/app/search-console/site_1/position-bands", "period=thisYear&step=week");
+    at("/app/search-console/site_1/position-bands", "period=last12Months&step=week");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleListPage": LIST,
@@ -407,7 +408,7 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
   });
 
   it("New and lost asks for the step chosen", () => {
-    at("/app/search-console/site_1/new-and-lost", "period=thisYear&step=month");
+    at("/app/search-console/site_1/new-and-lost", "period=last12Months&step=month");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleChanges:searchConsoleNewLost": {
@@ -417,6 +418,6 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
       },
     });
     render(<SearchConsoleNewLostPage />);
-    expect(askedOf("searchConsoleNewLost").at(-1)).toMatchObject({ from: "2026-01-01", to: "2026-09-26", step: "month" });
+    expect(askedOf("searchConsoleNewLost").at(-1)).toMatchObject({ from: "2025-09-27", to: "2026-09-26", step: "month" });
   });
 });

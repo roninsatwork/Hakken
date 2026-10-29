@@ -4,8 +4,8 @@
 detail-header
   back: Back to Overview
   page-header: ‹the record's name›
+    sees-eye
     primary-action: Track this question
-settings-card: What Hakken sees
 figures
   figure: Asked a month
   figure: Businesses it names

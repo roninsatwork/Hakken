@@ -129,12 +129,11 @@ describe("how far the ready-made periods reach (insights-intelligence-plan.md ph
     // Tuesday 29 September; Google's newest the Saturday before; days kept from 29 July; collection began 8 July.
     const slots = slotsOf("2026-09-26", "2026-07-08", "2025-05-26", "2026-09-29", "2026-07-29");
     const slot = (period: string, which: "NOW" | "BEFORE") => slots.find((one) => one.period === period && one.which === which);
-    // Last quarter and the quarter before it: asked of Google a week at a time.
-    expect(slot("lastQuarter", "NOW")).toMatchObject({ span: { from: "2026-04-01", to: "2026-06-30" }, long: true });
-    expect(slot("lastQuarter", "BEFORE")).toMatchObject({ span: { from: "2026-01-01", to: "2026-03-31" }, long: true });
-    // This quarter to Google's newest day, set against the same days of the quarter before.
-    expect(slot("thisQuarter", "NOW")).toMatchObject({ span: { from: "2026-07-01", to: "2026-09-26" }, long: true });
-    expect(slot("thisQuarter", "BEFORE")).toMatchObject({ span: { from: "2026-04-01", to: "2026-06-26" }, long: true });
+    // The last 3 months back from Google's newest day, and the 3 months before them: asked of Google a week at a time.
+    expect(slot("last3Months", "NOW")).toMatchObject({ span: { from: "2026-06-27", to: "2026-09-26" }, long: true });
+    expect(slot("last3Months", "BEFORE")).toMatchObject({ span: { from: "2026-03-27", to: "2026-06-26" }, long: true });
+    expect(slot("last6Months", "NOW")).toMatchObject({ span: { from: "2026-03-27", to: "2026-09-26" }, long: true });
+    expect(slot("last6Months", "BEFORE")).toMatchObject({ span: { from: "2025-09-27", to: "2026-03-26" }, long: true });
     // Last month inside the days kept; the month before it past them.
     expect(slot("lastMonth", "NOW")).toMatchObject({ span: { from: "2026-08-01", to: "2026-08-31" }, long: false });
     expect(slot("lastMonth", "BEFORE")).toMatchObject({ span: { from: "2026-07-01", to: "2026-07-31" }, long: true });
@@ -142,9 +141,9 @@ describe("how far the ready-made periods reach (insights-intelligence-plan.md ph
     expect(slot("lastWeek", "NOW")).toMatchObject({ span: { from: "2026-09-21", to: "2026-09-26" }, long: false });
     expect(slot("lastWeek", "BEFORE")).toMatchObject({ span: { from: "2026-09-14", to: "2026-09-19" }, long: false });
     expect(slot("thisWeek", "NOW")?.span).toBeNull();
-    // This year against the same days last year: past Google's sixteen months, so nothing to set against.
-    expect(slot("thisYear", "NOW")).toMatchObject({ span: { from: "2026-01-01", to: "2026-09-26" }, long: true });
-    expect(slot("thisYear", "BEFORE")?.span).toBeNull();
+    // The last 12 months against the 12 before: past Google's sixteen months, so nothing to set against.
+    expect(slot("last12Months", "NOW")).toMatchObject({ span: { from: "2025-09-27", to: "2026-09-26" }, long: true });
+    expect(slot("last12Months", "BEFORE")?.span).toBeNull();
     // Inside the days kept, before collection began: nothing to set against.
     const early = slotsOf("2026-08-15", "2026-07-08", "2025-05-26", "2026-08-17", "2026-06-17");
     expect(early.find((one) => one.period === "thisMonth" && one.which === "BEFORE")?.span).toBeNull();

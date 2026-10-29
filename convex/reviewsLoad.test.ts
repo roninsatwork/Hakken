@@ -89,9 +89,9 @@ describe("Reviews at five times a large client", () => {
     const siteId = seeded.holdId;
     const officeId = seeded.offices[0];
     const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
-      ["your reviews, every office", api.siteReviews.yourReviews, { siteId, period: "thisYear", step: "month" }],
-      ["your reviews, one office", api.siteReviews.yourReviews, { siteId, officeId, period: "thisYear", step: "month" }],
-      ["against rivals", api.siteReviews.reviewsAgainstRivals, { siteId, officeId, period: "thisYear", step: "month" }],
+      ["your reviews, every office", api.siteReviews.yourReviews, { siteId, period: "last12Months", step: "month" }],
+      ["your reviews, one office", api.siteReviews.yourReviews, { siteId, officeId, period: "last12Months", step: "month" }],
+      ["against rivals", api.siteReviews.reviewsAgainstRivals, { siteId, officeId, period: "last12Months", step: "month" }],
       ["what customers say", api.siteReviews.whatCustomersSay, { siteId }],
       ["business profile", api.siteLocalProfile.businessProfile, { siteId, officeId }],
     ];

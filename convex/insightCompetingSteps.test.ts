@@ -33,7 +33,7 @@ async function seed(t: Harness) {
       for (let start = 0; start < entries.length; start += chunk) {
         const rows = entries.slice(start, start + chunk);
         await ctx.db.insert("searchConsolePeriods", {
-          companyWebsiteId: holdId, searchType: "web", list, period: "lastQuarter", which: "NOW", part: start / chunk,
+          companyWebsiteId: holdId, searchType: "web", list, period: "last3Months", which: "NOW", part: start / chunk,
           from: "2026-07-01", to: "2026-09-30", builtAt: 10,
           keys: packNumbers(rows.map((row) => row.key)),
           clicks: packNumbers(rows.map((row) => row.shown / 20)),
@@ -86,7 +86,7 @@ describe("competing-page analysis through bounded reads", () => {
       const allPages = [...pages, "https://acme.test/kitchen-design/", "https://acme.test/kitchen-company/"];
       for (const list of ["competing", "query", "page"] as const) {
         const entries = list === "competing" ? allSearches.flatMap((search, at) => [0, 1].map((page) => ({ key: search, page: allPages[(at >= searches.length ? 2 : 0) + page] }))) : (list === "query" ? allSearches : allPages).map((key) => ({ key, page: "" }));
-        await ctx.db.insert("searchConsolePeriods", { companyWebsiteId: holdId, searchType: "web", list, period: "lastQuarter", which: "NOW", part: 0, from: "2026-07-01", to: "2026-09-30", builtAt: 20,
+        await ctx.db.insert("searchConsolePeriods", { companyWebsiteId: holdId, searchType: "web", list, period: "last3Months", which: "NOW", part: 0, from: "2026-07-01", to: "2026-09-30", builtAt: 20,
           keys: entries.map((entry) => entry.key), clicks: entries.map(() => 50), impressions: entries.map(() => 1_000), positionSums: entries.map(() => 12_000), ...(list === "competing" ? { pages: entries.map((entry) => entry.page) } : {}) });
       }
       const agentId = await ctx.db.insert("agents", { name: "Insights", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 });

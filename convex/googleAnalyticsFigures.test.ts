@@ -167,12 +167,12 @@ describe("the second round's figures", () => {
     expect(daily.points[0].visits).toEqual([10, 4, 2]);
 
     // Last quarter's 92 days are kept as days (ga-stored-figures-plan.md SF2): read from what is held, never asked of Google.
-    const quarter = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "lastQuarter" as const });
+    const quarter = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "last3Months" as const });
     expect(quarter).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
     expect(quarter.points).toHaveLength(92);
     expect(quarter.points.every((point) => !point.lastDay)).toBe(true);
     // This year from the two years filled by themselves after the first night's collection (SF9, BR7): a day for 92 days, before them weeks.
-    const long = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "thisYear" as const });
+    const long = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, { ...args, period: "last12Months" as const });
     expect(long).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
     expect(long.points.filter((point) => !point.lastDay)).toHaveLength(92);
     expect(long.points.some((point) => point.lastDay !== undefined)).toBe(true);

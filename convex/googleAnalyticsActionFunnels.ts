@@ -58,7 +58,7 @@ export async function actionEvents(ctx: { db: QueryCtx["db"] }, connection: Doc<
   const newest = connection.newestDay;
   const points = newest ? await readDayPoints(ctx, connection, "event", EVERY_DEVICE, shiftDay(newest, -364), newest) : null;
   if (points) return merged(points.flatMap((point) => point.rows));
-  return (await readSlot(ctx, connection.companyWebsiteId, slotKey("event", "thisYear", "NOW", EVERY_DEVICE)))?.rows ?? [];
+  return (await readSlot(ctx, connection.companyWebsiteId, slotKey("event", "last12Months", "NOW", EVERY_DEVICE)))?.rows ?? [];
 }
 
 export const actionsOf = internalQuery({

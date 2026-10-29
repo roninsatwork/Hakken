@@ -4,7 +4,7 @@
 detail-header
   back: Back to Websites AI cites
   page-header: ‹the record's name›
-settings-card: What Hakken sees
+    sees-eye
 figures
   figure: Quoted beside your rivals
   figure: Rivals it links to

@@ -334,7 +334,7 @@ export async function competingFromSources(source: CompetingSources, host: strin
 export async function competingNow(ctx: Pick<QueryCtx, "db">, hold: Doc<"companyWebsites">, host: string): Promise<CompetingNow | null> {
   const locationCode = hold.locationCode ?? DEFAULT_LOCATION_CODE;
   return await competingFromSources({
-    list: async (list) => await readPeriod(ctx, hold._id, "web", list, "lastQuarter", "NOW"),
+    list: async (list) => await readPeriod(ctx, hold._id, "web", list, "last3Months", "NOW"),
     names: async (list, tokens) => list.book ? await new BookNames(ctx, list.book).textsOf(tokens) : new Map(),
     history: async () => await historyOf(ctx, hold._id),
     kinds: async () => await pageKindsOf(ctx, hold._id),
@@ -489,7 +489,7 @@ export const groupListPart = internalQuery({
   args: { holdId: v.id("companyWebsites"), list: v.union(v.literal("competing"), v.literal("query"), v.literal("page")), part: v.number(), builtAt: v.optional(v.number()) },
   returns: v.union(v.null(), storedGroupPartValidator),
   handler: async (ctx, args): Promise<Doc<"searchConsolePeriods"> | null> => {
-    const period = await holdingPeriod(ctx, { companyWebsiteId: args.holdId, country: undefined, searchType: "web", list: args.list }, "lastQuarter");
+    const period = await holdingPeriod(ctx, { companyWebsiteId: args.holdId, country: undefined, searchType: "web", list: args.list }, "last3Months");
     const first = await firstPartOf(ctx, args.holdId, undefined, "web", args.list, period, "NOW");
     if (!first) return null;
     if (args.builtAt !== undefined && first.builtAt !== args.builtAt) throw appError("CONFLICT", "Search Console changed while competing pages were being read; try this stage again.");

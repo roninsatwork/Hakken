@@ -1,4 +1,4 @@
-import { OPENING_PERIOD, isCalendarPeriod, periodSpan, spanBefore, stepOf, ukDay, type CalendarPeriod } from "@/convex/utils/calendarPeriods";
+import { OPENING_PERIOD, isCalendarPeriod, periodSpan, spanBefore, stepOf, ukDay, type MenuPeriod } from "@/convex/utils/calendarPeriods";
 
 /**
  * The date menu's period and the step every Sites and Search Console page
@@ -12,7 +12,7 @@ export type SiteStep = "day" | "week" | "month";
 
 /** A calendar period's days on a Sites page, and the step its charts are drawn in. */
 export type SitePeriodRange = {
-  period: CalendarPeriod;
+  period: MenuPeriod;
   /** Inclusive, `YYYY-MM-DD`. */
   from: string;
   to: string;
@@ -30,7 +30,7 @@ export type SitePeriodRange = {
  * going runs to today, in the UK (rule 1). The step is the period's own (rule
  * 8) unless one was chosen.
  */
-export function parseSitePeriod(params: URLSearchParams, now: Date = new Date(), opening: CalendarPeriod = OPENING_PERIOD): SitePeriodRange {
+export function parseSitePeriod(params: URLSearchParams, now: Date = new Date(), opening: MenuPeriod = OPENING_PERIOD): SitePeriodRange {
   const raw = params.get("period");
   const period = isCalendarPeriod(raw) ? raw : opening;
   const today = ukDay(now.getTime());

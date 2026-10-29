@@ -64,7 +64,7 @@ async function bigWebsite() {
       await ctx.db.insert("holdPageAddresses", { companyWebsiteId: siteId, record, addresses });
     }
     const put = async (list: AnalyticsList, which: "NOW" | "BEFORE", rows: ListRow[]) => {
-      const key = slotKey(list, "thisYear", which, "");
+      const key = slotKey(list, "last12Months", which, "");
       const parts = packList(list, rows, EVENTS);
       await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: siteId, key, slot: 0, parts: parts.length, ...THIS_YEAR[which], hash: "x", builtAt: 1 });
       for (const [part, packed] of parts.entries()) await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: siteId, key, slot: 0, part, ...packed });
@@ -107,7 +107,7 @@ function withinBudget(reads: MeteredRead[], what: string) {
 describe("a large website's second-round Google Analytics", () => {
   test("each screen of this year at its longest, at five times the largest website, inside its reading budget", async () => {
     const { t, siteId, companyId } = await bigWebsite();
-    const args = { siteId, period: "thisYear" as const, device: "" };
+    const args = { siteId, period: "last12Months" as const, device: "" };
     const measured = async <T>(what: string, read: (ctx: { db: never; companyId: Id<"companies"> }) => Promise<T>) => {
       const { answer, reads } = await t.run(async (ctx) => {
         const { db, reads } = metered(ctx.db);

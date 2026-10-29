@@ -344,8 +344,8 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
 
   // 9. Counted again: a page Google counts 1.5 times or more a visit that saw it — its contents links taken as new views —
   // which makes visits look deeper than they are (analytics-page-screen-plan.md, phase 6). Google's newest answer for
-  // the pages: this quarter once it holds a week, else last quarter.
-  const pages = await latestList(ctx, connection, "page", "thisQuarter", "lastQuarter") ?? [];
+  // the pages: the last 3 months, which always hold a quarter's days (the two quarters until 2026-10-29).
+  const pages = await latestList(ctx, connection, "page", "last3Months", "last3Months") ?? [];
   const again = pages
     .filter((row) => row.views >= COUNTED_AGAIN_FLOOR && row.visits > 0 && row.views / row.visits >= COUNTED_AGAIN && row.key !== "(not set)")
     .sort((left, right) => right.views / right.visits - left.views / left.visits);

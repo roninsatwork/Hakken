@@ -123,7 +123,7 @@ describe("the menu's Tracked group", () => {
   it("comes first and open wherever you arrive, holding Tracked keywords and Tracked pages with their counts", () => {
     // Arriving on Performance: Tracked is open from the start, not only because the page read is in it.
     nav.pathname = "/app/search-console/site_1";
-    nav.search = "period=lastQuarter";
+    nav.search = "period=last3Months";
     answer({ "searchConsoleTracking:searchConsoleTracking": TRACKING });
     render(<SearchConsoleMenu siteId="site_1" />);
     const menu = screen.getByRole("navigation", { name: "searchConsole.menu.label" });
@@ -140,9 +140,9 @@ describe("the menu's Tracked group", () => {
 
     const items = within(menu).getAllByRole("link");
     expect(items.slice(0, 3).map((item) => item.getAttribute("href"))).toEqual([
-      "/app/search-console/site_1/tracked/keywords?period=lastQuarter",
-      "/app/search-console/site_1/tracked/pages?period=lastQuarter",
-      "/app/search-console/site_1?period=lastQuarter",
+      "/app/search-console/site_1/tracked/keywords?period=last3Months",
+      "/app/search-console/site_1/tracked/pages?period=last3Months",
+      "/app/search-console/site_1?period=last3Months",
     ]);
     expect(items[0]).toHaveTextContent(/^searchConsole\.menu\.trackedKeywords8$/);
     expect(items[1]).toHaveTextContent(/^searchConsole\.menu\.trackedPages6$/);
@@ -238,7 +238,7 @@ describe("Tracked keywords", () => {
 
   it("opens a keyword's own screen, whose way back names Tracked keywords and returns to the list as it was left", () => {
     nav.pathname = "/app/search-console/site_1/tracked/keywords";
-    nav.search = "period=lastQuarter&q=agency&sort=position&direction=asc";
+    nav.search = "period=last3Months&q=agency&sort=position&direction=asc";
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleListPage": LIST,
@@ -250,10 +250,10 @@ describe("Tracked keywords", () => {
     expect(path).toBe("/app/search-console/site_1/keywords/keyword");
     const address = new URLSearchParams(query);
     expect(address.get("key")).toBe("ai agency");
-    expect(address.get("period")).toBe("lastQuarter");
+    expect(address.get("period")).toBe("last3Months");
     const back = address.get("back") ?? "";
     expect(back.split("?")[0]).toBe("/app/search-console/site_1/tracked/keywords");
-    expect(Object.fromEntries(new URLSearchParams(back.split("?")[1]))).toEqual({ period: "lastQuarter", q: "agency", sort: "position", direction: "asc" });
+    expect(Object.fromEntries(new URLSearchParams(back.split("?")[1]))).toEqual({ period: "last3Months", q: "agency", sort: "position", direction: "asc" });
     fireEvent.click(screen.getByText("bad websites").closest("tr")!);
     expect(nav.push).toHaveBeenCalledWith(expect.stringContaining("/app/search-console/site_1/keywords/keyword?"));
     unmount();

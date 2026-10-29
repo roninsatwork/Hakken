@@ -34,9 +34,10 @@ describe('Search Console screens reach back sixteen months', () => {
     expect(cut).toEqual([]);
   });
 
-  test('the date menu offers the calendar periods, with no dates of its own', () => {
-    expect(readRepoFile(`${SCREENS}/[siteId]/layout.tsx`)).toMatch(/<SiteDateRange \/>/);
-    expect(readRepoFile("src/app/(dashboard)/app/sites/_components/SiteDateRange.tsx")).not.toMatch(/type="date"|custom/i);
+  test("the date menu is the kit's Dates menu, with no dates of its own (sees-header-and-rolling-dates-plan.md)", () => {
+    expect(readRepoFile(`${SCREENS}/[siteId]/layout.tsx`)).toMatch(/<SiteDateRange( [^>]*)?\/>/);
+    expect(readRepoFile("src/app/(dashboard)/app/sites/_components/SiteDateRange.tsx")).toMatch(/<DatesMenu /);
+    expect(readRepoFile("src/app/(dashboard)/app/sites/_components/SiteDateRange.tsx")).not.toMatch(/type="date"/);
   });
 
   test('the backend reads the days from where they begin, not where collection began', () => {

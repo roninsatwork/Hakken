@@ -249,9 +249,9 @@ describe("collecting the main country and a country kept ready", () => {
 
     const gbr = await keptOf(t, siteId, "gbr");
     const period = (list: string, which: string, span: string) => gbr.periods.find((part) => part.list === list && part.which === which && part.period === span);
-    // This month and this quarter on Sunday 27 September (calendar-periods-plan.md, phase 4).
+    // This month and the last 3 months on Sunday 27 September (sees-header-and-rolling-dates-plan.md).
     expect(period("query", "NOW", "thisMonth")).toMatchObject({ from: "2026-09-01", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [5, 3], counts: [1, 1] });
-    expect(period("query", "NOW", "thisQuarter")).toMatchObject({ from: "2026-07-01", keys: ["plumber leeds", "emergency plumber", "boiler repair"] });
+    expect(period("query", "NOW", "last3Months")).toMatchObject({ from: "2026-06-27", keys: ["plumber leeds", "emergency plumber", "boiler repair"] });
     expect(period("device", "NOW", "thisMonth")).toMatchObject({ keys: ["MOBILE", "DESKTOP"], clicks: [6, 2] });
     expect(gbr.periods.some((part) => part.list === "country")).toBe(false);
     expect(gbr.weeks.filter((week) => week.grain === "WEEK" && week.otherClicks > 0).map((week) => [week.week, week.otherClicks])).toEqual([["2026-07-27", 2], ["2026-09-21", 8]]);

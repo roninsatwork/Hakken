@@ -103,7 +103,7 @@ describe("a build's book", () => {
     for (const builtAt of [1, 2, 3]) await write(t, { companyWebsiteId: holdId, searchType: "web", builtAt }, "query", ["door handles"]);
     await t.run(async (ctx) => {
       await noteListBuild(ctx, { companyWebsiteId: holdId, searchType: "web", list: "query", period: "lastMonth", which: "NOW" }, 3);
-      await noteListBuild(ctx, { companyWebsiteId: holdId, searchType: "web", list: "query", period: "lastQuarter", which: "NOW" }, 2);
+      await noteListBuild(ctx, { companyWebsiteId: holdId, searchType: "web", list: "query", period: "last3Months", which: "NOW" }, 2);
     });
     const builds = () => t.run(async (ctx) => [...new Set((await ctx.db.query("searchConsolePeriodBooks").collect()).map((record) => record.builtAt))].sort());
 

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
 import { Select } from "@/src/ui/components/screens/Select";
 import { countryName } from "../../search-console/_components/countries";
 import { readerLanguage } from "../../search-console/_components/searchConsoleFormat";
@@ -11,7 +12,6 @@ import { useOpeningPeriod } from "../../sites/_components/useCalendarPeriod";
 import { useSetSiteParams } from "../../sites/_components/useSiteParam";
 import {
   DEVICES,
-  PERIODS,
   PERIOD_KEY,
   STEPS,
   STEP_KEY,
@@ -23,6 +23,7 @@ import {
   useStep,
   type Device,
   type Step,
+  useAnalyticsStatus,
 } from "./useAnalytics";
 
 /**
@@ -40,6 +41,7 @@ export function AnalyticsFilters() {
   const pathname = usePathname();
   const [device, setDevice] = useDevice();
   const [period] = usePeriod();
+  const status = useAnalyticsStatus();
   const opening = useOpeningPeriod();
   const setParams = useSetSiteParams();
   // A new period draws in its own step (rule 8): a step chosen for the last one is dropped.
@@ -66,9 +68,7 @@ export function AnalyticsFilters() {
       </Select>
       {dated ? (
         <>
-          <Select aria-label={t("period")} value={period} onChange={choosePeriod}>
-            {PERIODS.map((value) => <option key={value} value={value}>{t(`periods.${value}`)}</option>)}
-          </Select>
+          <DatesMenu value={{ period }} newest={status?.connection?.newestDay ?? null} custom={false} onChange={(choice) => choosePeriod(choice.period)} />
           <Select aria-label={t("step")} value={step} onChange={(next) => setStep(next as Step)}>
             {STEPS.map((value) => <option key={value} value={value}>{t(`steps.${value}`)}</option>)}
           </Select>

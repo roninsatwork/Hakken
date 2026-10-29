@@ -90,30 +90,30 @@ describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
     for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
       const read = await t.run(async (ctx) => {
         const meter = metered(ctx.db);
-        const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "thisYear", from: "2026-01-01", to: NEWEST }));
+        const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "last12Months", from: "2026-01-01", to: NEWEST }));
         return { bytes: meter.bytes(), holds: held.bytes };
       });
       expect(read.bytes, kind ?? "own figures").toBeLessThan(HALF_READ);
       expect(read.holds, kind ?? "own figures").toBeLessThan(HALF_MEMORY);
     }
-    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", undefined).eq("key", "thisYear")).collect());
+    const parts = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", undefined).eq("key", "last12Months")).collect());
     expect(parts.length).toBeGreaterThan(1);
   });
 
   test("This year's Pages screen, Overview, a page's own screen and Errors, 90 days held, each read within half of one read", async () => {
     for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
-      const built = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", kind).eq("key", "thisYear")).first());
-      if (!built) await t.mutation(internal.clarity.buildSpan, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "thisYear", from: "2026-01-01", to: NEWEST });
+      const built = await t.run(async (ctx) => await ctx.db.query("clarityFigures").withIndex("by_hold_span_kind_key", (q) => q.eq("companyWebsiteId", holdId).eq("span", "PERIOD").eq("kind", kind).eq("key", "last12Months")).first());
+      if (!built) await t.mutation(internal.clarity.buildSpan, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "last12Months", from: "2026-01-01", to: NEWEST });
     }
-    const pages = await readBy(t, ownerId, clarityPagesList as never, { siteId: holdId, period: "thisYear", page: 1, rows: 25 });
+    const pages = await readBy(t, ownerId, clarityPagesList as never, { siteId: holdId, period: "last12Months", page: 1, rows: 25 });
     const answer = pages.answer as { total: number; period: { now: { days: number } } };
     expect(answer.period.now.days).toBe(DAYS);
     expect(answer.total).toBeGreaterThan(ROWS);
     expect(pages.bytes).toBeLessThan(HALF_READ);
     for (const [name, query, args] of [
-      ["Overview", clarityOverview, { siteId: holdId, period: "thisYear" }],
-      ["a page", clarityPage, { siteId: holdId, period: "thisYear", page: path(0) }],
-      ["Errors", clarityErrors, { siteId: holdId, period: "thisYear" }],
+      ["Overview", clarityOverview, { siteId: holdId, period: "last12Months" }],
+      ["a page", clarityPage, { siteId: holdId, period: "last12Months", page: path(0) }],
+      ["Errors", clarityErrors, { siteId: holdId, period: "last12Months" }],
     ] as const) {
       const read = await readBy(t, ownerId, query as never, args);
       expect(read.bytes, name).toBeLessThan(HALF_READ);

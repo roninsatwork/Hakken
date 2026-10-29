@@ -76,8 +76,8 @@ describe("Web mentions at their largest", () => {
 
     const siteId = seeded.holdId;
     const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
-      ["all mentions", api.siteWebMentions.webMentions, { siteId, period: "thisYear" }],
-      ["mentions against rivals", api.siteWebMentions.mentionsAgainstRivals, { siteId, period: "thisYear", step: "month" }],
+      ["all mentions", api.siteWebMentions.webMentions, { siteId, period: "last12Months" }],
+      ["mentions against rivals", api.siteWebMentions.mentionsAgainstRivals, { siteId, period: "last12Months", step: "month" }],
       ["where to get listed", api.siteWebMentions.whereToGetListed, { siteId }],
     ];
     const modules = import.meta.glob("./*.ts");
