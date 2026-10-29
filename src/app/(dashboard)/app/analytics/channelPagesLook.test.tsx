@@ -8,6 +8,7 @@ import { CHANNEL, ROW, STATUS, list } from "@/src/test/googleAnalyticsFixtures";
 import { channelPageSees, channelsPageSees } from "@/convex/utils/sees/analyticsChannel";
 import AnalyticsChannelsPage from "./[siteId]/channels/page";
 import AnalyticsChannelPage from "./[siteId]/channels/channel/page";
+import { openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * Channels and a channel's own page hold to the looks Anthony approved on
@@ -160,6 +161,7 @@ describe("Channels and a channel's own page: the approved looks", () => {
       "pageKinds:pageKindChoices": null,
     });
     const { container } = render(<AnalyticsChannelsPage />);
+    await openHakkenSees();
     await screen.findByText(/Organic Search brought the most visits, 82\.8% of them, but none converted/);
     await expectApprovedLook(container, PLAN, "Main", "Google Analytics → Channels");
   });
@@ -169,6 +171,7 @@ describe("Channels and a channel's own page: the approved looks", () => {
     nav.search = "key=Organic+Search";
     channelPage("Organic Search", [{ ...ROW, kind: "SERVICE" }]);
     const { container } = render(<AnalyticsChannelPage />);
+    await openHakkenSees();
     await screen.findByText(/Organic Search brought 192 visits, up from 150, but no conversions, down from 3\./);
     await screen.findByText("Conversions it started");
     await expectApprovedLook(container, PLAN, "Organic", "Google Analytics → a channel's page, its landing pages");

@@ -12,8 +12,9 @@ import { DetailHeader, PageHeader, PagePrimaryAction } from "./PageHeader";
  */
 const HEADER_RULE = ["border-b", "border-border-dim", "pb-6"];
 
+// The title shares a row with the eye (HakkenSeesEye), so the header block is the part around them.
 function headerBlockOf(heading: HTMLElement) {
-  return heading.closest("div")?.parentElement;
+  return heading.closest('[data-part="page-header"], [data-part="detail-header"]');
 }
 
 describe("PageHeader", () => {
@@ -133,8 +134,9 @@ describe("DetailHeader", () => {
       expect(back).toHaveAttribute("href", "/app/sites/s/ai/searched");
       expect(back.compareDocumentPosition(heading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       // The labels share the title's row rather than sitting under the sentence.
-      expect(heading.parentElement).toContainElement(screen.getByText("Checked once on Google"));
-      expect(heading.parentElement).not.toContainElement(screen.getByText("Not one of your tracked searches."));
+      // The title's row: the title and the eye share a cell of it, the labels the rest.
+      expect(heading.parentElement!.parentElement).toContainElement(screen.getByText("Checked once on Google"));
+      expect(heading.parentElement!.parentElement).not.toContainElement(screen.getByText("Not one of your tracked searches."));
       expect(screen.getByText("Not one of your tracked searches.")).not.toHaveClass("tracking-wide");
       expect(heading.closest(".border-b")).toHaveClass(...HEADER_RULE);
     });

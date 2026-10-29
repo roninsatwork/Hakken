@@ -4,8 +4,8 @@
 detail-header
   back: Back to Keywords
   page-header: ‹the record's name›
+    sees-eye
     checkbox: Track this keyword
-settings-card: What Hakken sees
 choice: Kind of result: Web | Video | News | Discover | Google News
 figures
   figure: Clicks

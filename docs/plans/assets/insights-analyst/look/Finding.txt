@@ -4,8 +4,8 @@
 detail-header
   back: All findings
   page-header: ‹the record's name›
+    sees-eye
     primary-action: Add the steps to Hakken tasks
-settings-card: What Hakken sees
 figures
   figure: Conversions from Organic Search
 chart-card: The figures, against what they're compared with

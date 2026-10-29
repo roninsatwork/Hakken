@@ -1,12 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { SettingsCard } from "./SettingsCard";
-import { rememberFolded, useFoldedAdvice } from "./hakkenSeesFold";
+import { publishSees, toggleSees, useSeesOpen } from "./hakkenSeesStore";
 
 /** One "Do first" step: its sentence, its link's words and where the link leads. */
 export type HakkenSeesStep = { words: string; link: string; href: string; external?: boolean };
@@ -22,23 +23,36 @@ export type HakkenSeesStep = { words: string; link: string; href: string; extern
  * sentences at prose width, then "Do first" and up to three numbered steps.
  * With nothing to do it shows the sentences alone.
  *
- * It folds away (search-console-volatility-plan.md §8, HS1–HS3): folded, one
- * row with its first sentence; remembered per screen in this browser, and
- * opened again by itself when its `advice` changes — the box's sentences and
- * steps as codes (`seenAdvice`), so the same advice with today's numbers
- * stays folded. Without `advice`, the sentences themselves are the advice.
+ * It opens from the eye in the header (`HakkenSeesEye`;
+ * sees-header-and-rolling-dates-plan.md, part one; Anthony, 2026-10-29: the
+ * box "takes up a lot of screen real estate when all I want to see is the
+ * graphs and data"): closed on every screen until the eye opens it, and
+ * closed again by its own chevron or the eye. The box publishes what it holds
+ * to `hakkenSeesStore` so the header can draw the eye and count its steps as
+ * new — `advice` names the box's sentences and steps as codes (`seenAdvice`),
+ * so the same advice with today's numbers is not new again; without it, the
+ * sentences themselves are the advice.
  */
 export function HakkenSees({ says, steps, advice }: { says: string[]; steps: HakkenSeesStep[]; advice?: string }) {
-  const t = useTranslations("ui.hakkenSees");
-  const { platformName } = useSystemSettings();
   const screen = usePathname() ?? "";
   const held = advice ?? says.join(" ");
-  const open = useFoldedAdvice(screen) !== held;
+  // Published once per change of words, not per render: the arrays are new each time.
+  const words = JSON.stringify({ says, steps });
+  useEffect(() => {
+    publishSees({ screen, says, steps, advice: held });
+    return () => publishSees(null, screen);
+  }, [screen, words, held]); // eslint-disable-line react-hooks/exhaustive-deps
+  const open = useSeesOpen();
+  if (!open) return null;
+  return <HakkenSeesCard says={says} steps={steps} onClose={toggleSees} />;
+}
+
+/** The box itself, open: drawn by `HakkenSees` once the eye opens it, and by the drawing kit. */
+export function HakkenSeesCard({ says, steps, onClose }: { says: string[]; steps: HakkenSeesStep[]; onClose: () => void }) {
+  const t = useTranslations("ui.hakkenSees");
+  const { platformName } = useSystemSettings();
   return (
-    <SettingsCard
-      title={t("title", { platformName })}
-      fold={{ open, summary: says[0], onToggle: () => rememberFolded(screen, open ? held : null) }}
-    >
+    <SettingsCard title={t("title", { platformName })} fold={{ open: true, summary: says[0], onToggle: onClose }}>
       <p className="max-w-[75ch] text-[13px] leading-[1.6] text-secondary">{says.join(" ")}</p>
       {steps.length > 0 ? (
         <div className="mt-1 flex flex-col gap-2">

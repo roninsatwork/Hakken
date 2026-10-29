@@ -14,6 +14,7 @@ import AnalyticsConversionsPage from "./[siteId]/conversions/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
 import AnalyticsTrackingCheckPage from "./[siteId]/tracking-health/check/page";
 import AnalyticsConnectionPage from "./[siteId]/connection/page";
+import { openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * Google Analytics' screens hold to the looks Anthony agreed and locked on
@@ -70,6 +71,7 @@ describe("Google Analytics' approved looks", () => {
     });
     const { container } = render(<GoogleAnalyticsPage />);
     await screen.findByText("acme-shop.test");
+    await openHakkenSees();
     await screen.findByText(/acme-shop\.test made £4,400 last month, up from £3,500/);
     await expectApprovedLook(container, PLAN, "Main", "Google Analytics → your websites");
   });
@@ -85,6 +87,7 @@ describe("Google Analytics' approved looks", () => {
     });
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("2,412");
+    await openHakkenSees();
     await screen.findByText(/Visits rose 8\.4%, and conversions with them, from 19 to 23\./);
     await screen.findByText("AI agency");
     // Option 4 of the Overview canvas, "Every figure" (ga-overview-plan.md, built 2026-10-15).
@@ -201,6 +204,7 @@ describe("Google Analytics' approved looks", () => {
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ events: [] }), "googleAnalyticsReads:analyticsConversions": NOTHING_COUNTED, "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST });
     const { container } = render(<AnalyticsConversionsPage />);
     await screen.findByText("Nothing counts as a conversion yet");
+    await openHakkenSees();
     await screen.findByText(/Your property does record “Newsletter sign-up”/);
     await expectApprovedLook(container, PLAN, "NothingCounted", "Google Analytics → nothing counted yet");
   });
@@ -222,6 +226,7 @@ describe("Google Analytics' approved looks", () => {
       }),
     });
     const { container } = render(<AnalyticsTrackingCheckPage />);
+    await openHakkenSees();
     await screen.findByText(/In Google Analytics, open Reports, then Realtime, and check each one arrives\./);
     await expectApprovedLook(container, "ga-tracking-health", "Check", "Google Analytics → a tracking health check");
   });
@@ -259,6 +264,7 @@ describe("Google Analytics' approved looks", () => {
     cleanup();
     at("/app/analytics/site_1/tracking-health/check", "key=ENQUIRY_UNCOUNTED");
     render(<AnalyticsTrackingCheckPage />);
+    await openHakkenSees();
     await screen.findByText(/Choose “Contact” on the Connection page: they are then counted from Google.s own figures, for the whole year\./);
     screen.getByText(/happened 179 times in 12 months but isn.t counted/);
     expect(screen.getAllByRole("button", { name: "Choose what counts" })).toHaveLength(1);
@@ -269,6 +275,7 @@ describe("Google Analytics' approved looks", () => {
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": { ...statusWith(null), searchConsole: { clicks: 367, impressions: 264_403 } } });
     const { container } = render(<AnalyticsConnectionPage />);
     await screen.findAllByText("Add Google Analytics");
+    await openHakkenSees();
     await screen.findByText(/Search Console shows Google sent acme-shop\.test 367 clicks/);
     await expectApprovedLook(container, PLAN, "Connect", "Google Analytics → not connected yet");
   });

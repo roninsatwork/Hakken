@@ -26,7 +26,7 @@ const BarChart = dynamic(() => import("recharts").then((module) => module.BarCha
 const CartesianGrid = dynamic(() => import("recharts").then((module) => module.CartesianGrid));
 const Cell = dynamic(() => import("recharts").then((module) => module.Cell));
 const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
-const Tooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const RechartsTooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
 const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
 const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
 
@@ -275,7 +275,7 @@ export default function CompanyDashboardPage() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
+                  <RechartsTooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
                   {SIGN_IN_BANDS.map((band, index) => (
                     <Bar
                       key={band.key}
@@ -325,7 +325,7 @@ export default function CompanyDashboardPage() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip cursor={CHART_CURSOR} content={<QuestionsTooltip />} />
+                  <RechartsTooltip cursor={CHART_CURSOR} content={<QuestionsTooltip />} />
                   {/* One series, so no legend: the title names it. A day with
                       nothing asked is drawn in the recessive grey rather than
                       left blank, so the gap is visible as a gap. */}

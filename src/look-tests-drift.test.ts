@@ -49,6 +49,8 @@ describe("approved looks", () => {
       "Select.tsx": ['data-part="filter"', 'data-part="select"'],
       "TitleSwitch.tsx": ['data-part="title-switch"'],
       "SettingsCard.tsx": ['data-part="settings-card"'],
+      "HakkenSeesEye.tsx": ['data-part="sees-eye"'],
+      "Tooltip.tsx": ['data-part="tooltip"'],
       "CompactList.tsx": ['data-part="compact-list"'],
       "SaveControls.tsx": ['data-part="save"'],
       "DownloadButton.tsx": ['data-part="download"'],

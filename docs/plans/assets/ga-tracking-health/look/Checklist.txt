@@ -2,7 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracking health
-settings-card: What Hakken sees
+  sees-eye
 figures
   figure: Checks passing
   figure: Visits Hakken can't credit

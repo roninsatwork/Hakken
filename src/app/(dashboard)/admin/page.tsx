@@ -29,7 +29,7 @@ const CartesianGrid = dynamic(() => import("recharts").then((module) => module.C
 const Line = dynamic(() => import("recharts").then((module) => module.Line));
 const LineChart = dynamic(() => import("recharts").then((module) => module.LineChart));
 const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
-const Tooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const RechartsTooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
 const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
 const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
 const PlanDistributionChart = dynamic(() =>
@@ -349,7 +349,7 @@ export default function AdminDashboardPage() {
                     <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                     <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                    <Tooltip content={<ActivityTooltip />} />
+                    <RechartsTooltip content={<ActivityTooltip />} />
                     {ACTIVITY_SERIES.map((series) => (
                       <Line
                         key={series.key}
@@ -386,7 +386,7 @@ export default function AdminDashboardPage() {
                     <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                     <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value: number) => `$${value.toFixed(2)}`} />
-                    <Tooltip content={<SpendTooltip />} />
+                    <RechartsTooltip content={<SpendTooltip />} />
                     {/* One series, so the title names it and no legend is needed. */}
                     <Area
                       type="monotone"
@@ -416,7 +416,7 @@ export default function AdminDashboardPage() {
                   <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                   <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
+                  <RechartsTooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
                   {SIGN_IN_BANDS.map((band, index) => (
                     <Bar
                       key={band.key}

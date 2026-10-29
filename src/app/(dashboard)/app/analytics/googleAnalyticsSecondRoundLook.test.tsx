@@ -18,6 +18,7 @@ import AnalyticsProductsPage from "./[siteId]/products/page";
 import AnalyticsPageScreen from "./[siteId]/all-pages/page/page";
 import AnalyticsLivePage from "./[siteId]/live/page";
 import { AnalyticsFilters } from "./_components/AnalyticsFilters";
+import { openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * The second round's screens hold to the looks drawn and agreed on
@@ -79,6 +80,7 @@ describe("Google Analytics' second-round looks", () => {
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS }, async () => live);
     const { container } = render(<AnalyticsLivePage />);
     await screen.findByText("AI Agency | Agent Automation Company");
+    await openHakkenSees();
     await screen.findByText(/4 people are on the website now/);
     // Every country counts: no country named on the figures (Anthony, 2026-10-13).
     await screen.findByText("In the last 5 minutes");
@@ -107,6 +109,7 @@ describe("Google Analytics' second-round looks", () => {
     });
     const { container } = render(<AnalyticsCampaignsPage />);
     await screen.findAllByText("ai-agents-launch");
+    await openHakkenSees();
     await screen.findByText(/Only 7 of the 799 visits came from a link you tagged/);
     await expectApprovedLook(container, PLAN, "Campaigns", "Google Analytics → Campaigns");
   });
@@ -190,6 +193,7 @@ describe("Google Analytics' second-round looks", () => {
     await screen.findByText("Digital Growth Agency");
     await screen.findByText("Typed in, a bookmark or an app");
     await screen.findByText("Typed in or a bookmark");
+    await openHakkenSees();
     await screen.findByText(/593 visits started on this page/);
     // The visits needed for one conversion, by channel and conversion (page-conversion-explorer-plan.md): its toolbar, and a channel ticked off.
     screen.getByText(/^Last month: the visits that started on this page and the conversions they went on to make, day by day, from the dates at the top of the page\.$/);
@@ -320,6 +324,7 @@ describe("Google Analytics' second-round looks", () => {
     });
     const { container } = render(<AnalyticsProductsPage />);
     await screen.findByText("Brass lever handle");
+    await openHakkenSees();
     await screen.findByText(/Of the 1,980 visits that looked at a product, 412 added one to the basket/);
     // The baskets and checkouts left, in points on the span before.
     await screen.findByText("Left in the basket");

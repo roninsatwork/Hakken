@@ -2,7 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Search and content
-settings-card: What Hakken sees
+  sees-eye
 search: Search findings...
 filter: Pattern
 table: Finding | Pattern | At stake | Found | Status

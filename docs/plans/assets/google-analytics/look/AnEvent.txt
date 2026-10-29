@@ -4,7 +4,7 @@
 detail-header
   back: Conversions
   page-header: ‹the record's name›
-settings-card: What Hakken sees
+    sees-eye
 figures
   figure: Times
   figure: People

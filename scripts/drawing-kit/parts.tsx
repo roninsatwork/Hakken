@@ -26,7 +26,8 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
 import { Field } from "@/src/ui/components/screens/Field";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
+import { HakkenSeesCard } from "@/src/ui/components/screens/HakkenSees";
+import { SeesEye } from "@/src/ui/components/screens/HakkenSeesEye";
 import { Meter } from "@/src/ui/components/screens/Meter";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
@@ -417,9 +418,10 @@ const PARTS: Part[] = [
     id: "hakken-sees",
     name: "What Hakken sees",
     source: "src/ui/components/screens/HakkenSees.tsx",
-    use: "Under the title of every Visibility screen: what the page means, then up to three steps to do first.",
+    use: "Opened from the eye in the header, under the title of every Visibility screen: what the page means, then up to three steps to do first.",
     render: () => (
-      <HakkenSees
+      <HakkenSeesCard
+        onClose={noop}
         says={[
           "Google's AI names you in 64 answers a month: 18% of the answers about you and your rivals, behind Brightside Digital's 34%.",
           "You are missing from the most-asked question, about website costs.",
@@ -429,6 +431,18 @@ const PARTS: Part[] = [
           { words: "Get listed on clutch.co.", link: "See clutch.co", href: "#" },
         ]}
       />
+    ),
+  },
+  {
+    id: "sees-eye",
+    name: "The eye, and its tooltip",
+    source: "src/ui/components/screens/HakkenSeesEye.tsx, Tooltip.tsx",
+    use: "After the page title in every header: opens What Hakken sees; the count of new steps beside it; the tooltip while the mouse rests on it.",
+    render: () => (
+      <div className="flex flex-col gap-10 pt-10">
+        <div className="flex items-center gap-3"><span className="text-2xl font-bold tracking-tight text-foreground">kordatackle.com</span><SeesEye open={false} fresh count={2} onClick={noop} tooltipShown /></div>
+        <div className="flex items-center gap-3"><span className="text-2xl font-bold tracking-tight text-foreground">kordatackle.com</span><SeesEye open fresh={false} count={2} onClick={noop} /></div>
+      </div>
     ),
   },
   {

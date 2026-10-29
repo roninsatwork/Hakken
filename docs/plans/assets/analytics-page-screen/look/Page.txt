@@ -4,6 +4,7 @@
 detail-header
   back: All pages
   page-header: ‹the record's name›
+    sees-eye
 settings-card: What Hakken sees
 figures
   figure: Views

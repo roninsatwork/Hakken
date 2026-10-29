@@ -4,7 +4,7 @@
 detail-header
   back: Back to Pages
   page-header: ‹the record's name›
-settings-card: What Hakken sees
+    sees-eye
 figures
   figure: Clicks
   figure: Impressions

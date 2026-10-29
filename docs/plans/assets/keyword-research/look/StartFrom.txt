@@ -4,8 +4,8 @@
 detail-header
   back: Keyword research
   page-header: ‹the record's name›
+    sees-eye
     select: Competitor
-settings-card: What Hakken sees
 figures
   figure: Searches it ranks for
   figure: That you don't

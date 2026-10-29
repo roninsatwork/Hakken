@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/src/ui/lib/utils";
 import { LAYER } from "@/src/ui/lib/layers";
 import { DetailTabs, type DetailTab } from "./DetailTabs";
+import { HakkenSeesEye } from "./HakkenSeesEye";
 
 type AdminDetailLayoutProps = {
   actions?: ReactNode;
@@ -44,9 +45,12 @@ export function DetailLayout({
           <div className="flex items-center gap-4 min-w-0">
             {leading}
             <div className="flex flex-col gap-0.5 min-w-0">
-              <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                {title}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                  {title}
+                </h1>
+                <HakkenSeesEye />
+              </div>
               {description ? (
                 <p className="text-[13px] text-secondary mt-1 max-w-[500px] truncate">
                   {description}

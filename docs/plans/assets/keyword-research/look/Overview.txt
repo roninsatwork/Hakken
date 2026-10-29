@@ -4,12 +4,12 @@
 detail-header
   back: Keyword research
   page-header: ‹the record's name›
+    sees-eye
     select: Measured against
     filter: Add to a list
 field: Look up another keyword
 select: This keyword
 page-header: Overview
-settings-card: What Hakken sees
 figures
   figure: Searches a month
   figure: Difficulty

@@ -4,6 +4,7 @@
 detail-header
   back: Tracking health
   page-header: ‹the record's name›
+    sees-eye
 settings-card: What Hakken sees
 chart-card: The conversions it names
 compact-list: Conversion | Google's name | What Hakken found

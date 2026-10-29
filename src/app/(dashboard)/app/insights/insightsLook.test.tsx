@@ -31,6 +31,7 @@ import InsightsCannibalisationPage from "./cannibalisation/page";
 import InsightsCompetingGroupPage from "./cannibalisation/group/page";
 import InsightsAiSearchPage from "./ai-search/page";
 import InsightsFindingsSectionPage from "./findings/sections/[section]/page";
+import { openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -276,6 +277,7 @@ describe("Insights' looks", () => {
     nav.pathname = "/app/insights/leaderboards";
     answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME });
     const { container } = render(<InsightsLeaderboardsPage />);
+    await openHakkenSees();
     await screen.findByText(/In the four main leagues you're 5th for domain authority/);
     await expectApprovedLook(container, PLAN, "Leagues", "Insights → Leaderboards");
   });
@@ -285,6 +287,7 @@ describe("Insights' looks", () => {
     nav.league = "strength";
     answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME });
     const { container } = render(<InsightsLeaguePage />);
+    await openHakkenSees();
     await screen.findByText(/You're 5th of 5 with 290/);
     await expectApprovedLook(container, PLAN, "LeagueStrength", "Insights → Domain authority league");
   });
@@ -353,6 +356,7 @@ describe("Insights' looks", () => {
     nav.pathname = "/app/insights/your-month";
     answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsLatestReport": MONTH_REPORT });
     const { container } = render(<InsightsYourMonthPage />);
+    await openHakkenSees();
     await screen.findByText(/Enquiries grew to 10 in September/);
     await expectApprovedLook(container, PLAN, "Month", "Insights → Your month");
   });
@@ -504,6 +508,7 @@ describe("Insights' looks", () => {
     nav.pathname = "/app/insights/funnel";
     answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION, "insightsPeriod:insightsPeriodView": ENQUIRY_VIEW, "insightBoxes:insightsScreenBox": BOX(["The chain is weakest at the click: 1% of times shown."], "INSIGHTS_CONVERSION") });
     render(<InsightsFunnelPage />);
+    await openHakkenSees();
     await screen.findByText(/The chain is weakest at the click: 1% of times shown\./);
     expect(screen.getByText(/The Conversion specialist wrote this for the week of/)).toBeTruthy();
   });
@@ -512,6 +517,7 @@ describe("Insights' looks", () => {
     nav.pathname = "/app/insights/page-plan";
     answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA, "insightDecisions:insightsPageDecisions": DECISIONS, "insightBoxes:insightsScreenBox": BOX(["Merge the chatbot pages first."], "INSIGHTS_PAGE_DECISIONS") });
     render(<InsightsPagePlanPage />);
+    await openHakkenSees();
     await screen.findByText(/Merge the chatbot pages first\./);
     expect(screen.getByText(/The Page decisions specialist wrote this for the week of/)).toBeTruthy();
   });
@@ -524,6 +530,7 @@ describe("Insights' looks", () => {
       "insightBoxes:insightsScreenBox": BOX(["Two of three findings checked were right."], "INSIGHTS_HEAD_OF_STRATEGY"),
     });
     render(<InsightsTrackRecordPage />);
+    await openHakkenSees();
     await screen.findByText(/Two of three findings checked were right\./);
     expect(screen.getByText(/The Head of Strategy wrote this for the week of/)).toBeTruthy();
   });
@@ -581,6 +588,7 @@ describe("Insights' looks", () => {
     nav.search = "key=%2Fai-agency%2F";
     answer({ "insightsReads:insightsHome": HOME, "insightCompeting:insightsCompetingGroup": { siteId: "site_1", host: "ronins.co.uk", kept: CANNIBALISATION.groups[0], finding: { headline: "3 of your pages split Google's searches.", action: "Make /ai-agency/ the page.", checkOn: "2026-12-07" } } });
     const { container } = render(<InsightsCompetingGroupPage />);
+    await openHakkenSees();
     await screen.findAllByText(/Merge \/ai-software-development-company\/ into \/ai-agency\//);
     await expectApprovedLook(container, PLAN, "CompetingGroup", "Insights → A group of competing pages");
     nav.search = "";
@@ -592,6 +600,7 @@ describe("Insights' looks", () => {
     const decided = { ...CANNIBALISATION.groups[0], group: { ...AI_GROUP, decidedBy: "AGENT", decidedWeek: "2026-10-12" }, summary: ["Three AI pages split 120 of your searches.", "Give each search one page, and merge the software page into /ai-agency/."] };
     answer({ "insightsReads:insightsHome": HOME, "insightCompeting:insightsCompetingGroup": { siteId: "site_1", host: "ronins.co.uk", kept: decided, finding: null } });
     render(<InsightsCompetingGroupPage />);
+    await openHakkenSees();
     await screen.findByText(/Three AI pages split 120 of your searches\./);
     expect(screen.getByText(/The Keyword cannibalisation specialist decided these on/)).toBeTruthy();
     expect(screen.queryByText(/hasn't looked at this group yet/)).toBeNull();

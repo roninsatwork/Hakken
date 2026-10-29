@@ -10390,7 +10390,10 @@
     },
     "hakkenSees": {
       "title": "Cosa vede {platformName}",
-      "doFirst": "Prima di tutto"
+      "doFirst": "Prima di tutto",
+      "new": "{count, plural, =0 {nuovo} one {# nuovo} other {# nuovi}}",
+      "tooltipNew": "Cosa vede {platformName} · {count, plural, =0 {nuovi consigli} one {# cosa da fare prima} other {# cose da fare prima}}",
+      "tooltipRead": "Cosa vede {platformName}"
     }
   },
   "agenticTesting": {

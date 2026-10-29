@@ -7,6 +7,7 @@ import { expectApprovedLook } from "@/src/test/lookOutline";
 import { expectWords } from "@/src/test/seenWords";
 import { ROW, STATUS, list } from "@/src/test/searchConsoleFixtures";
 import SearchConsoleVolatilityPage from "./[siteId]/volatility/page";
+import { openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * Search Console → Volatility holds to the look Anthony approved on the
@@ -81,6 +82,7 @@ describe("Volatility's approved look", () => {
     });
     const { container } = render(<SearchConsoleVolatilityPage />);
     await screen.findByText("ai agency");
+    await openHakkenSees();
     expect(screen.getByText(/Google's September 2026 spam update ran from/)).toBeInTheDocument();
     await expectApprovedLook(container, "search-console-volatility", "Main", "Search Console → Volatility");
   });

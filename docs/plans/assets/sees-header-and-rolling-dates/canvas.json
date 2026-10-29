@@ -1,0 +1,21 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-29T11:40:00Z" },
+  "title": "Dates menu and What Hakken sees",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 1180, "title": "1 · The Dates menu, with today's days", "expand": "fill", "is_interactive": true },
+    "Option1.dc.html": { "x": 0, "y": 1300, "w": 1440, "h": 900, "title": "Option 1 · A small link on the status row", "expand": "fill" },
+    "Option2.dc.html": { "x": 0, "y": 2320, "w": 1440, "h": 900, "title": "Option 2 · A link on the status row at body size", "expand": "fill" },
+    "Option3.dc.html": { "x": 0, "y": 3340, "w": 1440, "h": 900, "title": "Option 3 · A button beside the filters", "expand": "fill" },
+    "Option4.dc.html": { "x": 0, "y": 4360, "w": 1440, "h": 900, "title": "Option 4 · One line of its own under the title", "expand": "fill" },
+    "Option5.dc.html": { "x": 0, "y": 5380, "w": 1440, "h": 900, "title": "Option 5 · The page's filled button", "expand": "fill" },
+    "Option6.dc.html": { "x": 0, "y": 6400, "w": 1440, "h": 960, "title": "Option 6 · The app's notice box under the title", "expand": "fill" },
+    "Option7.dc.html": { "x": 0, "y": 7480, "w": 1440, "h": 1320, "title": "Option 7 · The eye beside the title, working: hover and open", "expand": "fill", "is_interactive": true },
+    "Option7States.dc.html": { "x": 1520, "y": 7480, "w": 1440, "h": 1060, "title": "Option 7 · The three states, drawn still", "expand": "fill" }
+  },
+  "order": ["Main.dc.html", "Option1.dc.html", "Option2.dc.html", "Option3.dc.html", "Option4.dc.html", "Option5.dc.html", "Option6.dc.html", "Option7.dc.html", "Option7States.dc.html"],
+  "notes": {},
+  "designSystems": []
+}

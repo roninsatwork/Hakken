@@ -2,7 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Findings
-settings-card: What Hakken sees
+  sees-eye
 chart-card: Findings each week, by section
 chart-card: Checks due, by month
 search: Search findings...

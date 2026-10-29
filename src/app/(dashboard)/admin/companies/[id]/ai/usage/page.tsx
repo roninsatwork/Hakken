@@ -36,7 +36,7 @@ const Area = dynamic(() => import("recharts").then((module) => module.Area));
 const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
 const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
 const CartesianGrid = dynamic(() => import("recharts").then((module) => module.CartesianGrid));
-const Tooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const RechartsTooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
 const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
@@ -259,7 +259,7 @@ export default function CompanyAiUsagePage() {
                           width={40}
                         />
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <Tooltip
+                        <RechartsTooltip
                           cursor={CHART_CROSSHAIR}
                           content={
                             <ChartTooltip

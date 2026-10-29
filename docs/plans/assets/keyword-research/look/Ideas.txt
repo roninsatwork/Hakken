@@ -4,12 +4,12 @@
 detail-header
   back: Keyword research
   page-header: ‹the record's name›
+    sees-eye
     select: Measured against
     filter: Add to a list
 field: Look up another keyword
 select: This keyword
 page-header: Terms match
-settings-card: What Hakken sees
 choice: Kind of idea: Terms match · # | Questions · # | Also rank for · #
 search: Find an idea…
 filter: Intent

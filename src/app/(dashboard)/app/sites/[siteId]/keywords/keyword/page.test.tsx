@@ -80,7 +80,8 @@ describe("a search's own page, as a fan-out query", () => {
     const sentence = screen.getByText("sites.keywordRecord.checkedOnceNotice 29 Sept 2026");
 
     expect(heading.closest(".border-b")).toContainElement(sentence);
-    expect(heading.parentElement).toContainElement(screen.getByText("sites.keywordRecord.checkedOncePill"));
+    // The title's row: the title and the eye share a cell of it, the labels the rest.
+    expect(heading.parentElement!.parentElement).toContainElement(screen.getByText("sites.keywordRecord.checkedOncePill"));
     expect(screen.getAllByText(/checkedOnceNotice/)).toHaveLength(1);
   });
 

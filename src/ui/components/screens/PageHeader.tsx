@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "./AccessLevel";
+import { HakkenSeesEye } from "./HakkenSeesEye";
 
 type AdminPageHeaderProps = {
   icon: ReactNode;
@@ -33,10 +34,13 @@ export function PageHeader({ icon, title, description, action, pills, divider = 
   return (
     <div data-part="page-header" className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4${divider ? " border-b border-border-dim pb-6" : ""}`}>
       <div>
-        <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          {icon}
-          {title}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            {icon}
+            {title}
+          </h1>
+          <HakkenSeesEye />
+        </div>
         {description ? <p className="text-[13px] text-secondary mt-1 tracking-wide">{description}</p> : null}
         {pills ? <div className="flex flex-wrap items-center gap-2 mt-2.5">{pills}</div> : null}
       </div>
@@ -116,7 +120,10 @@ function PathHeader({ back, title, description, pills, action }: Omit<AdminDetai
         <BackRow {...back} />
       )}
       <div className="flex flex-col gap-x-6 gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <h1 data-part-title className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 data-part-title className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+          <HakkenSeesEye />
+        </div>
         {pills || action ? (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
             {pills}
@@ -141,10 +148,13 @@ function CompactHeader({ back, icon, title, description, pills, action, note }: 
       <BackRow {...back} />
       <div data-part="page-header" className="flex flex-col gap-3 border-b border-border-dim pb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 data-part-title className="flex min-w-0 items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-            {icon}
-            {title}
-          </h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 data-part-title className="flex min-w-0 items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
+              {icon}
+              {title}
+            </h1>
+            <HakkenSeesEye />
+          </div>
           {action}
         </div>
         {description || pills || note ? (
