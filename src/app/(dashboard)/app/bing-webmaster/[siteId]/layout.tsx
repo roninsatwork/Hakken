@@ -8,6 +8,7 @@ import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { useEffect } from "react";
@@ -89,11 +90,23 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
     <OpeningPeriodContext.Provider value={opening}>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
+        {/* The standard website header (2026-10-30): the name is the switch, on its own row; "Updated …" and the filters under it. */}
         <DetailHeader
+          layout="compact"
           back={{ label: t("back"), href: `/app/bing-webmaster${bingQuery(params)}` }}
           icon={<SiteMark host={status.host} iconUrl={status.iconUrl} owned />}
-          title={status.host}
-          description={connection?.site && state !== "CHOOSING" ? t("withSite", { site: connection.site }) : t("yourWebsite")}
+          title={
+            status.ownSites.length > 1 ? (
+              <TitleSwitch
+                label={status.host}
+                aria-label={t("switch")}
+                value={siteId}
+                onChange={(next) => router.push(`/app/bing-webmaster/${next}${bingQuery(params)}`)}
+              >
+                {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
+              </TitleSwitch>
+            ) : status.host
+          }
           pills={
             state === "CONNECTED" && connection?.lastCollectedAt && !firstComing ? (
               <StatusLabel tone="success">{t("updated", { when: formatDateTime(connection.lastCollectedAt) })}</StatusLabel>
@@ -105,11 +118,6 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
           }
           action={
             <div className="flex flex-wrap items-end gap-3">
-              {status.ownSites.length > 1 ? (
-                <Select aria-label={t("switch")} value={siteId} onChange={(next) => router.push(`/app/bing-webmaster/${next}${bingQuery(params)}`)}>
-                  {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
-                </Select>
-              ) : null}
               <DatesMenu value={choice} newest={connection?.newestDay ?? null} onChange={chooseDates} />
               <Select aria-label={tf("step")} value={step} onChange={(next) => setStep(next as typeof step)} className="w-[140px]">
                 {STEPS.map((entry) => <option key={entry} value={entry}>{tf(`steps.${entry}`)}</option>)}
@@ -126,9 +134,6 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
             <BingMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            {connection?.newestDay && state !== "CHOOSING" ? (
-              <p className="text-[12px] text-muted">{t("figuresTo", { day: formatDay(connection.newestDay) })}</p>
-            ) : null}
             <PeriodDays siteId={siteId} period={period} newestDay={connection?.newestDay ?? null} newestWeek={connection?.newestWeek ?? null}>{children}</PeriodDays>
           </section>
         </div>

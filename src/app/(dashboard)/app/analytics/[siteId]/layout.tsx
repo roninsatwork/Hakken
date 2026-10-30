@@ -30,16 +30,16 @@ import { analyticsQuery, pageForPath, useAnalyticsDates, useAnalyticsSiteId, use
  * page. Read through the caller's own hold: another company's website answers
  * exactly as a missing one does.
  *
- * The header is the compact one Anthony chose on 2026-10-15
- * (docs/plans/active/ga-header-plan.md): the website's name is the switch,
- * the filters share its row, and how fresh the figures are ends the line
- * under it.
+ * The header is the standard website header (Anthony, 2026-10-30, on the
+ * Conversions canvas; before it the compact one of 2026-10-15,
+ * docs/plans/active/ga-header-plan.md): the website's name is the switch, on
+ * its own row; "Updated …" and the filters share the row under it. The
+ * property line and the "figures to" line went as clutter.
  */
 export default function AnalyticsSiteLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("googleAnalytics.site");
   const ts = useTranslations("googleAnalytics.status");
   const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const siteId = useAnalyticsSiteId();
   const status = useAnalyticsStatus();
@@ -78,15 +78,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
 
   const connection = status.connection;
   const state = !connection || connection.status === "CONNECTING" ? "NOT_CONNECTED" : connection.status;
-  const property = connection?.property && connection.propertyName && state !== "CHOOSING"
-    ? t("withProperty", { name: connection.propertyName, id: connection.property.replace(/^properties\//, "") })
-    : t("yourWebsite");
   const firstComing = state === "CONNECTED" && !connection?.historyDone;
-  const ownDates = pageForPath(pathname, siteId) === "live" || /\/landing-pages\/page\/?$/.test(pathname);
-  // A landing page's own screen joins Search Console's days to Analytics' and says both itself (§15); Live is the last 30 minutes.
-  const figuresTo = connection?.newestDay && state !== "CHOOSING" && state !== "COUNTING" && !ownDates
-    ? t("figuresTo", { day: formatDay(connection.newestDay) })
-    : null;
 
   // A website whose days begin this month opens on This month until the 1st (agreed 2026-10-20).
   return (
@@ -109,7 +101,6 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
               </TitleSwitch>
             ) : status.host
           }
-          description={property}
           pills={
             state === "CONNECTED" && connection?.lastCollectedAt && !firstComing ? (
               <StatusLabel tone="success">{t("updated", { when: formatDateTime(connection.lastCollectedAt) })}</StatusLabel>
@@ -120,7 +111,6 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
             )
           }
           action={<AnalyticsFilters />}
-          note={figuresTo}
         />
 
         <AnalyticsConnectionBanner status={status} siteId={siteId} />

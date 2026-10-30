@@ -6,7 +6,6 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "./AccessLevel";
-import { HakkenSeesEye } from "./HakkenSeesEye";
 
 type AdminPageHeaderProps = {
   icon: ReactNode;
@@ -39,7 +38,6 @@ export function PageHeader({ icon, title, description, action, pills, divider = 
             {icon}
             {title}
           </h1>
-          <HakkenSeesEye />
         </div>
         {description ? <p className="text-[13px] text-secondary mt-1 tracking-wide">{description}</p> : null}
         {pills ? <div className="flex flex-wrap items-center gap-2 mt-2.5">{pills}</div> : null}
@@ -66,17 +64,17 @@ type AdminDetailHeaderProps = Omit<AdminPageHeaderProps, "divider" | "icon"> & {
    * above the title, the labels on the title row to the right, and one
    * sentence about this record under it — no icon, and no box repeating the
    * labels.
-   * `compact`: a record read through filters (a website in Google Analytics,
-   * Anthony's choice of 2026-10-15, docs/plans/active/ga-header-plan.md):
-   * the title and `action` share one row, and the description, the labels
-   * and `note` share one line under it.
+   * `compact`: the standard website header (Anthony, 2026-10-30, on the
+   * Conversions canvas; before it, docs/plans/active/ga-header-plan.md): the
+   * website's name on its own row, then one row with its status label
+   * (`pills`, "Updated …") on the left and the page's filters (`action`) on
+   * the right. It draws no description and no note: the property line and
+   * the "figures to" line were dropped as clutter ("the header is getting
+   * very cluttered"), and the eye lives in the top bar (`Header`). Every
+   * section with a website wears it; `src/website-header-drift.test.ts`
+   * holds that.
    */
   layout?: "stacked" | "path" | "compact";
-  /**
-   * The `compact` layout's quiet note at the far end of the line under the
-   * title — how fresh the figures are.
-   */
-  note?: ReactNode;
 };
 
 const BACK_ROW_CLASSES =
@@ -91,9 +89,9 @@ const BACK_ROW_CLASSES =
  * lives up here rather than woven into the title row so the title starts at
  * the left edge exactly like every other admin page.
  */
-export function DetailHeader({ back, layout = "stacked", icon, note, ...headerProps }: AdminDetailHeaderProps) {
+export function DetailHeader({ back, layout = "stacked", icon, ...headerProps }: AdminDetailHeaderProps) {
   if (layout === "path") return <PathHeader back={back} {...headerProps} />;
-  if (layout === "compact") return <CompactHeader back={back} icon={icon} note={note} {...headerProps} />;
+  if (layout === "compact") return <CompactHeader back={back} icon={icon} {...headerProps} />;
   return (
     <div data-part="detail-header" className="flex flex-col gap-3">
       <BackRow {...back} />
@@ -122,7 +120,6 @@ function PathHeader({ back, title, description, pills, action }: Omit<AdminDetai
       <div className="flex flex-col gap-x-6 gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <h1 data-part-title className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-          <HakkenSeesEye />
         </div>
         {pills || action ? (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
@@ -137,33 +134,27 @@ function PathHeader({ back, title, description, pills, action }: Omit<AdminDetai
 }
 
 /**
- * The `compact` layout of `DetailHeader`. The page's filters sit on the
- * title's row, centred on it, and go under the title on a phone; the line
- * under the title wraps rather than breaking the note in two, which drops
- * whole to a line of its own when there is no room beside the labels.
+ * The `compact` layout of `DetailHeader`: the standard website header. The
+ * name has its row to itself, so a long one has the width ("to give space
+ * for long URLs"); the status label and the filters share the row under it,
+ * the filters on the right, and go under the label on a phone. Whatever a
+ * caller passes as `description` is not drawn: the line went on 2026-10-30.
  */
-function CompactHeader({ back, icon, title, description, pills, action, note }: Omit<AdminDetailHeaderProps, "layout">) {
+function CompactHeader({ back, icon, title, pills, action }: Omit<AdminDetailHeaderProps, "layout">) {
   return (
     <div data-part="detail-header" data-part-variant="compact" className="flex flex-col gap-3">
       <BackRow {...back} />
       <div data-part="page-header" className="flex flex-col gap-3 border-b border-border-dim pb-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <h1 data-part-title className="flex min-w-0 items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-              {icon}
-              {title}
-            </h1>
-            <HakkenSeesEye />
-          </div>
-          {action}
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 data-part-title className="flex min-w-0 items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
+            {icon}
+            {title}
+          </h1>
         </div>
-        {description || pills || note ? (
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {description ? <p className="text-[13px] text-secondary tracking-wide">{description}</p> : null}
-              {pills}
-            </div>
-            {note ? <p className="text-[12px] text-muted sm:whitespace-nowrap">{note}</p> : null}
+        {pills || action ? (
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">{pills}</div>
+            {action}
           </div>
         ) : null}
       </div>

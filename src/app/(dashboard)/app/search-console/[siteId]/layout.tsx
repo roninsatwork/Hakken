@@ -34,10 +34,10 @@ import {
  * (search-console-plan.md §16), the menu, and the page.
  * A website opens on top of the section's list, so it wears the record-level
  * header with the way back (docs/developer/screen-kit.md, "Headers"): the
- * compact one, as Google Analytics', approved for Search Console on
- * 2026-10-15 (docs/plans/active/ga-header-plan.md) — the website's name is
- * the switch, the country and dates share its row, and how fresh Google's
- * figures are ends the line under it. Read through the caller's own hold:
+ * standard website header (Anthony, 2026-10-30; the compact one of
+ * 2026-10-15 before it, docs/plans/active/ga-header-plan.md) — the website's
+ * name is the switch, on its own row; "Updated …", the country and the dates
+ * share the row under it. Read through the caller's own hold:
  * another company's website answers exactly as a missing one does.
  */
 export default function SearchConsoleSiteLayout({ children }: { children: React.ReactNode }) {
@@ -75,7 +75,6 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
 
   const connection = status.connection;
   const state = !connection || connection.status === "CONNECTING" ? "NOT_CONNECTED" : connection.status;
-  const shown = connection?.property && state !== "CHOOSING" ? connection.property : null;
 
   return (
     // A website whose days begin this month opens on This month until the 1st (agreed 2026-10-20).
@@ -99,7 +98,6 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
               </TitleSwitch>
             ) : status.host
           }
-          description={shown ? t("withProperty", { property: shown }) : t("yourWebsite")}
           pills={
             state === "CONNECTED" && connection?.lastCollectedAt ? (
               <StatusLabel tone="success">{t("updated", { when: formatDateTime(connection.lastCollectedAt) })}</StatusLabel>
@@ -114,7 +112,6 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
               <SiteDateRange newest={connection?.newestDay ?? null} custom />
             </div>
           }
-          note={connection?.newestDay && state !== "CHOOSING" ? t("figuresTo", { day: formatDay(connection.newestDay) }) : null}
         />
 
         <ConnectionBanner status={status} siteId={siteId} />

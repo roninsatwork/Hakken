@@ -147,6 +147,34 @@ describe("DetailHeader", () => {
       expect(screen.getByRole("link", { name: /Back/ })).toHaveTextContent("Back");
     });
   });
+
+  // The standard website header, decided on the Conversions canvas on 2026-10-30.
+  describe("the compact layout", () => {
+    it("puts the name on its own row, then the status on the left and the filters on the right, and nothing else", () => {
+      render(
+        <DetailHeader
+          layout="compact"
+          back={{ label: "Back to Google Analytics", href: "/app/analytics" }}
+          title="morehandles.co.uk"
+          description="Google Analytics property 123"
+          pills={<span>Updated 30/10/2026</span>}
+          action={<button type="button">Dates</button>}
+        />
+      );
+
+      const heading = screen.getByRole("heading", { name: "morehandles.co.uk" });
+      const status = screen.getByText("Updated 30/10/2026");
+      const filters = screen.getByRole("button", { name: "Dates" });
+      // The name's row holds the name alone, so a long one has the width.
+      expect(heading.parentElement).not.toContainElement(status);
+      expect(heading.parentElement).not.toContainElement(filters);
+      // The status and the filters share the row under it.
+      expect(status.parentElement!.parentElement).toContainElement(filters);
+      // No property line: the description is not drawn.
+      expect(screen.queryByText("Google Analytics property 123")).toBeNull();
+      expect(heading.closest(".border-b")).toHaveClass(...HEADER_RULE);
+    });
+  });
 });
 
 describe("PagePrimaryAction", () => {

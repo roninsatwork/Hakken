@@ -7,6 +7,7 @@ import Header from "@/src/ui/components/layout/Header";
 import { BackRow, DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
@@ -73,7 +74,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     <OpeningPeriodContext.Provider value={openingPeriod(site.heldFrom, ukDay())}>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
+        {/* The standard website header (2026-10-30): the name on its own row; the status, the place it is
+            measured from and the dates on the row under it. The place was the description line before. */}
         <DetailHeader
+          layout="compact"
           // A competitor leads back to the website it is measured against, on the same page (W4).
           back={
             site.relationship === "TRACKED" && site.ofSiteId && site.ofHost
@@ -83,15 +87,15 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           // The website's mark, as the Sites list and Search Console's header draw it.
           icon={<SiteMark host={site.host} iconUrl={heldIcon(site.holds, { siteId: site.siteId })} owned={site.relationship === "OWNED"} />}
           title={<SiteSwitcher siteId={site.siteId} host={site.host} holds={site.holds} />}
-          description={
-            site.relationship === "OWNED"
-              ? t("ownedFrom", { place: site.placeLabel })
-              : site.ofHost
-                ? t("competitorOfFrom", { host: site.ofHost, place: site.placeLabel })
-                : t("competitorFrom", { place: site.placeLabel })
-          }
           pills={
             <>
+              <TagLabel>
+                {site.relationship === "OWNED"
+                  ? t("ownedFrom", { place: site.placeLabel })
+                  : site.ofHost
+                    ? t("competitorOfFrom", { host: site.ofHost, place: site.placeLabel })
+                    : t("competitorFrom", { place: site.placeLabel })}
+              </TagLabel>
               {site.checked && site.lastCheckedAt ? (
                 <StatusLabel tone="success">{t("lastChecked", { when: formatDateTime(site.lastCheckedAt) })}</StatusLabel>
               ) : site.checked && site.latestDay ? (

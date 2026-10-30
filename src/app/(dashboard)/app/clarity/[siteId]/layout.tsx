@@ -13,7 +13,6 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
-import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
@@ -24,11 +23,11 @@ import { CLARITY_DEVICES, CLARITY_PAGES, clarityPageForPath, useClarityPath, use
 
 /**
  * One website in Microsoft Clarity's section (docs/plans/active/agents-and-clarity-plan.md,
- * Part 4, CS2, drawn on "Hakken — Microsoft Clarity"): Google Analytics'
- * compact header — the website's name, the switch between the company's own
- * websites, every device or one, and the date menu's calendar period
- * (calendar-periods-plan.md, phase 3) — how fresh the figures are at the end
- * of the line under it, the menu, and the page. Recordings shows every one
+ * Part 4, CS2, drawn on "Hakken — Microsoft Clarity"): the standard website
+ * header (2026-10-30) — the website's name, the switch between the company's
+ * own websites, then "Updated …" beside every device or one and the date
+ * menu's calendar period (calendar-periods-plan.md, phase 3) — the menu, and
+ * the page. Recordings shows every one
  * Clarity still keeps, so it draws no date menu (item 11.6).
  */
 export default function ClaritySiteLayout({ children }: { children: React.ReactNode }) {
@@ -70,7 +69,6 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
               </TitleSwitch>
             ) : status.host
           }
-          description={connection?.projectName ? t("site.withProject", { name: connection.projectName }) : t("site.yourWebsite")}
           pills={state === "CONNECTED" && connection?.lastCollectedAt
             ? <StatusLabel tone="success">{t("site.updated", { when: formatWhen(connection.lastCollectedAt) })}</StatusLabel>
             : <StatusLabel tone={state === "NEEDS_RECONNECT" ? "warning" : "neutral"}>{t(`status.${state}`)}</StatusLabel>}
@@ -89,7 +87,6 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
               </div>
             )
           }
-          note={connection?.newestDay ? t("site.figuresTo", { day: formatDay(connection.newestDay) }) : null}
         />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-4 lg:self-start">

@@ -10,20 +10,21 @@ import { Tooltip } from "./Tooltip";
 import { claimEye, toggleSees, useDrawsEye, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
- * The eye beside the page title that opens What Hakken sees — option 7 on
- * the canvas of 2026-10-29 (sees-header-and-rolling-dates-plan.md, part one;
- * Anthony: "i think i like the eyes"): a bordered 38px button with the eye
- * in the brand colour, then how many of the box's steps are new ("2 new")
- * until the box has been opened on this advice. Resting on it shows what it
- * is; clicking it opens the box under the header and leaves the eye pressed;
+ * The eye in the top bar that opens What Hakken sees — option 7 on the
+ * canvas of 2026-10-29 (sees-header-and-rolling-dates-plan.md, part one;
+ * Anthony: "i think i like the eyes"), moved from beside the page title to
+ * the top bar on 2026-10-30 (the Conversions canvas: "could the What Hakken
+ * sees icon sit here and have page context"): a bordered 38px button with
+ * the eye in the brand colour, then how many of the box's steps are new
+ * ("2 new") until the box has been opened on this advice. Resting on it
+ * shows what it is; clicking it opens the box and leaves the eye pressed;
  * clicking again closes it.
  *
- * Every header part draws it (`PageHeader`, `DetailHeader`, `DetailLayout`),
- * and it draws itself only once the screen's box has published something —
- * so no screen wires it up, and a screen with nothing to say has no eye.
- * Where two headers stack on one screen, the outermost draws it
- * (`claimEye`). The words and the look are read only once there is a box,
- * so a header on a screen without one costs nothing.
+ * The top bar (`Header`) is the one place that draws it, and it draws itself
+ * only once the screen's box has published something — so no screen wires it
+ * up, and a screen with nothing to say has no eye. `claimEye` keeps one eye
+ * on screen should two bars ever mount. The words and the look are read only
+ * once there is a box, so a screen without one costs nothing.
  */
 export function HakkenSeesEye() {
   const id = useId();

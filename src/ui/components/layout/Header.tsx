@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import { NotificationBell } from "./NotificationBell";
+import { HakkenSeesEye } from "@/src/ui/components/screens/HakkenSeesEye";
 import { isLearnPath } from "./learnPaths";
 
 interface HeaderProps {
@@ -237,6 +238,9 @@ export default function Header({ onOpenModal }: HeaderProps) {
 
       {/* Profile & Utility Actions */}
       <div className="flex items-center gap-3">
+        {/* What Hakken sees opens from here, before the bell (Anthony, 2026-10-30, on the Conversions canvas:
+            the eye left the page titles for the top bar, where it has the page's context and clutters no header). */}
+        <HakkenSeesEye />
         <NotificationBell />
 
         <div className="relative" ref={profileRef}>

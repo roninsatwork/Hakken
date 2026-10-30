@@ -139,17 +139,16 @@ const PARTS: Part[] = [
   },
   {
     id: "record-header-compact",
-    name: "Record header — compact, the name is the switch",
+    name: "Website header — the standard one, the name is the switch",
     source: "src/ui/components/screens/PageHeader.tsx (DetailHeader layout=\"compact\"), TitleSwitch.tsx",
-    use: "A record read through filters (a website in Google Analytics): the filters on the title's row, one line under it with a quiet note at its end. With more than one record the title opens the list.",
+    use: "Every section that opens a website (2026-10-30): the name on its own row, then \"Updated …\" on the left and the page's filters on the right. No property line, no figures-to line; the eye is in the top bar. With more than one website the title opens the list.",
     render: () => (
       <DetailHeader
         layout="compact"
         back={{ label: "Back to Google Analytics", href: "#" }}
         icon={<SiteMark host="kordatacle.com" owned />}
         title={<TitleSwitch label="kordatacle.com" aria-label="Choose a website" value="1" onChange={noop}><option value="1">kordatacle.com</option></TitleSwitch>}
-        description="Your website · Google Analytics property Kordatackle.com (397603311)"
-        pills={<StatusLabel tone="neutral">Collecting its first 90 days</StatusLabel>}
+        pills={<StatusLabel tone="success">Updated 30/10/2026, 05:40:41</StatusLabel>}
         action={
           <div className="flex flex-wrap items-end gap-3">
             <Select aria-label="Country" value="gb" onChange={noop}><option value="gb">United Kingdom</option></Select>
@@ -158,7 +157,6 @@ const PARTS: Part[] = [
             <Select aria-label="Chart step" value="day" onChange={noop}><option value="day">Daily</option></Select>
           </div>
         }
-        note="Analytics' figures to 14 Oct 2026; the last two days can still change."
       />
     ),
   },

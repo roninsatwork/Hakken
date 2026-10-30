@@ -35,10 +35,11 @@ const steps = [
 const eye = () => screen.getAllByRole("button", { name: "ui.hakkenSees.title Hakken" })[0];
 const boxTitle = () => screen.getAllByRole("button", { name: "ui.hakkenSees.title Hakken" })[1] ?? null;
 
-/** A screen as the app assembles it: a header, then the page with its box. */
+/** A screen as the app assembles it: the top bar's eye, a header, then the page with its box. */
 function Screen(props: { says?: string[]; steps?: typeof steps; advice?: string }) {
   return (
     <>
+      <HakkenSeesEye />
       <PageHeader icon={null} title="Brand radar" />
       <HakkenSees says={props.says ?? says} steps={props.steps ?? steps} advice={props.advice ?? "update | hold, clutch"} />
     </>
@@ -114,15 +115,16 @@ describe("HakkenSees and its eye", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("ui.hakkenSees.tooltipRead Hakken");
   });
 
-  it("draws no eye on a screen without a box, and one eye where two headers stack", () => {
-    render(<PageHeader icon={null} title="Settings" />);
+  // The eye left the page titles for the top bar on 2026-10-30: headers draw none, the top bar one.
+  it("draws no eye on a screen without a box, and one eye however many headers the screen stacks", () => {
+    render(<><HakkenSeesEye /><PageHeader icon={null} title="Settings" /></>);
     expect(screen.queryByRole("button", { name: "ui.hakkenSees.title Hakken" })).toBeNull();
     resetSees();
     render(
       <>
+        <HakkenSeesEye />
         <PageHeader icon={null} title="kordatackle.com" />
         <PageHeader icon={null} title="Overview" />
-        <HakkenSeesEye />
         <HakkenSees says={says} steps={steps} />
       </>,
     );
