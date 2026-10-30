@@ -31,6 +31,8 @@ export async function prepareSeesJudge(ctx: ActionCtx, run: JudgeRun): Promise<P
 const acted = (result: DecisionResult | undefined) => result?.verdict === "ACT" && result.answer.kind === "yes-no";
 const yes = (result: DecisionResult | undefined) => acted(result) && result!.answer.kind === "yes-no" && result!.answer.yes;
 const no = (result: DecisionResult | undefined) => acted(result) && result!.answer.kind === "yes-no" && !result!.answer.yes;
+/** Jev leaned no but was not sure enough to act: asked, answered no, not acted on. */
+const leansNo = (result: DecisionResult | undefined) => !!result && result.source !== "RULES" && result.verdict !== "ACT" && result.answer.kind === "yes-no" && !result.answer.yes;
 
 /**
  * Code's findings, judged: one Jev would call obvious or of no use is left out; a device gap Jev calls behaviour is
@@ -46,6 +48,8 @@ export async function judgeFindings(ctx: ActionCtx, run: JudgeRun, prepared: Pre
     ]);
     // One request per finding's questions: the state names the one finding each is about.
     const kept: Finding[] = [];
+    // Those Jev leans to calling obvious go to the end: still shown in the panel, no longer first to be written up.
+    const later: Finding[] = [];
     for (const [at, finding] of findings.entries()) {
       const mine = requests.filter((request) => request.id.endsWith(`-${at}`));
       const results = await runDecisions(ctx, {
@@ -60,6 +64,11 @@ export async function judgeFindings(ctx: ActionCtx, run: JudgeRun, prepared: Pre
         notes.push(`Left out as obvious or of no use: ${findingWords(finding)}`);
         continue;
       }
+      if (leansNo(results[`matters-${at}`])) {
+        notes.push(`Moved to the end, as probably obvious: ${findingWords(finding)}`);
+        later.push(finding.kind === "trackingGap" ? { ...finding, params: { ...finding.params, tracking: "check" } } : finding);
+        continue;
+      }
       if (finding.kind === "trackingGap" && no(results[`gap-${at}`])) {
         notes.push(`Called behaviour, not tracking: ${findingWords(finding)}`);
         kept.push({ ...finding, params: { ...finding.params, tracking: "behaviour" } });
@@ -67,7 +76,9 @@ export async function judgeFindings(ctx: ActionCtx, run: JudgeRun, prepared: Pre
       }
       kept.push(finding.kind === "trackingGap" ? { ...finding, params: { ...finding.params, tracking: "check" } } : finding);
     }
-    return { findings: kept, notes };
+    // Their keys follow their new places, so the team names f1 for the first finding it is shown.
+    const ordered = [...kept, ...later].map((finding, at) => ({ ...finding, facts: finding.facts.map((fact) => ({ ...fact, key: fact.key.replace(/^f\d+\./, `f${at + 1}.`) })) }));
+    return { findings: ordered, notes };
   } catch (error) {
     return { findings: [...findings], notes: [`Jev could not judge the findings (${failureSummary(error)}); all are kept.`] };
   }

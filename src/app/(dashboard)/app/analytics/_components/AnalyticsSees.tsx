@@ -66,7 +66,7 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask 
     return { href: hrefOf(to.segment ?? "", to.segment === "all-pages/page" ? { ...to.filters, from } : to.filters) };
   };
   const steps: HakkenSeesStep[] = box.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
-  return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} ask={ask} />;
+  return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} ask={ask} name={nameOf} />;
 }
 
 /** Conversions' events, sent joined by commas, by their own names in the reader's language, as it lists them. */

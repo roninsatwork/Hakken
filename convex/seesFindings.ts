@@ -7,6 +7,7 @@ import { readMapView } from "./agentReads";
 import type { SiteReader } from "./siteAccess";
 import { tenantQuery } from "./tenantFunctions";
 import { findingsFrom, type Finding, type FindingView } from "./utils/sees/findings";
+import { findingValidator } from "./utils/sees/findingValidator";
 
 /**
  * What the figures show, worked out by code over the Conversions map's four views
@@ -17,13 +18,7 @@ import { findingsFrom, type Finding, type FindingView } from "./utils/sees/findi
 
 const COLUMNS = ["channel", "kind", "device", "country"] as const;
 
-export const findingValidator = v.object({
-  id: v.string(),
-  kind: v.union(v.literal("visitsForOne"), v.literal("step"), v.literal("groupAbove"), v.literal("groupBelow"), v.literal("rose"), v.literal("fell"), v.literal("trackingGap")),
-  score: v.number(),
-  params: v.record(v.string(), v.union(v.string(), v.number())),
-  facts: v.array(v.object({ key: v.string(), value: v.number(), unit: v.union(v.literal("count"), v.literal("percent"), v.literal("ratio"), v.literal("score")), label: v.string() })),
-});
+export { findingValidator };
 
 const findingsArgs = { siteId: v.id("companyWebsites"), period: v.string(), device: v.string(), country: v.optional(v.string()) };
 

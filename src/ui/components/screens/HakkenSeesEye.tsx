@@ -9,7 +9,9 @@ import { seesKey } from "@/convex/utils/seesAsk";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
-import { SeesBubble } from "./HakkenSees";
+import { SeesPanel } from "./SeesPanel";
+import { SeesChatFoot, SeesChatLog, useSeesChat } from "./SeesChat";
+import { findingWords } from "@/convex/utils/sees/findings";
 import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
@@ -21,7 +23,7 @@ import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, 
  * the eye in the brand colour, then how many of the box's steps are new
  * ("2 new") until the bubble has been opened on this advice. No tooltip
  * (Anthony, 2026-10-30, "remove it": at the top of the page it opened under
- * the browser's toolbar); clicking it opens the speech bubble under it
+ * the browser's toolbar); clicking it opens the panel over the page (`SeesPanel`, in place of the bubble since 2026-10-31)
  * (`SeesBubble`) and leaves the eye pressed; clicking again, a click
  * anywhere else or Escape closes it.
  *
@@ -58,22 +60,25 @@ export function HakkenSeesEye() {
     askSees(box.ask).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
   }, [open, key, asked?.key, box?.ask, askSees]);
   const answer = useQuery(api.seesAsk.seesAnswer, open && box?.ask && key && asked?.key === key && asked.status !== "FAILED" ? { siteId: box.ask.siteId, key } : "skip");
-  // A click anywhere outside the eye and its bubble, or Escape, closes the bubble, as the bell's panel closes.
-  useEffect(() => {
-    if (!open) return;
-    const pressedOutside = (event: MouseEvent) => {
-      if (holder.current && !holder.current.contains(event.target as Node)) closeSees();
-    };
-    const escaped = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeSees();
-    };
-    document.addEventListener("mousedown", pressedOutside);
-    document.addEventListener("keydown", escaped);
-    return () => {
-      document.removeEventListener("mousedown", pressedOutside);
-      document.removeEventListener("keydown", escaped);
-    };
-  }, [open]);
+  // The panel closes itself: Escape, its close button, or a click on the page behind it (SidePanel).
+  // What the figures show, read at once on an Analytics screen; the words' own order once the team has written them.
+  const readsFindings = open && box?.ask && box.ask.screen.startsWith("googleAnalytics.") && !answer?.findings;
+  const live = useQuery(api.seesFindings.seesFindings, readsFindings && box?.ask ? { siteId: box.ask.siteId, period: box.ask.period, device: box.ask.device, ...(box.ask.country ? { country: box.ask.country } : {}) } : "skip");
+  const read = answer?.status === "WRITTEN" && answer.findings ? answer.findings : live;
+  const findings = Array.isArray(read) ? read : undefined;
+  // Asking about the page: an Ask Hakken conversation for its website, started with the page as its starting point.
+  const shown = answer?.status === "WRITTEN" ? answer : null;
+  const chat = useSeesChat({
+    pageKey: key ?? box?.screen ?? null,
+    ...(box?.ask ? { siteId: box.ask.siteId } : {}),
+    startedOn: {
+      path: box?.ask?.path ?? box?.screen ?? "",
+      about: box?.ask?.about ?? box?.screen ?? "",
+      dates: box?.ask ? [box.ask.from && box.ask.to ? `${box.ask.from} to ${box.ask.to}` : box.ask.period, box.ask.country || null, box.ask.device || null].filter(Boolean).join(", ") : "",
+      findings: (findings ?? []).map(findingWords),
+      said: shown ? [...shown.says, ...shown.steps.map((step) => step.words)] : [...(box?.says ?? []), ...(box?.steps ?? []).map((step) => step.words)],
+    },
+  });
   if (!draws || !box) return null;
   // The team's words when it has written them; "researching" while it writes; the rule's words otherwise.
   const team = answer?.status === "WRITTEN" ? answer : null;
@@ -88,7 +93,7 @@ export function HakkenSeesEye() {
       count={box.steps.length}
       onClick={toggleSees}
       bubbleId={`${id}-bubble`}
-      bubble={open ? <SeesBubble id={`${id}-bubble`} says={says} steps={steps} researching={researching} /> : null}
+      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
     />
   );
 }

@@ -10450,7 +10450,39 @@
       "title": "What {platformName} sees",
       "doFirst": "Do first",
       "new": "{count, plural, =0 {new} one {# new} other {# new}}",
-      "researching": "{platformName} is researching…"
+      "researching": "{platformName} is researching…",
+      "figures": "What the figures show",
+      "figuresNote": "From this page, just now",
+      "means": "What it means",
+      "meansNote": "Written by the {platformName} team",
+      "ask": "Ask about this page",
+      "askPlaceholder": "Ask about this page…",
+      "send": "Send",
+      "saved": "Saved in Ask {platformName}, with your other conversations.",
+      "askAbout": "Ask about this",
+      "open": "Open in Ask {platformName}",
+      "thinking": "{platformName} is reading the figures…",
+      "findings": {
+        "visitsForOne": "One <b>{event}</b> took <n>{visits}</n> visits, against <n>{before}</n> before.",
+        "visitsForOneNow": "One <b>{event}</b> took <n>{visits}</n> visits.",
+        "step": "<n>{wentOn}</n> of visits with <b>{from}</b> went on to <b>{to}</b>, against <n>{before}</n> before.",
+        "stepNow": "<n>{wentOn}</n> of visits with <b>{from}</b> went on to <b>{to}</b>.",
+        "group": "<b>{group}</b>: <n>{rate}</n> of visits did <b>{event}</b>, against <n>{siteRate}</n> across the website.",
+        "together": "<b>{group}</b>: <n>{perVisit}</n> conversions a visit, against <n>{sitePerVisit}</n> across the website.",
+        "rose": "<b>{group}</b>: <n>{rate}</n> of visits did <b>{event}</b>, up from <n>{before}</n>.",
+        "fell": "<b>{group}</b>: <n>{rate}</n> of visits did <b>{event}</b>, down from <n>{before}</n>.",
+        "trackingCheck": "<b>{event}</b> on {low}: <n>{lowRate}</n> of visits, against <n>{highRate}</n> on {high}. Check its tracking there first.",
+        "trackingBehaviour": "<b>{event}</b> happens far less on {low}: <n>{lowRate}</n> of visits, against <n>{highRate}</n> on {high}.",
+        "kindPages": "{group} pages",
+        "devices": {
+          "mobile": "phones",
+          "desktop": "computers",
+          "tablet": "tablets"
+        }
+      }
+    },
+    "sidePanel": {
+      "close": "Close"
     }
   },
   "agenticTesting": {

@@ -336,6 +336,7 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
         presentation: "WRITTEN",
         agent: { systemPrompt: agent.systemPrompt, skills: runtimeSkills, alwaysMemories: agentAlwaysMemories },
         ...(thread.companyWebsiteId ? { websiteHoldId: thread.companyWebsiteId } : {}),
+        ...(thread.startedOn ? { startedOn: thread.startedOn } : {}),
       })
     : null;
   const systemInstruction = conversationInstructions

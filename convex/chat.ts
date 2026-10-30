@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { startedOnValidator } from "./utils/startedOn";
 import { issueUpload, requireOwnedUpload } from "./uploadReservations";
 import { uploadMetadataArgs } from "./uploadSchema";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -353,6 +354,8 @@ export const createThread = tenantMutation({
     forPlatform: v.optional(v.boolean()),
     /** The website chosen in "Answering for": one the conversation's company holds (keep-less-history-plan.md, 6.1). */
     forWebsiteId: v.optional(v.id("companyWebsites")),
+    /** The page the conversation starts on, from the eye's panel: Ask Hakken is told it (sees-side-panel-plan-2026-10-31.md). */
+    startedOn: v.optional(startedOnValidator),
   },
   returns: v.id("threads"),
   handler: async (ctx, args) => {
@@ -379,6 +382,7 @@ export const createThread = tenantMutation({
       userId,
       companyId: activeCompanyId,
       ...(args.forWebsiteId !== undefined ? { companyWebsiteId: args.forWebsiteId } : {}),
+      ...(args.startedOn ? { startedOn: { ...args.startedOn, findings: args.startedOn.findings.slice(0, 12), said: args.startedOn.said.slice(0, 12) } } : {}),
       agentId: args.agentId,
       title: "New Conversation",
       createdAt: now,

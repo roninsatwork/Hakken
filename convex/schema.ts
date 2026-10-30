@@ -1,4 +1,5 @@
 import { defineSchema, defineTable } from "convex/server";
+import { startedOnValidator } from "./utils/startedOn";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
@@ -3004,6 +3005,11 @@ export default defineSchema({
      * or tracks. Absent, the whole company's. The company stays the owner.
      */
     companyWebsiteId: v.optional(v.id("companyWebsites")),
+    /**
+     * The page a conversation was started on, from the eye's panel (sees-side-panel-plan-2026-10-31.md): its
+     * address and name, its dates, what code found in its figures and what the eye said. Ask Hakken is told it.
+     */
+    startedOn: v.optional(startedOnValidator),
     /**
      * Marks a thread the platform created for itself rather than for a person.
      *

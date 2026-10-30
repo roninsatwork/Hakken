@@ -22,6 +22,7 @@
  */
 
 import { internal } from "./_generated/api";
+import { startedOnLines, type StartedOn } from "./utils/startedOn";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import {
@@ -164,6 +165,8 @@ export async function gatherInstructions(
     platformName?: string;
     /** The website the conversation is about, chosen in Ask Hakken (keep-less-history-plan.md, 6.1); absent for the whole company. */
     websiteHoldId?: Id<"companyWebsites">;
+    /** The page the conversation was started on, from the eye's panel (sees-side-panel-plan-2026-10-31.md). */
+    startedOn?: StartedOn;
   },
 ) {
   const { companyId } = args;
@@ -206,7 +209,8 @@ export async function gatherInstructions(
     ...(args.agent ? { agent: args.agent } : {}),
   });
   const focused = focus ? `${written}\n\n====================\nTHE WEBSITE THIS CONVERSATION IS ABOUT:\n\n${websiteFocusLine(focus)}` : written;
-  const withFocus = focus && advice.length > 0 ? `${focused}\n\n====================\nWHAT THE SCREENS ADVISE ON THIS WEBSITE:\n\n${adviceLines(focus.host, advice)}` : focused;
+  const advised = focus && advice.length > 0 ? `${focused}\n\n====================\nWHAT THE SCREENS ADVISE ON THIS WEBSITE:\n\n${adviceLines(focus.host, advice)}` : focused;
+  const withFocus = args.startedOn ? `${advised}\n\n====================\nTHE PAGE THIS CONVERSATION STARTED ON:\n\n${startedOnLines(args.startedOn)}` : advised;
 
   return {
     systemInstruction:

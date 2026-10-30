@@ -22,7 +22,7 @@ import type { HakkenSeesStep, SeesAsk } from "./HakkenSees";
  * eye is pressed (sees-conversion-specialist-plan-2026-10-30.md S4); a page
  * without one shows the rule's words alone.
  */
-export type SeesBox = { screen: string; says: string[]; steps: HakkenSeesStep[]; advice: string; ask?: SeesAsk };
+export type SeesBox = { screen: string; says: string[]; steps: HakkenSeesStep[]; advice: string; ask?: SeesAsk; name?: (eventName: string) => string };
 
 const PREFIX = "hakken.sees.read.";
 let current: SeesBox | null = null;
@@ -151,4 +151,22 @@ export function resetSees() {
   asked = null;
   readKept.clear();
   changed();
+}
+
+/**
+ * The Ask Hakken conversation started from the eye's panel on each page, by the page's key (`seesKey`): reopening
+ * the panel on the same page shows the same conversation (sees-side-panel-plan-2026-10-31.md, phase 3). Kept for
+ * the browser tab only; the conversation itself is in Ask Hakken's list.
+ */
+const seesThreads = new Map<string, string>();
+let threadsVersion = 0;
+const threadListeners = new Set<() => void>();
+export function noteSeesThread(key: string, threadId: string) {
+  seesThreads.set(key, threadId);
+  threadsVersion += 1;
+  for (const listener of threadListeners) listener();
+}
+export function useSeesThread(key: string | null): string | null {
+  useSyncExternalStore((listener) => { threadListeners.add(listener); return () => threadListeners.delete(listener); }, () => threadsVersion, () => 0);
+  return key ? seesThreads.get(key) ?? null : null;
 }

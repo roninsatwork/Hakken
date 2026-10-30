@@ -844,6 +844,7 @@ import type * as utils_sees_analyticsProducts from "../utils/sees/analyticsProdu
 import type * as utils_sees_analyticsVisitors from "../utils/sees/analyticsVisitors.js";
 import type * as utils_sees_backlinks from "../utils/sees/backlinks.js";
 import type * as utils_sees_competitors from "../utils/sees/competitors.js";
+import type * as utils_sees_findingValidator from "../utils/sees/findingValidator.js";
 import type * as utils_sees_findings from "../utils/sees/findings.js";
 import type * as utils_sees_google from "../utils/sees/google.js";
 import type * as utils_sees_local from "../utils/sees/local.js";
@@ -870,6 +871,7 @@ import type * as utils_skillMarkdownService from "../utils/skillMarkdownService.
 import type * as utils_skillNormalization from "../utils/skillNormalization.js";
 import type * as utils_skillShapes from "../utils/skillShapes.js";
 import type * as utils_sortOrder from "../utils/sortOrder.js";
+import type * as utils_startedOn from "../utils/startedOn.js";
 import type * as utils_starterSkills from "../utils/starterSkills.js";
 import type * as utils_statReporter from "../utils/statReporter.js";
 import type * as utils_stepMemory from "../utils/stepMemory.js";
@@ -1806,6 +1808,7 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/analyticsVisitors": typeof utils_sees_analyticsVisitors;
   "utils/sees/backlinks": typeof utils_sees_backlinks;
   "utils/sees/competitors": typeof utils_sees_competitors;
+  "utils/sees/findingValidator": typeof utils_sees_findingValidator;
   "utils/sees/findings": typeof utils_sees_findings;
   "utils/sees/google": typeof utils_sees_google;
   "utils/sees/local": typeof utils_sees_local;
@@ -1832,6 +1835,7 @@ declare const fullApi: ApiFromModules<{
   "utils/skillNormalization": typeof utils_skillNormalization;
   "utils/skillShapes": typeof utils_skillShapes;
   "utils/sortOrder": typeof utils_sortOrder;
+  "utils/startedOn": typeof utils_startedOn;
   "utils/starterSkills": typeof utils_starterSkills;
   "utils/statReporter": typeof utils_statReporter;
   "utils/stepMemory": typeof utils_stepMemory;

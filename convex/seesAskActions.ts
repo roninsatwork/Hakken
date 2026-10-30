@@ -37,7 +37,7 @@ import {
  */
 
 type Page = { host: string; screen: string; about: string; period: string; from?: string; to?: string; country: string; device?: string; facts: Parameters<typeof factsOf>[0]["facts"]; links: readonly SeesLink[]; shop: boolean };
-type Written = { verdict: SeesVerdict; role: InsightsRole; lines: Array<{ heading: string; detail: string; failed?: boolean }> };
+type Written = { verdict: SeesVerdict; role: InsightsRole; lines: Array<{ heading: string; detail: string; failed?: boolean }>; findings?: Finding[] };
 /** An eval page as `seesAsk.evalPagesInternal` gives it: named here so the action's type never depends on its own module. */
 type EvalPage = {
   _id: Id<"seesEvalPages">; companyId: Id<"companies">; companyWebsiteId: Id<"companyWebsites">; host: string; screen: string; about: string; facts: Page["facts"]; links: SeesLink[]; expected: string[];
@@ -153,7 +153,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     // 3. The Editor checks every number and every word (S5, S7): what fails goes back.
     verdict = seesFrom(raw, named, page.links, noTracking);
   }
-  if (!verdict.ok) return { verdict, role: chosen, lines };
+  if (!verdict.ok) return { verdict, role: chosen, lines, findings };
   // 4. The Head's second look (A5): the most useful thing, or a rewrite — kept only when the Editor passes it too. It
   // sees the page's figures and those the specialist read, the ones the bubble names first.
   try {
@@ -179,7 +179,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   } catch (error) {
     lines.push({ heading: "Second look", detail: `Not taken: ${failureSummary(error)}. The specialist's words stand.` });
   }
-  return { verdict, role: chosen, lines };
+  return { verdict, role: chosen, lines, findings };
 }
 
 /**
@@ -252,7 +252,7 @@ export const writeSeesAnswer = internalAction({
         await sentBack(written.verdict.why, written.role);
         return null;
       }
-      await ctx.runMutation(internal.seesAsk.saveSeesAnswer, { answerId: args.answerId, status: "WRITTEN", says: written.verdict.says, steps: written.verdict.steps, role: written.role });
+      await ctx.runMutation(internal.seesAsk.saveSeesAnswer, { answerId: args.answerId, status: "WRITTEN", says: written.verdict.says, steps: written.verdict.steps, role: written.role, ...(written.findings && written.findings.length > 0 ? { findings: written.findings } : {}) });
       await log("The Editor", `Passed: ${written.verdict.says.length} sentence${written.verdict.says.length === 1 ? "" : "s"}, ${written.verdict.steps.length} step${written.verdict.steps.length === 1 ? "" : "s"}.`);
       await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, status: "SUCCESS", summary: `The bubble for ${args.about} on ${args.host}: ${written.verdict.says.join(" ")}`.slice(0, 900) });
     } catch (error) {

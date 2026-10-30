@@ -221,3 +221,9 @@ button * {
 .recharts-tooltip-wrapper {
   z-index: 1;
 }
+
+/* The side panel slides in from the right (SidePanel, 2026-10-31); still for anyone who asks for less motion. */
+@keyframes side-panel-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}

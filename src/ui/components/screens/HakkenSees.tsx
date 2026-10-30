@@ -39,13 +39,13 @@ export type SeesAsk = FunctionArgs<typeof api.seesAsk.askSees>;
  * numbers is not new again; without it, the sentences themselves are the
  * advice.
  */
-export function HakkenSees({ says, steps, advice, ask }: { says: string[]; steps: HakkenSeesStep[]; advice?: string; ask?: SeesAsk }) {
+export function HakkenSees({ says, steps, advice, ask, name }: { says: string[]; steps: HakkenSeesStep[]; advice?: string; ask?: SeesAsk; name?: (eventName: string) => string }) {
   const screen = usePathname() ?? "";
   const held = advice ?? says.join(" ");
   // Published once per change of words, not per render: the arrays are new each time.
   const words = JSON.stringify({ says, steps, ask });
   useEffect(() => {
-    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}) });
+    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}), ...(name ? { name } : {}) });
     return () => publishSees(null, screen);
   }, [screen, words, held]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;

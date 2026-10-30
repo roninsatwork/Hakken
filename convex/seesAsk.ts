@@ -6,6 +6,7 @@ import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
+import { findingValidator } from "./utils/sees/findingValidator";
 import { SEES_KEPT_MS, SEES_WRITING_MS, fromSeesKey, sameFigures, seesAskValidator, seesKey } from "./utils/seesAsk";
 import { weekOf } from "./insightsTeam";
 
@@ -25,6 +26,8 @@ const answerValidator = v.object({
   steps: v.array(v.object({ words: v.string(), link: v.string(), href: v.string() })),
   role: v.union(v.string(), v.null()),
   writtenAt: v.union(v.number(), v.null()),
+  /** The findings as Jev ordered them when the words were written; absent before code found any. */
+  findings: v.optional(v.array(findingValidator)),
 });
 
 /** Whether a kept answer still stands: written within three hours, or being written within ten minutes. */
@@ -104,7 +107,7 @@ export const seesAnswer = tenantQuery({
     if (!row) return null;
     // An answer past its three hours reads as none: the next press writes afresh.
     if (!stillStands(row, Date.now()) && row.status !== "FAILED") return null;
-    return { status: row.status, says: row.says, steps: row.steps, role: row.role ?? null, writtenAt: row.writtenAt ?? null };
+    return { status: row.status, says: row.says, steps: row.steps, role: row.role ?? null, writtenAt: row.writtenAt ?? null, ...(row.findings ? { findings: row.findings } : {}) };
   },
 });
 
@@ -117,6 +120,7 @@ export const saveSeesAnswer = internalMutation({
     steps: v.array(v.object({ words: v.string(), link: v.string(), href: v.string() })),
     role: v.optional(v.string()),
     failedWhy: v.optional(v.string()),
+    findings: v.optional(v.array(findingValidator)),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -127,6 +131,7 @@ export const saveSeesAnswer = internalMutation({
       says: args.says,
       steps: args.steps,
       ...(args.role ? { role: args.role } : {}),
+      ...(args.findings ? { findings: args.findings } : {}),
       ...(args.status === "WRITTEN" ? { writtenAt: Date.now(), failedWhy: undefined } : { failedWhy: args.failedWhy ?? "The team gave no answer." }),
     });
     return null;

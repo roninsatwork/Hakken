@@ -1,4 +1,5 @@
 import { defineTable } from "convex/server";
+import { findingValidator } from "./utils/sees/findingValidator";
 import { v } from "convex/values";
 import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
@@ -434,6 +435,8 @@ export const insightsTables = {
     links: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
     /** Whether the page was a shop's, as it said when the eye was pressed: an eval page kept from it is read the same way. */
     shop: v.optional(v.boolean()),
+    /** What the figures show, as code found them and Jev ordered them when the words were written: the panel's first section. */
+    findings: v.optional(v.array(findingValidator)),
   })
     .index("by_hold_key", ["companyWebsiteId", "key"])
     .index("by_hold_week", ["companyWebsiteId", "week"]),

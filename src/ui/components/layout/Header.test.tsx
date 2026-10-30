@@ -31,11 +31,19 @@ vi.mock("@/convex/_generated/api", () => ({
     },
     chat: {
       getThreadHeading: "chat:getThreadHeading",
+      // The eye's panel asks Ask Hakken about the page (sees-side-panel-plan-2026-10-31.md).
+      createThread: "chat:createThread",
+      sendMessage: "chat:sendMessage",
+      getMessages: "chat:getMessages",
     },
     // The eye in the top bar asks the Insights team (sees-conversion-specialist-plan-2026-10-30.md).
     seesAsk: {
       askSees: "seesAsk:askSees",
       seesAnswer: "seesAsk:seesAnswer",
+    },
+    // And shows what code found in the page's figures (sees-findings-in-code-plan-2026-10-31.md).
+    seesFindings: {
+      seesFindings: "seesFindings:seesFindings",
     },
     notifications: {
       countMineUnread: "notifications:countMineUnread",

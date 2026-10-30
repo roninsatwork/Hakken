@@ -10450,7 +10450,39 @@
       "title": "Cosa vede {platformName}",
       "doFirst": "Prima di tutto",
       "new": "{count, plural, =0 {nuovo} one {# nuovo} other {# nuovi}}",
-      "researching": "{platformName} sta facendo ricerche…"
+      "researching": "{platformName} sta facendo ricerche…",
+      "figures": "Cosa mostrano i numeri",
+      "figuresNote": "Da questa pagina, ora",
+      "means": "Cosa significa",
+      "meansNote": "Scritto dal team di {platformName}",
+      "ask": "Chiedi di questa pagina",
+      "askPlaceholder": "Chiedi di questa pagina…",
+      "send": "Invia",
+      "saved": "Salvato in Chiedi a {platformName}, con le altre conversazioni.",
+      "askAbout": "Chiedi di questo",
+      "open": "Apri in Chiedi a {platformName}",
+      "thinking": "{platformName} sta leggendo i numeri…",
+      "findings": {
+        "visitsForOne": "Un <b>{event}</b> ha richiesto <n>{visits}</n> visite, contro <n>{before}</n> prima.",
+        "visitsForOneNow": "Un <b>{event}</b> ha richiesto <n>{visits}</n> visite.",
+        "step": "Il <n>{wentOn}</n> delle visite con <b>{from}</b> è passato a <b>{to}</b>, contro il <n>{before}</n> prima.",
+        "stepNow": "Il <n>{wentOn}</n> delle visite con <b>{from}</b> è passato a <b>{to}</b>.",
+        "group": "<b>{group}</b>: il <n>{rate}</n> delle visite ha fatto <b>{event}</b>, contro il <n>{siteRate}</n> sul sito.",
+        "together": "<b>{group}</b>: <n>{perVisit}</n> conversioni per visita, contro <n>{sitePerVisit}</n> sul sito.",
+        "rose": "<b>{group}</b>: il <n>{rate}</n> delle visite ha fatto <b>{event}</b>, in salita dal <n>{before}</n>.",
+        "fell": "<b>{group}</b>: il <n>{rate}</n> delle visite ha fatto <b>{event}</b>, in calo dal <n>{before}</n>.",
+        "trackingCheck": "<b>{event}</b> su {low}: il <n>{lowRate}</n> delle visite, contro il <n>{highRate}</n> su {high}. Controlla prima il tracciamento lì.",
+        "trackingBehaviour": "<b>{event}</b> avviene molto meno su {low}: il <n>{lowRate}</n> delle visite, contro il <n>{highRate}</n> su {high}.",
+        "kindPages": "Pagine {group}",
+        "devices": {
+          "mobile": "telefoni",
+          "desktop": "computer",
+          "tablet": "tablet"
+        }
+      }
+    },
+    "sidePanel": {
+      "close": "Chiudi"
     }
   },
   "agenticTesting": {

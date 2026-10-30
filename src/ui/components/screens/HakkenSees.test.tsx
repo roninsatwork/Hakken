@@ -1,6 +1,7 @@
 import { renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { fireEvent, waitFor } from "@testing-library/react";
 import { useMutation, useQuery } from "convex/react";
+import { getFunctionName } from "convex/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HakkenSees } from "./HakkenSees";
@@ -13,8 +14,12 @@ vi.mock("next-intl", async () => {
   const base = (await import("@/src/test/screenMocks")).nextIntl();
   return {
     ...base,
-    useTranslations: (namespace: string) => (key: string, values?: Record<string, unknown>) =>
-      [`${namespace}.${key}`, ...Object.values(values ?? {})].join(" "),
+    useTranslations: (namespace: string) => {
+      const words = (key: string, values?: Record<string, unknown>) =>
+        [`${namespace}.${key}`, ...Object.values(values ?? {}).filter((value) => typeof value !== "function")].join(" ");
+      // The findings' words carry their figures in rich tags: the same key and values, as plain text.
+      return Object.assign(words, { rich: words });
+    },
   };
 });
 vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
@@ -83,22 +88,27 @@ describe("HakkenSees and its eye", () => {
   });
 
   // The speech bubble (the Conversions canvas, board "Sees", 2026-10-30): under the eye, closed by Escape, a click outside, or the eye.
-  it("counts the steps as new until opened; the bubble hangs from the eye and Escape or a click outside closes it", () => {
+  it("counts the steps as new until opened; the eye slides the panel over the page, and Escape or a click on the page behind closes it", () => {
     render(<Screen />);
     expect(screen.getByText("ui.hakkenSees.new 2")).toBeInTheDocument();
     expect(bubble()).toBeNull();
     fireEvent.click(eye());
     expect(screen.queryByText("ui.hakkenSees.new 2")).toBeNull();
     expect(bubble()).not.toBeNull();
-    // Inside the eye's own holder, so it sits under the eye, not in the page.
-    expect(eye().closest("[data-part='sees-eye']")).toContainElement(bubble());
+    // Drawn over the page, out of any bar's layer (SidePanel, 2026-10-31), and named for the eye that opened it.
+    expect(eye().closest("[data-part='sees-eye']")).not.toContainElement(bubble());
+    expect(bubble()).toHaveAttribute("data-part", "side-panel");
     expect(eye()).toHaveAttribute("aria-controls", bubble()!.id);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(eye()).toHaveAttribute("aria-expanded", "false");
     expect(bubble()).toBeNull();
     fireEvent.click(eye());
     expect(bubble()).not.toBeNull();
-    fireEvent.mouseDown(document.body);
+    fireEvent.mouseDown(document.querySelector("[data-part='side-panel-scrim']")!);
+    expect(bubble()).toBeNull();
+    // Its own close button closes it too.
+    fireEvent.click(eye());
+    fireEvent.click(screen.getByRole("button", { name: "ui.sidePanel.close" }));
     expect(bubble()).toBeNull();
     expect(screen.queryByText("ui.hakkenSees.doFirst")).toBeNull();
   });
@@ -166,6 +176,37 @@ describe("HakkenSees and its eye", () => {
       expect(screen.getByText("23 conversions last month, down on the month before.")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Funnel" })).toHaveAttribute("href", "/app/analytics/site_1/funnel");
       expect(screen.queryByText("ui.hakkenSees.researching Hakken")).toBeNull();
+    });
+
+    it("shows what code found at once, and a question asked in the panel starts an Ask Hakken conversation for the page (sees-side-panel plan, phase 3)", async () => {
+      const calls: Array<[string, unknown]> = [];
+      // One mock answers every mutation the eye uses: the team's ask, a new conversation, a sent message.
+      vi.mocked(useMutation).mockImplementation(((reference: unknown) => vi.fn(async (args: unknown) => {
+        const name = getFunctionName(reference as never);
+        calls.push([name, args]);
+        if (name.includes("createThread")) return "thread_1";
+        if (name.includes("sendMessage")) return true;
+        return { key: "googleAnalytics.conversions|lastMonth|||", status: "RESEARCHING" };
+      })) as never);
+      const finding = { id: "above:channel:purchase:Paid Search", kind: "groupAbove", score: 1, params: { by: "channel", group: "Paid Search", event: "purchase", rate: 9.2, siteRate: 3.4 }, facts: [] };
+      vi.mocked(useQuery).mockImplementation(((reference: unknown, args: unknown) => {
+        if (args === "skip") return undefined;
+        if (getFunctionName(reference as never).includes("seesFindings")) return [finding];
+        if (getFunctionName(reference as never).includes("getMessages")) return [];
+        return { status: "RESEARCHING", says: [], steps: [], role: null, writtenAt: null };
+      }) as never);
+      render(<Asking />);
+      fireEvent.click(eye());
+      // Code's finding, in the reader's words, before any model has written.
+      expect(screen.getByText(/ui\.hakkenSees\.findings\.group/)).toBeInTheDocument();
+      fireEvent.change(screen.getByRole("textbox", { name: "ui.hakkenSees.askPlaceholder" }), { target: { value: "Why does Paid Search buy more?" } });
+      fireEvent.click(screen.getByRole("button", { name: "ui.hakkenSees.send" }));
+      await waitFor(() => expect(calls.some(([name]) => name.includes("sendMessage"))).toBe(true));
+      const created = calls.find(([name]) => name.includes("createThread"))![1] as { forWebsiteId: string; startedOn: { path: string; findings: string[] } };
+      expect(created.forWebsiteId).toBe("site_1");
+      expect(created.startedOn.path).toBe("/app/analytics/site_1/conversions");
+      expect(created.startedOn.findings[0]).toContain("Paid Search");
+      expect(calls.find(([name]) => name.includes("sendMessage"))![1]).toEqual({ threadId: "thread_1", content: "Why does Paid Search buy more?" });
     });
 
     it("keeps the rule's words when there is no team to ask, or the Editor sent the words back", async () => {
