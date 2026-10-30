@@ -10405,7 +10405,8 @@
       "doFirst": "Do first",
       "new": "{count, plural, =0 {new} one {# new} other {# new}}",
       "tooltipNew": "What {platformName} sees · {count, plural, =0 {new advice} one {# thing to do first} other {# things to do first}}",
-      "tooltipRead": "What {platformName} sees"
+      "tooltipRead": "What {platformName} sees",
+      "researching": "{platformName} is researching…"
     }
   },
   "agenticTesting": {

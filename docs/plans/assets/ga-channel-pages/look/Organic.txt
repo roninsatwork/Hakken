@@ -4,7 +4,6 @@
 detail-header
   back: Channels
   page-header: ‹the record's name›
-settings-card: What Hakken sees
 figures
   figure: Visits
   figure: Conversions

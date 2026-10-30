@@ -31,9 +31,9 @@ const steps = [
   { words: "Hold big changes until 22 October.", link: "See the update", href: "/app/x" },
   { words: "Get listed on clutch.co.", link: "Visit clutch.co", href: "https://clutch.co", external: true },
 ];
-// The eye comes first in the page; the open box's own title button, named the same, follows it.
-const eye = () => screen.getAllByRole("button", { name: "ui.hakkenSees.title Hakken" })[0];
-const boxTitle = () => screen.getAllByRole("button", { name: "ui.hakkenSees.title Hakken" })[1] ?? null;
+// The eye is the one button named What Hakken sees; the open bubble is a dialog of the same name.
+const eye = () => screen.getByRole("button", { name: "ui.hakkenSees.title Hakken" });
+const bubble = () => screen.queryByRole("dialog", { name: "ui.hakkenSees.title Hakken" });
 
 /** A screen as the app assembles it: the top bar's eye, a header, then the page with its box. */
 function Screen(props: { says?: string[]; steps?: typeof steps; advice?: string }) {
@@ -75,14 +75,24 @@ describe("HakkenSees and its eye", () => {
     expect(screen.queryByText("ui.hakkenSees.doFirst")).toBeNull();
   });
 
-  it("counts the steps as new until opened, and the box's own chevron closes it again", () => {
+  // The speech bubble (the Conversions canvas, board "Sees", 2026-10-30): under the eye, closed by Escape, a click outside, or the eye.
+  it("counts the steps as new until opened; the bubble hangs from the eye and Escape or a click outside closes it", () => {
     render(<Screen />);
     expect(screen.getByText("ui.hakkenSees.new 2")).toBeInTheDocument();
+    expect(bubble()).toBeNull();
     fireEvent.click(eye());
     expect(screen.queryByText("ui.hakkenSees.new 2")).toBeNull();
-    expect(boxTitle()).toBeTruthy();
-    fireEvent.click(boxTitle()!);
+    expect(bubble()).not.toBeNull();
+    // Inside the eye's own holder, so it sits under the eye, not in the page.
+    expect(eye().closest("[data-part='sees-eye']")).toContainElement(bubble());
+    expect(eye()).toHaveAttribute("aria-controls", bubble()!.id);
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(eye()).toHaveAttribute("aria-expanded", "false");
+    expect(bubble()).toBeNull();
+    fireEvent.click(eye());
+    expect(bubble()).not.toBeNull();
+    fireEvent.mouseDown(document.body);
+    expect(bubble()).toBeNull();
     expect(screen.queryByText("ui.hakkenSees.doFirst")).toBeNull();
   });
 

@@ -6,32 +6,28 @@ import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { SettingsCard } from "./SettingsCard";
-import { publishSees, toggleSees, useSeesOpen } from "./hakkenSeesStore";
+import { LAYER } from "@/src/ui/lib/layers";
+import { cn } from "@/src/ui/lib/utils";
+import { publishSees } from "./hakkenSeesStore";
 
 /** One "Do first" step: its sentence, its link's words and where the link leads. */
 export type HakkenSeesStep = { words: string; link: string; href: string; external?: boolean };
 
 /**
- * What Hakken sees: the box under the title of every Visibility screen
- * (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2), saying in
- * two or three sentences what the page means for the business, then the
- * first things to do, each with a quiet link to where it is done. Anthony,
- * 2026-10-10: "I love the what hakken sees addition".
+ * What Hakken sees: what the page means for the business, in two or three
+ * sentences, then the first things to do, each with a quiet link to where it
+ * is done (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2;
+ * Anthony, 2026-10-10: "I love the what hakken sees addition").
  *
- * A `SettingsCard` with fixed contents, so it cannot drift page by page: the
- * sentences at prose width, then "Do first" and up to three numbered steps.
- * With nothing to do it shows the sentences alone.
- *
- * It opens from the eye in the header (`HakkenSeesEye`;
- * sees-header-and-rolling-dates-plan.md, part one; Anthony, 2026-10-29: the
- * box "takes up a lot of screen real estate when all I want to see is the
- * graphs and data"): closed on every screen until the eye opens it, and
- * closed again by its own chevron or the eye. The box publishes what it holds
- * to `hakkenSeesStore` so the header can draw the eye and count its steps as
- * new — `advice` names the box's sentences and steps as codes (`seenAdvice`),
- * so the same advice with today's numbers is not new again; without it, the
- * sentences themselves are the advice.
+ * Since 2026-10-30 (the Conversions canvas, board "Sees") it is a speech
+ * bubble hanging from the eye in the top bar, over the page — "another
+ * layer above the rest, close to the eye" — not a box in the page: this
+ * part draws nothing itself. It publishes the screen's words to
+ * `hakkenSeesStore` as it mounts, so the top bar's eye can draw, count the
+ * steps as new, and open the bubble (`SeesBubble`) with them. `advice`
+ * names the words as codes (`seenAdvice`), so the same advice with today's
+ * numbers is not new again; without it, the sentences themselves are the
+ * advice.
  */
 export function HakkenSees({ says, steps, advice }: { says: string[]; steps: HakkenSeesStep[]; advice?: string }) {
   const screen = usePathname() ?? "";
@@ -42,18 +38,52 @@ export function HakkenSees({ says, steps, advice }: { says: string[]; steps: Hak
     publishSees({ screen, says, steps, advice: held });
     return () => publishSees(null, screen);
   }, [screen, words, held]); // eslint-disable-line react-hooks/exhaustive-deps
-  const open = useSeesOpen();
-  if (!open) return null;
-  return <HakkenSeesCard says={says} steps={steps} onClose={toggleSees} />;
+  return null;
 }
 
-/** The box itself, open: drawn by `HakkenSees` once the eye opens it, and by the drawing kit. */
-export function HakkenSeesCard({ says, steps, onClose }: { says: string[]; steps: HakkenSeesStep[]; onClose: () => void }) {
+/**
+ * The speech bubble, open under the eye: the heading, the sentences at the
+ * app's 13px, then "Do first" and up to three numbered steps. It has no
+ * fixed height — it grows with the words and scrolls inside itself past
+ * the screen (Anthony, 2026-10-30: "assume the bubble gets deeper to suit
+ * the reply from the agents") — and a tail pointing up at the eye, 22px
+ * above it. `researching` is the one other thing it says: while the
+ * Insights team writes the words (sees-conversion-specialist-plan-2026-10-30.md,
+ * S11), "Hakken is researching…" and nothing else.
+ */
+export function SeesBubble({ says, steps, researching = false, id }: { says: string[]; steps: HakkenSeesStep[]; researching?: boolean; id?: string }) {
   const t = useTranslations("ui.hakkenSees");
   const { platformName } = useSystemSettings();
   return (
-    <SettingsCard title={t("title", { platformName })} fold={{ open: true, summary: says[0], onToggle: onClose }}>
-      <p className="max-w-[75ch] text-[13px] leading-[1.6] text-secondary">{says.join(" ")}</p>
+    <div
+      id={id}
+      role="dialog"
+      aria-label={t("title", { platformName })}
+      data-part="sees-bubble"
+      className={cn(
+        "absolute right-0 top-full mt-[22px] flex w-[min(520px,calc(100vw-32px))] flex-col gap-3 rounded-[14px] border border-border-dim bg-card p-5 text-left shadow-2xl sm:-right-6",
+        "max-h-[min(70vh,720px)] overflow-y-auto",
+        LAYER.HEADER,
+      )}
+    >
+      {/* The tail, centred under the eye: the eye is 38px wide and the bubble reaches 24px past it on a wide screen. */}
+      <span aria-hidden="true" className="absolute -top-[9px] right-[11px] h-4 w-4 rotate-45 border-l border-t border-border-dim bg-card sm:right-[35px]" />
+      <span className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">{t("title", { platformName })}</span>
+      {researching ? (
+        <p className="text-[13px] leading-[1.6] text-secondary" aria-live="polite">{t("researching", { platformName })}</p>
+      ) : (
+        <SeesWords says={says} steps={steps} />
+      )}
+    </div>
+  );
+}
+
+/** The bubble's words: the sentences, then "Do first" and the steps, each with its quiet link. */
+export function SeesWords({ says, steps }: { says: string[]; steps: HakkenSeesStep[] }) {
+  const t = useTranslations("ui.hakkenSees");
+  return (
+    <>
+      <p className="text-[13px] leading-[1.6] text-secondary">{says.join(" ")}</p>
       {steps.length > 0 ? (
         <div className="mt-1 flex flex-col gap-2">
           <div className="text-[12px] text-muted">{t("doFirst")}</div>
@@ -72,6 +102,6 @@ export function HakkenSeesCard({ says, steps, onClose }: { says: string[]; steps
           ))}
         </div>
       ) : null}
-    </SettingsCard>
+    </>
   );
 }

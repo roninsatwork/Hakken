@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
+import { SeesBubble } from "./HakkenSees";
 import { Tooltip } from "./Tooltip";
-import { claimEye, toggleSees, useDrawsEye, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
+import { claimEye, closeSees, toggleSees, useDrawsEye, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
  * The eye in the top bar that opens What Hakken sees — option 7 on the
@@ -16,9 +17,10 @@ import { claimEye, toggleSees, useDrawsEye, useSeesBox, useSeesNew, useSeesOpen 
  * the top bar on 2026-10-30 (the Conversions canvas: "could the What Hakken
  * sees icon sit here and have page context"): a bordered 38px button with
  * the eye in the brand colour, then how many of the box's steps are new
- * ("2 new") until the box has been opened on this advice. Resting on it
- * shows what it is; clicking it opens the box and leaves the eye pressed;
- * clicking again closes it.
+ * ("2 new") until the bubble has been opened on this advice. Resting on it
+ * shows what it is; clicking it opens the speech bubble under it
+ * (`SeesBubble`) and leaves the eye pressed; clicking again, a click
+ * anywhere else or Escape closes it.
  *
  * The top bar (`Header`) is the one place that draws it, and it draws itself
  * only once the screen's box has published something — so no screen wires it
@@ -33,21 +35,60 @@ export function HakkenSeesEye() {
   const box = useSeesBox();
   const open = useSeesOpen();
   const fresh = useSeesNew();
+  const holder = useRef<HTMLSpanElement>(null);
+  // A click anywhere outside the eye and its bubble, or Escape, closes the bubble, as the bell's panel closes.
+  useEffect(() => {
+    if (!open) return;
+    const pressedOutside = (event: MouseEvent) => {
+      if (holder.current && !holder.current.contains(event.target as Node)) closeSees();
+    };
+    const escaped = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeSees();
+    };
+    document.addEventListener("mousedown", pressedOutside);
+    document.addEventListener("keydown", escaped);
+    return () => {
+      document.removeEventListener("mousedown", pressedOutside);
+      document.removeEventListener("keydown", escaped);
+    };
+  }, [open]);
   if (!draws || !box) return null;
-  return <SeesEye open={open} fresh={fresh} count={box.steps.length} onClick={toggleSees} />;
+  return (
+    <SeesEye
+      ref={holder}
+      open={open}
+      fresh={fresh}
+      count={box.steps.length}
+      onClick={toggleSees}
+      bubbleId={`${id}-bubble`}
+      bubble={open ? <SeesBubble id={`${id}-bubble`} says={box.says} steps={box.steps} /> : null}
+    />
+  );
 }
 
-/** The eye as drawn: pressed while the box is open, the count beside it while its steps are new. */
-export function SeesEye({ open, fresh, count, onClick, tooltipShown }: { open: boolean; fresh: boolean; count: number; onClick: () => void; tooltipShown?: boolean }) {
+/** The eye as drawn: pressed while the bubble is open, the count beside it while its steps are new, the bubble under it. */
+export function SeesEye({ ref, open, fresh, count, onClick, tooltipShown, bubble, bubbleId }: {
+  ref?: React.Ref<HTMLSpanElement>;
+  open: boolean;
+  fresh: boolean;
+  count: number;
+  onClick: () => void;
+  tooltipShown?: boolean;
+  /** The open bubble, drawn under the eye; the kit draws one to show it. */
+  bubble?: ReactNode;
+  bubbleId?: string;
+}) {
   const t = useTranslations("ui.hakkenSees");
   const { platformName } = useSystemSettings();
   return (
-    <span data-part="sees-eye" className="relative inline-flex shrink-0 items-center gap-3 text-[13px] font-normal tracking-normal">
+    <span ref={ref} data-part="sees-eye" className="relative inline-flex shrink-0 items-center gap-3 text-[13px] font-normal tracking-normal">
       <Tooltip label={fresh ? t("tooltipNew", { platformName, count }) : t("tooltipRead", { platformName })} shown={tooltipShown}>
         <Button
           variant="ghost"
           aria-label={t("title", { platformName })}
           aria-expanded={open}
+          aria-haspopup="dialog"
+          aria-controls={open ? bubbleId : undefined}
           onClick={onClick}
           className={cn(
             "inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] border p-0 transition-colors",
@@ -58,6 +99,7 @@ export function SeesEye({ open, fresh, count, onClick, tooltipShown }: { open: b
         </Button>
       </Tooltip>
       {fresh ? <span className="text-foreground">{t("new", { count })}</span> : null}
+      {bubble}
     </span>
   );
 }

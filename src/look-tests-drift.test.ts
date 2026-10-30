@@ -50,6 +50,7 @@ describe("approved looks", () => {
       "TitleSwitch.tsx": ['data-part="title-switch"'],
       "SettingsCard.tsx": ['data-part="settings-card"'],
       "HakkenSeesEye.tsx": ['data-part="sees-eye"'],
+      "HakkenSees.tsx": ['data-part="sees-bubble"'],
       "ConversionsMap.tsx": ['data-part="conversions-map"'],
       "ConversionsByKindChart.tsx": ['data-part="conversions-by-kind"'],
       "ConversionsOverTimeChart.tsx": ['data-part="conversions-over-time"'],

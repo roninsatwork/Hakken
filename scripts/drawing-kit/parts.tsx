@@ -29,7 +29,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
 import { Field } from "@/src/ui/components/screens/Field";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { HakkenSeesCard } from "@/src/ui/components/screens/HakkenSees";
+import { SeesBubble } from "@/src/ui/components/screens/HakkenSees";
 import { SeesEye } from "@/src/ui/components/screens/HakkenSeesEye";
 import { DatesMenu } from "@/src/ui/components/screens/DatesMenu";
 import { Meter } from "@/src/ui/components/screens/Meter";
@@ -481,21 +481,27 @@ const PARTS: Part[] = [
   },
   {
     id: "hakken-sees",
-    name: "What Hakken sees",
-    source: "src/ui/components/screens/HakkenSees.tsx",
-    use: "Opened from the eye in the header, under the title of every Visibility screen: what the page means, then up to three steps to do first.",
+    name: "What Hakken sees — the speech bubble",
+    source: "src/ui/components/screens/HakkenSees.tsx (SeesBubble), HakkenSeesEye.tsx",
+    use: "Opened from the eye in the top bar (2026-10-30, the Conversions canvas): a speech bubble under the eye, over the page, its tail on the eye — what the page means, then up to three steps to do first. It grows with the words.",
     render: () => (
-      <HakkenSeesCard
-        onClose={noop}
-        says={[
-          "Google's AI names you in 64 answers a month: 18% of the answers about you and your rivals, behind Brightside Digital's 34%.",
-          "You are missing from the most-asked question, about website costs.",
-        ]}
-        steps={[
-          { words: "Put plain prices at the top of your /pricing/ page.", link: "See the question", href: "#" },
-          { words: "Get listed on clutch.co.", link: "See clutch.co", href: "#" },
-        ]}
-      />
+      <div className="flex justify-end pb-[280px] pr-8">
+        <SeesEye
+          open
+          fresh={false}
+          count={2}
+          onClick={noop}
+          bubble={(
+            <SeesBubble
+              says={[
+                "6 of your 13 conversions did not happen once last month.",
+                "Either nobody did them, or Google Analytics has stopped recording them.",
+              ]}
+              steps={[{ words: "Check the 6 are still set up in Google Analytics.", link: "See the 6", href: "#" }]}
+            />
+          )}
+        />
+      </div>
     ),
   },
   {

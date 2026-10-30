@@ -3,7 +3,6 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Your month: September #
   primary-action: Download the report
-settings-card: What Hakken sees
 figures
   figure: Enquiries
   figure: Visits

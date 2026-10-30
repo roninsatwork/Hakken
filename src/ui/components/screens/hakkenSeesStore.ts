@@ -81,10 +81,17 @@ function markRead(screen: string, advice: string) {
   }
 }
 
-/** Open the box, marking its advice read, or close it. */
+/** Open the bubble, marking its advice read, or close it. */
 export function toggleSees() {
   open = !open;
   if (open && current) markRead(current.screen, current.advice);
+  changed();
+}
+
+/** Close the bubble: a click outside it, or Escape (the speech bubble of 2026-10-30). */
+export function closeSees() {
+  if (!open) return;
+  open = false;
   changed();
 }
 
