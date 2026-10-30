@@ -1,7 +1,8 @@
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
-import { CHART_MARK, chartPoints, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
+import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
+import { isCalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * The Assistant's chart (docs/plans/active/hakken-tasks-plan.md, item 2.1),
@@ -14,8 +15,8 @@ import { CHART_MARK, chartPoints, type AnswerChart, type ChartMeasure } from "./
 
 const NO_COMPANY = { ok: false, problem: "This conversation belongs to no company, so there are no figures to chart here." };
 
-/** The look-ups a chart can draw from: Search Console's days, for now. */
-const LOOKUPS = new Set(["search_console"]);
+/** The look-ups a chart can draw from: Search Console's days, and Google Analytics' (2026-10-31). */
+const LOOKUPS = new Set(["search_console", "google_analytics"]);
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -58,9 +59,11 @@ const sum = (days: Array<{ value: number }>) => days.reduce((total, day) => tota
 export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecutionInput) => Promise<unknown>> = {
   "assistant.chart": async (input) => {
     if (!input.companyId) return NO_COMPANY;
-    if (!LOOKUPS.has(text(input.args, "lookup") ?? "search_console")) {
-      return { ok: false, problem: "Charts draw Search Console's visitors and impressions for now: lookup is search_console." };
+    const lookup = text(input.args, "lookup") ?? "search_console";
+    if (!LOOKUPS.has(lookup)) {
+      return { ok: false, problem: "Charts draw from search_console (visitors, impressions) or google_analytics (visits, conversions, conversionRate)." };
     }
+    if (lookup === "google_analytics") return await analyticsChart(input);
     const website = text(input.args, "website");
     if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
     const measure = (text(input.args, "measure") ?? "visitors") as ChartMeasure;
@@ -116,3 +119,57 @@ export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecuti
     };
   },
 };
+
+/**
+ * The chart from Google Analytics' days (sees-side-panel-plan-2026-10-31.md, phase 4): visits, conversions (every
+ * one, or one event's) or the share of visits that converted, each day of a calendar period, against the period
+ * before where Analytics keeps it as days. The figures are the reads' own, worked out in code.
+ */
+async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown> {
+  const website = text(input.args, "website");
+  if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
+  const measure = (text(input.args, "measure") ?? "visits") as AnalyticsChartMeasure;
+  if (!(ANALYTICS_CHART_MEASURES as readonly string[]).includes(measure)) return { ok: false, problem: "From Google Analytics a chart shows visits, conversions or conversionRate." };
+  const period = text(input.args, "period") ?? "lastMonth";
+  if (!isCalendarPeriod(period)) return { ok: false, problem: "period is one of thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months, last12Months." };
+  const read = await input.ctx.runQuery(internal.assistantAnalyticsCharts.analyticsChartInternal, { companyId: input.companyId!, website, period });
+  if (!read.ok) return { ok: false, problem: read.problem };
+  const event = measure === "visits" ? undefined : text(input.args, "event");
+  const eventAt = event ? read.events.indexOf(event) : null;
+  if (event && eventAt === -1) return { ok: false, problem: `${event} is not one of the conversions this website counts: ${read.events.join(", ")}.` };
+  const days = analyticsChartValues(read.points, measure, eventAt);
+  // The period before is laid over the period's days by its read (`shift`): its own dates are moved back, so the
+  // chart's second line says when it was.
+  const earlier = read.before.held && read.before.points.length > 0
+    ? analyticsChartValues(read.before.points, measure, eventAt).map((point) => ({ ...point, day: shiftDay(point.day, -read.before.shift) }))
+    : null;
+  const range = {
+    from: days[0].day,
+    to: days[days.length - 1].day,
+    beforeFrom: earlier ? earlier[0].day : days[0].day,
+    beforeTo: earlier ? earlier[earlier.length - 1].day : days[0].day,
+  };
+  const link = `/app/analytics/${read.siteId}/conversions?period=${period}`;
+  const chart: AnswerChart = {
+    look: "analyticsDays",
+    measure,
+    ...(event ? { event } : {}),
+    website: read.host,
+    ...range,
+    points: chartPoints(days, earlier, range),
+    link,
+  };
+  const total = measure === "conversionRate" ? undefined : sum(days);
+  return {
+    ok: true,
+    website: read.host,
+    measure: measure === "visits" ? "visits" : measure === "conversions" ? `conversions${event ? ` (${event})` : ""}` : `share of visits that converted${event ? ` (${event})` : ""}, in percent`,
+    from: range.from,
+    to: range.to,
+    ...(total !== undefined ? { total } : {}),
+    ...(earlier && total !== undefined ? { theDaysBefore: { from: range.beforeFrom, to: range.beforeTo, total: sum(earlier) } } : {}),
+    link,
+    note: `The chart is drawn under your answer from these figures, with a link to the screen. Write ${CHART_MARK} on a line of its own where it belongs, after the sentences it illustrates; don't list the days or describe the chart.`,
+    chart,
+  };
+}

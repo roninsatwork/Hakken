@@ -120,7 +120,11 @@ export const analyticsPeriodBeforeChart = tenantQuery({
     /** The counted events, in the order of each point's `events`: the chart's own order. */
     events: v.array(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => await readPeriodBeforeChart(ctx, args),
+});
+
+/** Its read, for the screen and Ask Hakken's chart alike: the caller's own website only. */
+export async function readPeriodBeforeChart(ctx: SiteReader, args: ObjectType<typeof analyticsChartArgs>) {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
     const country = await keptCountry(ctx, site.hold, args.country);
@@ -158,8 +162,7 @@ export const analyticsPeriodBeforeChart = tenantQuery({
       }),
       events,
     };
-  },
-});
+}
 
 /** Channels drawn as lines of their own on Channels' chart; the rest are one line, "everything else" (§18.2 board 16). */
 const CHANNEL_LINES = 4;

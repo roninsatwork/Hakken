@@ -8162,7 +8162,8 @@
         "searchConsolePages": "Search Console di {website}, pagine che contengono {page}, {span}",
         "lastDays": "ultimi {days} giorni",
         "aiMentions": "Risposte AI, {website}",
-        "tasks": "Attività aperte"
+        "tasks": "Attività aperte",
+        "googleAnalytics": "Google Analytics, {website}, {span}"
       },
       "client": {
         "answeringFor": "Risponde per",
@@ -8281,14 +8282,22 @@
       "chart": {
         "title": {
           "visitors": "Visitatori da Google ogni giorno",
-          "impressions": "Volte in cui è apparso su Google ogni giorno"
+          "impressions": "Volte in cui è apparso su Google ogni giorno",
+          "visits": "Visite al giorno",
+          "conversions": "Conversioni al giorno",
+          "conversionRate": "Visite che hanno convertito al giorno, su cento"
         },
         "titlePage": {
           "visitors": "Visitatori di {page} da Google ogni giorno",
           "impressions": "Volte in cui {page} è apparsa su Google ogni giorno"
         },
         "open": "Apri in Search Console",
-        "span": "dal {from} al {to}"
+        "span": "dal {from} al {to}",
+        "titleEvent": {
+          "conversions": "{event} al giorno",
+          "conversionRate": "Visite che hanno fatto {event} al giorno, su cento"
+        },
+        "openAnalytics": "Apri in Google Analytics"
       }
     },
     "costs": {

@@ -19,6 +19,8 @@ export const lookupKindValidator = v.union(
   v.literal("searchConsole"),
   v.literal("aiMentions"),
   v.literal("tasks"),
+  // Ask Hakken's chart from Google Analytics' days (2026-10-31).
+  v.literal("googleAnalytics"),
 );
 
 export const lookupValidator = v.object({
@@ -79,7 +81,9 @@ export function lookupsFromToolCalls(
   const lookups: Lookup[] = [];
   const seen = new Set<string>();
   for (const call of calls) {
-    const kind = LOOKUP_KINDS[call.handlerMapping];
+    const named = LOOKUP_KINDS[call.handlerMapping];
+    // A chart from Google Analytics names Analytics, not Search Console (2026-10-31).
+    const kind: Lookup["kind"] | undefined = call.handlerMapping === "assistant.chart" && parse(call.argumentsJson).lookup === "google_analytics" ? "googleAnalytics" : named;
     if (!kind || call.status !== "SUCCESS") continue;
     // The runtime wraps a handler's answer as { status, data }.
     const data = parse(call.resultJson).data as Record<string, unknown> | undefined;
@@ -91,7 +95,7 @@ export function lookupsFromToolCalls(
       kind,
       link: data.link,
       ...(typeof data.website === "string" ? { website: data.website } : {}),
-      ...(month ? { month } : kind === "searchConsole" && inclusiveDays(data.from, data.to) ? { days: inclusiveDays(data.from, data.to) } : {}),
+      ...(month ? { month } : (kind === "searchConsole" || kind === "googleAnalytics") && inclusiveDays(data.from, data.to) ? { days: inclusiveDays(data.from, data.to) } : {}),
       ...(kind === "searchConsole" && typeof page === "string" && page.trim() ? { page: page.trim() } : {}),
     };
     const key = JSON.stringify(lookup);

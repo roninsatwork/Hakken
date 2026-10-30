@@ -50,6 +50,8 @@ export function lookupLabel(t: Translate, lookup: Lookup, previous?: Lookup, loc
       return t("aiMentions", { website });
     case "tasks":
       return t("tasks");
+    case "googleAnalytics":
+      return t("googleAnalytics", { website, span: t("lastDays", { days: lookup.days ?? 0 }) });
     case "searchConsole": {
       const span = lookup.month ? monthName(lookup.month, locale) : t("lastDays", { days: lookup.days ?? 0 });
       if (previous?.kind === "searchConsole" && previous.website === lookup.website && previous.page === lookup.page) return span;

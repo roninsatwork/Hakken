@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHART_MARK, chartFromToolCalls, chartPoints, splitAtChart, type AnswerChart } from "./assistantCharts";
+import { analyticsChartValues, CHART_MARK, chartFromToolCalls, chartPoints, splitAtChart, type AnswerChart } from "./assistantCharts";
 
 const chart: AnswerChart = {
   look: "searchConsoleDays",
@@ -56,5 +56,19 @@ describe("a chart under an answer", () => {
     expect(splitAtChart(`Twice ${CHART_MARK} and ${CHART_MARK} again`)).toEqual({ before: "Twice", after: "and  again" });
     // Still being written: the mark's first letters are not shown either.
     expect(splitAtChart("September was good.\n\n{{cha")).toEqual({ before: "September was good.", after: "" });
+  });
+});
+
+describe("Google Analytics' days as one measure (2026-10-31)", () => {
+  const points = [
+    { day: "2026-09-01", visits: 200, conversions: 20, events: [4, 16], eventVisits: [3, 10], eventTimes: [4, 16] },
+    { day: "2026-09-02", visits: 0, conversions: 0, events: [0, 0] },
+  ];
+  it("gives visits, conversions (every one or one event's times) and the share of visits that converted, worked out in code", () => {
+    expect(analyticsChartValues(points, "visits", null)).toEqual([{ day: "2026-09-01", value: 200 }, { day: "2026-09-02", value: 0 }]);
+    expect(analyticsChartValues(points, "conversions", null)[0].value).toBe(20);
+    expect(analyticsChartValues(points, "conversions", 1)[0].value).toBe(16);
+    // The event's visits over the day's visits; a day with no visits is nothing, never a division by nought.
+    expect(analyticsChartValues(points, "conversionRate", 0)).toEqual([{ day: "2026-09-01", value: 1.5 }, { day: "2026-09-02", value: 0 }]);
   });
 });

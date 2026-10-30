@@ -217,6 +217,22 @@ describe("the Assistant's company figures", () => {
     ]);
   });
 
+  test("a tool whose definition changed since it was installed is written again on the next answer (2026-10-31)", async () => {
+    const t = harness();
+    const companyId = await company(t, "Asker Ltd");
+    const userId = await admin(t, companyId);
+    await t.mutation(internal.hakkenAssistant.ensureAssistantInternal, { installedBy: userId });
+    // An installed chart tool from before it learnt Google Analytics.
+    await t.run(async (ctx) => {
+      const chart = (await ctx.db.query("aiTools").collect()).find((tool) => tool.handlerMapping === "assistant.chart")!;
+      await ctx.db.patch(chart._id, { description: "Draws Search Console's days only.", inputSchema: JSON.stringify({ type: "object", properties: {} }) });
+    });
+    await t.mutation(internal.hakkenAssistant.ensureAssistantInternal, { installedBy: userId });
+    const chart = await t.run(async (ctx) => (await ctx.db.query("aiTools").collect()).find((tool) => tool.handlerMapping === "assistant.chart")!);
+    expect(chart.description).toContain("google_analytics");
+    expect(chart.inputSchema).toContain("conversionRate");
+  });
+
   test("a tool its connector gained after it was installed reaches the Assistant; one an administrator switched off stays off", async () => {
     const t = harness();
     const companyId = await company(t, "Grown Ltd");

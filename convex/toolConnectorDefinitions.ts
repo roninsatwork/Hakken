@@ -752,7 +752,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     key: "assistant-charts",
     name: "Assistant charts",
     description:
-      "Lets the Assistant draw a chart under its answer from the company's own Search Console figures, never its own numbers.",
+      "Lets the Assistant draw a chart under its answer from the company's own Search Console and Google Analytics figures, never its own numbers.",
     category: "KNOWLEDGE",
     authMode: "NONE",
     tenantAvailability: "GLOBAL",
@@ -762,7 +762,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Show a chart",
         description:
-          "Draws a chart under your answer: one of the company's own websites' visitors from Google, or how often it showed up in Google (impressions), each day — for the whole website or the page whose address contains `page` — against as many days before. Use it when someone asks how something did over time, for one calendar month (`month`, e.g. last month) or the newest 7, 30 or 90 days. It is drawn from the figures it reads, never from yours, and returns the totals for your words. One chart to an answer. Like Search Console, competitors have none.",
+          "Draws a chart under your answer: one of the company's own websites' visitors from Google, or how often it showed up in Google (impressions), each day — for the whole website or the page whose address contains `page` — against as many days before. Use it when someone asks how something did over time, for one calendar month (`month`, e.g. last month) or the newest 7, 30 or 90 days. Or, with lookup google_analytics: the website's visits, its conversions (every one, or one by `event`), or the share of visits that converted (conversionRate), each day of a calendar `period`, against the period before where it is kept. It is drawn from the figures it reads, never from yours, and returns the totals for your words. One chart to an answer. Competitors have none.",
         handlerMapping: "assistant.chart",
         modelName: "show_chart",
         requiredRole: "ADMIN",
@@ -772,9 +772,11 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           type: "object",
           required: ["website", "measure"],
           properties: {
-            lookup: { type: "string", enum: ["search_console"], description: "Where the figures come from: search_console." },
+            lookup: { type: "string", enum: ["search_console", "google_analytics"], description: "Where the figures come from: search_console (visitors, impressions) or google_analytics (visits, conversions, conversionRate)." },
             website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
-            measure: { type: "string", enum: ["visitors", "impressions"], description: "visitors (Search Console clicks) or impressions." },
+            measure: { type: "string", enum: ["visitors", "impressions", "visits", "conversions", "conversionRate"], description: "From search_console: visitors (clicks) or impressions. From google_analytics: visits, conversions, or conversionRate (the share of visits that converted)." },
+            event: { type: "string", description: "google_analytics only: one conversion by its Google event name (purchase, add_to_cart, generate_lead) for conversions or conversionRate. Leave out for every conversion." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"], description: "google_analytics only: the calendar period, drawn against the period before where it is kept. lastMonth if they don't say." },
             month: { type: "string", description: "A calendar month as YYYY-MM, drawn against the month before. Leave out to use days." },
             days: { type: "number", description: "7, 30 or 90: the newest days, against as many before. Used when there's no month." },
             page: { type: "string", description: "Part of a page's address, e.g. /boiler-repair. Leave out for the whole website." },

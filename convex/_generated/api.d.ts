@@ -95,6 +95,7 @@ import type * as apifyRest from "../apifyRest.js";
 import type * as approvalExpiryService from "../approvalExpiryService.js";
 import type * as arcade from "../arcade.js";
 import type * as assetSummaries from "../assetSummaries.js";
+import type * as assistantAnalyticsCharts from "../assistantAnalyticsCharts.js";
 import type * as assistantAnalyticsReads from "../assistantAnalyticsReads.js";
 import type * as assistantBingReads from "../assistantBingReads.js";
 import type * as assistantChartHandlers from "../assistantChartHandlers.js";
@@ -1059,6 +1060,7 @@ declare const fullApi: ApiFromModules<{
   approvalExpiryService: typeof approvalExpiryService;
   arcade: typeof arcade;
   assetSummaries: typeof assetSummaries;
+  assistantAnalyticsCharts: typeof assistantAnalyticsCharts;
   assistantAnalyticsReads: typeof assistantAnalyticsReads;
   assistantBingReads: typeof assistantBingReads;
   assistantChartHandlers: typeof assistantChartHandlers;

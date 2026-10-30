@@ -13,13 +13,22 @@ import { v, type Infer } from "convex/values";
 
 export const CHART_MEASURES = ["visitors", "impressions"] as const;
 export type ChartMeasure = (typeof CHART_MEASURES)[number];
+/**
+ * Google Analytics' measures (sees-side-panel-plan-2026-10-31.md, phase 4; Anthony: "upgrade ask hakken to create
+ * graphs and charts"): the website's visits, its conversions (every one, or one by its Google name), and the share
+ * of visits that converted — each a day at a time from the days Analytics keeps, never the model's numbers.
+ */
+export const ANALYTICS_CHART_MEASURES = ["visits", "conversions", "conversionRate"] as const;
+export type AnalyticsChartMeasure = (typeof ANALYTICS_CHART_MEASURES)[number];
 
 /** Where in its words the answer wants the chart: on a line of its own. Drawn at the end when the answer does not say. */
 export const CHART_MARK = "{{chart}}";
 
 export const answerChartValidator = v.object({
-  look: v.literal("searchConsoleDays"),
-  measure: v.union(v.literal("visitors"), v.literal("impressions")),
+  look: v.union(v.literal("searchConsoleDays"), v.literal("analyticsDays")),
+  measure: v.union(v.literal("visitors"), v.literal("impressions"), v.literal("visits"), v.literal("conversions"), v.literal("conversionRate")),
+  /** One conversion, by its Google name, for Analytics' conversions and their rate; absent for every one. */
+  event: v.optional(v.string()),
   website: v.string(),
   page: v.optional(v.string()),
   /** The days drawn, `YYYY-MM-DD`, and the same number before them. */
@@ -51,8 +60,8 @@ function isChart(value: unknown): value is AnswerChart {
   if (!value || typeof value !== "object") return false;
   const chart = value as Record<string, unknown>;
   return (
-    chart.look === "searchConsoleDays"
-    && (chart.measure === "visitors" || chart.measure === "impressions")
+    ((chart.look === "searchConsoleDays" && (chart.measure === "visitors" || chart.measure === "impressions"))
+      || (chart.look === "analyticsDays" && (ANALYTICS_CHART_MEASURES as readonly unknown[]).includes(chart.measure)))
     && typeof chart.website === "string"
     && typeof chart.from === "string"
     && typeof chart.to === "string"
@@ -117,4 +126,22 @@ export function chartPoints(
     points.push({ day, value: values.get(day) ?? 0, ...(held ? { before: earlier.get(then) ?? 0 } : {}) });
   }
   return points;
+}
+
+/**
+ * Analytics' days as one measure's values: visits; conversions — every counted one, or one event's, in times — or
+ * the share of the day's visits that converted, in percent (the event's visits, else every conversion). Worked
+ * out here, never by the model.
+ */
+export function analyticsChartValues(
+  points: ReadonlyArray<{ day: string; visits: number; conversions: number; events: readonly number[]; eventVisits?: readonly number[]; eventTimes?: readonly number[] }>,
+  measure: AnalyticsChartMeasure,
+  eventAt: number | null,
+): Array<{ day: string; value: number }> {
+  return points.map((point) => {
+    const times = eventAt === null ? point.conversions : point.eventTimes?.[eventAt] ?? point.events[eventAt] ?? 0;
+    const did = eventAt === null ? point.conversions : point.eventVisits?.[eventAt] ?? point.events[eventAt] ?? 0;
+    const value = measure === "visits" ? point.visits : measure === "conversions" ? times : point.visits > 0 ? Math.round((did / point.visits) * 1000) / 10 : 0;
+    return { day: point.day, value };
+  });
 }

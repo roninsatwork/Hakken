@@ -22,7 +22,11 @@ export function AnswerChart({ chart }: { chart: Chart }) {
   const t = useTranslations("ai.assistant.chart");
   const locale = useLocale();
   const page = chart.page ? pathOf(chart.page) : null;
-  const title = page ? t(`titlePage.${chart.measure}`, { page }) : t(`title.${chart.measure}`);
+  // An Analytics chart of one conversion names it as Google does, in plain words; Search Console's names its page.
+  const event = chart.event ? chart.event.replace(/_/g, " ") : null;
+  const title = event && (chart.measure === "conversions" || chart.measure === "conversionRate")
+    ? t(`titleEvent.${chart.measure}`, { event: chart.measure === "conversions" ? event.charAt(0).toUpperCase() + event.slice(1) : event })
+    : page ? t(`titlePage.${chart.measure}` as "titlePage.visitors", { page }) : t(`title.${chart.measure}`);
   const named = (from: string, to: string) => wholeMonth(from, to, locale) ?? t("span", { from: formatShortDay(from), to: formatShortDay(to) });
   const hasBefore = chart.points.some((point) => point.before !== undefined);
 
@@ -37,7 +41,7 @@ export function AnswerChart({ chart }: { chart: Chart }) {
       <div className="flex items-baseline justify-between gap-4">
         <figcaption className="text-[13px] font-medium text-foreground">{title}</figcaption>
         <Link href={chart.link} className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
-          {t("open")}
+          {chart.look === "analyticsDays" ? t("openAnalytics") : t("open")}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
       </div>
