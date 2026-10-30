@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { FunctionReturnType } from "convex/server";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -27,6 +27,7 @@ import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
 import { useFlowKindName } from "../../_components/ConversionParts";
 import { ConversionsMapCard, ConversionsOverTimeCard } from "../../_components/ConversionsCards";
+import { conversionsAsk } from "../../_components/seesAskFacts";
 
 /** Google's own name for a shop's purchase and for a basket, as Analytics records them. */
 const PURCHASE = "purchase";
@@ -105,10 +106,22 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   const rate = answer && second && answer.visits > 0 ? second.count / answer.visits : null;
   const rateBefore = answer?.visitsBefore && second && second.countBefore !== null ? second.countBefore / answer.visitsBefore : null;
   const rateChange = rate !== null && rateBefore !== null ? rate - rateBefore : null;
+  // What the eye hands the Insights team (sees-conversion-specialist-plan-2026-10-30.md): this page's figures and links.
+  const hrefFor = useAnalyticsHref(args.siteId);
+  const path = usePathname() ?? "";
+  const ask = answer ? conversionsAsk(
+    { siteId: args.siteId, path, period: args.period, from: answer.from ?? null, to: answer.to ?? null, country: args.country ?? "", device: args.device, periodName: tf(`periods.${periodWord(period)}`).toLowerCase(), beforeName: tf(`before.${periodWord(period)}`) },
+    {
+      visits: answer.visits, visitsBefore: answer.visitsBefore, total, totalBefore,
+      // The shop's purchases as the page shows them (the orders Google counted), never the kind's visits that bought.
+      kinds: kinds.map((kind) => (purchase && shop && kind.eventName === PURCHASE ? { ...kind, count: shop.purchases, countBefore: shop.purchasesBefore } : kind)),
+      rateOf: second?.eventName ?? null, rate, rateBefore, currency, sells, nameOf, hrefFor,
+    },
+  ) : undefined;
 
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="conversions" seen={answer?.seen} currency={currency} names={names} />
+      <AnalyticsSees screen="conversions" seen={answer?.seen} currency={currency} names={names} ask={ask} />
 
       {answer ? (
         <FigureRow>

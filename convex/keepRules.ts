@@ -364,6 +364,9 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   insightCompetingGroups: cleared("the newest week", "insightCompeting/saveGroups"),
   insightPageDecisions: cleared("the newest run", "insightDecisions/saveDecisions"),
   insightScreenBoxes: cleared("the newest week", "insightBoxes/saveBoxes"),
+  // The eye's bubble, written by the Insights team: one row per website, page, dates, country and device, replaced on
+  // the next press after its three hours (sees-conversion-specialist-plan-2026-10-30.md S3, S9).
+  seesAnswers: cleared("the next press after 3 hours, in place", "seesAsk/askSees"),
   insightSearchPicks: LATEST,
   insightPlans: LATEST,
   insightQuestionPanels: LATEST,

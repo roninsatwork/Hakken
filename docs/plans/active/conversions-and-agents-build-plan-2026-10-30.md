@@ -178,3 +178,17 @@ A1–A6, in this order so each step is measured.
   `analyticsEventHours`; until the first run since, the card says "Hakken
   collects this with the next night's run". Nothing was asked of Google by
   hand. Overall: 30%.
+- 2026-10-30, later: phases 4 and 5 built on dev, committed locally, not
+  pushed. Phase 4: the speech bubble (`SeesBubble`) under the eye in the top
+  bar, over the page, closed by Escape, a click outside or the eye; no box in
+  the page. Phase 5: the eye asks the Insights team (`convex/seesAsk.ts`,
+  `convex/seesAskActions.ts`, `convex/utils/seesAsk.ts`, the `seesAnswers`
+  table): the Conversions page and a conversion's own screen hand over their
+  figures and links (`_components/seesAskFacts.ts`); one run of the Head of
+  Strategy's picks the specialist, the specialist writes, the Editor's code
+  checks every number and word, the answer is saved three hours per website,
+  page, dates, country and device, and the week's bubbles are kept for the
+  weekly run (`weekSeesAnswers`; the weekly run reading them is phase 6's
+  A1). The plain-words rule is in every agent's ground rules
+  (`PLAIN_WORDS`). Checked on morehandles.co.uk in the app: the bubble
+  answered in about two seconds. Overall: 50%.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
+import { HakkenSees, type HakkenSeesStep, type SeesAsk } from "@/src/ui/components/screens/HakkenSees";
 import { seenAdvice, type Seen, type SeenPhrase, type SeenTarget } from "@/convex/utils/hakkenSees";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatMoney } from "./analyticsFormat";
@@ -27,8 +27,10 @@ import { useEventName } from "./useEventName";
  * page of this website's section, with the dates and device chosen
  * (`segment`, `filters`), or to an address of its own (`url`).
  */
-export function AnalyticsSees({ screen, seen, currency, keep = true, names }: {
+export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask }: {
   screen: string;
+  /** The page's figures and links for the Insights team, asked when the eye is pressed (sees-conversion-specialist-plan-2026-10-30.md). */
+  ask?: SeesAsk;
   /**
    * Words for the codes a rule sends in `text` or `more`, where the reader
    * wants a name: a page group's id read as its classification's name
@@ -64,7 +66,7 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names }: {
     return { href: hrefOf(to.segment ?? "", to.segment === "all-pages/page" ? { ...to.filters, from } : to.filters) };
   };
   const steps: HakkenSeesStep[] = box.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
-  return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} />;
+  return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} ask={ask} />;
 }
 
 /** Conversions' events, sent joined by commas, by their own names in the reader's language, as it lists them. */

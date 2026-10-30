@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePathname } from "next/navigation";
 import type { FunctionReturnType } from "convex/server";
 import { HandCoins } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -13,6 +14,7 @@ import { AnalyticsSees } from "./AnalyticsSees";
 import { ChannelsChart } from "./AnalyticsChart";
 import { BeforeLine } from "./AnalyticsFigures";
 import { ConversionsByHourCard, ConversionsByKindCard } from "./ConversionsCards";
+import { conversionAsk } from "./seesAskFacts";
 import { formatMoney, formatPercent } from "./analyticsFormat";
 import { useEventName } from "./useEventName";
 import { periodWord, useAnalyticsArgs, useAnalyticsHref, usePeriod, type AnalyticsStatus } from "./useAnalytics";
@@ -48,6 +50,16 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
   const rate = figures.siteVisits > 0 ? figures.times / figures.siteVisits : null;
   const rateBefore = figures.siteVisitsBefore && figures.timesBefore !== null ? figures.timesBefore / figures.siteVisitsBefore : null;
   const rateChange = rate !== null && rateBefore !== null ? rate - rateBefore : null;
+  // What the eye hands the Insights team (sees-conversion-specialist-plan-2026-10-30.md): this conversion's figures and links.
+  const path = usePathname() ?? "";
+  const ask = conversionAsk(
+    { siteId: args.siteId, path, period: args.period, from: conversions?.from ?? null, to: conversions?.to ?? null, country: args.country ?? "", device: args.device, periodName: periodName.toLowerCase(), beforeName: before },
+    {
+      eventName: event, name, times: figures.times, timesBefore: figures.timesBefore, visits: figures.visits, visitsBefore: figures.visitsBefore,
+      siteVisits: figures.siteVisits, siteVisitsBefore: figures.siteVisitsBefore, rate, rateBefore, worth: kind?.value ?? null, worthBefore: kind?.valueBefore ?? null,
+      currency, sells: (conversions?.shop?.purchases ?? 0) > 0, hrefFor,
+    },
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +69,7 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
         title={name}
         description={t("countedDescription", { google: event })}
       />
-      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} />
+      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} />
 
       <FigureRow columns={4}>
         <Figure label={name} emphasis value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />

@@ -112,4 +112,14 @@ one path for quality, accepting the wait.
 ## Progress
 
 - 2026-10-30: decided on the canvas; the bubble and its words drawn (board
-  "Sees", Version 41). Not built.
+  "Sees", Version 41).
+- 2026-10-30, afternoon (Anthony: "Build it"): built on dev as phases 4 and 5
+  of [conversions-and-agents-build-plan-2026-10-30.md](conversions-and-agents-build-plan-2026-10-30.md),
+  committed locally, not pushed. S1–S9, S11 and S12 are in the code
+  (`convex/seesAsk.ts`, `convex/seesAskActions.ts`, `convex/utils/seesAsk.ts`;
+  `src/ui/components/screens/HakkenSees.tsx`, `HakkenSeesEye.tsx`); S10 is
+  half done — the week's bubbles are kept (`weekSeesAnswers`) and the weekly
+  run reads them with phase 6. Checked on morehandles.co.uk: pressing the eye
+  on Conversions gave the team's words in about two seconds. The Conversions
+  screens hand over their figures today; another page's eye asks the team
+  once Anthony names it.

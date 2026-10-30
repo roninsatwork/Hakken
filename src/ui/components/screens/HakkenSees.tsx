@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { FunctionArgs } from "convex/server";
+import type { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
@@ -12,6 +14,14 @@ import { publishSees } from "./hakkenSeesStore";
 
 /** One "Do first" step: its sentence, its link's words and where the link leads. */
 export type HakkenSeesStep = { words: string; link: string; href: string; external?: boolean };
+
+/**
+ * What a page hands the Insights team when the eye is pressed
+ * (sees-conversion-specialist-plan-2026-10-30.md S4): its figures as facts,
+ * where its steps may lead, and the dates and filters it is on. Nothing else
+ * reaches the team, and nothing is asked of Google.
+ */
+export type SeesAsk = FunctionArgs<typeof api.seesAsk.askSees>;
 
 /**
  * What Hakken sees: what the page means for the business, in two or three
@@ -29,13 +39,13 @@ export type HakkenSeesStep = { words: string; link: string; href: string; extern
  * numbers is not new again; without it, the sentences themselves are the
  * advice.
  */
-export function HakkenSees({ says, steps, advice }: { says: string[]; steps: HakkenSeesStep[]; advice?: string }) {
+export function HakkenSees({ says, steps, advice, ask }: { says: string[]; steps: HakkenSeesStep[]; advice?: string; ask?: SeesAsk }) {
   const screen = usePathname() ?? "";
   const held = advice ?? says.join(" ");
   // Published once per change of words, not per render: the arrays are new each time.
-  const words = JSON.stringify({ says, steps });
+  const words = JSON.stringify({ says, steps, ask });
   useEffect(() => {
-    publishSees({ screen, says, steps, advice: held });
+    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}) });
     return () => publishSees(null, screen);
   }, [screen, words, held]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;

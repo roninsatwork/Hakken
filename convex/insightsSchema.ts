@@ -392,4 +392,34 @@ export const insightsTables = {
   })
     .index("by_company_created", ["companyId", "createdAt"])
     .index("by_hold_kind_period", ["companyWebsiteId", "kind", "period"]),
+
+  /**
+   * What Hakken sees, written by the Insights team when the eye is pressed
+   * (sees-conversion-specialist-plan-2026-10-30.md): one answer for one
+   * website, page, dates, country and device (`key`), shown again for three
+   * hours (S3, S9), and kept for the specialist's next weekly run (S10).
+   * `RESEARCHING` while the team writes; `FAILED` with why when the Editor
+   * sent it back or the model gave nothing, and the bubble keeps the rule's
+   * words.
+   */
+  seesAnswers: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    key: v.string(),
+    screen: v.string(),
+    path: v.string(),
+    status: v.union(v.literal("RESEARCHING"), v.literal("WRITTEN"), v.literal("FAILED")),
+    says: v.array(v.string()),
+    steps: v.array(v.object({ words: v.string(), link: v.string(), href: v.string() })),
+    /** The specialist the Head of Strategy handed the page to. */
+    role: v.optional(v.string()),
+    runId: v.optional(v.id("agentRuns")),
+    askedAt: v.number(),
+    writtenAt: v.optional(v.number()),
+    failedWhy: v.optional(v.string()),
+    /** The week it was written in, for the weekly run to read what the bubbles said (S10). */
+    week: v.string(),
+  })
+    .index("by_hold_key", ["companyWebsiteId", "key"])
+    .index("by_hold_week", ["companyWebsiteId", "week"]),
 };

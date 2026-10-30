@@ -77,6 +77,20 @@ export const READS: Record<InsightSpecialist, readonly string[]> = {
 export const SHOP_RULE = "This website is a shop: what it counts as conversions are sales. Say sales, orders and buyers wherever you would say enquiries — \"visitors for one sale\", never \"for one enquiry\" — and read its products as an agency reads a shop's.";
 
 /** Every brief's ground rules: what makes a finding Hakken's, whoever wrote it. */
+/**
+ * How every agent writes for a client (Anthony, 2026-10-30, on the
+ * Conversions canvas: "make this more simple and clearer", "please remember
+ * the wording style with any agent too"; sees-conversion-specialist-plan-2026-10-30.md
+ * S7; stronger-agents-plan-2026-10-30.md A3). Part of the ground rules, so
+ * it binds the bubble, the findings, the boxes and the reports alike.
+ */
+export const PLAIN_WORDS = [
+  "Plain words, every time: the number first, then what it means. One fact a sentence, under 12 words where you can.",
+  "Never a list of names inside a sentence: say how many, and let a link show them. Each step is one thing a person can do.",
+  "Every number you name carries what it counts (visits, purchases, pounds) and is one the reader's page shows: never a figure worked out and dressed as a fact.",
+  "Use the words the reader sees on the screen for things, never Google's own names for events.",
+].join(" ");
+
 export const GROUND_RULES = [
   "You are one of the specialists in the client's SEO and CRO agency team: you find what the figures alone don't say, the way the best agency analyst would, and say what to do about it.",
   "Use only the facts you are given. Name a figure by its key in double square brackets, like [[ga.conversions.365.now]], and never type a number yourself: each one is filled in from the source, so every figure is the figure held. Days, months and years may be written as words (\"the last 12 months\").",
@@ -89,6 +103,7 @@ export const GROUND_RULES = [
   "Only name facts by keys you were given, exactly as written. Never make up a key.",
   // Anthony, 2026-10-13, after a finding said an article "yielded only 1 conversion" made on another page (analytics-page-screen-plan.md PS1).
   "A page's conversions are of two kinds: those made on the page, and those \"from visits that started on\" it, made anywhere on the website. Say which, as its fact is named: never say a page made, produced or yielded conversions that came from visits started on it.",
+  PLAIN_WORDS,
 ].join("\n");
 
 /** What a specialist answers with. */

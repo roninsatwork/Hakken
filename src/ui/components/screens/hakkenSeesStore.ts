@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { HakkenSeesStep } from "./HakkenSees";
+import type { HakkenSeesStep, SeesAsk } from "./HakkenSees";
 
 /**
  * What the screen's What Hakken sees box holds, and whether it is open
@@ -17,7 +17,12 @@ import type { HakkenSeesStep } from "./HakkenSees";
  * that refuses storage keeps the reads for this visit only.
  */
 
-export type SeesBox = { screen: string; says: string[]; steps: HakkenSeesStep[]; advice: string };
+/**
+ * `ask`: the page's figures and links, handed to the Insights team when the
+ * eye is pressed (sees-conversion-specialist-plan-2026-10-30.md S4); a page
+ * without one shows the rule's words alone.
+ */
+export type SeesBox = { screen: string; says: string[]; steps: HakkenSeesStep[]; advice: string; ask?: SeesAsk };
 
 const PREFIX = "hakken.sees.read.";
 let current: SeesBox | null = null;
@@ -95,6 +100,26 @@ export function closeSees() {
   changed();
 }
 
+/**
+ * What the Insights team said when the eye asked for a page (its key):
+ * "RESEARCHING" while it writes, then what it saved, or "FAILED" when there
+ * was no team to ask. Kept here, outside React, so the eye's effect updates
+ * it as an external system and the bubble reads it.
+ */
+export type SeesAsked = { key: string; status: "RESEARCHING" | "WRITTEN" | "FAILED" };
+let asked: SeesAsked | null = null;
+
+export function noteAsked(key: string, status: SeesAsked["status"]) {
+  // A later ask (another page, other filters) is never overwritten by an earlier one's answer.
+  if (asked && asked.key !== key && status !== "RESEARCHING") return;
+  asked = { key, status };
+  changed();
+}
+
+export function useSeesAsked(): SeesAsked | null {
+  return useStore(() => asked, () => null);
+}
+
 /** Whether the box holds advice not yet read in this browser. */
 export function useSeesNew(): boolean {
   return useStore(() => (current ? readAdvice(current.screen) !== current.advice : false), () => false);
@@ -123,6 +148,7 @@ export function resetSees() {
   current = null;
   open = false;
   claims = [];
+  asked = null;
   readKept.clear();
   changed();
 }

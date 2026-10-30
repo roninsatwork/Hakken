@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
+import { seesKey } from "@/convex/utils/seesAsk";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
 import { SeesBubble } from "./HakkenSees";
 import { Tooltip } from "./Tooltip";
-import { claimEye, closeSees, toggleSees, useDrawsEye, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
+import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
  * The eye in the top bar that opens What Hakken sees — option 7 on the
@@ -21,6 +24,13 @@ import { claimEye, closeSees, toggleSees, useDrawsEye, useSeesBox, useSeesNew, u
  * shows what it is; clicking it opens the speech bubble under it
  * (`SeesBubble`) and leaves the eye pressed; clicking again, a click
  * anywhere else or Escape closes it.
+ *
+ * A page that hands over its figures (`SeesBox.ask`) has them sent to the
+ * Insights team when the bubble opens (sees-conversion-specialist-plan-2026-10-30.md
+ * S2, S11, S12): the bubble says "Hakken is researching…" while the team
+ * writes, then the team's words, kept three hours; a team that could not
+ * answer leaves the rule's words standing. Every other page shows the
+ * rule's words at once.
  *
  * The top bar (`Header`) is the one place that draws it, and it draws itself
  * only once the screen's box has published something — so no screen wires it
@@ -36,6 +46,20 @@ export function HakkenSeesEye() {
   const open = useSeesOpen();
   const fresh = useSeesNew();
   const holder = useRef<HTMLSpanElement>(null);
+  const askSees = useMutation(api.seesAsk.askSees);
+  const key = box?.ask ? seesKey(box.ask) : null;
+  // What the team said when asked for this key (the store's, outside React): "RESEARCHING" until its answer is saved,
+  // "FAILED" when there is no team. Asked once per key, the first time the bubble opens on it.
+  const asked = useSeesAsked();
+  useEffect(() => {
+    if (!open || !box?.ask || !key || asked?.key === key) return;
+    noteAsked(key, "RESEARCHING");
+    void Promise.resolve()
+      .then(() => askSees(box.ask!))
+      .then((reply) => noteAsked(key, reply?.status ?? "FAILED"))
+      .catch(() => noteAsked(key, "FAILED"));
+  }, [open, key, asked?.key, box?.ask, askSees]);
+  const answer = useQuery(api.seesAsk.seesAnswer, open && box?.ask && key && asked?.key === key && asked.status !== "FAILED" ? { siteId: box.ask.siteId, key } : "skip");
   // A click anywhere outside the eye and its bubble, or Escape, closes the bubble, as the bell's panel closes.
   useEffect(() => {
     if (!open) return;
@@ -53,6 +77,11 @@ export function HakkenSeesEye() {
     };
   }, [open]);
   if (!draws || !box) return null;
+  // The team's words when it has written them; "researching" while it writes; the rule's words otherwise.
+  const team = answer?.status === "WRITTEN" ? answer : null;
+  const researching = Boolean(box.ask && asked?.key === key && asked.status !== "FAILED" && !team && answer?.status !== "FAILED");
+  const says = team ? team.says : box.says;
+  const steps = team ? team.steps : box.steps;
   return (
     <SeesEye
       ref={holder}
@@ -61,7 +90,7 @@ export function HakkenSeesEye() {
       count={box.steps.length}
       onClick={toggleSees}
       bubbleId={`${id}-bubble`}
-      bubble={open ? <SeesBubble id={`${id}-bubble`} says={box.says} steps={box.steps} /> : null}
+      bubble={open ? <SeesBubble id={`${id}-bubble`} says={says} steps={steps} researching={researching} /> : null}
     />
   );
 }
