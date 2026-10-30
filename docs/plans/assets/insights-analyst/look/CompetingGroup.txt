@@ -4,7 +4,6 @@
 detail-header
   back: Keyword cannibalisation
   page-header: ‹the record's name›
-    sees-eye
 settings-card: What Hakken sees
 figures
   figure: Searches split

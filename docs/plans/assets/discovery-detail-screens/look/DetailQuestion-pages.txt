@@ -4,7 +4,6 @@
 detail-header
   back: Back to Overview
   page-header: ‹the record's name›
-    sees-eye
     primary-action: Track this question
 figures
   figure: Asked a month

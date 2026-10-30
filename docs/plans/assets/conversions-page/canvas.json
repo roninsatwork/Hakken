@@ -1,0 +1,49 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Conversion.dc.html": {
+      "expand": "fill",
+      "h": 1948,
+      "is_interactive": true,
+      "title": "A conversion on its own: Purchase (a row on the list opens it). When people convert uses made-up numbers until Google is",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 2392,
+      "is_interactive": true,
+      "title": "Conversions: figures, visits for one, the map, the list",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Sees.dc.html": {
+      "expand": "fill",
+      "h": 2392,
+      "is_interactive": true,
+      "title": "The same page with What Hakken sees open: click the eye in the top bar and a speech bubble opens under it, over the page",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-30T10:20:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {},
+  "order": [
+    "Main.dc.html",
+    "Conversion.dc.html",
+    "Sees.dc.html"
+  ],
+  "pages": [],
+  "title": "Conversions page, three ways"
+}

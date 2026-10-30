@@ -16973,7 +16973,7 @@
     },
     "conversions": {
       "title": "Conversions",
-      "description": "Each thing this website counts as a conversion, the route the visits took to reach it and what it was worth; what people did before converting; and every other event Google Analytics recorded.",
+      "description": "Sales, sign-ups and the other things that count. How many, and where they came from.",
       "revenue": "Shop revenue",
       "purchases": "Purchases",
       "averageOrder": "Average order",
@@ -16988,8 +16988,8 @@
       "onlyKind": "Only {name}",
       "everyKind": "Every kind happened",
       "noKind": "None happened yet",
-      "whatCountsTitle": "What counts",
-      "whatCountsDescription": "The events counted as conversions, set on the Connection page.",
+      "whatCountsTitle": "What counts as a conversion",
+      "whatCountsDescription": "Each row is a Google Analytics event this website counts as a conversion. Click one to see it on its own.",
       "whatCountsSameValue": "The events counted as conversions, set on the Connection page. Every one is worth {value}, set in {platformName}.",
       "whereTitle": "Where they came from",
       "whereDescription": "The landing pages or channels of the visits that converted.",
@@ -17007,7 +17007,11 @@
         "howMany": "How many",
         "valueEach": "Value each",
         "value": "Value",
-        "change": "Change"
+        "change": "Change",
+        "conversions": "Conversions",
+        "visits": "Visits",
+        "worth": "Worth",
+        "changeTitle": "Conversions against the span before"
       },
       "noValue": "No value",
       "setIn": {
@@ -17018,7 +17022,10 @@
       "landingCollecting": "This device's landing pages are still being collected…",
       "noneBrought": "None in these dates.",
       "channelsTitle": "Channels that brought them",
-      "channelsDescription": "Where each of those visits came from."
+      "channelsDescription": "Where each of those visits came from.",
+      "rateFromUp": "▲ from {rate} {before}",
+      "rateFromDown": "▼ from {rate} {before}",
+      "rateFromSame": "The same as {before}"
     },
     "products": {
       "title": "Products",
@@ -18182,7 +18189,9 @@
         "cut": "The {count} pages with the most conversions are listed.",
         "noPage": "No page recorded",
         "download": "Download CSV"
-      }
+      },
+      "timeTitlePer": "Visits it took for one {event}, day by day",
+      "timeTitleRate": "{event}: the share of visits that did it, day by day"
     }
   },
   "bingWebmaster": {

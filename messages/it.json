@@ -16973,7 +16973,7 @@
     },
     "conversions": {
       "title": "Conversioni",
-      "description": "Ogni cosa che questo sito conta come conversione, il percorso che le visite hanno fatto per arrivarci e quanto valeva; cosa hanno fatto le persone prima di convertire; e ogni altro evento registrato da Google Analytics.",
+      "description": "Vendite, iscrizioni e le altre cose che contano. Quante, e da dove sono arrivate.",
       "revenue": "Ricavi del negozio",
       "purchases": "Acquisti",
       "averageOrder": "Ordine medio",
@@ -16988,8 +16988,8 @@
       "onlyKind": "Solo {name}",
       "everyKind": "Sono successi tutti i tipi",
       "noKind": "Ancora nessuno",
-      "whatCountsTitle": "Cosa conta",
-      "whatCountsDescription": "Gli eventi contati come conversioni, impostati nella pagina Connessione.",
+      "whatCountsTitle": "Cosa conta come conversione",
+      "whatCountsDescription": "Ogni riga è un evento di Google Analytics che questo sito conta come conversione. Cliccane uno per vederlo da solo.",
       "whatCountsSameValue": "Gli eventi contati come conversioni, impostati nella pagina Connessione. Ognuno vale {value}, impostato in {platformName}.",
       "whereTitle": "Da dove sono arrivate",
       "whereDescription": "Le pagine di destinazione o i canali delle visite che hanno convertito.",
@@ -17007,7 +17007,11 @@
         "howMany": "Quante",
         "valueEach": "Valore di ciascuna",
         "value": "Valore",
-        "change": "Variazione"
+        "change": "Variazione",
+        "conversions": "Conversioni",
+        "visits": "Visite",
+        "worth": "Valore",
+        "changeTitle": "Conversioni rispetto al periodo precedente"
       },
       "noValue": "Nessun valore",
       "setIn": {
@@ -17018,7 +17022,10 @@
       "landingCollecting": "Le pagine di destinazione di questo dispositivo sono ancora in raccolta…",
       "noneBrought": "Nessuna in queste date.",
       "channelsTitle": "I canali che le hanno portate",
-      "channelsDescription": "Da dove è arrivata ciascuna di quelle visite."
+      "channelsDescription": "Da dove è arrivata ciascuna di quelle visite.",
+      "rateFromUp": "▲ da {rate} {before}",
+      "rateFromDown": "▼ da {rate} {before}",
+      "rateFromSame": "Uguale a {before}"
     },
     "products": {
       "title": "Prodotti",
@@ -18182,7 +18189,9 @@
         "cut": "Sono elencate le {count} pagine con più conversioni.",
         "noPage": "Nessuna pagina registrata",
         "download": "Scarica CSV"
-      }
+      },
+      "timeTitlePer": "Visite necessarie per un {event}, giorno per giorno",
+      "timeTitleRate": "{event}: la quota di visite che lo ha fatto, giorno per giorno"
     }
   },
   "bingWebmaster": {

@@ -3,45 +3,45 @@
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import type { FunctionReturnType } from "convex/server";
-import { EVENT_KINDS, type EventKind } from "@/convex/utils/analyticsEvents";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { Select } from "@/src/ui/components/screens/Select";
-import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
-import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
+import { useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { ChangeCell } from "../../_components/AnalyticsCells";
 import { HandCoins, MousePointerClick } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { Change } from "@/src/ui/components/screens/Change";
+import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { AnalyticsGate, NothingCounted, countsAnything } from "../../_components/AnalyticsNotices";
 import { BeforeLine } from "../../_components/AnalyticsFigures";
-import { AnalyticsSees, eventList } from "../../_components/AnalyticsSees";
+import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { changeOf, formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
-import { ConversionsChart } from "../../_components/AnalyticsChart";
-import { BeforeConvertingCard, ConversionFlowCard, useFlowKindName } from "../../_components/ConversionParts";
-import { ConversionsByKindCard, ConversionsMapCard, ConversionsOverTimeCard } from "../../_components/ConversionsCards";
+import { useFlowKindName } from "../../_components/ConversionParts";
+import { ConversionsMapCard, ConversionsOverTimeCard } from "../../_components/ConversionsCards";
+
+/** Google's own name for a shop's purchase and for a basket, as Analytics records them. */
+const PURCHASE = "purchase";
+const ADDED_TO_BASKET = "add_to_cart";
 
 /**
- * Conversions, with Events merged in (docs/plans/active/ga-conversions-visitors-plan.md
- * CV1, CV2; drawn and approved 2026-10-14): What Hakken sees; four figures —
- * conversions, value, conversion rate and the key events not counted (the
- * kinds that happened when every key event counts); Conversions over time
- * (GA35); how visits reached a conversion, by page classification;
- * conversions by page classification; the visits needed for one conversion
- * over time, against the days just before (Anthony, 2026-10-20); what
- * people did before converting; then every event, the conversions first. A shop keeps its revenue,
- * purchases and average order first (GA7, board 8 as locked). Nothing
+ * Conversions, as drawn on the canvas "Conversions page, three ways" (board
+ * "Main", approved 2026-10-30; docs/plans/active/conversions-and-agents-build-plan-2026-10-30.md,
+ * phase 2): four figures, each against the month before — conversions, the
+ * purchase (or the biggest conversion), the conversion rate, and added to
+ * basket (or the next biggest); the visits it took for one purchase, day by
+ * day; the map of conversions by page kind, channel, device or country; then
+ * what counts as a conversion, a row an event, each opening the conversion's
+ * own screen. What people did before converting, the flow and the lines by
+ * kind left the page on the canvas ("we can remove this now"). Nothing
  * counted yet says how to choose, under its own box (screen 16), with every
  * event below it.
  */
@@ -69,21 +69,18 @@ function NothingCountedBody({ status }: { status: AnalyticsStatus }) {
     <div className="flex flex-col gap-6">
       <AnalyticsSees screen="conversions" seen={answer?.seen} currency={status.connection?.currency} />
       <NothingCounted status={status} siteId={args.siteId} />
-      <EventsTable status={status} />
+      <EventsTable status={status} worthOf={() => null} every />
     </div>
   );
 }
 
 function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.conversions");
-  const tc = useTranslations("googleAnalytics.channelsPage.figures");
   const tf = useTranslations("googleAnalytics.filters");
   const args = useAnalyticsArgs();
   const [period] = usePeriod();
   const nameOf = useEventName();
-  const locale = useLocale();
   const answer = useQuery(api.googleAnalyticsReads.analyticsConversions, args);
-  const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, args);
   const currency = status.connection?.currency ?? null;
   const flow = answer?.flow ?? null;
   const kindName = useFlowKindName(flow?.kinds ?? []);
@@ -91,125 +88,87 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   const flowKinds = new Set((flow?.kinds ?? []).map((kind) => kind.kind));
   const names = (value: string) => (flowKinds.has(value) ? kindName(value) : null);
   const kinds = [...(answer?.kinds ?? [])].sort((left, right) => right.count - left.count);
-  const shop = answer?.shop ?? null;
   const total = kinds.reduce((sum, kind) => sum + kind.count, 0);
   const totalBefore = answer?.kinds.every((kind) => kind.countBefore !== null) ? answer.kinds.reduce((sum, kind) => sum + (kind.countBefore ?? 0), 0) : null;
-  const value = kinds.reduce((sum, kind) => sum + (kind.value ?? 0), 0);
-  const valueBefore = answer?.kinds.every((kind) => kind.setIn === null || kind.valueBefore !== null)
-    ? answer.kinds.reduce((sum, kind) => sum + (kind.valueBefore ?? 0), 0)
-    : null;
-  const rate = answer && answer.visits > 0 ? total / answer.visits : null;
-  const rateBefore = answer?.visitsBefore && totalBefore !== null ? totalBefore / answer.visitsBefore : null;
-  const happened = kinds.filter((kind) => kind.count > 0);
-  const others = kinds.filter((kind) => kind.setIn !== "REVENUE");
-  const sales = shop !== null && shop.purchases > 0;
-  const fired = answer?.fired ?? [];
-  const firedCount = fired.reduce((sum, event) => sum + event.count, 0);
-  const happenedLine = happened.length === 0 ? t("noKind")
-    : happened.length === kinds.length && kinds.length > 1 ? t("everyKind")
-      : eventList(happened.map((kind) => kind.eventName).join(","), nameOf, locale);
+  // The second box: the shop's purchase, else the biggest conversion; the fourth: added to basket, else the next biggest.
+  const shop = answer?.shop ?? null;
+  const sells = shop !== null && shop.purchases > 0;
+  const purchase = sells ? kinds.find((kind) => kind.eventName === PURCHASE) ?? null : null;
+  // A shop's purchases are the orders Google counted (1,258 on the board), as the table says; the kind's count is the visits that bought.
+  const second = purchase && shop
+    ? { eventName: purchase.eventName, count: shop.purchases, countBefore: shop.purchasesBefore }
+    : kinds[0] ?? null;
+  const fourth = kinds.find((kind) => kind.eventName === ADDED_TO_BASKET && kind.eventName !== second?.eventName) ?? kinds.find((kind) => kind.eventName !== second?.eventName) ?? null;
+  const worthOf = (eventName: string) => kinds.find((kind) => kind.eventName === eventName)?.value ?? null;
+  // The conversion rate is the second box's conversion in every hundred visits (3.5% on the board: purchases over
+  // visits), never every conversion over the visits, which counts a basket, a checkout and a purchase three times.
+  const rate = answer && second && answer.visits > 0 ? second.count / answer.visits : null;
+  const rateBefore = answer?.visitsBefore && second && second.countBefore !== null ? second.countBefore / answer.visitsBefore : null;
+  const rateChange = rate !== null && rateBefore !== null ? rate - rateBefore : null;
 
   return (
     <div className="flex flex-col gap-6">
       <AnalyticsSees screen="conversions" seen={answer?.seen} currency={currency} names={names} />
 
       {answer ? (
-        sales && shop ? (
-          <FigureRow>
-            <Figure label={t("revenue")} emphasis value={formatMoney(shop.revenue, currency)} detail={<BeforeLine now={shop.revenue} before={shop.revenueBefore} />} />
-            <Figure label={t("purchases")} value={formatNumber(shop.purchases)} detail={<BeforeLine now={shop.purchases} before={shop.purchasesBefore} />} />
-            <Figure
-              label={t("averageOrder")}
-              value={formatMoney(Math.round(shop.revenue / shop.purchases), currency)}
-              detail={<BeforeLine now={shop.revenue / shop.purchases} before={shop.purchasesBefore ? (shop.revenueBefore ?? 0) / shop.purchasesBefore : null} />}
-            />
-            {others[0] ? (
-              <Figure
-                label={nameOf(others[0].eventName)}
-                value={formatNumber(others[0].count)}
-                detail={<span className="text-[12px] text-secondary">{formatMoney(others[0].value, currency)} · <Change by={changeOf(others[0].count, others[0].countBefore) === null ? null : Math.round(changeOf(others[0].count, others[0].countBefore)! * 1000) / 10} format={(by) => `${by.toFixed(1)}%`} /></span>}
-              />
-            ) : <Figure label={t("conversionRate")} value={formatPercent(rate)} detail={t("ofVisits", { visits: formatNumber(answer.visits) })} />}
-          </FigureRow>
-        ) : (
-          <FigureRow>
-            <Figure label={t("conversions")} value={formatNumber(total)} detail={<BeforeLine now={total} before={totalBefore} />} />
-            <Figure label={t("value")} emphasis value={formatMoney(value, currency)} detail={<BeforeLine now={value} before={answer.visitsBefore === null ? null : valueBefore} />} />
-            <Figure
-              label={t("conversionRate")}
-              value={formatPercent(rate)}
-              detail={(
-                <span className="text-[12px] text-secondary">
-                  {rateBefore !== null
-                    ? t("rateBefore", { rate: formatPercent(rateBefore), before: tf(`before.${periodWord(period)}`) })
-                    : t("ofVisits", { visits: formatNumber(answer.visits) })}
-                </span>
-              )}
-            />
-            {/* The key events not counted, as Channels names them (CV2); the kinds that happened when every key event counts. */}
-            {fired.length > 0 ? (
-              <Figure
-                label={tc("uncounted")}
-                value={formatNumber(firedCount)}
-                detail={<span className="text-[12px] text-secondary">{tc("uncountedDetail", { events: eventList(fired.map((event) => event.eventName).join(","), nameOf, locale), count: fired.length })}</span>}
-              />
-            ) : (
-              <Figure
-                label={t("kindsHappened")}
-                value={t("kindsOf", { happened: happened.length, counted: kinds.length })}
-                detail={<span className="text-[12px] text-secondary">{happened.length === 1 ? t("onlyKind", { name: happenedLine }) : happenedLine}</span>}
-              />
-            )}
-          </FigureRow>
-        )
+        <FigureRow>
+          <Figure label={t("conversions")} emphasis value={formatNumber(total)} detail={<BeforeLine now={total} before={totalBefore} />} />
+          {second ? <Figure label={nameOf(second.eventName)} value={formatNumber(second.count)} detail={<BeforeLine now={second.count} before={second.countBefore} />} /> : null}
+          <Figure
+            label={t("conversionRate")}
+            value={formatPercent(rate)}
+            detail={
+              rateBefore !== null && rateChange !== null ? (
+                <ChangeLine by={rateChange}>
+                  {t(rateChange > 0 ? "rateFromUp" : rateChange < 0 ? "rateFromDown" : "rateFromSame", { rate: formatPercent(rateBefore), before: tf(`before.${periodWord(period)}`) })}
+                </ChangeLine>
+              ) : (
+                <span className="text-[12px] text-secondary">{t("ofVisits", { visits: formatNumber(answer.visits) })}</span>
+              )
+            }
+          />
+          {fourth ? <Figure label={nameOf(fourth.eventName)} value={formatNumber(fourth.count)} detail={<BeforeLine now={fourth.count} before={fourth.countBefore} />} /> : null}
+        </FigureRow>
       ) : <div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />}
 
-      {/* Its chart, agreed on 9 Oct and kept (GA35; Anthony, 2026-10-14: "keep the Conversions over time chart"). */}
-      <ConversionsChart
-        days={chart?.points ?? []}
-        events={chart?.events ?? []}
-        names={nameOf}
-        host={status.host}
-        from={answer?.from ?? null}
-        to={answer?.to ?? null}
-        currency={currency}
-      />
-      <ConversionFlowCard flow={flow} currency={currency} />
-      {/* The three shared parts (conversion-charts-plan.md, 2026-10-29): the map and the line in place of the grid and "Visits needed". */}
+      {/* The three shared parts (conversion-charts-plan.md, 2026-10-29), as the board keeps them: the line first, then the map. */}
+      <ConversionsOverTimeCard opening={{ event: second?.eventName ?? null, show: "per" }} />
       <ConversionsMapCard />
-      <ConversionsByKindCard />
-      <ConversionsOverTimeCard />
-      <BeforeConvertingCard before={answer?.before ?? null} />
-      <EventsTable status={status} />
+
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-[14px] font-medium text-foreground">{t("whatCountsTitle")}</h2>
+          <p className="text-[12px] text-secondary">{t("whatCountsDescription")}</p>
+        </div>
+        <EventsTable status={status} worthOf={worthOf} />
+      </div>
     </div>
   );
 }
 
 type EventRow = NonNullable<FunctionReturnType<typeof api.googleAnalyticsEventReads.analyticsEvents>>["rows"][number];
+type NamedRow = EventRow & { name: string; worth: number | null };
 
-/** A row's place in the opening order: the conversions, then the key events not counted, then the rest (CV5). */
-const rankOf = (row: EventRow) => (row.counted ? 2 : row.keyEvent ? 1 : 0);
-
-const SORTS: SiteSortColumns<EventRow & { name: string }, "name" | "times" | "people" | "conversion" | "change"> = {
+const SORTS: SiteSortColumns<NamedRow, "name" | "times" | "visits" | "worth" | "change"> = {
   name: { value: (row) => row.name, first: "asc" },
   times: { value: (row) => row.times, first: "desc" },
-  people: { value: (row) => row.people, first: "desc" },
-  // The conversions first, the busiest of each first.
-  conversion: { value: (row) => rankOf(row) * 1e12 + row.times, first: "desc" },
+  visits: { value: (row) => row.visits, first: "desc" },
+  worth: { value: (row) => row.worth, first: "desc" },
   change: { value: (row) => changeOf(row.times, row.timesBefore), first: "desc" },
 };
 const nameOfRow = (row: { name: string }) => row.name;
 
 /**
- * Every event Google Analytics recorded, on Conversions
- * (docs/plans/active/ga-conversions-visitors-plan.md CV5; Events joined
- * Conversions, CV1): by its own name and Google's, its times and people,
- * whether it counts as a conversion — "Not counted" for a key event that does
- * not — and the change, opening with the conversions first. A Kind filter and
- * the search box above it; each row opens the event's own screen.
+ * What counts as a conversion (board "Main", 2026-10-30): a row an event
+ * this website counts, by its own name and Google's; how many times, the
+ * visits that did it, what it was worth, and the change on the span before;
+ * the busiest first, the search box above, "13 events" on its bar. Each row
+ * opens the conversion's own screen. With `every`, on a website where
+ * nothing counts yet, every event Google recorded instead (CV1).
  */
-function EventsTable({ status }: { status: AnalyticsStatus }) {
+function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStatus; worthOf: (eventName: string) => number | null; every?: boolean }) {
   const t = useTranslations("googleAnalytics.eventList");
+  const tc = useTranslations("googleAnalytics.conversions");
   const tf = useTranslations("googleAnalytics.filters");
   const router = useRouter();
   const args = useAnalyticsArgs();
@@ -217,15 +176,17 @@ function EventsTable({ status }: { status: AnalyticsStatus }) {
   const [device] = useDevice();
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
+  const currency = status.connection?.currency ?? null;
   const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvents, args);
-  const [kind, setKind] = useSiteParam<EventKind | "">("kind", "", ["", ...EVENT_KINDS]);
   const [search, setSearch, term] = useSiteSearch();
-  const named = answer?.rows.map((row) => ({ ...row, name: nameOf(row.eventName) }));
+  const named: NamedRow[] | undefined = answer?.rows
+    .filter((row) => every || row.counted)
+    .map((row) => ({ ...row, name: nameOf(row.eventName), worth: worthOf(row.eventName) }));
   const matches = wordStartMatcher(term.toLowerCase());
-  const matching = named?.filter((row) => (!kind || row.kind === kind) && (!matches || matches(row.name) || matches(row.eventName)));
-  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "conversion", name: nameOfRow });
+  const matching = named?.filter((row) => !matches || matches(row.name) || matches(row.eventName));
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "times", name: nameOfRow });
   const pager = useSitePager(sorted, { isLoading: answer === undefined || (answer?.live ?? false) });
-  const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase(), t("bar")].join(" · ");
+  const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase()].join(" · ");
   const href = (row: EventRow) => hrefFor("events/event", { key: row.eventName });
 
   return (
@@ -234,12 +195,6 @@ function EventsTable({ status }: { status: AnalyticsStatus }) {
       rowKey={(row) => row.eventName}
       onRowClick={(row) => router.push(href(row))}
       search={{ value: search, onChange: setSearch, placeholder: t("findEvent") }}
-      filters={
-        <Select chip={{ label: t("kindFilter"), choice: kind ? t(`kinds.${kind}`) : null }} value={kind} onChange={(value) => setKind(value as EventKind | "")}>
-          <option value="">{t("everyKind")}</option>
-          {EVENT_KINDS.map((entry) => <option key={entry} value={entry}>{t(`kinds.${entry}`)}</option>)}
-        </Select>
-      }
       cardHeader={
         <TableBar
           footer={pager.footer}
@@ -247,15 +202,14 @@ function EventsTable({ status }: { status: AnalyticsStatus }) {
           actions={sorted ? (
             <ListDownload
               label={t("download")}
-              fileName={`${status.host}-google-analytics-events`}
+              fileName={`${status.host}-google-analytics-conversions`}
               rows={sorted}
               columns={[
                 { header: t("csv.event"), value: (row) => row.name },
                 { header: t("csv.google"), value: (row) => row.eventName },
-                { header: t("csv.times"), value: (row) => row.times },
-                { header: t("csv.people"), value: (row) => row.people },
+                { header: tc("columns.conversions"), value: (row) => row.times },
                 { header: t("csv.visits"), value: (row) => row.visits },
-                { header: t("csv.counts"), value: (row) => (row.counted ? t("csv.yes") : t("csv.no")) },
+                { header: tc("columns.worth"), value: (row) => (row.worth === null ? null : row.worth / 100) },
                 { header: t("csv.change"), value: (row) => { const change = changeOf(row.times, row.timesBefore); return change === null ? null : Math.round(change * 1000) / 10; } },
               ]}
             />
@@ -265,7 +219,7 @@ function EventsTable({ status }: { status: AnalyticsStatus }) {
         </TableBar>
       }
       sort={tableSort}
-      empty={{ icon: <MousePointerClick className="h-8 w-8 text-muted/30" />, label: term || kind ? t("noMatch") : answer?.preparing ? t("preparing") : t("empty") }}
+      empty={{ icon: <MousePointerClick className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : answer?.preparing ? t("preparing") : every ? t("empty") : tc("empty") }}
       footer={pager.footer}
       columns={[
         {
@@ -274,24 +228,23 @@ function EventsTable({ status }: { status: AnalyticsStatus }) {
           sortable: true,
           className: CUT_COLUMN.first,
           cell: (row) => (
-            // Its own name, then Google's ("Page viewed · page_view", as drawn).
+            // Its own name, then Google's ("Purchase · purchase", as drawn).
             <span className="flex min-w-0 items-baseline gap-2">
               <span className="min-w-0"><RecordLinkCell href={href(row)} cut>{row.name}</RecordLinkCell></span>
               <span className="shrink-0 font-mono text-[11px] text-muted">{row.eventName}</span>
             </span>
           ),
         },
-        { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.times)}</span> },
-        { key: "people", header: t("columns.people"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.people)}</span> },
+        { key: "times", header: tc("columns.conversions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.times)}</span> },
+        { key: "visits", header: tc("columns.visits"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.visits)}</span> },
         {
-          key: "conversion",
-          header: t("columns.conversion"),
+          key: "worth",
+          header: tc("columns.worth"),
+          align: "right",
           sortable: true,
-          cell: (row) => (row.counted ? <StatusLabel tone="success">{t("counts")}</StatusLabel>
-            : row.keyEvent ? <StatusLabel tone="warning">{t("notCounted")}</StatusLabel>
-              : <span className="text-[12px] text-muted">–</span>),
+          cell: (row) => (row.worth ? <span className="font-mono text-[12px] text-foreground">{formatMoney(row.worth, currency)}</span> : <span className="text-[12px] text-muted">–</span>),
         },
-        { key: "change", header: <span title={t("columns.changeTitle")}>{t("columns.change")}</span>, align: "right", sortable: true, cell: (row) => <ChangeCell change={changeOf(row.times, row.timesBefore)} /> },
+        { key: "change", header: <span title={tc("columns.changeTitle")}>{t("columns.change")}</span>, align: "right", sortable: true, cell: (row) => <ChangeCell change={changeOf(row.times, row.timesBefore)} /> },
       ]}
     />
   );

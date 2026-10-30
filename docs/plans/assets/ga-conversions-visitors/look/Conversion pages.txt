@@ -4,7 +4,6 @@
 detail-header
   back: Conversions
   page-header: ‹the record's name›
-    sees-eye
 search: Find a page…
 table: Page | Visits | Converted | Times | Rate
   table-bar: Pages

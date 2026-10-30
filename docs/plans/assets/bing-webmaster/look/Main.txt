@@ -2,7 +2,6 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Bing Webmaster
-  sees-eye
 search: Find a website…
 table: Website | Status | Bing clicks | Impressions | Click-through | Share of search | Updated
   table-bar

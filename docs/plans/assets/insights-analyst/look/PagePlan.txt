@@ -2,7 +2,6 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Page decisions
-  sees-eye
 figures
   figure: To improve
   figure: To merge or redirect

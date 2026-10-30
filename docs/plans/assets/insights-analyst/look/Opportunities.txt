@@ -2,7 +2,6 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Opportunities
-  sees-eye
 chart-card: Your opportunities by place and how often they're shown
 chart-card: Searches within reach, by kind of page
 search: Find a search

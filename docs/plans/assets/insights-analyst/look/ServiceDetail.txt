@@ -4,7 +4,6 @@
 detail-header
   back: Strategy
   page-header: ‹the record's name›
-    sees-eye
 figures
   figure: Enquiries a year
   figure: Share of your services' Google clicks

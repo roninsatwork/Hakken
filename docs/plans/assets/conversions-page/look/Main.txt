@@ -1,0 +1,25 @@
+# Google Analytics → Conversions — the approved look (board "Main" of docs/plans/assets/conversions-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Conversions
+figures
+  figure: Conversions
+  figure: Contact form sent
+  figure: Conversion rate
+  figure: Phone number clicked
+chart-card: Visits it took for one contact form sent, day by day
+  filter: Conversion
+  filter: Show
+  filter: Compare
+conversions-over-time
+chart-card: Conversions
+  filter: Count
+  filter: Columns
+  filter: Compare
+conversions-map
+  channel-map
+search: Find an event…
+table: Event | Conversions | Visits | Worth | Change
+  table-bar
+    download: Download CSV
+  table-footer

@@ -4,7 +4,6 @@
 detail-header
   back: Page reviews
   page-header: ‹the record's name›
-    sees-eye
     primary-action: Add the steps to Hakken tasks
 figures
   figure: Visitors for each enquiry

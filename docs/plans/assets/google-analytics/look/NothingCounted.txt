@@ -2,11 +2,9 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Conversions
-  sees-eye
 settings-card: What Hakken sees
 search: Find an event…
-filter: Kind
-table: Event | Times | People | Conversion | Change
+table: Event | Conversions | Visits | Worth | Change
   table-bar
     download: Download CSV
   table-footer

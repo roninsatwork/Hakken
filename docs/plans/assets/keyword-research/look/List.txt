@@ -4,7 +4,6 @@
 detail-header
   back: Keyword research
   page-header: ‹the record's name›
-    sees-eye
 notice (info)
 figures
   figure: Keywords

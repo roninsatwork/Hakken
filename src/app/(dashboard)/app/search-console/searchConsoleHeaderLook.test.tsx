@@ -67,15 +67,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Search Console → a website's header", () => {
-  it("is the compact header: the name opens the company's websites, the country and dates share its row", async () => {
+  // The standard website header (2026-10-30, the Conversions canvas): the name on its own row, the status and the filters under it.
+  it("is the standard website header: the name opens the company's websites, the country and dates share the row under it", async () => {
     nav.search = "country=irl";
     answer(TWO_SITES);
     const { container } = render(<SearchConsoleSiteLayout><p>The page</p></SearchConsoleSiteLayout>);
-    await screen.findByText(/Google's figures to 26 Sept? 2026/);
+    const sw = await screen.findByLabelText("Choose a website");
     await expectApprovedLook(container, "ga-header", "SearchConsole", "Search Console → a website's header");
 
-    // How fresh Google's figures are ends the line under the title, not the top of the page.
-    expect(screen.getByText(/Google's figures to/).closest('[data-part="page-header"]')).not.toBeNull();
+    // No "figures to" line and no property line any more: the row under the name holds the status and the filters.
+    expect(screen.queryByText(/Google's figures to/)).toBeNull();
+    expect(screen.queryByText(/Search Console property/)).toBeNull();
+    expect(sw.closest("h1")!.parentElement).not.toContainElement(screen.getByLabelText("Country"));
 
     // Choosing another website from the title opens it, keeping the country.
     fireEvent.change(screen.getByLabelText("Choose a website"), { target: { value: "site_2" } });

@@ -143,35 +143,50 @@ describe("Google Analytics' approved looks", () => {
 
   // Conversions with Events merged in (ga-conversions-visitors-plan.md CV2, drawn and approved 2026-10-14), and the
   // visits needed for one conversion under Conversions by page classification (Anthony, 2026-10-20: "go").
-  it("7 · Conversions, with every event", async () => {
+  // The canvas "Conversions page, three ways", board "Main", approved 2026-10-30 (conversions-and-agents-build-plan-2026-10-30.md, phase 2).
+  it("7 · Conversions: four figures against the month before, the visits for one, the map, then what counts", async () => {
     at("/app/analytics/site_1/conversions");
     answer({
-      ...{
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
       "googleAnalyticsChartReads:analyticsChart": CHART,
       "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
       "googleAnalyticsEventReads:analyticsEvents": EVENT_LIST,
       "googleAnalyticsConversionsMap:analyticsConversionsMap": CONVERSIONS_MAP,
-      "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
       "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
-    },
-      // A key event not counted, as the drawing shows: the fourth figure says so.
-      "googleAnalyticsReads:analyticsConversions": { ...CONVERSIONS, fired: [{ eventName: "sign_up", count: 5 }] },
     });
     const { container } = render(<AnalyticsConversionsPage />);
-    await screen.findAllByText("Contact form sent");
-    await screen.findByText("Key events not counted");
-    await screen.findByText("Not counted");
-    // The three shared parts (conversion-charts-plan.md, 2026-10-29): the map, the lines by kind, one conversion a day.
-    await screen.findByText("Conversions over time by kind");
-    await screen.findByText("One conversion, day by day");
+    await screen.findByText("What counts as a conversion");
+    // The figures: every conversion, the biggest (no shop here), its rate in every hundred visits, the next biggest.
+    const figures = screen.getByText("Conversions", { selector: "[data-part='figure'] *" }).closest("[data-part='figures']") as HTMLElement;
+    expect(within(figures).getByText("23")).toBeInTheDocument();
+    expect(within(figures).getByText("▲ 21.1% on the month before")).toBeInTheDocument();
+    expect(within(figures).getAllByText("Contact form sent")).toHaveLength(1);
+    expect(within(figures).getByText("14")).toBeInTheDocument();
+    // 14 of 2,412 visits, from 11 of 2,225 the month before.
+    expect(within(figures).getByText("Conversion rate")).toBeInTheDocument();
+    expect(within(figures).getByText("0.6%")).toBeInTheDocument();
+    expect(within(figures).getByText("▲ from 0.5% the month before")).toBeInTheDocument();
+    expect(within(figures).getByText("Phone number clicked")).toBeInTheDocument();
+    // The line opens on the visits it took for one of the biggest conversion.
+    await screen.findByText("Visits it took for one contact form sent, day by day");
     const map = (await screen.findByText("Service")).closest("[data-part='conversions-map']") as HTMLElement;
     // Visits, the start: the contact form from Service pages, twelve visits.
     expect(within(map).getByLabelText("Contact form sent → Service 12")).toHaveTextContent("12");
     // A square opens the pages behind it, carrying this screen to come back to.
     expect(within(map).getByLabelText("Contact form sent → Service 12").closest("a")).toHaveAttribute("href", "/app/analytics/site_1/conversions/pages?event=generate_lead&by=kind&key=service&from=conversions");
-    await expectApprovedLook(container, "ga-conversions-visitors", "Conversions", "Google Analytics → Conversions");
+    // What counts: only the events that count, each with what it was worth, opening the conversion's own screen.
+    const table = screen.getByRole("table");
+    expect(within(table).getByRole("columnheader", { name: /Worth/ })).toBeInTheDocument();
+    expect(within(table).queryByText("page_view")).toBeNull();
+    expect(within(table).getByText("£3,500")).toBeInTheDocument();
+    expect(within(table).getByRole("link", { name: "Contact form sent" })).toHaveAttribute("href", "/app/analytics/site_1/events/event?key=generate_lead");
+    expect(screen.getByText("1 event")).toBeInTheDocument();
+    // What left the page on the canvas: the flow, the lines by kind, what people did before, the key events not counted.
+    expect(screen.queryByText("Conversions over time by kind")).toBeNull();
+    expect(screen.queryByText("What people did before converting")).toBeNull();
+    expect(screen.queryByText("Key events not counted")).toBeNull();
+    await expectApprovedLook(container, "conversions-page", "Main", "Google Analytics → Conversions");
   });
 
   it("7 · the pages behind a square: each landing page of the column that converted, the most first, back to Conversions", async () => {
@@ -244,7 +259,7 @@ describe("Google Analytics' approved looks", () => {
       "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
     });
     render(<AnalyticsConversionsPage />);
-    await screen.findByText("One conversion, day by day");
+    await screen.findByText("Visits it took for one contact form sent, day by day");
     expect(asked().length).toBeGreaterThan(0);
     expect(asked().every(([, args]) => args === "skip")).toBe(true);
     cleanup();
@@ -261,12 +276,8 @@ describe("Google Analytics' approved looks", () => {
       "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
     });
     render(<AnalyticsConversionsPage />);
-    await screen.findByText("One conversion, day by day");
+    await screen.findByText("Visits it took for one contact form sent, day by day");
     await waitFor(() => expect(asked().some(([, args]) => args !== "skip")).toBe(true));
-    // The lines by kind draw a tick box per line.
-    const lines = (await screen.findByText("Conversions over time by kind")).closest("[data-chart-export-root]") as HTMLElement;
-    expect(within(lines).getByLabelText("Organic Search")).toBeInTheDocument();
-    expect(within(lines).getByLabelText("Direct")).toBeInTheDocument();
   });
 
   it("18 · nothing counted yet", async () => {

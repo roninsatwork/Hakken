@@ -131,7 +131,14 @@ export function ConversionsByKindCard() {
   );
 }
 
-export function ConversionsOverTimeCard() {
+/**
+ * `opening`: what the card shows before anyone touches its menus. The
+ * Conversions page (board "Main", 2026-10-30) opens on the visits it took for
+ * one purchase — the shop's purchase, or the first conversion — so the
+ * title names the conversion and the figure: "Visits it took for one
+ * purchase, day by day".
+ */
+export function ConversionsOverTimeCard({ opening }: { opening?: { event?: string | null; show?: ConversionsOverTimeShow } } = {}) {
   const t = useTranslations("googleAnalytics.conversionsMap");
   const tf = useTranslations("googleAnalytics.filters");
   const args = useAnalyticsArgs();
@@ -140,10 +147,11 @@ export function ConversionsOverTimeCard() {
   const [period] = usePeriod();
   const [step] = useStep();
   const events = (status?.connection?.events ?? []).filter((event) => event.counted).map((event) => event.eventName);
-  const [eventName, setEventName] = useSiteParam<string>("timeEvent", events[0] ?? "", events.length > 0 ? events : [""]);
-  const [show, setShow] = useSiteParam<ConversionsOverTimeShow>("timeShow", "rate", SHOWS);
+  const first = opening?.event && events.includes(opening.event) ? opening.event : events[0] ?? "";
+  const [eventName, setEventName] = useSiteParam<string>("timeEvent", first, events.length > 0 ? events : [""]);
+  const [show, setShow] = useSiteParam<ConversionsOverTimeShow>("timeShow", opening?.show ?? "rate", SHOWS);
   const [compare, setCompare] = useSiteParam<Compare>("timeCompare", "none", COMPARES);
-  const chosen = eventName || events[0] || "";
+  const chosen = eventName || first;
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, status?.connection?.newestDay ? args : "skip");
   const before = useQuery(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, status?.connection?.newestDay && compare === "before" ? args : "skip");
   const beforeName = useBeforeName();
@@ -162,9 +170,12 @@ export function ConversionsOverTimeCard() {
   );
   const from = chart?.points[0]?.day ?? null;
   const to = chart?.points[chart.points.length - 1]?.day ?? null;
+  // The conversion's name in the middle of a sentence: "one purchase", "one contact form sent".
+  const name = nameOf(chosen);
+  const inSentence = name.charAt(0).toLocaleLowerCase() + name.slice(1);
   return (
     <ConversionsOverTimeChart
-      title={t("timeTitle")}
+      title={chosen ? (show === "per" ? t("timeTitlePer", { event: inSentence }) : t("timeTitleRate", { event: name })) : t("timeTitle")}
       controls={controls}
       points={points}
       before={beforePoints}

@@ -9,11 +9,12 @@ import { STATUS, statusWith } from "@/src/test/googleAnalyticsFixtures";
 import AnalyticsSiteLayout from "./[siteId]/layout";
 
 /**
- * A website's header in Google Analytics holds to the compact one Anthony
- * chose on 2026-10-15 (docs/plans/active/ga-header-plan.md; the picture is
- * docs/plans/assets/ga-header/Compact.png): the website's name is the switch,
- * the filters share its row, and how fresh the figures are ends the line
- * under it, never at the top of the page.
+ * A website's header in Google Analytics is the standard website header
+ * Anthony decided on 2026-10-30 on the Conversions canvas (board "Main" of
+ * docs/plans/assets/conversions-page/; the compact header of 2026-10-15,
+ * docs/plans/active/ga-header-plan.md, before it): the website's name is the
+ * switch, on its own row; "Updated …" and the filters share the row under it;
+ * no property line and no "figures to" line.
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/analytics/site_1", search: "", push: vi.fn() }));
@@ -54,16 +55,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Google Analytics → a website's header", () => {
-  it("is the compact header: the name opens the company's websites, the filters share its row", async () => {
+  it("is the standard website header: the name opens the company's websites, the status and the filters share the row under it", async () => {
     nav.search = "device=mobile";
     answer(TWO_SITES);
     const { container } = render(<AnalyticsSiteLayout><p>The page</p></AnalyticsSiteLayout>);
-    await screen.findByText("Collecting its first 92 days");
+    const status = await screen.findByText("Collecting its first 92 days");
     await expectApprovedLook(container, "ga-header", "Compact", "Google Analytics → a website's header");
 
-    // How fresh the figures are ends the line under the title, not the top of the page.
-    const note = screen.getByText(/Analytics' figures to 8 Oct 2026/);
-    expect(note.closest('[data-part="page-header"]')).not.toBeNull();
+    // The name has its row to itself; the status and the filters share the row under it; no property line, no figures-to line.
+    const heading = screen.getByRole("heading", { name: /acme-shop.test/ });
+    expect(heading.parentElement).not.toContainElement(status);
+    expect(status.closest('[data-part="page-header"]')).not.toBeNull();
+    expect(status.parentElement!.parentElement).toContainElement(screen.getByLabelText("Device"));
+    expect(screen.queryByText(/Analytics' figures to/)).toBeNull();
+    expect(screen.queryByText(/Google Analytics property/)).toBeNull();
 
     // Choosing another website from the title opens it, keeping the filters.
     fireEvent.change(screen.getByLabelText("Choose a website"), { target: { value: "site_2" } });
