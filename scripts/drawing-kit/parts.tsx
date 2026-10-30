@@ -518,7 +518,7 @@ const PARTS: Part[] = [
     use: "After the page title in every header: opens What Hakken sees; the count of new steps beside it; the tooltip while the mouse rests on it.",
     render: () => (
       <div className="flex flex-col gap-10 pt-10">
-        <div className="flex items-center gap-3"><span className="text-2xl font-bold tracking-tight text-foreground">kordatackle.com</span><SeesEye open={false} fresh count={2} onClick={noop} tooltipShown /></div>
+        <div className="flex items-center gap-3"><span className="text-2xl font-bold tracking-tight text-foreground">kordatackle.com</span><SeesEye open={false} fresh count={2} onClick={noop} /></div>
         <div className="flex items-center gap-3"><span className="text-2xl font-bold tracking-tight text-foreground">kordatackle.com</span><SeesEye open fresh={false} count={2} onClick={noop} /></div>
       </div>
     ),

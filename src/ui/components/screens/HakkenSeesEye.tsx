@@ -10,7 +10,6 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
 import { SeesBubble } from "./HakkenSees";
-import { Tooltip } from "./Tooltip";
 import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
@@ -20,8 +19,9 @@ import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, 
  * the top bar on 2026-10-30 (the Conversions canvas: "could the What Hakken
  * sees icon sit here and have page context"): a bordered 38px button with
  * the eye in the brand colour, then how many of the box's steps are new
- * ("2 new") until the bubble has been opened on this advice. Resting on it
- * shows what it is; clicking it opens the speech bubble under it
+ * ("2 new") until the bubble has been opened on this advice. No tooltip
+ * (Anthony, 2026-10-30, "remove it": at the top of the page it opened under
+ * the browser's toolbar); clicking it opens the speech bubble under it
  * (`SeesBubble`) and leaves the eye pressed; clicking again, a click
  * anywhere else or Escape closes it.
  *
@@ -54,10 +54,8 @@ export function HakkenSeesEye() {
   useEffect(() => {
     if (!open || !box?.ask || !key || asked?.key === key) return;
     noteAsked(key, "RESEARCHING");
-    void Promise.resolve()
-      .then(() => askSees(box.ask!))
-      .then((reply) => noteAsked(key, reply?.status ?? "FAILED"))
-      .catch(() => noteAsked(key, "FAILED"));
+    // Nobody waits on the page: the answer arrives through the store, and a refusal leaves the rule's words standing.
+    askSees(box.ask).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
   }, [open, key, asked?.key, box?.ask, askSees]);
   const answer = useQuery(api.seesAsk.seesAnswer, open && box?.ask && key && asked?.key === key && asked.status !== "FAILED" ? { siteId: box.ask.siteId, key } : "skip");
   // A click anywhere outside the eye and its bubble, or Escape, closes the bubble, as the bell's panel closes.
@@ -96,13 +94,12 @@ export function HakkenSeesEye() {
 }
 
 /** The eye as drawn: pressed while the bubble is open, the count beside it while its steps are new, the bubble under it. */
-export function SeesEye({ ref, open, fresh, count, onClick, tooltipShown, bubble, bubbleId }: {
+export function SeesEye({ ref, open, fresh, count, onClick, bubble, bubbleId }: {
   ref?: React.Ref<HTMLSpanElement>;
   open: boolean;
   fresh: boolean;
   count: number;
   onClick: () => void;
-  tooltipShown?: boolean;
   /** The open bubble, drawn under the eye; the kit draws one to show it. */
   bubble?: ReactNode;
   bubbleId?: string;
@@ -111,22 +108,20 @@ export function SeesEye({ ref, open, fresh, count, onClick, tooltipShown, bubble
   const { platformName } = useSystemSettings();
   return (
     <span ref={ref} data-part="sees-eye" className="relative inline-flex shrink-0 items-center gap-3 text-[13px] font-normal tracking-normal">
-      <Tooltip label={fresh ? t("tooltipNew", { platformName, count }) : t("tooltipRead", { platformName })} shown={tooltipShown}>
-        <Button
-          variant="ghost"
-          aria-label={t("title", { platformName })}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          aria-controls={open ? bubbleId : undefined}
-          onClick={onClick}
-          className={cn(
-            "inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] border p-0 transition-colors",
-            open ? "border-secondary/40 bg-hover" : "border-border-dim bg-background hover:bg-hover/40",
-          )}
-        >
-          <Eye className="h-5 w-5 text-brand" aria-hidden="true" />
-        </Button>
-      </Tooltip>
+      <Button
+        variant="ghost"
+        aria-label={t("title", { platformName })}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={open ? bubbleId : undefined}
+        onClick={onClick}
+        className={cn(
+          "inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] border p-0 transition-colors",
+          open ? "border-secondary/40 bg-hover" : "border-border-dim bg-background hover:bg-hover/40",
+        )}
+      >
+        <Eye className="h-5 w-5 text-brand" aria-hidden="true" />
+      </Button>
       {fresh ? <span className="text-foreground">{t("new", { count })}</span> : null}
       {bubble}
     </span>

@@ -119,19 +119,6 @@ describe("HakkenSees and its eye", () => {
     expect(screen.getByText("ui.hakkenSees.new 2")).toBeInTheDocument();
   });
 
-  it("says what it is while the mouse rests on the eye", () => {
-    render(<Screen />);
-    expect(screen.queryByRole("tooltip")).toBeNull();
-    fireEvent.mouseEnter(eye());
-    expect(screen.getByRole("tooltip")).toHaveTextContent("ui.hakkenSees.tooltipNew Hakken 2");
-    expect(eye()).toHaveAttribute("aria-describedby", screen.getByRole("tooltip").id);
-    fireEvent.mouseLeave(eye());
-    expect(screen.queryByRole("tooltip")).toBeNull();
-    fireEvent.click(eye());
-    fireEvent.focus(eye());
-    expect(screen.getByRole("tooltip")).toHaveTextContent("ui.hakkenSees.tooltipRead Hakken");
-  });
-
   // The eye left the page titles for the top bar on 2026-10-30: headers draw none, the top bar one.
   it("draws no eye on a screen without a box, and one eye however many headers the screen stacks", () => {
     render(<><HakkenSeesEye /><PageHeader icon={null} title="Settings" /></>);
