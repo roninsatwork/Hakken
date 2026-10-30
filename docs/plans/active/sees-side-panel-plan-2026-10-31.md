@@ -70,12 +70,28 @@ screen, the box to ask fixed at its foot.
    from the panel with the page as its starting point (the screen, dates,
    country, device, findings and written words as context), the answer streamed
    into the panel, the thread in Ask Hakken's list.
-4. **Write it down and check** (half a day): the guide, the screen kit's notes,
+4. **Ask Hakken draws charts from any section** (one and a half days; Anthony,
+   2026-10-31: "i also want to upgrade ask hakken to create graphs and charts").
+   Today its one chart is Search Console's Google visits or impressions a day
+   (`show_chart`). It draws from every section's saved figures with the app's
+   own chart parts — conversions over time, a line per channel, bars by kind of
+   page — in Ask Hakken and in the panel; never its own numbers, always read.
+5. **Ask Hakken handles tasks** (two days; Anthony: "send me a chart at 10am
+   tomorrow with my new conversion rates … this is handle tasks"). You ask it to
+   send something at a time, once or regularly, about any saved figure; it shows
+   what it will send, chart included, and sends it by email and in Hakken once
+   you say yes. Today a report is weekly only, Search Console's pages only, with
+   no chart and no "once, tomorrow at 10" (`propose_report`). The chart goes in
+   the email as a picture.
+6. **Write it down and check** (half a day): the guide, the screen kit's notes,
    tests, the local gate; commits local.
 
-About three and a half days of agent work for the panel; with the findings plan
-(about seven) about ten in all.
+About seven days of agent work for the panel and Ask Hakken's upgrades; with
+the findings plan (about seven) about fourteen in all.
 
 ## Progress
 
-- 2026-10-31: drawn (board "Panel") and planned. Nothing built.
+- 2026-10-31: drawn (board "Panel") and planned. Nothing built. Anthony's
+  comments on the board taken: Ask Hakken's disclaimer under the question box,
+  left-aligned; no page line in the head; head and send button centred. Ask
+  Hakken's charts and tasks added as phases 4 and 5.
