@@ -245,3 +245,34 @@ export function findingsFrom(views: readonly FindingView[]): Finding[] {
   // Their facts keyed in order, so the team names "f1.rate" and the Editor fills it in.
   return chosen.map((finding, at) => ({ ...finding, facts: finding.facts.map((fact) => ({ ...fact, key: `f${at + 1}.${fact.key}` })) }));
 }
+
+/** An event's Google name in plain words, for a model to read: "add_to_cart" → "add to cart"; every conversion together named so. */
+const eventWords = (event: string | number) => (event === "*" ? "every conversion together" : String(event).replace(/_/g, " "));
+const viewWords: Record<string, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country" };
+
+/**
+ * A finding as one plain English sentence, for Jev to judge and the team to read beside its keys. Never shown to a
+ * client: the panel builds its words from the catalogue (`googleAnalytics.findings`), in the reader's language.
+ */
+export function findingWords(finding: Pick<Finding, "kind" | "params">): string {
+  const p = finding.params;
+  const by = viewWords[String(p.by)] ?? String(p.by);
+  switch (finding.kind) {
+    case "visitsForOne":
+      return `It took ${p.visits} visits for one ${eventWords(p.event)}${p.visitsBefore !== undefined ? `, against ${p.visitsBefore} the span before` : ""}.`;
+    case "step":
+      return `Of the visits that did ${eventWords(p.from)}, ${p.wentOn}% went on to ${eventWords(p.to)}${p.wentOnBefore !== undefined ? `, against ${p.wentOnBefore}% the span before` : ""}.`;
+    case "groupAbove":
+    case "groupBelow": {
+      const direction = finding.kind === "groupAbove" ? "above" : "below";
+      return p.event === "*"
+        ? `The ${by} ${p.group} makes ${p.perVisit} conversions a visit, ${direction} the website's ${p.sitePerVisit}.`
+        : `${p.rate}% of the ${by} ${p.group}'s visits did ${eventWords(p.event)}, ${direction} the website's ${p.siteRate}%.`;
+    }
+    case "rose":
+    case "fell":
+      return `${p.rate}% of the ${by} ${p.group}'s visits did ${eventWords(p.event)}, ${finding.kind === "rose" ? "up" : "down"} from ${p.rateBefore}% the span before.`;
+    case "trackingGap":
+      return `${p.highRate}% of ${p.high} visits did ${eventWords(p.event)}, against ${p.lowRate}% of ${p.low} visits.`;
+  }
+}

@@ -9885,7 +9885,8 @@
       "wiki": "Wiki",
       "seo": "SEO",
       "knowledge": "Knowledge",
-      "discovery": "Visibility"
+      "discovery": "Visibility",
+      "sees": "The eye"
     },
     "certainty": {
       "SURE": "Sure",
@@ -10163,6 +10164,51 @@
           "about": "About this business",
           "another": "Something else of the name",
           "other": "Cannot tell"
+        }
+      },
+      "seesFindingMatters": {
+        "name": "Would the owner act on this finding?",
+        "description": "Before the eye's panel shows what the figures show, leaves out a finding that is obvious or of no use.",
+        "rule": "Without it, every finding the code scores highest is shown.",
+        "answers": {
+          "yes": "Worth acting on",
+          "no": "Obvious or of no use"
+        }
+      },
+      "seesGapOrTracking": {
+        "name": "Is this gap broken tracking rather than behaviour?",
+        "description": "When one device does something far less than another, decides whether to say tracking may be broken there.",
+        "rule": "Without it, a gap of three times or more is called possible broken tracking.",
+        "answers": {
+          "yes": "Possibly broken tracking",
+          "no": "Behaviour"
+        }
+      },
+      "seesGuessAsFact": {
+        "name": "Does this sentence state a guess as fact?",
+        "description": "Sends the eye's words back when a sentence gives a reason the figures don't show as fact.",
+        "rule": "Without it, only the Editor's own checks run.",
+        "answers": {
+          "yes": "States a guess as fact",
+          "no": "Says only what the figures show"
+        }
+      },
+      "seesGenericStep": {
+        "name": "Would this step fit any website?",
+        "description": "Sends the eye's words back when a step names no page, channel, device or product.",
+        "rule": "Without it, only the Editor's own checks run.",
+        "answers": {
+          "yes": "Fits any website",
+          "no": "Says where"
+        }
+      },
+      "seesPointCovered": {
+        "name": "Did the bubble make this point?",
+        "description": "Grades the eye's eval set: whether each of the notes on a page was found.",
+        "rule": "Without it, the Head of Strategy grades.",
+        "answers": {
+          "yes": "Found",
+          "no": "Missed"
         }
       }
     }

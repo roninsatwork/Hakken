@@ -98,6 +98,16 @@ describe("a bubble readable in one go (2026-10-30: \"a wall of numbers\")", () =
   });
 });
 
+describe("the findings code found (sees-findings plan, phase 3)", () => {
+  test("words that leave out a finding to cover go back; naming one of its figures covers it", () => {
+    const finding: Array<[string, Fact]> = [["f1.rate", { key: "f1.rate", value: 9.2, unit: "percent", source: "analytics", label: "Paid Search buying" }], ["f1.siteRate", { key: "f1.siteRate", value: 3.4, unit: "percent", source: "analytics", label: "the website buying" }]];
+    const facts = new Map([...factsByKey(factsOf(ask)), ...finding]);
+    const mustCover = [{ keys: ["f1.rate", "f1.siteRate"], words: "Paid Search buys at 9.2%." }];
+    expect(seesFrom({ says: ["[[conv.purchases.now]] purchases last month."], steps: [] }, facts, links, { mustCover })).toMatchObject({ ok: false, why: expect.stringContaining("It left out a finding: \"Paid Search buys at 9.2%.\"") });
+    expect(seesFrom({ says: ["[[f1.rate]] of Paid Search visits bought, against [[f1.siteRate]] across the website."], steps: [] }, facts, links, { mustCover })).toMatchObject({ ok: true });
+  });
+});
+
 describe("tracking advice and who writes (Anthony, 2026-10-30: \"the advice is still really shit\")", () => {
   test("with nothing wrong in tracking health, words about tracking or about changing what counts go back", () => {
     const facts = factsByKey(factsOf(ask));

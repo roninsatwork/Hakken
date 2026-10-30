@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internalQuery } from "./_generated/server";
+import { resolveModelConfig } from "./aiModels";
+import { TYPESAFE_PROVIDER_KEY } from "./aiModelService";
 import { readMapView } from "./agentReads";
 import type { SiteReader } from "./siteAccess";
 import { tenantQuery } from "./tenantFunctions";
@@ -47,4 +49,22 @@ export const seesFindingsInternal = internalQuery({
   args: { companyId: v.id("companies"), ...findingsArgs },
   returns: v.array(findingValidator),
   handler: async (ctx, { companyId, ...args }) => await readSeesFindings({ db: ctx.db, companyId }, args),
+});
+
+/** Models in the catalogue read at most: the whole of it. */
+const CATALOGUE_LIMIT = 500;
+
+/**
+ * The model the eye's Decisions ask: the catalogue's enabled TypeSafe model (Jev), read from stored configuration,
+ * never written into code — only these Decisions, so every other Decision keeps the platform's own choice. Null
+ * when none is enabled: the Decisions then go to whatever the platform answers Decisions with.
+ */
+export const seesJudgeModelInternal = internalQuery({
+  args: { companyId: v.optional(v.id("companies")) },
+  handler: async (ctx, args) => {
+    const models = await ctx.db.query("aiModels").take(CATALOGUE_LIMIT);
+    const jev = models.filter((model) => model.providerKey === TYPESAFE_PROVIDER_KEY && model.isEnabled).sort((a, b) => Number(b.isDefault ?? false) - Number(a.isDefault ?? false) || a.modelId.localeCompare(b.modelId))[0];
+    if (!jev) return null;
+    return await resolveModelConfig(ctx, { requestedModelId: jev.modelId, useCase: "decision", ...(args.companyId ? { companyId: args.companyId } : {}) });
+  },
 });

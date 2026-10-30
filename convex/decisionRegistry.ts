@@ -22,7 +22,7 @@ import { AUTO_CLASSIFY_DECISION, GROUP_LABELS } from "./utils/autoClassify";
  */
 
 /** Where an admin will see the Decision at work; a copy key, not a label. */
-export type DecisionUsedIn = "mailbox" | "chat" | "wiki" | "seo" | "knowledge" | "discovery";
+export type DecisionUsedIn = "mailbox" | "chat" | "wiki" | "seo" | "knowledge" | "discovery" | "sees";
 
 export type DecisionDefinition = {
   /** Stable id, `area.what-it-decides`, used in settings and run rows. */
@@ -73,6 +73,10 @@ const CHAT_STATE_NOTE =
  * `answer.text` is what it replied, and `brand.name` is the one name found in
  * that reply. The answer reaches the model as state and is stored nowhere.
  */
+/** State shape the bubble's finding Decisions read: the website, the page and one finding in words with its figures. */
+const SEES_STATE_NOTE =
+  "`website.host` is a business's website and `website.shop` says whether it sells online; `page` is the screen the owner is looking at; `finding.words` is one thing its figures show and `finding.figures` the figures behind it.";
+
 const CITATION_STATE_NOTE =
   "`question` was put to an AI engine and `answer.text` is its reply. `brand.name` is the name of one business found in that reply.";
 
@@ -671,6 +675,101 @@ export const DECISIONS: readonly DecisionDefinition[] = [
       },
     },
     // A page shown or left out of one report; acting on it changes nothing and there is nothing to audit.
+    describeAction: () => null,
+  },
+  // What Hakken sees (sees-findings-in-code-plan-2026-10-31.md, phases 2, 4 and 5; Anthony: "Ok let's make a plan
+  // here, as you suggested and with jev"). Code finds; these are the common-sense calls in between. Each acts on
+  // one bubble or one grading, low stakes, so *fairly sure* is enough; each has the rule it had before. Shipped off,
+  // as every Decision is; switched on in Admin → Decisions.
+  {
+    key: "sees.finding-matters",
+    name: "Would the owner act on this finding?",
+    copyKey: "seesFindingMatters",
+    usedIn: "sees",
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "noul",
+      instructions: {
+        task: "Decide whether the owner of this website would act on this finding, or whether it is obvious or of no use to them.",
+        context: SEES_STATE_NOTE,
+        yes: "A business owner would want to know this and could do something about it: a gap, a drop or a chance in how visits turn into sales or enquiries.",
+        no: "It is obvious to anyone who knows how websites work (blog pages rarely sell, people visit a contact page to make contact), or nothing could be done about it.",
+      },
+    },
+    describeAction: (answer) => (answer.kind === "yes-no" && !answer.yes ? "left the finding out of the panel as obvious or of no use" : null),
+  },
+  {
+    key: "sees.gap-or-tracking",
+    name: "Is this gap broken tracking rather than behaviour?",
+    copyKey: "seesGapOrTracking",
+    usedIn: "sees",
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "noul",
+      instructions: {
+        task: "Decide whether this gap between devices is more likely broken tracking than a difference in how people behave.",
+        context: SEES_STATE_NOTE,
+        yes: "The gap is too large, or of the wrong kind, for behaviour alone: a form, a step or an event that fires far less on one device usually means it is not being recorded there.",
+        no: "The gap is the kind that behaviour explains: people buy, read or sign up differently on a phone and a computer.",
+      },
+    },
+    describeAction: (answer) => (answer.kind === "yes-no" && !answer.yes ? "called the gap behaviour rather than tracking" : null),
+  },
+  {
+    key: "sees.guess-as-fact",
+    name: "Does this sentence state a guess as fact?",
+    copyKey: "seesGuessAsFact",
+    usedIn: "sees",
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "noul",
+      instructions: {
+        task: "Decide whether the sentence states, as fact, a cause or a reason the figures given do not show.",
+        context: "`sentence` is one sentence written for a business owner about their website; `figures` are the only figures it may rest on.",
+        yes: "It says why something happened, or what people did or felt, as a fact, when the figures only show that it happened (\"shoppers simply reloaded the checkout fewer times\").",
+        no: "It says only what the figures show, or offers a reason as a possibility (\"may\", \"could\", \"worth checking\").",
+      },
+    },
+    describeAction: (answer) => (answer.kind === "yes-no" && answer.yes ? "sent the words back for stating a guess as fact" : null),
+  },
+  {
+    key: "sees.generic-step",
+    name: "Would this step fit any website?",
+    copyKey: "seesGenericStep",
+    usedIn: "sees",
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "noul",
+      instructions: {
+        task: "Decide whether this step would fit almost any website, saying nowhere which page, channel, device, step or product it is about.",
+        context: "`step` is one thing to do, written for the owner of the website named in `website`.",
+        yes: "It is advice anyone could give without seeing the figures (\"improve your checkout\", \"review your landing pages\").",
+        no: "It names where: a kind of page, a channel, a device, a step of the shop or a product.",
+      },
+    },
+    describeAction: (answer) => (answer.kind === "yes-no" && answer.yes ? "sent the words back for a step that would fit any website" : null),
+  },
+  {
+    key: "sees.point-covered",
+    name: "Did the bubble make this point?",
+    copyKey: "seesPointCovered",
+    usedIn: "sees",
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "noul",
+      instructions: {
+        task: "Decide whether the bubble makes the point, in any words; its figures may differ a little from the point's.",
+        context: "`point` is something a person said a good bubble for this page would find; `bubble` is what was written.",
+        yes: "The bubble says the same finding, even in other words or with slightly different figures.",
+        no: "The bubble does not say it, or only touches on it without making the point.",
+      },
+    },
+    // A grading of the eval set: nothing changes for a client.
     describeAction: () => null,
   },
 ];

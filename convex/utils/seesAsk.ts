@@ -193,6 +193,15 @@ export function seriousFaults(failing: readonly string[]): string[] {
   return failing.filter((check) => check in SERIOUS_TRACKING_FAULTS).map((check) => SERIOUS_TRACKING_FAULTS[check]);
 }
 
+/** Findings the words must cover, of those code found: the first ones; the panel shows them all. */
+export const MOST_COVERED = 4;
+
+/** Said to the specialist when code has found things in the figures before it starts. */
+export const SEES_FINDINGS_FORMAT = [
+  "Code has already found the things listed in findings, the most worth saying first, each with its figures' keys. Your words must cover the first four, each by naming at least one of its figures' keys. Then add what your reading explains about them: why, where, what to do.",
+  "Never contradict a finding. Where a finding says to check tracking, say tracking may be broken there; where it says behaviour, say it as a gap in how people behave.",
+].join("\n");
+
 /** Whether two pages' figures are the same, key for key and value for value: a saved answer stands only while they are (S3). */
 export function sameFigures(left: ReadonlyArray<{ key: string; value: number }> | undefined, right: ReadonlyArray<{ key: string; value: number }>): boolean {
   if (!left || left.length !== right.length) return false;
@@ -221,7 +230,13 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
   noTrackingTalk?: boolean;
   /** An Analytics screen: words it never uses (clicks, sessions, users…) go back. */
   analytics?: boolean;
+  /**
+   * The findings code found that the words must cover, each by naming at least one of its figures' keys in a
+   * sentence that is kept (sees-findings-in-code-plan-2026-10-31.md, phase 3).
+   */
+  mustCover?: ReadonlyArray<{ keys: readonly string[]; words: string }>;
 } = {}): SeesVerdict {
+  const namedKept: string[] = [];
   const jargon = (text: string) => (options.analytics ? text.match(ANALYTICS_JARGON)?.[0] ?? null : null);
   let figures = 0;
   const trackingTalk = (text: string) => options.noTrackingTalk && TRACKING_TALK.test(text);
@@ -238,6 +253,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence.
     if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) break;
     figures += namedFacts(trimmed).length;
+    namedKept.push(...namedFacts(trimmed));
     const filled = fillFacts(trimmed, facts);
     if (filled.missing.length > 0) return { ok: false, why: `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
     if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}".` };
@@ -266,6 +282,9 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     const link = Number.isInteger(at) ? links[at] : undefined;
     if (!link) return { ok: false, why: "A step's link was not one of the page's." };
     steps.push({ words: filled.text, link: link.label, href: link.href });
+  }
+  for (const finding of options.mustCover ?? []) {
+    if (!finding.keys.some((key) => namedKept.includes(key))) return { ok: false, why: `It left out a finding: "${finding.words}". Cover it by naming one of its figures.` };
   }
   return { ok: true, says, steps };
 }

@@ -62,7 +62,7 @@ export async function askWithTools(
   tools: readonly AgentTool[],
   options: {
     /** The Editor's check: why the answer goes back, or null when it stands. Given every figure read so far. */
-    check?: (answer: unknown, found: ReadonlyMap<string, Fact>) => string | null;
+    check?: (answer: unknown, found: ReadonlyMap<string, Fact>) => string | null | Promise<string | null>;
     /** Reads made for the agent before its first turn. */
     firstReads?: readonly FirstRead[];
     /** What its reads' keys start with, then the read's number: `r` unless agents reading side by side need their own. */
@@ -169,7 +169,7 @@ export async function askWithTools(
 
     const parsed = readJson(response.text);
     lastAnswer = parsed;
-    lastWhy = parsed === null ? "It did not reply with the JSON asked for." : options.check?.(parsed, found) ?? null;
+    lastWhy = parsed === null ? "It did not reply with the JSON asked for." : (await options.check?.(parsed, found)) ?? null;
     if (lastWhy === null) return { answer: parsed, found: [...found.values()], reads, sentBack: null, turns: turn + 1 };
     if (sentBackTimes >= MOST_SENT_BACK || turn >= MOST_TURNS - 1) break;
     sentBackTimes += 1;

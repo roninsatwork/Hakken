@@ -13,8 +13,10 @@ import { INSIGHTS_LEAD_ROLE, type InsightsRole } from "./utils/agentRoles";
 import { briefFor } from "./utils/insightBriefs";
 import { factsByKey, type Fact } from "./utils/insightFacts";
 import { ANALYTICS_READ } from "./utils/agentTools";
+import { findingWords, type Finding } from "./utils/sees/findings";
+import { judgeFindings, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, ROUTE_FORMAT, SECOND_LOOK_FORMAT, judgeFrom, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, routeFor, seriousFaults, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
+  JUDGE_FORMAT, MOST_COVERED, ROUTE_FORMAT, SECOND_LOOK_FORMAT, SEES_FINDINGS_FORMAT, judgeFrom, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, routeFor, seriousFaults, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 
@@ -80,34 +82,72 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   const memories: Array<{ content: string }> = writer ? await ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: writer.agentId, companyId: run.companyId }).catch(() => []) : [];
   const toldBefore = memories.length > 0 ? `What you were told before, which binds you:\n${memories.map((memory) => `- ${memory.content}`).join("\n")}` : "";
   const links = page.links.map((link, number) => ({ number, label: link.label }));
-  const prompt = JSON.stringify({ website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults, facts: factLines(facts), links });
   const scope = { companyId: run.companyId, host: page.host, holdId: run.holdId, period: page.period, device: page.device ?? "", country: page.country, ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}) };
   const reads = page.screen.startsWith("googleAnalytics.") && readable(scope);
-  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, page.shop ? SEES_SHOP_FORMAT : "", reads ? SEES_READS_FORMAT : ""].filter(Boolean).join("\n\n");
+  // Code finds first (sees-findings-in-code-plan-2026-10-31.md): the findings over the map's views, then Jev leaves
+  // out the obvious and says whether a device gap is tracking. The writer must cover the first ones.
+  const judgeRun = { companyId: run.companyId, runId: run.runId };
+  const prepared = await prepareSeesJudge(ctx, judgeRun);
+  let findings: Finding[] = [];
+  if (reads) {
+    try {
+      const found = await ctx.runQuery(internal.seesFindings.seesFindingsInternal, { companyId: run.companyId, siteId: run.holdId, period: page.period, device: page.device ?? "", ...(page.country ? { country: page.country } : {}) });
+      const judged = await judgeFindings(ctx, judgeRun, prepared, { host: page.host, shop: page.shop, about: page.about }, found);
+      findings = judged.findings;
+      for (const note of judged.notes) lines.push({ heading: "Jev", detail: note.slice(0, 900) });
+      lines.push({ heading: "Findings", detail: `${findings.length} found by code: ${findings.map(findingWords).join(" ")}`.slice(0, 900) });
+    } catch (error) {
+      lines.push({ heading: "Findings", detail: `Not worked out: ${failureSummary(error)}. The specialist writes from its reading alone.`, failed: true });
+    }
+  }
+  const findingFacts: Fact[] = findings.flatMap((finding) => finding.facts.map((fact) => ({
+    key: fact.key, value: fact.value, unit: fact.unit, source: "analytics" as const, label: fact.label,
+    ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}), ...(page.country ? { country: page.country } : {}),
+  })));
+  const mustCover = findings.slice(0, MOST_COVERED).map((finding) => ({ keys: finding.facts.map((fact) => fact.key), words: findingWords(finding) }));
+  const findingsForWriter = findings.map((finding, at) => ({
+    number: at + 1,
+    finding: findingWords(finding),
+    ...(finding.params.tracking ? { tracking: finding.params.tracking } : {}),
+    figures: factLines(findingFacts.filter((fact) => fact.key.startsWith(`f${at + 1}.`))),
+  }));
+  const prompt = JSON.stringify({ website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults, ...(findings.length > 0 ? { findings: findingsForWriter } : {}), facts: factLines(facts), links });
+  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, page.shop ? SEES_SHOP_FORMAT : "", reads ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : ""].filter(Boolean).join("\n\n");
+  // Jev's check on the words, once the Editor's code has passed them: a guess stated as fact, a step that fits any website.
+  const figuresForJev = [...facts, ...findingFacts].slice(0, 60).map((fact) => ({ what: fact.label, value: fact.value }));
+  const wordsWhy = (checked: Extract<SeesVerdict, { ok: true }>) => judgeWords(ctx, judgeRun, prepared, page.host, checked.says, checked.steps.map((step) => step.words), figuresForJev);
   const who = `the ${chosen.replace("INSIGHTS_", "").toLowerCase()} writing the bubble`;
-  // Every figure the bubble may name: the page's, and whatever the specialist read.
-  let named: ReadonlyMap<string, Fact> = held;
+  // Every figure the bubble may name: the page's, the findings', and whatever the specialist read.
+  const given = factsByKey([...facts, ...findingFacts]);
+  let named: ReadonlyMap<string, Fact> = given;
   // Once the specialist can read, a bubble must say something the page's boxes don't (the Editor's check, both writers).
   const beyondPage = reads ? { pageKeys: new Set(held.keys()) } : {};
   // With nothing wrong in tracking health, words about tracking or about what counts go back (both writers).
   const noTracking = { noTrackingTalk: trackingFaults.length === 0, analytics: page.screen.startsWith("googleAnalytics.") };
-  const withRead = (found: ReadonlyMap<string, Fact>) => new Map([...found, ...held]);
+  const withRead = (found: ReadonlyMap<string, Fact>) => new Map([...found, ...given]);
+  const covering = mustCover.length > 0 ? { mustCover } : {};
   let verdict: SeesVerdict;
   let raw: unknown;
   if (reads) {
     const written = await askWithTools(ctx, run, writer, who, system, prompt, [analyticsTool(scope)], {
       firstReads: firstReadsFor(page),
       limitMs: WRITE_LIMIT_MS,
-      check: (answer, found) => {
-        const checked = seesFrom(answer, withRead(found), page.links, { ...noTracking, ...(found.size > 0 ? beyondPage : {}) });
-        return checked.ok ? null : checked.why;
+      check: async (answer, found) => {
+        const checked = seesFrom(answer, withRead(found), page.links, { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) });
+        return checked.ok ? await wordsWhy(checked) : checked.why;
       },
     });
     named = withRead(factsByKey(written.found));
     raw = written.answer;
     for (const read of written.reads) lines.push({ heading: "Read", detail: readLine(read), failed: Boolean(read.problem) });
-    // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with why.
-    verdict = seesFrom(raw, named, page.links, { ...noTracking, ...(written.found.length > 0 ? beyondPage : {}) });
+    // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with why. Words that
+    // still leave a finding out stand without it rather than leave the reader nothing; the run's log says so.
+    const strict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}) });
+    verdict = !strict.ok && strict.why.startsWith("It left out a finding")
+      ? seesFrom(raw, named, page.links, { ...noTracking, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}) })
+      : strict;
+    if (!strict.ok && verdict.ok) lines.push({ heading: "The Editor", detail: `Kept although ${strict.why.charAt(0).toLowerCase()}${strict.why.slice(1)}` });
+    if (written.sentBack && verdict.ok) lines.push({ heading: "Jev", detail: `Kept after one rewrite, though: ${written.sentBack}`.slice(0, 900) });
   } else {
     raw = await ask(ctx, run, writer, who, system, prompt, undefined, (value) => value !== null && typeof value === "object" && "says" in value);
     // 3. The Editor checks every number and every word (S5, S7): what fails goes back.
@@ -126,7 +166,9 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     if (read.useful) {
       lines.push({ heading: "Second look", detail: "The Head of Strategy kept the specialist's words: the most useful thing the page says." });
     } else {
-      const rewritten = seesFrom(read.rewrite, named, page.links, { ...noTracking, ...(named.size > held.size ? beyondPage : {}) });
+      const checkedRewrite = seesFrom(read.rewrite, named, page.links, { ...noTracking, ...covering, ...(named.size > held.size ? beyondPage : {}) });
+      const jevWhy = checkedRewrite.ok ? await wordsWhy(checkedRewrite) : null;
+      const rewritten: SeesVerdict = checkedRewrite.ok && jevWhy ? { ok: false, why: jevWhy } : checkedRewrite;
       if (rewritten.ok) {
         verdict = rewritten;
         lines.push({ heading: "Second look", detail: "The Head of Strategy said more useful words, which the Editor passed." });
@@ -253,7 +295,9 @@ export const runSeesEval = internalAction({
           const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
           const lead = setup.members.find((entry) => entry.role === INSIGHTS_LEAD_ROLE && entry.isActive);
           const bubble = { says, steps: written.verdict.steps.map((step) => step.words) };
-          const judged = judgeFrom(await ask(ctx, run, lead, "the eval judge", JUDGE_FORMAT, JSON.stringify({ page: page.about, points: page.expected, bubble }), LOOK_LIMIT_MS), page.expected);
+          // Jev first (sees.point-covered); the Head when the Decision is off or unsure throughout.
+          const byJev = await judgePoints(ctx, { companyId: page.companyId, runId: args.runId }, await prepareSeesJudge(ctx, { companyId: page.companyId, runId: args.runId }), page.expected, bubble);
+          const judged = byJev ?? judgeFrom(await ask(ctx, run, lead, "the eval judge", JUDGE_FORMAT, JSON.stringify({ page: page.about, points: page.expected, bubble }), LOOK_LIMIT_MS), page.expected);
           if (judged) grade = judged;
         } catch (error) {
           grade = { ...grade, notes: [...grade.notes, `The judge could not answer (${failureSummary(error)}); graded on the figures named.`] };

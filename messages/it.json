@@ -9885,7 +9885,8 @@
       "wiki": "Wiki",
       "seo": "SEO",
       "knowledge": "Conoscenza",
-      "discovery": "Visibilità"
+      "discovery": "Visibilità",
+      "sees": "L'occhio"
     },
     "certainty": {
       "SURE": "Sicuro",
@@ -10163,6 +10164,51 @@
           "about": "Parla di questa attività",
           "another": "Qualcos'altro con lo stesso nome",
           "other": "Non si può dire"
+        }
+      },
+      "seesFindingMatters": {
+        "name": "Il titolare agirebbe su questo dato?",
+        "description": "Prima che il pannello dell'occhio mostri cosa dicono i numeri, esclude un dato ovvio o inutile.",
+        "rule": "Senza, si mostra ogni dato con il punteggio più alto.",
+        "answers": {
+          "yes": "Merita un'azione",
+          "no": "Ovvio o inutile"
+        }
+      },
+      "seesGapOrTracking": {
+        "name": "Questo divario è un tracciamento rotto più che un comportamento?",
+        "description": "Quando un dispositivo fa qualcosa molto meno di un altro, decide se dire che lì il tracciamento potrebbe essere rotto.",
+        "rule": "Senza, un divario di tre volte o più è indicato come possibile tracciamento rotto.",
+        "answers": {
+          "yes": "Possibile tracciamento rotto",
+          "no": "Comportamento"
+        }
+      },
+      "seesGuessAsFact": {
+        "name": "Questa frase presenta un'ipotesi come un fatto?",
+        "description": "Rimanda indietro le parole dell'occhio quando una frase dà come fatto un motivo che i numeri non mostrano.",
+        "rule": "Senza, restano solo i controlli dell'Editor.",
+        "answers": {
+          "yes": "Presenta un'ipotesi come fatto",
+          "no": "Dice solo ciò che mostrano i numeri"
+        }
+      },
+      "seesGenericStep": {
+        "name": "Questo passo andrebbe bene per qualsiasi sito?",
+        "description": "Rimanda indietro le parole dell'occhio quando un passo non nomina pagina, canale, dispositivo o prodotto.",
+        "rule": "Senza, restano solo i controlli dell'Editor.",
+        "answers": {
+          "yes": "Va bene per qualsiasi sito",
+          "no": "Dice dove"
+        }
+      },
+      "seesPointCovered": {
+        "name": "Il fumetto ha colto questo punto?",
+        "description": "Valuta il set di prova dell'occhio: se ogni nota su una pagina è stata trovata.",
+        "rule": "Senza, valuta il Responsabile della strategia.",
+        "answers": {
+          "yes": "Trovato",
+          "no": "Mancato"
         }
       }
     }

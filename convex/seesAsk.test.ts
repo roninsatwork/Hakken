@@ -236,6 +236,40 @@ describe("the eye asks the Insights team", () => {
     expect(said).toContain("tracking health found nothing that breaks the conversion figures: a page about conversions goes to the Conversion specialist");
   });
 
+  test("with Jev's check switched on, a sentence that states a guess as fact goes back, and the specialist writes it again (sees-findings plan, phase 4)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    vi.stubEnv("TYPESAFE_API_KEY", "typesafe-test-key");
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert("aiProviders", { providerKey: "typesafe", displayName: "TypeSafe", isEnabled: true, authMode: "environment", status: "healthy", createdAt: now, updatedAt: now });
+      await ctx.db.insert("aiModels", { modelId: "typesafe:jev-latest", providerKey: "typesafe", providerModelId: "jev-latest", displayName: "Jev Latest", isEnabled: true, isDefault: false, capabilities: ["decision"], supportedUseCases: ["decision"], lastSyncedAt: now });
+      await ctx.db.insert("decisionSettings", { scope: "global", decisionKey: "sees.guess-as-fact", mode: "ACT", updatedAt: now });
+    });
+    // Jev: sure the first sentence it sees is a guess stated as fact; sure the next is not.
+    let jevCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { questions: Record<string, unknown> };
+      jevCalls += 1;
+      const noul = jevCalls === 1 ? 0.95 : 0.05;
+      return Response.json({ model: "jev-latest", answers: Object.fromEntries(Object.keys(body.questions).map((key) => [key, { type: "noul", noul }])), usage: { input_tokens: 30, output_tokens: 5 } });
+    }));
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, turns(
+      { says: ["[[conv.purchases.now]] purchases, because shoppers simply trusted the shop more."], steps: [] },
+      { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [] },
+    ));
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month, up from 1,091."] });
+    const told = (stream.mock.calls[1][0] as { turns: Array<{ parts: Array<{ text?: string }> }> }).turns.at(-1)?.parts[0].text ?? "";
+    expect(told).toContain("states a reason the figures don't show as fact");
+    // Every answer recorded, as every Decision is.
+    const runs = await t.run(async (ctx) => (await ctx.db.query("decisionRuns").collect()).filter((row) => row.decisionKey === "sees.guess-as-fact"));
+    expect(runs.length).toBeGreaterThanOrEqual(2);
+    expect(runs.some((row) => row.outcome === "ACTED")).toBe(true);
+  });
+
   test("new figures on the page are new words: a saved bubble stands only while the page's figures do (S3)", async () => {
     const t = harness();
     const { siteId, userId } = await seed(t);

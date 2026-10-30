@@ -533,6 +533,7 @@ import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as seesAsk from "../seesAsk.js";
 import type * as seesAskActions from "../seesAskActions.js";
 import type * as seesFindings from "../seesFindings.js";
+import type * as seesJudge from "../seesJudge.js";
 import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAgentRuns from "../seoAgentRuns.js";
 import type * as seoAiEngines from "../seoAiEngines.js";
@@ -1494,6 +1495,7 @@ declare const fullApi: ApiFromModules<{
   seesAsk: typeof seesAsk;
   seesAskActions: typeof seesAskActions;
   seesFindings: typeof seesFindings;
+  seesJudge: typeof seesJudge;
   selfImprovementConfig: typeof selfImprovementConfig;
   seoAgentRuns: typeof seoAgentRuns;
   seoAiEngines: typeof seoAiEngines;
