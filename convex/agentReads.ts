@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
-import { readConversionsMap, conversionColumnsValidator } from "./googleAnalyticsConversionsMap";
+import type { Id } from "./_generated/dataModel";
+import { readConversionsMap, conversionColumnsValidator, type ConversionColumns } from "./googleAnalyticsConversionsMap";
+import type { SiteReader } from "./siteAccess";
 import type { AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
@@ -55,17 +57,18 @@ function columnName(key: string, name: string | null): string {
   return key;
 }
 
-export const conversionsByInternal = internalQuery({
-  args: {
-    companyId: v.id("companies"),
-    siteId: v.id("companyWebsites"),
-    period: v.string(),
-    device: v.string(),
-    country: v.optional(v.string()),
-    columns: conversionColumnsValidator,
-  },
-  handler: async (ctx, args) => {
-    const map = await readConversionsMap({ db: ctx.db, companyId: args.companyId }, {
+/** What a map read is asked with: the website, its dates, device and country, and which columns. */
+export type MapViewArgs = { siteId: Id<"companyWebsites">; period: string; device: string; country?: string; columns: ConversionColumns };
+
+/**
+ * The Conversions map as an agent and the panel read it, in one view: every rate worked out here. Shared by the
+ * agents' read (\`conversionsByInternal\`) and the findings (\`seesFindings.ts\`), so both say the same figures.
+ */
+export async function readMapView(reader: SiteReader, args: MapViewArgs) {
+  const ctx = { db: reader.db };
+  const companyId = reader.companyId;
+
+    const map = await readConversionsMap({ db: ctx.db, companyId }, {
       siteId: args.siteId, period: args.period as AnalyticsPeriod, device: args.device, columns: args.columns, ...(args.country ? { country: args.country } : {}),
     });
     if (map.collecting) return { ok: false, problem: "The map holds nothing for these dates yet." };
@@ -130,5 +133,19 @@ export const conversionsByInternal = internalQuery({
       // Each conversion the website counts: the visits that did it, the visits it took for one, and each column's rate.
       conversions,
     };
+}
+
+/** The map as an agent reads it, through the map's own function (\`readMapView\`). */
+export type MapView = Awaited<ReturnType<typeof readMapView>>;
+
+export const conversionsByInternal = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+    siteId: v.id("companyWebsites"),
+    period: v.string(),
+    device: v.string(),
+    country: v.optional(v.string()),
+    columns: conversionColumnsValidator,
   },
+  handler: async (ctx, args) => await readMapView({ db: ctx.db, companyId: args.companyId }, args),
 });

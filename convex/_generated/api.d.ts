@@ -532,6 +532,7 @@ import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as seesAsk from "../seesAsk.js";
 import type * as seesAskActions from "../seesAskActions.js";
+import type * as seesFindings from "../seesFindings.js";
 import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAgentRuns from "../seoAgentRuns.js";
 import type * as seoAiEngines from "../seoAiEngines.js";
@@ -842,6 +843,7 @@ import type * as utils_sees_analyticsProducts from "../utils/sees/analyticsProdu
 import type * as utils_sees_analyticsVisitors from "../utils/sees/analyticsVisitors.js";
 import type * as utils_sees_backlinks from "../utils/sees/backlinks.js";
 import type * as utils_sees_competitors from "../utils/sees/competitors.js";
+import type * as utils_sees_findings from "../utils/sees/findings.js";
 import type * as utils_sees_google from "../utils/sees/google.js";
 import type * as utils_sees_local from "../utils/sees/local.js";
 import type * as utils_sees_mentions from "../utils/sees/mentions.js";
@@ -1491,6 +1493,7 @@ declare const fullApi: ApiFromModules<{
   seedWorkflows: typeof seedWorkflows;
   seesAsk: typeof seesAsk;
   seesAskActions: typeof seesAskActions;
+  seesFindings: typeof seesFindings;
   selfImprovementConfig: typeof selfImprovementConfig;
   seoAgentRuns: typeof seoAgentRuns;
   seoAiEngines: typeof seoAiEngines;
@@ -1801,6 +1804,7 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/analyticsVisitors": typeof utils_sees_analyticsVisitors;
   "utils/sees/backlinks": typeof utils_sees_backlinks;
   "utils/sees/competitors": typeof utils_sees_competitors;
+  "utils/sees/findings": typeof utils_sees_findings;
   "utils/sees/google": typeof utils_sees_google;
   "utils/sees/local": typeof utils_sees_local;
   "utils/sees/mentions": typeof utils_sees_mentions;
