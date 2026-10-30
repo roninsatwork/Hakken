@@ -75,6 +75,18 @@ and the rule that came from it. Every rule is now in the code.
    every step says where. On the flagship model it read the devices by itself and
    found that phones bring more visits than desktops but add to basket far less
    often: the first bubble Anthony did not send back.
+8. **"What do you think of the advice compared to what I gave you?"** Against
+   his three notes it half found one and missed two, and it was a wall of
+   numbers: six long sentences, about fifteen figures, words like "clicks".
+   *Rules:* cover the page's parts first, a short sentence each, then dig
+   (`pageParts`); at most two figures a sentence and eight a bubble, the rest
+   left off; sentences under 20 words; words the screen never uses go back
+   (`ANALYTICS_JARGON`); a gap of three times or more is questioned as possible
+   broken tracking before it is called behaviour. His notes became the first
+   eval page, graded by a judge point by point (`JUDGE_FORMAT`): the next
+   bubble found one of three (visits for one conversion), missing the basket to
+   checkout drop and the channels. That score, not a look at one bubble, is how
+   a change is judged from here.
 
 ## The rules for every screen
 
@@ -139,8 +151,11 @@ and the rule that came from it. Every rule is now in the code.
 6. Press the eye on morehandles.co.uk and a second real website. Read the run's
    log (each read, the Head's choice, the second look). Judge the bubble by
    Anthony's test: what does it say that a person scanning the page would miss?
-7. Keep a good bubble as an eval page with the sentences Anthony would write
-   (`keepSeesEvalPage`), so the next change is graded against it.
+7. Keep the page as an eval page with Anthony's notes on what a good bubble
+   would find (`keepSeesEvalPage`, or `keepSeesEvalPageInternal` from the
+   command line until the Admin screen exists), and grade every change against
+   the set (`gradeSeesEvalNow` / `gradeSeesEvalInternal`). The judge marks each
+   note found or missed; the notes are never put in the brief.
 
 ## Cost and time
 

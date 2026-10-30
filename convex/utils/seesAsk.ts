@@ -21,8 +21,39 @@ export const SEES_WRITING_MS = 10 * 60 * 1000;
 /** Sentences and steps a bubble holds at most (Anthony, 2026-10-30: "im happy for the advice to be twice as much as we show now"). */
 export const MOST_SEES_SAYS = 6;
 export const MOST_SEES_STEPS = 4;
-/** A sentence a client reads at a glance (S7): longer ones go back. */
-export const MOST_SENTENCE_WORDS = 24;
+/** A sentence a client reads at a glance (S7; 2026-10-30, "a wall of numbers"): longer ones go back. */
+export const MOST_SENTENCE_WORDS = 20;
+/** Figures a sentence names at most, and a bubble's sentences in all: past these it is a list of numbers, not advice. */
+export const MOST_SENTENCE_FIGURES = 2;
+export const MOST_BUBBLE_FIGURES = 8;
+
+/**
+ * What each screen shows, part by part, for the specialist to cover before it digs (Anthony, 2026-10-30, agreeing:
+ * "cover the page before digging"). The page's own layout, never a list of findings. A screen given a bubble adds
+ * its parts here.
+ */
+export function pageParts(screen: string): string[] {
+  if (screen === "googleAnalytics.conversions") {
+    return [
+      "the four boxes: conversions, purchases, the conversion rate and added to basket, each against the month before",
+      "the chart: how many visits it took for one conversion, day by day",
+      "the map: each conversion by kind of page, channel, device or country, as visits, a rate or events",
+      "the table: each event the website counts, with its conversions, visits and change",
+    ];
+  }
+  if (screen.startsWith("googleAnalytics.event:")) {
+    return [
+      "the four boxes: how many, the visits that did it, its rate in every hundred visits and what it was worth",
+      "the chart: the share of each day's visits that did it",
+      "the lines: the conversion by channel, day by day",
+      "when people convert: by hour and day of the week",
+    ];
+  }
+  return [];
+}
+
+/** Words the Analytics screens never use, which a reader would not know: the page's own names instead. */
+const ANALYTICS_JARGON = /\b(clicks?|sessions?|users?|CTR|bounce rate|event counts?|engagement rate)\b/i;
 /** Facts a page hands over at most: the page's figures, never a list of everything held. */
 export const MOST_SEES_FACTS = 160;
 
@@ -53,6 +84,13 @@ export const seesAskValidator = {
   links: v.array(seesLinkValidator),
   shop: v.optional(v.boolean()),
 };
+
+/** A key read back into its parts: the screen, its dates, country and device (`seesKey`'s other way). */
+export function fromSeesKey(key: string): { screen: string; period: string; from?: string; to?: string; country: string; device: string } {
+  const parts = key.split("|");
+  const [period, from, to, country, device] = parts.slice(-5);
+  return { screen: parts.slice(0, -5).join("|"), period: period ?? "", ...(from ? { from } : {}), ...(to ? { to } : {}), country: country ?? "", device: device ?? "" };
+}
 
 /** One answer for one website, page, dates, country and device (S9): change any and it is written afresh. */
 export function seesKey(ask: { screen: string; period: string; from?: string; to?: string; country: string; device: string }): string {
@@ -104,7 +142,8 @@ export const SEES_FORMAT = [
   "A reader pressed the eye on one page of the app and will read your words in a speech bubble. Find what this website's figures show that a person looking at the page would miss: look across everything you were given, compare the groups against each other and against the span before, and say what matters most, each with the figures that show it. Then what to do first.",
   "Never only repeat the figures in the page's boxes: the reader can see those. Say what they mean together, or what is behind them.",
   "Reply with only JSON: {\"says\": [\"…\", \"…\"], \"steps\": [{\"words\": \"…\", \"link\": the number of one of the links given}]}: up to six sentences, the most useful first, and up to four steps. Say as much as the figures hold that is worth acting on; never pad.",
-  "Write it as a short story a busy owner reads in under a minute, never a list of figures: what is happening, where it happens, and why it matters. Join figures in one sentence where they explain each other, and say what the reader should take from them. Plain words, short sentences, never over 24 words. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence.",
+  "Start with the page as it is laid out (pageParts): what each part says that matters, a short sentence each where it has something to say. Never name the parts (\"on the chart\", \"the map shows\"): say what they show. Then dig into the biggest thing.",
+  "Write it as a short story a busy owner reads in under a minute, never a list of figures: what is happening, where it happens, and why it matters. Plain words, short sentences under 20 words, at most two figures in a sentence and eight in the whole bubble: choose the figures that tell the story. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence.",
   "Say what got better and what got worse against the span before, wherever the figures hold it.",
   "Each step is one thing a person can do, in plain words, saying where: the device, channel, kind of page, step or product it is about — never advice that would fit any website. Link it to the place it names. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
   "Never tell them to change what counts as a conversion, or how their tracking is set up: they chose it on purpose. Speak about tracking only when trackingFaults lists a fault.",
@@ -118,6 +157,7 @@ export const SEES_FORMAT = [
 export const SEES_READS_FORMAT = [
   `You can read every Google Analytics screen of this website yourself, for the same dates, country and device, with ${ANALYTICS_READ}. The page's own screen is read for you already, with its map by kind of page and by channel. Read anything else that helps you find what the reader would miss.`,
   "Before you write, dig: take the biggest change you see and break it down — by device, by channel, by kind of page, by country, against the span before — until you know where it happens and where it does not. Read the map's other columns to do it. Then tell the reader where.",
+  "Question a gap that looks too big: when one group's rate is three or more times another's, say its tracking may be broken there before calling it behaviour, and make checking it a step.",
   "Every number a screen gives comes with its key in double square brackets: name it by that key. Where the page's own facts hold the same figure, use the page's key, so the bubble says what the page's boxes say.",
   "At least one sentence must name a figure you read beyond the page's boxes: that is what the reader cannot see for themselves.",
 ].join("\n");
@@ -179,7 +219,11 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
   pageKeys?: ReadonlySet<string>;
   /** Tracking health found no fault: words about tracking, or about changing what counts, go back. */
   noTrackingTalk?: boolean;
+  /** An Analytics screen: words it never uses (clicks, sessions, users…) go back. */
+  analytics?: boolean;
 } = {}): SeesVerdict {
+  const jargon = (text: string) => (options.analytics ? text.match(ANALYTICS_JARGON)?.[0] ?? null : null);
+  let figures = 0;
   const trackingTalk = (text: string) => options.noTrackingTalk && TRACKING_TALK.test(text);
   const raw = (answer && typeof answer === "object" ? answer : {}) as { says?: unknown; steps?: unknown };
   const saysRaw = Array.isArray(raw.says) ? raw.says : [];
@@ -190,10 +234,15 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     const trimmed = line.trim();
     if (typedNumbers(trimmed).length > 0) return { ok: false, why: `A sentence typed a number: "${trimmed}".` };
     if (namedFacts(trimmed).length === 0 && says.length === 0) return { ok: false, why: `The first sentence names no figure: "${trimmed}".` };
+    if (namedFacts(trimmed).length > MOST_SENTENCE_FIGURES) return { ok: false, why: `A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.` };
+    // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence.
+    if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) break;
+    figures += namedFacts(trimmed).length;
     const filled = fillFacts(trimmed, facts);
     if (filled.missing.length > 0) return { ok: false, why: `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
     if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}".` };
     if (/dataforseo|firecrawl/i.test(filled.text)) return { ok: false, why: "A sentence named a supplier." };
+    if (jargon(filled.text)) return { ok: false, why: `A sentence used "${jargon(filled.text)}", which the page never says: use the page's own words.` };
     if (trackingTalk(filled.text)) return { ok: false, why: `A sentence spoke about tracking or what counts, and tracking health found nothing wrong: "${filled.text}".` };
     says.push(filled.text);
   }
@@ -211,6 +260,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     const filled = fillFacts(words, facts);
     if (filled.missing.length > 0) return { ok: false, why: `A step named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
     if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A step ran past ${MOST_SENTENCE_WORDS} words.` };
+    if (jargon(filled.text)) return { ok: false, why: `A step used "${jargon(filled.text)}", which the page never says: use the page's own words.` };
     if (trackingTalk(filled.text)) return { ok: false, why: `A step advised on tracking or what counts, and tracking health found nothing wrong: "${filled.text}".` };
     const at = typeof step.link === "number" ? step.link : Number(step.link);
     const link = Number.isInteger(at) ? links[at] : undefined;
@@ -244,7 +294,7 @@ export function writerFrom(answer: unknown): InsightsRole | null {
  */
 export const SECOND_LOOK_FORMAT = [
   "A specialist wrote the bubble below for the page, after reading the website's screens. Decide whether it says the most useful thing the figures say: what a client would act on first, against their own past. A bubble that only repeats the page's boxes, or whose steps anyone could give without the figures, is not.",
-  "Not useful: a list of figures with no story; steps that would fit any website because they don't say where; advice about tracking or about what counts as a conversion, unless trackingFaults lists a fault; words that do not say what got better or worse against the span before; words that lead with money; words that say less than the figures hold worth acting on.",
+  "Not useful: words that skip a part of the page with something to say; a list of figures with no story; steps that would fit any website because they don't say where; advice about tracking or about what counts as a conversion, unless trackingFaults lists a fault or one group's rate is three or more times another's; words that do not say what got better or worse against the span before; words that lead with money; words that say less than the figures hold worth acting on.",
   "Keep it unless yours says something more useful. Never rewrite it into the boxes' figures with \"up from\" or \"down from\": the reader sees those already. A rewrite must name at least one figure the specialist read beyond the page.",
   "Reply with only JSON: {\"useful\": true} when it does; otherwise {\"useful\": false, \"says\": [\"…\"], \"steps\": [{\"words\": \"…\", \"link\": number}]}, written to the same rules as the specialist's: figures by their keys in double square brackets, never typed, from the facts given (the page's and those the specialist read); one fact a sentence; a step naming the thing to fix in words, never a figure glued on; a step's link one of the numbers given.",
 ].join("\n");
@@ -254,6 +304,30 @@ export function secondLookFrom(answer: unknown): { useful: true } | { useful: fa
   const raw = (answer && typeof answer === "object" ? answer : {}) as { useful?: unknown };
   if (raw.useful === true) return { useful: true };
   return { useful: false, rewrite: answer };
+}
+
+/**
+ * The eval set's judge (A6; Anthony, 2026-10-30): his notes on what a good bubble for the page would find are the
+ * marked answer, never the brief — the team has to find them itself. The judge says, point by point, whether the
+ * bubble found each one, in any words; its figures may differ a little, as his were read off the screen by eye.
+ */
+export const JUDGE_FORMAT = [
+  "Anthony wrote down what a good bubble for this page would find. Below are his points and the bubble the team wrote.",
+  "For each of his points, in order, decide whether the bubble found it: the same finding in any words, its figures allowed to differ a little. A point the bubble only touches without saying it is not found.",
+  "Reply with only JSON: {\"points\": [{\"found\": true or false, \"why\": \"one short sentence\"}]}, one for each of his points, in his order.",
+].join("\n");
+
+/** The judge's answer read: the share of Anthony's points found, 0 to 1, and a note per point; null when unreadable. */
+export function judgeFrom(answer: unknown, expected: readonly string[]): { score: number; notes: string[] } | null {
+  const points = (answer as { points?: unknown } | null)?.points;
+  if (!Array.isArray(points) || points.length !== expected.length) return null;
+  const read = points.map((point) => (point && typeof point === "object" ? point as { found?: unknown; why?: unknown } : {}));
+  if (read.some((point) => typeof point.found !== "boolean")) return null;
+  const found = read.filter((point) => point.found === true).length;
+  return {
+    score: Math.round((found / expected.length) * 100) / 100,
+    notes: read.map((point, at) => `${point.found ? "Found" : "Missed"}: ${expected[at]}${typeof point.why === "string" && point.why.trim() ? ` — ${point.why.trim()}` : ""}`),
+  };
 }
 
 /** The numbers a sentence carries, as written: "1,258", "3.5%", "£104,165" all read as their digits. */

@@ -432,6 +432,8 @@ export const insightsTables = {
     about: v.optional(v.string()),
     facts: v.optional(v.array(seesFactValidator)),
     links: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
+    /** Whether the page was a shop's, as it said when the eye was pressed: an eval page kept from it is read the same way. */
+    shop: v.optional(v.boolean()),
   })
     .index("by_hold_key", ["companyWebsiteId", "key"])
     .index("by_hold_week", ["companyWebsiteId", "week"]),
@@ -452,6 +454,16 @@ export const insightsTables = {
     links: v.array(v.object({ label: v.string(), href: v.string() })),
     /** The sentences Anthony would write: the answer to grade against. */
     expected: v.array(v.string()),
+    /**
+     * Where the page was looked at — its dates, country and device, and whether it is a shop — so the team reads the
+     * website's screens as the reader saw them when it is graded (A1). Absent on a page kept before agents read.
+     */
+    period: v.optional(v.string()),
+    from: v.optional(v.string()),
+    to: v.optional(v.string()),
+    country: v.optional(v.string()),
+    device: v.optional(v.string()),
+    shop: v.optional(v.boolean()),
     /**
      * Its gradings, the newest last, twenty kept: what the team wrote each time, whether the Editor passed it, and how
      * close it came to Anthony's (the share of the figures his sentences name that the team's name too, 0 to 1). On the

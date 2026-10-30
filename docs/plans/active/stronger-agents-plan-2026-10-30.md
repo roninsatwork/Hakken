@@ -210,3 +210,16 @@ measured on ronins.co.uk before anyone else's website.
   brings more visits than desktop but 11.2% of mobile visits add to basket
   against 16.7% on desktop; steps named the pages and devices. 76 seconds from
   the press; $0.39 a bubble (it was about $0.06 on the fast model).
+- 2026-10-31, after midnight (Anthony, asked how the bubble compared with his
+  three notes, then "yes" to four changes): the page's parts are covered
+  before the agent digs; two figures a sentence, eight a bubble (the rest left
+  off), sentences under 20 words, words the screen never uses sent back; a
+  gap of three times or more questioned as tracking first. A6 grows a judge:
+  eval pages keep where they were looked at, so graded bubbles read the
+  screens; the Head marks each of Anthony's notes found or missed. His three
+  notes on morehandles' Conversions page are the first eval page. First
+  grading: one of three found (about 25 visits for one conversion), the basket
+  to checkout drop and the channels missed. A bubble costs about $0.39 and is
+  written only when the page's figures change or three hours pass. Anthony then
+  said each press should spend the company's credit allowance: not built,
+  proposal to agree first.

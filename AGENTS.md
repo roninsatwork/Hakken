@@ -355,7 +355,7 @@ npm run convex:dev
 before giving any screen's eye a bubble written by the Insights team**
 (Anthony, 2026-10-30: "we need to document the lengths that we are going to,
 to get this right when we come to build this across every screen"). It holds
-the seven rounds the Conversions bubble went through and the rules each left:
+the eight rounds the Conversions bubble went through and the rules each left:
 the agent reads the screen's own saved data, every number keyed and checked,
 no checklist of findings, nothing the screen doesn't speak about.
 

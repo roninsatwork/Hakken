@@ -55,7 +55,7 @@ describe("the eye's ask", () => {
     const facts = factsByKey(factsOf(ask));
     expect(seesFrom({ says: ["3 in 4 baskets were left without buying."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("typed a number") });
     expect(seesFrom({ says: ["[[conv.baskets.left]] baskets were left."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("neither on the page nor read") });
-    expect(seesFrom({ says: ["[[conv.total.now]] conversions, which is a great many more words than any client should ever be asked to read in one sentence of a bubble that opens for two seconds."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("24 words") });
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions, which is a great many more words than any client should ever be asked to read in one sentence of a bubble that opens for two seconds."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("20 words") });
     expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: "Grow [[conv.total.now]] conversions.", link: 7 }] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("link") });
     // A step names the thing to fix in words; it need not carry a figure (2026-10-30: "to correct 28,623" read like a robot).
     expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: "Go through checkout on a phone and find where people stop.", link: 0 }] }, facts, links)).toMatchObject({ ok: true });
@@ -84,6 +84,17 @@ describe("once the team has read the website's screens (A1)", () => {
     expect(seesFrom({ says: ["[[conv.purchases.now]] purchases last month."], steps: [] }, facts, links, { pageKeys })).toMatchObject({ ok: false, why: expect.stringContaining("only said the page's own figures") });
     expect(seesFrom({ says: ["[[conv.purchases.now]] purchases last month.", "[[r1.products.steps.basketsLeftPercent]] of baskets never became a purchase."], steps: [] }, facts, links, { pageKeys }))
       .toMatchObject({ ok: true, says: ["1,258 purchases last month.", "93.1% of baskets never became a purchase."] });
+  });
+});
+
+describe("a bubble readable in one go (2026-10-30: \"a wall of numbers\")", () => {
+  test("a sentence with more than two figures goes back; past eight figures the rest is left off; words the page never says go back", () => {
+    const facts = factsByKey(factsOf(ask));
+    expect(seesFrom({ says: ["[[conv.total.now]], [[conv.total.before]] and [[conv.purchases.now]] all moved."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("more than 2 figures") });
+    const five = Array.from({ length: 5 }, () => "[[conv.total.now]] conversions, against [[conv.total.before]].");
+    expect(seesFrom({ says: five, steps: [] }, facts, links)).toMatchObject({ ok: true, says: expect.arrayContaining([]) });
+    expect((seesFrom({ says: five, steps: [] }, facts, links) as { says: string[] }).says).toHaveLength(4);
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions came from fewer clicks."], steps: [] }, facts, links, { analytics: true })).toMatchObject({ ok: false, why: expect.stringContaining("\"clicks\", which the page never says") });
   });
 });
 

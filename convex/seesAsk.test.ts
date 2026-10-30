@@ -71,11 +71,14 @@ const turns = (...each: unknown[]) => ({ turns: each });
  * The team's three answers: the Head's choice, the specialist's bubble (one answer, or `turns(…)`), and the Head's
  * second look (kept as is unless given). A page with no reads (the eval set's) asks the specialist as a single ask.
  */
-const answers = (head: unknown, specialist: unknown, secondLook: unknown = { useful: true }) => {
+const answers = (head: unknown, specialist: unknown, secondLook: unknown = { useful: true }, judge: unknown = null) => {
   const sequence = specialist && typeof specialist === "object" && "turns" in specialist ? (specialist as { turns: unknown[] }).turns : [specialist];
   generate.mockImplementation(async (request: { systemInstruction?: string }) => {
     const system = request.systemInstruction ?? "";
-    const answer = system.includes("Choose which specialist") ? head : system.includes("A specialist wrote the bubble below") ? secondLook : sequence[sequence.length - 1];
+    const answer = system.includes("Choose which specialist") ? head
+      : system.includes("A specialist wrote the bubble below") ? secondLook
+        : system.includes("Anthony wrote down what a good bubble") ? judge
+          : sequence[sequence.length - 1];
     return { text: JSON.stringify(answer), inputTokens: 100, outputTokens: 40 };
   });
   let at = 0;
@@ -255,7 +258,7 @@ describe("the eye asks the Insights team", () => {
     const superId = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Super", email: "super@platform.test", role: "SUPER_ADMIN", createdAt: 1 }));
     const user = t.withIdentity({ subject: userId });
     const admin = t.withIdentity({ subject: superId });
-    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [] });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [] }, undefined, { points: [{ found: true, why: "It says purchases rose." }] });
     const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
     await finishScheduled(t);
     const answerId = await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect())[0]._id);
@@ -271,14 +274,16 @@ describe("the eye asks the Insights team", () => {
     expect(results[0]).toMatchObject({ pageId, host: "acme-shop.test", expected: ["1,258 purchases, up from 1,091 the month before, worth more than ever."] });
     expect(results[0].latest).toMatchObject({ passed: true, score: 1, says: ["1,258 purchases last month, up from 1,091."] });
     const run = await t.run(async (ctx) => await ctx.db.get(runId));
-    expect(run?.finalOutput).toContain("1 page graded: 1 passed the Editor; 100% of Anthony's figures named.");
-    // The team as it stands next time names one figure only: the score says so.
-    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] });
+    expect(run?.finalOutput).toContain("1 page graded: 1 passed the Editor; 100% of what Anthony would want found was found.");
+    // Kept with where it was looked at, so the team reads the website's screens as the reader saw them.
+    expect(await t.run(async (ctx) => await ctx.db.get(pageId))).toMatchObject({ period: "lastMonth", country: "gbr", device: "", shop: true });
+    // The team as it stands next time misses Anthony's point: the judge says so, point by point.
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, undefined, { points: [{ found: false, why: "It never mentions purchases." }] });
     await admin.mutation(api.seesAsk.gradeSeesEvalNow, {});
     await finishScheduled(t);
     const again = await admin.query(api.seesAsk.seesEvalResults, {});
     expect(again[0].latest).toMatchObject({ passed: true, score: 0 });
-    expect(again[0].latest?.notes.join(" ")).toContain("Not named: 1258, 1091.");
+    expect(again[0].latest?.notes.join(" ")).toContain("Missed: 1,258 purchases, up from 1,091 the month before, worth more than ever. — It never mentions purchases.");
   });
 
   test("another company's website is not asked about, and a page with no figures is refused", async () => {

@@ -1,12 +1,12 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
-import { SEES_KEPT_MS, SEES_WRITING_MS, sameFigures, seesAskValidator, seesKey } from "./utils/seesAsk";
+import { SEES_KEPT_MS, SEES_WRITING_MS, fromSeesKey, sameFigures, seesAskValidator, seesKey } from "./utils/seesAsk";
 import { weekOf } from "./insightsTeam";
 
 /**
@@ -60,8 +60,8 @@ export const askSees = tenantMutation({
     }
     const companyId = site.hold.companyId;
     const answerId: Id<"seesAnswers"> = held
-      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path, about: args.about, facts: args.facts, links: args.links }), held._id)
-      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), about: args.about, facts: args.facts, links: args.links });
+      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path, about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false }), held._id)
+      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false });
     const runId = await ctx.db.insert("agentRuns", {
       agentId: lead._id,
       triggerType: "EVENT",
@@ -170,6 +170,80 @@ const evalPageValidator = v.object({
   facts: seesAskValidator.facts,
   links: seesAskValidator.links,
   expected: v.array(v.string()),
+  period: v.optional(v.string()),
+  from: v.optional(v.string()),
+  to: v.optional(v.string()),
+  country: v.optional(v.string()),
+  device: v.optional(v.string()),
+  shop: v.optional(v.boolean()),
+});
+
+/** A bubble kept as an eval page: its figures, links and where it was looked at, with Anthony's sentences. */
+async function keepEvalPage(ctx: MutationCtx, args: { answerId: Id<"seesAnswers">; expected: string[]; userId: Id<"users"> }): Promise<Id<"seesEvalPages">> {
+  const answer = await ctx.db.get(args.answerId);
+  if (!answer || !answer.facts || !answer.about) throw appError("NOT_FOUND", "That bubble kept no figures to grade against.");
+  const expected = args.expected.map((line) => line.trim()).filter(Boolean);
+  if (expected.length === 0 || expected.length > 5) throw appError("INVALID_INPUT", "Give one to five things the bubble should have found.");
+  const hold = await ctx.db.get(answer.companyWebsiteId);
+  const website = hold ? await ctx.db.get(hold.websiteId) : null;
+  const at = fromSeesKey(answer.key);
+  return await ctx.db.insert("seesEvalPages", {
+    companyId: answer.companyId,
+    companyWebsiteId: answer.companyWebsiteId,
+    host: website?.host ?? "",
+    screen: answer.screen,
+    about: answer.about,
+    facts: answer.facts,
+    links: answer.links ?? [],
+    expected,
+    period: at.period,
+    ...(at.from ? { from: at.from } : {}),
+    ...(at.to ? { to: at.to } : {}),
+    country: at.country,
+    device: at.device,
+    shop: answer.shop ?? false,
+    gradings: [],
+    createdBy: args.userId,
+    createdAt: Date.now(),
+  });
+}
+
+/** One grading run of the Head's per company, writing every kept page's bubble again. */
+async function startEval(ctx: MutationCtx): Promise<Id<"agentRuns">[]> {
+  const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
+  if (!lead) return [];
+  const pages = await ctx.db.query("seesEvalPages").take(200);
+  const byCompany = new Map<Id<"companies">, Id<"seesEvalPages">[]>();
+  for (const page of pages) byCompany.set(page.companyId, [...(byCompany.get(page.companyId) ?? []), page._id]);
+  const now = Date.now();
+  const runIds: Id<"agentRuns">[] = [];
+  for (const [companyId, pageIds] of byCompany) {
+    const runId = await ctx.db.insert("agentRuns", {
+      agentId: lead._id,
+      triggerType: "MANUAL",
+      objective: "Grade the eval set: write every kept page's bubble again and judge whether it found what Anthony would want found.",
+      title: "The eye: the eval set graded",
+      status: "QUEUED",
+      companyId,
+      startedAt: now,
+      updatedAt: now,
+    });
+    await ctx.scheduler.runAfter(0, internal.seesAskActions.runSeesEval, { runId, pageIds });
+    runIds.push(runId);
+  }
+  return runIds;
+}
+
+/** The same, kept and started from the command line while the eval set has no Admin screen (A6). */
+export const keepSeesEvalPageInternal = internalMutation({
+  args: { answerId: v.id("seesAnswers"), expected: v.array(v.string()), userId: v.id("users") },
+  returns: v.id("seesEvalPages"),
+  handler: async (ctx, args) => await keepEvalPage(ctx, args),
+});
+export const gradeSeesEvalInternal = internalMutation({
+  args: {},
+  returns: v.array(v.id("agentRuns")),
+  handler: async (ctx) => await startEval(ctx),
 });
 
 /**
@@ -180,27 +254,7 @@ const evalPageValidator = v.object({
 export const keepSeesEvalPage = superAdminMutation({
   args: { answerId: v.id("seesAnswers"), expected: v.array(v.string()) },
   returns: v.id("seesEvalPages"),
-  handler: async (ctx, args) => {
-    const answer = await ctx.db.get(args.answerId);
-    if (!answer || !answer.facts || !answer.about) throw appError("NOT_FOUND", "That bubble kept no figures to grade against.");
-    const expected = args.expected.map((line) => line.trim()).filter(Boolean);
-    if (expected.length === 0 || expected.length > 3) throw appError("INVALID_INPUT", "Give one to three sentences the bubble should have said.");
-    const hold = await ctx.db.get(answer.companyWebsiteId);
-    const website = hold ? await ctx.db.get(hold.websiteId) : null;
-    return await ctx.db.insert("seesEvalPages", {
-      companyId: answer.companyId,
-      companyWebsiteId: answer.companyWebsiteId,
-      host: website?.host ?? "",
-      screen: answer.screen,
-      about: answer.about,
-      facts: answer.facts,
-      links: answer.links ?? [],
-      expected,
-      gradings: [],
-      createdBy: ctx.userId,
-      createdAt: Date.now(),
-    });
-  },
+  handler: async (ctx, args) => await keepEvalPage(ctx, { ...args, userId: ctx.userId }),
 });
 
 /**
@@ -211,30 +265,7 @@ export const keepSeesEvalPage = superAdminMutation({
 export const gradeSeesEvalNow = superAdminMutation({
   args: {},
   returns: v.array(v.id("agentRuns")),
-  handler: async (ctx) => {
-    const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
-    if (!lead) return [];
-    const pages = await ctx.db.query("seesEvalPages").take(200);
-    const byCompany = new Map<Id<"companies">, Id<"seesEvalPages">[]>();
-    for (const page of pages) byCompany.set(page.companyId, [...(byCompany.get(page.companyId) ?? []), page._id]);
-    const now = Date.now();
-    const runIds: Id<"agentRuns">[] = [];
-    for (const [companyId, pageIds] of byCompany) {
-      const runId = await ctx.db.insert("agentRuns", {
-        agentId: lead._id,
-        triggerType: "MANUAL",
-        objective: "Grade the eval set: write every kept page's bubble again and compare it with the sentences Anthony would write.",
-        title: "The eye: the eval set graded",
-        status: "QUEUED",
-        companyId,
-        startedAt: now,
-        updatedAt: now,
-      });
-      await ctx.scheduler.runAfter(0, internal.seesAskActions.runSeesEval, { runId, pageIds });
-      runIds.push(runId);
-    }
-    return runIds;
-  },
+  handler: async (ctx) => await startEval(ctx),
 });
 
 /** The eval pages to grade: all, or the ones named. */
@@ -251,7 +282,11 @@ export const evalPagesInternal = internalQuery({
     } else {
       rows.push(...(await ctx.db.query("seesEvalPages").take(200)));
     }
-    return rows.map((row) => ({ _id: row._id, companyId: row.companyId, companyWebsiteId: row.companyWebsiteId, host: row.host, screen: row.screen, about: row.about, facts: row.facts, links: row.links, expected: row.expected }));
+    return rows.map((row) => ({
+      _id: row._id, companyId: row.companyId, companyWebsiteId: row.companyWebsiteId, host: row.host, screen: row.screen, about: row.about, facts: row.facts, links: row.links, expected: row.expected,
+      ...(row.period ? { period: row.period } : {}), ...(row.from ? { from: row.from } : {}), ...(row.to ? { to: row.to } : {}),
+      ...(row.country !== undefined ? { country: row.country } : {}), ...(row.device !== undefined ? { device: row.device } : {}), ...(row.shop !== undefined ? { shop: row.shop } : {}),
+    }));
   },
 });
 

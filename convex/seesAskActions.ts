@@ -14,7 +14,7 @@ import { briefFor } from "./utils/insightBriefs";
 import { factsByKey, type Fact } from "./utils/insightFacts";
 import { ANALYTICS_READ } from "./utils/agentTools";
 import {
-  ROUTE_FORMAT, SECOND_LOOK_FORMAT, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, routeFor, seriousFaults, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
+  JUDGE_FORMAT, ROUTE_FORMAT, SECOND_LOOK_FORMAT, judgeFrom, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, routeFor, seriousFaults, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 
@@ -37,7 +37,10 @@ import {
 type Page = { host: string; screen: string; about: string; period: string; from?: string; to?: string; country: string; device?: string; facts: Parameters<typeof factsOf>[0]["facts"]; links: readonly SeesLink[]; shop: boolean };
 type Written = { verdict: SeesVerdict; role: InsightsRole; lines: Array<{ heading: string; detail: string; failed?: boolean }> };
 /** An eval page as `seesAsk.evalPagesInternal` gives it: named here so the action's type never depends on its own module. */
-type EvalPage = { _id: Id<"seesEvalPages">; companyId: Id<"companies">; companyWebsiteId: Id<"companyWebsites">; host: string; screen: string; about: string; facts: Page["facts"]; links: SeesLink[]; expected: string[] };
+type EvalPage = {
+  _id: Id<"seesEvalPages">; companyId: Id<"companies">; companyWebsiteId: Id<"companyWebsites">; host: string; screen: string; about: string; facts: Page["facts"]; links: SeesLink[]; expected: string[];
+  period?: string; from?: string; to?: string; country?: string; device?: string; shop?: boolean;
+};
 
 /**
  * Each part's limit, together well inside the ten minutes Convex gives an action: on Google's flagship model
@@ -77,7 +80,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   const memories: Array<{ content: string }> = writer ? await ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: writer.agentId, companyId: run.companyId }).catch(() => []) : [];
   const toldBefore = memories.length > 0 ? `What you were told before, which binds you:\n${memories.map((memory) => `- ${memory.content}`).join("\n")}` : "";
   const links = page.links.map((link, number) => ({ number, label: link.label }));
-  const prompt = JSON.stringify({ website: page.host, page: page.about, dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults, facts: factLines(facts), links });
+  const prompt = JSON.stringify({ website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults, facts: factLines(facts), links });
   const scope = { companyId: run.companyId, host: page.host, holdId: run.holdId, period: page.period, device: page.device ?? "", country: page.country, ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}) };
   const reads = page.screen.startsWith("googleAnalytics.") && readable(scope);
   const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, page.shop ? SEES_SHOP_FORMAT : "", reads ? SEES_READS_FORMAT : ""].filter(Boolean).join("\n\n");
@@ -87,7 +90,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   // Once the specialist can read, a bubble must say something the page's boxes don't (the Editor's check, both writers).
   const beyondPage = reads ? { pageKeys: new Set(held.keys()) } : {};
   // With nothing wrong in tracking health, words about tracking or about what counts go back (both writers).
-  const noTracking = { noTrackingTalk: trackingFaults.length === 0 };
+  const noTracking = { noTrackingTalk: trackingFaults.length === 0, analytics: page.screen.startsWith("googleAnalytics.") };
   const withRead = (found: ReadonlyMap<string, Fact>) => new Map([...found, ...held]);
   let verdict: SeesVerdict;
   let raw: unknown;
@@ -117,7 +120,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     const used = new Set(namedIn(raw));
     const readFacts = [...named.values()].filter((fact) => !held.has(fact.key));
     const forHead = [...facts, ...readFacts.filter((fact) => used.has(fact.key)), ...readFacts.filter((fact) => !used.has(fact.key))].slice(0, 240);
-    const look = JSON.stringify({ website: page.host, page: page.about, shop: page.shop, trackingFaults, bubble: { says: verdict.says, steps: verdict.steps.map((step) => step.words) }, facts: factLines(forHead), links });
+    const look = JSON.stringify({ website: page.host, page: page.about, pageParts: pageParts(page.screen), shop: page.shop, trackingFaults, bubble: { says: verdict.says, steps: verdict.steps.map((step) => step.words) }, facts: factLines(forHead), links });
     const second = await ask(ctx, run, lead, "the Head of Strategy's second look", [rules, briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), SECOND_LOOK_FORMAT].filter(Boolean).join("\n\n"), look, LOOK_LIMIT_MS);
     const read = secondLookFrom(second);
     if (read.useful) {
@@ -232,15 +235,30 @@ export const runSeesEval = internalAction({
     let passed = 0;
     let total = 0;
     for (const page of pages) {
-      const run: InsightsRunArgs = { runId: args.runId, companyId: page.companyId, host: page.host, holdId: page.companyWebsiteId, shop: false };
+      const shop = page.shop ?? false;
+      const run: InsightsRunArgs = { runId: args.runId, companyId: page.companyId, host: page.host, holdId: page.companyWebsiteId, shop };
       let written: Written;
       try {
-        written = await writeBubble(ctx, run, { ...page, period: "eval", country: "", shop: false });
+        // Where it was looked at, so the team reads the website's screens as the reader saw them (a page kept before
+        // agents read has none, and is written from its figures alone).
+        written = await writeBubble(ctx, run, { ...page, period: page.period ?? "eval", country: page.country ?? "", device: page.device ?? "", shop });
       } catch (error) {
         written = { verdict: { ok: false, why: failureSummary(error) }, role: "INSIGHTS_CONVERSION", lines: [] };
       }
       const says = written.verdict.ok ? written.verdict.says : [];
-      const grade = gradeSees(page.expected, says);
+      // Judged point by point against Anthony's notes; the figures-named grade only when the judge can't answer.
+      let grade = gradeSees(page.expected, says);
+      if (written.verdict.ok) {
+        try {
+          const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
+          const lead = setup.members.find((entry) => entry.role === INSIGHTS_LEAD_ROLE && entry.isActive);
+          const bubble = { says, steps: written.verdict.steps.map((step) => step.words) };
+          const judged = judgeFrom(await ask(ctx, run, lead, "the eval judge", JUDGE_FORMAT, JSON.stringify({ page: page.about, points: page.expected, bubble }), LOOK_LIMIT_MS), page.expected);
+          if (judged) grade = judged;
+        } catch (error) {
+          grade = { ...grade, notes: [...grade.notes, `The judge could not answer (${failureSummary(error)}); graded on the figures named.`] };
+        }
+      }
       const notes = [...written.lines.map((line) => `${line.heading}: ${line.detail}`), ...(written.verdict.ok ? [] : [`Sent back: ${written.verdict.why}`]), ...grade.notes];
       await ctx.runMutation(internal.seesAsk.saveSeesEvalRun, {
         pageId: page._id,
@@ -259,7 +277,7 @@ export const runSeesEval = internalAction({
     await ctx.runMutation(internal.roleRuns.finishRoleRun, {
       runId: args.runId,
       status: "SUCCESS",
-      summary: pages.length === 0 ? "The eval set holds no pages yet." : `${pages.length} page${pages.length === 1 ? "" : "s"} graded: ${passed} passed the Editor; ${Math.round(score * 100)}% of Anthony's figures named.`,
+      summary: pages.length === 0 ? "The eval set holds no pages yet." : `${pages.length} page${pages.length === 1 ? "" : "s"} graded: ${passed} passed the Editor; ${Math.round(score * 100)}% of what Anthony would want found was found.`,
     });
     return { graded: pages.length, passed, score };
   },
