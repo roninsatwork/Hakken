@@ -155,3 +155,43 @@ export function writerFrom(answer: unknown): InsightsRole | null {
   const role = (answer as { specialist?: unknown } | null)?.specialist;
   return typeof role === "string" && (SEES_WRITERS as readonly string[]).includes(role) ? (role as InsightsRole) : null;
 }
+
+/**
+ * The Head's second look (stronger-agents-plan-2026-10-30.md A5): is this
+ * the most useful thing the page says — what a client would act on first?
+ * Nobody checked that before; the Editor checks numbers.
+ */
+export const SECOND_LOOK_FORMAT = [
+  "A specialist wrote the bubble below for the page. Decide whether it says the most useful thing this page's figures say: what a client would act on first, against their own past.",
+  "Reply with only JSON: {\"useful\": true} when it does; otherwise {\"useful\": false, \"says\": [\"…\"], \"steps\": [{\"words\": \"…\", \"link\": number}]}, written to the same rules as the specialist's: figures by their keys in double square brackets, never typed; one fact a sentence; a step's link one of the numbers given.",
+].join("\n");
+
+/** The Head's second look, read: kept as is, or its rewrite to check. */
+export function secondLookFrom(answer: unknown): { useful: true } | { useful: false; rewrite: unknown } {
+  const raw = (answer && typeof answer === "object" ? answer : {}) as { useful?: unknown };
+  if (raw.useful === true) return { useful: true };
+  return { useful: false, rewrite: answer };
+}
+
+/** The numbers a sentence carries, as written: "1,258", "3.5%", "£104,165" all read as their digits. */
+export function numbersIn(text: string): string[] {
+  return [...text.matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((match) => match[0].replace(/,/g, ""));
+}
+
+/**
+ * How close the team's bubble came to Anthony's sentences for the same page
+ * (A6): the share of the figures his sentences name that the team's name
+ * too, 0 to 1 — a bubble about the right figures scores high even in other
+ * words; one about other figures scores low. Sentences with no figure are
+ * graded on whether the team said anything at all.
+ */
+export function gradeSees(expected: readonly string[], says: readonly string[]): { score: number; notes: string[] } {
+  const wanted = [...new Set(expected.flatMap(numbersIn))];
+  const got = new Set(says.flatMap(numbersIn));
+  if (wanted.length === 0) return { score: says.length > 0 ? 1 : 0, notes: ["Anthony's sentences name no figure: graded on saying anything."] };
+  const matched = wanted.filter((number) => got.has(number));
+  const notes = [`${matched.length} of the ${wanted.length} figures Anthony named: ${matched.join(", ") || "none"}.`];
+  const missed = wanted.filter((number) => !got.has(number));
+  if (missed.length > 0) notes.push(`Not named: ${missed.join(", ")}.`);
+  return { score: Math.round((matched.length / wanted.length) * 100) / 100, notes };
+}

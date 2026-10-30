@@ -192,3 +192,11 @@ A1–A6, in this order so each step is measured.
   A1). The plain-words rule is in every agent's ground rules
   (`PLAIN_WORDS`). Checked on morehandles.co.uk in the app: the bubble
   answered in about two seconds. Overall: 50%.
+- 2026-10-30, later still: phase 6 built as far as the bubble's path
+  (stronger-agents-plan-2026-10-30.md, Progress): A3 in every agent's ground
+  rules; A4's read side (a specialist's memories bind its bubble); A5, the
+  Head's second look on every bubble; A6's set, grading and functions, with
+  the Admin screen still to draw; A1 (tools) not started, a design decision
+  for Anthony. S10 finished: the weekly run's Head reads what the bubbles
+  said this week (`saidOnThePages` in `askStrategy`). Overall: 75%. Phase 7
+  (the full gate) next.

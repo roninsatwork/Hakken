@@ -33,6 +33,15 @@ export const insightFindingStatusValidator = v.union(v.literal("PUBLISHED"), v.l
 /** How a finding turned out on the day it named (keeping score, §2.7): right, wrong, or too early to say. */
 export const insightOutcomeValidator = v.union(v.literal("RIGHT"), v.literal("WRONG"), v.literal("TOO_EARLY"));
 
+/** A figure a page hands over for its bubble: its key, value, unit and plain label (utils/seesAsk.ts). */
+const seesFactValidator = v.object({
+  key: v.string(),
+  value: v.number(),
+  unit: v.union(v.literal("count"), v.literal("money"), v.literal("percent"), v.literal("position"), v.literal("seconds"), v.literal("score"), v.literal("ratio")),
+  label: v.string(),
+  currency: v.optional(v.string()),
+});
+
 export const insightsTables = {
   /**
    * One finding: a story the team found in a website's sources, what it is
@@ -419,7 +428,47 @@ export const insightsTables = {
     failedWhy: v.optional(v.string()),
     /** The week it was written in, for the weekly run to read what the bubbles said (S10). */
     week: v.string(),
+    /** What the page handed over, kept so the page can join the eval set (stronger-agents-plan-2026-10-30.md A6). */
+    about: v.optional(v.string()),
+    facts: v.optional(v.array(seesFactValidator)),
+    links: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
   })
     .index("by_hold_key", ["companyWebsiteId", "key"])
     .index("by_hold_week", ["companyWebsiteId", "week"]),
+
+  /**
+   * The eval set (stronger-agents-plan-2026-10-30.md A6): real pages, each
+   * with the sentences Anthony would write for its bubble. A page is kept
+   * from a bubble the eye asked for, with its figures as they were; every
+   * change to an agent is graded against the set (`seesEvalRuns`).
+   */
+  seesEvalPages: defineTable({
+    companyId: v.id("companies"),
+    companyWebsiteId: v.id("companyWebsites"),
+    host: v.string(),
+    screen: v.string(),
+    about: v.string(),
+    facts: v.array(seesFactValidator),
+    links: v.array(v.object({ label: v.string(), href: v.string() })),
+    /** The sentences Anthony would write: the answer to grade against. */
+    expected: v.array(v.string()),
+    /**
+     * Its gradings, the newest last, twenty kept: what the team wrote each time, whether the Editor passed it, and how
+     * close it came to Anthony's (the share of the figures his sentences name that the team's name too, 0 to 1). On the
+     * page rather than a table of their own: one more table tipped TypeScript past following the data model.
+     */
+    gradings: v.array(v.object({
+      runId: v.id("agentRuns"),
+      at: v.number(),
+      role: v.optional(v.string()),
+      says: v.array(v.string()),
+      steps: v.array(v.object({ words: v.string(), link: v.string(), href: v.string() })),
+      passed: v.boolean(),
+      score: v.number(),
+      notes: v.array(v.string()),
+    })),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_company", ["companyId"]),
 };
+

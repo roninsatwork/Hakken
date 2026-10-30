@@ -343,7 +343,9 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   let ordered: Draft[] = [...drafts].sort((a, b) => b.stake - a.stake);
   if (drafts.length > 0 || toCall.length > 0) {
     try {
-      const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead, toCall);
+      // What the eye's bubbles said this week (sees-conversion-specialist-plan-2026-10-30.md S10): the Head weighs them too.
+      const bubbles = await ctx.runQuery(internal.seesAsk.weekSeesAnswers, { holdId: args.holdId, week: weekOf(now) }).catch(() => []);
+      const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead, toCall, bubbles);
       ordered = strategy.ordered;
       verdict = strategy.verdict;
       written = strategy.summary;
@@ -625,6 +627,8 @@ async function askStrategy(
   all: readonly Fact[],
   lead: TeamMember | undefined,
   services: readonly Service[],
+  /** What the eye's bubbles said on the website's pages this week (S10): read, never repeated as findings. */
+  bubbles: ReadonlyArray<{ screen: string; says: string[] }> = [],
 ): Promise<{ ordered: Draft[]; verdict: string; summary: unknown; services: unknown }> {
   const system = [rulesFor(args), briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), COMPETING_RULE, FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
   const used = new Set(drafts.flatMap((draft) => [...draft.comparisons.flat(), ...[draft.headline, draft.story].flatMap((text) => [...text.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1]))]));
@@ -646,6 +650,8 @@ async function askStrategy(
     })),
     // And why the enquiries moved, the Analyst's tests (phase 8), so the verdict can say what caused the move.
     facts: factLines(all.filter((fact) => used.has(fact.key) || headline.includes(fact.key) || fact.key.startsWith("why."))),
+    // What the team already told the client this week on the pages' own bubbles (S10): weigh it, never repeat it as news.
+    ...(bubbles.length > 0 ? { saidOnThePages: bubbles.map((bubble) => ({ page: bubble.screen, said: bubble.says })) } : {}),
   });
   const answer = await ask(ctx, args, lead, "the Head of Strategy", system, prompt, LEAD_ASK_LIMIT_MS, (value) => value !== null && typeof value === "object" && "verdict" in value && typeof value.verdict === "string") as { verdict?: unknown; summary?: unknown; order?: unknown; joined?: unknown; services?: unknown } | null;
   const order = Array.isArray(answer?.order) ? answer.order.filter((number): number is number => Number.isInteger(number) && number >= 0 && number < drafts.length) : [];

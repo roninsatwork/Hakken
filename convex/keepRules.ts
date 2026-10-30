@@ -367,6 +367,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   // The eye's bubble, written by the Insights team: one row per website, page, dates, country and device, replaced on
   // the next press after its three hours (sees-conversion-specialist-plan-2026-10-30.md S3, S9).
   seesAnswers: cleared("the next press after 3 hours, in place", "seesAsk/askSees"),
+  // The eval set (stronger-agents-plan-2026-10-30.md A6): kept, each page with its twenty newest gradings.
+  seesEvalPages: forever("the eval set: real pages with the sentences Anthony would write, graded against on every change"),
   insightSearchPicks: LATEST,
   insightPlans: LATEST,
   insightQuestionPanels: LATEST,

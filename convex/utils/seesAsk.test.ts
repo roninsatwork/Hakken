@@ -72,3 +72,18 @@ describe("the eye's ask", () => {
     expect(writerFrom({ specialist: "someone else" })).toBeNull();
   });
 });
+
+describe("the second look and the eval grading (stronger-agents-plan-2026-10-30.md A5, A6)", () => {
+  test("the Head's second look is kept as is, or read as a rewrite to check", async () => {
+    const { secondLookFrom, gradeSees, numbersIn } = await import("./seesAsk");
+    expect(secondLookFrom({ useful: true })).toEqual({ useful: true });
+    expect(secondLookFrom({ useful: false, says: ["x"] })).toEqual({ useful: false, rewrite: { useful: false, says: ["x"] } });
+    expect(secondLookFrom(null)).toEqual({ useful: false, rewrite: null });
+    expect(numbersIn("1,258 purchases, 3.5% of 36,459 visits, worth £104,165")).toEqual(["1258", "3.5", "36459", "104165"]);
+    expect(gradeSees(["1,258 purchases, up from 1,091"], ["1,258 purchases last month, up from 1,091."])).toMatchObject({ score: 1 });
+    expect(gradeSees(["1,258 purchases, up from 1,091"], ["28,623 conversions."])).toMatchObject({ score: 0, notes: expect.arrayContaining([expect.stringContaining("Not named: 1258, 1091.")]) });
+    expect(gradeSees(["1,258 purchases, up from 1,091"], ["1,258 purchases."])).toMatchObject({ score: 0.5 });
+    expect(gradeSees(["Nothing to worry about this month."], ["28,623 conversions."])).toMatchObject({ score: 1 });
+    expect(gradeSees(["Nothing to worry about this month."], [])).toMatchObject({ score: 0 });
+  });
+});

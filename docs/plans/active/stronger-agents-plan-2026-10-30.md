@@ -51,4 +51,40 @@ measured on ronins.co.uk before anyone else's website.
 
 ## Progress
 
-- 2026-10-30: agreed in principle. Nothing built.
+- 2026-10-30: agreed in principle.
+- 2026-10-30, afternoon (Anthony: "Build it", on the build plan): built on dev
+  as phase 6 of [conversions-and-agents-build-plan-2026-10-30.md](conversions-and-agents-build-plan-2026-10-30.md),
+  committed locally, not pushed, as far as the eye's bubble path:
+  - **A3 done**: the plain-words rule is in every agent's ground rules
+    (`PLAIN_WORDS`, `convex/utils/insightTeam.ts`), so it binds the bubble,
+    the findings, the boxes and the reports, and shows read-only on every
+    Instructions page with the ground rules.
+  - **A2 is Admin's**: nothing in code; Anthony added Gemini Argon on
+    2026-10-30 and sets the specialists' model in Model Defaults.
+  - **A4 half done**: the specialist writing a bubble reads its "always"
+    memories for the company (`agentMemories.getAlwaysMemoriesInternal`), so
+    a correction saved against it in Admin → Agents → Memories binds its
+    next bubble. Saving a correction from the bubble itself needs a control
+    Anthony has not drawn; the weekly run's specialists do not read memories
+    yet.
+  - **A5 done for the bubble**: the Head of Strategy takes a second look at
+    every bubble the Editor passed — "is this the most useful thing the page
+    says?" — and may say better words, kept only when the Editor passes them
+    too (`SECOND_LOOK_FORMAT`, `seesAskActions.writeBubble`). Not yet on the
+    weekly findings.
+  - **A6 built, no screen yet**: a bubble the eye asked for can be kept as an
+    eval page with the sentences Anthony would write
+    (`seesAsk.keepSeesEvalPage`); `gradeSeesEvalNow` writes every page's
+    bubble again through the same path and grades it — the Editor's verdict
+    and the share of Anthony's figures named (`gradeSees`) — a run of the
+    Head's per company, twenty gradings kept per page
+    (`seesEvalResults`). The Admin screen to add a page and read the
+    gradings is still to draw and build; until then a super admin calls the
+    functions.
+  - **A1 not started**: tools a specialist can call in several steps need a
+    tool-calling loop in the agent provider adapters
+    (`aiProviderRegistry.generateTextWithResolvedModel` is one shot, no
+    tools), across Anthropic, Google and OpenAI. That is a design decision
+    for Anthony — which providers, what each tool may read, the cost of
+    several calls a bubble — before it is built.
+  Overall for this plan: about 45%.

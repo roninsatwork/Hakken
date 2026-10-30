@@ -527,6 +527,8 @@ import type * as searchConsoleVolatilityDays from "../searchConsoleVolatilityDay
 import type * as searchVolumes from "../searchVolumes.js";
 import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
+import type * as seesAsk from "../seesAsk.js";
+import type * as seesAskActions from "../seesAskActions.js";
 import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAgentRuns from "../seoAgentRuns.js";
 import type * as seoAiEngines from "../seoAiEngines.js";
@@ -846,6 +848,7 @@ import type * as utils_sees_research from "../utils/sees/research.js";
 import type * as utils_sees_searchConsole from "../utils/sees/searchConsole.js";
 import type * as utils_sees_searchConsoleScreens from "../utils/sees/searchConsoleScreens.js";
 import type * as utils_sees_site from "../utils/sees/site.js";
+import type * as utils_seesAsk from "../utils/seesAsk.js";
 import type * as utils_seoLocations from "../utils/seoLocations.js";
 import type * as utils_seoSentPlace from "../utils/seoSentPlace.js";
 import type * as utils_siteKinds from "../utils/siteKinds.js";
@@ -1479,6 +1482,8 @@ declare const fullApi: ApiFromModules<{
   searchVolumes: typeof searchVolumes;
   seedUsers: typeof seedUsers;
   seedWorkflows: typeof seedWorkflows;
+  seesAsk: typeof seesAsk;
+  seesAskActions: typeof seesAskActions;
   selfImprovementConfig: typeof selfImprovementConfig;
   seoAgentRuns: typeof seoAgentRuns;
   seoAiEngines: typeof seoAiEngines;
@@ -1798,6 +1803,7 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/searchConsole": typeof utils_sees_searchConsole;
   "utils/sees/searchConsoleScreens": typeof utils_sees_searchConsoleScreens;
   "utils/sees/site": typeof utils_sees_site;
+  "utils/seesAsk": typeof utils_seesAsk;
   "utils/seoLocations": typeof utils_seoLocations;
   "utils/seoSentPlace": typeof utils_seoSentPlace;
   "utils/siteKinds": typeof utils_siteKinds;

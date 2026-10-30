@@ -54,10 +54,12 @@ const ask = (siteId: Id<"companyWebsites">) => ({
   shop: true,
 });
 
-const answers = (head: unknown, specialist: unknown) => {
+/** The team's three answers: the Head's choice, the specialist's bubble, and the Head's second look (kept as is unless given). */
+const answers = (head: unknown, specialist: unknown, secondLook: unknown = { useful: true }) => {
   generate.mockImplementation(async (request: { systemInstruction?: string }) => {
-    const routing = (request.systemInstruction ?? "").includes("Choose which specialist");
-    return { text: JSON.stringify(routing ? head : specialist), inputTokens: 100, outputTokens: 40 };
+    const system = request.systemInstruction ?? "";
+    const answer = system.includes("Choose which specialist") ? head : system.includes("A specialist wrote the bubble below") ? secondLook : specialist;
+    return { text: JSON.stringify(answer), inputTokens: 100, outputTokens: 40 };
   });
 };
 
@@ -81,17 +83,17 @@ describe("the eye asks the Insights team", () => {
       steps: [{ words: "Check the counts that never happened.", link: "Tracking health", href: "/app/analytics/site/tracking-health" }],
       role: "INSIGHTS_CONVERSION",
     });
-    // Two model calls, the Head's and the specialist's, on one run of the Head's, with its cost.
-    expect(generate).toHaveBeenCalledTimes(2);
+    // Three model calls — the Head's choice, the specialist's words, the Head's second look — on one run of the Head's, with its cost.
+    expect(generate).toHaveBeenCalledTimes(3);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "What Hakken sees: acme-shop.test" });
-    expect(runs[0].inputTokens).toBe(200);
+    expect(runs[0].inputTokens).toBe(300);
     // Pressed again within three hours: the same answer, nothing asked.
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
     await finishScheduled(t);
-    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate).toHaveBeenCalledTimes(3);
     // Another device is another answer (S9).
     const mobile = await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
     expect(mobile.status).toBe("RESEARCHING");
@@ -120,6 +122,55 @@ describe("the eye asks the Insights team", () => {
     await finishScheduled(t);
     expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["28,623 conversions last month."] });
     expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(2);
+  });
+
+  test("the Head's second look can say more useful words, kept only when the Editor passes them (A5)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, {
+      useful: false, says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Check the counts.", link: 0 }],
+    });
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month, up from 1,091."] });
+    // A rewrite that types a number goes back, and the specialist's words stand.
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, { useful: false, says: ["About 1,300 purchases."], steps: [] });
+    await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: "googleAnalytics.conversions|lastMonth|||gbr|mobile" })).toMatchObject({ status: "WRITTEN", says: ["28,623 conversions last month."] });
+  });
+
+  test("a bubble is kept as an eval page with Anthony's sentences, and the set is graded on the team as it stands (A6)", async () => {
+    const t = harness();
+    const { siteId, userId, companyId } = await seed(t);
+    const superId = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Super", email: "super@platform.test", role: "SUPER_ADMIN", createdAt: 1 }));
+    const user = t.withIdentity({ subject: userId });
+    const admin = t.withIdentity({ subject: superId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [] });
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    const answerId = await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect())[0]._id);
+    const pageId = await admin.mutation(api.seesAsk.keepSeesEvalPage, { answerId, expected: ["1,258 purchases, up from 1,091 the month before, worth more than ever."] });
+    void companyId;
+    void first;
+    // Graded: the team names both of Anthony's figures.
+    const [runId] = await admin.mutation(api.seesAsk.gradeSeesEvalNow, {});
+    expect(runId).toBeDefined();
+    await finishScheduled(t);
+    const results = await admin.query(api.seesAsk.seesEvalResults, {});
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ pageId, host: "acme-shop.test", expected: ["1,258 purchases, up from 1,091 the month before, worth more than ever."] });
+    expect(results[0].latest).toMatchObject({ passed: true, score: 1, says: ["1,258 purchases last month, up from 1,091."] });
+    const run = await t.run(async (ctx) => await ctx.db.get(runId));
+    expect(run?.finalOutput).toContain("1 page graded: 1 passed the Editor; 100% of Anthony's figures named.");
+    // The team as it stands next time names one figure only: the score says so.
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] });
+    await admin.mutation(api.seesAsk.gradeSeesEvalNow, {});
+    await finishScheduled(t);
+    const again = await admin.query(api.seesAsk.seesEvalResults, {});
+    expect(again[0].latest).toMatchObject({ passed: true, score: 0 });
+    expect(again[0].latest?.notes.join(" ")).toContain("Not named: 1258, 1091.");
   });
 
   test("another company's website is not asked about, and a page with no figures is refused", async () => {

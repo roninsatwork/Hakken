@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
@@ -59,8 +59,8 @@ export const askSees = tenantMutation({
     }
     const companyId = site.hold.companyId;
     const answerId: Id<"seesAnswers"> = held
-      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path }), held._id)
-      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now) });
+      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path, about: args.about, facts: args.facts, links: args.links }), held._id)
+      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), about: args.about, facts: args.facts, links: args.links });
     const runId = await ctx.db.insert("agentRuns", {
       agentId: lead._id,
       triggerType: "EVENT",
@@ -138,5 +138,152 @@ export const weekSeesAnswers = internalQuery({
   handler: async (ctx, args) => {
     const rows = await ctx.db.query("seesAnswers").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", args.week)).take(50);
     return rows.filter((row) => row.status === "WRITTEN").map((row) => ({ screen: row.screen, path: row.path, says: row.says, role: row.role ?? null, writtenAt: row.writtenAt ?? row.askedAt }));
+  },
+});
+
+// ---------------------------------------------------------------------------
+// The eval set (stronger-agents-plan-2026-10-30.md A6)
+// ---------------------------------------------------------------------------
+
+const evalPageValidator = v.object({
+  _id: v.id("seesEvalPages"),
+  companyId: v.id("companies"),
+  companyWebsiteId: v.id("companyWebsites"),
+  host: v.string(),
+  screen: v.string(),
+  about: v.string(),
+  facts: seesAskValidator.facts,
+  links: seesAskValidator.links,
+  expected: v.array(v.string()),
+});
+
+/**
+ * A bubble the eye asked for kept as an eval page, with the sentences Anthony
+ * would write for it: the page's figures as they were, graded against on
+ * every change to an agent (`seesAskActions.runSeesEval`). Super admins only.
+ */
+export const keepSeesEvalPage = superAdminMutation({
+  args: { answerId: v.id("seesAnswers"), expected: v.array(v.string()) },
+  returns: v.id("seesEvalPages"),
+  handler: async (ctx, args) => {
+    const answer = await ctx.db.get(args.answerId);
+    if (!answer || !answer.facts || !answer.about) throw appError("NOT_FOUND", "That bubble kept no figures to grade against.");
+    const expected = args.expected.map((line) => line.trim()).filter(Boolean);
+    if (expected.length === 0 || expected.length > 3) throw appError("INVALID_INPUT", "Give one to three sentences the bubble should have said.");
+    const hold = await ctx.db.get(answer.companyWebsiteId);
+    const website = hold ? await ctx.db.get(hold.websiteId) : null;
+    return await ctx.db.insert("seesEvalPages", {
+      companyId: answer.companyId,
+      companyWebsiteId: answer.companyWebsiteId,
+      host: website?.host ?? "",
+      screen: answer.screen,
+      about: answer.about,
+      facts: answer.facts,
+      links: answer.links ?? [],
+      expected,
+      gradings: [],
+      createdBy: ctx.userId,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Grade the eval set now: a run of the Head of Strategy's for each company
+ * with pages in the set — a model answer and its cost belong to one
+ * company's run — every page written again and graded. Says the runs.
+ */
+export const gradeSeesEvalNow = superAdminMutation({
+  args: {},
+  returns: v.array(v.id("agentRuns")),
+  handler: async (ctx) => {
+    const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
+    if (!lead) return [];
+    const pages = await ctx.db.query("seesEvalPages").take(200);
+    const byCompany = new Map<Id<"companies">, Id<"seesEvalPages">[]>();
+    for (const page of pages) byCompany.set(page.companyId, [...(byCompany.get(page.companyId) ?? []), page._id]);
+    const now = Date.now();
+    const runIds: Id<"agentRuns">[] = [];
+    for (const [companyId, pageIds] of byCompany) {
+      const runId = await ctx.db.insert("agentRuns", {
+        agentId: lead._id,
+        triggerType: "MANUAL",
+        objective: "Grade the eval set: write every kept page's bubble again and compare it with the sentences Anthony would write.",
+        title: "What Hakken sees: the eval set graded",
+        status: "QUEUED",
+        companyId,
+        startedAt: now,
+        updatedAt: now,
+      });
+      await ctx.scheduler.runAfter(0, internal.seesAskActions.runSeesEval, { runId, pageIds });
+      runIds.push(runId);
+    }
+    return runIds;
+  },
+});
+
+/** The eval pages to grade: all, or the ones named. */
+export const evalPagesInternal = internalQuery({
+  args: { pageIds: v.optional(v.array(v.id("seesEvalPages"))) },
+  returns: v.array(evalPageValidator),
+  handler: async (ctx, args) => {
+    const rows: Doc<"seesEvalPages">[] = [];
+    if (args.pageIds) {
+      for (const id of args.pageIds) {
+        const row = await ctx.db.get(id);
+        if (row) rows.push(row);
+      }
+    } else {
+      rows.push(...(await ctx.db.query("seesEvalPages").take(200)));
+    }
+    return rows.map((row) => ({ _id: row._id, companyId: row.companyId, companyWebsiteId: row.companyWebsiteId, host: row.host, screen: row.screen, about: row.about, facts: row.facts, links: row.links, expected: row.expected }));
+  },
+});
+
+export const saveSeesEvalRun = internalMutation({
+  args: {
+    pageId: v.id("seesEvalPages"),
+    runId: v.id("agentRuns"),
+    role: v.optional(v.string()),
+    says: v.array(v.string()),
+    steps: v.array(v.object({ words: v.string(), link: v.string(), href: v.string() })),
+    passed: v.boolean(),
+    score: v.number(),
+    notes: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const page = await ctx.db.get(args.pageId);
+    if (!page) return null;
+    const { pageId: _pageId, ...grading } = args;
+    await ctx.db.patch(args.pageId, { gradings: [...page.gradings, { ...grading, at: Date.now() }].slice(-20) });
+    return null;
+  },
+});
+
+/** Every eval page with its newest grading, for the Admin screen to come. */
+export const seesEvalResults = superAdminQuery({
+  args: {},
+  returns: v.array(v.object({
+    pageId: v.id("seesEvalPages"),
+    host: v.string(),
+    about: v.string(),
+    expected: v.array(v.string()),
+    latest: v.union(v.null(), v.object({ at: v.number(), role: v.union(v.string(), v.null()), says: v.array(v.string()), passed: v.boolean(), score: v.number(), notes: v.array(v.string()) })),
+  })),
+  handler: async (ctx) => {
+    const pages = await ctx.db.query("seesEvalPages").take(200);
+    const out = [];
+    for (const page of pages) {
+      const latest = page.gradings[page.gradings.length - 1] ?? null;
+      out.push({
+        pageId: page._id,
+        host: page.host,
+        about: page.about,
+        expected: page.expected,
+        latest: latest ? { at: latest.at, role: latest.role ?? null, says: latest.says, passed: latest.passed, score: latest.score, notes: latest.notes } : null,
+      });
+    }
+    return out;
   },
 });
