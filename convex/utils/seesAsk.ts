@@ -34,8 +34,8 @@ export const MOST_BUBBLE_FIGURES = 8;
  */
 export function pageParts(screen: string): string[] {
   if (screen === "googleAnalytics.conversions") {
+    // Not the boxes: the reader sees those (2026-10-31: a sentence spent on them left less room to dig).
     return [
-      "the four boxes: conversions, purchases, the conversion rate and added to basket, each against the month before",
       "the chart: how many visits it took for one conversion, day by day",
       "the map: each conversion by kind of page, channel, device or country, as visits, a rate or events",
       "the table: each event the website counts, with its conversions, visits and change",
@@ -43,7 +43,6 @@ export function pageParts(screen: string): string[] {
   }
   if (screen.startsWith("googleAnalytics.event:")) {
     return [
-      "the four boxes: how many, the visits that did it, its rate in every hundred visits and what it was worth",
       "the chart: the share of each day's visits that did it",
       "the lines: the conversion by channel, day by day",
       "when people convert: by hour and day of the week",
@@ -142,7 +141,7 @@ export const SEES_FORMAT = [
   "A reader pressed the eye on one page of the app and will read your words in a speech bubble. Find what this website's figures show that a person looking at the page would miss: look across everything you were given, compare the groups against each other and against the span before, and say what matters most, each with the figures that show it. Then what to do first.",
   "Never only repeat the figures in the page's boxes: the reader can see those. Say what they mean together, or what is behind them.",
   "Reply with only JSON: {\"says\": [\"…\", \"…\"], \"steps\": [{\"words\": \"…\", \"link\": the number of one of the links given}]}: up to six sentences, the most useful first, and up to four steps. Say as much as the figures hold that is worth acting on; never pad.",
-  "Start with the page as it is laid out (pageParts): what each part says that matters, a short sentence each where it has something to say. Never name the parts (\"on the chart\", \"the map shows\"): say what they show. Then dig into the biggest thing.",
+  "Start with the page as it is laid out (pageParts): what each part says that matters, a short sentence each where it has something to say; the reader sees the boxes, so never spend a sentence on them alone. Never name the parts (\"on the chart\", \"the map shows\"): say what they show. Then dig into the biggest thing.",
   "Write it as a short story a busy owner reads in under a minute, never a list of figures: what is happening, where it happens, and why it matters. Plain words, short sentences under 20 words, at most two figures in a sentence and eight in the whole bubble: choose the figures that tell the story. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence.",
   "Say what got better and what got worse against the span before, wherever the figures hold it.",
   "Each step is one thing a person can do, in plain words, saying where: the device, channel, kind of page, step or product it is about — never advice that would fit any website. Link it to the place it names. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
@@ -156,6 +155,7 @@ export const SEES_FORMAT = [
  */
 export const SEES_READS_FORMAT = [
   `You can read every Google Analytics screen of this website yourself, for the same dates, country and device, with ${ANALYTICS_READ}. The page's own screen is read for you already, with its map by kind of page and by channel. Read anything else that helps you find what the reader would miss.`,
+  "Each read of the map starts with its standouts and, for a shop, the steps from one to the next, all worked out in code: where the groups part most, and how many go on from each step. Look at them first; they are where a story usually starts.",
   "Before you write, dig: take the biggest change you see and break it down — by device, by channel, by kind of page, by country, against the span before — until you know where it happens and where it does not. Read the map's other columns to do it. Then tell the reader where.",
   "Question a gap that looks too big: when one group's rate is three or more times another's, say its tracking may be broken there before calling it behaviour, and make checking it a step.",
   "Every number a screen gives comes with its key in double square brackets: name it by that key. Where the page's own facts hold the same figure, use the page's key, so the bubble says what the page's boxes say.",

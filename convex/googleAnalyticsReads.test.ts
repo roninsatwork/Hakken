@@ -600,6 +600,24 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
       expect(byKey.get(`r1.conversions.kinds.${kind.eventName}.count`)).toMatchObject({ value: kind.count, unit: "count" });
       if (kind.value !== null) expect(byKey.get(`r1.conversions.kinds.${kind.eventName}.value`)).toMatchObject({ value: kind.value / 100, unit: "money", currency: "GBP" });
     }
+    // The Conversions map as an agent reads it (agentReads.ts): each rate, every conversion together a visit, and each
+    // view's standouts, all worked out in code from the map's own figures.
+    const map = await user.query(api.googleAnalyticsConversionsMap.analyticsConversionsMap, { siteId, period: "lastMonth", device: "", columns: "channel" });
+    const agentMap = await t.query(internal.agentReads.conversionsByInternal, { companyId, siteId, period: "lastMonth", device: "", columns: "channel" }) as {
+      ok: boolean; standouts: Array<{ conversion: string; highest?: { column: string } }>; everyConversionTogether: Array<{ column: string; conversionsPerVisit: number | null }>;
+      conversions: Array<{ event: string; by: Array<{ column: string; visitsThatDidIt: number; ratePercent: number | null }> }>;
+    };
+    expect(agentMap.ok).toBe(true);
+    expect(agentMap.standouts[0].conversion).toBe("every conversion together, a visit");
+    const lead = agentMap.conversions.find((one) => one.event === "generate_lead")!;
+    const row = map.rows.find((one) => one.eventName === "generate_lead")!;
+    map.columns.forEach((column, at) => {
+      const cell = lead.by.find((one) => one.column === (column.name ?? column.key))!;
+      expect(cell.visitsThatDidIt).toBe(row.cells[at].visits);
+      expect(cell.ratePercent).toBe(column.visits > 0 ? Math.round((row.cells[at].visits / column.visits) * 1000) / 10 : null);
+    });
+    // No shop's steps on a website that sends none.
+    expect(agentMap).not.toHaveProperty("shopSteps");
 
     expect(await read("visitors")).toMatchObject({ ok: true, figures: { visits: 30 * 33 }, googleSignals: "off" });
     expect(await read("products")).toMatchObject({ ok: false });

@@ -223,3 +223,15 @@ measured on ronins.co.uk before anyone else's website.
   written only when the page's figures change or three hours pass. Anthony then
   said each press should spend the company's credit allowance: not built,
   proposal to agree first.
+- 2026-10-31, late (Anthony: "ok build the fix now"): the map read gains
+  every conversion together a visit, a shop's steps each into the next
+  (Google's standard basket, checkout and purchase events), and each view's
+  standouts — highest and lowest rate among groups with 2% of visits or 100,
+  biggest rise and fall — all in code; the bubble no longer spends a sentence
+  on the boxes. The Editor went back to the platform's fast model at his word.
+  Graded three times: one of three each time. Every bubble found about 25
+  visits for one conversion (29). Two of three found the basket to checkout
+  step (44.4% of basket visits started checkout; "over half of basket visits
+  stop"), but the judge marked it missed against his "about a 10% drop": what
+  his 10% measured is to ask him. None mentioned AI assistants. Tomorrow: a
+  strong, cheaper ChatGPT model graded against these scores.
