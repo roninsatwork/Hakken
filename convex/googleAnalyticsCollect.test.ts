@@ -7,7 +7,7 @@ import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { aboutMs, useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
-import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
+import { unpackPart, splitChannelKey, splitEventHourKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
 import { KEPT_BACK, analyticsWindow, dueJobs, fetchedAfter, finishedDue, insightsYearJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
 import { pageListJobs } from "./googleAnalyticsPageLists";
@@ -184,12 +184,13 @@ describe("which days and lists a run asks for", () => {
   });
 
   test("the periods still going each run, the finished ones due, and Insights' 12 months a day with the weekly lists", () => {
-    // Sixteen lists each — every event, the campaigns and their words, Visitors' six, Insights' first channel and
-    // landing pages by channel, and AI assistants' landing pages among them (§18.6.5, §18.6.6; insights-analyst-plan.md
-    // I35, §8; ga-channel-pages-plan.md CH13). The charts read the days, weeks and months kept (ga-stored-figures-plan.md
-    // SF12). Each period with its span before: This Week, This Month and the last 3, 6 and 12 months, 2 each — and,
-    // weekly, Insights' 12 months a day.
-    const LISTS = 16;
+    // Seventeen lists each — every event, the counted events by weekday and hour (conversions-and-agents-build-plan-
+    // 2026-10-30.md, phase 3), the campaigns and their words, Visitors' six, Insights' first channel and landing pages by
+    // channel, and AI assistants' landing pages among them (§18.6.5, §18.6.6; insights-analyst-plan.md I35, §8;
+    // ga-channel-pages-plan.md CH13). The charts read the days, weeks and months kept (ga-stored-figures-plan.md SF12).
+    // Each period with its span before: This Week, This Month and the last 3, 6 and 12 months, 2 each — and, weekly,
+    // Insights' 12 months a day.
+    const LISTS = 17;
     expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength((2 + 2 + 2 + 2 + 2) * LISTS + 1);
     // Not weekly: This Week and This Month alone.
     const daily = dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW);
@@ -347,6 +348,24 @@ describe("collecting a website's Google Analytics", () => {
     expect(addresses).toEqual(["https://www.acme-shop.test/", "https://www.acme-shop.test/ai-agency/", "https://www.acme-shop.test/contact/"]);
     expect(landing.rows[0]).toMatchObject({ visits: 300, views: 600 });
     expect(landing.slot).toMatchObject({ from: "2026-09-01", to: "2026-09-30" });
+    // When people convert (conversions-and-agents-build-plan-2026-10-30.md, phase 3): the counted events by day of the
+    // week and hour, asked for those events only and kept as a period list of their own.
+    const hourAsks = google.calls.filter((call) => call.url.endsWith(":runReport"))
+      .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
+      .filter((ask) => ask.dimensions.some((dimension) => dimension.name === "hour"));
+    expect(hourAsks.length).toBeGreaterThan(0);
+    expect(hourAsks.every((ask) => ask.dimensions.map((dimension) => dimension.name).slice(-3).join() === "eventName,dayOfWeek,hour")).toBe(true);
+    expect(hourAsks.every((ask) => JSON.stringify(ask.dimensionFilter).includes("generate_lead"))).toBe(true);
+    const hours = (await periodRows(t, siteId, "eventHour|lastMonth|NOW|"))!;
+    expect(hours.rows.length).toBeGreaterThan(0);
+    expect(hours.rows.map((row) => splitEventHourKey(row.key).eventName).every((name) => ["generate_lead", "click_tel"].includes(name))).toBe(true);
+    expect(hours.rows.every((row) => splitEventHourKey(row.key).hour >= 9 && splitEventHourKey(row.key).hour <= 16 && (row.times ?? 0) > 0)).toBe(true);
+    // The conversion's screen reads them as a week of hours: nothing outside the fake's 9am to 4pm.
+    const grid = await admin.query(api.googleAnalyticsEventReads.analyticsEventHours, { siteId, event: "generate_lead", period: "lastMonth", device: "" });
+    expect(grid?.held).toBe(true);
+    expect(grid!.cells).toHaveLength(7);
+    expect(grid!.cells.flat().reduce((sum, times) => sum + times, 0)).toBeGreaterThan(0);
+    expect(grid!.cells.every((day) => day.length === 24 && day.slice(0, 9).every((times) => times === 0) && day.slice(17).every((times) => times === 0))).toBe(true);
     // Every list a screen shows for one device is kept for each device (ga-stored-figures-plan.md SF3): the page lists
     // too, each device's own; every device asked whole, its people as Google counts them.
     expect(await periodRows(t, siteId, "total|lastWeek|NOW|mobile")).not.toBeNull();

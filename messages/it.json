@@ -16902,7 +16902,7 @@
       "bar": "prima le conversioni"
     },
     "eventScreen": {
-      "back": "Conversioni",
+      "back": "Torna a Conversioni",
       "description": "L'evento {google} di Google Analytics. Ogni dato qui riguarda questo evento.",
       "descriptionWhat": "L'evento {google} di Google Analytics: {what}. Ogni dato qui riguarda questo evento.",
       "what": {
@@ -16969,7 +16969,38 @@
       "afterNothingCounts": "Nient'altro conta ancora come conversione",
       "afterUnknown": "Google non ha potuto dirlo questa volta",
       "theRest": "Il resto, sommato",
-      "collecting": "Ancora in raccolta…"
+      "collecting": "Ancora in raccolta…",
+      "countedDescription": "Conta come conversione. Google lo chiama {google}.",
+      "didIt": "Visite che lo hanno fatto",
+      "rate": "Tasso di conversione",
+      "ofSiteVisits": "Su {visits} visite",
+      "worth": "Valore",
+      "noWorth": "Nessun valore impostato",
+      "dayByDay": {
+        "day": "{event}, giorno per giorno",
+        "week": "{event}, settimana per settimana",
+        "month": "{event}, mese per mese"
+      },
+      "dayByDayHint": "{period}.",
+      "when": {
+        "title": "Quando le persone convertono",
+        "hint": "Conversioni a ogni ora del giorno, una linea per ogni giorno della settimana, sommate sulle date mostrate. Togli la spunta a un giorno per nascondere la sua linea.",
+        "hours": "Dalle {from} alle {to}, ogni giorno nelle date mostrate",
+        "conversions": "Conversioni",
+        "compare": "Confronta",
+        "nothing": "Niente",
+        "collecting": "Hakken lo raccoglie con la prossima esecuzione notturna.",
+        "csvHour": "Ora",
+        "days": {
+          "0": "Domenica",
+          "1": "Lunedì",
+          "2": "Martedì",
+          "3": "Mercoledì",
+          "4": "Giovedì",
+          "5": "Venerdì",
+          "6": "Sabato"
+        }
+      }
     },
     "conversions": {
       "title": "Conversioni",
@@ -18191,7 +18222,14 @@
         "download": "Scarica CSV"
       },
       "timeTitlePer": "Visite necessarie per un {event}, giorno per giorno",
-      "timeTitleRate": "{event}: la quota di visite che lo ha fatto, giorno per giorno"
+      "timeTitleRate": "{event}: la quota di visite che lo ha fatto, giorno per giorno",
+      "linesTitleFor": "{event} al giorno, una linea per {column}",
+      "columnsLower": {
+        "kind": "tipo di pagina",
+        "channel": "canale",
+        "device": "dispositivo",
+        "country": "paese"
+      }
     }
   },
   "bingWebmaster": {

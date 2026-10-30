@@ -1,0 +1,28 @@
+# Google Analytics → a conversion's own screen — the approved look (board "Conversion" of docs/plans/assets/conversions-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Conversions
+  page-header: ‹the record's name›
+figures
+  figure: Contact form sent
+  figure: Visits that did it
+  figure: Conversion rate
+  figure: Worth
+chart-card: Contact form sent, day by day
+chart-card: Contact form sent a day, a line per channel
+  filter: Count
+  filter: Columns
+  checkbox: Organic Search
+  checkbox: Direct
+conversions-by-kind
+chart-card: When people convert
+  filter: Compare
+  checkbox: Monday
+  checkbox: Tuesday
+  checkbox: Wednesday
+  checkbox: Thursday
+  checkbox: Friday
+  checkbox: Saturday
+  checkbox: Sunday
+conversions-by-hour

@@ -283,7 +283,9 @@ export async function askList(
     ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } }
       : only.pagePath !== undefined ? { only: { dimension: "pagePath", values: only.pagePath } }
         // Only the assistants' visits: a list of every source by every landing page would be a website's longest.
-        : list === "landingAssistant" ? { only: { dimension: "sessionSource", values: [...AI_SOURCE_VALUES] } } : {}),
+        : list === "landingAssistant" ? { only: { dimension: "sessionSource", values: [...AI_SOURCE_VALUES] } }
+          // Only the counted events, by day of the week and hour: every event's 168 cells would be a website's longest list.
+          : list === "eventHour" ? { only: { dimension: "eventName", values: [...target.events] } } : {}),
   };
   const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
   // Sales asked apart only where they happen on another address: a booking page's list asks nothing more.
@@ -727,6 +729,8 @@ export async function collectPeriod(
   const range = periodRange(job.period, job.which, top);
   // Google has sent none of the period yet: nothing to ask (its jobs are planned only once it has).
   if (!range) return { ok: true, rows: 0, requests: session.requests };
+  // When people convert is a list of the counted events: a website counting none has nothing to ask.
+  if (job.list === "eventHour" && target.events.length === 0) return { ok: true, rows: 0, requests: session.requests };
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).

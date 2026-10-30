@@ -158,7 +158,11 @@ export type PageFactList = (typeof PAGE_FACT_LISTS)[number];
 export const ANALYTICS_LISTS = [
   // `series`: the website's 12 months a day, every device, for Insights (insights-analyst-plan.md): the charts read the
   // days, weeks and months kept (ga-stored-figures-plan.md SF12).
-  "total", "channel", "landing", "page", "series", "event", "campaign", "adKeyword",
+  "total", "channel", "landing", "page", "series", "event",
+  // Each counted event by the day of the week and the hour it happened (conversions-and-agents-build-plan-2026-10-30.md,
+  // phase 3, "When people convert"): a period list like `event`, the counted events only.
+  "eventHour",
+  "campaign", "adKeyword",
   "visitorType", "browser", "system", "age", "gender", "interest", "product",
   "firstChannel", "landingChannel",
   // AI assistants' landing pages (ga-channel-pages-plan.md CH13): each landing page by Google's channel and the AI source, AI sources only.
@@ -177,6 +181,7 @@ export const analyticsListValidator = v.union(
   v.literal("page"),
   v.literal("series"),
   v.literal("event"),
+  v.literal("eventHour"),
   v.literal("campaign"),
   v.literal("adKeyword"),
   v.literal("visitorType"),

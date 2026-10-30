@@ -47,8 +47,23 @@ export const EVENT_LIST_METRICS = ["eventCount", "totalUsers", "sessions"] as co
 export const SALES_METRICS = ["ecommercePurchases", "purchaseRevenue"] as const;
 
 /** The lists of events: one ask each, with their own figures, never joined to the key events. */
-export function isEventList(list: AnalyticsList): list is "event" {
-  return list === "event";
+export function isEventList(list: AnalyticsList): list is "event" | "eventHour" {
+  return list === "event" || list === "eventHour";
+}
+
+/**
+ * A row of the counted events by day of the week and hour (`eventHour`,
+ * conversions-and-agents-build-plan-2026-10-30.md, phase 3): Google's
+ * `dayOfWeek` runs 0 (Sunday) to 6, its `hour` "00" to "23"; the key keeps
+ * them as Google sends them, the event first.
+ */
+export function eventHourKey(eventName: string, dayOfWeek: string, hour: string): string {
+  return `${eventName}${JOIN}${dayOfWeek}${JOIN}${hour}`;
+}
+
+export function splitEventHourKey(key: string): { eventName: string; dayOfWeek: number; hour: number } {
+  const [eventName = "", dayOfWeek = "0", hour = "0"] = key.split(JOIN);
+  return { eventName, dayOfWeek: Number(dayOfWeek), hour: Number(hour) };
 }
 
 /**
@@ -78,6 +93,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   page: ["pagePath"],
   series: ["date"],
   event: ["eventName"],
+  // The counted events only (`askList` keeps it to them): when people convert, by day of the week and hour.
+  eventHour: ["eventName", "dayOfWeek", "hour"],
   campaign: ["sessionCampaignName", "sessionSource", "sessionMedium"],
   adKeyword: ["sessionManualTerm"],
   visitorType: ["newVsReturning"],
@@ -134,6 +151,7 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   landing: true,
   page: true,
   event: true,
+  eventHour: true,
   campaign: true,
   adKeyword: true,
   visitorType: true,
@@ -288,6 +306,8 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "adKeyword") return isUntagged(keys[0] ?? "") ? UNTAGGED : keys[0] ?? "";
   // A product with its category: one name can sit in two.
   if (list === "product") return channelKey(keys[0] ?? "", keys[1] ?? "");
+  // A counted event by the day of the week and the hour it happened.
+  if (list === "eventHour") return eventHourKey(keys[0] ?? "", keys[1] ?? "", keys[2] ?? "");
   // A landing page with the channel of its visits (Insights, §8): the page numbered as Landing pages' are.
   if (list === "landingChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   // A landing page with Google's channel and the assistant's source: the page first, as `landingChannel`'s, the rest one key.

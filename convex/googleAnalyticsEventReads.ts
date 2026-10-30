@@ -6,7 +6,7 @@ import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf } from "./pageTitles";
 import { funnelAsk } from "./googleAnalyticsLive";
-import type { ListRow } from "./googleAnalyticsLists";
+import { splitEventHourKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import type { Doc } from "./_generated/dataModel";
 import { readDayPoints } from "./googleAnalyticsHistory";
@@ -179,7 +179,11 @@ export const analyticsEvent = tenantQuery({
       /** Its people over the website's, and its visits over the website's: null without any. */
       peopleShare: v.union(v.number(), v.null()),
       visits: v.number(),
+      visitsBefore: v.union(v.number(), v.null()),
       visitsShare: v.union(v.number(), v.null()),
+      /** The website's visits in the dates and the span before: a conversion's rate is its times in every hundred of them. */
+      siteVisits: v.number(),
+      siteVisitsBefore: v.union(v.number(), v.null()),
     }),
     /** Its times a day; past 90 days a week or month to its `lastDay` (ga-stored-figures-plan.md SF2b). */
     points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), times: v.number() })),
@@ -214,6 +218,7 @@ export async function readEvent(ctx: SiteReader, args: ObjectType<typeof analyti
   const row = now?.rows.find((one) => one.key === args.event) ?? null;
   const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
   const whole = total?.rows[0] ?? null;
+  const wholeBefore = (await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country)))?.rows[0] ?? null;
   const detail = EVENT_DETAIL[args.event] ?? null;
   // What it was about and the pages it happened on, kept by each collection for every event and home country
   // (ga-stored-figures-plan.md SF7, SF13, SF15): `live` until the next run has built them.
@@ -258,7 +263,10 @@ export async function readEvent(ctx: SiteReader, args: ObjectType<typeof analyti
       people: row?.people ?? 0,
       peopleShare: whole && whole.people > 0 ? (row?.people ?? 0) / whole.people : null,
       visits: row?.visits ?? 0,
+      visitsBefore: before ? before.rows.find((one) => one.key === args.event)?.visits ?? 0 : null,
       visitsShare: whole && whole.visits > 0 ? (row?.visits ?? 0) / whole.visits : null,
+      siteVisits: whole?.visits ?? 0,
+      siteVisitsBefore: wholeBefore ? wholeBefore.visits : null,
     },
     points: (stored ?? []).map(({ times: [count], ...when }) => ({ ...when, times: count })),
     live,
@@ -272,3 +280,57 @@ export async function readEvent(ctx: SiteReader, args: ObjectType<typeof analyti
     }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// When people convert: a conversion by the day of the week and the hour
+// ---------------------------------------------------------------------------
+
+const analyticsEventHoursArgs = { siteId: v.id("companyWebsites"), event: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
+
+/** Seven days of twenty-four hours, Sunday first as Google counts them (`dayOfWeek` 0), each cell the times it happened. */
+const hourGrid = (rows: readonly ListRow[], event: string): number[][] => {
+  const grid = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+  for (const row of rows) {
+    const { eventName, dayOfWeek, hour } = splitEventHourKey(row.key);
+    if (eventName !== event || dayOfWeek < 0 || dayOfWeek > 6 || hour < 0 || hour > 23) continue;
+    grid[dayOfWeek][hour] += row.times ?? 0;
+  }
+  return grid;
+};
+
+/**
+ * When people convert (conversions-and-agents-build-plan-2026-10-30.md, phase
+ * 3; the canvas "Conversions page, three ways", board "Conversion"): one
+ * conversion's times at each hour of each day of the week, added up over the
+ * dates shown, from the `eventHour` list each collection keeps for the
+ * counted events — and the same for the span before, for the Compare menu.
+ * `held` false until the first collection since the list was added has run;
+ * `live` while this device's list is not built yet.
+ */
+export const analyticsEventHours = tenantQuery({
+  args: analyticsEventHoursArgs,
+  returns: v.union(v.null(), v.object({
+    held: v.boolean(),
+    live: v.boolean(),
+    /** `cells[dayOfWeek][hour]`, Sunday first as Google counts (0), midnight first. */
+    cells: v.array(v.array(v.number())),
+    before: v.union(v.null(), v.array(v.array(v.number()))),
+  })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
+    const connection = await connectionOf(ctx, holdId);
+    if (!connection?.newestDay) return null;
+    const now = await readFor(ctx, holdId, "eventHour", args.period, "NOW", args.device, undefined, country);
+    const before = await readFor(ctx, holdId, "eventHour", args.period, "BEFORE", args.device, undefined, country);
+    const rows = now && now !== "LIVE" ? now.rows : null;
+    const beforeRows = before && before !== "LIVE" ? before.rows : null;
+    return {
+      held: rows !== null,
+      live: now === "LIVE",
+      cells: hourGrid(rows ?? [], args.event),
+      before: beforeRows ? hourGrid(beforeRows, args.event) : null,
+    };
+  },
+});

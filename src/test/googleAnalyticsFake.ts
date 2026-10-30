@@ -64,6 +64,8 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   date: (visit) => visit.date.replaceAll("-", ""),
   // Google's day of the week: 0 is Sunday.
   dayOfWeek: (visit) => String(new Date(`${visit.date}T00:00:00Z`).getUTCDay()),
+  // Google's hour of the day, "00" to "23": every visit of a day at one hour, 9am to 4pm by its day of the month.
+  hour: (visit) => String(9 + (Number(visit.date.slice(8, 10)) % 8)).padStart(2, "0"),
   yearMonth: (visit) => visit.date.slice(0, 7).replace("-", ""),
   // Google's ISO week, `202641`: the week of the year's Thursday, Monday to Sunday.
   isoYearIsoWeek: (visit) => {

@@ -635,6 +635,7 @@ Each card is its heading, its dropdowns, the chart and the key, and nothing else
   in visits, as a rate of the column's visits, or in times; brighter for a bigger share of the row or a higher rate;
   with Compare on, each square's change against the span before. Built on `ChannelMap`.
 - `ConversionsByKindChart`: one conversion a day, a line per kind, a tick box per line above the chart.
+- `ConversionsByHourChart`: when people convert — one conversion's times at each hour of the day, a line per day of the week, Monday first, a tick box per line; the same lines part with the hours across the bottom, so a conversion's screen does not draw a third chart that looks the same (the Conversions canvas, board "Conversion", 2026-10-30). `hourLabel` says an hour as people do: "12am", "9am", "11pm".
 - `ConversionsOverTimeChart`: one conversion a day as the share of visits that did it or the visits for one, with the
   span before as a dashed grey line when compared.
 

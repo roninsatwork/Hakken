@@ -11,6 +11,7 @@ import AnalyticsOverviewPage from "./[siteId]/page";
 import AnalyticsLandingPagesPage from "./[siteId]/funnel/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
+import AnalyticsEventScreen from "./[siteId]/events/event/page";
 import AnalyticsConversionPagesPage from "./[siteId]/conversions/pages/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
 import AnalyticsTrackingCheckPage from "./[siteId]/tracking-health/check/page";
@@ -278,6 +279,42 @@ describe("Google Analytics' approved looks", () => {
     render(<AnalyticsConversionsPage />);
     await screen.findByText("Visits it took for one contact form sent, day by day");
     await waitFor(() => expect(asked().some(([, args]) => args !== "skip")).toBe(true));
+  });
+
+  // The canvas "Conversions page, three ways", board "Conversion", approved 2026-10-30 (conversions-and-agents-build-plan-2026-10-30.md, phase 3).
+  it("7 · a conversion's own screen: four figures, day by day, a line per channel, when people convert", async () => {
+    at("/app/analytics/site_1/events/event", "key=generate_lead");
+    const hours = Array.from({ length: 7 }, (_, day) => Array.from({ length: 24 }, (_, hour) => (hour >= 9 && hour <= 17 ? day + 1 : 0)));
+    answer({
+      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
+      "googleAnalyticsReads:analyticsConversions": CONVERSIONS,
+      "googleAnalyticsEventReads:analyticsEvent": {
+        eventName: "generate_lead", kind: "conversion", counted: true, detail: null,
+        figures: { times: 14, timesBefore: 11, people: 14, peopleShare: 0.02, visits: 14, visitsBefore: 11, visitsShare: 0.006, siteVisits: 2412, siteVisitsBefore: 2225 },
+        points: CHART.points.map((point, index) => ({ day: point.day, times: index % 2 })), live: false, afterLive: false, about: [], pages: [], counting: true, after: null,
+        seen: { says: [], steps: [] },
+      },
+      "googleAnalyticsEventReads:analyticsEventHours": { held: true, live: false, cells: hours, before: hours },
+      "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
+      "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
+    });
+    const { container } = render(<AnalyticsEventScreen />);
+    await screen.findByText("Counted as a conversion. Google calls it generate_lead.");
+    expect(screen.getByRole("link", { name: "Back to Conversions" })).toHaveAttribute("href", "/app/analytics/site_1/conversions");
+    // The figures, each against the month before: how many, the visits that did it, its rate in every hundred visits, its worth.
+    const figures = screen.getByText("Visits that did it").closest("[data-part='figures']") as HTMLElement;
+    expect(within(figures).getAllByText("14").length).toBeGreaterThanOrEqual(2);
+    // Times 11 to 14, visits 11 to 14 and worth £2,750 to £3,500: the same rise three times.
+    expect(within(figures).getAllByText("▲ 27.3% on the month before")).toHaveLength(3);
+    expect(within(figures).getByText("0.6%")).toBeInTheDocument();
+    expect(within(figures).getByText("▲ from 0.5% the month before")).toBeInTheDocument();
+    expect(within(figures).getByText("£3,500")).toBeInTheDocument();
+    // Its times day by day, a line per channel, and when people convert, Monday first.
+    await screen.findByText("Contact form sent, day by day");
+    await screen.findByText("Contact form sent a day, a line per channel");
+    const when = (await screen.findByText("When people convert")).closest("[data-chart-export-root]") as HTMLElement;
+    expect(within(when).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent)).toEqual(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);
+    await expectApprovedLook(container, "conversions-page", "Conversion", "Google Analytics → a conversion's own screen");
   });
 
   it("18 · nothing counted yet", async () => {

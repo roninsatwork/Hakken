@@ -162,4 +162,19 @@ A1–A6, in this order so each step is measured.
 
 ## Progress
 
-- 2026-10-30: plan written. Nothing built.
+- 2026-10-30: plan written.
+- 2026-10-30, afternoon (Anthony: "Build it"): phases 1, 2 and 3 built on
+  dev, committed locally, not pushed. Phase 1: the standard website header on
+  Google Analytics, Search Console, Bing Webmaster, Microsoft Clarity and
+  Discovery, the eye in the top bar, `src/website-header-drift.test.ts`.
+  Phase 2: the Conversions page as board "Main", its look locked at
+  `docs/plans/assets/conversions-page/look/Main.txt`. Phase 3: a conversion's
+  own screen as board "Conversion" (`_components/ConversionScreen.tsx`, opened
+  for any event that counts; other events keep the event screen), the lines
+  part reused with the hours across the bottom
+  (`src/ui/components/screens/ConversionsByHourChart.tsx`, a new kit part),
+  and the `eventHour` list — the counted events by weekday and hour — asked
+  by the night run with every other period list and read by
+  `analyticsEventHours`; until the first run since, the card says "Hakken
+  collects this with the next night's run". Nothing was asked of Google by
+  hand. Overall: 30%.

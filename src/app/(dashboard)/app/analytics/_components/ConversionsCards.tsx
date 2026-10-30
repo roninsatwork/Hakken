@@ -7,6 +7,7 @@ import type { ConversionColumns } from "@/convex/googleAnalyticsConversionsMap";
 import { ConversionsMap, type ConversionsCount, type ConversionsMapRow } from "@/src/ui/components/screens/ConversionsMap";
 import { ConversionsByKindChart } from "@/src/ui/components/screens/ConversionsByKindChart";
 import { ConversionsOverTimeChart, type ConversionsOverTimeShow } from "@/src/ui/components/screens/ConversionsOverTimeChart";
+import { ConversionsByHourChart } from "@/src/ui/components/screens/ConversionsByHourChart";
 import { countryName } from "../../search-console/_components/countries";
 import { readerLanguage } from "../../search-console/_components/searchConsoleFormat";
 import { formatDay } from "../../sites/_components/siteFormat";
@@ -91,7 +92,12 @@ export function ConversionsMapCard() {
   );
 }
 
-export function ConversionsByKindCard() {
+/**
+ * `event`: on a conversion's own screen (board "Conversion", 2026-10-30) the
+ * card is that conversion's and offers no Conversion menu; its title names
+ * it and the lines: "Purchase a day, a line per channel".
+ */
+export function ConversionsByKindCard({ event }: { event?: string } = {}) {
   const t = useTranslations("googleAnalytics.conversionsMap");
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
@@ -101,20 +107,20 @@ export function ConversionsByKindCard() {
   const [eventName, setEventName] = useSiteParam<string>("linesEvent", events[0] ?? "", events.length > 0 ? events : [""]);
   const [count, setCount] = useSiteParam<ConversionsCount>("linesCount", "visits", COUNTS);
   const [columns, setColumns] = useSiteParam<(typeof LINE_COLUMNS)[number]>("linesBy", "channel", LINE_COLUMNS);
-  const chosen = eventName || events[0] || "";
+  const chosen = event ?? (eventName || events[0] || "");
   const lines = useQuery(api.googleAnalyticsConversionsMap.analyticsConversionsByKindChart, status?.connection?.newestDay && chosen ? { ...args, columns, eventName: chosen } : "skip");
   const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId: args.siteId });
   const columnName = useColumnName(columns, [], choices?.main ?? null);
   const controls = (
     <div className="flex flex-wrap items-center gap-2">
-      <Choice label={t("conversion")} value={chosen} choices={events.length > 0 ? events : [chosen]} word={nameOf} onChange={setEventName} />
+      {event ? null : <Choice label={t("conversion")} value={chosen} choices={events.length > 0 ? events : [chosen]} word={nameOf} onChange={setEventName} />}
       <Choice label={t("count")} value={count} choices={COUNTS} word={(choice) => t(`counts.${choice}`)} onChange={setCount} />
       <Choice label={t("columns")} value={columns} choices={LINE_COLUMNS} word={(choice) => t(`columnsOf.${choice}`)} onChange={setColumns} />
     </div>
   );
   return (
     <ConversionsByKindChart
-      title={t("linesTitle")}
+      title={event ? t("linesTitleFor", { event: nameOf(event), column: t(`columnsLower.${columns}`) }) : t("linesTitle")}
       controls={controls}
       columns={(lines?.columns ?? []).map((column) => ({ key: column.key, name: columnName(column.key) }))}
       points={lines?.points ?? []}
@@ -194,3 +200,48 @@ export function ConversionsOverTimeCard({ opening }: { opening?: { event?: strin
   );
 }
 
+
+/** Google counts Sunday as 0; a British week reads Monday first. */
+const WEEK = [1, 2, 3, 4, 5, 6, 0] as const;
+
+/**
+ * When people convert, on a conversion's own screen (board "Conversion",
+ * 2026-10-30): the conversion's times at each hour of each day of the week
+ * over the dates shown, from the `eventHour` list each collection keeps;
+ * the Compare menu sets the span before beside each hour in the readout.
+ * Until the first collection since the list was added, the card says so.
+ */
+export function ConversionsByHourCard({ event }: { event: string }) {
+  const t = useTranslations("googleAnalytics.eventScreen.when");
+  const te = useTranslations("googleAnalytics.eventScreen");
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const [compare, setCompare] = useSiteParam<Compare>("hourCompare", "none", COMPARES);
+  const grid = useQuery(api.googleAnalyticsEventReads.analyticsEventHours, status?.connection?.newestDay && event ? { ...args, event } : "skip");
+  const beforeName = useBeforeName();
+  const comparing = compare === "before" && (grid?.before ?? null) !== null;
+  const days = WEEK.map((day) => ({
+    key: String(day),
+    name: t(`days.${day}`),
+    hours: grid?.cells[day] ?? [],
+    before: comparing ? grid?.before?.[day] ?? null : null,
+  }));
+  const controls = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Choice label={t("compare")} value={compare} choices={COMPARES} word={(choice) => (choice === "before" ? beforeName : t("nothing"))} onChange={setCompare} />
+    </div>
+  );
+  return (
+    <ConversionsByHourChart
+      title={t("title")}
+      hint={t("hint")}
+      controls={controls}
+      days={days}
+      compare={comparing}
+      words={{ hours: (from, to) => t("hours", { from, to }), conversions: t("conversions"), csvHour: t("csvHour") }}
+      exportName={`google-analytics-${event}-by-hour`}
+      caption={status?.host}
+      emptyText={grid === undefined ? undefined : grid === null || !grid.held || grid.live ? t("collecting") : te("empty")}
+    />
+  );
+}

@@ -147,7 +147,10 @@ export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: A
  * the campaigns and the words their links carry, and Visitors' lists (§18.6.6).
  */
 export const PAGE_LISTS: readonly AnalyticsList[] = [
-  "total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS,
+  "total", "channel", "page", "landing", "event",
+  // When people convert (conversions-and-agents-build-plan-2026-10-30.md, phase 3): the counted events by weekday and hour.
+  "eventHour",
+  "campaign", "adKeyword", ...VISITOR_LISTS,
   // Insights' two (insights-analyst-plan.md I35, §8): the channel that first brought each person, and each landing page by channel.
   "firstChannel", "landingChannel",
   // AI assistants' landing pages, whichever channel Google filed them under (ga-channel-pages-plan.md CH13).

@@ -25,6 +25,7 @@ import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { ChangeCell, PageLink } from "../../../_components/AnalyticsCells";
 import { ChannelsChart, TopBars } from "../../../_components/AnalyticsChart";
+import { ConversionScreen } from "../../../_components/ConversionScreen";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { useEventFunnel } from "../../../_components/AnalyticsListScreen";
 import { formatPercent, pathOf } from "../../../_components/analyticsFormat";
@@ -64,9 +65,23 @@ export default function AnalyticsEventScreen() {
   const siteId = useAnalyticsSiteId();
   return status ? (
     <AnalyticsGate status={status} siteId={siteId}>
-      <EventBody status={status} />
+      <EventRoute status={status} />
     </AnalyticsGate>
   ) : null;
+}
+
+/**
+ * An event that counts as a conversion opens the conversion's own screen
+ * (board "Conversion" of the Conversions canvas, 2026-10-30); every other
+ * event keeps this screen. Decided once the event is read; the event's own
+ * read is shared, so the screen below asks nothing twice.
+ */
+function EventRoute({ status }: { status: AnalyticsStatus }) {
+  const args = useAnalyticsArgs();
+  const event = useSearchParams().get("key") ?? "";
+  const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvent, event ? { ...args, event } : "skip");
+  if (answer?.counted) return <ConversionScreen status={status} event={event} answer={answer} />;
+  return <EventBody status={status} />;
 }
 
 function EventBody({ status }: { status: AnalyticsStatus }) {

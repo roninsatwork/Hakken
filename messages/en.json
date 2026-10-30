@@ -16902,7 +16902,7 @@
       "bar": "conversions first"
     },
     "eventScreen": {
-      "back": "Conversions",
+      "back": "Back to Conversions",
       "description": "Google Analytics' {google} event. Every figure here is for this event.",
       "descriptionWhat": "Google Analytics' {google} event: {what}. Every figure here is for this event.",
       "what": {
@@ -16969,7 +16969,38 @@
       "afterNothingCounts": "Nothing else counts as a conversion yet",
       "afterUnknown": "Google couldn't say this time",
       "theRest": "The rest, added up",
-      "collecting": "Still being collected…"
+      "collecting": "Still being collected…",
+      "countedDescription": "Counted as a conversion. Google calls it {google}.",
+      "didIt": "Visits that did it",
+      "rate": "Conversion rate",
+      "ofSiteVisits": "Of {visits} visits",
+      "worth": "Worth",
+      "noWorth": "No value set",
+      "dayByDay": {
+        "day": "{event}, day by day",
+        "week": "{event}, week by week",
+        "month": "{event}, month by month"
+      },
+      "dayByDayHint": "{period}.",
+      "when": {
+        "title": "When people convert",
+        "hint": "Conversions at each hour of the day, a line for each day of the week, added up over the dates shown. Untick a day to hide its line.",
+        "hours": "{from} to {to}, every day in the dates shown",
+        "conversions": "Conversions",
+        "compare": "Compare",
+        "nothing": "Nothing",
+        "collecting": "Hakken collects this with the next night's run.",
+        "csvHour": "Hour",
+        "days": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        }
+      }
     },
     "conversions": {
       "title": "Conversions",
@@ -18191,7 +18222,14 @@
         "download": "Download CSV"
       },
       "timeTitlePer": "Visits it took for one {event}, day by day",
-      "timeTitleRate": "{event}: the share of visits that did it, day by day"
+      "timeTitleRate": "{event}: the share of visits that did it, day by day",
+      "linesTitleFor": "{event} a day, a line per {column}",
+      "columnsLower": {
+        "kind": "page kind",
+        "channel": "channel",
+        "device": "device",
+        "country": "country"
+      }
     }
   },
   "bingWebmaster": {
