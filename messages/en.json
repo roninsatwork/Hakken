@@ -10404,8 +10404,6 @@
       "title": "What {platformName} sees",
       "doFirst": "Do first",
       "new": "{count, plural, =0 {new} one {# new} other {# new}}",
-      "tooltipNew": "What {platformName} sees · {count, plural, =0 {new advice} one {# thing to do first} other {# things to do first}}",
-      "tooltipRead": "What {platformName} sees",
       "researching": "{platformName} is researching…"
     }
   },
@@ -16990,7 +16988,7 @@
         "conversions": "Conversions",
         "compare": "Compare",
         "nothing": "Nothing",
-        "collecting": "Hakken collects this with the next night's run.",
+        "collecting": "{platformName} collects this with the next night's run.",
         "csvHour": "Hour",
         "days": {
           "0": "Sunday",
@@ -17000,8 +16998,14 @@
           "4": "Thursday",
           "5": "Friday",
           "6": "Saturday"
+        },
+        "count": "Count",
+        "counts": {
+          "conversions": "Conversions",
+          "visits": "Visits"
         }
-      }
+      },
+      "bought": "Visits that bought"
     },
     "conversions": {
       "title": "Conversions",
@@ -18158,7 +18162,7 @@
       "perConversionCsv": "Visits for one conversion"
     },
     "conversionsMap": {
-      "title": "Conversions",
+      "title": "Conversions by page kind, channel, device or country",
       "linesTitle": "Conversions over time by kind",
       "timeTitle": "One conversion, day by day",
       "count": "Count",
@@ -18230,7 +18234,26 @@
         "channel": "channel",
         "device": "device",
         "country": "country"
-      }
+      },
+      "hint": "Each square: the visits that did it, from that kind of page. Click a square for the pages behind it.",
+      "timeHintPer": "How many visits it took for one {event}, each day. Fewer is better.",
+      "timeHintRate": "The share of each day's visits that did it. Compare it with {before}.",
+      "timeHintRateBought": "The share of each day's visits that bought. Compare it with {before}.",
+      "linesHintDid": "A line a day for each {column}, in visits that did it. Untick one to hide its line.",
+      "linesHintBought": "A line a day for each {column}, in visits that bought. Untick one to hide its line."
+    },
+    "seesAsk": {
+      "visits": "visits {period}",
+      "conversions": "conversions {period}",
+      "kind": "{name} {period}",
+      "worth": "worth of {name} {period}",
+      "rate": "{name} in every hundred visits {period}",
+      "didIt": "visits that did {name} {period}",
+      "siteVisits": "visits to the website {period}",
+      "aboutConversions": "Conversions: what this website counts as a conversion, {period}",
+      "aboutConversionsShop": "Conversions: what this shop counts as a conversion, {period}",
+      "aboutConversion": "{name}: one conversion on its own, {period}",
+      "aboutConversionShop": "{name}: one conversion on its own on this shop, {period}"
     }
   },
   "bingWebmaster": {

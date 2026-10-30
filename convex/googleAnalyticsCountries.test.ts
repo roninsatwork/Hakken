@@ -10,6 +10,7 @@ import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart } from "./googleAnalyticsLists";
 import { dueJobs } from "./googleAnalyticsCollect";
 import { INSIGHTS_YEAR_LISTS } from "./googleAnalyticsJobs";
+import { COUNTED_WITH } from "./googleAnalyticsSchema";
 import { PROPERTY, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 
 /**
@@ -50,9 +51,10 @@ async function connected(t: Harness, countries?: string[]) {
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: ["staging.acme-shop.test"],
       timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
       events: [{ eventName: "generate_lead", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 14 }],
-      // Last week and last quarter already fetched and settled, for both home countries: these tests read last month,
-      // so the runs ask the periods still going and last month alone (AGENTS.md: cut what the assertions don't read).
-      periodsFetched: FETCHED,
+      // Last week already fetched and settled, for both home countries, and the events counted the current way — or the
+      // first collection is a recount, which asks every finished period again: these tests read last month, so the runs
+      // ask the periods still going and last month alone (AGENTS.md: cut what the assertions don't read).
+      periodsFetched: FETCHED, countedWith: COUNTED_WITH,
       createdAt: 1, updatedAt: 1,
     });
     await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
@@ -247,7 +249,13 @@ describe("home countries", () => {
   test("a home country taken off the website's list goes after the next collection", async () => {
     const t = harness();
     const { siteId, agentId, admin } = await connected(t, ["gbr", "fra"]);
-    // A fortnight of visits is enough to hold lists and days for each: what goes is the test, not how much.
+    // Last month fetched already too, for both home countries: this test reads no month, only which countries' lists
+    // and days are held, and two collections of every list for two countries are what it costs (AGENTS.md: cut what
+    // the assertions do not read). A fortnight of visits is enough to hold lists and days for each.
+    await t.run(async (ctx) => {
+      const connection = (await ctx.db.query("googleAnalyticsConnections").collect())[0];
+      await ctx.db.patch(connection._id, { periodsFetched: [...FETCHED, ...["lastMonth", "lastMonth|fra"].map((key) => ({ key, from: "2026-12-01", settled: false }))] });
+    });
     fakeGoogle([...history(14, TOP), ...fromFrance(14)]);
     await save(admin, siteId);
     await finishScheduled(t);
@@ -259,7 +267,7 @@ describe("home countries", () => {
 
     const keys = await keysOf(t, siteId);
     expect(keys.some((key) => key.endsWith("|fra"))).toBe(false);
-    expect(keys).toContain("total|lastMonth|NOW|");
+    expect(keys).toContain("total|thisWeek|NOW|");
     // Its days and its place on the connection go too (SF7).
     expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsDays").collect()).some((one) => one.device.endsWith("|fra")))).toBe(false);
     expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsConnections").collect())[0].countryHistory)).toEqual([]);

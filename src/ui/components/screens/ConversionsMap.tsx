@@ -89,7 +89,9 @@ export function changeWords(now: number, before: number | null, newWord: string)
   return `${by > 0 ? "▲" : "▼"} ${(100 * Math.abs(by)).toFixed(1)}%`;
 }
 
-export function ConversionsMap({ title, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven }: {
+export function ConversionsMap({ title, hint, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven }: {
+  /** The line under the title: what a square is, in plain words (the Conversions canvas, 2026-10-30). */
+  hint?: ReactNode;
   title: string;
   controls: ReactNode;
   columns: readonly ConversionsMapColumn[];
@@ -183,7 +185,7 @@ export function ConversionsMap({ title, controls, columns, rows, count, compare,
     );
   })() : null;
   return (
-    <ChartCard title={title} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={rows.length > 0} emptyText={emptyText}>
+    <ChartCard title={title} hint={hint} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={rows.length > 0} emptyText={emptyText}>
       <div data-part="conversions-map" ref={box}>
         {narrow ? list : <ChannelMap
           columns={columns.map((column) => column.name)}

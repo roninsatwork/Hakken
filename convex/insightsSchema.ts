@@ -469,6 +469,6 @@ export const insightsTables = {
     })),
     createdBy: v.id("users"),
     createdAt: v.number(),
-  }).index("by_company", ["companyId"]),
+  }),
 };
 

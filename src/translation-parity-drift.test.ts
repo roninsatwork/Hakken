@@ -44,6 +44,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['googleAnalytics.pageVisitors.heading', 'two placeholders and a comma: "{name}, {period}", the words come from each language'],
     ['admin.classificationTypes.namePlaceholder', 'an example type name: names are written once, in English (classification-types-plan CT7)'],
     ['sites.businessRecord.views.chatgpt', 'Product name (ChatGPT) and a count'],
+    ['googleAnalytics.seesAsk.kind', 'two placeholders: "{name} {period}", the words come from each language (the figures a page hands the Insights team)'],
     ['sites.businessRecord.views.map', 'Product name (Google Maps) and a count'],
     ['sidebar.postureStudio', 'product name'],
     ['clarity.common.percentOn', 'an arrow, a share and the comparison\'s own words, filled in: nothing of its own to translate (Clarity\'s change lines)'],

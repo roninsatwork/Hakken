@@ -32,6 +32,11 @@ vi.mock("@/convex/_generated/api", () => ({
     chat: {
       getThreadHeading: "chat:getThreadHeading",
     },
+    // The eye in the top bar asks the Insights team (sees-conversion-specialist-plan-2026-10-30.md).
+    seesAsk: {
+      askSees: "seesAsk:askSees",
+      seesAnswer: "seesAsk:seesAnswer",
+    },
     notifications: {
       countMineUnread: "notifications:countMineUnread",
       listMine: "notifications:listMine",

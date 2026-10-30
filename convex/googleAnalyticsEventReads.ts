@@ -287,15 +287,17 @@ export async function readEvent(ctx: SiteReader, args: ObjectType<typeof analyti
 
 const analyticsEventHoursArgs = { siteId: v.id("companyWebsites"), event: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
 
-/** Seven days of twenty-four hours, Sunday first as Google counts them (`dayOfWeek` 0), each cell the times it happened. */
-const hourGrid = (rows: readonly ListRow[], event: string): number[][] => {
-  const grid = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+/** Seven days of twenty-four hours, Sunday first as Google counts them (`dayOfWeek` 0), each cell the times it happened and the visits that did. */
+const hourGrid = (rows: readonly ListRow[], event: string): { times: number[][]; visits: number[][] } => {
+  const times = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+  const visits = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
   for (const row of rows) {
     const { eventName, dayOfWeek, hour } = splitEventHourKey(row.key);
     if (eventName !== event || dayOfWeek < 0 || dayOfWeek > 6 || hour < 0 || hour > 23) continue;
-    grid[dayOfWeek][hour] += row.times ?? 0;
+    times[dayOfWeek][hour] += row.times ?? 0;
+    visits[dayOfWeek][hour] += row.visits;
   }
-  return grid;
+  return { times, visits };
 };
 
 /**
@@ -312,9 +314,12 @@ export const analyticsEventHours = tenantQuery({
   returns: v.union(v.null(), v.object({
     held: v.boolean(),
     live: v.boolean(),
-    /** `cells[dayOfWeek][hour]`, Sunday first as Google counts (0), midnight first. */
+    /** `cells[dayOfWeek][hour]`, Sunday first as Google counts (0), midnight first: the times it happened. */
     cells: v.array(v.array(v.number())),
+    /** The same cells in visits that did it, for the Count menu. */
+    visitCells: v.array(v.array(v.number())),
     before: v.union(v.null(), v.array(v.array(v.number()))),
+    visitsBefore: v.union(v.null(), v.array(v.array(v.number()))),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -326,11 +331,15 @@ export const analyticsEventHours = tenantQuery({
     const before = await readFor(ctx, holdId, "eventHour", args.period, "BEFORE", args.device, undefined, country);
     const rows = now && now !== "LIVE" ? now.rows : null;
     const beforeRows = before && before !== "LIVE" ? before.rows : null;
+    const grid = hourGrid(rows ?? [], args.event);
+    const gridBefore = beforeRows ? hourGrid(beforeRows, args.event) : null;
     return {
       held: rows !== null,
       live: now === "LIVE",
-      cells: hourGrid(rows ?? [], args.event),
-      before: beforeRows ? hourGrid(beforeRows, args.event) : null,
+      cells: grid.times,
+      visitCells: grid.visits,
+      before: gridBefore?.times ?? null,
+      visitsBefore: gridBefore?.visits ?? null,
     };
   },
 });

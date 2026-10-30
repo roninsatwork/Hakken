@@ -135,7 +135,7 @@ A1–A6, in this order so each step is measured.
 
 | Step | Work | Days |
 |---|---|---|
-| A3 rules + A2 model | Anthony's rules into every agent's fixed instructions; the specialists on the strongest model in Model Defaults (Gemini Argon is the candidate), the Head's routing and the Editor on the cheapest that does the job. No model in code. | 1 |
+| A3 rules + A2 model | Anthony's rules into every agent's fixed instructions; the specialists on the strongest model in Model Defaults (the newest Google model Anthony added on 2026-10-30 is the candidate), the Head's routing and the Editor on the cheapest that does the job. No model in code. | 1 |
 | A6 eval set | 20 real pages, each with the sentence Anthony would write; graded with `convex/agentEvalFixtures.ts` / `runEvalSuite`; a small Admin screen to add a page and its answer. Built first so A1, A4 and A5 are measured against it. | 2 |
 | A1 tools | Read-only tools a specialist can call in several steps over the saved data (`aiToolExecutionService.ts` is the place): a page's figures, a list's rows, the month before, a page kind's pages. Never Google, never a fetch. | 4 |
 | A5 second look | A ranking pass before saving: "what would the client act on first?"; the Editor's number check stays. | 1 |
@@ -200,3 +200,30 @@ A1–A6, in this order so each step is measured.
   for Anthony. S10 finished: the weekly run's Head reads what the bubbles
   said this week (`saidOnThePages` in `askStrategy`). Overall: 75%. Phase 7
   (the full gate) next.
+- 2026-10-30, evening (Anthony: "can you audit the code and the screen
+  don't look like the signed off UI"): the two live screens read against
+  boards Main and Conversion in his Chrome, and every gap closed. The
+  Conversions page: the shop's first box says Purchases, the map is titled
+  "Conversions by page kind, channel, device or country" with its hint, the
+  table's bar holds the count alone, every chart carries the board's hint.
+  A conversion's own screen: a purchase's boxes read "Purchases" and
+  "Visits that bought"; the first chart is the share of each day's visits
+  that did it, with Show and Compare pinned; the lines part is named for the
+  conversion; When people convert has a Count menu, conversions or visits.
+  Two wordings differ from the board on purpose: a conversion is named by
+  Google's event name as the connection holds it ("Ua 5 minutes on site"),
+  and the figures say "added up over the dates shown" where the board said
+  the month. Every word is in `messages/en.json` and `it.json`. The eye on
+  both screens still answers through the Insights team.
+  Phase 7, measuring: no bubble or weekly run was costed on a website — a
+  cost needs a run, and runs are Anthony's to start — so that line stays
+  open. Phase 7, the gate: `npm run check` passes (8,179 tests, one skipped);
+  the speed check had one test over five seconds on its own
+  (`convex/googleAnalyticsCountries.test.ts`, the country taken off), the
+  `eventHour` list having added a list to each of its two collections. It
+  was made lighter honestly: the file's connections were never marked as
+  counted the current way, so every first collection there was a recount
+  asking every finished period again, and the "fetched already" list the
+  file set did nothing; marking them (`countedWith`) made the file's own
+  comment true, and that one test also has Last Month fetched already,
+  which it never read. 5.0s became 2.8s.

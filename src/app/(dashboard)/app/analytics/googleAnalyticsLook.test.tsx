@@ -294,8 +294,10 @@ describe("Google Analytics' approved looks", () => {
         points: CHART.points.map((point, index) => ({ day: point.day, times: index % 2 })), live: false, afterLive: false, about: [], pages: [], counting: true, after: null,
         seen: { says: [], steps: [] },
       },
-      "googleAnalyticsEventReads:analyticsEventHours": { held: true, live: false, cells: hours, before: hours },
+      "googleAnalyticsEventReads:analyticsEventHours": { held: true, live: false, cells: hours, visitCells: hours, before: hours, visitsBefore: hours },
       "googleAnalyticsConversionsMap:analyticsConversionsByKindChart": CONVERSIONS_LINES,
+      "googleAnalyticsChartReads:analyticsChart": CHART,
+      "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
       "searchConsoleCountries:searchConsoleCountryChoices": COUNTRY_CHOICES,
     });
     const { container } = render(<AnalyticsEventScreen />);
@@ -309,8 +311,9 @@ describe("Google Analytics' approved looks", () => {
     expect(within(figures).getByText("0.6%")).toBeInTheDocument();
     expect(within(figures).getByText("▲ from 0.5% the month before")).toBeInTheDocument();
     expect(within(figures).getByText("£3,500")).toBeInTheDocument();
-    // Its times day by day, a line per channel, and when people convert, Monday first.
+    // The share of each day's visits that did it (with Show and Compare), a line per channel, and when people convert, Monday first.
     await screen.findByText("Contact form sent, day by day");
+    expect(screen.getByText("The share of each day's visits that did it. Compare it with the month before.")).toBeInTheDocument();
     await screen.findByText("Contact form sent a day, a line per channel");
     const when = (await screen.findByText("When people convert")).closest("[data-chart-export-root]") as HTMLElement;
     expect(within(when).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent)).toEqual(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);

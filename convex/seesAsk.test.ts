@@ -87,7 +87,7 @@ describe("the eye asks the Insights team", () => {
     expect(generate).toHaveBeenCalledTimes(3);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     expect(runs).toHaveLength(1);
-    expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "What Hakken sees: acme-shop.test" });
+    expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "The eye: acme-shop.test" });
     expect(runs[0].inputTokens).toBe(300);
     // Pressed again within three hours: the same answer, nothing asked.
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));

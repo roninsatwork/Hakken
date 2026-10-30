@@ -10404,8 +10404,6 @@
       "title": "Cosa vede {platformName}",
       "doFirst": "Prima di tutto",
       "new": "{count, plural, =0 {nuovo} one {# nuovo} other {# nuovi}}",
-      "tooltipNew": "Cosa vede {platformName} · {count, plural, =0 {nuovi consigli} one {# cosa da fare prima} other {# cose da fare prima}}",
-      "tooltipRead": "Cosa vede {platformName}",
       "researching": "{platformName} sta facendo ricerche…"
     }
   },
@@ -16990,7 +16988,7 @@
         "conversions": "Conversioni",
         "compare": "Confronta",
         "nothing": "Niente",
-        "collecting": "Hakken lo raccoglie con la prossima esecuzione notturna.",
+        "collecting": "{platformName} lo raccoglie con la prossima esecuzione notturna.",
         "csvHour": "Ora",
         "days": {
           "0": "Domenica",
@@ -17000,8 +16998,14 @@
           "4": "Giovedì",
           "5": "Venerdì",
           "6": "Sabato"
+        },
+        "count": "Conteggio",
+        "counts": {
+          "conversions": "Conversioni",
+          "visits": "Visite"
         }
-      }
+      },
+      "bought": "Visite che hanno comprato"
     },
     "conversions": {
       "title": "Conversioni",
@@ -18158,7 +18162,7 @@
       "perConversionCsv": "Visite per una conversione"
     },
     "conversionsMap": {
-      "title": "Conversioni",
+      "title": "Conversioni per tipo di pagina, canale, dispositivo o paese",
       "linesTitle": "Conversioni nel tempo per tipo",
       "timeTitle": "Una conversione, giorno per giorno",
       "count": "Conteggio",
@@ -18230,7 +18234,26 @@
         "channel": "canale",
         "device": "dispositivo",
         "country": "paese"
-      }
+      },
+      "hint": "Ogni quadrato: le visite che lo hanno fatto, da quel tipo di pagina. Clicca un quadrato per le pagine dietro.",
+      "timeHintPer": "Quante visite sono servite per un {event}, ogni giorno. Meno è meglio.",
+      "timeHintRate": "La quota delle visite di ogni giorno che lo ha fatto. Confrontala con {before}.",
+      "timeHintRateBought": "La quota delle visite di ogni giorno che ha comprato. Confrontala con {before}.",
+      "linesHintDid": "Una linea al giorno per ogni {column}, in visite che lo hanno fatto. Togli la spunta per nascondere una linea.",
+      "linesHintBought": "Una linea al giorno per ogni {column}, in visite che hanno comprato. Togli la spunta per nascondere una linea."
+    },
+    "seesAsk": {
+      "visits": "visite {period}",
+      "conversions": "conversioni {period}",
+      "kind": "{name} {period}",
+      "worth": "valore di {name} {period}",
+      "rate": "{name} ogni cento visite {period}",
+      "didIt": "visite che hanno fatto {name} {period}",
+      "siteVisits": "visite al sito {period}",
+      "aboutConversions": "Conversioni: cosa questo sito conta come conversione, {period}",
+      "aboutConversionsShop": "Conversioni: cosa questo negozio conta come conversione, {period}",
+      "aboutConversion": "{name}: una conversione da sola, {period}",
+      "aboutConversionShop": "{name}: una conversione da sola in questo negozio, {period}"
     }
   },
   "bingWebmaster": {

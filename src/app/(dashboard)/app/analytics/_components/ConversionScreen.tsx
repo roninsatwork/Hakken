@@ -11,9 +11,8 @@ import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { AnalyticsSees } from "./AnalyticsSees";
-import { ChannelsChart } from "./AnalyticsChart";
 import { BeforeLine } from "./AnalyticsFigures";
-import { ConversionsByHourCard, ConversionsByKindCard } from "./ConversionsCards";
+import { ConversionsByHourCard, ConversionsByKindCard, ConversionsOverTimeCard } from "./ConversionsCards";
 import { conversionAsk } from "./seesAskFacts";
 import { formatMoney, formatPercent } from "./analyticsFormat";
 import { useEventName } from "./useEventName";
@@ -35,6 +34,7 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
   const t = useTranslations("googleAnalytics.eventScreen");
   const tc = useTranslations("googleAnalytics.conversions");
   const tf = useTranslations("googleAnalytics.filters");
+  const tmap = useTranslations("googleAnalytics.conversionsMap");
   const args = useAnalyticsArgs();
   const [period] = usePeriod();
   const hrefFor = useAnalyticsHref(args.siteId);
@@ -44,6 +44,9 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
   const kind = conversions?.kinds.find((one) => one.eventName === event) ?? null;
   const currency = status.connection?.currency ?? null;
   const name = nameOf(event);
+  // A shop's purchase reads as its sales do on the board ("Purchases", "Visits that bought"); every other conversion by its name.
+  const isPurchase = event === "purchase" && (conversions?.shop?.purchases ?? 0) > 0;
+  const label = isPurchase ? tc("purchases") : name;
   const figures = answer.figures;
   const periodName = tf(`periods.${periodWord(period)}`);
   const before = tf(`before.${periodWord(period)}`);
@@ -52,8 +55,12 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
   const rateChange = rate !== null && rateBefore !== null ? rate - rateBefore : null;
   // What the eye hands the Insights team (sees-conversion-specialist-plan-2026-10-30.md): this conversion's figures and links.
   const path = usePathname() ?? "";
+  const tw = useTranslations("googleAnalytics.seesAsk");
+  const tm = useTranslations("googleAnalytics.menu");
   const ask = conversionAsk(
     { siteId: args.siteId, path, period: args.period, from: conversions?.from ?? null, to: conversions?.to ?? null, country: args.country ?? "", device: args.device, periodName: periodName.toLowerCase(), beforeName: before },
+    (key, values) => tw(key, values),
+    { funnel: tm("landingPages"), trackingHealth: tm("trackingHealth"), channels: tm("channels"), conversions: tm("conversions") },
     {
       eventName: event, name, times: figures.times, timesBefore: figures.timesBefore, visits: figures.visits, visitsBefore: figures.visitsBefore,
       siteVisits: figures.siteVisits, siteVisitsBefore: figures.siteVisitsBefore, rate, rateBefore, worth: kind?.value ?? null, worthBefore: kind?.valueBefore ?? null,
@@ -72,8 +79,8 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
       <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} />
 
       <FigureRow columns={4}>
-        <Figure label={name} emphasis value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />
-        <Figure label={t("didIt")} value={formatNumber(figures.visits)} detail={<BeforeLine now={figures.visits} before={figures.visitsBefore} />} />
+        <Figure label={label} emphasis value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />
+        <Figure label={t(isPurchase ? "bought" : "didIt")} value={formatNumber(figures.visits)} detail={<BeforeLine now={figures.visits} before={figures.visitsBefore} />} />
         <Figure
           label={t("rate")}
           value={formatPercent(rate)}
@@ -94,17 +101,9 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
         />
       </FigureRow>
 
-      <ChannelsChart
-        channels={[name]}
-        rest={false}
-        points={answer.points.map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.times] }))}
-        host={status.host}
-        from={null}
-        to={null}
-        exportName={`google-analytics-${event}`}
-        title={{ day: t("dayByDay.day", { event: name }), week: t("dayByDay.week", { event: name }), month: t("dayByDay.month", { event: name }), hint: t("dayByDayHint", { period: periodName }) }}
-      />
-      <ConversionsByKindCard event={event} />
+      {/* As drawn (board "Conversion"): the share of each day's visits that did it, with Show and Compare; then a line per channel. */}
+      <ConversionsOverTimeCard opening={{ event, show: "rate", pinned: true, title: t("dayByDay.day", { event: label }), hint: tmap(isPurchase ? "timeHintRateBought" : "timeHintRate", { before }) }} />
+      <ConversionsByKindCard event={event} name={label} hint={tmap(isPurchase ? "linesHintBought" : "linesHintDid", { column: tmap("columnsLower.channel") })} />
       <ConversionsByHourCard event={event} />
     </div>
   );

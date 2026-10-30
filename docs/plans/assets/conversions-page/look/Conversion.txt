@@ -10,6 +10,9 @@ figures
   figure: Conversion rate
   figure: Worth
 chart-card: Contact form sent, day by day
+  filter: Show
+  filter: Compare
+conversions-over-time
 chart-card: Contact form sent a day, a line per channel
   filter: Count
   filter: Columns
@@ -17,6 +20,7 @@ chart-card: Contact form sent a day, a line per channel
   checkbox: Direct
 conversions-by-kind
 chart-card: When people convert
+  filter: Count
   filter: Compare
   checkbox: Monday
   checkbox: Tuesday

@@ -36,7 +36,7 @@ Nothing to change in code. Three things in Admin:
    routing and the Editor's checks on the cheapest that does the job.
 3. Each agent's engine settings only where one should differ from the default.
 
-Anthony added **Gemini Argon**, Google's newest flagship, to Admin → AI
+Anthony added Google's newest flagship model to Admin → AI
 models on 2026-10-30 ("great at reasoning"). It is a candidate for the
 specialists' default. Which model the specialists run on is decided by the
 eval set (A6) on real pages, not by name: the one that gives the answer
@@ -59,7 +59,7 @@ measured on ronins.co.uk before anyone else's website.
     (`PLAIN_WORDS`, `convex/utils/insightTeam.ts`), so it binds the bubble,
     the findings, the boxes and the reports, and shows read-only on every
     Instructions page with the ground rules.
-  - **A2 is Admin's**: nothing in code; Anthony added Gemini Argon on
+  - **A2 is Admin's**: nothing in code; Anthony added Google's newest flagship model on
     2026-10-30 and sets the specialists' model in Model Defaults.
   - **A4 half done**: the specialist writing a bubble reads its "always"
     memories for the company (`agentMemories.getAlwaysMemoriesInternal`), so

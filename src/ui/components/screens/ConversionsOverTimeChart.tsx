@@ -26,8 +26,10 @@ export type ConversionsOverTimePoint = { day: string; lastDay?: string; visits: 
 const figureOf = (show: ConversionsOverTimeShow, visits: number, did: number): number | null =>
   did <= 0 ? null : show === "rate" ? (100 * did) / visits : visits / did;
 
-export function ConversionsOverTimeChart({ title, controls, points, before, show, step, words, exportName, caption, emptyText }: {
+export function ConversionsOverTimeChart({ title, hint, controls, points, before, show, step, words, exportName, caption, emptyText }: {
   title: string;
+  /** The line under the title: what the chart counts, in plain words (the Conversions canvas, 2026-10-30). */
+  hint?: ReactNode;
   controls: ReactNode;
   points: readonly ConversionsOverTimePoint[];
   /** The span before's days, each already laid over the period's day it compares with; null when not shown or not held. */
@@ -100,7 +102,7 @@ export function ConversionsOverTimeChart({ title, controls, points, before, show
   ].join("\n");
   const drawn = data.some((row) => row.now !== null || row.before !== null);
   return (
-    <ChartCard title={title} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={data.length > 0} emptyText={emptyText}>
+    <ChartCard title={title} hint={hint} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={data.length > 0} emptyText={emptyText}>
       <div data-part="conversions-over-time">
         {drawn
           ? <SiteLineChart data={data} series={series} sharedScale formatValue={formatValue} readout={readout} keepEmptyRows breakGaps formatScale={(value) => (show === "rate" ? `${value}%` : String(value))} />

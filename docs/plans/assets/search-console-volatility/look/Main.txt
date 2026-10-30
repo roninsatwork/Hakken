@@ -2,8 +2,6 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Volatility
-  sees-eye
-settings-card: What Hakken sees
 figures
   figure: Latest day, # Oct
   figure: During Google's update

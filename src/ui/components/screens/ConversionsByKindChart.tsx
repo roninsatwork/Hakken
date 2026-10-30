@@ -28,8 +28,10 @@ const COLOURS = [CHART_SERIES_ORANGE, ...CHART_SERIES_PALETTE.filter((colour) =>
 
 const pct = (share: number) => `${(100 * share).toFixed(1)}%`;
 
-export function ConversionsByKindChart({ title, controls, columns, points, count, step, words, exportName, csv, caption, emptyText }: {
+export function ConversionsByKindChart({ title, hint, controls, columns, points, count, step, words, exportName, csv, caption, emptyText }: {
   title: string;
+  /** The line under the title: what the lines count, in plain words (the Conversions canvas, 2026-10-30). */
+  hint?: ReactNode;
   controls: ReactNode;
   columns: readonly ConversionsByKindColumn[];
   points: readonly ConversionsByKindPoint[];
@@ -127,6 +129,7 @@ export function ConversionsByKindChart({ title, controls, columns, points, count
   return (
     <ChartCard
       title={title}
+      hint={hint}
       controls={<div className="flex flex-col gap-3">{controls}{columns.length > 1 ? ticks : null}</div>}
       exportName={exportName}
       csv={csvOf}

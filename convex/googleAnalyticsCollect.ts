@@ -728,9 +728,8 @@ export async function collectPeriod(
 ): Promise<StepResult> {
   const range = periodRange(job.period, job.which, top);
   // Google has sent none of the period yet: nothing to ask (its jobs are planned only once it has).
-  if (!range) return { ok: true, rows: 0, requests: session.requests };
-  // When people convert is a list of the counted events: a website counting none has nothing to ask.
-  if (job.list === "eventHour" && target.events.length === 0) return { ok: true, rows: 0, requests: session.requests };
+  // Nor for the counted events by hour (`eventHour`) when the website counts none.
+  if (!range || (job.list === "eventHour" && target.events.length === 0)) return { ok: true, rows: 0, requests: session.requests };
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   // All pages count their reading too — a page's views and scrolls — for its story and its group's (SF13).

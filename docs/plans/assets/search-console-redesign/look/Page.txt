@@ -4,7 +4,6 @@
 detail-header
   back: Back to Pages
   page-header: ‹the record's name›
-    sees-eye
     checkbox: Track this page
 choice: Kind of result: Web | Video | News | Discover | Google News
 figures

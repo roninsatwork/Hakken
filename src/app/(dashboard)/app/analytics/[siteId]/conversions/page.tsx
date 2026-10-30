@@ -24,7 +24,7 @@ import { BeforeLine } from "../../_components/AnalyticsFigures";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { changeOf, formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
-import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
 import { useFlowKindName } from "../../_components/ConversionParts";
 import { ConversionsMapCard, ConversionsOverTimeCard } from "../../_components/ConversionsCards";
 import { conversionsAsk } from "../../_components/seesAskFacts";
@@ -109,8 +109,12 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   // What the eye hands the Insights team (sees-conversion-specialist-plan-2026-10-30.md): this page's figures and links.
   const hrefFor = useAnalyticsHref(args.siteId);
   const path = usePathname() ?? "";
+  const tw = useTranslations("googleAnalytics.seesAsk");
+  const tm = useTranslations("googleAnalytics.menu");
   const ask = answer ? conversionsAsk(
     { siteId: args.siteId, path, period: args.period, from: answer.from ?? null, to: answer.to ?? null, country: args.country ?? "", device: args.device, periodName: tf(`periods.${periodWord(period)}`).toLowerCase(), beforeName: tf(`before.${periodWord(period)}`) },
+    (key, values) => tw(key, values),
+    { funnel: tm("landingPages"), trackingHealth: tm("trackingHealth"), channels: tm("channels"), conversions: tm("conversions") },
     {
       visits: answer.visits, visitsBefore: answer.visitsBefore, total, totalBefore,
       // The shop's purchases as the page shows them (the orders Google counted), never the kind's visits that bought.
@@ -126,7 +130,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
       {answer ? (
         <FigureRow>
           <Figure label={t("conversions")} emphasis value={formatNumber(total)} detail={<BeforeLine now={total} before={totalBefore} />} />
-          {second ? <Figure label={nameOf(second.eventName)} value={formatNumber(second.count)} detail={<BeforeLine now={second.count} before={second.countBefore} />} /> : null}
+          {second ? <Figure label={purchase && shop ? t("purchases") : nameOf(second.eventName)} value={formatNumber(second.count)} detail={<BeforeLine now={second.count} before={second.countBefore} />} /> : null}
           <Figure
             label={t("conversionRate")}
             value={formatPercent(rate)}
@@ -182,11 +186,8 @@ const nameOfRow = (row: { name: string }) => row.name;
 function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStatus; worthOf: (eventName: string) => number | null; every?: boolean }) {
   const t = useTranslations("googleAnalytics.eventList");
   const tc = useTranslations("googleAnalytics.conversions");
-  const tf = useTranslations("googleAnalytics.filters");
   const router = useRouter();
   const args = useAnalyticsArgs();
-  const [period] = usePeriod();
-  const [device] = useDevice();
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
   const currency = status.connection?.currency ?? null;
@@ -199,7 +200,6 @@ function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStat
   const matching = named?.filter((row) => !matches || matches(row.name) || matches(row.eventName));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "times", name: nameOfRow });
   const pager = useSitePager(sorted, { isLoading: answer === undefined || (answer?.live ?? false) });
-  const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase()].join(" · ");
   const href = (row: EventRow) => hrefFor("events/event", { key: row.eventName });
 
   return (
@@ -228,7 +228,8 @@ function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStat
             />
           ) : undefined}
         >
-          <span className="text-[12px] text-secondary">{answer?.live ? t("collecting") : bar}</span>
+          {/* The bar says the count alone, as drawn (board "Main"); only a list still being collected says so. */}
+          {answer?.live ? <span className="text-[12px] text-secondary">{t("collecting")}</span> : null}
         </TableBar>
       }
       sort={tableSort}

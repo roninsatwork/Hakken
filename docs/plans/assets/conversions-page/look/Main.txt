@@ -12,7 +12,7 @@ chart-card: Visits it took for one contact form sent, day by day
   filter: Show
   filter: Compare
 conversions-over-time
-chart-card: Conversions
+chart-card: Conversions by page kind, channel, device or country
   filter: Count
   filter: Columns
   filter: Compare
