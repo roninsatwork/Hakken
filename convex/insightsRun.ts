@@ -9,6 +9,9 @@ import { failureSummary } from "./roleRuns";
 import { finishRun } from "./searchConsoleAgentRun";
 import { LEAD_ASK_LIMIT_MS, ask, factLines, insightsStepArgs, lines, rulesFor, whyNotFilled, words, type InsightsRunArgs } from "./insightsAsk";
 import { readWebsiteFacts } from "./insightsReading";
+import { askWithTools } from "./insightsToolAsk";
+import { analyticsTool, searchConsoleTool } from "./insightsTools";
+import { WEEKLY_READS_FORMAT, findingsCheck } from "./utils/agentTools";
 import { weekOf, type SavedFinding, type TeamMember } from "./insightsTeam";
 import { COMPETING_ROLE, competingForRun, keepCompeting } from "./insightCompeting";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
@@ -312,11 +315,17 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
     }
   })();
   const drafts: Draft[] = [];
+  // What the specialists read for themselves (stronger-agents-plan-2026-10-30.md A1): joined to the reading, so the Head
+  // weighs them and the Editor checks them like every other figure.
+  const readByAgents: Fact[] = [];
+  const given = [...reading.facts];
   const answers = await Promise.all(SIDE_BY_SIDE.map(async (specialist) => {
     const mine = candidates.filter((candidate) => candidate.specialist === specialist);
     if (mine.length === 0) return [];
     try {
-      return await askSpecialist(ctx, args, specialist, mine, reading.facts, member(SPECIALIST_ROLE[specialist]) ?? lead, caveatFor(specialist));
+      const asked = await askSpecialist(ctx, args, specialist, mine, given, member(SPECIALIST_ROLE[specialist]) ?? lead, caveatFor(specialist));
+      readByAgents.push(...asked.found);
+      return asked.drafts;
     } catch (error) {
       analysisProblems.push(`${specialist}: ${failureSummary(error)}`);
       await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: specialist, detail: failureSummary(error), failed: true });
@@ -324,6 +333,7 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
     }
   }));
   for (const answer of answers) drafts.push(...answer);
+  reading.facts.push(...readByAgents);
   const whyWords = await analystWork;
 
   // 3c. The Keyword cannibalisation specialist's write-ups, ranked and checked with the rest.
@@ -366,7 +376,8 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   // 5. The Editor checks every figure, comparison and claim, against a fresh reading (I21, I29).
   const freshReading = await readWebsiteFacts(ctx, args.holdId);
   analysisProblems.push(...freshReading.problems);
-  const fresh = factsByKey([...freshReading.facts, ...why, ...competing.facts]);
+  // The specialists' own reads were read from the saved screens minutes ago, as fresh as the reading.
+  const fresh = factsByKey([...freshReading.facts, ...why, ...competing.facts, ...readByAgents]);
   const saved: SavedFinding[] = [];
   let rank = 0;
   for (const draft of ordered) {
@@ -586,23 +597,36 @@ async function askSpecialist(
   all: readonly Fact[],
   member: TeamMember | undefined,
   caveat: string | null,
-): Promise<Draft[]> {
+): Promise<{ drafts: Draft[]; found: Fact[] }> {
   // The Search and content specialist works where pages compete, so it is given the rule the Keyword cannibalisation screens use.
-  const system = [rulesFor(args), briefFor(SPECIALIST_ROLE[specialist], member?.instructions), specialist === "search" ? COMPETING_RULE : "", caveat ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
+  const system = [rulesFor(args), briefFor(SPECIALIST_ROLE[specialist], member?.instructions), specialist === "search" ? COMPETING_RULE : "", caveat ?? "", FINDINGS_FORMAT, WEEKLY_READS_FORMAT].filter(Boolean).join("\n\n");
   const prompt = JSON.stringify({
     website: args.host,
     candidates: candidates.map((candidate, number) => ({ number, pattern: candidate.pattern, seen: candidate.seen, atStake: Math.round(candidate.stake * 10) / 10, facts: candidate.facts })),
     facts: factLines(factsFor(specialist, candidates, all)),
   });
-  const answer = await ask(ctx, args, member, `the ${specialist} specialist`, system, prompt, undefined, (value) => value !== null && typeof value === "object" && "findings" in value && Array.isArray(value.findings)) as { findings?: unknown } | null;
+  // It reads the website's screens for itself (A1), and what it names that is neither given nor read goes back to it once.
+  const known = factsByKey(all);
+  const scope = { companyId: args.companyId, host: args.host, holdId: args.holdId };
+  const written = await askWithTools(ctx, args, member, `the ${specialist} specialist`, system, prompt, [analyticsTool(scope), searchConsoleTool(scope)], {
+    // Each specialist's reads keyed under its own name: they read side by side.
+    prefix: `${specialist}.r`,
+    check: (value, read) => findingsCheck(value, known, read),
+  });
+  for (const read of written.reads) {
+    const what = [read.args.period, read.args.screen, read.args.columns, read.args.key, read.args.page].filter((part) => typeof part === "string" && part).join(", ") || read.tool;
+    await ctx.runMutation(internal.roleRuns.logRunLine, { runId: args.runId, companyId: args.companyId, heading: `${specialist}: read`, detail: read.problem ? `${what}: ${read.problem}` : `${what}: ${read.figures} figures.`, failed: Boolean(read.problem) });
+  }
+  const answer = written.answer as { findings?: unknown } | null;
   const found = Array.isArray(answer?.findings) ? answer.findings : [];
-  return found.slice(0, 3).flatMap((raw) => {
+  const drafts = found.slice(0, 3).flatMap((raw) => {
     const number = typeof (raw as { candidate?: unknown })?.candidate === "number" ? (raw as { candidate: number }).candidate : 0;
     const candidate = candidates[number] ?? candidates[0];
     const draft = draftFrom(raw, specialist, candidate.pattern, candidate.stake);
     // The pattern is the checklist's, never renamed by the model; with what it put at stake.
     return draft ? [{ ...draft, pattern: candidate.pattern, ...(candidate.enquiries ? { atStake: candidate.enquiries } : {}) }] : [];
   });
+  return { drafts, found: written.found };
 }
 
 /** The Analyst's words on why the enquiries moved: kept only when every figure is named and held. */

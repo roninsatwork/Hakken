@@ -289,6 +289,12 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   half-written `coverage/.tmp` files failed a coverage run on timing alone
   (2026-10-07). A new tool that writes into the tree joins that list in the
   same change; `src/test/driftUtils.test.ts` holds it.
+- **Never assert "the last row" of a list ordered by a time a row is stamped
+  with** (2026-10-30). A chat refusal is stamped a millisecond ahead
+  (`createdAt: now + 1`) and `messages.by_thread` reads by `createdAt`, so a
+  line sent in that same millisecond sorts before it: `convex/chat.test.ts`
+  failed two full runs in three on it. Assert the row is there, and count
+  what must not be, instead of `.at(-1)`.
 - **When one still fails in a full run and passes alone**: find its shape, fix
   every test with that shape through the helpers, extend the guard so it
   cannot be written again, and add the rule here — in the same piece of work.
@@ -342,6 +348,16 @@ npm run dev
 npm run convex:dev
 ```
 
+
+## What Hakken Sees On A Screen
+
+**Read [docs/developer/what-hakken-sees-guide.md](docs/developer/what-hakken-sees-guide.md)
+before giving any screen's eye a bubble written by the Insights team**
+(Anthony, 2026-10-30: "we need to document the lengths that we are going to,
+to get this right when we come to build this across every screen"). It holds
+the seven rounds the Conversions bubble went through and the rules each left:
+the agent reads the screen's own saved data, every number keyed and checked,
+no checklist of findings, nothing the screen doesn't speak about.
 
 ## Drawing And Building Screens
 

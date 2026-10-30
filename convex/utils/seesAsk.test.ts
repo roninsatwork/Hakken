@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import type { Fact } from "./insightFacts";
 import { factsOf, seesFrom, seesKey, writerFrom, writersForHead } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
@@ -41,21 +42,23 @@ describe("the eye's ask", () => {
   test("the Editor passes sentences that name the page's figures, filled in, and steps with the page's links", () => {
     const verdict = seesFrom({
       says: ["[[conv.purchases.now]] purchases last month, worth [[conv.worth.now]].", "Conversions fell to [[conv.total.now]] from [[conv.total.before]]."],
-      steps: [{ words: "Check the counts that never happened in Google Analytics.", link: 0 }],
+      steps: [{ words: "Find why [[conv.total.now]] conversions hold so few purchases.", link: 0 }],
     }, factsByKey(factsOf(ask)), links);
     expect(verdict).toEqual({
       ok: true,
       says: ["1,258 purchases last month, worth £104,165.", "Conversions fell to 28,623 from 31,880."],
-      steps: [{ words: "Check the counts that never happened in Google Analytics.", link: "Tracking health", href: "/app/analytics/s1/tracking-health" }],
+      steps: [{ words: "Find why 28,623 conversions hold so few purchases.", link: "Tracking health", href: "/app/analytics/s1/tracking-health" }],
     });
   });
 
-  test("the Editor sends back a typed number, a figure the page does not hold, a long sentence, a stray link (S5, S7)", () => {
+  test("the Editor sends back a typed number, a figure neither on the page nor read, a long sentence, a stray link (S5, S7)", () => {
     const facts = factsByKey(factsOf(ask));
     expect(seesFrom({ says: ["3 in 4 baskets were left without buying."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("typed a number") });
-    expect(seesFrom({ says: ["[[conv.baskets.left]] baskets were left."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("does not hold") });
+    expect(seesFrom({ says: ["[[conv.baskets.left]] baskets were left."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("neither on the page nor read") });
     expect(seesFrom({ says: ["[[conv.total.now]] conversions, which is a great many more words than any client should ever be asked to read in one sentence of a bubble that opens for two seconds."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("24 words") });
-    expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: "Look at the funnel.", link: 7 }] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("link") });
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: "Grow [[conv.total.now]] conversions.", link: 7 }] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("link") });
+    // A step names the thing to fix in words; it need not carry a figure (2026-10-30: "to correct 28,623" read like a robot).
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: "Go through checkout on a phone and find where people stop.", link: 0 }] }, facts, links)).toMatchObject({ ok: true });
     expect(seesFrom({ says: ["Nothing much happened here."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("names no figure") });
     expect(seesFrom({ says: [] }, facts, links)).toMatchObject({ ok: false });
   });
@@ -70,6 +73,60 @@ describe("the eye's ask", () => {
     expect(writerFrom({ specialist: "INSIGHTS_CONVERSION" })).toBe("INSIGHTS_CONVERSION");
     expect(writerFrom({ specialist: "INSIGHTS_EDITOR" })).toBeNull();
     expect(writerFrom({ specialist: "someone else" })).toBeNull();
+  });
+});
+
+describe("once the team has read the website's screens (A1)", () => {
+  test("a bubble that only says the page's own figures goes back; one that names a figure read beyond them passes", () => {
+    const read: Array<[string, Fact]> = [["r1.products.steps.basketsLeftPercent", { key: "r1.products.steps.basketsLeftPercent", value: 93.1, unit: "percent", source: "analytics", label: "baskets left" }]];
+    const facts = new Map([...factsByKey(factsOf(ask)), ...read]);
+    const pageKeys = new Set(factsOf(ask).map((fact) => fact.key));
+    expect(seesFrom({ says: ["[[conv.purchases.now]] purchases last month."], steps: [] }, facts, links, { pageKeys })).toMatchObject({ ok: false, why: expect.stringContaining("only said the page's own figures") });
+    expect(seesFrom({ says: ["[[conv.purchases.now]] purchases last month.", "[[r1.products.steps.basketsLeftPercent]] of baskets never became a purchase."], steps: [] }, facts, links, { pageKeys }))
+      .toMatchObject({ ok: true, says: ["1,258 purchases last month.", "93.1% of baskets never became a purchase."] });
+  });
+});
+
+describe("tracking advice and who writes (Anthony, 2026-10-30: \"the advice is still really shit\")", () => {
+  test("with nothing wrong in tracking health, words about tracking or about changing what counts go back", () => {
+    const facts = factsByKey(factsOf(ask));
+    const quiet = { noTrackingTalk: true };
+    for (const words of [
+      "[[conv.total.now]] conversions are recorded because basket additions count as goals.",
+      "[[conv.purchases.now]] checkout completes double-count alongside tracked purchases.",
+    ]) expect(seesFrom({ says: [words], steps: [] }, facts, links, quiet)).toMatchObject({ ok: false, why: expect.stringContaining("tracking health found nothing wrong") });
+    for (const step of ["Stop counting basket additions as conversions.", "Remove duplicate checkout tracking."]) {
+      expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: step, link: 0 }] }, facts, links, quiet)).toMatchObject({ ok: false, why: expect.stringContaining("advised on tracking") });
+    }
+    // Saying what counts, as the page does, is not advice; and with a fault found, tracking may be spoken of.
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions; newsletter sign-ups count as conversions."], steps: [] }, facts, links, quiet)).toMatchObject({ ok: true });
+    expect(seesFrom({ says: ["[[conv.purchases.now]] checkout completes double-count alongside tracked purchases."], steps: [] }, facts, links)).toMatchObject({ ok: true });
+  });
+
+  test("a page about conversions goes to the Conversion specialist, unless tracking health found a fault", async () => {
+    const { routeFor } = await import("./seesAsk");
+    expect(routeFor("INSIGHTS_MEASUREMENT", "googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
+    expect(routeFor("INSIGHTS_MEASUREMENT", "googleAnalytics.event:purchase", [])).toBe("INSIGHTS_CONVERSION");
+    expect(routeFor("INSIGHTS_MEASUREMENT", "googleAnalytics.conversions", ["NO_VALUE"])).toBe("INSIGHTS_MEASUREMENT");
+    expect(routeFor("INSIGHTS_ANALYST", "googleAnalytics.conversions", [])).toBe("INSIGHTS_ANALYST");
+    expect(routeFor(null, "googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
+  });
+
+  test("only faults that break the conversion figures count; housekeeping never lets tracking in", async () => {
+    const { seriousFaults } = await import("./seesAsk");
+    expect(seriousFaults(["NO_VALUE", "TOO_MUCH_UNKNOWN", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"])).toEqual([]);
+    expect(seriousFaults(["NO_VALUE", "SOMETHING_ELSE"])).toEqual(["a conversion is really something else, counting day for day with another event"]);
+  });
+});
+
+describe("a saved bubble and the page's figures (S3)", () => {
+  test("stands only while every figure is the same, key for key and value for value", async () => {
+    const { sameFigures } = await import("./seesAsk");
+    const now = [{ key: "a", value: 1 }, { key: "b", value: 2 }];
+    expect(sameFigures(now, [{ key: "b", value: 2 }, { key: "a", value: 1 }])).toBe(true);
+    expect(sameFigures(now, [{ key: "a", value: 1 }, { key: "b", value: 3 }])).toBe(false);
+    expect(sameFigures(now, [{ key: "a", value: 1 }])).toBe(false);
+    expect(sameFigures(undefined, now)).toBe(false);
   });
 });
 

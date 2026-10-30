@@ -6,22 +6,30 @@ import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
+import { ANALYTICS_READ } from "./utils/agentTools";
 
 /**
  * The eye asks the Insights team (sees-conversion-specialist-plan-2026-10-30.md):
  * a press starts one run of the Head of Strategy's, which picks the
- * specialist, has it write from the page's figures, has the Editor's code
- * check every number, and saves the bubble; the answer is kept three hours
- * for that page and its filters; a bubble the Editor sends back leaves the
- * rule's words standing, and the next press asks again.
+ * specialist, has it read the website's screens for itself and write
+ * (stronger-agents-plan-2026-10-30.md A1), has the Editor's code check every
+ * number, and saves the bubble; the answer is kept three hours for that page
+ * and its filters while its figures stand; a bubble the Editor sends back is
+ * written once more, then leaves the rule's words standing, and the next press
+ * asks again. The Head's questions are single asks (`generate`); the
+ * specialist's reading is a conversation with tools (`stream`).
  */
-const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
+const { generate, stream } = vi.hoisted(() => ({ generate: vi.fn(), stream: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (original) => ({ ...(await original<typeof import("./aiProviderRegistry")>()), generateTextWithResolvedModel: generate }));
+vi.mock("./agentProviderRegistry", async (original) => ({
+  ...(await original<typeof import("./agentProviderRegistry")>()),
+  getAgentProviderAdapter: () => ({ providerKey: "test", streamTurn: stream }),
+}));
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
-beforeEach(() => { useFixedDay("2026-10-30"); generate.mockReset(); });
+beforeEach(() => { useFixedDay("2026-10-30"); generate.mockReset(); stream.mockReset(); });
 afterEach(() => vi.useRealTimers());
 
 async function seed(t: Harness) {
@@ -54,12 +62,30 @@ const ask = (siteId: Id<"companyWebsites">) => ({
   shop: true,
 });
 
-/** The team's three answers: the Head's choice, the specialist's bubble, and the Head's second look (kept as is unless given). */
+/** A specialist's turn that reads a screen instead of answering. */
+const reads = (args: Record<string, unknown>) => ({ read: args });
+/** A specialist that takes several turns: each a read or an answer, in order; the last repeated. */
+const turns = (...each: unknown[]) => ({ turns: each });
+
+/**
+ * The team's three answers: the Head's choice, the specialist's bubble (one answer, or `turns(…)`), and the Head's
+ * second look (kept as is unless given). A page with no reads (the eval set's) asks the specialist as a single ask.
+ */
 const answers = (head: unknown, specialist: unknown, secondLook: unknown = { useful: true }) => {
+  const sequence = specialist && typeof specialist === "object" && "turns" in specialist ? (specialist as { turns: unknown[] }).turns : [specialist];
   generate.mockImplementation(async (request: { systemInstruction?: string }) => {
     const system = request.systemInstruction ?? "";
-    const answer = system.includes("Choose which specialist") ? head : system.includes("A specialist wrote the bubble below") ? secondLook : specialist;
+    const answer = system.includes("Choose which specialist") ? head : system.includes("A specialist wrote the bubble below") ? secondLook : sequence[sequence.length - 1];
     return { text: JSON.stringify(answer), inputTokens: 100, outputTokens: 40 };
+  });
+  let at = 0;
+  stream.mockImplementation(async () => {
+    const turn = sequence[Math.min(at, sequence.length - 1)];
+    at += 1;
+    const read = turn && typeof turn === "object" && "read" in turn ? (turn as { read: Record<string, unknown> }).read : null;
+    return read
+      ? { text: "", toolCalls: [{ name: ANALYTICS_READ, args: read }], inputTokens: 100, outputTokens: 40, cachedInputTokens: 0, outcome: "RUN_TOOLS" }
+      : { text: JSON.stringify(turn), toolCalls: [], inputTokens: 100, outputTokens: 40, cachedInputTokens: 0, outcome: "COMPLETE" };
   });
 };
 
@@ -70,7 +96,7 @@ describe("the eye asks the Insights team", () => {
     const user = t.withIdentity({ subject: userId });
     answers({ specialist: "INSIGHTS_CONVERSION", why: "It is about conversions." }, {
       says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."],
-      steps: [{ words: "Check the counts that never happened.", link: 0 }],
+      steps: [{ words: "Find why [[conv.total.now]] conversions hold so few purchases.", link: 0 }],
     });
     const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(first).toEqual({ key: "googleAnalytics.conversions|lastMonth|||gbr|", status: "RESEARCHING" });
@@ -80,11 +106,12 @@ describe("the eye asks the Insights team", () => {
     expect(written).toMatchObject({
       status: "WRITTEN",
       says: ["1,258 purchases last month, up from 1,091."],
-      steps: [{ words: "Check the counts that never happened.", link: "Tracking health", href: "/app/analytics/site/tracking-health" }],
+      steps: [{ words: "Find why 28,623 conversions hold so few purchases.", link: "Tracking health", href: "/app/analytics/site/tracking-health" }],
       role: "INSIGHTS_CONVERSION",
     });
     // Three model calls — the Head's choice, the specialist's words, the Head's second look — on one run of the Head's, with its cost.
-    expect(generate).toHaveBeenCalledTimes(3);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(stream).toHaveBeenCalledTimes(1);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "The eye: acme-shop.test" });
@@ -93,7 +120,8 @@ describe("the eye asks the Insights team", () => {
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
     await finishScheduled(t);
-    expect(generate).toHaveBeenCalledTimes(3);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(stream).toHaveBeenCalledTimes(1);
     // Another device is another answer (S9).
     const mobile = await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
     expect(mobile.status).toBe("RESEARCHING");
@@ -129,7 +157,7 @@ describe("the eye asks the Insights team", () => {
     const { siteId, userId } = await seed(t);
     const user = t.withIdentity({ subject: userId });
     answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, {
-      useful: false, says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Check the counts.", link: 0 }],
+      useful: false, says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Grow [[conv.purchases.now]] purchases.", link: 0 }],
     });
     const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
     await finishScheduled(t);
@@ -139,6 +167,86 @@ describe("the eye asks the Insights team", () => {
     await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
     await finishScheduled(t);
     expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: "googleAnalytics.conversions|lastMonth|||gbr|mobile" })).toMatchObject({ status: "WRITTEN", says: ["28,623 conversions last month."] });
+  });
+
+  test("the specialist reads the website's screens for itself: a screen that cannot answer goes back to it as words, and it writes (A1)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, turns(
+      reads({ screen: "channels" }),
+      { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Grow [[conv.purchases.now]] purchases.", link: 0 }] },
+    ));
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month, up from 1,091."] });
+    // Two turns: a read, then the words. The read's answer went back inside the conversation, with the reads made for it
+    // first — the page's own screen, its map by kind of page and by channel, and for a shop its products — in its opening.
+    expect(stream).toHaveBeenCalledTimes(2);
+    const opening = (stream.mock.calls[0][0] as { turns: Array<{ parts: Array<{ text?: string }> }> }).turns[0].parts[0].text ?? "";
+    expect(opening).toContain("Read for you already");
+    expect(opening).toContain("\"screen\":\"conversions\"");
+    expect(opening).toContain("\"screen\":\"products\"");
+    expect(opening).toContain("\"columns\":\"kind\"");
+    expect(opening).toContain("\"columns\":\"channel\"");
+    const second = (stream.mock.calls[1][0] as { turns: Array<{ role: string; parts: Array<{ functionResponse?: { response: { content: { problem?: string } } } }> }> }).turns;
+    expect(second.at(-1)?.role).toBe("function");
+    expect(second.at(-1)?.parts[0].functionResponse?.response.content.problem).toContain("no Google Analytics figures yet");
+    // Every read is on the run's log, saying what it read and why it could not.
+    const logged = await t.run(async (ctx) => (await ctx.db.query("agentLogs").collect()).filter((line) => line.interactionType === "Read").map((line) => line.responseContent));
+    expect(logged).toHaveLength(5);
+    expect(logged[0]).toMatch(/^conversions: acme-shop\.test has no Google Analytics figures yet/);
+    expect(logged[1]).toMatch(/^conversionsBy, kind: /);
+    expect(logged[4]).toMatch(/^channels: /);
+  });
+
+  test("the Editor sends tracking advice back when tracking health found nothing wrong, and the specialist writes it again in the same conversation", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, turns(
+      { says: ["[[conv.purchases.now]] purchases last month."], steps: [{ words: "Stop counting basket additions as conversions.", link: 0 }] },
+      { says: ["[[conv.purchases.now]] purchases last month."], steps: [{ words: "Find why [[conv.total.now]] conversions hold so few purchases.", link: 0 }] },
+    ));
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({
+      status: "WRITTEN",
+      steps: [{ words: "Find why 28,623 conversions hold so few purchases." }],
+    });
+    expect(stream).toHaveBeenCalledTimes(2);
+    const told = (stream.mock.calls[1][0] as { turns: Array<{ role: string; parts: Array<{ text?: string }> }> }).turns.at(-1);
+    expect(told?.role).toBe("user");
+    expect(told?.parts[0].text).toContain("The Editor sent it back: A step advised on tracking or what counts, and tracking health found nothing wrong: \"Stop counting basket additions as conversions.\"");
+  });
+
+  test("the Head's choice of the measurement specialist for a conversions page stands only when tracking health found a fault", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    await t.run(async (ctx) => { await ctx.db.insert("agents", { name: "INSIGHTS_MEASUREMENT", systemKey: "INSIGHTS_MEASUREMENT", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 }); });
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_MEASUREMENT" }, { says: ["[[conv.purchases.now]] purchases last month."], steps: [] });
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", role: "INSIGHTS_CONVERSION" });
+    const said = await t.run(async (ctx) => (await ctx.db.query("agentLogs").collect()).map((line) => line.responseContent).join(" "));
+    expect(said).toContain("tracking health found nothing that breaks the conversion figures: a page about conversions goes to the Conversion specialist");
+  });
+
+  test("new figures on the page are new words: a saved bubble stands only while the page's figures do (S3)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.purchases.now]] purchases last month."], steps: [] });
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month."] });
+    // The night's run moved a figure: the same page, dates and filters, written afresh.
+    const moved = { ...ask(siteId), facts: ask(siteId).facts.map((fact) => (fact.key === "conv.purchases.now" ? { ...fact, value: 1262 } : fact)) };
+    expect(await user.mutation(api.seesAsk.askSees, moved)).toEqual({ key: first.key, status: "RESEARCHING" });
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,262 purchases last month."] });
+    expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(2);
   });
 
   test("a bubble is kept as an eval page with Anthony's sentences, and the set is graded on the team as it stands (A6)", async () => {

@@ -70,7 +70,7 @@ export async function within<T>(work: Promise<T>, limitMs: number): Promise<T> {
 }
 
 /** The model a member works with, or the lead's, or the platform's default for agents. */
-async function modelFor(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined) {
+export async function modelFor(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined) {
   return await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
     ...(member?.requestedModelId ? { requestedModelId: member.requestedModelId } : {}),
     companyId: args.companyId,

@@ -227,3 +227,11 @@ A1–A6, in this order so each step is measured.
   file set did nothing; marking them (`countedWith`) made the file's own
   comment true, and that one test also has Last Month fetched already,
   which it never read. 5.0s became 2.8s.
+- 2026-10-30, night (Anthony: "wow the advice from ask hakken is poor"; then
+  "yes please" to A1): the eye's tooltip removed ("remove it": it opened under
+  the browser's toolbar). A1 built — the specialists read the saved screens
+  for themselves; detail in stronger-agents-plan-2026-10-30.md, Progress. The
+  bubble on morehandles' Conversions page now says what the boxes don't
+  ("75.6% of baskets are left behind without a purchase"). Overall: 95%; left:
+  the eval set's Admin screen, and the eval pages keeping their period so they
+  grade bubbles that read.

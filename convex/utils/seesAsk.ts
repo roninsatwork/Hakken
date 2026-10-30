@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { INSIGHTS_LEAD_ROLE, INSIGHTS_ROLES, type InsightsRole } from "./agentRoles";
+import { ANALYTICS_READ } from "./agentTools";
 import { fillFacts, namedFacts, type Fact } from "./insightFacts";
 import { typedNumbers } from "./insightEditor";
 import { DISCIPLINE, SPECIALIST_ROLE, type InsightSpecialist } from "./insightTeam";
@@ -17,9 +18,9 @@ import { DISCIPLINE, SPECIALIST_ROLE, type InsightSpecialist } from "./insightTe
 export const SEES_KEPT_MS = 3 * 60 * 60 * 1000;
 /** A write still going this long after it was asked is believed; past it, the next press asks again. */
 export const SEES_WRITING_MS = 10 * 60 * 1000;
-/** Sentences and steps a bubble holds at most, as the rule's box (utils/hakkenSees.ts). */
-export const MOST_SEES_SAYS = 3;
-export const MOST_SEES_STEPS = 3;
+/** Sentences and steps a bubble holds at most (Anthony, 2026-10-30: "im happy for the advice to be twice as much as we show now"). */
+export const MOST_SEES_SAYS = 6;
+export const MOST_SEES_STEPS = 4;
 /** A sentence a client reads at a glance (S7): longer ones go back. */
 export const MOST_SENTENCE_WORDS = 24;
 /** Facts a page hands over at most: the page's figures, never a list of everything held. */
@@ -90,6 +91,7 @@ export function writersForHead(): Array<{ role: InsightsRole; does: string }> {
 /** What the Head answers with when handed a page (S8, S12). */
 export const ROUTE_FORMAT = [
   "A reader pressed the eye on one page of the app. Choose which specialist on your team should say what the page means, from the specialists given, by what the page is about and the figures it holds.",
+  "A page about sales and conversions goes to the Conversion specialist. The measurement specialist answers only when trackingFaults lists a fault tracking health found.",
   "Reply with only JSON: {\"specialist\": the role exactly as given, \"why\": one sentence}.",
 ].join("\n");
 
@@ -99,12 +101,64 @@ export const ROUTE_FORMAT = [
  * here because a bubble is read in two seconds.
  */
 export const SEES_FORMAT = [
-  "A reader pressed the eye on one page of the app and will read your words in a speech bubble, in two seconds. Say what this page's figures mean for the business, then what to do first.",
-  "Reply with only JSON: {\"says\": [\"…\", \"…\"], \"steps\": [{\"words\": \"…\", \"link\": the number of one of the links given}]}: one to three sentences, up to three steps.",
-  "Each sentence: the number first, then what it means; one fact a sentence; under 12 words where you can and never over 24. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence: say how many, and let the step's link show them.",
-  "Each step is one thing a person can do, in plain words, with the link that takes them there. Use the words the page uses for things, never Google's own names for events.",
+  "A reader pressed the eye on one page of the app and will read your words in a speech bubble. Find what this website's figures show that a person looking at the page would miss: look across everything you were given, compare the groups against each other and against the span before, and say what matters most, each with the figures that show it. Then what to do first.",
+  "Never only repeat the figures in the page's boxes: the reader can see those. Say what they mean together, or what is behind them.",
+  "Reply with only JSON: {\"says\": [\"…\", \"…\"], \"steps\": [{\"words\": \"…\", \"link\": the number of one of the links given}]}: up to six sentences, the most useful first, and up to four steps. Say as much as the figures hold that is worth acting on; never pad.",
+  "Write it as a short story a busy owner reads in under a minute, never a list of figures: what is happening, where it happens, and why it matters. Join figures in one sentence where they explain each other, and say what the reader should take from them. Plain words, short sentences, never over 24 words. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence.",
+  "Say what got better and what got worse against the span before, wherever the figures hold it.",
+  "Each step is one thing a person can do, in plain words, saying where: the device, channel, kind of page, step or product it is about — never advice that would fit any website. Link it to the place it names. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
+  "Never tell them to change what counts as a conversion, or how their tracking is set up: they chose it on purpose. Speak about tracking only when trackingFaults lists a fault.",
   "The most useful thing first: what a client would act on, never what did not happen.",
 ].join("\n");
+
+/**
+ * Said to an agent that can read the website's screens for itself (stronger-agents-plan-2026-10-30.md A1): read
+ * before writing, and where the page holds a figure, say the page's, so the bubble and the boxes agree.
+ */
+export const SEES_READS_FORMAT = [
+  `You can read every Google Analytics screen of this website yourself, for the same dates, country and device, with ${ANALYTICS_READ}. The page's own screen is read for you already, with its map by kind of page and by channel. Read anything else that helps you find what the reader would miss.`,
+  "Before you write, dig: take the biggest change you see and break it down — by device, by channel, by kind of page, by country, against the span before — until you know where it happens and where it does not. Read the map's other columns to do it. Then tell the reader where.",
+  "Every number a screen gives comes with its key in double square brackets: name it by that key. Where the page's own facts hold the same figure, use the page's key, so the bubble says what the page's boxes say.",
+  "At least one sentence must name a figure you read beyond the page's boxes: that is what the reader cannot see for themselves.",
+].join("\n");
+
+/**
+ * Said for a shop (Anthony, 2026-10-30): conversions and purchases, never money ("i just dont want it focusing on
+ * money" — the Conversions screens count conversions). What to look for is never listed: "i dont want it hard coded".
+ */
+export const SEES_SHOP_FORMAT = [
+  "This website is a shop. Speak in conversions and purchases, never in money: do not lead with sales value or what anything earned.",
+  "Compare things that matter to the business: never set a figure against nothing, or against a channel or page with a handful of visits.",
+].join("\n");
+
+/** Words that advise on tracking or on what counts: the bubble's only when tracking health found a fault. */
+const TRACKING_TALK = /\b(double[- ]count\w*|duplicat\w* (tracking|tags?|events?|conversions?|goals?)|stop counting|(un)?count(ing)? [\w ]{1,30} as (a )?conversions?|remove [\w ]{1,30} (tracking|tags?|goals?)|tracking (set ?up|tags?)|as goals?)\b/i;
+
+/**
+ * The tracking health faults that break the conversion figures themselves, each in words for the team: only these
+ * let the bubble speak about tracking (Anthony, 2026-10-30). Housekeeping — a conversion with no value, one that
+ * never happens, a page counted twice, other addresses, unknown sources — never displaces what the sales say.
+ */
+export const SERIOUS_TRACKING_FAULTS: Readonly<Record<string, string>> = {
+  NOTHING_COUNTED: "nothing is counted as a conversion yet",
+  TRACKING_STOPPED: "tracking stopped: no visits recorded lately",
+  SUDDEN_FALL: "the conversions fell suddenly, which looks like broken tracking",
+  SOMETHING_ELSE: "a conversion is really something else, counting day for day with another event",
+  ENQUIRY_UNCOUNTED: "an enquiry happens but is not counted as a conversion",
+  CONVERSIONS_ELSEWHERE: "conversions happen on an address whose conversions are not counted",
+};
+
+/** The failing checks that break the conversion figures, in words; housekeeping left out. */
+export function seriousFaults(failing: readonly string[]): string[] {
+  return failing.filter((check) => check in SERIOUS_TRACKING_FAULTS).map((check) => SERIOUS_TRACKING_FAULTS[check]);
+}
+
+/** Whether two pages' figures are the same, key for key and value for value: a saved answer stands only while they are (S3). */
+export function sameFigures(left: ReadonlyArray<{ key: string; value: number }> | undefined, right: ReadonlyArray<{ key: string; value: number }>): boolean {
+  if (!left || left.length !== right.length) return false;
+  const held = new Map(left.map((fact) => [fact.key, fact.value]));
+  return right.every((fact) => held.get(fact.key) === fact.value);
+}
 
 /** Why a written bubble was sent back: for the run's log, in plain words. */
 export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: string; link: string; href: string }> } | { ok: false; why: string };
@@ -116,7 +170,17 @@ export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: stri
  * names no supplier; every step is one plain sentence with one of the page's
  * links. Anything else goes back, and the bubble keeps the rule's words.
  */
-export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, links: readonly SeesLink[]): SeesVerdict {
+export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, links: readonly SeesLink[], options: {
+  /**
+   * The page's own keys, when the team read the website's screens (A1): at least one sentence must then name a figure
+   * read beyond them. A bubble that only says the boxes' figures again tells the reader nothing they can't see
+   * (Anthony, 2026-10-30: "there is so much data on this page and this is the best it can do").
+   */
+  pageKeys?: ReadonlySet<string>;
+  /** Tracking health found no fault: words about tracking, or about changing what counts, go back. */
+  noTrackingTalk?: boolean;
+} = {}): SeesVerdict {
+  const trackingTalk = (text: string) => options.noTrackingTalk && TRACKING_TALK.test(text);
   const raw = (answer && typeof answer === "object" ? answer : {}) as { says?: unknown; steps?: unknown };
   const saysRaw = Array.isArray(raw.says) ? raw.says : [];
   if (saysRaw.length === 0) return { ok: false, why: "It said nothing." };
@@ -127,10 +191,15 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     if (typedNumbers(trimmed).length > 0) return { ok: false, why: `A sentence typed a number: "${trimmed}".` };
     if (namedFacts(trimmed).length === 0 && says.length === 0) return { ok: false, why: `The first sentence names no figure: "${trimmed}".` };
     const filled = fillFacts(trimmed, facts);
-    if (filled.missing.length > 0) return { ok: false, why: `A sentence named a figure the page does not hold: ${filled.missing.join(", ")}.` };
+    if (filled.missing.length > 0) return { ok: false, why: `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
     if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}".` };
     if (/dataforseo|firecrawl/i.test(filled.text)) return { ok: false, why: "A sentence named a supplier." };
+    if (trackingTalk(filled.text)) return { ok: false, why: `A sentence spoke about tracking or what counts, and tracking health found nothing wrong: "${filled.text}".` };
     says.push(filled.text);
+  }
+  if (options.pageKeys) {
+    const beyond = saysRaw.slice(0, MOST_SEES_SAYS).some((line) => typeof line === "string" && namedFacts(line).some((key) => !options.pageKeys!.has(key)));
+    if (!beyond) return { ok: false, why: "It only said the page's own figures again: say what the screens you read show behind them, by their keys." };
   }
   const stepsRaw = Array.isArray(raw.steps) ? raw.steps : [];
   const steps: Array<{ words: string; link: string; href: string }> = [];
@@ -140,14 +209,26 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     const words = step.words.trim();
     if (typedNumbers(words).length > 0) return { ok: false, why: `A step typed a number: "${words}".` };
     const filled = fillFacts(words, facts);
-    if (filled.missing.length > 0) return { ok: false, why: `A step named a figure the page does not hold: ${filled.missing.join(", ")}.` };
+    if (filled.missing.length > 0) return { ok: false, why: `A step named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
     if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A step ran past ${MOST_SENTENCE_WORDS} words.` };
+    if (trackingTalk(filled.text)) return { ok: false, why: `A step advised on tracking or what counts, and tracking health found nothing wrong: "${filled.text}".` };
     const at = typeof step.link === "number" ? step.link : Number(step.link);
     const link = Number.isInteger(at) ? links[at] : undefined;
     if (!link) return { ok: false, why: "A step's link was not one of the page's." };
     steps.push({ words: filled.text, link: link.label, href: link.href });
   }
   return { ok: true, says, steps };
+}
+
+/**
+ * Who writes, as the Head chose — held to its rule: a page about conversions goes to the Conversion specialist unless
+ * tracking health found a fault, when the measurement specialist may answer. No choice: the Conversion specialist.
+ */
+export function routeFor(chosen: InsightsRole | null, screen: string, trackingFaults: readonly string[]): InsightsRole {
+  const aboutConversions = screen === "googleAnalytics.conversions" || screen.startsWith("googleAnalytics.event:");
+  if (!chosen) return "INSIGHTS_CONVERSION";
+  if (aboutConversions && chosen === "INSIGHTS_MEASUREMENT" && trackingFaults.length === 0) return "INSIGHTS_CONVERSION";
+  return chosen;
 }
 
 /** The Head's choice, as a role on the team; null when it named none. */
@@ -162,8 +243,10 @@ export function writerFrom(answer: unknown): InsightsRole | null {
  * Nobody checked that before; the Editor checks numbers.
  */
 export const SECOND_LOOK_FORMAT = [
-  "A specialist wrote the bubble below for the page. Decide whether it says the most useful thing this page's figures say: what a client would act on first, against their own past.",
-  "Reply with only JSON: {\"useful\": true} when it does; otherwise {\"useful\": false, \"says\": [\"…\"], \"steps\": [{\"words\": \"…\", \"link\": number}]}, written to the same rules as the specialist's: figures by their keys in double square brackets, never typed; one fact a sentence; a step's link one of the numbers given.",
+  "A specialist wrote the bubble below for the page, after reading the website's screens. Decide whether it says the most useful thing the figures say: what a client would act on first, against their own past. A bubble that only repeats the page's boxes, or whose steps anyone could give without the figures, is not.",
+  "Not useful: a list of figures with no story; steps that would fit any website because they don't say where; advice about tracking or about what counts as a conversion, unless trackingFaults lists a fault; words that do not say what got better or worse against the span before; words that lead with money; words that say less than the figures hold worth acting on.",
+  "Keep it unless yours says something more useful. Never rewrite it into the boxes' figures with \"up from\" or \"down from\": the reader sees those already. A rewrite must name at least one figure the specialist read beyond the page.",
+  "Reply with only JSON: {\"useful\": true} when it does; otherwise {\"useful\": false, \"says\": [\"…\"], \"steps\": [{\"words\": \"…\", \"link\": number}]}, written to the same rules as the specialist's: figures by their keys in double square brackets, never typed, from the facts given (the page's and those the specialist read); one fact a sentence; a step naming the thing to fix in words, never a figure glued on; a step's link one of the numbers given.",
 ].join("\n");
 
 /** The Head's second look, read: kept as is, or its rewrite to check. */

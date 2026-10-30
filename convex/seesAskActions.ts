@@ -6,12 +6,15 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import { failureSummary } from "./roleRuns";
 import { ask, factLines, rulesFor, type InsightsRunArgs } from "./insightsAsk";
+import { askWithTools, type AgentRead, type FirstRead } from "./insightsToolAsk";
+import { analyticsTool, readable } from "./insightsTools";
 import type { TeamMember } from "./insightsTeam";
 import { INSIGHTS_LEAD_ROLE, type InsightsRole } from "./utils/agentRoles";
 import { briefFor } from "./utils/insightBriefs";
-import { factsByKey } from "./utils/insightFacts";
+import { factsByKey, type Fact } from "./utils/insightFacts";
+import { ANALYTICS_READ } from "./utils/agentTools";
 import {
-  ROUTE_FORMAT, SECOND_LOOK_FORMAT, SEES_FORMAT, factsOf, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
+  ROUTE_FORMAT, SECOND_LOOK_FORMAT, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, routeFor, seriousFaults, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 
@@ -20,8 +23,10 @@ import {
  * S8, S12; Anthony: "keep the paths clean … if everything goes through the
  * Head the quality is easier to maintain"): one path, the weekly run's. The
  * Head of Strategy is handed the page and picks the specialist; the
- * specialist writes the bubble from the page's figures and nothing else,
- * with what it was told before (its memories, stronger-agents-plan A4); the
+ * specialist reads the website's screens for itself (A1: the page's own read
+ * for it first, then whatever explains what it sees, saved data only) and
+ * writes the bubble from those figures, with what it was told before (its
+ * memories, A4); the
  * Editor's code checks every number and every word (`seesFrom`); the Head
  * takes a second look at whether it is the most useful thing to say (A5);
  * the answer is saved and the bubble shows it. Every call is a step on the
@@ -29,10 +34,18 @@ import {
  * asks Google. The eval set runs the same path (A6, `runSeesEval`).
  */
 
-type Page = { host: string; screen: string; about: string; period: string; from?: string; to?: string; country: string; facts: Parameters<typeof factsOf>[0]["facts"]; links: readonly SeesLink[]; shop: boolean };
+type Page = { host: string; screen: string; about: string; period: string; from?: string; to?: string; country: string; device?: string; facts: Parameters<typeof factsOf>[0]["facts"]; links: readonly SeesLink[]; shop: boolean };
 type Written = { verdict: SeesVerdict; role: InsightsRole; lines: Array<{ heading: string; detail: string; failed?: boolean }> };
 /** An eval page as `seesAsk.evalPagesInternal` gives it: named here so the action's type never depends on its own module. */
 type EvalPage = { _id: Id<"seesEvalPages">; companyId: Id<"companies">; companyWebsiteId: Id<"companyWebsites">; host: string; screen: string; about: string; facts: Page["facts"]; links: SeesLink[]; expected: string[] };
+
+/**
+ * Each part's limit, together well inside the ten minutes Convex gives an action: on Google's flagship model
+ * (2026-10-30) the reading and writing takes the longest. A second look that runs out leaves the specialist's words.
+ */
+const CHOOSE_LIMIT_MS = 60 * 1000;
+const WRITE_LIMIT_MS = 4.5 * 60 * 1000;
+const LOOK_LIMIT_MS = 2.5 * 60 * 1000;
 
 /** The team writes one page's bubble: the Head picks, the specialist writes, the Editor checks, the Head looks again. */
 async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Promise<Written> {
@@ -43,38 +56,74 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   const facts = factsOf(page);
   const held = factsByKey(facts);
   const rules = rulesFor(run);
+  // Tracking health's faults that break the conversion figures, in words: the only time the bubble may speak about tracking.
+  const trackingFaults = seriousFaults(page.screen.startsWith("googleAnalytics.") ? await ctx.runQuery(internal.seesAsk.trackingFaultsInternal, { holdId: run.holdId }).catch(() => []) : []);
   // 1. The Head of Strategy picks who answers (S8): every writer on the team, by what the page is about.
   let role: InsightsRole | null = null;
   try {
     const system = [rules, briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), ROUTE_FORMAT].filter(Boolean).join("\n\n");
-    const prompt = JSON.stringify({ website: page.host, page: page.about, screen: page.screen, figures: factLines(facts).slice(0, 40), specialists: writersForHead() });
-    const answer = await ask(ctx, run, lead, "the Head of Strategy choosing who answers", system, prompt, undefined, (value) => writerFrom(value) !== null);
+    const prompt = JSON.stringify({ website: page.host, page: page.about, screen: page.screen, shop: page.shop, trackingFaults, figures: factLines(facts).slice(0, 40), specialists: writersForHead() });
+    const answer = await ask(ctx, run, lead, "the Head of Strategy choosing who answers", system, prompt, CHOOSE_LIMIT_MS, (value) => writerFrom(value) !== null);
     role = writerFrom(answer);
   } catch (error) {
     lines.push({ heading: "The Head of Strategy", detail: `Could not choose: ${failureSummary(error)}. The Conversion specialist answers.` });
   }
-  const chosen: InsightsRole = role ?? "INSIGHTS_CONVERSION";
+  const routed = routeFor(role, page.screen, trackingFaults);
+  if (role && routed !== role) lines.push({ heading: "The Head of Strategy", detail: `Chose ${role.replace("INSIGHTS_", "").toLowerCase()}, but tracking health found nothing that breaks the conversion figures: a page about conversions goes to the Conversion specialist.` });
+  const chosen: InsightsRole = routed;
   lines.push({ heading: "The Head of Strategy", detail: `Handed ${page.about} to ${chosen.replace("INSIGHTS_", "").toLowerCase().replace(/_/g, " ")}.` });
-  // 2. The specialist writes, from the page's figures and nothing else (S4, S5), with what it was told before (A4).
+  // 2. The specialist reads the website's screens for itself (A1), then writes, with what it was told before (A4).
   const writer = member(chosen) ?? lead;
   const memories: Array<{ content: string }> = writer ? await ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: writer.agentId, companyId: run.companyId }).catch(() => []) : [];
   const toldBefore = memories.length > 0 ? `What you were told before, which binds you:\n${memories.map((memory) => `- ${memory.content}`).join("\n")}` : "";
-  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT].filter(Boolean).join("\n\n");
   const links = page.links.map((link, number) => ({ number, label: link.label }));
-  const prompt = JSON.stringify({ website: page.host, page: page.about, dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, facts: factLines(facts), links });
-  const answer = await ask(ctx, run, writer, `the ${chosen.replace("INSIGHTS_", "").toLowerCase()} writing the bubble`, system, prompt, undefined, (value) => value !== null && typeof value === "object" && "says" in value);
-  // 3. The Editor checks every number and every word (S5, S7): what fails goes back.
-  let verdict = seesFrom(answer, held, page.links);
+  const prompt = JSON.stringify({ website: page.host, page: page.about, dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults, facts: factLines(facts), links });
+  const scope = { companyId: run.companyId, host: page.host, holdId: run.holdId, period: page.period, device: page.device ?? "", country: page.country, ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}) };
+  const reads = page.screen.startsWith("googleAnalytics.") && readable(scope);
+  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, page.shop ? SEES_SHOP_FORMAT : "", reads ? SEES_READS_FORMAT : ""].filter(Boolean).join("\n\n");
+  const who = `the ${chosen.replace("INSIGHTS_", "").toLowerCase()} writing the bubble`;
+  // Every figure the bubble may name: the page's, and whatever the specialist read.
+  let named: ReadonlyMap<string, Fact> = held;
+  // Once the specialist can read, a bubble must say something the page's boxes don't (the Editor's check, both writers).
+  const beyondPage = reads ? { pageKeys: new Set(held.keys()) } : {};
+  // With nothing wrong in tracking health, words about tracking or about what counts go back (both writers).
+  const noTracking = { noTrackingTalk: trackingFaults.length === 0 };
+  const withRead = (found: ReadonlyMap<string, Fact>) => new Map([...found, ...held]);
+  let verdict: SeesVerdict;
+  let raw: unknown;
+  if (reads) {
+    const written = await askWithTools(ctx, run, writer, who, system, prompt, [analyticsTool(scope)], {
+      firstReads: firstReadsFor(page),
+      limitMs: WRITE_LIMIT_MS,
+      check: (answer, found) => {
+        const checked = seesFrom(answer, withRead(found), page.links, { ...noTracking, ...(found.size > 0 ? beyondPage : {}) });
+        return checked.ok ? null : checked.why;
+      },
+    });
+    named = withRead(factsByKey(written.found));
+    raw = written.answer;
+    for (const read of written.reads) lines.push({ heading: "Read", detail: readLine(read), failed: Boolean(read.problem) });
+    // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with why.
+    verdict = seesFrom(raw, named, page.links, { ...noTracking, ...(written.found.length > 0 ? beyondPage : {}) });
+  } else {
+    raw = await ask(ctx, run, writer, who, system, prompt, undefined, (value) => value !== null && typeof value === "object" && "says" in value);
+    // 3. The Editor checks every number and every word (S5, S7): what fails goes back.
+    verdict = seesFrom(raw, named, page.links, noTracking);
+  }
   if (!verdict.ok) return { verdict, role: chosen, lines };
-  // 4. The Head's second look (A5): the most useful thing, or a rewrite — kept only when the Editor passes it too.
+  // 4. The Head's second look (A5): the most useful thing, or a rewrite — kept only when the Editor passes it too. It
+  // sees the page's figures and those the specialist read, the ones the bubble names first.
   try {
-    const look = JSON.stringify({ website: page.host, page: page.about, bubble: { says: verdict.says, steps: verdict.steps.map((step) => step.words) }, facts: factLines(facts), links });
-    const second = await ask(ctx, run, lead, "the Head of Strategy's second look", [rules, briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), SECOND_LOOK_FORMAT].filter(Boolean).join("\n\n"), look);
+    const used = new Set(namedIn(raw));
+    const readFacts = [...named.values()].filter((fact) => !held.has(fact.key));
+    const forHead = [...facts, ...readFacts.filter((fact) => used.has(fact.key)), ...readFacts.filter((fact) => !used.has(fact.key))].slice(0, 240);
+    const look = JSON.stringify({ website: page.host, page: page.about, shop: page.shop, trackingFaults, bubble: { says: verdict.says, steps: verdict.steps.map((step) => step.words) }, facts: factLines(forHead), links });
+    const second = await ask(ctx, run, lead, "the Head of Strategy's second look", [rules, briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), SECOND_LOOK_FORMAT].filter(Boolean).join("\n\n"), look, LOOK_LIMIT_MS);
     const read = secondLookFrom(second);
     if (read.useful) {
       lines.push({ heading: "Second look", detail: "The Head of Strategy kept the specialist's words: the most useful thing the page says." });
     } else {
-      const rewritten = seesFrom(read.rewrite, held, page.links);
+      const rewritten = seesFrom(read.rewrite, named, page.links, { ...noTracking, ...(named.size > held.size ? beyondPage : {}) });
       if (rewritten.ok) {
         verdict = rewritten;
         lines.push({ heading: "Second look", detail: "The Head of Strategy said more useful words, which the Editor passed." });
@@ -86,6 +135,39 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     lines.push({ heading: "Second look", detail: `Not taken: ${failureSummary(error)}. The specialist's words stand.` });
   }
   return { verdict, role: chosen, lines };
+}
+
+/**
+ * The page's own screen, read for the specialist before it starts (A1): Conversions' screen for the Conversions page,
+ * and a shop's steps beside it; a conversion's own screen reads its event and the Conversions screen.
+ */
+export function firstReadsFor(page: Pick<Page, "screen" | "shop">): FirstRead[] {
+  const tool = ANALYTICS_READ;
+  if (page.screen === "googleAnalytics.conversions") {
+    return [
+      { tool, args: { screen: "conversions" } },
+      // The page's map, as it opens (by page kind) and by channel; devices and countries the agent reads if it wants them.
+      { tool, args: { screen: "conversionsBy", columns: "kind" } },
+      { tool, args: { screen: "conversionsBy", columns: "channel" } },
+      ...(page.shop ? [{ tool, args: { screen: "products" } }] : []),
+    ];
+  }
+  if (page.screen.startsWith("googleAnalytics.event:")) {
+    const event = page.screen.slice("googleAnalytics.event:".length);
+    return [{ tool, args: { screen: "event", key: event } }, { tool, args: { screen: "conversions" } }, ...(page.shop && event === "purchase" ? [{ tool, args: { screen: "products" } }] : [])];
+  }
+  return [];
+}
+
+/** A read, as the run's log says it: the screen, and how many figures came back or why none did. */
+function readLine(read: AgentRead): string {
+  const what = [read.args.screen, read.args.columns, read.args.key, read.args.list].filter((part) => typeof part === "string" && part).join(", ") || read.tool;
+  return read.problem ? `${what}: ${read.problem}` : `${what}: ${read.figures} figure${read.figures === 1 ? "" : "s"}.`;
+}
+
+/** The keys a specialist's answer names, as it wrote them, before the Editor filled them in. */
+function namedIn(raw: unknown): string[] {
+  return [...JSON.stringify(raw ?? null).matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1].trim());
 }
 
 /** The eye was pressed: write the page's bubble and save it, or say why it went back. */
@@ -102,6 +184,8 @@ export const writeSeesAnswer = internalAction({
     from: v.optional(v.string()),
     to: v.optional(v.string()),
     country: v.string(),
+    /** One device, or empty for every device; absent on an answer asked before the agents read for themselves. */
+    device: v.optional(v.string()),
     facts: seesAskValidator.facts,
     links: seesAskValidator.links,
     shop: v.boolean(),

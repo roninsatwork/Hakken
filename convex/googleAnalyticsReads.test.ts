@@ -12,6 +12,8 @@ import { PROPERTY, dayOf, fakeGoogle, history, type Visit } from "@/src/test/goo
 import { shiftDay } from "./searchConsoleDays";
 import { YOUR_PAGES_COPY, YOUR_PAGES_FIELDS } from "./holdPages";
 import { encodeCopyRows } from "./utils/copyColumns";
+import { keyedRead } from "./utils/agentTools";
+import { factsByKey } from "./utils/insightFacts";
 
 /**
  * What the Google Analytics screens read (docs/plans/active/google-analytics-plan.md
@@ -589,6 +591,15 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     const conversions = await read("conversions");
     const conversionsShown = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "lastMonth", device: "" });
     expect(conversions.kinds).toEqual(conversionsShown.kinds.map((kind) => ({ event: kind.eventName, count: kind.count, countBefore: kind.countBefore, value: kind.value === null ? null : kind.value / 100 })));
+    // An Insights agent reads the same screen for itself (stronger-agents-plan-2026-10-30.md A1): every figure keyed, each
+    // key's fact the number the screen shows, money in the property's currency.
+    const keyed = keyedRead(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "acme-shop.test", screen: "conversions", period: "lastMonth" }), "r1.conversions", { source: "analytics", currency: "GBP" });
+    const byKey = factsByKey(keyed.facts);
+    expect(byKey.get("r1.conversions.visits")?.value).toBe(conversionsShown.visits);
+    for (const kind of conversionsShown.kinds) {
+      expect(byKey.get(`r1.conversions.kinds.${kind.eventName}.count`)).toMatchObject({ value: kind.count, unit: "count" });
+      if (kind.value !== null) expect(byKey.get(`r1.conversions.kinds.${kind.eventName}.value`)).toMatchObject({ value: kind.value / 100, unit: "money", currency: "GBP" });
+    }
 
     expect(await read("visitors")).toMatchObject({ ok: true, figures: { visits: 30 * 33 }, googleSignals: "off" });
     expect(await read("products")).toMatchObject({ ok: false });

@@ -6,7 +6,7 @@ import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
-import { SEES_KEPT_MS, SEES_WRITING_MS, seesAskValidator, seesKey } from "./utils/seesAsk";
+import { SEES_KEPT_MS, SEES_WRITING_MS, sameFigures, seesAskValidator, seesKey } from "./utils/seesAsk";
 import { weekOf } from "./insightsTeam";
 
 /**
@@ -49,7 +49,8 @@ export const askSees = tenantMutation({
     const key = seesKey(args);
     const now = Date.now();
     const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).first();
-    if (held && stillStands(held, now)) return { key, status: held.status };
+    // Kept three hours while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
+    if (held && stillStands(held, now) && (held.status === "RESEARCHING" || sameFigures(held.facts, args.facts))) return { key, status: held.status };
     if (!/^\/app\/[^\s]{1,300}$/.test(args.path)) throw appError("INVALID_INPUT", "The screen's address is not one of the app's.");
     if (args.facts.length === 0) throw appError("INVALID_INPUT", "The page handed over no figures.");
     const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
@@ -84,6 +85,7 @@ export const askSees = tenantMutation({
       from: args.from,
       to: args.to,
       country: args.country,
+      device: args.device,
       facts: args.facts,
       links: args.links,
       shop: args.shop ?? false,
@@ -132,6 +134,19 @@ export const saveSeesAnswer = internalMutation({
 });
 
 /** What the bubbles said this week for a website, for the specialist's weekly run to read (S10). */
+/**
+ * The tracking health checks failing on a website's Analytics, as their names: the only time the bubble may speak
+ * about tracking (Anthony, 2026-10-30, agreeing the fix to "the advice is still really shit"). Empty with none.
+ */
+export const trackingFaultsInternal = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    return (connection?.health?.checks ?? []).filter((check) => !check.passing).map((check) => check.check);
+  },
+});
+
 export const weekSeesAnswers = internalQuery({
   args: { holdId: v.id("companyWebsites"), week: v.string() },
   returns: v.array(v.object({ screen: v.string(), path: v.string(), says: v.array(v.string()), role: v.union(v.string(), v.null()), writtenAt: v.number() })),

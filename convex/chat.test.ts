@@ -371,7 +371,11 @@ describe("Message Quotas Enforcements", () => {
       const reopened = await t.run(async (ctx) =>
         ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", second.threadId)).collect()
       );
-      expect(reopened.at(-1)).toMatchObject({ role: "user", content: "Back again." });
+      // Admitted: the visitor's line is stored and no third apology was. Never "the last message": the thread reads in
+      // `createdAt` order and an apology is stamped a millisecond ahead, so a line sent in that same millisecond sorts
+      // before it — a full run on a fast machine failed here (2026-10-30).
+      expect(reopened.some((message) => message.role === "user" && message.content === "Back again.")).toBe(true);
+      expect(reopened.filter((message) => message.systemKey === "quotaRefusal")).toHaveLength(2);
     });
 
     test("a visitor cannot choose the model, the thinking level or the swarm", async () => {
