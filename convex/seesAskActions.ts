@@ -16,7 +16,7 @@ import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
 import { judgeFindings, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, MOST_COVERED, ROUTE_FORMAT, SECOND_LOOK_FORMAT, SEES_FINDINGS_FORMAT, judgeFrom, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, routeFor, seriousFaults, gradeSees, secondLookFrom, seesAskValidator, seesFrom, writerFrom, writersForHead,
+  JUDGE_FORMAT, MOST_COVERED, ROUTE_FORMAT, SEES_FINDINGS_FORMAT, judgeFrom, SEES_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, routeFor, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFrom, writersForHead,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 
@@ -113,7 +113,11 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     figures: factLines(findingFacts.filter((fact) => fact.key.startsWith(`f${at + 1}.`))),
   }));
   const prompt = JSON.stringify({ website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults, ...(findings.length > 0 ? { findings: findingsForWriter } : {}), facts: factLines(facts), links });
-  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, page.shop ? SEES_SHOP_FORMAT : "", reads ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : ""].filter(Boolean).join("\n\n");
+  // With code's findings in hand the writer writes them up from them and the page's own figures, and reads no screen:
+  // reading a thousand figures it no longer had to find anything in was most of a press's cost (Anthony, 2026-10-31:
+  // "how can it be more expensive as we are doing more in code now"). Without findings it still reads for itself.
+  const readsScreens = reads && findings.length === 0;
+  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, page.shop ? SEES_SHOP_FORMAT : "", readsScreens ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : ""].filter(Boolean).join("\n\n");
   // Jev's check on the words, once the Editor's code has passed them: a guess stated as fact, a step that fits any website.
   const figuresForJev = [...facts, ...findingFacts].slice(0, 60).map((fact) => ({ what: fact.label, value: fact.value }));
   const wordsWhy = (checked: Extract<SeesVerdict, { ok: true }>) => judgeWords(ctx, judgeRun, prepared, page.host, checked.says, checked.steps.map((step) => step.words), figuresForJev);
@@ -130,8 +134,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   let verdict: SeesVerdict;
   let raw: unknown;
   if (reads) {
-    const written = await askWithTools(ctx, run, writer, who, system, prompt, [analyticsTool(scope)], {
-      firstReads: firstReadsFor(page),
+    const written = await askWithTools(ctx, run, writer, who, system, prompt, readsScreens ? [analyticsTool(scope)] : [], {
+      firstReads: readsScreens ? firstReadsFor(page) : [],
       limitMs: WRITE_LIMIT_MS,
       check: async (answer, found) => {
         const checked = seesFrom(answer, withRead(found), page.links, { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) });
@@ -155,31 +159,6 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     verdict = seesFrom(raw, named, page.links, noTracking);
   }
   if (!verdict.ok) return { verdict, role: chosen, lines, findings };
-  // 4. The Head's second look (A5): the most useful thing, or a rewrite — kept only when the Editor passes it too. It
-  // sees the page's figures and those the specialist read, the ones the bubble names first.
-  try {
-    const used = new Set(namedIn(raw));
-    const readFacts = [...named.values()].filter((fact) => !held.has(fact.key));
-    const forHead = [...facts, ...readFacts.filter((fact) => used.has(fact.key)), ...readFacts.filter((fact) => !used.has(fact.key))].slice(0, 240);
-    const look = JSON.stringify({ website: page.host, page: page.about, pageParts: pageParts(page.screen), shop: page.shop, trackingFaults, bubble: { says: verdict.says, steps: verdict.steps.map((step) => step.words) }, facts: factLines(forHead), links });
-    const second = await ask(ctx, run, lead, "the Head of Strategy's second look", [rules, briefFor(INSIGHTS_LEAD_ROLE, lead?.instructions), SECOND_LOOK_FORMAT].filter(Boolean).join("\n\n"), look, LOOK_LIMIT_MS);
-    const read = secondLookFrom(second);
-    if (read.useful) {
-      lines.push({ heading: "Second look", detail: "The Head of Strategy kept the specialist's words: the most useful thing the page says." });
-    } else {
-      const checkedRewrite = seesFrom(read.rewrite, named, page.links, { ...noTracking, ...covering, ...(named.size > held.size ? beyondPage : {}) });
-      const jevWhy = checkedRewrite.ok ? await wordsWhy(checkedRewrite) : null;
-      const rewritten: SeesVerdict = checkedRewrite.ok && jevWhy ? { ok: false, why: jevWhy } : checkedRewrite;
-      if (rewritten.ok) {
-        verdict = rewritten;
-        lines.push({ heading: "Second look", detail: "The Head of Strategy said more useful words, which the Editor passed." });
-      } else {
-        lines.push({ heading: "Second look", detail: `The Head of Strategy's rewrite went back (${rewritten.why}); the specialist's words stand.` });
-      }
-    }
-  } catch (error) {
-    lines.push({ heading: "Second look", detail: `Not taken: ${failureSummary(error)}. The specialist's words stand.` });
-  }
   return { verdict, role: chosen, lines, findings };
 }
 
@@ -209,11 +188,6 @@ export function firstReadsFor(page: Pick<Page, "screen" | "shop">): FirstRead[] 
 function readLine(read: AgentRead): string {
   const what = [read.args.screen, read.args.columns, read.args.key, read.args.list].filter((part) => typeof part === "string" && part).join(", ") || read.tool;
   return read.problem ? `${what}: ${read.problem}` : `${what}: ${read.figures} figure${read.figures === 1 ? "" : "s"}.`;
-}
-
-/** The keys a specialist's answer names, as it wrote them, before the Editor filled them in. */
-function namedIn(raw: unknown): string[] {
-  return [...JSON.stringify(raw ?? null).matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1].trim());
 }
 
 /** The eye was pressed: write the page's bubble and save it, or say why it went back. */

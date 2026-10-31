@@ -307,25 +307,6 @@ export function writerFrom(answer: unknown): InsightsRole | null {
 }
 
 /**
- * The Head's second look (stronger-agents-plan-2026-10-30.md A5): is this
- * the most useful thing the page says — what a client would act on first?
- * Nobody checked that before; the Editor checks numbers.
- */
-export const SECOND_LOOK_FORMAT = [
-  "A specialist wrote the bubble below for the page, after reading the website's screens. Decide whether it says the most useful thing the figures say: what a client would act on first, against their own past. A bubble that only repeats the page's boxes, or whose steps anyone could give without the figures, is not.",
-  "Not useful: words that skip a part of the page with something to say; a list of figures with no story; steps that would fit any website because they don't say where; advice about tracking or about what counts as a conversion, unless trackingFaults lists a fault or one group's rate is three or more times another's; words that do not say what got better or worse against the span before; words that lead with money; words that say less than the figures hold worth acting on.",
-  "Keep it unless yours says something more useful. Never rewrite it into the boxes' figures with \"up from\" or \"down from\": the reader sees those already. A rewrite must name at least one figure the specialist read beyond the page.",
-  "Reply with only JSON: {\"useful\": true} when it does; otherwise {\"useful\": false, \"says\": [\"…\"], \"steps\": [{\"words\": \"…\", \"link\": number}]}, written to the same rules as the specialist's: figures by their keys in double square brackets, never typed, from the facts given (the page's and those the specialist read); one fact a sentence; a step naming the thing to fix in words, never a figure glued on; a step's link one of the numbers given.",
-].join("\n");
-
-/** The Head's second look, read: kept as is, or its rewrite to check. */
-export function secondLookFrom(answer: unknown): { useful: true } | { useful: false; rewrite: unknown } {
-  const raw = (answer && typeof answer === "object" ? answer : {}) as { useful?: unknown };
-  if (raw.useful === true) return { useful: true };
-  return { useful: false, rewrite: answer };
-}
-
-/**
  * The eval set's judge (A6; Anthony, 2026-10-30): his notes on what a good bubble for the page would find are the
  * marked answer, never the brief — the team has to find them itself. The judge says, point by point, whether the
  * bubble found each one, in any words; its figures may differ a little, as his were read off the screen by eye.

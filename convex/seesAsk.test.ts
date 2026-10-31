@@ -68,16 +68,15 @@ const reads = (args: Record<string, unknown>) => ({ read: args });
 const turns = (...each: unknown[]) => ({ turns: each });
 
 /**
- * The team's three answers: the Head's choice, the specialist's bubble (one answer, or `turns(…)`), and the Head's
- * second look (kept as is unless given). A page with no reads (the eval set's) asks the specialist as a single ask.
+ * The team's answers: the Head's choice, the specialist's bubble (one answer, or `turns(…)`), and the eval judge's.
+ * A page with no reads (the eval set's) asks the specialist as a single ask.
  */
-const answers = (head: unknown, specialist: unknown, secondLook: unknown = { useful: true }, judge: unknown = null) => {
+const answers = (head: unknown, specialist: unknown, judge: unknown = null) => {
   const sequence = specialist && typeof specialist === "object" && "turns" in specialist ? (specialist as { turns: unknown[] }).turns : [specialist];
   generate.mockImplementation(async (request: { systemInstruction?: string }) => {
     const system = request.systemInstruction ?? "";
     const answer = system.includes("Choose which specialist") ? head
-      : system.includes("A specialist wrote the bubble below") ? secondLook
-        : system.includes("Anthony wrote down what a good bubble") ? judge
+      : system.includes("Anthony wrote down what a good bubble") ? judge
           : sequence[sequence.length - 1];
     return { text: JSON.stringify(answer), inputTokens: 100, outputTokens: 40 };
   });
@@ -112,18 +111,19 @@ describe("the eye asks the Insights team", () => {
       steps: [{ words: "Find why 28,623 conversions hold so few purchases.", link: "Tracking health", href: "/app/analytics/site/tracking-health" }],
       role: "INSIGHTS_CONVERSION",
     });
-    // Three model calls — the Head's choice, the specialist's words, the Head's second look — on one run of the Head's, with its cost.
-    expect(generate).toHaveBeenCalledTimes(2);
+    // Two model calls — the Head's choice and the specialist's words — on one run of the Head's, with its cost; no
+    // second look since 2026-10-31, when it had said "useful" every time and cost a sixth of a press.
+    expect(generate).toHaveBeenCalledTimes(1);
     expect(stream).toHaveBeenCalledTimes(1);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "The eye: acme-shop.test" });
-    expect(runs[0].inputTokens).toBe(300);
+    expect(runs[0].inputTokens).toBe(200);
     // Pressed again within three hours: the same answer, nothing asked.
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
     await finishScheduled(t);
-    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate).toHaveBeenCalledTimes(1);
     expect(stream).toHaveBeenCalledTimes(1);
     // Another device is another answer (S9).
     const mobile = await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
@@ -153,23 +153,6 @@ describe("the eye asks the Insights team", () => {
     await finishScheduled(t);
     expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["28,623 conversions last month."] });
     expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(2);
-  });
-
-  test("the Head's second look can say more useful words, kept only when the Editor passes them (A5)", async () => {
-    const t = harness();
-    const { siteId, userId } = await seed(t);
-    const user = t.withIdentity({ subject: userId });
-    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, {
-      useful: false, says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Grow [[conv.purchases.now]] purchases.", link: 0 }],
-    });
-    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
-    await finishScheduled(t);
-    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month, up from 1,091."] });
-    // A rewrite that types a number goes back, and the specialist's words stand.
-    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, { useful: false, says: ["About 1,300 purchases."], steps: [] });
-    await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
-    await finishScheduled(t);
-    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: "googleAnalytics.conversions|lastMonth|||gbr|mobile" })).toMatchObject({ status: "WRITTEN", says: ["28,623 conversions last month."] });
   });
 
   test("the specialist reads the website's screens for itself: a screen that cannot answer goes back to it as words, and it writes (A1)", async () => {
@@ -292,7 +275,7 @@ describe("the eye asks the Insights team", () => {
     const superId = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Super", email: "super@platform.test", role: "SUPER_ADMIN", createdAt: 1 }));
     const user = t.withIdentity({ subject: userId });
     const admin = t.withIdentity({ subject: superId });
-    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [] }, undefined, { points: [{ found: true, why: "It says purchases rose." }] });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [] }, { points: [{ found: true, why: "It says purchases rose." }] });
     const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
     await finishScheduled(t);
     const answerId = await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect())[0]._id);
@@ -312,7 +295,7 @@ describe("the eye asks the Insights team", () => {
     // Kept with where it was looked at, so the team reads the website's screens as the reader saw them.
     expect(await t.run(async (ctx) => await ctx.db.get(pageId))).toMatchObject({ period: "lastMonth", country: "gbr", device: "", shop: true });
     // The team as it stands next time misses Anthony's point: the judge says so, point by point.
-    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, undefined, { points: [{ found: false, why: "It never mentions purchases." }] });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month."], steps: [] }, { points: [{ found: false, why: "It never mentions purchases." }] });
     await admin.mutation(api.seesAsk.gradeSeesEvalNow, {});
     await finishScheduled(t);
     const again = await admin.query(api.seesAsk.seesEvalResults, {});
