@@ -245,6 +245,21 @@ export const keepSeesEvalPageInternal = internalMutation({
   returns: v.id("seesEvalPages"),
   handler: async (ctx, args) => await keepEvalPage(ctx, args),
 });
+/**
+ * A kept page's sentences changed, from the command line: a point the figures turn out not to hold is taken out
+ * rather than marking every bubble down for not saying it (Anthony, 2026-10-31, on AI assistants in September).
+ */
+export const setSeesEvalPointsInternal = internalMutation({
+  args: { pageId: v.id("seesEvalPages"), expected: v.array(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const expected = args.expected.map((line) => line.trim()).filter(Boolean);
+    if (expected.length === 0 || expected.length > 5) throw appError("INVALID_INPUT", "Give one to five things the bubble should have found.");
+    if (!(await ctx.db.get(args.pageId))) throw appError("NOT_FOUND", "There is no such eval page.");
+    await ctx.db.patch(args.pageId, { expected });
+    return null;
+  },
+});
 export const gradeSeesEvalInternal = internalMutation({
   args: {},
   returns: v.array(v.id("agentRuns")),

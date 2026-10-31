@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { MOST_FINDINGS, findingsFrom, type FindingView } from "./findings";
+import { MOST_FINDINGS, findingWords, findingsFrom, type FindingView } from "./findings";
 
 /**
  * What the figures show, found by code (sees-findings-in-code-plan-2026-10-31.md, phase 1): general rules over the
@@ -58,6 +58,31 @@ const devices = view("device", { mobile: { visits: 18_614, before: 18_000 }, des
 });
 
 describe("findings, by code, for any website", () => {
+  test("a shop's step is weighed by the visits it loses of every visit, and said as the map reads down a column", () => {
+    // morehandles.co.uk's September, as the map showed it: 14.2% of visits added to basket, 6.3% started checkout,
+    // 3.4% bought — the basket step loses about 8 visits in every 100, more than twice the share that buys.
+    const shop = view("channel", { all: { visits: 36_677 } }, {
+      purchase: { all: [1_246] },
+      add_to_cart: { all: [5_208] },
+      begin_checkout: { all: [2_311] },
+    }, { shopSteps: [{ step: "add_to_cart to begin_checkout", wentOnPercent: 44.4, wentOnPercentBefore: 42.7 }, { step: "begin_checkout to purchase", wentOnPercent: 53.9, wentOnPercentBefore: 55.8 }] });
+    const found = findingsFrom([shop]);
+    const basket = found.find((one) => one.id === "step:add_to_cart to begin_checkout")!;
+    const checkout = found.find((one) => one.id === "step:begin_checkout to purchase")!;
+    expect(basket.params).toMatchObject({ fromShare: 14.2, toShare: 6.3, lost: 7.9 });
+    expect(basket.score).toBeGreaterThan(checkout.score);
+    expect(basket.facts.map((fact) => fact.key)).toEqual(expect.arrayContaining([expect.stringMatching(/\.lost$/)]));
+    expect(findingWords(basket)).toContain("14.2% of all visits did add to cart and 6.3% did begin checkout: 7.9 visits in every 100 lost at this step.");
+  });
+
+  test("the visits it took for one keeps its place however many findings outrank it", () => {
+    const many = findingsFrom([channels, devices, view("kind", { Blog: { visits: 9_000 }, Brand: { visits: 6_000 }, Hinges: { visits: 7_000 }, Locks: { visits: 8_000 } }, {
+      purchase: { Blog: [40], Brand: [340], Hinges: [180], Locks: [330] },
+    })]);
+    expect(many.length).toBeLessThanOrEqual(MOST_FINDINGS);
+    expect(many.map((one) => one.id)).toContain("visitsForOne:purchase");
+  });
+
   test("the visits it took for one purchase, a shop's steps, a channel far above the website, and a device gap to check as tracking", () => {
     const found = findingsFrom([channels, devices]);
     expect(found.length).toBeLessThanOrEqual(MOST_FINDINGS);

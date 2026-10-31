@@ -93,6 +93,7 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
   const p = finding.params;
   const percent = (value: string | number | undefined) => `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(value ?? 0))}%`;
   const whole = (value: string | number | undefined) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  const one = (value: string | number | undefined) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(value ?? 0));
   const two = (value: string | number | undefined) => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Number(value ?? 0));
   const event = (value: string | number | undefined) => (name ? name(String(value)) : String(value));
   const device = (value: string | number | undefined) => (["mobile", "desktop", "tablet"].includes(String(value)) ? t(`devices.${String(value)}` as "devices.mobile") : String(value));
@@ -105,6 +106,8 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
           ? t.rich("visitsForOne", { ...rich, event: event(p.event), visits: whole(p.visits), before: whole(p.visitsBefore) })
           : t.rich("visitsForOneNow", { ...rich, event: event(p.event), visits: whole(p.visits) });
       case "step":
+        // Read down the map's column, as people do: of every visit, the share at each step and the visits lost between.
+        if (p.lost !== undefined) return t.rich("stepLost", { ...rich, from: event(p.from), to: event(p.to), fromShare: percent(p.fromShare), toShare: percent(p.toShare), lost: one(p.lost) });
         return p.wentOnBefore !== undefined
           ? t.rich("step", { ...rich, from: event(p.from), to: event(p.to), wentOn: percent(p.wentOn), before: percent(p.wentOnBefore) })
           : t.rich("stepNow", { ...rich, from: event(p.from), to: event(p.to), wentOn: percent(p.wentOn) });

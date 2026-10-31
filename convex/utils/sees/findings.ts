@@ -65,6 +65,9 @@ const round1 = (value: number) => Math.round(value * 10) / 10;
 /** How much a group's share of visits counts: full from a twentieth of the website, less below — a small group far off is still worth saying. */
 const REACH_FULL = 0.05;
 const reach = (share: number) => Math.sqrt(Math.min(1, share / REACH_FULL));
+/** A step's weight: the visits it loses, of every visit, against the share that converts — so many times, to at most this. */
+const LOST_WEIGHT = 0.6;
+const LOST_MOST = 1.5;
 
 /**
  * The best findings in the views, most worth saying first: at most `MOST_FINDINGS`, at most two from one view. The
@@ -94,18 +97,38 @@ export function findingsFrom(views: readonly FindingView[]): Finding[] {
     });
   }
 
-  // A shop's steps, each into the next: the bigger the share lost, the more it matters; worse than before, more still.
-  for (const step of views.find((view) => view.shopSteps && view.shopSteps.length > 0)?.shopSteps ?? []) {
+  // A shop's steps, each into the next, weighed by the visits lost there — of every visit to the website, against
+  // the share that ends up converting: a step losing more visits than ever convert matters most. Worse than before,
+  // more still. Said as people read the map down a column: "14.3% of visits add to basket, 6.3% start checkout".
+  const stepView = views.find((view) => view.shopSteps && view.shopSteps.length > 0);
+  const stepVisits = stepView ? stepView.visits.reduce((sum, column) => sum + column.visits, 0) : 0;
+  const shareOf = (event: string) => {
+    const did = stepView?.conversions.find((one) => one.event === event)?.visitsThatDidIt;
+    return did !== undefined && stepVisits > 0 ? (did / stepVisits) * 100 : null;
+  };
+  const mainShare = main ? shareOf(main.event) : null;
+  for (const step of stepView?.shopSteps ?? []) {
     if (step.wentOnPercent === null) continue;
     const [from, to] = step.step.split(" to ");
     const before = step.wentOnPercentBefore ?? null;
     const worse = before !== null && step.wentOnPercent < before;
+    const fromShare = shareOf(from);
+    const toShare = shareOf(to);
+    const shares = fromShare !== null && toShare !== null && fromShare >= toShare ? { fromShare: round1(fromShare), toShare: round1(toShare), lost: round1(fromShare - toShare) } : null;
+    const weight = shares && mainShare ? Math.min(LOST_MOST, ((fromShare! - toShare!) / mainShare) * LOST_WEIGHT) : (1 - step.wentOnPercent / 100) * 0.9;
     found.push({
       id: `step:${step.step}`,
       kind: "step",
-      score: (1 - step.wentOnPercent / 100) * 0.9 + (worse ? 0.2 : 0),
-      params: { from, to, wentOn: step.wentOnPercent, ...(before !== null ? { wentOnBefore: before } : {}) },
+      score: weight + (worse ? 0.2 : 0),
+      params: { from, to, wentOn: step.wentOnPercent, ...(before !== null ? { wentOnBefore: before } : {}), ...(shares ?? {}) },
       facts: [
+        ...(shares
+          ? [
+              { key: "fromShare", value: shares.fromShare, unit: "percent" as const, label: `of every visit to the website, the share that did ${from}` },
+              { key: "toShare", value: shares.toShare, unit: "percent" as const, label: `of every visit to the website, the share that did ${to}` },
+              { key: "lost", value: shares.lost, unit: "count" as const, label: `visits in every 100 lost between ${from} and ${to}` },
+            ]
+          : []),
         { key: "wentOn", value: step.wentOnPercent, unit: "percent", label: `of visits that did ${from}, the share that went on to ${to}` },
         ...(before !== null ? [{ key: "wentOnBefore", value: before, unit: "percent" as const, label: `the same, the span before` }] : []),
       ],
@@ -227,12 +250,15 @@ export function findingsFrom(views: readonly FindingView[]): Finding[] {
     if (one.view === "device" && (one.kind === "groupAbove" || one.kind === "groupBelow") && gaps.has(String(one.params.event))) found.splice(at, 1);
   }
 
-  // The best first; never more than two from one view, never the same group twice.
+  // The best first; never more than two from one view, never the same group twice. The visits it took for one is the
+  // page's own headline, so it always keeps a place.
   const chosen: Finding[] = [];
+  const headline = found.find((one) => one.kind === "visitsForOne");
   const fromView = new Map<string, number>();
   const groups = new Set<string>();
   for (const finding of found.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))) {
-    if (chosen.length >= MOST_FINDINGS) break;
+    // Room for the rest leaves the headline's place free, wherever it ranks.
+    if (finding !== headline && chosen.filter((one) => one.kind !== "visitsForOne").length >= MOST_FINDINGS - (headline ? 1 : 0)) continue;
     const group = typeof finding.params.group === "string" ? `${finding.view}:${finding.params.group}` : null;
     if (finding.view && (fromView.get(finding.view) ?? 0) >= MOST_FROM_A_VIEW) continue;
     if (group && groups.has(group)) continue;
@@ -261,7 +287,7 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
     case "visitsForOne":
       return `It took ${p.visits} visits for one ${eventWords(p.event)}${p.visitsBefore !== undefined ? `, against ${p.visitsBefore} the span before` : ""}.`;
     case "step":
-      return `Of the visits that did ${eventWords(p.from)}, ${p.wentOn}% went on to ${eventWords(p.to)}${p.wentOnBefore !== undefined ? `, against ${p.wentOnBefore}% the span before` : ""}.`;
+      return `${p.fromShare !== undefined ? `${p.fromShare}% of all visits did ${eventWords(p.from)} and ${p.toShare}% did ${eventWords(p.to)}: ${p.lost} visits in every 100 lost at this step. ` : ""}Of the visits that did ${eventWords(p.from)}, ${p.wentOn}% went on to ${eventWords(p.to)}${p.wentOnBefore !== undefined ? `, against ${p.wentOnBefore}% the span before` : ""}.`;
     case "groupAbove":
     case "groupBelow": {
       const direction = finding.kind === "groupAbove" ? "above" : "below";

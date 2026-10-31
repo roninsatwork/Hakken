@@ -318,6 +318,10 @@ describe("the eye asks the Insights team", () => {
     const again = await admin.query(api.seesAsk.seesEvalResults, {});
     expect(again[0].latest).toMatchObject({ passed: true, score: 0 });
     expect(again[0].latest?.notes.join(" ")).toContain("Missed: 1,258 purchases, up from 1,091 the month before, worth more than ever. — It never mentions purchases.");
+    // A point the figures don't hold is taken out, never left to mark every bubble down.
+    await t.mutation(internal.seesAsk.setSeesEvalPointsInternal, { pageId, expected: ["  1,258 purchases last month. ", ""] });
+    expect((await t.run(async (ctx) => await ctx.db.get(pageId)))?.expected).toEqual(["1,258 purchases last month."]);
+    await expect(t.mutation(internal.seesAsk.setSeesEvalPointsInternal, { pageId, expected: [" "] })).rejects.toThrow("one to five");
   });
 
   test("another company's website is not asked about, and a page with no figures is refused", async () => {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { FunctionArgs } from "convex/server";
 import { ArrowUpRight, SendHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -27,24 +28,25 @@ type StartedOn = NonNullable<FunctionArgs<typeof api.chat.createThread>["started
 export function useSeesChat({ pageKey, siteId, startedOn }: { pageKey: string | null; siteId?: Id<"companyWebsites">; startedOn: StartedOn }) {
   const threadId = useSeesThread(pageKey) as Id<"threads"> | null;
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
+  const sendAction = useAdminAction({ scope: "sees-chat-send" });
+  const t = useTranslations("ui.hakkenSees");
   const createThread = useMutation(api.chat.createThread);
   const sendMessage = useMutation(api.chat.sendMessage);
   const messages = useQuery(api.chat.getMessages, threadId ? { threadId } : "skip");
+  const sending = sendAction.isBusy();
   const send = async () => {
     const content = draft.trim();
     if (!content || sending || !pageKey) return;
-    setSending(true);
-    try {
-      const id = threadId ?? await createThread({ ...(siteId ? { forWebsiteId: siteId } : {}), startedOn });
-      if (!threadId) noteSeesThread(pageKey, id);
-      await sendMessage({ threadId: id, content });
-      setDraft("");
-    } catch {
-      // The box keeps the words; nothing was lost. Ask Hakken's own screens say why a message was refused.
-    } finally {
-      setSending(false);
-    }
+    // A refusal is said, and the box keeps the words: nothing is lost.
+    await sendAction.run(
+      async () => {
+        const id = threadId ?? await createThread({ ...(siteId ? { forWebsiteId: siteId } : {}), startedOn });
+        if (!threadId) noteSeesThread(pageKey, id);
+        await sendMessage({ threadId: id, content });
+        setDraft("");
+      },
+      { fallbackMessage: t("sendFailed") },
+    );
   };
   // Waiting on an answer: the last line is the person's, and no answer has begun.
   const waiting = sending || (messages?.length ? messages[messages.length - 1].role === "user" : false);

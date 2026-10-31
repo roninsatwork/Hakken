@@ -765,7 +765,7 @@ export const DECISIONS: readonly DecisionDefinition[] = [
       instructions: {
         task: "Decide whether the bubble makes the point, in any words; its figures may differ a little from the point's.",
         context: "`point` is something a person said a good bubble for this page would find; `bubble` is what was written.",
-        yes: "The bubble says the same finding, even in other words or with slightly different figures.",
+        yes: "The bubble says the same finding, even in other words or with slightly different figures. A drop between two steps is the same finding whether it is said as the share that went on, or as the visits lost out of every visit.",
         no: "The bubble does not say it, or only touches on it without making the point.",
       },
     },
