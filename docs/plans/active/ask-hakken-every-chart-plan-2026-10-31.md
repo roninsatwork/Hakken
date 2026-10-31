@@ -97,3 +97,19 @@ charts may break out to the full column as tables already do.
   saved September figures; the pie is the one new part. Awaits Anthony's yes.
 - 2026-10-31: board 2 drawn — the eye's panel at 560px with the channels table spaced and its numbers aligned; the
   cause of the touching columns found (chat tables are left unstyled) and the fix written into §2.
+- 2026-10-31: phases 1–5 built and committed locally, nothing pushed (9455ce6b, 31b34270, 0ad11190, 52845d3e). Lint,
+  types, guards and the whole suite (8,231 tests) pass.
+- **The audit, point by point (2026-10-31):**
+  - Done: bars, stacked bars, pie, scatter and grid from Google Analytics' Conversions map, by channel, kind of page,
+    device or country, each from saved figures through code, each linking to its screen; a grid uses the
+    conversation's full width; every kind can be sent at a time, once or weekly (the email draws each group as a bar
+    with its name and figure listed, since email cannot draw a pie, a scatter or a grid; a grid's rows go as words);
+    the panel at 560px; every answer's table spaced, figure columns found by code (not left to the model's `---:`)
+    and set right in JetBrains Mono; a new conversation each press; the `sees` credit kind, 2 a press written, free
+    from the three hours kept.
+  - Not done: Search Console's groups (queries, pages) and Visibility, Bing Webmaster and Clarity — Google Analytics
+    only so far; pages as a chart's groups ("top pages"); the hour-and-weekday grid; a saved-outline look test for
+    the pie (component tests hold it instead); the drawing kit's parts page shows the pie's names but not its ring,
+    which the chart library draws only in a browser.
+  - Not checked: in Chrome — the browser tab Claude can drive was signed out, and Claude may not sign in. Anthony's
+    answer still open: at zero credits the eye, like every kind today, records and carries on.
