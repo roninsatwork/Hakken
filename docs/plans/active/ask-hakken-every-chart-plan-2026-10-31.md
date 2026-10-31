@@ -76,3 +76,6 @@ charts may break out to the full column as tables already do.
 ## Progress
 
 - 2026-10-31: planned with Anthony. Phase 0 started.
+- 2026-10-31: drawn — canvas "Ask Hakken, every kind of chart" (https://claude.ai/artifact/DMCDEfYqSVr7y63viu1wRe),
+  board 1: six questions and answers in Ask Hakken, each chart drawn by the real parts from morehandles.co.uk's
+  saved September figures; the pie is the one new part. Awaits Anthony's yes. The wider panel is not drawn yet.
