@@ -143,3 +143,43 @@ describe("a chart of a website's groups (ask-hakken-every-chart-plan-2026-10-31.
     expect(screen.getByText("18.8%")).toBeInTheDocument();
   });
 });
+
+describe("charts from Bing, Clarity and Visibility (ask-hakken-every-chart-plan-2026-10-31.md, the last sources)", () => {
+  const groups = (chart: Partial<Chart> & Record<string, unknown>) => ({ website: "morehandles.co.uk", period: "lastMonth", link: "/app/x", ...chart }) as Chart;
+
+  it("Bing's searches are Bing's clicks, opened in Bing Webmaster", () => {
+    renderWithProviders(<AnswerChart chart={groups({ look: "bingGroups", kind: "bars", by: "query", measure: "clicks", link: "/app/bing-webmaster/site/keywords", groups: [{ name: "door handles", value: 12, before: 9 }] })} />);
+    expect(screen.getByRole("figure", { name: "Clicks from Bing by search" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Bing Webmaster" })).toHaveAttribute("href", "/app/bing-webmaster/site/keywords");
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["door handles: Last month 12, The month before 9"]);
+  });
+
+  it("Clarity's scroll by device in percent, its devices in plain words, opened in Clarity", () => {
+    renderWithProviders(<AnswerChart chart={groups({ look: "clarityGroups", kind: "bars", by: "device", measure: "scroll", groups: [{ name: "desktop", value: 31.4, before: 28 }, { name: "mobile", value: 22.5 }] })} />);
+    expect(screen.getByRole("figure", { name: "How far people scroll, by device" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Clarity" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Desktop: Last month 31.4, The month before 28", "Mobile: Last month 22.5, The month before –"]);
+  });
+
+  it("Clarity's grid names each row by what people did, each square a share", () => {
+    renderWithProviders(<AnswerChart chart={groups({ look: "clarityGroups", kind: "grid", by: "page", measure: "scroll", groups: [{ name: "/basket", value: 900 }], rows: [{ event: "scroll", values: [41.2] }, { event: "rageClicks", values: [3.5] }] })} />);
+    expect(screen.getByRole("figure", { name: "What people do on each page, from Clarity" })).toBeInTheDocument();
+    expect(screen.getByText("Scroll")).toBeInTheDocument();
+    expect(screen.getByText("Angry clicks")).toBeInTheDocument();
+    expect(screen.getByText("41.2%")).toBeInTheDocument();
+  });
+
+  it("Visibility sets each website at its newest check, by its day, and opens Visibility", () => {
+    renderWithProviders(<AnswerChart chart={groups({ look: "visibilityGroups", kind: "bars", by: "website", measure: "estimatedVisitors", period: "latest", asOf: "2026-10-28", groups: [{ name: "corston.com", value: 4120 }, { name: "morehandles.co.uk", value: 2210 }] })} />);
+    expect(screen.getByRole("figure", { name: "Estimated visitors from Google by website" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Visibility" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")[0].textContent).toMatch(/^corston\.com: Newest check, .*28.* 4120$/);
+  });
+
+  it("Visibility's grid keeps each website's address as it is, each square a count of searches", () => {
+    renderWithProviders(<AnswerChart chart={groups({ look: "visibilityGroups", kind: "grid", by: "website", measure: "searches", period: "latest", groups: [{ name: "1–3", value: 141 }, { name: "4–10", value: 99 }], rows: [{ event: "morehandles.co.uk", values: [61, 29] }] })} />);
+    expect(screen.getByRole("figure", { name: "Each website's searches by Google position" })).toBeInTheDocument();
+    expect(screen.getByText("morehandles.co.uk")).toBeInTheDocument();
+    expect(screen.getByText("61")).toBeInTheDocument();
+  });
+});

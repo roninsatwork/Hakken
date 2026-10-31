@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { EVERY_OTHER, groupsChartFrom, hoursGridFrom, searchGroupsChartFrom, type GroupsView } from "./assistantGroupCharts";
+import { EVERY_OTHER, clarityGroupsChartFrom, groupsAreShares, groupsChartFrom, hoursGridFrom, searchGroupsChartFrom, visibilityGroupsChartFrom, type ClarityGroupLine, type GroupsView, type VisibilityWebsite } from "./assistantGroupCharts";
 
 /**
  * Charts of groups (ask-hakken-every-chart-plan-2026-10-31.md, phase 1), on figures shaped like morehandles.co.uk's
@@ -135,3 +135,51 @@ describe("Search Console's groups and the week's hours (the plan's gaps)", () =>
     expect(hoursGridFrom(Array.from({ length: 7 }, () => Array(24).fill(0)), { event: "purchase", website: "x", period: "lastMonth", link: "/" }).ok).toBe(false);
   });
 });
+
+describe("Clarity's and Visibility's charts (the last sources)", () => {
+  const line = (name: string, visits: number, scroll: number, rageClicks = 0): ClarityGroupLine => ({ name, visits, scroll, quickBacks: 5, rageClicks, deadClicks: 1, errors: 0 });
+  const pages = [line("/", 900, 41.2, 2), line("/basket", 300, 63, 7), line("/rare", 4, 90, 50)];
+  const clarity = { by: "page" as const, website: "morehandles.co.uk", period: "lastMonth", link: "/app/clarity/site/pages", trusted: 10 };
+
+  test("a Clarity measure ranks only pages with visits enough to trust, each against the period before", () => {
+    const built = clarityGroupsChartFrom(pages, new Map([["/", line("/", 800, 38)]]), { ...clarity, kind: "bars", measure: "rageClicks" });
+    if (!built.ok) throw new Error(built.problem);
+    expect(built.chart.groups).toEqual([{ name: "/basket", value: 7 }, { name: "/", value: 2, before: 0 }]);
+  });
+
+  test("Clarity's shares are of visits, its grid every measure for each trusted page, its scatter scroll when none is named", () => {
+    const pie = clarityGroupsChartFrom(pages, null, { ...clarity, kind: "pie", measure: "scroll" });
+    expect(pie.ok && pie.chart).toMatchObject({ measure: "visits", groups: [{ name: "/", value: 74.8 }, { name: "/basket", value: 24.9 }, { name: "/rare", value: 0.3 }] });
+    const grid = clarityGroupsChartFrom(pages, null, { ...clarity, kind: "grid", measure: "visits" });
+    expect(grid.ok && grid.chart.groups.map((group) => group.name)).toEqual(["/", "/basket"]);
+    expect(grid.ok && grid.chart.rows?.map((row) => row.event)).toEqual(["scroll", "quickBacks", "rageClicks", "deadClicks", "errors"]);
+    const scatter = clarityGroupsChartFrom(pages, null, { ...clarity, kind: "scatter", measure: "visits" });
+    expect(scatter.ok && scatter.chart).toMatchObject({ measure: "scroll", groups: [{ name: "/", value: 41.2, visits: 900 }, { name: "/basket", value: 63, visits: 300 }] });
+  });
+
+  const site = (host: string, estimatedVisitors: number | null, searches: number | null, top: number): VisibilityWebsite => ({
+    host, estimatedVisitors, searches, topThree: top, linkingWebsites: null, bands: { p01_03: top, p04_10: 10, p11_20: 20, p21_50: 30, p51_up: 40 },
+  });
+  const group = [site("morehandles.co.uk", 2210, 807, 61), site("corston.com", 4120, 1500, 120), site("new.co.uk", null, null, 0)];
+  const visibility = { website: "morehandles.co.uk", asOf: "2026-10-28", link: "/app/sites/site/competitors" };
+
+  test("Visibility ranks the websites known, shares them out, and sets searches against estimated visitors", () => {
+    const bars = visibilityGroupsChartFrom(group, { ...visibility, kind: "bars", by: "website", measure: "estimatedVisitors" });
+    expect(bars.ok && bars.chart).toMatchObject({ look: "visibilityGroups", period: "latest", asOf: "2026-10-28", groups: [{ name: "corston.com", value: 4120 }, { name: "morehandles.co.uk", value: 2210 }] });
+    const pie = visibilityGroupsChartFrom(group, { ...visibility, kind: "pie", by: "website", measure: "estimatedVisitors" });
+    expect(pie.ok && pie.chart.groups.map((one) => one.value)).toEqual([65.1, 34.9]);
+    const scatter = visibilityGroupsChartFrom(group, { ...visibility, kind: "scatter", by: "website", measure: "topThree" });
+    expect(scatter.ok && scatter.chart).toMatchObject({ measure: "estimatedVisitors", groups: [{ name: "morehandles.co.uk", value: 2210, visits: 807 }, { name: "corston.com", value: 4120, visits: 1500 }] });
+    expect(visibilityGroupsChartFrom(group, { ...visibility, kind: "grid", by: "position", measure: "searches" }).ok).toBe(false);
+  });
+
+  test("one rule for percents: shares, rates and Clarity's measures; counts for visits, searches and the week's hours", () => {
+    expect(groupsAreShares({ look: "clarityGroups", kind: "bars", by: "page", measure: "scroll" })).toBe(true);
+    expect(groupsAreShares({ look: "clarityGroups", kind: "bars", by: "page", measure: "visits" })).toBe(false);
+    expect(groupsAreShares({ look: "visibilityGroups", kind: "grid", by: "website", measure: "searches" })).toBe(false);
+    expect(groupsAreShares({ look: "visibilityGroups", kind: "pie", by: "website", measure: "searches" })).toBe(true);
+    expect(groupsAreShares({ look: "analyticsGroups", kind: "grid", by: "hour", measure: "conversions" })).toBe(false);
+    expect(groupsAreShares({ look: "bingGroups", kind: "scatter", by: "query", measure: "impressions" })).toBe(true);
+  });
+});
+

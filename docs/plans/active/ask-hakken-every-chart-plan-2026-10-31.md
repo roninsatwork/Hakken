@@ -123,3 +123,34 @@ charts may break out to the full column as tables already do.
   3,186 visits). Its hours grid says it waits for the next collection, which has not reached that list yet.
   - Still not done: Visibility, Bing Webmaster and Clarity as chart sources; a saved-outline look test for the pie.
   - Still not checked in Chrome: the drivable tab was signed out.
+- 2026-10-31, the last sources and the pie's look, at Anthony's "Yes, build all four" (after "why is this
+  consistently not done" — they had been left each round because each go named other pieces, and the plan's "as
+  each one's saved data allows" was read as leave for later; nothing blocked them):
+  - **Bing**: its searches or pages, clicks or times shown, as bars against the period before, a pie, stacked
+    shares or a scatter of times shown against the share clicked, from Bing's own ready-made lists. No grid.
+  - **Clarity**: devices, pages, kinds of page, sources or browsers — visits, or how far people scroll and the
+    shares of visits with a quick back, an angry click, a dead click or an error — as bars against the period before
+    (a measure only for groups with 10 visits or more, as Clarity's screens judge a page), shares of visits as a pie
+    or stacked bars, visits against a measure as a scatter, or a grid of every measure for each group.
+  - **Visibility**: the website against the competitors it is watched with, each in the website's own market as
+    Side by side reads them — estimated visitors, searches ranked for, in Google's top 3, or linking websites — as
+    bars, a pie, stacked shares, a scatter of searches against estimated visitors, or a grid of each website's
+    searches by position band; or the website's own searches by position. At the newest check, said by its day; a
+    competitor's chart works too, as its Visibility screens do.
+  - Each can be sent at a time like the rest; the email and the bell name the source. Decided without asking (his
+    "just build the plan" rule): Bing, Clarity and Visibility open as bars when no kind is said, since they keep no
+    line a day for a chart; a Visibility chart sent weekly reads the newest check on its day, whatever the period.
+  - Found and fixed on the way: a grid's headline in the email and the bell showed its busiest group's visits with a
+    "%" (Google Analytics' grids too).
+  - **The look test**: `src/ui/components/chat/answerChartLook.test.tsx` holds board 1's six charts to the outline
+    saved in `docs/plans/assets/ask-hakken-every-chart/look/Main.txt` — each title, and the pie as a ring beside its
+    legend, checked to draw its ring.
+  - Checked on saved figures: Visibility on morehandles.co.uk (ironmongerydirect.co.uk first at 48,616 estimated
+    visitors; its searches 486 in 1–3, 1,201 in 4–10, 1,704 in 11–20, 2,560 in 21–50, 404 beyond; the grid of every
+    website by position); Clarity on ronins.co.uk this month (desktop 1,056 visits, mobile 57, tablet 27; sources
+    google 57.3%; the grid of its twelve busiest pages; browsers' scroll). Last month holds none of ronins.co.uk's
+    Clarity days, which start on 11 October, and the chart says so. **Bing is not checked on saved figures**: no
+    website on the dev deployment has Bing connected; its tests read a collected website.
+  - Still not checked in Chrome. Still open from before: the drawing kit's parts page shows the pie's legend but not
+    its ring; Anthony's answer on the eye at zero credits.
+

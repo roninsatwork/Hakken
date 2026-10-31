@@ -6,6 +6,7 @@ import { signed } from "./utils/hakkenReports";
 import { clockOf } from "./utils/hakkenTaskTiming";
 import { pathOf } from "./utils/hakkenTaskRules";
 import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
+import { GROUP_MEASURES, groupsAreShares, lookOfSaved, sourceOfLook, type GroupChartBy, type GroupChartKind, type GroupMeasure } from "./utils/assistantGroupCharts";
 
 /**
  * A Hakken report's email (hakken-tasks-plan.md, item 4.1, board
@@ -130,9 +131,11 @@ export function buildTaskGroupsEmail(args: {
   const words = wording.taskChart;
   const kind = typeof payload.kind === "string" ? payload.kind : "bars";
   const by = typeof payload.by === "string" ? payload.by : "channel";
-  const measure = payload.measure === "conversions" || payload.measure === "conversionRate" || payload.measure === "clicks" || payload.measure === "impressions" ? payload.measure : "visits";
+  const measure = (GROUP_MEASURES as readonly unknown[]).includes(payload.measure) ? payload.measure as GroupMeasure : "visits";
   const event = typeof payload.event === "string" ? payload.event : undefined;
-  const search = measure === "clicks" || measure === "impressions";
+  const look = lookOfSaved({ ...(typeof payload.source === "string" ? { source: payload.source } : {}), measure });
+  const source = sourceOfLook(look);
+  const search = look === "searchConsoleGroups";
   const hours = by === "hour";
   const groups = Array.isArray(payload.groups) && payload.groups.length > 0 && payload.groups.length <= 20
     && payload.groups.every((group) => group && typeof group.name === "string" && typeof group.value === "number")
@@ -145,7 +148,7 @@ export function buildTaskGroupsEmail(args: {
   const timeOfDay = typeof payload.timeOfDay === "string" ? payload.timeOfDay : "09:00";
   const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
   // Counts as whole numbers — a bar's clicks or visits, a grid of the week's times — and the rest as shares.
-  const rate = hours ? false : measure === "conversionRate" || kind !== "bars";
+  const rate = groupsAreShares({ look, kind: kind as GroupChartKind, by: by as GroupChartBy, measure });
   const shown = (value: number) => (rate ? `${value.toLocaleString(wording.dateLocale, { maximumFractionDigits: 1 })}%` : Math.round(value).toLocaleString(wording.dateLocale));
   // Search Console names a country by its three letters ("gbr"): said in the reader's language where it can be.
   const country = (code: string) => {
@@ -157,7 +160,9 @@ export function buildTaskGroupsEmail(args: {
     }
   };
   const name = (group: string) => (group === "*" ? words.everyOther : search && by === "country" ? country(group) : group);
-  const title = words.groupsTitle({ kind, by, measure, ...(event ? { event } : {}) });
+  // A grid's groups carry their visits or counts, whatever its squares hold: its headline is a count.
+  const headline = (value: number) => (kind === "grid" ? Math.round(value).toLocaleString(wording.dateLocale) : shown(value));
+  const title = words.groupsTitle({ source, kind, by, measure, ...(event ? { event } : {}) });
   const top = groups.find((group) => group.name !== "*") ?? groups[0];
   // A scatter's groups are listed with their visits beside the rate; a grid's rows as each step's highest and lowest.
   const facts = kind === "grid"
@@ -166,24 +171,25 @@ export function buildTaskGroupsEmail(args: {
         const high = cells.reduce((best, cell) => (cell.value > best.value ? cell : best), cells[0]);
         const low = cells.reduce((worst, cell) => (cell.value < worst.value ? cell : worst), cells[0]);
         // A grid of the week names each row by its day, Google's Sunday 0.
-        const label = hours ? words.weekday({ day: ((Number(row.event) + 6) % 7) + 1 }) : row.event.replace(/_/g, " ");
+        // Clarity's rows are its measures; Visibility's are its websites.
+        const label = hours ? words.weekday({ day: ((Number(row.event) + 6) % 7) + 1 }) : source === "clarity" ? words.clarityMeasure({ measure: row.event }) : source === "visibility" ? row.event : row.event.replace(/_/g, " ");
         return { term: label.charAt(0).toUpperCase() + label.slice(1), value: high ? shown(high.value) : "–", note: high && low ? words.gridRow({ high: `${high.name} ${shown(high.value)}`, low: `${low.name} ${shown(low.value)}` }) : "" };
       })
     : groups.map((group) => ({
         term: name(group.name),
         value: shown(group.value),
         note: kind === "scatter" && group.visits !== undefined
-          ? `${Math.round(group.visits).toLocaleString(wording.dateLocale)} ${search ? words.timesShown : args.language.startsWith("it") ? "visite" : "visits"}`
+          ? `${Math.round(group.visits).toLocaleString(wording.dateLocale)} ${search || source === "bing" ? words.timesShown : source === "visibility" ? (args.language.startsWith("it") ? "ricerche" : "searches") : args.language.startsWith("it") ? "visite" : "visits"}`
           : group.before !== undefined ? words.before({ figure: shown(group.before) }) : "",
       }));
   const drawn = kind !== "grid";
   return {
-    subject: words.subject({ title, figure: `${name(top.name)} ${shown(top.value)}` }),
+    subject: words.subject({ title, figure: `${name(top.name)} ${headline(top.value)}` }),
     content: {
       kind: `${words.kind({ once, weekday })} · ${payload.website}`,
-      figure: shown(top.value),
+      figure: headline(top.value),
       verdict: words.groupsTop({ name: name(top.name) }),
-      lede: words.groupsSpan({ period: payload.period }),
+      lede: words.groupsSpan({ period: payload.period, ...(typeof payload.asOf === "string" ? { asOf: payload.asOf } : {}) }),
       ...(drawn ? { picture: { cid: TASK_CHART_CID, alt: words.groupsAlt({ title, count: groups.length }), from: name(groups[0].name), to: name(groups[groups.length - 1].name) } } : {}),
       facts,
       actions: [{ label: words.open, url: `${brand.appUrl}${link}`, emphasis: "primary" }],

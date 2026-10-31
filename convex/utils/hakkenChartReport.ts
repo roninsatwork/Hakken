@@ -1,6 +1,6 @@
 import { analyticsChartValues, type AnalyticsChartMeasure } from "./assistantCharts";
 import { weekdayName } from "./hakkenReports";
-import type { GroupChartBy, GroupChartKind, GroupMeasure } from "./assistantGroupCharts";
+import type { GroupChartBy, GroupChartKind, GroupMeasure, GroupSource } from "./assistantGroupCharts";
 
 /**
  * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
@@ -22,7 +22,7 @@ export type ChartReportSpec = {
   /** A chart of groups' kind and groups (ask-hakken-every-chart-plan-2026-10-31.md); absent for a line a day. */
   kind?: GroupChartKind;
   by?: GroupChartBy;
-  source?: "searchConsole";
+  source?: Exclude<GroupSource, "analytics">;
 };
 
 type Day = { day: string; visits: number; conversions: number; events: readonly number[]; eventVisits?: readonly number[]; eventTimes?: readonly number[] };
@@ -49,11 +49,28 @@ export function chartReportFigures(points: readonly Day[], before: readonly Day[
   };
 }
 
-const BY_WORDS: Record<GroupChartBy, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search" };
+const BY_WORDS: Record<GroupChartBy, string> = {
+  channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
+  source: "source", browser: "browser", website: "website", position: "Google position",
+};
+/** Bing's, Clarity's and Visibility's measures in plain words, for the tasks page. */
+const MEASURE_WORDS: Record<string, string> = {
+  clicks: "clicks", impressions: "times shown", visits: "visits", scroll: "how far people scroll", quickBacks: "quick backs", rageClicks: "angry clicks",
+  deadClicks: "dead clicks", errors: "errors", estimatedVisitors: "estimated visitors", searches: "searches ranked for", topThree: "searches in Google's top 3",
+  linkingWebsites: "linking websites",
+};
 
 /** A chart of groups in plain English words, as the tasks page lists it: "a pie of visits by device". */
-function groupsWhat(report: Pick<ChartReportSpec, "measure" | "event"> & { kind: GroupChartKind; by: GroupChartBy }): string {
+function groupsWhat(report: Pick<ChartReportSpec, "measure" | "event" | "source"> & { kind: GroupChartKind; by: GroupChartBy }): string {
   const of = BY_WORDS[report.by];
+  if (report.source === "bing" || report.source === "clarity" || report.source === "visibility") {
+    const section = report.source === "bing" ? "Bing" : report.source === "clarity" ? "Clarity" : "Visibility";
+    if (report.source === "visibility" && report.by === "position") return `${report.kind === "pie" ? "a pie" : report.kind === "stacked" ? "stacked bars" : "bars"} of searches by Google position, from Visibility`;
+    if (report.kind === "grid") return report.source === "visibility" ? "a grid of each website's searches by Google position, from Visibility" : `a grid of Clarity's measures by ${of}`;
+    if (report.kind === "scatter") return report.source === "visibility" ? "a scatter of searches against estimated visitors, by website, from Visibility" : `a scatter of visits against ${MEASURE_WORDS[report.measure]} by ${of}, from ${section}`;
+    const what = MEASURE_WORDS[report.measure] ?? report.measure;
+    return `${report.kind === "pie" ? "a pie" : report.kind === "stacked" ? "stacked bars" : "bars"} of ${what} by ${of}, from ${section}`;
+  }
   const did = report.event === "purchase" ? "made a purchase" : `did ${(report.event ?? "").replace(/_/g, " ")}`;
   if (report.kind === "grid") return `a grid of the share of visits that did each step, by ${of}`;
   if (report.kind === "scatter") return `a scatter of visits against the share that ${did}, by ${of}`;

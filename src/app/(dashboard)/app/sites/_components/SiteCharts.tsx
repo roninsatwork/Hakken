@@ -758,9 +758,10 @@ export function SitePieChart({ slices, formatValue = formatNumber, size = 200 }:
   const shareOf = (value: number) => (whole > 0 ? `${((value / whole) * 100).toFixed(1)}%` : "");
   return (
     <ChartReveal replay={slices.map((slice) => `${slice.key}:${slice.value}`).join("|")} motion="fade">
-      <div className="flex flex-wrap items-center gap-6">
+      {/* Marked for the approved look's outline (`lookOutline`): the ring and its legend, whatever the slices. */}
+      <div data-part="pie-chart" className="flex flex-wrap items-center gap-6">
         {/* A ring is as wide as it is tall, so it is drawn at its own size rather than filling a box. */}
-        <div className="shrink-0">
+        <div data-part="pie-ring" className="shrink-0">
           <PieChart width={size} height={size}>
             <Pie data={slices} dataKey="value" nameKey="name" innerRadius="63%" outerRadius="100%" paddingAngle={2} stroke="none" isAnimationActive={false}>
               {slices.map((slice) => <Cell key={slice.key} fill={slice.colour} />)}
@@ -768,7 +769,7 @@ export function SitePieChart({ slices, formatValue = formatNumber, size = 200 }:
             <Tooltip content={<ChartTooltip formatValue={(value) => `${formatValue(value)} · ${shareOf(value)}`} />} />
           </PieChart>
         </div>
-        <ul className="flex min-w-0 flex-col gap-2 text-[13px]">
+        <ul data-part="pie-legend" className="flex min-w-0 flex-col gap-2 text-[13px]">
           {slices.map((slice) => (
             <li key={slice.key} className="flex items-center gap-2.5">
               <span className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: slice.colour }} aria-hidden />

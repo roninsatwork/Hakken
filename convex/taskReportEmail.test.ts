@@ -37,4 +37,28 @@ describe("a chart of groups by email", () => {
     ]);
     expect(made.pictures).toBeUndefined();
   });
+
+  test("Clarity's grid: each measure by name, its highest and lowest page, in percent", () => {
+    const made = buildTaskReportEmail({ language: "en", brand, payload: {
+      ...sent, look: "analyticsGroups", source: "clarity", kind: "grid", by: "page", measure: "scroll",
+      groups: [{ name: "/", value: 900 }, { name: "/basket", value: 300 }],
+      rows: [{ event: "scroll", values: [41.2, 63] }, { event: "rageClicks", values: [2, 7] }],
+    } });
+    if ("skip" in made) throw new Error(made.skip);
+    expect(made.subject).toBe("What people do on each page, from Clarity: / 900");
+    expect(made.content.facts?.map((fact) => [fact.term, fact.note])).toEqual([
+      ["Scroll", "highest /basket 63%, lowest / 41.2%"],
+      ["Angry clicks", "highest /basket 7%, lowest / 2%"],
+    ]);
+  });
+
+  test("Visibility's websites at the newest check, by its day, counted not shared", () => {
+    const made = buildTaskReportEmail({ language: "en", brand, payload: {
+      ...sent, look: "analyticsGroups", source: "visibility", kind: "bars", by: "website", measure: "estimatedVisitors", period: "latest", asOf: "2026-10-28",
+      groups: [{ name: "corston.com", value: 4120 }, { name: "morehandles.co.uk", value: 2210 }],
+    } });
+    if ("skip" in made) throw new Error(made.skip);
+    expect(made.subject).toBe("Estimated visitors from Google by website: corston.com 4,120");
+    expect(made.content.lede).toBe("At the newest check, 28 October.");
+  });
 });

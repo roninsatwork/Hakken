@@ -14,25 +14,49 @@ export type GroupChartKind = (typeof GROUP_CHART_KINDS)[number];
 /**
  * The groups a chart can be of. From Google Analytics: channel, kind of page, device, country, landing page (`page`)
  * and — a grid alone — hour of each weekday (`hour`). From Search Console: the search (`query`), page, country or
- * device (the plan's gaps, built 2026-10-31).
+ * device (the plan's gaps, built 2026-10-31). From Bing: the search or page. From Clarity: device, page, kind of
+ * page, the source a visit came by (`source`) or its browser. From Visibility: each website of the group
+ * (`website`) or the website's searches by its place on Google (`position`).
  */
-export const GROUP_CHART_BY = ["channel", "kind", "device", "country", "page", "hour", "query"] as const;
+export const GROUP_CHART_BY = ["channel", "kind", "device", "country", "page", "hour", "query", "source", "browser", "website", "position"] as const;
 export type GroupChartBy = (typeof GROUP_CHART_BY)[number];
-/** Search Console's measures for a chart of groups: clicks (visitors from Google) and impressions (times shown). */
+/** Search Console's and Bing's measures for a chart of groups: clicks (visitors from the engine) and impressions (times shown). */
 export const SEARCH_GROUP_MEASURES = ["clicks", "impressions"] as const;
 export type SearchGroupMeasure = (typeof SEARCH_GROUP_MEASURES)[number];
-export type GroupMeasure = AnalyticsChartMeasure | SearchGroupMeasure;
+/**
+ * Clarity's measures beside its visits: the average share of a page scrolled, and the shares of visits with a quick
+ * back, an angry (rage) click, a dead click or an error — each in percent, as Clarity's screens say them.
+ */
+export const CLARITY_GROUP_MEASURES = ["scroll", "quickBacks", "rageClicks", "deadClicks", "errors"] as const;
+export type ClarityGroupMeasure = (typeof CLARITY_GROUP_MEASURES)[number];
+/** Visibility's measures for each website: estimated visitors from Google, searches ranked for, in Google's top 3, linking websites. */
+export const VISIBILITY_GROUP_MEASURES = ["estimatedVisitors", "searches", "topThree", "linkingWebsites"] as const;
+export type VisibilityGroupMeasure = (typeof VISIBILITY_GROUP_MEASURES)[number];
+export type GroupMeasure = AnalyticsChartMeasure | SearchGroupMeasure | ClarityGroupMeasure | VisibilityGroupMeasure;
+export const GROUP_MEASURES = ["visits", "conversions", "conversionRate", ...SEARCH_GROUP_MEASURES, ...CLARITY_GROUP_MEASURES, ...VISIBILITY_GROUP_MEASURES] as const;
+export const groupMeasureValidator = v.union(...GROUP_MEASURES.map((measure) => v.literal(measure)));
+
+/** Where a chart of groups' figures come from, each section's saved data (Anthony, 2026-10-29: Insights' five sections). */
+export const GROUP_SOURCES = ["analytics", "searchConsole", "bing", "clarity", "visibility"] as const;
+export type GroupSource = (typeof GROUP_SOURCES)[number];
+export const groupSourceValidator = v.union(...GROUP_SOURCES.map((source) => v.literal(source)));
+const LOOKS = { analytics: "analyticsGroups", searchConsole: "searchConsoleGroups", bing: "bingGroups", clarity: "clarityGroups", visibility: "visibilityGroups" } as const;
+export type GroupLook = (typeof LOOKS)[GroupSource];
+export const lookOfSource = (source: GroupSource): GroupLook => LOOKS[source];
+export const sourceOfLook = (look: GroupLook): GroupSource => (Object.keys(LOOKS) as GroupSource[]).find((source) => LOOKS[source] === look) ?? "analytics";
+export const GROUP_LOOKS = Object.values(LOOKS);
 
 export const groupsChartValidator = v.object({
-  look: v.union(v.literal("analyticsGroups"), v.literal("searchConsoleGroups")),
+  look: v.union(...GROUP_LOOKS.map((look) => v.literal(look))),
   kind: v.union(...GROUP_CHART_KINDS.map((kind) => v.literal(kind))),
   by: v.union(...GROUP_CHART_BY.map((by) => v.literal(by))),
-  measure: v.union(v.literal("visits"), v.literal("conversions"), v.literal("conversionRate"), v.literal("clicks"), v.literal("impressions")),
+  measure: groupMeasureValidator,
   /** The conversion a count or rate is of, by its Google name; a scatter's and a grid's main one. */
   event: v.optional(v.string()),
   website: v.string(),
-  /** The calendar period the figures cover, and its dates. */
+  /** The calendar period the figures cover; Visibility's newest check (`latest`), its day in `asOf`. */
   period: v.string(),
+  asOf: v.optional(v.string()),
   /** Each group, in the order drawn: its figure, the period before's, and — a scatter's other axis — its visits. */
   groups: v.array(v.object({ name: v.string(), value: v.number(), before: v.optional(v.number()), visits: v.optional(v.number()) })),
   /** A grid's rows: each conversion, its rate in each group (`null` where the group has no visits), groups in order. */
@@ -156,6 +180,25 @@ export function groupsChartFrom(
   return { ok: true, chart: { ...base, groups: bars } };
 }
 
+/**
+ * Whether a chart's figures are percents — shares, rates, Clarity's measures — or counts: one rule for the chart, the
+ * bell and the email. A grid of the week's hours and Visibility's grid count searches; a Visibility scatter's figure
+ * is its estimated visitors.
+ */
+export function groupsAreShares(chart: Pick<GroupsChart, "look" | "kind" | "by" | "measure">): boolean {
+  if (chart.kind === "pie" || chart.kind === "stacked") return true;
+  if (chart.look === "visibilityGroups" || chart.by === "hour") return false;
+  if (chart.kind === "scatter" || chart.kind === "grid") return true;
+  if (chart.look === "clarityGroups") return chart.measure !== "visits";
+  return chart.measure === "conversionRate";
+}
+
+/** A chart's source as a saved chart or an email names it: the source named, else Search Console for its measures. */
+export function lookOfSaved(saved: { source?: string; measure?: string }): GroupLook {
+  if (saved.source && (GROUP_SOURCES as readonly string[]).includes(saved.source)) return lookOfSource(saved.source as GroupSource);
+  return saved.measure === "clicks" || saved.measure === "impressions" ? "searchConsoleGroups" : "analyticsGroups";
+}
+
 /** A chart of groups' figures as words, for the model to write from and the email to list: "Organic Search: 12,809". */
 export function groupsChartLines(chart: GroupsChart): Array<{ name: string; value: number; before?: number; visits?: number }> {
   return chart.groups.map((group) => ({ name: group.name === EVERY_OTHER ? "every other" : group.name, value: group.value, ...(group.before !== undefined ? { before: group.before } : {}), ...(group.visits !== undefined ? { visits: group.visits } : {}) }));
@@ -167,17 +210,20 @@ export type SearchGroupRow = { key: string; clicks: number; impressions: number;
 /**
  * A chart of Search Console's groups (the plan's gaps): searches, pages, countries or devices over the period, from
  * the list Search Console's screens read — clicks or impressions as bars, a pie or stacked bars of shares, or a
- * scatter of times shown against the share clicked. Search Console counts no conversions, so it draws no grid.
+ * scatter of times shown against the share clicked. Search Console counts no conversions, so it draws no grid. Bing's
+ * searches and pages are drawn the same way, from Bing's own lists (`look` "bingGroups"). A row with no `key` is
+ * counted in the whole and never drawn: a big list names only the rows a chart can show.
  */
 export function searchGroupsChartFrom(
   rows: readonly SearchGroupRow[],
-  ask: { kind: GroupChartKind; by: GroupChartBy; measure: SearchGroupMeasure; website: string; period: string; link: string },
+  ask: { kind: GroupChartKind; by: GroupChartBy; measure: SearchGroupMeasure; website: string; period: string; link: string; look?: "searchConsoleGroups" | "bingGroups" },
 ): { ok: true; chart: GroupsChart } | { ok: false; problem: string } {
-  if (ask.kind === "grid") return { ok: false, problem: "Search Console counts no conversions, so it has no grid. Ask for bars, stacked, pie or scatter." };
+  const engine = ask.look === "bingGroups" ? "Bing" : "Search Console";
+  if (ask.kind === "grid") return { ok: false, problem: `${engine} counts no conversions, so it has no grid. Ask for bars, stacked, pie or scatter.` };
   const named = rows.filter((row) => row.key && !NOT_A_GROUP.has(row.key.toLowerCase()));
   const whole = rows.reduce((sum, row) => sum + row[ask.measure], 0);
-  if (whole <= 0) return { ok: false, problem: "Search Console has nothing for those dates." };
-  const base = { look: "searchConsoleGroups" as const, kind: ask.kind, by: ask.by, measure: ask.measure, website: ask.website, period: ask.period, link: ask.link };
+  if (whole <= 0) return { ok: false, problem: `${engine} has nothing for those dates.` };
+  const base = { look: ask.look ?? ("searchConsoleGroups" as const), kind: ask.kind, by: ask.by, measure: ask.measure, website: ask.website, period: ask.period, link: ask.link };
   const share = (part: number, all: number) => (all > 0 ? round1((part / all) * 100) : 0);
   // Clicks the period before are kept; impressions before are not, so a share before is of clicks only.
   const hasBefore = ask.measure === "clicks" && rows.some((row) => row.previousClicks !== null);
@@ -228,4 +274,136 @@ export function hoursGridFrom(
       rows: WEEK.map((day) => ({ event: String(day), values: HOUR_BLOCKS.map((from) => block(cells[day] ?? [], from)) })),
     },
   };
+}
+
+/** A Clarity group's figures, as its screens work them out (`measuresOf`): visits, and the measures in percent. */
+export type ClarityGroupLine = { name: string; visits: number } & Record<ClarityGroupMeasure, number | null>;
+
+/**
+ * A chart of Clarity's groups (the plan's last sources, 2026-10-31): devices, pages, kinds of page, sources or
+ * browsers over the period — visits, or a measure in percent, as bars against the period before; shares of visits
+ * as a pie or stacked bars; each group's visits against a measure as a scatter; or a grid of every measure for each
+ * group, each square a percent. A group's measure is drawn only with visits enough to trust (`trusted`), as Clarity's
+ * screens judge a page.
+ */
+export function clarityGroupsChartFrom(
+  lines: readonly ClarityGroupLine[],
+  before: ReadonlyMap<string, ClarityGroupLine> | null,
+  ask: { kind: GroupChartKind; by: GroupChartBy; measure: "visits" | ClarityGroupMeasure; website: string; period: string; link: string; trusted: number },
+): { ok: true; chart: GroupsChart } | { ok: false; problem: string } {
+  const groups = lines.filter((line) => line.name && line.visits > 0 && !NOT_A_GROUP.has(line.name.toLowerCase()));
+  const whole = lines.reduce((sum, line) => sum + line.visits, 0);
+  if (whole <= 0) return { ok: false, problem: "Clarity recorded no visits in those dates." };
+  // Shares are of visits; a scatter and a grid are of the measures, scroll where none is named.
+  const measure = ask.kind === "pie" || ask.kind === "stacked" ? "visits" : (ask.kind === "scatter" || ask.kind === "grid") && ask.measure === "visits" ? "scroll" : ask.measure;
+  const base = { look: "clarityGroups" as const, kind: ask.kind, by: ask.by, measure, website: ask.website, period: ask.period, link: ask.link };
+  const share = (part: number, all: number) => (all > 0 ? round1((part / all) * 100) : 0);
+  const trusted = groups.filter((line) => line.visits >= ask.trusted);
+
+  if (ask.kind === "pie" || ask.kind === "stacked") {
+    const wholeBefore = before ? [...before.values()].reduce((sum, line) => sum + line.visits, 0) : 0;
+    const top = [...groups].sort((a, b) => b.visits - a.visits).slice(0, MOST[ask.kind]);
+    const shown = top.map((line) => ({ name: line.name, value: share(line.visits, whole), ...(wholeBefore > 0 ? { before: share(before?.get(line.name)?.visits ?? 0, wholeBefore) } : {}) }));
+    const rest = whole - top.reduce((sum, line) => sum + line.visits, 0);
+    const restBefore = wholeBefore - top.reduce((sum, line) => sum + (before?.get(line.name)?.visits ?? 0), 0);
+    return { ok: true, chart: { ...base, groups: [...shown, ...(rest > 0 ? [{ name: EVERY_OTHER, value: share(rest, whole), ...(wholeBefore > 0 ? { before: share(Math.max(0, restBefore), wholeBefore) } : {}) }] : [])] } };
+  }
+
+  if (ask.kind === "grid") {
+    // Groups across, by visits; each measure down; each square the measure's percent for the group.
+    const columns = [...trusted].sort((a, b) => b.visits - a.visits).slice(0, MOST.grid);
+    if (columns.length === 0) return { ok: false, problem: "No group had visits enough to lay out in those dates." };
+    return {
+      ok: true,
+      chart: {
+        ...base,
+        groups: columns.map((line) => ({ name: line.name, value: line.visits })),
+        rows: CLARITY_GROUP_MEASURES.map((one) => ({ event: one, values: columns.map((line) => line[one]) })),
+      },
+    };
+  }
+
+  if (ask.kind === "scatter") {
+    const one = measure as ClarityGroupMeasure;
+    const points = [...trusted].filter((line) => line[one] !== null).sort((a, b) => b.visits - a.visits).slice(0, MOST.scatter)
+      .map((line) => ({ name: line.name, value: line[one]!, visits: line.visits }));
+    if (points.length < 2) return { ok: false, problem: "Too few groups have visits enough to set side by side." };
+    return { ok: true, chart: { ...base, groups: points } };
+  }
+
+  // Bars: visits, or a measure where the visits can be trusted, the period before's beside each.
+  const valueOf = (line: ClarityGroupLine | undefined) => (line ? (measure === "visits" ? line.visits : line[measure as ClarityGroupMeasure]) : null);
+  const bars = (measure === "visits" ? groups : trusted)
+    .map((line) => ({ line, value: valueOf(line) }))
+    .filter((one): one is { line: ClarityGroupLine; value: number } => one.value !== null && one.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, MOST.bars)
+    .map(({ line, value }) => {
+      const then = valueOf(before?.get(line.name));
+      return { name: line.name, value, ...(then !== null ? { before: then } : {}) };
+    });
+  if (bars.length === 0) return { ok: false, problem: "Nothing to draw in those dates." };
+  return { ok: true, chart: { ...base, groups: bars } };
+}
+
+/** Google's positions, in the bands every Visibility screen counts them in. */
+export const POSITION_BANDS = [["p01_03", "1–3"], ["p04_10", "4–10"], ["p11_20", "11–20"], ["p21_50", "21–50"], ["p51_up", "51+"]] as const;
+export type PositionBandKey = (typeof POSITION_BANDS)[number][0];
+
+/** A website of the group at its newest check, as Visibility's screens count it; null where not known yet. */
+export type VisibilityWebsite = { host: string } & Record<VisibilityGroupMeasure, number | null> & { bands: Record<PositionBandKey, number> | null };
+
+/**
+ * A chart of Visibility's figures (the plan's last sources): each website of the group — the company's own and the
+ * competitors it watches — at its newest check, as bars, a pie or stacked bars of shares, searches ranked for against
+ * estimated visitors as a scatter, or a grid of each website's searches in each band of Google's positions; or one
+ * website's searches by position band. The supplier's own counts, as the Sites screens show them.
+ */
+export function visibilityGroupsChartFrom(
+  websites: readonly VisibilityWebsite[],
+  ask: { kind: GroupChartKind; by: "website" | "position"; measure: VisibilityGroupMeasure; website: string; asOf: string | null; link: string },
+): { ok: true; chart: GroupsChart } | { ok: false; problem: string } {
+  const base = { look: "visibilityGroups" as const, kind: ask.kind, by: ask.by, website: ask.website, period: "latest", ...(ask.asOf ? { asOf: ask.asOf } : {}), link: ask.link };
+  const share = (part: number, all: number) => (all > 0 ? round1((part / all) * 100) : 0);
+
+  if (ask.by === "position") {
+    if (ask.kind === "scatter" || ask.kind === "grid") return { ok: false, problem: "One website's positions are drawn as bars, stacked or a pie; for a grid or a scatter, ask by website." };
+    const own = websites.find((one) => one.host === ask.website) ?? websites[0];
+    const bands = own?.bands;
+    const whole = bands ? POSITION_BANDS.reduce((sum, [key]) => sum + bands[key], 0) : 0;
+    if (!bands || whole <= 0) return { ok: false, problem: `${ask.website}'s searches by position aren't known yet: they come with its next check.` };
+    const counts = POSITION_BANDS.map(([key, name]) => ({ name, value: bands[key] }));
+    return { ok: true, chart: { ...base, measure: "searches", groups: ask.kind === "bars" ? counts : counts.map((one) => ({ name: one.name, value: share(one.value, whole) })) } };
+  }
+
+  if (ask.kind === "grid") {
+    const known = websites.filter((one) => one.bands !== null);
+    if (known.length === 0) return { ok: false, problem: "No website of the group has its searches by position yet." };
+    return {
+      ok: true,
+      chart: {
+        ...base,
+        measure: "searches",
+        groups: POSITION_BANDS.map(([key, name]) => ({ name, value: known.reduce((sum, one) => sum + one.bands![key], 0) })),
+        rows: known.map((one) => ({ event: one.host, values: POSITION_BANDS.map(([key]) => one.bands![key]) })),
+      },
+    };
+  }
+
+  if (ask.kind === "scatter") {
+    // Searches ranked for across, estimated visitors up: who turns rankings into visitors.
+    const points = websites.filter((one) => one.searches !== null && one.estimatedVisitors !== null)
+      .map((one) => ({ name: one.host, value: Math.round(one.estimatedVisitors!), visits: one.searches! }));
+    if (points.length < 2) return { ok: false, problem: "Too few websites of the group have their figures yet to set side by side." };
+    return { ok: true, chart: { ...base, measure: "estimatedVisitors", groups: points } };
+  }
+
+  const known = websites.filter((one) => one[ask.measure] !== null).map((one) => ({ name: one.host, value: Math.round(one[ask.measure]!) }));
+  const whole = known.reduce((sum, one) => sum + one.value, 0);
+  if (known.length === 0 || whole <= 0) return { ok: false, problem: "No website of the group has that figure yet: it comes with the next check." };
+  const sorted = [...known].sort((a, b) => b.value - a.value);
+  if (ask.kind === "bars") return { ok: true, chart: { ...base, measure: ask.measure, groups: sorted.slice(0, MOST.bars) } };
+  const top = sorted.slice(0, MOST[ask.kind]);
+  const rest = whole - top.reduce((sum, one) => sum + one.value, 0);
+  return { ok: true, chart: { ...base, measure: ask.measure, groups: [...top.map((one) => ({ name: one.name, value: share(one.value, whole) })), ...(rest > 0 ? [{ name: EVERY_OTHER, value: share(rest, whole) }] : [])] } };
 }

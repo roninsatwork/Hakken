@@ -61,6 +61,30 @@ describe("Microsoft Clarity's screens", () => {
   beforeEach(() => useFixedDay());
   afterEach(() => vi.useRealTimers());
 
+  test("Ask Hakken's Clarity chart: devices against the month before, sources, and a grid of what people do on each page", async () => {
+    // ask-hakken-every-chart-plan-2026-10-31.md, the last sources: Clarity's ready-made periods, worked out as its screens work them.
+    const t = harness();
+    const { holdId } = await seed(t);
+    const companyId = (await t.run(async (ctx) => await ctx.db.get(holdId)))!.companyId;
+    await threeDays(t, holdId);
+    const chart = (kind: "bars" | "grid" | "pie", by: "device" | "page" | "source", measure: "visits" | "scroll" = "visits") =>
+      t.query(internal.assistantGroupChartReads.groupsChartInternal, { companyId, website: "ronins.test", period: "lastMonth", kind, by, measure, source: "clarity" });
+
+    const devices = await chart("bars", "device");
+    if (!devices.ok) throw new Error(devices.problem);
+    expect(devices.chart).toMatchObject({ look: "clarityGroups", measure: "visits", link: `/app/clarity/${holdId}?period=lastMonth` });
+    expect(devices.chart.groups).toEqual([{ name: "desktop", value: 22, before: 20 }, { name: "mobile", value: 4 }]);
+    const sources = await chart("pie", "source");
+    expect(sources.ok && sources.chart.groups).toEqual([{ name: "google", value: 80 }, { name: "Direct", value: 20 }]);
+    // Only pages with visits enough to trust are laid out: /hub/prism/'s 6 are too few.
+    const grid = await chart("grid", "page");
+    if (!grid.ok) throw new Error(grid.problem);
+    expect(grid.chart.groups).toEqual([{ name: "/ai-agency/", value: 20 }]);
+    expect(grid.chart.rows).toEqual([
+      { event: "scroll", values: [19.8] }, { event: "quickBacks", values: [15] }, { event: "rageClicks", values: [0] }, { event: "deadClicks", values: [0] }, { event: "errors", values: [10] },
+    ]);
+  });
+
   test("Overview: the website's figures against the month before, its pages, groups, devices, sources and errors, from the same totals", async () => {
     const t = harness();
     const { userId, holdId } = await seed(t);

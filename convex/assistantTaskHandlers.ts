@@ -7,7 +7,7 @@ import { answerTitle, engineName, engineOf, rankingTitle, type AiEngine } from "
 import { TRIAL_DAYS, pathOf, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
 import { DEFAULT_TASK_TIME_ZONE, dayIn, taskTimeOfDay } from "./utils/hakkenTaskTiming";
 import { analyticsChartFor, analyticsGroupsChartFor } from "./assistantChartHandlers";
-import type { GroupChartBy, GroupChartKind, GroupMeasure } from "./utils/assistantGroupCharts";
+import { sourceOfLook, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupSource } from "./utils/assistantGroupCharts";
 import { CHART_MARK } from "./utils/assistantCharts";
 import { chartReportTitle } from "./utils/hakkenChartReport";
 
@@ -195,14 +195,16 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     // A chart of groups — bars, stacked bars, a pie, a scatter or a grid (ask-hakken-every-chart-plan-2026-10-31.md) —
     // or a line a day.
     type Found = Awaited<ReturnType<typeof analyticsChartFor>> & { ok: true };
-    type Offered = Pick<Found, "siteId" | "host" | "period" | "event" | "chart" | "answer"> & { measure: GroupMeasure; kind?: GroupChartKind; by?: GroupChartBy; source?: "searchConsole" };
+    type Offered = Pick<Found, "siteId" | "host" | "period" | "event" | "chart" | "answer"> & { measure: GroupMeasure; kind?: GroupChartKind; by?: GroupChartBy; source?: Exclude<GroupSource, "analytics"> };
     let found: Offered;
-    if (kind && kind !== "line") {
+    // Bing, Clarity and Visibility are charts of groups whatever kind is said.
+    if ((kind && kind !== "line") || ["bing", "clarity", "visibility"].includes(text(input.args, "lookup") ?? "")) {
       const groups = await analyticsGroupsChartFor({ ...input, args: { ...input.args, period } });
       if (!groups.ok) return { ok: false, problem: groups.problem };
+      const source = sourceOfLook(groups.chart.look);
       found = {
         ...groups, measure: groups.chart.measure, ...(groups.chart.event ? { event: groups.chart.event } : {}), kind: groups.chart.kind, by: groups.chart.by,
-        ...(groups.chart.look === "searchConsoleGroups" ? { source: "searchConsole" as const } : {}),
+        ...(source !== "analytics" ? { source } : {}),
       };
     } else {
       const line = await analyticsChartFor({ ...input, args: { ...input.args, period } });

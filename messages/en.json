@@ -8267,7 +8267,8 @@
               "grid": "A grid"
             }
           },
-          "chartHint": "Want something different? Just tell me, like “make it 9am” or “every Monday instead”."
+          "chartHint": "Want something different? Just tell me, like “make it 9am” or “every Monday instead”.",
+          "coversLatest": "The newest check of each website on that day"
         },
         "research": {
           "lookInto": "I’ll look into",
@@ -8331,7 +8332,11 @@
             "page": "landing page",
             "searchPage": "page",
             "hour": "hour",
-            "query": "search"
+            "query": "search",
+            "source": "source",
+            "browser": "browser",
+            "website": "website",
+            "position": "Google position"
           },
           "did": {
             "purchase": "made a purchase",
@@ -8383,8 +8388,63 @@
             "scatterY": "Share clicked (%)",
             "readoutY": "Clicked"
           },
-          "hoursShades": "fewer to more times"
-        }
+          "hoursShades": "fewer to more times",
+          "bing": {
+            "bars": {
+              "clicks": "Clicks from Bing by {by}",
+              "impressions": "Times shown in Bing by {by}"
+            },
+            "stacked": {
+              "clicks": "Each {by}'s share of clicks from Bing",
+              "impressions": "Each {by}'s share of times shown in Bing"
+            },
+            "scatter": "Times shown in Bing against the share clicked, by {by}"
+          },
+          "clarity": {
+            "measures": {
+              "scroll": "How far people scroll",
+              "quickBacks": "Share of visits that went straight back",
+              "rageClicks": "Share of visits with an angry click",
+              "deadClicks": "Share of visits with a dead click",
+              "errors": "Share of visits with an error"
+            },
+            "rows": {
+              "scroll": "Scroll",
+              "quickBacks": "Quick backs",
+              "rageClicks": "Angry clicks",
+              "deadClicks": "Dead clicks",
+              "errors": "Errors"
+            },
+            "visits": "Visits by {by}, from Clarity",
+            "measure": "{measure}, by {by}",
+            "stacked": "Each {by}'s share of visits, from Clarity",
+            "scatter": "Visits against {measure}, by {by}",
+            "grid": "What people do on each {by}, from Clarity",
+            "shades": "a lower to a higher share"
+          },
+          "visibility": {
+            "measures": {
+              "estimatedVisitors": "Estimated visitors from Google",
+              "searches": "Searches ranked for",
+              "topThree": "Searches in Google's top 3",
+              "linkingWebsites": "Linking websites"
+            },
+            "bars": "{measure} by website",
+            "stacked": "Each website's share: {measure}",
+            "position": "Searches by Google position",
+            "positionStacked": "Each Google position's share of searches",
+            "grid": "Each website's searches by Google position",
+            "scatter": "Searches ranked for against estimated visitors, by website",
+            "scatterX": "Searches ranked for",
+            "scatterY": "Estimated visitors",
+            "shades": "fewer to more searches",
+            "latest": "Newest check",
+            "asOf": "Newest check, {date}"
+          }
+        },
+        "openBing": "Open in Bing Webmaster",
+        "openClarity": "Open in Clarity",
+        "openVisibility": "Open in Visibility"
       }
     },
     "costs": {

@@ -11,7 +11,7 @@ import { chartReportFigures, type ChartReportSpec } from "./utils/hakkenChartRep
 import { dayIn } from "./utils/hakkenTaskTiming";
 import { groupsChartOf } from "./assistantGroupChartReads";
 import { isCalendarPeriod } from "./utils/calendarPeriods";
-import { EVERY_OTHER, type GroupsChart } from "./utils/assistantGroupCharts";
+import { EVERY_OTHER, groupsAreShares, sourceOfLook, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
  * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
@@ -134,8 +134,8 @@ async function sendGroupsChartReport(
       email: owner.email,
       language,
       payload: {
-        taskId: task._id, look: "analyticsGroups", website: target.website, kind: chart.kind, by: chart.by, measure: chart.measure, ...(chart.event ? { event: chart.event } : {}),
-        period: chart.period, groups: chart.groups, ...(chart.rows ? { rows: chart.rows } : {}),
+        taskId: task._id, look: "analyticsGroups", source: sourceOfLook(chart.look), website: target.website, kind: chart.kind, by: chart.by, measure: chart.measure, ...(chart.event ? { event: chart.event } : {}),
+        period: chart.period, ...(chart.asOf ? { asOf: chart.asOf } : {}), groups: chart.groups, ...(chart.rows ? { rows: chart.rows } : {}),
         every: report.every, weekday: report.weekday, timeOfDay: task.timeOfDay, link,
       },
       idempotencyKey: `TASK_CHART:${task._id}:${sentOn}`,
@@ -143,13 +143,14 @@ async function sendGroupsChartReport(
   }
   if (task.channels.bell && !seen) {
     const words = emailWording(language).taskChart;
-    const rate = chart.measure === "conversionRate" || chart.kind === "scatter" || chart.kind === "grid" || chart.kind === "pie" || chart.kind === "stacked";
+    // A grid's groups carry their visits or counts, whatever its squares hold.
+    const rate = chart.kind !== "grid" && groupsAreShares(chart);
     const figure = rate ? `${top.value.toLocaleString(emailWording(language).dateLocale, { maximumFractionDigits: 1 })}%` : Math.round(top.value).toLocaleString(emailWording(language).dateLocale);
     await ctx.scheduler.runAfter(0, internal.notifications.notifyUserInternal, {
       userId: owner._id,
       companyId: task.companyId,
       kind: "HAKKEN_TASK_REPORT",
-      title: words.bellTitle({ title: words.groupsTitle({ kind: chart.kind, by: chart.by, measure: chart.measure, ...(chart.event ? { event: chart.event } : {}) }) }),
+      title: words.bellTitle({ title: words.groupsTitle({ source: sourceOfLook(chart.look), kind: chart.kind, by: chart.by, measure: chart.measure, ...(chart.event ? { event: chart.event } : {}) }) }),
       body: `${words.groupsTop({ name: top.name === EVERY_OTHER ? words.everyOther : top.name })}: ${figure}.`,
       href: link,
     });

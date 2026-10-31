@@ -1,0 +1,13 @@
+# Ask Hakken's charts — the approved look (board "Main" of docs/plans/assets/ask-hakken-every-chart/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+answer-chart: Visits each day
+answer-chart: Visits by channel
+answer-chart: Each channel's share of visits
+answer-chart: Visits by device
+  pie-chart
+    pie-ring
+    pie-legend
+answer-chart: Visits against the share that made a purchase, by kind of page
+answer-chart: Share of visits that did each step, by kind of page
+  channel-map

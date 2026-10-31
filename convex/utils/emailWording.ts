@@ -114,9 +114,9 @@ export type EmailWording = {
     bellTitle: (args: { title: string }) => string;
     bellBody: (args: { figure: string; figureIs: string }) => string;
     /** A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): "Visits by channel", "Each device's share of visits". */
-    groupsTitle: (args: { kind: string; by: string; measure: "visits" | "conversions" | "conversionRate" | "clicks" | "impressions"; event?: string }) => string;
-    /** Which dates it covers, against which: "Last month, against the month before." */
-    groupsSpan: (args: { period: string }) => string;
+    groupsTitle: (args: { source?: string; kind: string; by: string; measure: string; event?: string }) => string;
+    /** Which dates it covers, against which: "Last month, against the month before."; Visibility's newest check, by its day. */
+    groupsSpan: (args: { period: string; asOf?: string }) => string;
     /** Under the big figure, the group it is: "Organic Search, the biggest". */
     groupsTop: (args: { name: string }) => string;
     groupsAlt: (args: { title: string; count: number }) => string;
@@ -127,6 +127,8 @@ export type EmailWording = {
     timesShown: string;
     /** A day of the week, 1 Monday … 7 Sunday: a grid of the week's rows. */
     weekday: (args: { day: number }) => string;
+    /** A grid of Clarity's measures: each row's measure ("scroll", "quickBacks"…) in words. */
+    clarityMeasure: (args: { measure: string }) => string;
   };
   /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
   taskAlert: {
@@ -175,8 +177,28 @@ export type EmailWording = {
 const EN_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
 /** A chart of groups' groups and periods in words (ask-hakken-every-chart-plan-2026-10-31.md), as the screens say them. */
-const EN_GROUPS_BY: Record<string, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search" };
-const IT_GROUPS_BY: Record<string, string> = { channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese", page: "pagina di arrivo", hour: "ora", query: "ricerca" };
+const EN_GROUPS_BY: Record<string, string> = {
+  channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
+  source: "source", browser: "browser", website: "website", position: "Google position",
+};
+const IT_GROUPS_BY: Record<string, string> = {
+  channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese", page: "pagina di arrivo", hour: "ora", query: "ricerca",
+  source: "fonte", browser: "browser", website: "sito", position: "posizione su Google",
+};
+/** Clarity's and Visibility's measures in words (ask-hakken-every-chart-plan-2026-10-31.md, the last sources). */
+const EN_MEASURES: Record<string, string> = {
+  visits: "Visits", scroll: "How far people scroll", quickBacks: "Share of visits that went straight back", rageClicks: "Share of visits with an angry click",
+  deadClicks: "Share of visits with a dead click", errors: "Share of visits with an error", estimatedVisitors: "Estimated visitors from Google",
+  searches: "Searches ranked for", topThree: "Searches in Google's top 3", linkingWebsites: "Linking websites",
+};
+const IT_MEASURES: Record<string, string> = {
+  visits: "Visite", scroll: "Quanto scorrono le persone", quickBacks: "Quota di visite tornate subito indietro", rageClicks: "Quota di visite con un clic di rabbia",
+  deadClicks: "Quota di visite con un clic a vuoto", errors: "Quota di visite con un errore", estimatedVisitors: "Visitatori stimati da Google",
+  searches: "Ricerche posizionate", topThree: "Ricerche nella top 3 di Google", linkingWebsites: "Siti che rimandano",
+};
+/** A grid of Clarity's measures names each row shortly. */
+const EN_CLARITY_ROWS: Record<string, string> = { scroll: "Scroll", quickBacks: "Quick backs", rageClicks: "Angry clicks", deadClicks: "Dead clicks", errors: "Errors" };
+const IT_CLARITY_ROWS: Record<string, string> = { scroll: "Scorrimento", quickBacks: "Ritorni rapidi", rageClicks: "Clic di rabbia", deadClicks: "Clic a vuoto", errors: "Errori" };
 const EN_PERIODS: Record<string, [string, string]> = {
   thisWeek: ["This week", "the same days last week"], lastWeek: ["Last week", "the week before"], thisMonth: ["This month", "the same days last month"],
   lastMonth: ["Last month", "the month before"], last3Months: ["The last 3 months", "the 3 months before"], last6Months: ["The last 6 months", "the 6 months before"], last12Months: ["The last 12 months", "the 12 months before"],
@@ -319,11 +341,25 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           : `You asked ${platformName} for this chart every ${EN_WEEKDAYS[weekday - 1] ?? "week"} at ${time}. Pause or stop it any time in ${platformName} tasks.`,
       bellTitle: ({ title }) => `Your chart is ready: ${title}`,
       bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
-      groupsTitle: ({ kind, by, measure, event }) => {
+      groupsTitle: ({ source, kind, by, measure, event }) => {
         const search = measure === "clicks" || measure === "impressions";
-        const of = search && by === "page" ? "page" : EN_GROUPS_BY[by] ?? by;
+        const of = (search || source === "clarity") && by === "page" ? "page" : EN_GROUPS_BY[by] ?? by;
+        if (source === "visibility") {
+          if (by === "position") return kind === "stacked" ? "Each Google position's share of searches" : "Searches by Google position";
+          if (kind === "grid") return "Each website's searches by Google position";
+          if (kind === "scatter") return "Searches ranked for against estimated visitors, by website";
+          const what = EN_MEASURES[measure] ?? measure;
+          return kind === "stacked" ? `Each website's share of ${what.charAt(0).toLowerCase()}${what.slice(1)}` : `${what} by website`;
+        }
+        if (source === "clarity") {
+          if (kind === "grid") return `What people do on each ${of}, from Clarity`;
+          if (kind === "scatter") return `Visits against ${(EN_MEASURES[measure] ?? measure).toLowerCase()}, by ${of}`;
+          if (kind === "stacked") return `Each ${of}'s share of visits, from Clarity`;
+          return measure === "visits" ? `Visits by ${of}, from Clarity` : `${EN_MEASURES[measure] ?? measure}, by ${of}`;
+        }
         if (search) {
-          const what = measure === "clicks" ? "Clicks from Google" : "Times shown in Google";
+          const engine = source === "bing" ? "Bing" : "Google";
+          const what = measure === "clicks" ? `Clicks from ${engine}` : `Times shown in ${engine}`;
           if (kind === "scatter") return `Times shown against the share clicked, by ${of}`;
           if (kind === "stacked") return `Each ${of}'s share of ${what.charAt(0).toLowerCase()}${what.slice(1)}`;
           return `${what} by ${of}`;
@@ -336,13 +372,16 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
         if (kind === "pie") return measure === "visits" ? `Visits by ${of}` : `Visits that ${did}, by ${of}`;
         return measure === "visits" ? `Visits by ${of}` : measure === "conversions" ? `Visits that ${did}, by ${of}` : `Share of visits that ${did}, by ${of}`;
       },
-      groupsSpan: ({ period }) => `${EN_PERIODS[period]?.[0] ?? "These dates"}, against ${EN_PERIODS[period]?.[1] ?? "the period before"}.`,
+      groupsSpan: ({ period, asOf }) => (period === "latest"
+        ? `At the newest check${asOf ? `, ${new Date(`${asOf}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })}` : ""}.`
+        : `${EN_PERIODS[period]?.[0] ?? "These dates"}, against ${EN_PERIODS[period]?.[1] ?? "the period before"}.`),
       groupsTop: ({ name }) => `${name}, the biggest`,
       groupsAlt: ({ title, count }) => `Bars, one for each of ${count}: ${title}.`,
       gridRow: ({ high, low }) => `highest ${high}, lowest ${low}`,
       everyOther: "Every other",
       timesShown: "times shown",
       weekday: ({ day }) => EN_WEEKDAYS[day - 1] ?? "",
+      clarityMeasure: ({ measure }) => EN_CLARITY_ROWS[measure] ?? measure,
     },
     taskAlert: {
       kind: "Alert",
@@ -496,11 +535,25 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           : `Hai chiesto a ${platformName} questo grafico ogni ${IT_WEEKDAYS[weekday - 1] ?? "settimana"} alle ${time}. Puoi metterlo in pausa o fermarlo quando vuoi in Attività di ${platformName}.`,
       bellTitle: ({ title }) => `Il tuo grafico è pronto: ${title}`,
       bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
-      groupsTitle: ({ kind, by, measure, event }) => {
+      groupsTitle: ({ source, kind, by, measure, event }) => {
         const search = measure === "clicks" || measure === "impressions";
-        const of = search && by === "page" ? "pagina" : IT_GROUPS_BY[by] ?? by;
+        const of = (search || source === "clarity") && by === "page" ? "pagina" : IT_GROUPS_BY[by] ?? by;
+        if (source === "visibility") {
+          if (by === "position") return kind === "stacked" ? "Quota di ricerche per posizione su Google" : "Ricerche per posizione su Google";
+          if (kind === "grid") return "Ricerche di ogni sito per posizione su Google";
+          if (kind === "scatter") return "Ricerche posizionate e visitatori stimati, per sito";
+          const what = IT_MEASURES[measure] ?? measure;
+          return kind === "stacked" ? `Quota di ogni sito: ${what.charAt(0).toLowerCase()}${what.slice(1)}` : `${what} per sito`;
+        }
+        if (source === "clarity") {
+          if (kind === "grid") return `Cosa fanno le persone su ogni ${of}, da Clarity`;
+          if (kind === "scatter") return `Visite e ${(IT_MEASURES[measure] ?? measure).toLowerCase()}, per ${of}`;
+          if (kind === "stacked") return `Quota di visite di ogni ${of}, da Clarity`;
+          return measure === "visits" ? `Visite per ${of}, da Clarity` : `${IT_MEASURES[measure] ?? measure}, per ${of}`;
+        }
         if (search) {
-          const what = measure === "clicks" ? "Clic da Google" : "Volte in cui è apparso su Google";
+          const engine = source === "bing" ? "Bing" : "Google";
+          const what = measure === "clicks" ? `Clic da ${engine}` : `Volte in cui è apparso su ${engine}`;
           if (kind === "scatter") return `Volte in cui è apparso e quota di clic, per ${of}`;
           if (kind === "stacked") return `Quota di ${measure === "clicks" ? "clic" : "apparizioni"} di ogni ${of}`;
           return `${what} per ${of}`;
@@ -513,13 +566,16 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
         if (kind === "pie") return measure === "visits" ? `Visite per ${of}` : `Visite che ${did}, per ${of}`;
         return measure === "visits" ? `Visite per ${of}` : measure === "conversions" ? `Visite che ${did}, per ${of}` : `Quota di visite che ${did}, per ${of}`;
       },
-      groupsSpan: ({ period }) => `${IT_PERIODS[period]?.[0] ?? "Queste date"}, contro ${IT_PERIODS[period]?.[1] ?? "il periodo precedente"}.`,
+      groupsSpan: ({ period, asOf }) => (period === "latest"
+        ? `All'ultimo controllo${asOf ? `, ${new Date(`${asOf}T12:00:00Z`).toLocaleDateString("it-IT", { day: "numeric", month: "long", timeZone: "UTC" })}` : ""}.`
+        : `${IT_PERIODS[period]?.[0] ?? "Queste date"}, contro ${IT_PERIODS[period]?.[1] ?? "il periodo precedente"}.`),
       groupsTop: ({ name }) => `${name}, il più alto`,
       groupsAlt: ({ title, count }) => `Barre, una per ciascuno di ${count}: ${title}.`,
       gridRow: ({ high, low }) => `più alta ${high}, più bassa ${low}`,
       everyOther: "Tutti gli altri",
       timesShown: "apparizioni",
       weekday: ({ day }) => IT_WEEKDAYS[day - 1] ?? "",
+      clarityMeasure: ({ measure }) => IT_CLARITY_ROWS[measure] ?? measure,
     },
     taskAlert: {
       kind: "Avviso",

@@ -136,6 +136,24 @@ describe("what the Bing Webmaster screens read", () => {
     expect(googleHigher.rows.map((row) => row.key)).toEqual(["ai agency"]);
   });
 
+  test("Ask Hakken's Bing chart: its searches from Bing's own list, as bars and as shares", async () => {
+    // ask-hakken-every-chart-plan-2026-10-31.md, the last sources: saved figures only, nothing asked of Bing.
+    const t = harness();
+    const { companyId, siteId } = await collected(t);
+    const ask = { companyId, website: "ronins.co.uk", period: "lastMonth" as const, by: "query" as const, measure: "clicks" as const, source: "bing" as const };
+    const bars = await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...ask, kind: "bars" });
+    if (!bars.ok) throw new Error(bars.problem);
+    expect(bars.chart).toMatchObject({ look: "bingGroups", by: "query", measure: "clicks", link: `/app/bing-webmaster/${siteId}/keywords?period=lastMonth` });
+    // September holds nothing of Bing's, so no bar is set against a period before.
+    expect(bars.chart.groups).toEqual([
+      { name: "ronins", value: 5 }, { name: "ai agency", value: 2 }, { name: "internal and external stakeholders", value: 2 }, { name: "what is a brand audit", value: 2 },
+    ]);
+    const pie = await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...ask, kind: "pie" });
+    expect(pie.ok && pie.chart.groups.map((group) => [group.name, group.value])).toEqual([["ronins", 45.5], ["ai agency", 18.2], ["internal and external stakeholders", 18.2], ["what is a brand audit", 18.2]]);
+    const grid = await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...ask, kind: "grid" });
+    expect(grid).toMatchObject({ ok: false, problem: expect.stringContaining("no grid") });
+  });
+
   test("a keyword's own screen: its weeks on Bing and the menu's period beside Google's", async () => {
     const t = harness();
     const { siteId, user } = await collected(t);

@@ -8267,7 +8267,8 @@
               "grid": "Una griglia"
             }
           },
-          "chartHint": "Vuoi qualcosa di diverso? Dimmelo, ad esempio “alle 9” o “ogni lunedì invece”."
+          "chartHint": "Vuoi qualcosa di diverso? Dimmelo, ad esempio “alle 9” o “ogni lunedì invece”.",
+          "coversLatest": "L'ultimo controllo di ogni sito in quel giorno"
         },
         "research": {
           "lookInto": "Approfondirò",
@@ -8331,7 +8332,11 @@
             "page": "pagina di arrivo",
             "searchPage": "pagina",
             "hour": "ora",
-            "query": "ricerca"
+            "query": "ricerca",
+            "source": "fonte",
+            "browser": "browser",
+            "website": "sito",
+            "position": "posizione su Google"
           },
           "did": {
             "purchase": "hanno fatto un acquisto",
@@ -8383,8 +8388,63 @@
             "scatterY": "Quota di clic (%)",
             "readoutY": "Clic"
           },
-          "hoursShades": "da meno a più volte"
-        }
+          "hoursShades": "da meno a più volte",
+          "bing": {
+            "bars": {
+              "clicks": "Clic da Bing per {by}",
+              "impressions": "Volte in cui è apparso su Bing per {by}"
+            },
+            "stacked": {
+              "clicks": "Quota di clic da Bing di ogni {by}",
+              "impressions": "Quota di apparizioni su Bing di ogni {by}"
+            },
+            "scatter": "Apparizioni su Bing e quota di clic, per {by}"
+          },
+          "clarity": {
+            "measures": {
+              "scroll": "Quanto scorrono le persone",
+              "quickBacks": "Quota di visite tornate subito indietro",
+              "rageClicks": "Quota di visite con un clic di rabbia",
+              "deadClicks": "Quota di visite con un clic a vuoto",
+              "errors": "Quota di visite con un errore"
+            },
+            "rows": {
+              "scroll": "Scorrimento",
+              "quickBacks": "Ritorni rapidi",
+              "rageClicks": "Clic di rabbia",
+              "deadClicks": "Clic a vuoto",
+              "errors": "Errori"
+            },
+            "visits": "Visite per {by}, da Clarity",
+            "measure": "{measure}, per {by}",
+            "stacked": "Quota di visite di ogni {by}, da Clarity",
+            "scatter": "Visite e {measure}, per {by}",
+            "grid": "Cosa fanno le persone su ogni {by}, da Clarity",
+            "shades": "da una quota più bassa a una più alta"
+          },
+          "visibility": {
+            "measures": {
+              "estimatedVisitors": "Visitatori stimati da Google",
+              "searches": "Ricerche posizionate",
+              "topThree": "Ricerche nella top 3 di Google",
+              "linkingWebsites": "Siti che rimandano"
+            },
+            "bars": "{measure} per sito",
+            "stacked": "Quota di ogni sito: {measure}",
+            "position": "Ricerche per posizione su Google",
+            "positionStacked": "Quota di ricerche per posizione su Google",
+            "grid": "Ricerche di ogni sito per posizione su Google",
+            "scatter": "Ricerche posizionate e visitatori stimati, per sito",
+            "scatterX": "Ricerche posizionate",
+            "scatterY": "Visitatori stimati",
+            "shades": "da meno a più ricerche",
+            "latest": "Ultimo controllo",
+            "asOf": "Ultimo controllo, {date}"
+          }
+        },
+        "openBing": "Apri in Bing Webmaster",
+        "openClarity": "Apri in Clarity",
+        "openVisibility": "Apri in Visibility"
       }
     },
     "costs": {

@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { useGroupsChartTitle } from "./AnswerChart";
-import type { GroupsChart } from "@/convex/utils/assistantGroupCharts";
+import { lookOfSaved, type GroupMeasure, type GroupsChart } from "@/convex/utils/assistantGroupCharts";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -31,9 +31,9 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
   const tPeriods = useTranslations("common.periods");
   // "A chart of the share of visits that did purchase": an event's own name, in plain words.
   const groupsTitle = useGroupsChartTitle();
-  const chartWords = (chart: { measure: "visits" | "conversions" | "conversionRate" | "clicks" | "impressions"; event?: string; kind?: GroupsChart["kind"]; by?: GroupsChart["by"] }) => {
+  const chartWords = (chart: { measure: GroupMeasure; event?: string; kind?: GroupsChart["kind"]; by?: GroupsChart["by"]; source?: string }) => {
     // A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): its kind, then what it shows, as its title says it.
-    if (chart.kind && chart.by) return t("report.chart.ofKind", { kind: t(`report.chart.kinds.${chart.kind}`), title: groupsTitle({ kind: chart.kind, by: chart.by, measure: chart.measure, event: chart.event }) });
+    if (chart.kind && chart.by) return t("report.chart.ofKind", { kind: t(`report.chart.kinds.${chart.kind}`), title: groupsTitle({ look: lookOfSaved(chart), kind: chart.kind, by: chart.by, measure: chart.measure, event: chart.event }) });
     return chart.event === "purchase" && chart.measure === "conversionRate" ? t("report.chart.conversionRatePurchase")
       : chart.event ? t(`report.chart.${chart.measure}Of` as "report.chart.conversionsOf", { event: chart.event.replace(/_/g, " ") }) : t(`report.chart.${chart.measure}`);
   };
@@ -150,7 +150,8 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
     [t("when"), report.every === "once" && report.sendOn
       ? t("report.once", { date: formatDate(new Date(`${report.sendOn}T12:00:00`), { locale, fallback: report.sendOn, options: { weekday: "long", day: "numeric", month: "long" } }), time })
       : t("report.every", { weekday: t(`report.weekdays.${report.weekday}` as "report.weekdays.1"), time })],
-    [t("report.covers"), t("report.coversWhat", { period: tPeriods(report.period as "lastMonth"), before: tPeriods(`before.${report.period}` as "before.lastMonth") })],
+    // Visibility's figures are its newest check's on the day it goes, whatever the period.
+    [t("report.covers"), report.source === "visibility" ? t("report.coversLatest") : t("report.coversWhat", { period: tPeriods(report.period as "lastMonth"), before: tPeriods(`before.${report.period}` as "before.lastMonth") })],
     [t("where"), where],
     [t("goodToKnow"), t("report.chartNewest")],
     [t("cost"), proposal.price ? t("costReport", { credits: proposal.price }) : t("free")],

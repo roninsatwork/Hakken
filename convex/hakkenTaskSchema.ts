@@ -1,4 +1,5 @@
 import { defineTable } from "convex/server";
+import { GROUP_CHART_BY, GROUP_CHART_KINDS, groupMeasureValidator } from "./utils/assistantGroupCharts";
 import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
 
@@ -64,10 +65,10 @@ export const hakkenTaskPagesReportValidator = v.object({
  */
 export const hakkenTaskChartReportValidator = v.object({
   look: v.literal("analyticsChart"),
-  /** Search Console's clicks and impressions for a chart of its groups (ask-hakken-every-chart-plan, the gaps). */
-  measure: v.union(v.literal("visits"), v.literal("conversions"), v.literal("conversionRate"), v.literal("clicks"), v.literal("impressions")),
+  /** Search Console's and Bing's clicks and impressions, Clarity's and Visibility's measures, for a chart of groups (ask-hakken-every-chart-plan). */
+  measure: groupMeasureValidator,
   event: v.optional(v.string()),
-  /** One of the screens' calendar periods: lastWeek, lastMonth… */
+  /** One of the screens' calendar periods: lastWeek, lastMonth… (a Visibility chart reads the newest check whatever it says). */
   period: v.string(),
   every: v.union(v.literal("week"), v.literal("once")),
   /** 1 Monday … 7 Sunday: the day it goes every week, or the day of `sendOn`. */
@@ -75,10 +76,10 @@ export const hakkenTaskChartReportValidator = v.object({
   /** For a chart sent once, its day, `YYYY-MM-DD` in the owner's time zone. */
   sendOn: v.optional(v.string()),
   /** A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): its kind and its groups; absent for a line a day. */
-  kind: v.optional(v.union(v.literal("bars"), v.literal("stacked"), v.literal("pie"), v.literal("scatter"), v.literal("grid"))),
-  by: v.optional(v.union(v.literal("channel"), v.literal("kind"), v.literal("device"), v.literal("country"), v.literal("page"), v.literal("hour"), v.literal("query"))),
-  /** Where a chart of groups is read from: Search Console's lists, or — absent — Google Analytics'. */
-  source: v.optional(v.literal("searchConsole")),
+  kind: v.optional(v.union(...GROUP_CHART_KINDS.map((kind) => v.literal(kind)))),
+  by: v.optional(v.union(...GROUP_CHART_BY.map((by) => v.literal(by)))),
+  /** Where a chart of groups is read from: Search Console's, Bing's, Clarity's or Visibility's saved figures, or — absent — Google Analytics'. */
+  source: v.optional(v.union(v.literal("searchConsole"), v.literal("bing"), v.literal("clarity"), v.literal("visibility"))),
 });
 
 export const hakkenTaskReportValidator = v.union(hakkenTaskPagesReportValidator, hakkenTaskChartReportValidator);

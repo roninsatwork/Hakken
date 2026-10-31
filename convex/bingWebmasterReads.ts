@@ -386,6 +386,16 @@ export async function readList(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyW
   };
 }
 
+/**
+ * The period before's clicks for each row of a list, by its number (ask-hakken-every-chart-plan-2026-10-31.md, the
+ * last sources): a chart of Bing's searches or pages sets each against them, as the screens do.
+ */
+export async function beforeClicksOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, list: "query" | "page", period: BingPeriodArg): Promise<Map<number, number> | null> {
+  const parts = await periodParts(ctx, holdId, list, period, "BEFORE");
+  if (parts.length === 0) return null;
+  return new Map(rowsOfParts(parts).map((row) => [row.number, row.clicks]));
+}
+
 /** The titles Google Analytics saw for a few pages, from the website's page list. */
 async function titlesOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, addresses: readonly string[]) {
   const titles = new Map<string, string>();

@@ -4,7 +4,7 @@ import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
 import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, mainConversionAt, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
 import { isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
-import { GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupsChart } from "./utils/assistantGroupCharts";
+import { CLARITY_GROUP_MEASURES, GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, VISIBILITY_GROUP_MEASURES, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupSource, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
  * The Assistant's chart (docs/plans/active/hakken-tasks-plan.md, item 2.1),
@@ -17,8 +17,13 @@ import { GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, groupsChartLi
 
 const NO_COMPANY = { ok: false, problem: "This conversation belongs to no company, so there are no figures to chart here." };
 
-/** The look-ups a chart can draw from: Search Console's days, and Google Analytics' (2026-10-31). */
-const LOOKUPS = new Set(["search_console", "google_analytics"]);
+/**
+ * The look-ups a chart can draw from: Search Console's days, and Google Analytics' (2026-10-31); Bing's, Clarity's
+ * and Visibility's saved figures as charts of groups (ask-hakken-every-chart-plan-2026-10-31.md, the last sources).
+ */
+const LOOKUPS = new Set(["search_console", "google_analytics", "bing", "clarity", "visibility"]);
+/** Look-ups drawn only as charts of groups: they keep no line a day for a chart. */
+const GROUPS_ONLY: Record<string, GroupSource> = { bing: "bing", clarity: "clarity", visibility: "visibility" };
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -63,9 +68,13 @@ export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecuti
     if (!input.companyId) return NO_COMPANY;
     const lookup = text(input.args, "lookup") ?? "search_console";
     if (!LOOKUPS.has(lookup)) {
-      return { ok: false, problem: "Charts draw from search_console (visitors, impressions) or google_analytics (visits, conversions, conversionRate)." };
+      return { ok: false, problem: "Charts draw from search_console (visitors, impressions), google_analytics (visits, conversions, conversionRate), bing (clicks, impressions), clarity (visits, scroll, quickBacks, rageClicks, deadClicks, errors) or visibility (estimatedVisitors, searches, topThree, linkingWebsites)." };
     }
     if (lookup === "google_analytics") return await analyticsChart(input);
+    if (GROUPS_ONLY[lookup]) {
+      const groups = await analyticsGroupsChartFor(input);
+      return groups.ok ? groups.answer : groups;
+    }
     // Search Console's groups as a chart of their own kind (the plan's gaps): searches, pages, countries, devices.
     const kind = text(input.args, "kind");
     if (kind && kind !== "line") {
@@ -148,12 +157,36 @@ async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown
 /** Google counts Sunday as 0. */
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+/** Clarity's measures in words for the model. */
+const CLARITY_MEASURE_WORDS: Record<string, string> = {
+  visits: "visits Clarity recorded", scroll: "the average share of the page scrolled, in percent", quickBacks: "the share of visits that went straight back, in percent",
+  rageClicks: "the share of visits with an angry (rage) click, in percent", deadClicks: "the share of visits with a dead click, in percent", errors: "the share of visits that hit an error, in percent",
+};
+/** Visibility's measures in words for the model: the supplier's estimates, never named to the client. */
+const VISIBILITY_MEASURE_WORDS: Record<string, string> = {
+  estimatedVisitors: "estimated visitors a month from Google", searches: "searches it ranks for on Google", topThree: "searches it is in Google's top 3 for", linkingWebsites: "websites linking to it",
+};
+
 function groupsMeasureWords(chart: GroupsChart): string {
   const event = chart.event === "*" ? "any conversion" : chart.event ? chart.event.replace(/_/g, " ") : null;
-  if (chart.look === "searchConsoleGroups") {
-    if (chart.kind === "scatter") return "each group's times shown in Google, and the share of them clicked, in percent";
-    const what = chart.measure === "impressions" ? "times shown in Google" : "clicks from Google";
+  if (chart.look === "searchConsoleGroups" || chart.look === "bingGroups") {
+    const engine = chart.look === "bingGroups" ? "Bing" : "Google";
+    if (chart.kind === "scatter") return `each group's times shown in ${engine}, and the share of them clicked, in percent`;
+    const what = chart.measure === "impressions" ? `times shown in ${engine}` : `clicks from ${engine}`;
     return chart.kind === "stacked" || chart.kind === "pie" ? `each group's share of ${what}, in percent` : what;
+  }
+  if (chart.look === "clarityGroups") {
+    if (chart.kind === "grid") return "for each group (across), each measure (down) in percent: scroll is the average share of the page scrolled; quickBacks, rageClicks, deadClicks and errors are shares of its visits";
+    if (chart.kind === "scatter") return `each group's visits, and ${CLARITY_MEASURE_WORDS[chart.measure]}`;
+    if (chart.kind === "stacked" || chart.kind === "pie") return "each group's share of the visits Clarity recorded, in percent";
+    return CLARITY_MEASURE_WORDS[chart.measure] ?? chart.measure;
+  }
+  if (chart.look === "visibilityGroups") {
+    if (chart.by === "position") return chart.kind === "bars" ? "the website's searches in each band of Google positions" : "each band's share of the searches the website ranks for, in percent";
+    if (chart.kind === "grid") return "each website's (down) searches in each band of Google positions (across)";
+    if (chart.kind === "scatter") return "each website's searches ranked for (as visits), and its estimated visitors a month from Google (as value)";
+    const what = VISIBILITY_MEASURE_WORDS[chart.measure] ?? chart.measure;
+    return chart.kind === "stacked" || chart.kind === "pie" ? `each website's share of the group's ${what}, in percent` : what;
   }
   if (chart.by === "hour") return `the times ${event} happened in each four hours of each weekday, added up over the period`;
   if (chart.kind === "stacked" || chart.kind === "pie") return chart.measure === "visits" ? "each group's share of visits, in percent" : `each group's share of the visits that did ${event}, in percent`;
@@ -172,15 +205,23 @@ export async function analyticsGroupsChartFor(input: ToolHandlerExecutionInput):
 > {
   const website = text(input.args, "website");
   if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
-  const kind = text(input.args, "kind") as GroupChartKind | undefined;
+  // Bing, Clarity and Visibility keep no line a day for a chart: bars, unless another kind is asked for.
+  const saidKind = text(input.args, "kind");
+  const kind = (GROUPS_ONLY[text(input.args, "lookup") ?? ""] && (!saidKind || saidKind === "line") ? "bars" : saidKind) as GroupChartKind | undefined;
   if (!kind || !(GROUP_CHART_KINDS as readonly string[]).includes(kind)) return { ok: false, problem: `kind is one of line, ${GROUP_CHART_KINDS.join(", ")}.` };
-  // Searches are Search Console's; so is any chart its look-up names.
-  const source = text(input.args, "lookup") === "search_console" || text(input.args, "by") === "query" ? "searchConsole" : "analytics";
-  const by = (text(input.args, "by") ?? (source === "searchConsole" ? "query" : "channel")) as GroupChartBy;
+  // Searches are Search Console's unless Bing is named; so is any chart its look-up names.
+  const lookup = text(input.args, "lookup");
+  const source: GroupSource = GROUPS_ONLY[lookup ?? ""] ?? (lookup === "search_console" || text(input.args, "by") === "query" ? "searchConsole" : "analytics");
+  const firstBy: Record<GroupSource, GroupChartBy> = { analytics: "channel", searchConsole: "query", bing: "query", clarity: "device", visibility: "website" };
+  const by = (text(input.args, "by") ?? firstBy[source]) as GroupChartBy;
   if (!(GROUP_CHART_BY as readonly string[]).includes(by)) return { ok: false, problem: `by is one of ${GROUP_CHART_BY.join(", ")}.` };
   const said = text(input.args, "measure");
-  const measure = (said === "visitors" ? "clicks" : said ?? (source === "searchConsole" ? "clicks" : "visits")) as GroupMeasure;
-  if (!([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES] as readonly string[]).includes(measure)) return { ok: false, problem: "A chart of groups shows visits, conversions or conversionRate from Google Analytics, or clicks or impressions from Search Console." };
+  const firstMeasure: Record<GroupSource, GroupMeasure> = { analytics: "visits", searchConsole: "clicks", bing: "clicks", clarity: "visits", visibility: "estimatedVisitors" };
+  const measure = (said === "visitors" ? (source === "visibility" ? "estimatedVisitors" : "clicks") : said ?? firstMeasure[source]) as GroupMeasure;
+  const measures: Record<GroupSource, readonly string[]> = {
+    analytics: ANALYTICS_CHART_MEASURES, searchConsole: SEARCH_GROUP_MEASURES, bing: SEARCH_GROUP_MEASURES, clarity: ["visits", ...CLARITY_GROUP_MEASURES], visibility: VISIBILITY_GROUP_MEASURES,
+  };
+  if (!measures[source].includes(measure)) return { ok: false, problem: `From ${lookup ?? source} a chart of groups shows ${measures[source].join(", ")}.` };
   const period = text(input.args, "period") ?? "lastMonth";
   if (!isCalendarPeriod(period)) return { ok: false, problem: "period is one of thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months, last12Months." };
   const event = text(input.args, "event");
@@ -194,7 +235,11 @@ export async function analyticsGroupsChartFor(input: ToolHandlerExecutionInput):
     shows: groupsMeasureWords(chart),
     by,
     groups: groupsChartLines(chart),
-    ...(chart.rows ? { rows: chart.rows.map((row) => (chart.by === "hour" ? { weekday: WEEKDAY_NAMES[Number(row.event)], times: row.values } : { conversion: row.event, rates: row.values })) } : {}),
+    ...(chart.asOf ? { checkedOn: chart.asOf } : {}),
+    ...(chart.rows ? { rows: chart.rows.map((row) => (chart.by === "hour" ? { weekday: WEEKDAY_NAMES[Number(row.event)], times: row.values }
+      : chart.look === "clarityGroups" ? { measure: row.event, percents: row.values }
+        : chart.look === "visibilityGroups" ? { website: row.event, searchesByPosition: row.values }
+          : { conversion: row.event, rates: row.values })) } : {}),
     link: chart.link,
     note: `The chart is drawn under your answer from these figures, with a link to the screen. Write ${CHART_MARK} on a line of its own where it belongs, after the sentences it illustrates; don't list every group or describe the chart.`,
     chart,

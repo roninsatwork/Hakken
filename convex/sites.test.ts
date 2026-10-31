@@ -7,6 +7,9 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { kdBandFor, pageTypeByAddress } from "./utils/siteShapes";
 import { useFixedDay } from "@/src/test/realTime";
 import { featuresOf, trendOf } from "./utils/rankFacts";
+import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
+import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
+import { renderOutboxRow } from "./outboxTemplates";
 
 /**
  * The client's Sites screens (docs/plans/active/user-sites-plan.md).
@@ -770,6 +773,70 @@ describe("links and the market", () => {
       tlds: [{ key: "com", count: 3 }],
       platforms: [],
     });
+  });
+
+  test("Ask Hakken's Visibility chart: the website against its competitors, and its searches by position, at the newest check", async () => {
+    // ask-hakken-every-chart-plan-2026-10-31.md, the last sources: the supplier's own counts, as Side by side reads them.
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
+    const rival = await hold(t, ronins, "lightflows.co.uk", "TRACKED", own.websiteId);
+    const bands = { p01_03: 61, p04_10: 29, p11_20: 110, p21_50: 300, p51_up: 307 };
+    await summary(t, own.websiteId, DAY, { rankedKeywordsTotal: 807, estimatedTraffic: 1937, allBands: bands, referringDomains: 505 });
+    await summary(t, rival.websiteId, DAY, { rankedKeywordsTotal: 754, estimatedTraffic: 2158, allBands: { p01_03: 80, p04_10: 70, p11_20: 100, p21_50: 200, p51_up: 304 } });
+    const chart = (kind: "bars" | "pie" | "scatter" | "grid", by: "website" | "position", measure: "estimatedVisitors" | "topThree" = "estimatedVisitors") =>
+      t.query(internal.assistantGroupChartReads.groupsChartInternal, { companyId: ronins, website: "ronins.co.uk", period: "lastMonth", kind, by, measure, source: "visibility" });
+
+    const bars = await chart("bars", "website");
+    if (!bars.ok) throw new Error(bars.problem);
+    expect(bars.chart).toMatchObject({ look: "visibilityGroups", period: "latest", asOf: DAY, link: `/app/sites/${own.holdId}/competitors` });
+    expect(bars.chart.groups).toEqual([{ name: "lightflows.co.uk", value: 2158 }, { name: "ronins.co.uk", value: 1937 }]);
+    const top = await chart("bars", "website", "topThree");
+    expect(top.ok && top.chart.groups).toEqual([{ name: "lightflows.co.uk", value: 80 }, { name: "ronins.co.uk", value: 61 }]);
+    const scatter = await chart("scatter", "website");
+    expect(scatter.ok && scatter.chart.groups).toEqual([{ name: "ronins.co.uk", value: 1937, visits: 807 }, { name: "lightflows.co.uk", value: 2158, visits: 754 }]);
+    const grid = await chart("grid", "website");
+    expect(grid.ok && grid.chart.rows).toEqual([{ event: "ronins.co.uk", values: [61, 29, 110, 300, 307] }, { event: "lightflows.co.uk", values: [80, 70, 100, 200, 304] }]);
+    const positions = await chart("pie", "position");
+    expect(positions.ok && positions.chart.groups.map((group) => group.name)).toEqual(["1–3", "4–10", "11–20", "21–50", "51+"]);
+    expect(positions.ok && positions.chart.groups[0].value).toBeCloseTo(7.6, 1);
+    // A competitor's own chart sets it against the website it is watched with, as its Visibility screens do.
+    const theirs = await t.query(internal.assistantGroupChartReads.groupsChartInternal, { companyId: ronins, website: "lightflows.co.uk", period: "lastMonth", kind: "bars", by: "website", measure: "estimatedVisitors", source: "visibility" });
+    expect(theirs.ok && theirs.chart.groups.map((group) => group.name)).toEqual(["lightflows.co.uk", "ronins.co.uk"]);
+  });
+
+  test("a Visibility chart sent each week: offered with today's, set up on a yes, sent with each website and the check's day", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
+    const rival = await hold(t, ronins, "lightflows.co.uk", "TRACKED", own.websiteId);
+    await summary(t, own.websiteId, DAY, { rankedKeywordsTotal: 807, estimatedTraffic: 1937 });
+    await summary(t, rival.websiteId, DAY, { rankedKeywordsTotal: 754, estimatedTraffic: 2158 });
+    const userId = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Owner", email: "owner@ronins.test", role: "ADMIN" as const, companyId: ronins, createdAt: 1 }));
+    type Call = (reference: unknown, args: unknown) => Promise<unknown>;
+    const loose = t as unknown as { query: Call; mutation: Call; action: Call };
+    const ctx = { runQuery: loose.query, runMutation: loose.mutation, runAction: loose.action } as unknown as ToolHandlerExecutionInput["ctx"];
+    const offer = (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeChartReport"]({
+      ctx, handlerMapping: "assistant.tasks.proposeChartReport", companyId: ronins, userId,
+      args: { website: "ronins.co.uk", lookup: "visibility", measure: "estimatedVisitors", every: "week", weekday: "Monday", time: "08:00" },
+    })) as { ok: boolean; problem?: string; chart?: { look: string; kind: string }; proposal?: Record<string, unknown> };
+    expect(offer.problem).toBeUndefined();
+    expect(offer.chart).toMatchObject({ look: "visibilityGroups", kind: "bars" });
+    expect(offer.proposal).toMatchObject({
+      title: "Every Monday, send me bars of estimated visitors by website, from Visibility",
+      report: { look: "analyticsChart", measure: "estimatedVisitors", kind: "bars", by: "website", source: "visibility" },
+    });
+    const threadId = await t.run((db) => db.db.insert("threads", { userId, companyId: ronins, title: "Rivals", createdAt: 1, updatedAt: 1 }));
+    const messageId = await t.run((db) => db.db.insert("messages", { threadId, role: "assistant", content: "Here it is.", createdAt: Date.now(), taskProposal: offer.proposal as never }));
+    await t.withIdentity({ subject: userId }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true, timeZone: "Europe/London" });
+    const task = (await t.run((db) => db.db.query("hakkenTasks").collect())).find((row) => row.threadId === threadId)!;
+    expect(await t.mutation(internal.hakkenStatReporter.sendReportInternal, { taskId: task._id })).toBe("SENT");
+    const email = (await t.run((db) => db.db.query("outboxMessages").collect())).find((row) => row.idempotencyKey?.startsWith(`TASK_CHART:${task._id}:`))!;
+    const rendered = await t.run((db) => renderOutboxRow(db, email));
+    if (!("email" in rendered)) throw new Error(rendered.skip);
+    expect(rendered.email.subject).toBe("Estimated visitors from Google by website: lightflows.co.uk 2,158");
+    expect(rendered.email.text).toContain("At the newest check, 23 September.");
+    expect(rendered.email.text).toContain("ronins.co.uk");
   });
 
   test("the market map places the site, its rivals and the competitors found, each once", async () => {
