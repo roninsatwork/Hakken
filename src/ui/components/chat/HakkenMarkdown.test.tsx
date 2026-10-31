@@ -107,3 +107,26 @@ describe("code in an answer", () => {
     expect(container.textContent).toContain("Snippet");
   });
 });
+
+describe("a table in a chat answer (ask-hakken-every-chart-plan-2026-10-31.md, §2)", () => {
+  const table = [
+    "| Channel | Visits | Share of visits | Value |",
+    "|---|---|---|---|",
+    "| Organic Search | 12,808 | 34.9% | £24,651.75 |",
+    "| Referral | 756 | 2.1% | – |",
+  ].join("\n");
+
+  test("is spaced into columns, its figures on the right in the numbers' font, its words left as they are", () => {
+    render(<HakkenMarkdown content={table} />);
+    const visits = screen.getByText("12,808");
+    expect(visits.tagName).toBe("TD");
+    expect(visits.className).toContain("px-3");
+    expect(visits.className).toContain("text-right");
+    expect(visits.className).toContain("font-mono");
+    expect(screen.getByText("Visits").className).toContain("text-right");
+    // A dash for none still counts as a figure; a channel's name never does.
+    expect(screen.getByText("£24,651.75").className).toContain("font-mono");
+    expect(screen.getByText("Organic Search").className).not.toContain("font-mono");
+    expect(screen.getByText("Channel").className).not.toContain("text-right");
+  });
+});

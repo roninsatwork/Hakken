@@ -64,6 +64,38 @@ function markWords(words: readonly string[], others: readonly string[] = []) {
   return () => (tree: HastNode) => walk(tree);
 }
 
+/** A cell that holds a figure: a count, a share, money, or a dash for none. */
+const FIGURE = /^(?:[-+−]?[£$€]?\d[\d,]*(?:\.\d+)?\s?(?:%|k|m|bn)?|[–—-])$/i;
+
+/**
+ * A rehype step that marks a table's figure columns (ask-hakken-every-chart-plan-2026-10-31.md, §2): a column whose
+ * every filled cell below the heading is a figure gets `data-number` on its heading and cells, which line up on the
+ * right in the numbers' font — so "12,808" and "34.9%" never run together, whatever alignment the model wrote.
+ */
+function numberColumns() {
+  const textOf = (node: HastNode): string => (node.type === "text" ? node.value ?? "" : (node.children ?? []).map(textOf).join(""));
+  const rowsOf = (node: HastNode): HastNode[] => (node.tagName === "tr" ? [node] : (node.children ?? []).flatMap(rowsOf));
+  const cellsOf = (row: HastNode) => (row.children ?? []).filter((cell) => cell.tagName === "td" || cell.tagName === "th");
+  const walk = (node: HastNode) => {
+    if (node.tagName !== "table") {
+      (node.children ?? []).forEach(walk);
+      return;
+    }
+    const rows = rowsOf(node);
+    const body = rows.filter((row) => cellsOf(row).some((cell) => cell.tagName === "td"));
+    const columns = Math.max(0, ...rows.map((row) => cellsOf(row).length));
+    for (let at = 0; at < columns; at += 1) {
+      const filled = body.map((row) => textOf(cellsOf(row)[at] ?? { type: "text", value: "" }).trim()).filter(Boolean);
+      if (filled.length === 0 || !filled.every((text) => FIGURE.test(text))) continue;
+      for (const row of rows) {
+        const cell = cellsOf(row)[at];
+        if (cell) cell.properties = { ...cell.properties, dataNumber: "true" };
+      }
+    }
+  };
+  return () => (tree: HastNode) => walk(tree);
+}
+
 /** A rehype step that turns each `[n]` an answer cites by into a link to its nth page, outside code and links. */
 function linkCitations(citations: readonly string[]) {
   const marker = /\[(\d{1,3})\]/g;
@@ -121,6 +153,7 @@ export function HakkenMarkdown({ content, highlight, highlightOthers, variant = 
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[
+        numberColumns(),
         ...((citations?.length ?? 0) > 0 ? [linkCitations(citations ?? [])] : []),
         ...((highlight?.length ?? 0) + (highlightOthers?.length ?? 0) > 0 ? [markWords(highlight ?? [], highlightOthers)] : []),
       ]}
@@ -153,16 +186,18 @@ export function HakkenMarkdown({ content, highlight, highlightOthers, variant = 
         ul: (props) => <ul className="list-disc pl-5 mb-3 space-y-2.5 marker:text-brand marker:opacity-80" {...omitMarkdownNode(props)} />,
         ol: (props) => <ol className="list-decimal pl-5 mb-3 space-y-2.5 marker:text-brand marker:opacity-80" {...omitMarkdownNode(props)} />,
         li: (props) => <li className="text-[14px] leading-[1.7] text-secondary [&>p]:mb-0" {...omitMarkdownNode(props)} />,
-        // An answer's table in columns with rules between rows; a chat's is left as it was.
-        ...(variant === "answer"
-          ? {
-              table: (props: ComponentProps<"table"> & { node?: unknown }) => (
-                <div className="mb-3 overflow-x-auto"><table className="w-full border-collapse text-left text-[13px]" {...omitMarkdownNode(props)} /></div>
-              ),
-              th: (props: ComponentProps<"th"> & { node?: unknown }) => <th className="border-b border-border-dim px-3 py-2 font-medium text-foreground first:pl-0" {...omitMarkdownNode(props)} />,
-              td: (props: ComponentProps<"td"> & { node?: unknown }) => <td className="border-b border-border-dim/50 px-3 py-2 align-top first:pl-0" {...omitMarkdownNode(props)} />,
-            }
-          : {}),
+        // A table in columns with rules between rows, its figures on the right in the numbers' font — an answer's
+        // and, since 2026-10-31, a chat's too, whose bare cells ran "12,80834.9%" together in the eye's panel
+        // (ask-hakken-every-chart-plan-2026-10-31.md, §2). Too wide for its column, it scrolls in its own box.
+        table: (props: ComponentProps<"table"> & { node?: unknown }) => (
+          <div className="mb-3 overflow-x-auto"><table className="w-full border-collapse text-left text-[13px]" {...omitMarkdownNode(props)} /></div>
+        ),
+        th: (props: ComponentProps<"th"> & { node?: unknown; "data-number"?: string }) => (
+          <th className={`border-b border-border-dim px-3 py-2 font-medium text-foreground first:pl-0 ${props["data-number"] ? "text-right whitespace-nowrap" : ""}`} {...omitMarkdownNode(props)} />
+        ),
+        td: (props: ComponentProps<"td"> & { node?: unknown; "data-number"?: string }) => (
+          <td className={`border-b border-border-dim/50 px-3 py-2 align-top first:pl-0 ${props["data-number"] ? "text-right font-mono whitespace-nowrap" : ""}`} {...omitMarkdownNode(props)} />
+        ),
         blockquote: (props) => (
           <blockquote className="border-l-2 border-brand/50 pl-4 py-1 mb-4 italic text-muted bg-foreground/5 rounded-r-[8px]" {...omitMarkdownNode(props)} />
         ),

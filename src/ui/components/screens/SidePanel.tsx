@@ -55,7 +55,7 @@ export function SidePanel({ open, onClose, title, icon, children, foot, id, labe
         aria-labelledby={titleId}
         tabIndex={-1}
         data-part="side-panel"
-        className={cn("fixed inset-y-0 right-0 flex w-full flex-col border-l border-border-dim bg-sidebar shadow-2xl outline-none sm:w-[480px] animate-[side-panel-in_200ms_ease-out] motion-reduce:animate-none", LAYER.OVERLAY)}
+        className={cn("fixed inset-y-0 right-0 flex w-full flex-col border-l border-border-dim bg-sidebar shadow-2xl outline-none sm:w-[560px] animate-[side-panel-in_200ms_ease-out] motion-reduce:animate-none", LAYER.OVERLAY)}
       >
         <div className="flex items-center justify-between gap-4 border-b border-border-dim px-6 py-5">
           <div className="flex min-w-0 items-center gap-3">

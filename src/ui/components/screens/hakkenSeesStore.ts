@@ -86,10 +86,14 @@ function markRead(screen: string, advice: string) {
   }
 }
 
-/** Open the bubble, marking its advice read, or close it. */
+/**
+ * Open the bubble, marking its advice read, or close it. Each press opens it on a new conversation (Anthony,
+ * 2026-10-31: "every time we press the eye it should open a new chat thread"): the last one stays in Ask Hakken's list.
+ */
 export function toggleSees() {
   open = !open;
   if (open && current) markRead(current.screen, current.advice);
+  if (open) forgetSeesThreads();
   changed();
 }
 
@@ -154,15 +158,21 @@ export function resetSees() {
 }
 
 /**
- * The Ask Hakken conversation started from the eye's panel on each page, by the page's key (`seesKey`): reopening
- * the panel on the same page shows the same conversation (sees-side-panel-plan-2026-10-31.md, phase 3). Kept for
- * the browser tab only; the conversation itself is in Ask Hakken's list.
+ * The Ask Hakken conversation started from the eye's panel on each page, by the page's key (`seesKey`), while the
+ * panel stays open (sees-side-panel-plan-2026-10-31.md, phase 3); each press of the eye starts a new one
+ * (ask-hakken-every-chart-plan-2026-10-31.md, §2b). The conversations themselves are in Ask Hakken's list.
  */
 const seesThreads = new Map<string, string>();
 let threadsVersion = 0;
 const threadListeners = new Set<() => void>();
 export function noteSeesThread(key: string, threadId: string) {
   seesThreads.set(key, threadId);
+  threadsVersion += 1;
+  for (const listener of threadListeners) listener();
+}
+function forgetSeesThreads() {
+  if (seesThreads.size === 0) return;
+  seesThreads.clear();
   threadsVersion += 1;
   for (const listener of threadListeners) listener();
 }
