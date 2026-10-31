@@ -104,7 +104,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     key: fact.key, value: fact.value, unit: fact.unit, source: "analytics" as const, label: fact.label,
     ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}), ...(page.country ? { country: page.country } : {}),
   })));
-  const mustCover = findings.slice(0, MOST_COVERED).map((finding) => ({ keys: finding.facts.map((fact) => fact.key), words: findingWords(finding) }));
+  // The first ones, and the visits it took for one wherever it ranks: the page's own headline is always said.
+  const mustCover = findings.filter((finding, at) => at < MOST_COVERED || finding.kind === "visitsForOne").map((finding) => ({ keys: finding.facts.map((fact) => fact.key), words: findingWords(finding) }));
   const findingsForWriter = findings.map((finding, at) => ({
     number: at + 1,
     finding: findingWords(finding),

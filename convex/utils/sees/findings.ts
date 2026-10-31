@@ -102,9 +102,14 @@ export function findingsFrom(views: readonly FindingView[]): Finding[] {
   // more still. Said as people read the map down a column: "14.3% of visits add to basket, 6.3% start checkout".
   const stepView = views.find((view) => view.shopSteps && view.shopSteps.length > 0);
   const stepVisits = stepView ? stepView.visits.reduce((sum, column) => sum + column.visits, 0) : 0;
+  const stepVisitsBefore = stepView ? stepView.visits.reduce((sum, column) => sum + (column.visitsBefore ?? 0), 0) : 0;
   const shareOf = (event: string) => {
     const did = stepView?.conversions.find((one) => one.event === event)?.visitsThatDidIt;
     return did !== undefined && stepVisits > 0 ? (did / stepVisits) * 100 : null;
+  };
+  const shareBeforeOf = (event: string) => {
+    const did = stepView?.conversions.find((one) => one.event === event)?.visitsThatDidItBefore;
+    return did !== undefined && did !== null && stepVisitsBefore > 0 ? (did / stepVisitsBefore) * 100 : null;
   };
   const mainShare = main ? shareOf(main.event) : null;
   for (const step of stepView?.shopSteps ?? []) {
@@ -114,24 +119,29 @@ export function findingsFrom(views: readonly FindingView[]): Finding[] {
     const worse = before !== null && step.wentOnPercent < before;
     const fromShare = shareOf(from);
     const toShare = shareOf(to);
-    const shares = fromShare !== null && toShare !== null && fromShare >= toShare ? { fromShare: round1(fromShare), toShare: round1(toShare), lost: round1(fromShare - toShare) } : null;
+    const fromBefore = shareBeforeOf(from);
+    const toBefore = shareBeforeOf(to);
+    const lostBefore: Record<string, number> = fromBefore !== null && toBefore !== null && fromBefore >= toBefore ? { lostBefore: round1(fromBefore - toBefore) } : {};
+    const shares: { fromShare: number; toShare: number; lost: number; lostBefore?: number } | null = fromShare !== null && toShare !== null && fromShare >= toShare ? { fromShare: round1(fromShare), toShare: round1(toShare), lost: round1(fromShare - toShare), ...lostBefore } : null;
     const weight = shares && mainShare ? Math.min(LOST_MOST, ((fromShare! - toShare!) / mainShare) * LOST_WEIGHT) : (1 - step.wentOnPercent / 100) * 0.9;
     found.push({
       id: `step:${step.step}`,
       kind: "step",
       score: weight + (worse ? 0.2 : 0),
-      params: { from, to, wentOn: step.wentOnPercent, ...(before !== null ? { wentOnBefore: before } : {}), ...(shares ?? {}) },
-      facts: [
-        ...(shares
-          ? [
-              { key: "fromShare", value: shares.fromShare, unit: "percent" as const, label: `of every visit to the website, the share that did ${from}` },
-              { key: "toShare", value: shares.toShare, unit: "percent" as const, label: `of every visit to the website, the share that did ${to}` },
-              { key: "lost", value: shares.lost, unit: "count" as const, label: `visits in every 100 lost between ${from} and ${to}` },
-            ]
-          : []),
-        { key: "wentOn", value: step.wentOnPercent, unit: "percent", label: `of visits that did ${from}, the share that went on to ${to}` },
-        ...(before !== null ? [{ key: "wentOnBefore", value: before, unit: "percent" as const, label: `the same, the span before` }] : []),
-      ],
+      params: { from, to, wentOn: step.wentOnPercent, ...(before !== null ? { wentOnBefore: before } : {}), ...(shares ? { ...shares, ...lostBefore } : {}) },
+      // Said one way only, so the words read as the map does: with every visit's shares, the share that went on is
+      // left to the panel's line — handed both, a writer said "44.4% went on", and a reader heard a 56% drop.
+      facts: shares
+        ? [
+            { key: "fromShare", value: shares.fromShare, unit: "percent", label: `of every visit to the website, the share that did ${from}` },
+            { key: "toShare", value: shares.toShare, unit: "percent", label: `of every visit to the website, the share that did ${to}` },
+            { key: "lost", value: shares.lost, unit: "count", label: `visits in every 100 lost between ${from} and ${to}` },
+            ...(shares.lostBefore !== undefined ? [{ key: "lostBefore", value: shares.lostBefore, unit: "count" as const, label: `the same, the span before` }] : []),
+          ]
+        : [
+            { key: "wentOn", value: step.wentOnPercent, unit: "percent", label: `of visits that did ${from}, the share that went on to ${to}` },
+            ...(before !== null ? [{ key: "wentOnBefore", value: before, unit: "percent" as const, label: `the same, the span before` }] : []),
+          ],
     });
   }
 
@@ -287,7 +297,9 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
     case "visitsForOne":
       return `It took ${p.visits} visits for one ${eventWords(p.event)}${p.visitsBefore !== undefined ? `, against ${p.visitsBefore} the span before` : ""}.`;
     case "step":
-      return `${p.fromShare !== undefined ? `${p.fromShare}% of all visits did ${eventWords(p.from)} and ${p.toShare}% did ${eventWords(p.to)}: ${p.lost} visits in every 100 lost at this step. ` : ""}Of the visits that did ${eventWords(p.from)}, ${p.wentOn}% went on to ${eventWords(p.to)}${p.wentOnBefore !== undefined ? `, against ${p.wentOnBefore}% the span before` : ""}.`;
+      return p.lost !== undefined
+        ? `${p.fromShare}% of all visits did ${eventWords(p.from)} and ${p.toShare}% did ${eventWords(p.to)}: ${p.lost} visits in every 100 lost at this step${p.lostBefore !== undefined ? `, against ${p.lostBefore} the span before` : ""}.`
+        : `Of the visits that did ${eventWords(p.from)}, ${p.wentOn}% went on to ${eventWords(p.to)}${p.wentOnBefore !== undefined ? `, against ${p.wentOnBefore}% the span before` : ""}.`;
     case "groupAbove":
     case "groupBelow": {
       const direction = finding.kind === "groupAbove" ? "above" : "below";

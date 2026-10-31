@@ -107,7 +107,10 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
           : t.rich("visitsForOneNow", { ...rich, event: event(p.event), visits: whole(p.visits) });
       case "step":
         // Read down the map's column, as people do: of every visit, the share at each step and the visits lost between.
-        if (p.lost !== undefined) return t.rich("stepLost", { ...rich, from: event(p.from), to: event(p.to), fromShare: percent(p.fromShare), toShare: percent(p.toShare), lost: one(p.lost) });
+        if (p.lost !== undefined) {
+          const shares = { ...rich, from: event(p.from), to: event(p.to), fromShare: percent(p.fromShare), toShare: percent(p.toShare), lost: one(p.lost) };
+          return p.lostBefore !== undefined ? t.rich("stepLostBefore", { ...shares, before: one(p.lostBefore) }) : t.rich("stepLost", shares);
+        }
         return p.wentOnBefore !== undefined
           ? t.rich("step", { ...rich, from: event(p.from), to: event(p.to), wentOn: percent(p.wentOn), before: percent(p.wentOnBefore) })
           : t.rich("stepNow", { ...rich, from: event(p.from), to: event(p.to), wentOn: percent(p.wentOn) });

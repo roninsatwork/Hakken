@@ -10494,6 +10494,7 @@
         "step": "<n>{wentOn}</n> of visits with <b>{from}</b> went on to <b>{to}</b>, against <n>{before}</n> before.",
         "stepNow": "<n>{wentOn}</n> of visits with <b>{from}</b> went on to <b>{to}</b>.",
         "stepLost": "<n>{fromShare}</n> of visits did <b>{from}</b> and <n>{toShare}</n> did <b>{to}</b>: <n>{lost}</n> in every 100 visits lost here.",
+        "stepLostBefore": "<n>{fromShare}</n> of visits did <b>{from}</b> and <n>{toShare}</n> did <b>{to}</b>: <n>{lost}</n> in every 100 visits lost here, against <n>{before}</n> before.",
         "group": "<b>{group}</b>: <n>{rate}</n> of visits did <b>{event}</b>, against <n>{siteRate}</n> across the website.",
         "together": "<b>{group}</b>: <n>{perVisit}</n> conversions a visit, against <n>{sitePerVisit}</n> across the website.",
         "rose": "<b>{group}</b>: <n>{rate}</n> of visits did <b>{event}</b>, up from <n>{before}</n>.",

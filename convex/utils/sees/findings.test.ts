@@ -72,7 +72,9 @@ describe("findings, by code, for any website", () => {
     expect(basket.params).toMatchObject({ fromShare: 14.2, toShare: 6.3, lost: 7.9 });
     expect(basket.score).toBeGreaterThan(checkout.score);
     expect(basket.facts.map((fact) => fact.key)).toEqual(expect.arrayContaining([expect.stringMatching(/\.lost$/)]));
-    expect(findingWords(basket)).toContain("14.2% of all visits did add to cart and 6.3% did begin checkout: 7.9 visits in every 100 lost at this step.");
+    expect(findingWords(basket)).toBe("14.2% of all visits did add to cart and 6.3% did begin checkout: 7.9 visits in every 100 lost at this step.");
+    // Said one way only: the share that went on is not handed to the writer beside it.
+    expect(basket.facts.some((fact) => fact.key.endsWith(".wentOn"))).toBe(false);
   });
 
   test("the visits it took for one keeps its place however many findings outrank it", () => {
