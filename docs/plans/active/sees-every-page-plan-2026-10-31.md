@@ -117,8 +117,11 @@ Section by section, each one finished before the next, so Anthony can test as ea
 6. Visibility (71, the biggest)
 
 For each page: its entry in the screen list, its boxes handed to the eye, findings shown, written words on press,
-the chat with the page's context. Each section is checked in Chrome on morehandles.co.uk and the second website
-before the next starts, and committed on its own.
+the chat with the page's context. Each section is checked in Chrome before the next starts, and committed on its own.
+
+**Testing presses a random handful, never every eye** (Anthony, 2026-10-31: "dont press all of the eyes just do a
+random selection to see if it works"). Each section: a few pages picked at random, pressed on morehandles.co.uk and
+the second website; every other page is held by its tests (its screen-list entry, its reads, its findings).
 
 ### 5. Test and refine (with Anthony, two to three days spread out)
 
@@ -190,3 +193,4 @@ Paths under `/app/`. R = rule words today; W = written in the page today; T = fu
 ## Progress
 
 - 2026-10-31: planned from an audit of all 162 pages. Nothing built.
+- 2026-10-31: Anthony, on testing: press a random selection of eyes, not all of them (phase 4).
