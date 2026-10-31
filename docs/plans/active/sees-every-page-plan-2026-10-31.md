@@ -194,3 +194,12 @@ Paths under `/app/`. R = rule words today; W = written in the page today; T = fu
 
 - 2026-10-31: planned from an audit of all 162 pages. Nothing built.
 - 2026-10-31: Anthony, on testing: press a random selection of eyes, not all of them (phase 4).
+- 2026-10-31, Anthony's answers to the open questions:
+  1. No eye on the four connection pages and the four redirects: "yes thats correct". 154 pages keep one.
+  2. The writers as proposed; where no specialist exists or matches a section, create one ("if we need to create a
+     new please do if one does not exist or match"). Clarity is the likely case: how people behave on a page is not
+     the Conversion specialist's discipline; decided in phase 1, and named to Anthony when made.
+  3. Insights' nine weekly-box pages show the weekly words and write nothing new: "ok".
+  4. The second website: Anthony names it later. Until then, morehandles.co.uk alone, with ronins.co.uk for Clarity
+     (the only website on the dev deployment with Clarity's figures).
+  5. At zero credits the eye **stops** and says so: "stop". Every other kind still records and carries on.
