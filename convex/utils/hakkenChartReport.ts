@@ -1,6 +1,6 @@
 import { analyticsChartValues, type AnalyticsChartMeasure } from "./assistantCharts";
 import { weekdayName } from "./hakkenReports";
-import type { GroupChartBy, GroupChartKind } from "./assistantGroupCharts";
+import type { GroupChartBy, GroupChartKind, GroupMeasure } from "./assistantGroupCharts";
 
 /**
  * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
@@ -12,7 +12,8 @@ import type { GroupChartBy, GroupChartKind } from "./assistantGroupCharts";
 
 export type ChartReportSpec = {
   look: "analyticsChart";
-  measure: AnalyticsChartMeasure;
+  /** A line a day is of Google Analytics' measures; a chart of groups may be of Search Console's (`source`). */
+  measure: GroupMeasure;
   event?: string;
   period: string;
   every: "week" | "once";
@@ -21,6 +22,7 @@ export type ChartReportSpec = {
   /** A chart of groups' kind and groups (ask-hakken-every-chart-plan-2026-10-31.md); absent for a line a day. */
   kind?: GroupChartKind;
   by?: GroupChartBy;
+  source?: "searchConsole";
 };
 
 type Day = { day: string; visits: number; conversions: number; events: readonly number[]; eventVisits?: readonly number[]; eventTimes?: readonly number[] };
@@ -47,7 +49,7 @@ export function chartReportFigures(points: readonly Day[], before: readonly Day[
   };
 }
 
-const BY_WORDS: Record<GroupChartBy, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country" };
+const BY_WORDS: Record<GroupChartBy, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search" };
 
 /** A chart of groups in plain English words, as the tasks page lists it: "a pie of visits by device". */
 function groupsWhat(report: Pick<ChartReportSpec, "measure" | "event"> & { kind: GroupChartKind; by: GroupChartBy }): string {

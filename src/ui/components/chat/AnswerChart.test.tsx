@@ -119,6 +119,21 @@ describe("a chart of a website's groups (ask-hakken-every-chart-plan-2026-10-31.
     expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Brand 3517 5.7", "Blog 2027 0.4"]);
   });
 
+  it("Search Console's clicks by country name each country and open Search Console", () => {
+    renderWithProviders(<AnswerChart chart={groups({ look: "searchConsoleGroups", kind: "bars", by: "country", measure: "clicks", link: "/app/search-console/site/countries-and-devices", groups: [{ name: "gbr", value: 840, before: 790 }] })} />);
+    expect(screen.getByRole("figure", { name: "Clicks from Google by country" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Search Console" })).toHaveAttribute("href", "/app/search-console/site/countries-and-devices");
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["United Kingdom: Last month 840, The month before 790"]);
+  });
+
+  it("the week's hours: each weekday by name, each square a count", () => {
+    renderWithProviders(<AnswerChart chart={groups({ kind: "grid", by: "hour", measure: "conversions", event: "purchase", groups: [{ name: "08:00–12:00", value: 13 }, { name: "12:00–16:00", value: 7 }], rows: [{ event: "1", values: [12, 4] }, { event: "0", values: [1, 3] }] })} />);
+    expect(screen.getByRole("figure", { name: "When people made a purchase, by hour and day" })).toBeInTheDocument();
+    expect(screen.getByText("Monday")).toBeInTheDocument();
+    expect(screen.getByText("Sunday")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+  });
+
   it("a grid shades each conversion's rate across the kinds of page", () => {
     renderWithProviders(<AnswerChart chart={groups({ kind: "grid", by: "kind", measure: "conversionRate", event: "purchase", groups: [{ name: "Brand", value: 3517 }, { name: "Blog", value: 2027 }], rows: [{ event: "purchase", values: [5.7, 0.4] }, { event: "add_to_cart", values: [18.8, null] }] })} />);
     expect(screen.getByRole("figure", { name: "Share of visits that did each step, by kind of page" })).toBeInTheDocument();

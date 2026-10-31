@@ -948,6 +948,18 @@ describe("a chart of a website's groups", () => {
     expect(chartFromToolCalls([{ handlerMapping: "assistant.chart", status: "SUCCESS", resultJson: JSON.stringify({ status: "ok", data: bars }) }])?.look).toBe("analyticsGroups");
     // A kind it doesn't draw is said.
     expect(await draw({ kind: "radar", measure: "visits" })).toMatchObject({ ok: false, problem: expect.stringContaining("kind is one of") });
+
+    // Landing pages, from their own list (the plan's gaps): the busiest first, by its address.
+    const pages = await draw({ kind: "bars", measure: "visits", by: "page" });
+    expect(pages.ok).toBe(true);
+    expect(pages.chart).toMatchObject({ look: "analyticsGroups", by: "page", link: `/app/analytics/${siteId}/landing-pages?period=lastMonth` });
+    expect(pages.chart!.groups[0].name.startsWith("/")).toBe(true);
+    expect(pages.chart!.groups.map((group) => group.value)).toEqual([...pages.chart!.groups.map((group) => group.value)].sort((a, b) => b - a));
+    // The week's hours, from the list "When people convert" reads: Monday first, the conversion done most.
+    const hours = await draw({ kind: "grid", by: "hour" }) as { ok: boolean; problem?: string; chart?: { by: string; event?: string; rows?: Array<{ event: string; values: number[] }> } };
+    expect(hours.problem).toBeUndefined();
+    expect(hours.chart?.rows?.map((row) => row.event)).toEqual(["1", "2", "3", "4", "5", "6", "0"]);
+    expect(hours.chart?.rows?.flatMap((row) => row.values).reduce((sum, count) => sum + count, 0)).toBeGreaterThan(0);
   });
 });
 

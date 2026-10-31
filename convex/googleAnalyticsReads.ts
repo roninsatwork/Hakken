@@ -434,7 +434,7 @@ function withOnward(row: ShownRow, own: Onward | undefined, kept: boolean): Show
 }
 
 /** The page addresses of the rows a screen shows, and their titles (GA27), read only for them. */
-async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
+export async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
   const refs = [...new Set(rows.flatMap((row) => [row.label, ...(row.next ? [row.next.page] : [])]).filter(isPageRef))];
   const named = refs.length > 0 ? await decodePages(ctx, holdId, refs) : [];
   const byRef = new Map(refs.map((ref, index) => [ref, named[index]]));

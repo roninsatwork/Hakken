@@ -5,6 +5,7 @@ import { emailWording } from "./utils/emailWording";
 import { signed } from "./utils/hakkenReports";
 import { clockOf } from "./utils/hakkenTaskTiming";
 import { pathOf } from "./utils/hakkenTaskRules";
+import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
 
 /**
  * A Hakken report's email (hakken-tasks-plan.md, item 4.1, board
@@ -129,8 +130,10 @@ export function buildTaskGroupsEmail(args: {
   const words = wording.taskChart;
   const kind = typeof payload.kind === "string" ? payload.kind : "bars";
   const by = typeof payload.by === "string" ? payload.by : "channel";
-  const measure = payload.measure === "conversions" || payload.measure === "conversionRate" ? payload.measure : "visits";
+  const measure = payload.measure === "conversions" || payload.measure === "conversionRate" || payload.measure === "clicks" || payload.measure === "impressions" ? payload.measure : "visits";
   const event = typeof payload.event === "string" ? payload.event : undefined;
+  const search = measure === "clicks" || measure === "impressions";
+  const hours = by === "hour";
   const groups = Array.isArray(payload.groups) && payload.groups.length > 0 && payload.groups.length <= 20
     && payload.groups.every((group) => group && typeof group.name === "string" && typeof group.value === "number")
     ? payload.groups as Array<{ name: string; value: number; before?: number; visits?: number }>
@@ -141,9 +144,19 @@ export function buildTaskGroupsEmail(args: {
   const weekday = typeof payload.weekday === "number" ? payload.weekday : 1;
   const timeOfDay = typeof payload.timeOfDay === "string" ? payload.timeOfDay : "09:00";
   const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
-  const rate = measure === "conversionRate" || kind !== "bars";
+  // Counts as whole numbers — a bar's clicks or visits, a grid of the week's times — and the rest as shares.
+  const rate = hours ? false : measure === "conversionRate" || kind !== "bars";
   const shown = (value: number) => (rate ? `${value.toLocaleString(wording.dateLocale, { maximumFractionDigits: 1 })}%` : Math.round(value).toLocaleString(wording.dateLocale));
-  const name = (group: string) => (group === "*" ? words.everyOther : group);
+  // Search Console names a country by its three letters ("gbr"): said in the reader's language where it can be.
+  const country = (code: string) => {
+    const alpha2 = ALPHA3_TO_ALPHA2[code.toUpperCase()];
+    try {
+      return alpha2 ? new Intl.DisplayNames([wording.dateLocale], { type: "region" }).of(alpha2) ?? code.toUpperCase() : code.toUpperCase();
+    } catch {
+      return code.toUpperCase();
+    }
+  };
+  const name = (group: string) => (group === "*" ? words.everyOther : search && by === "country" ? country(group) : group);
   const title = words.groupsTitle({ kind, by, measure, ...(event ? { event } : {}) });
   const top = groups.find((group) => group.name !== "*") ?? groups[0];
   // A scatter's groups are listed with their visits beside the rate; a grid's rows as each step's highest and lowest.
@@ -152,14 +165,15 @@ export function buildTaskGroupsEmail(args: {
         const cells = row.values.map((value, at) => ({ value, name: name(groups[at]?.name ?? "") })).filter((cell): cell is { value: number; name: string } => cell.value !== null);
         const high = cells.reduce((best, cell) => (cell.value > best.value ? cell : best), cells[0]);
         const low = cells.reduce((worst, cell) => (cell.value < worst.value ? cell : worst), cells[0]);
-        const label = row.event.replace(/_/g, " ");
+        // A grid of the week names each row by its day, Google's Sunday 0.
+        const label = hours ? words.weekday({ day: ((Number(row.event) + 6) % 7) + 1 }) : row.event.replace(/_/g, " ");
         return { term: label.charAt(0).toUpperCase() + label.slice(1), value: high ? shown(high.value) : "–", note: high && low ? words.gridRow({ high: `${high.name} ${shown(high.value)}`, low: `${low.name} ${shown(low.value)}` }) : "" };
       })
     : groups.map((group) => ({
         term: name(group.name),
         value: shown(group.value),
         note: kind === "scatter" && group.visits !== undefined
-          ? `${Math.round(group.visits).toLocaleString(wording.dateLocale)} ${args.language.startsWith("it") ? "visite" : "visits"}`
+          ? `${Math.round(group.visits).toLocaleString(wording.dateLocale)} ${search ? words.timesShown : args.language.startsWith("it") ? "visite" : "visits"}`
           : group.before !== undefined ? words.before({ figure: shown(group.before) }) : "",
       }));
   const drawn = kind !== "grid";

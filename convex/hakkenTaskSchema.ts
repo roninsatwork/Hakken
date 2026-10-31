@@ -64,7 +64,8 @@ export const hakkenTaskPagesReportValidator = v.object({
  */
 export const hakkenTaskChartReportValidator = v.object({
   look: v.literal("analyticsChart"),
-  measure: v.union(v.literal("visits"), v.literal("conversions"), v.literal("conversionRate")),
+  /** Search Console's clicks and impressions for a chart of its groups (ask-hakken-every-chart-plan, the gaps). */
+  measure: v.union(v.literal("visits"), v.literal("conversions"), v.literal("conversionRate"), v.literal("clicks"), v.literal("impressions")),
   event: v.optional(v.string()),
   /** One of the screens' calendar periods: lastWeek, lastMonth… */
   period: v.string(),
@@ -75,7 +76,9 @@ export const hakkenTaskChartReportValidator = v.object({
   sendOn: v.optional(v.string()),
   /** A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): its kind and its groups; absent for a line a day. */
   kind: v.optional(v.union(v.literal("bars"), v.literal("stacked"), v.literal("pie"), v.literal("scatter"), v.literal("grid"))),
-  by: v.optional(v.union(v.literal("channel"), v.literal("kind"), v.literal("device"), v.literal("country"))),
+  by: v.optional(v.union(v.literal("channel"), v.literal("kind"), v.literal("device"), v.literal("country"), v.literal("page"), v.literal("hour"), v.literal("query"))),
+  /** Where a chart of groups is read from: Search Console's lists, or — absent — Google Analytics'. */
+  source: v.optional(v.literal("searchConsole")),
 });
 
 export const hakkenTaskReportValidator = v.union(hakkenTaskPagesReportValidator, hakkenTaskChartReportValidator);

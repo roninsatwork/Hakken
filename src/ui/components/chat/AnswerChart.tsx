@@ -8,6 +8,7 @@ import { EVERY_OTHER, type GroupsChart } from "@/convex/utils/assistantGroupChar
 import { pathOf } from "@/convex/utils/hakkenTaskRules";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteLineChart, SitePieChart, SiteScatterChart, type SiteSeries } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
 import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
+import { countryName } from "@/src/app/(dashboard)/app/search-console/_components/countries";
 import { datedRow } from "@/src/app/(dashboard)/app/sites/_components/datedRows";
 import { formatShortDay } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
 import { CHART_COMPARATOR_GREY } from "@/src/ui/components/charts/chartPalette";
@@ -21,8 +22,39 @@ import { CHART_COMPARATOR_GREY } from "@/src/ui/components/charts/chartPalette";
  * in the app does; its figures are the look-up's own, kept on the message.
  */
 export function AnswerChart({ chart }: { chart: Chart }) {
-  return chart.look === "analyticsGroups" ? <GroupsAnswerChart chart={chart} /> : <DaysAnswerChart chart={chart} />;
+  return isGroupsChart(chart) ? <GroupsAnswerChart chart={chart} /> : <DaysAnswerChart chart={chart} />;
 }
+
+/** What a chart's conversion is, in words: "made a purchase", "converted", "did add to cart". */
+function useGroupsDid() {
+  const tg = useTranslations("ai.assistant.chart.groups");
+  return (event: string | undefined) => (event === "purchase" ? tg("did.purchase") : event === "*" ? tg("did.every") : tg("did.event", { event: (event ?? "").replace(/_/g, " ") }));
+}
+
+/**
+ * A chart of groups' title, as the chart and the offer to send it both say it: what it shows, by what. Shared so
+ * the two never word the same chart differently.
+ */
+export function useGroupsChartTitle() {
+  const tg = useTranslations("ai.assistant.chart.groups");
+  const didOf = useGroupsDid();
+  return (chart: Pick<GroupsChart, "kind" | "by" | "measure" | "event"> & { look?: GroupsChart["look"] }) => {
+    const search = chart.measure === "clicks" || chart.measure === "impressions";
+    const by = tg(`by.${search && chart.by === "page" ? "searchPage" : chart.by}` as "by.channel");
+    const did = didOf(chart.event);
+    if (search) {
+      const measure = chart.measure as "clicks" | "impressions";
+      return chart.kind === "scatter" ? tg("search.scatter", { by }) : tg(`search.${chart.kind === "stacked" ? "stacked" : chart.kind === "pie" ? "pie" : "bars"}.${measure}`, { by });
+    }
+    if (chart.by === "hour") return tg("hours", { did });
+    if (chart.kind === "grid") return tg("grid", { by });
+    if (chart.kind === "scatter") return tg("scatter", { did, by });
+    if (chart.kind === "bars") return tg(`bars.${chart.measure as "visits"}`, { did, by });
+    return tg(`${chart.kind as "pie"}.${chart.measure === "visits" ? "visits" : "conversions"}`, { did, by });
+  };
+}
+
+const isGroupsChart = (chart: Chart): chart is GroupsChart => chart.look === "analyticsGroups" || chart.look === "searchConsoleGroups";
 
 /** A line a day against the days before: the chart as it was first drawn. */
 function DaysAnswerChart({ chart }: { chart: DaysChart }) {
@@ -70,19 +102,20 @@ function GroupsAnswerChart({ chart }: { chart: GroupsChart }) {
   const tg = useTranslations("ai.assistant.chart.groups");
   const tf = useTranslations("googleAnalytics.filters");
   const locale = useLocale();
-  const by = tg(`by.${chart.by}`);
-  const eventWords = chart.event ? chart.event.replace(/_/g, " ") : "";
-  const did = chart.event === "purchase" ? tg("did.purchase") : tg("did.event", { event: eventWords });
-  const title = chart.kind === "grid" ? tg("grid", { by })
-    : chart.kind === "scatter" ? tg("scatter", { did, by })
-      : chart.kind === "bars" ? tg(`bars.${chart.measure}`, { did, by })
-        : tg(`${chart.kind}.${chart.measure === "visits" ? "visits" : "conversions"}`, { did, by });
-  const name = (group: string) => (group === EVERY_OTHER ? tg("everyOther") : chart.by === "device" && ["desktop", "mobile", "tablet"].includes(group) ? tg(`devices.${group}` as "devices.mobile") : group);
+  const tw = useTranslations("googleAnalytics.eventScreen.when");
+  const title = useGroupsChartTitle()(chart);
+  const search = chart.look === "searchConsoleGroups";
+  const hours = chart.by === "hour";
+  const did = useGroupsDid()(chart.event);
+  // Search Console names a country by its three letters ("gbr"): said in the reader's language.
+  const name = (group: string) => (group === EVERY_OTHER ? tg("everyOther")
+    : chart.by === "device" && ["desktop", "mobile", "tablet"].includes(group) ? tg(`devices.${group}` as "devices.mobile")
+      : search && chart.by === "country" ? countryName(group, locale) ?? group.toUpperCase() : group);
   const period = tf(`periods.${chart.period}` as "periods.lastMonth");
   const before = tf(`before.${chart.period}` as "before.lastMonth");
   const beforeName = before.charAt(0).toUpperCase() + before.slice(1);
   const hasBefore = chart.groups.some((group) => group.before !== undefined);
-  const rate = chart.measure === "conversionRate" || chart.kind === "scatter" || chart.kind === "grid";
+  const rate = !search && (chart.measure === "conversionRate" || chart.kind === "scatter" || (chart.kind === "grid" && !hours));
   const number = (value: number) => (rate ? `${value.toLocaleString(locale, { maximumFractionDigits: 1 })}%` : value.toLocaleString(locale));
   const share = (value: number) => `${value.toLocaleString(locale, { maximumFractionDigits: 1 })}%`;
 
@@ -102,19 +135,21 @@ function GroupsAnswerChart({ chart }: { chart: GroupsChart }) {
     if (chart.kind === "scatter") {
       return (
         <SiteScatterChart
-          groups={[{ key: "groups", name: by, colour: SITE_SERIES_COLOURS[0], labelled: true, points: chart.groups.map((group) => ({ x: group.visits ?? 0, y: group.value, label: name(group.name) })) }]}
-          xLabel={tg("visits")}
-          yLabel={tg("scatterY", { did })}
-          readout={{ x: tg("visits"), y: tg("rate") }}
+          groups={[{ key: "groups", name: title, colour: SITE_SERIES_COLOURS[0], labelled: true, points: chart.groups.map((group) => ({ x: group.visits ?? 0, y: group.value, label: name(group.name) })) }]}
+          xLabel={search ? tg("search.scatterX") : tg("visits")}
+          yLabel={search ? tg("search.scatterY") : tg("scatterY", { did })}
+          readout={search ? { x: tg("search.scatterX"), y: tg("search.readoutY") } : { x: tg("visits"), y: tg("rate") }}
           height={300}
         />
       );
     }
     if (chart.kind === "grid") {
       const columns = chart.groups.map((group) => name(group.name));
+      // A grid of the week names each row by its day (Google counts Sunday as 0) and says times, not shares.
+      const figure = (value: number) => (hours ? value.toLocaleString(locale) : share(value));
       const rows: ChannelMapRow[] = (chart.rows ?? []).map((row) => {
         const highest = Math.max(0, ...row.values.map((value) => value ?? 0));
-        const label = row.event.replace(/_/g, " ");
+        const label = hours ? tw(`days.${row.event}` as "days.1") : row.event.replace(/_/g, " ");
         return {
           key: row.event,
           label: label.charAt(0).toUpperCase() + label.slice(1),
@@ -122,12 +157,12 @@ function GroupsAnswerChart({ chart }: { chart: GroupsChart }) {
           cells: row.values.map((value, at) => ({
             visits: value ?? 0,
             conversions: 0,
-            hover: value === null ? `${columns[at]}: ${tg("none")}` : `${columns[at]}: ${share(value)}`,
-            ...(value !== null ? { text: share(value), share: highest > 0 ? value / highest : 0 } : {}),
+            hover: value === null ? `${columns[at]}: ${tg("none")}` : `${columns[at]}: ${figure(value)}`,
+            ...(value !== null ? { text: figure(value), share: highest > 0 ? value / highest : 0 } : {}),
           })),
         };
       });
-      return <ChannelMap columns={columns} rows={rows} rowVisits={() => 1} conversionsWord={() => ""} legend={{ shades: tg("shades"), empty: tg("none") }} headingTooltips cellTooltips />;
+      return <ChannelMap columns={columns} rows={rows} rowVisits={() => 1} conversionsWord={() => ""} legend={{ shades: hours ? tg("hoursShades") : tg("shades"), empty: tg("none") }} headingTooltips cellTooltips />;
     }
     // Bars along, the biggest first: the period in orange, the period before in grey beside it.
     const rows = chart.groups.map((group) => ({ label: name(group.name), now: group.value, ...(group.before !== undefined ? { before: group.before } : {}) }));
@@ -143,7 +178,7 @@ function GroupsAnswerChart({ chart }: { chart: GroupsChart }) {
       <div className="flex items-baseline justify-between gap-4">
         <figcaption className="text-[13px] font-medium text-foreground">{title}</figcaption>
         <Link href={chart.link} className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
-          {t("openAnalytics")}
+          {search ? t("open") : t("openAnalytics")}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
       </div>

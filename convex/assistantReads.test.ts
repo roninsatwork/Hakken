@@ -127,6 +127,19 @@ describe("the Assistant's company figures", () => {
     expect(mentions.answers).toHaveLength(mentionsScreen.length);
   });
 
+  test("a chart of Search Console's searches reads the list its screen reads, and says so while the list is still being made", async () => {
+    useFixedDay("2026-09-23");
+    const t = harness();
+    const companyId = await company(t, "Figures Ltd");
+    const siteId = await hold(t, companyId, "figures.test");
+    await connected(t, companyId, siteId);
+    const chart = await t.query(internal.assistantGroupChartReads.groupsChartInternal, { companyId, website: "figures.test", period: "lastWeek", kind: "bars", by: "query", measure: "clicks", source: "searchConsole" });
+    // Days held, but no ready-made list yet: said, never asked of Google.
+    expect(chart).toMatchObject({ ok: false, problem: expect.stringMatching(/still being added up|nothing for those dates/) });
+    // Search Console has no grid.
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { companyId, website: "figures.test", period: "lastWeek", kind: "grid", by: "query", measure: "clicks", source: "searchConsole" })).toMatchObject({ ok: false });
+  });
+
   test("one company can never read another's: its website answers as not the company's", async () => {
     const t = harness();
     const mine = await company(t, "Mine Ltd");

@@ -8327,11 +8327,16 @@
             "channel": "canale",
             "kind": "tipo di pagina",
             "device": "dispositivo",
-            "country": "paese"
+            "country": "paese",
+            "page": "pagina di arrivo",
+            "searchPage": "pagina",
+            "hour": "ora",
+            "query": "ricerca"
           },
           "did": {
             "purchase": "hanno fatto un acquisto",
-            "event": "hanno fatto {event}"
+            "event": "hanno fatto {event}",
+            "every": "hanno convertito"
           },
           "bars": {
             "visits": "Visite per {by}",
@@ -8358,7 +8363,27 @@
             "desktop": "Computer",
             "mobile": "Telefono",
             "tablet": "Tablet"
-          }
+          },
+          "hours": "Quando le persone {did}, per ora e giorno",
+          "search": {
+            "bars": {
+              "clicks": "Clic da Google per {by}",
+              "impressions": "Volte in cui è apparso su Google per {by}"
+            },
+            "pie": {
+              "clicks": "Clic da Google per {by}",
+              "impressions": "Volte in cui è apparso su Google per {by}"
+            },
+            "stacked": {
+              "clicks": "Quota di clic da Google di ogni {by}",
+              "impressions": "Quota di apparizioni su Google di ogni {by}"
+            },
+            "scatter": "Volte in cui è apparso e quota di clic, per {by}",
+            "scatterX": "Volte in cui è apparso",
+            "scatterY": "Quota di clic (%)",
+            "readoutY": "Clic"
+          },
+          "hoursShades": "da meno a più volte"
         }
       }
     },

@@ -288,7 +288,7 @@ export async function readEvent(ctx: SiteReader, args: ObjectType<typeof analyti
 const analyticsEventHoursArgs = { siteId: v.id("companyWebsites"), event: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
 
 /** Seven days of twenty-four hours, Sunday first as Google counts them (`dayOfWeek` 0), each cell the times it happened and the visits that did. */
-const hourGrid = (rows: readonly ListRow[], event: string): { times: number[][]; visits: number[][] } => {
+export const hourGrid = (rows: readonly ListRow[], event: string): { times: number[][]; visits: number[][] } => {
   const times = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
   const visits = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
   for (const row of rows) {

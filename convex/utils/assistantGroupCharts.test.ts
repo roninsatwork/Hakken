@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { EVERY_OTHER, groupsChartFrom, type GroupsView } from "./assistantGroupCharts";
+import { EVERY_OTHER, groupsChartFrom, hoursGridFrom, searchGroupsChartFrom, type GroupsView } from "./assistantGroupCharts";
 
 /**
  * Charts of groups (ask-hakken-every-chart-plan-2026-10-31.md, phase 1), on figures shaped like morehandles.co.uk's
@@ -88,5 +88,50 @@ describe("charts of a website's groups, worked out in code", () => {
   test("a conversion the website doesn't count is said, never drawn", () => {
     const built = groupsChartFrom(view, { ...ask, kind: "bars", measure: "conversions", event: "generate_lead" });
     expect(built).toEqual({ ok: false, problem: expect.stringContaining("generate_lead is not one of the conversions") });
+  });
+});
+
+describe("Search Console's groups and the week's hours (the plan's gaps)", () => {
+  const searches = [
+    { key: "cupboard handles", clicks: 420, impressions: 9_000, ctr: 0.0467, previousClicks: 380 },
+    { key: "door handles", clicks: 300, impressions: 12_000, ctr: 0.025, previousClicks: 310 },
+    { key: "brass knobs", clicks: 90, impressions: 1_500, ctr: 0.06, previousClicks: 60 },
+    { key: "hinges", clicks: 10, impressions: 80, ctr: 0.125, previousClicks: null },
+  ];
+  const ask = { by: "query" as const, website: "morehandles.co.uk", period: "lastMonth", link: "/app/search-console/site/keywords" };
+
+  test("bars rank the searches by clicks, the period before beside each", () => {
+    const built = searchGroupsChartFrom(searches, { ...ask, kind: "bars", measure: "clicks" });
+    if (!built.ok) throw new Error(built.problem);
+    expect(built.chart).toMatchObject({ look: "searchConsoleGroups", kind: "bars", by: "query", measure: "clicks" });
+    expect(built.chart.groups[0]).toEqual({ name: "cupboard handles", value: 420, before: 380 });
+  });
+
+  test("a scatter sets times shown against the share clicked, for searches shown enough to judge", () => {
+    const built = searchGroupsChartFrom(searches, { ...ask, kind: "scatter", measure: "clicks" });
+    if (!built.ok) throw new Error(built.problem);
+    expect(built.chart.measure).toBe("impressions");
+    expect(built.chart.groups.find((group) => group.name === "door handles")).toEqual({ name: "door handles", value: 2.5, visits: 12_000 });
+    expect(built.chart.groups.map((group) => group.name)).not.toContain("hinges");
+  });
+
+  test("a pie shares out the clicks, and Search Console has no grid", () => {
+    const built = searchGroupsChartFrom(searches, { ...ask, kind: "pie", measure: "clicks" });
+    if (!built.ok) throw new Error(built.problem);
+    expect(Math.round(built.chart.groups.reduce((sum, group) => sum + group.value, 0))).toBe(100);
+    expect(searchGroupsChartFrom(searches, { ...ask, kind: "grid", measure: "clicks" })).toMatchObject({ ok: false, problem: expect.stringContaining("no grid") });
+  });
+
+  test("the week's hours as a grid: Monday first, four hours a square, the times added up", () => {
+    // Sunday (Google's 0) quiet; Monday busy at 9 and 10am; every other day one at noon.
+    const cells = Array.from({ length: 7 }, (_, day) => Array.from({ length: 24 }, (_, hour) => (day === 1 && (hour === 9 || hour === 10) ? 5 : day > 1 && hour === 12 ? 1 : 0)));
+    const built = hoursGridFrom(cells, { event: "purchase", website: "morehandles.co.uk", period: "lastMonth", link: "/app/analytics/site/events/event?key=purchase" });
+    if (!built.ok) throw new Error(built.problem);
+    expect(built.chart).toMatchObject({ kind: "grid", by: "hour", event: "purchase" });
+    expect(built.chart.groups.map((group) => group.name)).toEqual(["00:00–04:00", "04:00–08:00", "08:00–12:00", "12:00–16:00", "16:00–20:00", "20:00–00:00"]);
+    expect(built.chart.rows?.map((row) => row.event)).toEqual(["1", "2", "3", "4", "5", "6", "0"]);
+    expect(built.chart.rows?.[0].values).toEqual([0, 0, 10, 0, 0, 0]);
+    expect(built.chart.groups[3].value).toBe(5);
+    expect(hoursGridFrom(Array.from({ length: 7 }, () => Array(24).fill(0)), { event: "purchase", website: "x", period: "lastMonth", link: "/" }).ok).toBe(false);
   });
 });

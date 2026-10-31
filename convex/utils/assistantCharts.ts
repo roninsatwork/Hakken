@@ -1,5 +1,5 @@
 import { v, type Infer } from "convex/values";
-import { GROUP_CHART_BY, GROUP_CHART_KINDS, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
+import { GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
 
 /**
  * A chart under an Ask Hakken answer (docs/plans/active/hakken-tasks-plan.md,
@@ -69,10 +69,10 @@ function parse(json: string | undefined): unknown {
 const MOST_GROUPS = 20;
 
 function isGroupsChart(chart: Record<string, unknown>): boolean {
-  return chart.look === "analyticsGroups"
+  return (chart.look === "analyticsGroups" || chart.look === "searchConsoleGroups")
     && (GROUP_CHART_KINDS as readonly unknown[]).includes(chart.kind)
     && (GROUP_CHART_BY as readonly unknown[]).includes(chart.by)
-    && (ANALYTICS_CHART_MEASURES as readonly unknown[]).includes(chart.measure)
+    && ([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES] as readonly unknown[]).includes(chart.measure)
     && typeof chart.website === "string"
     && typeof chart.period === "string"
     && typeof chart.link === "string"
@@ -84,7 +84,7 @@ function isGroupsChart(chart: Record<string, unknown>): boolean {
 function isChart(value: unknown): value is AnswerChart {
   if (!value || typeof value !== "object") return false;
   const chart = value as Record<string, unknown>;
-  if (chart.look === "analyticsGroups") return isGroupsChart(chart);
+  if (chart.look === "analyticsGroups" || chart.look === "searchConsoleGroups") return isGroupsChart(chart);
   return (
     ((chart.look === "searchConsoleDays" && (chart.measure === "visitors" || chart.measure === "impressions"))
       || (chart.look === "analyticsDays" && (ANALYTICS_CHART_MEASURES as readonly unknown[]).includes(chart.measure)))

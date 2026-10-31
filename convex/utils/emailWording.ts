@@ -114,7 +114,7 @@ export type EmailWording = {
     bellTitle: (args: { title: string }) => string;
     bellBody: (args: { figure: string; figureIs: string }) => string;
     /** A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): "Visits by channel", "Each device's share of visits". */
-    groupsTitle: (args: { kind: string; by: string; measure: "visits" | "conversions" | "conversionRate"; event?: string }) => string;
+    groupsTitle: (args: { kind: string; by: string; measure: "visits" | "conversions" | "conversionRate" | "clicks" | "impressions"; event?: string }) => string;
     /** Which dates it covers, against which: "Last month, against the month before." */
     groupsSpan: (args: { period: string }) => string;
     /** Under the big figure, the group it is: "Organic Search, the biggest". */
@@ -123,6 +123,10 @@ export type EmailWording = {
     /** A grid's row in words: "highest Brand 5.7%, lowest Blog 0.4%". */
     gridRow: (args: { high: string; low: string }) => string;
     everyOther: string;
+    /** A scatter of Search Console's groups: beside each one's share clicked, the times it was shown. */
+    timesShown: string;
+    /** A day of the week, 1 Monday … 7 Sunday: a grid of the week's rows. */
+    weekday: (args: { day: number }) => string;
   };
   /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
   taskAlert: {
@@ -171,8 +175,8 @@ export type EmailWording = {
 const EN_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
 /** A chart of groups' groups and periods in words (ask-hakken-every-chart-plan-2026-10-31.md), as the screens say them. */
-const EN_GROUPS_BY: Record<string, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country" };
-const IT_GROUPS_BY: Record<string, string> = { channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese" };
+const EN_GROUPS_BY: Record<string, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search" };
+const IT_GROUPS_BY: Record<string, string> = { channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese", page: "pagina di arrivo", hour: "ora", query: "ricerca" };
 const EN_PERIODS: Record<string, [string, string]> = {
   thisWeek: ["This week", "the same days last week"], lastWeek: ["Last week", "the week before"], thisMonth: ["This month", "the same days last month"],
   lastMonth: ["Last month", "the month before"], last3Months: ["The last 3 months", "the 3 months before"], last6Months: ["The last 6 months", "the 6 months before"], last12Months: ["The last 12 months", "the 12 months before"],
@@ -316,8 +320,16 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       bellTitle: ({ title }) => `Your chart is ready: ${title}`,
       bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
       groupsTitle: ({ kind, by, measure, event }) => {
-        const of = EN_GROUPS_BY[by] ?? by;
-        const did = event === "purchase" ? "made a purchase" : `did ${(event ?? "").replace(/_/g, " ")}`;
+        const search = measure === "clicks" || measure === "impressions";
+        const of = search && by === "page" ? "page" : EN_GROUPS_BY[by] ?? by;
+        if (search) {
+          const what = measure === "clicks" ? "Clicks from Google" : "Times shown in Google";
+          if (kind === "scatter") return `Times shown against the share clicked, by ${of}`;
+          if (kind === "stacked") return `Each ${of}'s share of ${what.charAt(0).toLowerCase()}${what.slice(1)}`;
+          return `${what} by ${of}`;
+        }
+        const did = event === "purchase" ? "made a purchase" : event === "*" ? "converted" : `did ${(event ?? "").replace(/_/g, " ")}`;
+        if (by === "hour") return `When people ${did}, by hour and day`;
         if (kind === "grid") return `Share of visits that did each step, by ${of}`;
         if (kind === "scatter") return `Visits against the share that ${did}, by ${of}`;
         if (kind === "stacked") return measure === "visits" ? `Each ${of}'s share of visits` : `Each ${of}'s share of visits that ${did}`;
@@ -329,6 +341,8 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       groupsAlt: ({ title, count }) => `Bars, one for each of ${count}: ${title}.`,
       gridRow: ({ high, low }) => `highest ${high}, lowest ${low}`,
       everyOther: "Every other",
+      timesShown: "times shown",
+      weekday: ({ day }) => EN_WEEKDAYS[day - 1] ?? "",
     },
     taskAlert: {
       kind: "Alert",
@@ -483,8 +497,16 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       bellTitle: ({ title }) => `Il tuo grafico è pronto: ${title}`,
       bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
       groupsTitle: ({ kind, by, measure, event }) => {
-        const of = IT_GROUPS_BY[by] ?? by;
-        const did = event === "purchase" ? "hanno fatto un acquisto" : `hanno fatto ${(event ?? "").replace(/_/g, " ")}`;
+        const search = measure === "clicks" || measure === "impressions";
+        const of = search && by === "page" ? "pagina" : IT_GROUPS_BY[by] ?? by;
+        if (search) {
+          const what = measure === "clicks" ? "Clic da Google" : "Volte in cui è apparso su Google";
+          if (kind === "scatter") return `Volte in cui è apparso e quota di clic, per ${of}`;
+          if (kind === "stacked") return `Quota di ${measure === "clicks" ? "clic" : "apparizioni"} di ogni ${of}`;
+          return `${what} per ${of}`;
+        }
+        const did = event === "purchase" ? "hanno fatto un acquisto" : event === "*" ? "hanno convertito" : `hanno fatto ${(event ?? "").replace(/_/g, " ")}`;
+        if (by === "hour") return `Quando le persone ${did}, per ora e giorno`;
         if (kind === "grid") return `Quota di visite che hanno fatto ogni passaggio, per ${of}`;
         if (kind === "scatter") return `Visite e quota che ${did}, per ${of}`;
         if (kind === "stacked") return measure === "visits" ? `Quota di visite di ogni ${of}` : `Quota di ogni ${of} tra le visite che ${did}`;
@@ -496,6 +518,8 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       groupsAlt: ({ title, count }) => `Barre, una per ciascuno di ${count}: ${title}.`,
       gridRow: ({ high, low }) => `più alta ${high}, più bassa ${low}`,
       everyOther: "Tutti gli altri",
+      timesShown: "apparizioni",
+      weekday: ({ day }) => IT_WEEKDAYS[day - 1] ?? "",
     },
     taskAlert: {
       kind: "Avviso",

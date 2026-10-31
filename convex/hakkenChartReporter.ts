@@ -6,11 +6,12 @@ import { chargeTaskWork } from "./hakkenTaskCredits";
 import { queueOutboxMessage } from "./outbox";
 import { ensureReaderPreferences } from "./readerPreferences";
 import { emailWording } from "./utils/emailWording";
-import { mainConversionAt } from "./utils/assistantCharts";
+import { mainConversionAt, type AnalyticsChartMeasure } from "./utils/assistantCharts";
 import { chartReportFigures, type ChartReportSpec } from "./utils/hakkenChartReport";
 import { dayIn } from "./utils/hakkenTaskTiming";
-import { readMapView } from "./agentReads";
-import { EVERY_OTHER, groupsChartFrom, type GroupsChart } from "./utils/assistantGroupCharts";
+import { groupsChartOf } from "./assistantGroupChartReads";
+import { isCalendarPeriod } from "./utils/calendarPeriods";
+import { EVERY_OTHER, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
  * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
@@ -28,16 +29,18 @@ export async function sendChartReport(
   now: number,
 ): Promise<"SENT" | "NOTHING_YET" | "GONE"> {
   if (report.kind && report.by) return await sendGroupsChartReport(ctx, task, { ...report, kind: report.kind, by: report.by }, target, now);
+  // A line a day is always of Google Analytics' measures.
+  const measure = report.measure as AnalyticsChartMeasure;
   const reader = { db: ctx.db, companyId: task.companyId };
   const common = { siteId: target.companyWebsiteId, period: report.period as never, device: "" };
   const read = await readChart(reader, common).catch(() => null);
   if (!read || read.points.length === 0) return "NOTHING_YET";
   // A rate is always of one conversion: the one it names, else the page's own (a shop's purchase, else the biggest).
-  const eventAt = report.event ? read.events.indexOf(report.event) : report.measure === "conversionRate" ? mainConversionAt(read.events, read.points) : null;
+  const eventAt = report.event ? read.events.indexOf(report.event) : measure === "conversionRate" ? mainConversionAt(read.events, read.points) : null;
   // The conversion it was about is no longer counted: nothing true to send.
   if (eventAt === -1) return "GONE";
   const before = await readPeriodBeforeChart(reader, common).catch(() => null);
-  const figures = chartReportFigures(read.points, before?.held ? before.points : null, report.measure, eventAt);
+  const figures = chartReportFigures(read.points, before?.held ? before.points : null, measure, eventAt);
 
   const owner = await ctx.db.get(task.userId);
   if (!owner) return "GONE";
@@ -77,8 +80,8 @@ export async function sendChartReport(
       userId: owner._id,
       companyId: task.companyId,
       kind: "HAKKEN_TASK_REPORT",
-      title: words.bellTitle({ title: words.title({ measure: report.measure, ...(report.event ? { event: report.event } : {}) }) }),
-      body: words.bellBody({ figure, figureIs: words.figureIs({ measure: report.measure }) }),
+      title: words.bellTitle({ title: words.title({ measure, ...(report.event ? { event: report.event } : {}) }) }),
+      body: words.bellBody({ figure, figureIs: words.figureIs({ measure }) }),
       href: link,
     });
   }
@@ -100,15 +103,15 @@ async function sendGroupsChartReport(
   target: NonNullable<Doc<"hakkenTasks">["target"]>,
   now: number,
 ): Promise<"SENT" | "NOTHING_YET" | "GONE"> {
-  const view = await readMapView({ db: ctx.db, companyId: task.companyId }, { siteId: target.companyWebsiteId, period: report.period, device: "", columns: report.by }).catch(() => null);
-  if (!view || !("visits" in view) || !view.visits) return "NOTHING_YET";
-  const link = `/app/analytics/${target.companyWebsiteId}/conversions?period=${report.period}`;
-  const built = groupsChartFrom({ visits: view.visits, conversions: view.conversions }, {
-    kind: report.kind, by: report.by, measure: report.measure, ...(report.event ? { event: report.event } : {}), website: target.website, period: report.period, link,
-  });
-  // The conversion it was about is no longer counted: nothing true to send.
-  if (!built.ok) return report.event && !view.conversions.some((one) => one.event === report.event) ? "GONE" : "NOTHING_YET";
+  if (!isCalendarPeriod(report.period)) return "GONE";
+  const built = await groupsChartOf({ db: ctx.db }, task.companyId, { _id: target.companyWebsiteId, host: target.website }, {
+    kind: report.kind, by: report.by, measure: report.measure, ...(report.event ? { event: report.event } : {}), period: report.period, source: report.source ?? "analytics",
+  }).catch(() => null);
+  // The conversion it was about is no longer counted: nothing true to send. Anything else waits for its figures.
+  if (!built) return "NOTHING_YET";
+  if (!built.ok) return /is not one of the conversions/.test(built.problem) ? "GONE" : "NOTHING_YET";
   const chart: GroupsChart = built.chart;
+  const link = chart.link;
   const top = chart.groups.find((group) => group.name !== EVERY_OTHER) ?? chart.groups[0];
 
   const owner = await ctx.db.get(task.userId);

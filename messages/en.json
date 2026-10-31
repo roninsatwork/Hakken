@@ -8327,11 +8327,16 @@
             "channel": "channel",
             "kind": "kind of page",
             "device": "device",
-            "country": "country"
+            "country": "country",
+            "page": "landing page",
+            "searchPage": "page",
+            "hour": "hour",
+            "query": "search"
           },
           "did": {
             "purchase": "made a purchase",
-            "event": "did {event}"
+            "event": "did {event}",
+            "every": "converted"
           },
           "bars": {
             "visits": "Visits by {by}",
@@ -8358,7 +8363,27 @@
             "desktop": "Desktop",
             "mobile": "Mobile",
             "tablet": "Tablet"
-          }
+          },
+          "hours": "When people {did}, by hour and day",
+          "search": {
+            "bars": {
+              "clicks": "Clicks from Google by {by}",
+              "impressions": "Times shown in Google by {by}"
+            },
+            "pie": {
+              "clicks": "Clicks from Google by {by}",
+              "impressions": "Times shown in Google by {by}"
+            },
+            "stacked": {
+              "clicks": "Each {by}'s share of clicks from Google",
+              "impressions": "Each {by}'s share of times shown in Google"
+            },
+            "scatter": "Times shown against the share clicked, by {by}",
+            "scatterX": "Times shown",
+            "scatterY": "Share clicked (%)",
+            "readoutY": "Clicked"
+          },
+          "hoursShades": "fewer to more times"
         }
       }
     },

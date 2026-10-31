@@ -4,7 +4,7 @@ import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
 import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, mainConversionAt, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
 import { isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
-import { GROUP_CHART_BY, GROUP_CHART_KINDS, groupsChartFrom, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupsChart } from "./utils/assistantGroupCharts";
+import { GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
  * The Assistant's chart (docs/plans/active/hakken-tasks-plan.md, item 2.1),
@@ -66,6 +66,12 @@ export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecuti
       return { ok: false, problem: "Charts draw from search_console (visitors, impressions) or google_analytics (visits, conversions, conversionRate)." };
     }
     if (lookup === "google_analytics") return await analyticsChart(input);
+    // Search Console's groups as a chart of their own kind (the plan's gaps): searches, pages, countries, devices.
+    const kind = text(input.args, "kind");
+    if (kind && kind !== "line") {
+      const groups = await analyticsGroupsChartFor(input);
+      return groups.ok ? groups.answer : groups;
+    }
     const website = text(input.args, "website");
     if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
     const measure = (text(input.args, "measure") ?? "visitors") as ChartMeasure;
@@ -139,8 +145,17 @@ async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown
 }
 
 /** What a chart of groups shows, in words for the model: "visits", "purchase, as visits that did it". */
+/** Google counts Sunday as 0. */
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function groupsMeasureWords(chart: GroupsChart): string {
-  const event = chart.event ? chart.event.replace(/_/g, " ") : null;
+  const event = chart.event === "*" ? "any conversion" : chart.event ? chart.event.replace(/_/g, " ") : null;
+  if (chart.look === "searchConsoleGroups") {
+    if (chart.kind === "scatter") return "each group's times shown in Google, and the share of them clicked, in percent";
+    const what = chart.measure === "impressions" ? "times shown in Google" : "clicks from Google";
+    return chart.kind === "stacked" || chart.kind === "pie" ? `each group's share of ${what}, in percent` : what;
+  }
+  if (chart.by === "hour") return `the times ${event} happened in each four hours of each weekday, added up over the period`;
   if (chart.kind === "stacked" || chart.kind === "pie") return chart.measure === "visits" ? "each group's share of visits, in percent" : `each group's share of the visits that did ${event}, in percent`;
   if (chart.kind === "grid") return "the share of each group's visits that did each conversion, in percent";
   if (chart.kind === "scatter") return `each group's visits, and the share of them that did ${event}, in percent`;
@@ -159,19 +174,19 @@ export async function analyticsGroupsChartFor(input: ToolHandlerExecutionInput):
   if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
   const kind = text(input.args, "kind") as GroupChartKind | undefined;
   if (!kind || !(GROUP_CHART_KINDS as readonly string[]).includes(kind)) return { ok: false, problem: `kind is one of line, ${GROUP_CHART_KINDS.join(", ")}.` };
-  const by = (text(input.args, "by") ?? "channel") as GroupChartBy;
+  // Searches are Search Console's; so is any chart its look-up names.
+  const source = text(input.args, "lookup") === "search_console" || text(input.args, "by") === "query" ? "searchConsole" : "analytics";
+  const by = (text(input.args, "by") ?? (source === "searchConsole" ? "query" : "channel")) as GroupChartBy;
   if (!(GROUP_CHART_BY as readonly string[]).includes(by)) return { ok: false, problem: `by is one of ${GROUP_CHART_BY.join(", ")}.` };
-  const measure = (text(input.args, "measure") ?? "visits") as AnalyticsChartMeasure;
-  if (!(ANALYTICS_CHART_MEASURES as readonly string[]).includes(measure)) return { ok: false, problem: "From Google Analytics a chart shows visits, conversions or conversionRate." };
+  const said = text(input.args, "measure");
+  const measure = (said === "visitors" ? "clicks" : said ?? (source === "searchConsole" ? "clicks" : "visits")) as GroupMeasure;
+  if (!([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES] as readonly string[]).includes(measure)) return { ok: false, problem: "A chart of groups shows visits, conversions or conversionRate from Google Analytics, or clicks or impressions from Search Console." };
   const period = text(input.args, "period") ?? "lastMonth";
   if (!isCalendarPeriod(period)) return { ok: false, problem: "period is one of thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months, last12Months." };
-  const read = await input.ctx.runQuery(internal.assistantAnalyticsCharts.analyticsGroupsInternal, { companyId: input.companyId!, website, period, by });
-  if (!read.ok) return { ok: false, problem: read.problem ?? "That website has no Google Analytics figures yet." };
-  const link = `/app/analytics/${read.siteId}/conversions?period=${period}`;
   const event = text(input.args, "event");
-  const built = groupsChartFrom(read.view, { kind, by, measure, ...(event ? { event } : {}), website: read.host, period, link });
-  if (!built.ok) return built;
-  const chart = built.chart;
+  const read = await input.ctx.runQuery(internal.assistantGroupChartReads.groupsChartInternal, { companyId: input.companyId!, website, period, kind, by, measure, ...(event ? { event } : {}), source });
+  if (!read.ok) return { ok: false, problem: read.problem ?? "That website has no figures for that chart yet." };
+  const chart = read.chart;
   const answer = {
     ok: true,
     website: read.host,
@@ -179,8 +194,8 @@ export async function analyticsGroupsChartFor(input: ToolHandlerExecutionInput):
     shows: groupsMeasureWords(chart),
     by,
     groups: groupsChartLines(chart),
-    ...(chart.rows ? { rows: chart.rows.map((row) => ({ conversion: row.event, rates: row.values })) } : {}),
-    link,
+    ...(chart.rows ? { rows: chart.rows.map((row) => (chart.by === "hour" ? { weekday: WEEKDAY_NAMES[Number(row.event)], times: row.values } : { conversion: row.event, rates: row.values })) } : {}),
+    link: chart.link,
     note: `The chart is drawn under your answer from these figures, with a link to the screen. Write ${CHART_MARK} on a line of its own where it belongs, after the sentences it illustrates; don't list every group or describe the chart.`,
     chart,
   };
