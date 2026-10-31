@@ -50,6 +50,15 @@ charts may break out to the full column as tables already do.
   channels table fits with clear gaps.
 - Check with the answer Anthony saw (morehandles.co.uk's channels table) in the panel and in Ask Hakken.
 
+## 2b. A new conversation every press of the eye
+
+- Anthony, 2026-10-31: "i think that every time we press the eye it should open a new chat thread". Today the panel
+  keeps one conversation per page for the browser tab (`hakkenSeesStore`), so a press on the same page opens the old
+  questions again.
+- The fix: each press opens the panel on a fresh conversation; the first question asked starts a new Ask Hakken
+  conversation for the page, as today. Earlier ones stay in Ask Hakken's list, reached from "Open in Ask Hakken".
+- Check: press, ask, close, press again on the same page: the box is empty and a second conversation is listed.
+
 ## 3. Credits for a press of the eye
 
 - What a press costs now (measured 2026-10-31, after code took over the finding): about **$0.06**, 5p — the choice
@@ -68,7 +77,7 @@ charts may break out to the full column as tables already do.
 1. **Charts in code** — one chart shape for every kind; the reads that fill each; `show_chart` names the kind.
 2. **Charts on screen** — `AnswerChart` draws each kind; the pie joins the screen kit with a look test.
 3. **Charts sent at a time** — every kind in the email and the Hakken tasks page.
-4. **The panel** — wider; tables padded and numbers aligned.
+4. **The panel** — wider; tables padded and numbers aligned; a new conversation each press (§2b).
 5. **Credits** — the `sees` kind, charged once per new bubble; zero credits as Anthony decides.
 6. **The audit** — at his word, the whole plan checked against what was built, point by point, before it is
    called done: every chart kind asked for in Chrome, the panel's table, a press's credits on the Usage page.
@@ -77,6 +86,7 @@ charts may break out to the full column as tables already do.
 
 - Asked in plain words for each kind, Ask Hakken draws it, from figures that match the screen it links to.
 - The channels table in the panel reads with clear gaps between every column.
+- Each press of the eye opens an empty conversation; the last one is in Ask Hakken's list.
 - A press of the eye takes 2 credits once, and nothing again for three hours.
 
 ## Progress
