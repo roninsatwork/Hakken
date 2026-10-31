@@ -22,7 +22,7 @@ type Finding = FunctionReturnType<typeof api.seesFindings.seesFindings>[number];
  * (`seesFindings`); what it means — the team's words and steps, or the page's own rule's words; and, below them,
  * asking about the page (`chat`, given by the eye). It replaces the speech bubble.
  */
-export function SeesPanel({ open, onClose, says, steps, researching, noCredits = false, name, findings: given, chat, foot, onAskAbout, id }: {
+export function SeesPanel({ open, onClose, says, steps, researching, noCredits = false, written = true, name, findings: given, chat, foot, onAskAbout, id }: {
   open: boolean;
   onClose: () => void;
   says: string[];
@@ -30,6 +30,8 @@ export function SeesPanel({ open, onClose, says, steps, researching, noCredits =
   researching: boolean;
   /** The company has fewer credits than a press costs: nothing new is written, and it says so (Anthony, 2026-10-31: "stop"). */
   noCredits?: boolean;
+  /** The words are the team's, written for this page: only then does it say so; a rule's words carry no such note. */
+  written?: boolean;
   /** An event's own name on the page, for the findings: "add_to_cart" → "Added to basket". */
   name?: (eventName: string) => string;
   /** What the figures show: as Jev ordered them when the words were written, or code's own, read at once (the eye's). */
@@ -57,7 +59,7 @@ export function SeesPanel({ open, onClose, says, steps, researching, noCredits =
           </section>
         ) : null}
         <section data-part="sees-means" className="flex flex-col gap-3">
-          <SectionHead title={t("means")} note={researching ? undefined : t("meansNote", { platformName })} />
+          <SectionHead title={t("means")} note={researching || !written ? undefined : t("meansNote", { platformName })} />
           {noCredits ? (
             <p data-part="sees-no-credits" className="text-[13px] leading-[1.6] text-secondary">
               {t.rich("noCredits", { platformName, billing: (chunks) => <Link href="/app/settings/billing" className="text-foreground underline underline-offset-2 hover:text-brand">{chunks}</Link> })}

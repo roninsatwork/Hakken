@@ -17,6 +17,7 @@ import { pageDataFor, pageFigureLines } from "@/convex/utils/sees/pageData";
 import { pageFindings } from "@/convex/utils/sees/pageFindings";
 import { seesScreenFor, seesWrites } from "@/convex/utils/sees/screens";
 import type { SeesAsk } from "./HakkenSees";
+import type { Id } from "@/convex/_generated/dataModel";
 import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
@@ -60,17 +61,19 @@ export function HakkenSeesEye() {
   const page = box?.page;
   const data = page?.data;
   const pageData = useMemo(() => (data !== undefined ? pageDataFor(data) : null), [data]);
+  // The website: the page's, else the one its figures are of (Insights opens on a website without naming it).
+  const siteId = page?.siteId ?? (data !== undefined ? siteIdIn(data) : undefined);
   const derivedAsk = useMemo<SeesAsk | undefined>(() => {
-    if (!page?.siteId || pageData === null || !seesWrites(page.screen)) return undefined;
+    if (!page || !siteId || pageData === null || !seesWrites(page.screen)) return undefined;
     const links = new Map<string, { label: string; href: string }>();
     for (const step of box?.steps ?? []) if (step.href.startsWith("/app/") && !step.external) links.set(step.href, { label: step.link, href: step.href });
     for (const link of page.links ?? []) links.set(link.href, { label: link.label, href: link.href });
     const dates = datesOf(page);
     return {
-      siteId: page.siteId, screen: page.screen, about: "", path: pathname, ...dates,
+      siteId, screen: page.screen, about: "", path: pathname, ...dates,
       facts: [], links: [...links.values()].slice(0, 12), data: pageData,
     };
-  }, [page, pageData, pathname, box?.steps]);
+  }, [page, siteId, pageData, pathname, box?.steps]);
   const ask = box?.ask ?? derivedAsk;
   const key = ask ? seesKey(ask) : null;
   // What the team said when asked for this key (the store's, outside React): "RESEARCHING" until its answer is saved,
@@ -80,7 +83,8 @@ export function HakkenSeesEye() {
     if (!open || !ask || !key || asked?.key === key) return;
     noteAsked(key, "RESEARCHING");
     // Nobody waits on the page: the answer arrives through the store, and a refusal leaves the rule's words standing.
-    Promise.resolve().then(() => askSees(ask)).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
+    // A press that is refused, or answers nothing at all, reads as no team to ask.
+    Promise.resolve(askSees(ask)).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
   }, [open, key, asked?.key, ask, askSees]);
   const noCredits = Boolean(ask && asked?.key === key && asked.status === "NO_CREDITS");
   const answer = useQuery(api.seesAsk.seesAnswer, open && ask && key && asked?.key === key && asked.status !== "FAILED" && !noCredits ? { siteId: ask.siteId, key } : "skip");
@@ -100,7 +104,7 @@ export function HakkenSeesEye() {
   const where = ask ?? (page ? datesOf(page) : null);
   const chat = useSeesChat({
     pageKey: key ?? box?.screen ?? null,
-    ...(ask ? { siteId: ask.siteId } : page?.siteId ? { siteId: page.siteId } : {}),
+    ...(ask ? { siteId: ask.siteId } : siteId ? { siteId } : {}),
     startedOn: {
       path: ask?.path || pathname || box?.screen || "",
       about: ask?.about || (page ? seesScreenFor(page.screen)?.about ?? page.screen : box?.screen ?? ""),
@@ -124,9 +128,30 @@ export function HakkenSeesEye() {
       count={box.steps.length}
       onClick={toggleSees}
       bubbleId={`${id}-bubble`}
-      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} noCredits={noCredits} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
+      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} noCredits={noCredits} written={Boolean(team)} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
     />
   );
+}
+
+/**
+ * The website a page's figures are of: the `siteId` its answers carry — on the answer, on the answers it gathers, or on
+ * their rows — when they all name the same one; none when they name several (Insights over every website writes
+ * nothing, as a press is always for one website) or none.
+ */
+function siteIdIn(data: unknown): Id<"companyWebsites"> | undefined {
+  const named = new Set<string>();
+  const look = (value: unknown, depth: number) => {
+    if (!value || typeof value !== "object" || depth > 2) return;
+    if (Array.isArray(value)) {
+      for (const item of value.slice(0, 50)) look(item, depth + 1);
+      return;
+    }
+    const own = (value as { siteId?: unknown }).siteId;
+    if (typeof own === "string") named.add(own);
+    for (const inner of Object.values(value as Record<string, unknown>)) if (inner && typeof inner === "object") look(inner, depth + 1);
+  };
+  look(data, 0);
+  return named.size === 1 ? ([...named][0] as Id<"companyWebsites">) : undefined;
 }
 
 /**

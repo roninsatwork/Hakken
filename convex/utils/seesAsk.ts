@@ -117,6 +117,8 @@ export const SEES_FORMAT = [
   "Each step is one thing a person can do, in plain words, saying where: the device, channel, kind of page, step or product it is about — never advice that would fit any website. Link it to the place it names. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
   "Never tell them to change what counts as a conversion, or how their tracking is set up: they chose it on purpose. Speak about tracking only when trackingFaults lists a fault.",
   "The most useful thing first: what a client would act on, never what did not happen.",
+  // The platform's word (Anthony, GA19, 2026-10-09), though some screens' own figures still say enquiries.
+  "Call them conversions, never enquiries, even where the page's figures say enquiries.",
 ].join("\n");
 
 /**

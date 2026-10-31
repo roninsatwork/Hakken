@@ -10701,7 +10701,7 @@
         "checkout": "checkouts started",
         "basket": "basket additions",
         "looks": "product views",
-        "looked": "visits that looked at a product"
+        "looked": "product views"
       }
     },
     "sidePanel": {

@@ -217,4 +217,31 @@ Paths under `/app/`. R = rule words today; W = written in the page today; T = fu
   - **A websites list page** (one per section, no website chosen) shows findings and the chat but writes nothing
     when pressed: a press is always for one website.
   - Phase 2 therefore folds into phase 4: each page hands over its figures as it joins the eye.
+- 2026-10-31, **phase 3 built** (fb702bdc): findings in code from any page's own figures (`pageFindings.ts`,
+  `measures.ts`) — a total that moved, a list's biggest rise and fall, one row holding most, a percentage far from
+  the list's average weighed by its own base; a rise in errors or angry clicks reads as bad news.
+- 2026-10-31, **phase 4 built** (7660491c): every page of the six sections hands the eye its figures (six helpers, a
+  section each, reviewed and committed together). Eyes added where there were none: Clarity's websites list, Search
+  Console's two countries pages, Insights' source page, reports list and Summary. The Analytics connection page's eye
+  removed, as agreed. Gaps: a few panels load their own figures inside the page (the Channels table, Campaigns' chart,
+  the Conversions events table), so those figures don't reach the eye; a page in its empty state ("no groups yet")
+  shows no eye.
+- 2026-10-31, **tested in Chrome on a random handful** (Anthony: "dont press all of the eyes"), morehandles.co.uk:
+  Google Analytics → Products, Search Console → Almost there, Visibility → Backlinks → Domains, Insights → This
+  week, and a question in the chat (Backlinks → Domains: "imagetou.com, 488 links", as the table). Each wrote a short
+  story from the page's figures with specific steps, in 40 to 70 seconds. Found and fixed on the way:
+  - a website's name with a digit in it ("handles4doors.co.uk") was sent back as a typed number;
+  - a page's words had no second try when the Editor sent them back (now one, as Conversions had);
+  - a row named by a code ("UNJUDGED") became a finding's name;
+  - the panel closed whenever a page's figures changed;
+  - Insights over its default website wrote nothing (the eye now finds the one website its figures name);
+  - "Written by the Hakken team" showed over a rule's words;
+  - the Products screen's product views were called visits;
+  - the writer said "enquiries" (every writer is now told: conversions).
+  - Decided: Live's figures are asked of Google each minute, so its eye writes nothing.
+  - **Not tested in Chrome**: Bing (no website on the dev deployment has Bing connected) and Clarity (its only
+    figures are ronins.co.uk's, another company; the browser was not switched to it). Both are held by tests.
+- 2026-10-31, **phase 6**: `docs/developer/what-hakken-sees-guide.md` rewritten for how the eye works now.
+- **Still open**: phase 5 is Anthony's — pressing across the sections and noting what a good panel should find, each
+  note an eval page; the second website for testing; Bing and Clarity pressed for real.
 

@@ -52,7 +52,8 @@ const COUNTS: Record<string, Measure> = {
   checkout: { words: "checkouts started", kind: "count" },
   basket: { words: "basket additions", kind: "count" },
   looks: { words: "product views", kind: "count" },
-  looked: { words: "visits that looked at a product", kind: "count" },
+  // The Products screen's steps count looks, not visits: its visits are a list of their own (`visits.looked`).
+  looked: { words: "product views", kind: "count" },
   itemsViewed: { words: "product views", kind: "count" },
   itemsPurchased: { words: "products bought", kind: "count" },
   crawled: { words: "pages read by the search engine", kind: "count" },

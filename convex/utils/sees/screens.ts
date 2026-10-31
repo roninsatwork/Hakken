@@ -137,7 +137,7 @@ export const SEES_SCREENS: Readonly<Record<string, Partial<SeesScreen> & { about
   "visibility.pageRecord": { about: "one page's own screen: the searches it ranks for" },
   "visibility.keywordsStructure": { about: "the website's sections and how each ranks on Google" },
   "visibility.yourPages": { about: "the pages the company chose to watch" },
-  "visibility.draft": { about: "a draft Hakken wrote for the business" },
+  "visibility.draft": { about: "a draft written for the business by the team" },
 
   // Insights: its weekly boxes are the team's words already; the rest by the specialist whose work it is.
   "insights.aiSearch": { writer: "INSIGHTS_AI_VISIBILITY", about: "AI search: how AI answers treat the business", writes: false },

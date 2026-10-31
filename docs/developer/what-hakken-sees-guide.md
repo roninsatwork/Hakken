@@ -5,10 +5,39 @@ team. It records what it took to make the Conversions page's bubble worth
 reading (Anthony, 30 October 2026), so the next screen starts where this one
 ended, not where it began.
 
-The eye in the top bar opens a speech bubble. On the Conversions page and a
-conversion's own screen, the Insights team writes it: the Head of Strategy picks
-a specialist, the specialist reads the saved data and writes, the Editor's code
-checks every word and number, and the Head takes a second look. Plans:
+## How it works now (since 31 October 2026)
+
+The eye in the top bar opens a panel on every page of Google Analytics, Search
+Console, Bing Webmaster, Clarity, Visibility and Insights
+(`docs/plans/active/sees-every-page-plan-2026-10-31.md`). On each page:
+
+1. **The page hands the eye its own figures**: the answer of the query that
+   draws it, passed as `data` to its section's eye piece (`AnalyticsSees`,
+   `SearchConsoleSees`, `BingSees`, `SiteSees`) or as `page` to `HakkenSees`.
+   The eye cuts it to what the page shows first and keys every number
+   (`convex/utils/sees/pageData.ts`). Every figure the panel, the writer and the
+   chat name is the reader's own.
+2. **Code finds what the figures show**, at once, before any model
+   (`convex/utils/sees/pageFindings.ts`): a total that moved, a list's biggest
+   rise and fall, one row holding most of it, a percentage far from the list's
+   average. Only figures named in `convex/utils/sees/measures.ts` are spoken of,
+   in the reader's words; a row named by a code is never a finding's name. The
+   Conversions screens keep their own rules (`findings.ts`).
+3. **Pressing writes the words** (about 5p, 2 credits; nothing at zero credits):
+   the page's specialist, named in the screen list (`convex/utils/sees/screens.ts`)
+   — no model chooses — writes from the page's figures and the findings, covering
+   the first four. The Editor's code checks every word and number; what fails
+   goes back once, with why. Words stand three hours while the figures do.
+   Insights' weekly boxes, the Summary and Live write nothing new.
+4. **Ask about this page** starts an Ask Hakken conversation told the page,
+   its dates, its findings, its words and its figures.
+
+Bringing a new page to the eye is one entry in the screen list (writer, what it
+is, its parts, what it never talks about) and its figures passed to its eye
+piece. Anything not in the list falls back to its section's specialist.
+
+The rest of this guide is how the Conversions bubble got good: the rounds still
+hold, and the rules they left are in the code. Plans:
 `docs/plans/active/sees-conversion-specialist-plan-2026-10-30.md` and
 `docs/plans/active/stronger-agents-plan-2026-10-30.md` (A1, Progress).
 
@@ -107,10 +136,13 @@ and the rule that came from it. Every rule is now in the code.
   device. A page on custom dates offers no reads.
 
 **Who writes**
-- The Head chooses, held to a rule only where Anthony made one (`routeFor`).
+- The screen list names each page's specialist (`writerFor`); the Head of
+  Strategy no longer chooses. On a page about conversions, a tracking fault that
+  breaks the figures hands it to the Measurement specialist. Clarity's pages have
+  a specialist of their own, the Visitor behaviour specialist.
 - The Insights agents run on the strongest model, set on each agent in Admin →
-  Agents. The fast model's bubbles were the weakest of the night, whatever the
-  brief said.
+  Agents; a specialist added later takes the Conversion specialist's model. The
+  fast model's bubbles were the weakest of the night, whatever the brief said.
 
 **The brief**
 - General, never a list of findings. Say what to look across (groups, steps,
@@ -131,39 +163,33 @@ and the rule that came from it. Every rule is now in the code.
 - Each step uses one of the page's links.
 - What fails goes back to the agent once, with why, in the same conversation.
 
-**The Head's second look**
-- Rejects tracking advice without a fault, words that lead with money, words
-  that don't say what got better or worse, and words that say less than the
-  figures hold.
+**The second look** was removed on 31 October 2026: it said "useful" every
+time and cost a sixth of a press. Jev's checks (a guess stated as fact, a step
+that would fit any website) stand in, through the Decisions engine.
 
 ## Bringing it to a new screen
 
 1. Say the screen's intent in one sentence and agree it with Anthony.
-2. List every part the screen draws. Make sure each has a read the agent can
-   call (Ask Hakken's reads in `assistantAnalyticsReads.ts` cover most
-   Analytics screens; add the rest to `agentReads.ts`).
-3. Add the screen to `firstReadsFor`, so its own data is read first.
-4. Have the screen hand its boxes' figures to the eye (`seesAskFacts.ts`), with
-   the words from the catalogue.
-5. Decide with Anthony anything the screen must never talk about (money on
-   Conversions is the example). Put it in the brief and, where the words can be
-   recognised, in the Editor.
-6. Press the eye on morehandles.co.uk and a second real website. Read the run's
-   log (each read, the Head's choice, the second look). Judge the bubble by
-   Anthony's test: what does it say that a person scanning the page would miss?
-7. Keep the page as an eval page with Anthony's notes on what a good bubble
-   would find (`keepSeesEvalPage`, or `keepSeesEvalPageInternal` from the
-   command line until the Admin screen exists), and grade every change against
-   the set (`gradeSeesEvalNow` / `gradeSeesEvalInternal`). The judge marks each
-   note found or missed; the notes are never put in the brief.
+2. Pass the page's own figures to its eye piece (`data`, or `page` on an inline
+   `HakkenSees`), built once while their parts stay the same.
+3. Give it an entry in the screen list: its writer, what it is, its parts, what
+   it never talks about, and `writes: false` if its words are already the team's.
+4. Check its figures' names are in the measures list, so its findings speak;
+   add any that are missing, with their words in English and Italian.
+5. Press the eye on morehandles.co.uk and a second real website — a random
+   handful, never every page (Anthony, 2026-10-31). Read the run's log. Judge the
+   words by Anthony's test: what does it say that a person scanning the page
+   would miss?
+6. Keep the page as an eval page with Anthony's notes (`keepSeesEvalPage`, or
+   `keepSeesEvalPageInternal` from the command line), and grade every change
+   against the set (`gradeSeesEvalNow` / `gradeSeesEvalInternal`). The notes are
+   never put in the brief.
 
 ## Cost and time
 
-- A bubble reads four to six screens and makes four to six model calls; each
-  is recorded on the run with its cost and held by the run's spend limit.
-- On the flagship model a bubble cost $0.39 and took 76 seconds (30 October,
-  morehandles.co.uk); on the fast model it was about $0.06 and two to four
-  minutes. "Hakken is researching…" shows meanwhile, and the answer is kept three
-  hours while the figures stand, so each page pays once.
-- Each part has its limit, together inside Convex's ten minutes: one minute to
-  choose, four and a half to read and write, two and a half for the second look.
+- A press makes one model call for the words, two when the Editor sends them
+  back; code finds, and Jev's checks are cheap. About 5p on the flagship model
+  (31 October 2026), charged as 2 credits to whoever pressed, once the words are
+  written. Kept three hours while the figures stand, so a page pays once.
+- At zero credits the eye writes nothing and says so, with the way to Billing.
+- "Hakken is researching…" shows meanwhile: 40 to 70 seconds on morehandles.co.uk.
