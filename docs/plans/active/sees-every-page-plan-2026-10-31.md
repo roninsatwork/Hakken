@@ -203,3 +203,18 @@ Paths under `/app/`. R = rule words today; W = written in the page today; T = fu
   4. The second website: Anthony names it later. Until then, morehandles.co.uk alone, with ronins.co.uk for Clarity
      (the only website on the dev deployment with Clarity's figures).
   5. At zero credits the eye **stops** and says so: "stop". Every other kind still records and carries on.
+- 2026-10-31, building (Anthony: "Start"). **Phase 1 built** (eaaefa9a, local): the screen list
+  (`convex/utils/sees/screens.ts`), every page's writer, a page's own figures handed to the eye
+  (`convex/utils/sees/pageData.ts`), the chat told the page's figures, the Head of Strategy's choice of writer
+  dropped (one model call a press saved), the Visitor behaviour specialist (`INSIGHTS_BEHAVIOUR`, for Clarity; it
+  takes the Conversion specialist's model when made), and the stop at zero credits ("NO_CREDITS", with the way to
+  Billing). Decisions taken while building, under the "build the whole plan" rule:
+  - **A page's own figures come from the page itself**, not from new server reads: every page already holds the
+    answer of the query that draws it, so the eye takes that answer, cut to its first rows. The writer, the panel's
+    findings and the chat then name exactly the figures the reader sees, and phase 2's hundred-odd server reads are
+    not needed. What this leaves out: Ask Hakken on its own page (not opened from the eye) still reads only the
+    screens it read before; from the eye's panel it is told the page's figures.
+  - **A websites list page** (one per section, no website chosen) shows findings and the chat but writes nothing
+    when pressed: a press is always for one website.
+  - Phase 2 therefore folds into phase 4: each page hands over its figures as it joins the eye.
+
