@@ -40,8 +40,14 @@ charts may break out to the full column as tables already do.
 
 - The eye's panel is 480px on a computer (`SidePanel`, `sm:w-[480px]`). Widen it a step (about 560px) so an
   answer's table and charts fit; a phone keeps the full width.
-- An answer's tables already pad their cells (`HakkenMarkdown`, `px-3`), yet the panel showed none: find why the
-  padding is lost in the panel, and right-align number columns so figures never touch.
+- **Why the columns touched (found 2026-10-31):** `HakkenMarkdown` styles a table — padding, rules, smaller text —
+  only for `variant="answer"` (the Insights and Discovery answers). Ask Hakken's chat uses the default `"chat"`
+  variant, which leaves the table bare: the browser's own one-pixel cells. So it happens on the Ask Hakken page too,
+  not only in the panel, and a wider panel alone would not fix it.
+- **The fix:** chat tables take the answer's table styling; number columns line up on the right (Markdown's `---:`,
+  which the model is told to use for figures) and wear JetBrains Mono, words stay Inter; a table wider than its
+  column scrolls inside its own box. Drawn on the canvas, board 2: at 560px morehandles.co.uk's five-column
+  channels table fits with clear gaps.
 - Check with the answer Anthony saw (morehandles.co.uk's channels table) in the panel and in Ask Hakken.
 
 ## 3. Credits for a press of the eye
@@ -78,4 +84,6 @@ charts may break out to the full column as tables already do.
 - 2026-10-31: planned with Anthony. Phase 0 started.
 - 2026-10-31: drawn — canvas "Ask Hakken, every kind of chart" (https://claude.ai/artifact/DMCDEfYqSVr7y63viu1wRe),
   board 1: six questions and answers in Ask Hakken, each chart drawn by the real parts from morehandles.co.uk's
-  saved September figures; the pie is the one new part. Awaits Anthony's yes. The wider panel is not drawn yet.
+  saved September figures; the pie is the one new part. Awaits Anthony's yes.
+- 2026-10-31: board 2 drawn — the eye's panel at 560px with the channels table spaced and its numbers aligned; the
+  cause of the touching columns found (chat tables are left unstyled) and the fix written into §2.
