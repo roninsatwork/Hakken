@@ -137,3 +137,12 @@ website in the set, at a lower cost a bubble than today's $0.39.
 ## Progress
 
 - 2026-10-31: planned. Nothing built.
+- 2026-10-31, overnight: phases 1 to 5 built and committed locally (264890eb, ea84f39d), nothing pushed.
+  Code finds the figures (`convex/utils/sees/findings.ts`); five `sees.*` Decisions let Jev order them, call a
+  gap tracking or behaviour, catch a guess stated as fact and a step that fits any website, and grade the eval
+  set. They shipped off and were switched to act in Admin → AI → Decisions. The writer must cover code's top
+  four findings. On morehandles.co.uk the bubble now names Paid Search at 9.2%, Brand pages at 5.7%, Organic
+  Search at 2.2%, checkout to purchase at 54% and 29 visits for one purchase. The eval still scores one of
+  Anthony's three points: his "10%" step and AI assistants are not found.
+  - Waiting on Anthony: phase 0 (what his "10%" measured; eval pages on other websites) and phase 6 (adding
+    a ChatGPT model to grade against Argon).

@@ -95,3 +95,24 @@ the findings plan (about seven) about fourteen in all.
   comments on the board taken: Ask Hakken's disclaimer under the question box,
   left-aligned; no page line in the head; head and send button centred. Ask
   Hakken's charts and tasks added as phases 4 and 5.
+- 2026-10-31, overnight (Anthony: "continue to finish the plan, test it in chrome and tests and commit dont
+  push"): phases 1 to 5 built and committed locally, nothing pushed.
+  - Phases 1 to 3 (187b401c): `SidePanel` is a screen-kit part any page can use; `SeesPanel` is the eye's
+    panel inside it, with code's findings (each one a question when clicked), the team's words and steps, and
+    Ask Hakken about the page. The conversation is an ordinary Ask Hakken one, started with the page as its
+    starting point (`threads.startedOn`), listed in Ask Hakken.
+  - Phase 4 (63d46d91): `show_chart` draws Google Analytics' visits, conversions and the share of visits that
+    converted, from saved days only, beside Search Console's. Installed tools now pick up a changed definition.
+  - Phase 5 (1293b776): `propose_chart_report` offers a chart once on a day or every week, with today's chart
+    drawn under the offer. A yes makes a report task; the Stat Report Agent sends it on its day by email (bars
+    as a picture) and the bell, then pauses a chart sent once. Checked in Chrome on morehandles.co.uk: "send me
+    a chart at 10am tomorrow with my conversion rates" offered Sunday 1 November at 10am, its line at about 3
+    to 4%, as the page's 3.4%. The yes was left for Anthony to tap: it would send him a real email.
+  - Found and fixed on the way: a rate with no conversion named counted every conversion over the visits
+    (about 80 a hundred on morehandles). It is now one conversion, as the page's own box: a shop's purchase,
+    else the conversion done most (`mainConversionAt`).
+  - Limits set: a chart sent once can be set up to a year ahead. Its day ("tomorrow") is worked out in UK
+    time when offered, as the person's own time zone arrives only with their yes.
+  - Not done: no Telegram for charts yet; other sections' charts (Search Console's are older, Bing and
+    Clarity have none) wait for Anthony to name them; the local gate was not run, at Anthony's "Don't run the
+    check". Phase 6 is the guide and kit notes, written; the gate is left.
