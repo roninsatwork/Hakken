@@ -950,3 +950,39 @@ describe("a chart of a website's groups", () => {
     expect(await draw({ kind: "radar", measure: "visits" })).toMatchObject({ ok: false, problem: expect.stringContaining("kind is one of") });
   });
 });
+
+describe("a chart of groups sent at a time", () => {
+  test("a pie of visits by device: offered with today's, set up on a yes, sent on its day with each device written beside its bar", async () => {
+    const { t, siteId, adminId } = await collectedGrowing();
+    const companyId = (await t.run((ctx) => ctx.db.get(siteId)))!.companyId;
+    type Call = (reference: unknown, args: unknown) => Promise<unknown>;
+    const loose = t as unknown as { query: Call; mutation: Call; action: Call };
+    const ctx = { runQuery: loose.query, runMutation: loose.mutation, runAction: loose.action } as unknown as ToolHandlerExecutionInput["ctx"];
+    const offer = (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeChartReport"]({
+      ctx, handlerMapping: "assistant.tasks.proposeChartReport", companyId, userId: adminId,
+      args: { website: "acme-shop.test", measure: "visits", kind: "pie", by: "device", every: "week", weekday: "Monday", time: "08:00" },
+    })) as { ok: boolean; problem?: string; chart?: { look: string; kind: string }; proposal?: Record<string, unknown> };
+    expect(offer.ok).toBe(true);
+    expect(offer.chart).toMatchObject({ look: "analyticsGroups", kind: "pie" });
+    expect(offer.proposal).toMatchObject({
+      title: "Every Monday, send me a pie of visits by device",
+      report: { look: "analyticsChart", measure: "visits", period: "lastWeek", every: "week", weekday: 1, kind: "pie", by: "device" },
+    });
+
+    const threadId = await t.run((db) => db.db.insert("threads", { userId: adminId, companyId, title: "A pie", createdAt: 1, updatedAt: 1 }));
+    const messageId = await t.run((db) => db.db.insert("messages", { threadId, role: "assistant", content: "Here it is.", createdAt: NOW, taskProposal: offer.proposal as never }));
+    await t.withIdentity({ subject: adminId }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true, timeZone: "Europe/London" });
+    const task = (await t.run((db) => db.db.query("hakkenTasks").collect())).find((row) => row.threadId === threadId)!;
+    expect(task).toMatchObject({ kind: "REPORT", state: "ON" });
+
+    expect(await t.mutation(internal.hakkenStatReporter.sendReportInternal, { taskId: task._id })).toBe("SENT");
+    const email = (await t.run((db) => db.db.query("outboxMessages").collect())).find((row) => row.idempotencyKey?.startsWith(`TASK_CHART:${task._id}:`))!;
+    const rendered = await t.run((db) => renderOutboxRow(db, email));
+    if (!("email" in rendered)) throw new Error(rendered.skip);
+    expect(rendered.email.subject).toMatch(/^Visits by device: \S+ [0-9.]+%$/);
+    expect(rendered.email.text).toContain("Last week, against the week before.");
+    expect(rendered.email.pictures).toHaveLength(1);
+    // Weekly: it waits for next week.
+    expect((await t.run((db) => db.db.get(task._id)))?.state).toBe("ON");
+  });
+});

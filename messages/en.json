@@ -8256,7 +8256,15 @@
             "conversionsOf": "A chart of {event} each day",
             "conversionRate": "A chart of the share of visits that converted",
             "conversionRateOf": "A chart of the share of visits that did {event}",
-            "conversionRatePurchase": "A chart of the share of visits that made a purchase"
+            "conversionRatePurchase": "A chart of the share of visits that made a purchase",
+            "ofKind": "{kind}: {title}",
+            "kinds": {
+              "bars": "Bars",
+              "stacked": "Stacked bars",
+              "pie": "A pie",
+              "scatter": "A scatter",
+              "grid": "A grid"
+            }
           },
           "chartHint": "Want something different? Just tell me, like “make it 9am” or “every Monday instead”."
         },

@@ -6,7 +6,8 @@ import { reportCount, reportTitle, weekdayOf } from "./utils/hakkenReports";
 import { answerTitle, engineName, engineOf, rankingTitle, type AiEngine } from "./utils/hakkenWatches";
 import { TRIAL_DAYS, pathOf, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
 import { DEFAULT_TASK_TIME_ZONE, dayIn, taskTimeOfDay } from "./utils/hakkenTaskTiming";
-import { analyticsChartFor } from "./assistantChartHandlers";
+import { analyticsChartFor, analyticsGroupsChartFor } from "./assistantChartHandlers";
+import type { GroupChartBy, GroupChartKind } from "./utils/assistantGroupCharts";
 import { CHART_MARK } from "./utils/assistantCharts";
 import { chartReportTitle } from "./utils/hakkenChartReport";
 
@@ -190,8 +191,21 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     const when = chartDay(text(input.args, "day"), every, input.args.weekday);
     if ("problem" in when) return { ok: false, problem: when.problem };
     const period = text(input.args, "period") ?? (every === "week" ? "lastWeek" : "lastMonth");
-    const found = await analyticsChartFor({ ...input, args: { ...input.args, period } });
-    if (!found.ok) return { ok: false, problem: found.problem };
+    const kind = text(input.args, "kind");
+    // A chart of groups — bars, stacked bars, a pie, a scatter or a grid (ask-hakken-every-chart-plan-2026-10-31.md) —
+    // or a line a day.
+    type Found = Awaited<ReturnType<typeof analyticsChartFor>> & { ok: true };
+    type Offered = Pick<Found, "siteId" | "host" | "period" | "measure" | "event" | "chart" | "answer"> & { kind?: GroupChartKind; by?: GroupChartBy };
+    let found: Offered;
+    if (kind && kind !== "line") {
+      const groups = await analyticsGroupsChartFor({ ...input, args: { ...input.args, period } });
+      if (!groups.ok) return { ok: false, problem: groups.problem };
+      found = { ...groups, measure: groups.chart.measure, ...(groups.chart.event ? { event: groups.chart.event } : {}), kind: groups.chart.kind, by: groups.chart.by };
+    } else {
+      const line = await analyticsChartFor({ ...input, args: { ...input.args, period } });
+      if (!line.ok) return { ok: false, problem: line.problem };
+      found = line;
+    }
     const report = {
       look: "analyticsChart" as const,
       measure: found.measure,
@@ -200,6 +214,7 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
       every,
       weekday: when.weekday,
       ...(when.sendOn ? { sendOn: when.sendOn } : {}),
+      ...(found.kind && found.by ? { kind: found.kind, by: found.by } : {}),
     };
     const { chart, answer } = found;
     return {

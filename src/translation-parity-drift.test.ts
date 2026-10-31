@@ -40,6 +40,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['admin.siteView.schedulesPage.sources.names.SEARCH_CONSOLE', 'Product name (Search Console): a row of a website\'s Schedules'],
     ['admin.siteView.schedulesPage.sources.names.GOOGLE_ANALYTICS', 'Product name (Google Analytics): a row of a website\'s Schedules'],
     ['admin.siteView.schedulesPage.sources.names.BING', 'Product name (Bing Webmaster): a row of a website\'s Schedules'],
+    ['ai.assistant.taskProposal.report.chart.ofKind', 'two placeholders: "{kind}: {title}", both worded in each language (a chart of groups on an offer, ask-hakken-every-chart-plan)'],
     ['hakkenTasks.hear.once', 'three placeholders: "{channels}, {date} {time}", the words come from each language (a chart sent once, on the Hakken tasks page)'],
     ['ai.assistant.lookedUp.googleAnalytics', 'Product name (Google Analytics), a website and its days: Ask Hakken\'s "Looked up" line'],
     ['admin.workflows.schedules.scheduleShort.utc', 'a time and "UTC", the same in both languages'],

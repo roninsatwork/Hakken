@@ -837,7 +837,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Propose a chart sent at a time",
         description:
-          "When someone asks to be sent a chart from Google Analytics at a time — once (\"send me a chart at 10am tomorrow with my conversion rates\") or every week — propose it with this. It draws the chart as it would look today under your reply and writes the offer out with “Yes, send it” and “Not now”: nothing is sent until they tap yes. On its day, at their time, it reads the period's newest saved days and sends the chart by email and here, against the period before. Visits, conversions (every one, or one event's) or the share of visits that converted. Never promise to send it yourself, and never use propose_report for a chart.",
+          "When someone asks to be sent a chart from Google Analytics at a time — once (\"send me a chart at 10am tomorrow with my conversion rates\") or every week — propose it with this. It draws the chart as it would look today under your reply and writes the offer out with “Yes, send it” and “Not now”: nothing is sent until they tap yes. On its day, at their time, it reads the period's newest saved days and sends the chart by email and here, against the period before. Visits, conversions (every one, or one event's) or the share of visits that converted — each day as a line, or, with a `kind`, the website's groups (`by` channel, kind of page, device or country) as bars, stacked bars, a pie, a scatter or a grid, as show_chart draws them. Never promise to send it yourself, and never use propose_report for a chart.",
         handlerMapping: "assistant.tasks.proposeChartReport",
         modelName: "propose_chart_report",
         requiredRole: "ADMIN",
@@ -855,6 +855,8 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
             day: { type: "string", description: "For once: today, tomorrow or YYYY-MM-DD. tomorrow if they don't say." },
             weekday: { type: "string", description: "For every week: Monday to Sunday. Monday if they don't say." },
             time: { type: "string", description: "Their time, HH:MM, 24-hour, e.g. 10:00; 09:00 if they don't say." },
+            kind: { type: "string", enum: ["line", "bars", "stacked", "pie", "scatter", "grid"], description: "line (each day, the default), or a chart of the website's groups: bars, stacked, pie, scatter or grid." },
+            by: { type: "string", enum: ["channel", "kind", "device", "country"], description: "With a kind other than line: the groups — channel (default), kind (of page), device or country." },
           },
         }),
       },

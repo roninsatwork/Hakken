@@ -73,6 +73,9 @@ export const hakkenTaskChartReportValidator = v.object({
   weekday: v.number(),
   /** For a chart sent once, its day, `YYYY-MM-DD` in the owner's time zone. */
   sendOn: v.optional(v.string()),
+  /** A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): its kind and its groups; absent for a line a day. */
+  kind: v.optional(v.union(v.literal("bars"), v.literal("stacked"), v.literal("pie"), v.literal("scatter"), v.literal("grid"))),
+  by: v.optional(v.union(v.literal("channel"), v.literal("kind"), v.literal("device"), v.literal("country"))),
 });
 
 export const hakkenTaskReportValidator = v.union(hakkenTaskPagesReportValidator, hakkenTaskChartReportValidator);

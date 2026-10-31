@@ -22,6 +22,7 @@ export function buildTaskReportEmail(args: {
   const { brand, payload } = args;
   // A chart sent at a time (2026-10-31) is its own email: its bars, its figure, and the period before.
   if (payload.look === "analyticsChart") return buildTaskChartEmail(args);
+  if (payload.look === "analyticsGroups") return buildTaskGroupsEmail(args);
   const wording = emailWording(args.language);
   const words = wording.taskReport;
   const pages = pagesOf(payload.pages);
@@ -109,5 +110,71 @@ export function buildTaskChartEmail(args: {
       quiet: [words.youAsked({ once, weekday, time: args.language.startsWith("en") ? clockOf(timeOfDay) : timeOfDay, platformName: brand.platformName })],
     },
     pictures: [{ cid: TASK_CHART_CID, bars: { values, marked: values.map(() => false) } }],
+  };
+}
+
+/**
+ * A chart of groups sent at a time (ask-hakken-every-chart-plan-2026-10-31.md, phase 3): the biggest group's figure big,
+ * the period against the period before, each group a bar in a picture that travels with the email — its names and
+ * figures written beside it, in the same order, so a reader who cannot see it misses nothing — and a grid's rows as
+ * words: each step's highest and lowest group. Built from the figures read when it was sent.
+ */
+export function buildTaskGroupsEmail(args: {
+  language: string;
+  brand: { platformName: string; appUrl: string };
+  payload: Record<string, unknown>;
+}): { subject: string; content: EmailContent; pictures?: EmailPicture[] } | { skip: string } {
+  const { brand, payload } = args;
+  const wording = emailWording(args.language);
+  const words = wording.taskChart;
+  const kind = typeof payload.kind === "string" ? payload.kind : "bars";
+  const by = typeof payload.by === "string" ? payload.by : "channel";
+  const measure = payload.measure === "conversions" || payload.measure === "conversionRate" ? payload.measure : "visits";
+  const event = typeof payload.event === "string" ? payload.event : undefined;
+  const groups = Array.isArray(payload.groups) && payload.groups.length > 0 && payload.groups.length <= 20
+    && payload.groups.every((group) => group && typeof group.name === "string" && typeof group.value === "number")
+    ? payload.groups as Array<{ name: string; value: number; before?: number; visits?: number }>
+    : null;
+  if (!groups || typeof payload.website !== "string" || typeof payload.period !== "string") return { skip: "It says nothing of what the chart showed." };
+  const rows = Array.isArray(payload.rows) ? payload.rows as Array<{ event: string; values: Array<number | null> }> : [];
+  const once = payload.every === "once";
+  const weekday = typeof payload.weekday === "number" ? payload.weekday : 1;
+  const timeOfDay = typeof payload.timeOfDay === "string" ? payload.timeOfDay : "09:00";
+  const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
+  const rate = measure === "conversionRate" || kind !== "bars";
+  const shown = (value: number) => (rate ? `${value.toLocaleString(wording.dateLocale, { maximumFractionDigits: 1 })}%` : Math.round(value).toLocaleString(wording.dateLocale));
+  const name = (group: string) => (group === "*" ? words.everyOther : group);
+  const title = words.groupsTitle({ kind, by, measure, ...(event ? { event } : {}) });
+  const top = groups.find((group) => group.name !== "*") ?? groups[0];
+  // A scatter's groups are listed with their visits beside the rate; a grid's rows as each step's highest and lowest.
+  const facts = kind === "grid"
+    ? rows.map((row) => {
+        const cells = row.values.map((value, at) => ({ value, name: name(groups[at]?.name ?? "") })).filter((cell): cell is { value: number; name: string } => cell.value !== null);
+        const high = cells.reduce((best, cell) => (cell.value > best.value ? cell : best), cells[0]);
+        const low = cells.reduce((worst, cell) => (cell.value < worst.value ? cell : worst), cells[0]);
+        const label = row.event.replace(/_/g, " ");
+        return { term: label.charAt(0).toUpperCase() + label.slice(1), value: high ? shown(high.value) : "–", note: high && low ? words.gridRow({ high: `${high.name} ${shown(high.value)}`, low: `${low.name} ${shown(low.value)}` }) : "" };
+      })
+    : groups.map((group) => ({
+        term: name(group.name),
+        value: shown(group.value),
+        note: kind === "scatter" && group.visits !== undefined
+          ? `${Math.round(group.visits).toLocaleString(wording.dateLocale)} ${args.language.startsWith("it") ? "visite" : "visits"}`
+          : group.before !== undefined ? words.before({ figure: shown(group.before) }) : "",
+      }));
+  const drawn = kind !== "grid";
+  return {
+    subject: words.subject({ title, figure: `${name(top.name)} ${shown(top.value)}` }),
+    content: {
+      kind: `${words.kind({ once, weekday })} · ${payload.website}`,
+      figure: shown(top.value),
+      verdict: words.groupsTop({ name: name(top.name) }),
+      lede: words.groupsSpan({ period: payload.period }),
+      ...(drawn ? { picture: { cid: TASK_CHART_CID, alt: words.groupsAlt({ title, count: groups.length }), from: name(groups[0].name), to: name(groups[groups.length - 1].name) } } : {}),
+      facts,
+      actions: [{ label: words.open, url: `${brand.appUrl}${link}`, emphasis: "primary" }],
+      quiet: [words.youAsked({ once, weekday, time: args.language.startsWith("en") ? clockOf(timeOfDay) : timeOfDay, platformName: brand.platformName })],
+    },
+    ...(drawn ? { pictures: [{ cid: TASK_CHART_CID, bars: { values: groups.map((group) => group.value), marked: groups.map((group) => group.name === top.name) } }] } : {}),
   };
 }

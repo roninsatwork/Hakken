@@ -8256,7 +8256,15 @@
             "conversionsOf": "Un grafico di {event} ogni giorno",
             "conversionRate": "Un grafico della quota di visite che hanno convertito",
             "conversionRateOf": "Un grafico della quota di visite che hanno fatto {event}",
-            "conversionRatePurchase": "Un grafico della quota di visite con un acquisto"
+            "conversionRatePurchase": "Un grafico della quota di visite con un acquisto",
+            "ofKind": "{kind}: {title}",
+            "kinds": {
+              "bars": "Barre",
+              "stacked": "Barre sovrapposte",
+              "pie": "Una torta",
+              "scatter": "Un grafico a dispersione",
+              "grid": "Una griglia"
+            }
           },
           "chartHint": "Vuoi qualcosa di diverso? Dimmelo, ad esempio “alle 9” o “ogni lunedì invece”."
         },

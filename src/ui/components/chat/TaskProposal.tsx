@@ -28,9 +28,21 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
   const t = useTranslations("ai.assistant.taskProposal");
   const tPeriods = useTranslations("common.periods");
   // "A chart of the share of visits that did purchase": an event's own name, in plain words.
-  const chartWords = (chart: { measure: "visits" | "conversions" | "conversionRate"; event?: string }) =>
-    chart.event === "purchase" && chart.measure === "conversionRate" ? t("report.chart.conversionRatePurchase")
+  const tGroups = useTranslations("ai.assistant.chart.groups");
+  const chartWords = (chart: { measure: "visits" | "conversions" | "conversionRate"; event?: string; kind?: string; by?: string }) => {
+    // A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): its kind, then what it shows, as its title says it.
+    if (chart.kind && chart.by) {
+      const by = tGroups(`by.${chart.by}` as "by.channel");
+      const did = chart.event === "purchase" ? tGroups("did.purchase") : tGroups("did.event", { event: (chart.event ?? "").replace(/_/g, " ") });
+      const title = chart.kind === "grid" ? tGroups("grid", { by })
+        : chart.kind === "scatter" ? tGroups("scatter", { did, by })
+          : chart.kind === "bars" ? tGroups(`bars.${chart.measure}`, { did, by })
+            : tGroups(`${chart.kind as "pie"}.${chart.measure === "visits" ? "visits" : "conversions"}`, { did, by });
+      return t("report.chart.ofKind", { kind: t(`report.chart.kinds.${chart.kind}` as "report.chart.kinds.bars"), title });
+    }
+    return chart.event === "purchase" && chart.measure === "conversionRate" ? t("report.chart.conversionRatePurchase")
       : chart.event ? t(`report.chart.${chart.measure}Of` as "report.chart.conversionsOf", { event: chart.event.replace(/_/g, " ") }) : t(`report.chart.${chart.measure}`);
+  };
   const engineLabel = useEngineLabel();
   const locale = useLocale();
   const { platformName } = useSystemSettings();

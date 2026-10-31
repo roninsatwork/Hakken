@@ -113,6 +113,16 @@ export type EmailWording = {
     youAsked: (args: { once: boolean; weekday: number; time: string; platformName: string }) => string;
     bellTitle: (args: { title: string }) => string;
     bellBody: (args: { figure: string; figureIs: string }) => string;
+    /** A chart of groups (ask-hakken-every-chart-plan-2026-10-31.md): "Visits by channel", "Each device's share of visits". */
+    groupsTitle: (args: { kind: string; by: string; measure: "visits" | "conversions" | "conversionRate"; event?: string }) => string;
+    /** Which dates it covers, against which: "Last month, against the month before." */
+    groupsSpan: (args: { period: string }) => string;
+    /** Under the big figure, the group it is: "Organic Search, the biggest". */
+    groupsTop: (args: { name: string }) => string;
+    groupsAlt: (args: { title: string; count: number }) => string;
+    /** A grid's row in words: "highest Brand 5.7%, lowest Blog 0.4%". */
+    gridRow: (args: { high: string; low: string }) => string;
+    everyOther: string;
   };
   /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
   taskAlert: {
@@ -160,6 +170,17 @@ export type EmailWording = {
 
 const EN_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
+/** A chart of groups' groups and periods in words (ask-hakken-every-chart-plan-2026-10-31.md), as the screens say them. */
+const EN_GROUPS_BY: Record<string, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country" };
+const IT_GROUPS_BY: Record<string, string> = { channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese" };
+const EN_PERIODS: Record<string, [string, string]> = {
+  thisWeek: ["This week", "the same days last week"], lastWeek: ["Last week", "the week before"], thisMonth: ["This month", "the same days last month"],
+  lastMonth: ["Last month", "the month before"], last3Months: ["The last 3 months", "the 3 months before"], last6Months: ["The last 6 months", "the 6 months before"], last12Months: ["The last 12 months", "the 12 months before"],
+};
+const IT_PERIODS: Record<string, [string, string]> = {
+  thisWeek: ["Questa settimana", "gli stessi giorni della settimana scorsa"], lastWeek: ["La settimana scorsa", "la settimana precedente"], thisMonth: ["Questo mese", "gli stessi giorni del mese scorso"],
+  lastMonth: ["Il mese scorso", "il mese precedente"], last3Months: ["Gli ultimi 3 mesi", "i 3 mesi precedenti"], last6Months: ["Gli ultimi 6 mesi", "i 6 mesi precedenti"], last12Months: ["Gli ultimi 12 mesi", "i 12 mesi precedenti"],
+};
 /** "del lunedì", "della domenica": Italian's article for a weekday. */
 const itOfWeekday = (weekday: number) => (weekday === 7 ? "della domenica" : IT_WEEKDAYS[weekday - 1] ? `del ${IT_WEEKDAYS[weekday - 1]}` : "della settimana");
 
@@ -294,6 +315,20 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           : `You asked ${platformName} for this chart every ${EN_WEEKDAYS[weekday - 1] ?? "week"} at ${time}. Pause or stop it any time in ${platformName} tasks.`,
       bellTitle: ({ title }) => `Your chart is ready: ${title}`,
       bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
+      groupsTitle: ({ kind, by, measure, event }) => {
+        const of = EN_GROUPS_BY[by] ?? by;
+        const did = event === "purchase" ? "made a purchase" : `did ${(event ?? "").replace(/_/g, " ")}`;
+        if (kind === "grid") return `Share of visits that did each step, by ${of}`;
+        if (kind === "scatter") return `Visits against the share that ${did}, by ${of}`;
+        if (kind === "stacked") return measure === "visits" ? `Each ${of}'s share of visits` : `Each ${of}'s share of visits that ${did}`;
+        if (kind === "pie") return measure === "visits" ? `Visits by ${of}` : `Visits that ${did}, by ${of}`;
+        return measure === "visits" ? `Visits by ${of}` : measure === "conversions" ? `Visits that ${did}, by ${of}` : `Share of visits that ${did}, by ${of}`;
+      },
+      groupsSpan: ({ period }) => `${EN_PERIODS[period]?.[0] ?? "These dates"}, against ${EN_PERIODS[period]?.[1] ?? "the period before"}.`,
+      groupsTop: ({ name }) => `${name}, the biggest`,
+      groupsAlt: ({ title, count }) => `Bars, one for each of ${count}: ${title}.`,
+      gridRow: ({ high, low }) => `highest ${high}, lowest ${low}`,
+      everyOther: "Every other",
     },
     taskAlert: {
       kind: "Alert",
@@ -447,6 +482,20 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           : `Hai chiesto a ${platformName} questo grafico ogni ${IT_WEEKDAYS[weekday - 1] ?? "settimana"} alle ${time}. Puoi metterlo in pausa o fermarlo quando vuoi in Attività di ${platformName}.`,
       bellTitle: ({ title }) => `Il tuo grafico è pronto: ${title}`,
       bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
+      groupsTitle: ({ kind, by, measure, event }) => {
+        const of = IT_GROUPS_BY[by] ?? by;
+        const did = event === "purchase" ? "hanno fatto un acquisto" : `hanno fatto ${(event ?? "").replace(/_/g, " ")}`;
+        if (kind === "grid") return `Quota di visite che hanno fatto ogni passaggio, per ${of}`;
+        if (kind === "scatter") return `Visite e quota che ${did}, per ${of}`;
+        if (kind === "stacked") return measure === "visits" ? `Quota di visite di ogni ${of}` : `Quota di ogni ${of} tra le visite che ${did}`;
+        if (kind === "pie") return measure === "visits" ? `Visite per ${of}` : `Visite che ${did}, per ${of}`;
+        return measure === "visits" ? `Visite per ${of}` : measure === "conversions" ? `Visite che ${did}, per ${of}` : `Quota di visite che ${did}, per ${of}`;
+      },
+      groupsSpan: ({ period }) => `${IT_PERIODS[period]?.[0] ?? "Queste date"}, contro ${IT_PERIODS[period]?.[1] ?? "il periodo precedente"}.`,
+      groupsTop: ({ name }) => `${name}, il più alto`,
+      groupsAlt: ({ title, count }) => `Barre, una per ciascuno di ${count}: ${title}.`,
+      gridRow: ({ high, low }) => `più alta ${high}, più bassa ${low}`,
+      everyOther: "Tutti gli altri",
     },
     taskAlert: {
       kind: "Avviso",

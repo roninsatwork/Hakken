@@ -9,6 +9,8 @@ import { emailWording } from "./utils/emailWording";
 import { mainConversionAt } from "./utils/assistantCharts";
 import { chartReportFigures, type ChartReportSpec } from "./utils/hakkenChartReport";
 import { dayIn } from "./utils/hakkenTaskTiming";
+import { readMapView } from "./agentReads";
+import { EVERY_OTHER, groupsChartFrom, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
  * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
@@ -25,6 +27,7 @@ export async function sendChartReport(
   target: NonNullable<Doc<"hakkenTasks">["target"]>,
   now: number,
 ): Promise<"SENT" | "NOTHING_YET" | "GONE"> {
+  if (report.kind && report.by) return await sendGroupsChartReport(ctx, task, { ...report, kind: report.kind, by: report.by }, target, now);
   const reader = { db: ctx.db, companyId: task.companyId };
   const common = { siteId: target.companyWebsiteId, period: report.period as never, device: "" };
   const read = await readChart(reader, common).catch(() => null);
@@ -80,6 +83,74 @@ export async function sendChartReport(
     });
   }
   // Sent once: it stops, and stays on the Hakken tasks page as paused, so it can be read back or set again.
+  if (report.every === "once") await ctx.db.patch(task._id, { state: "PAUSED", updatedAt: now });
+  return "SENT";
+}
+
+/**
+ * A chart of groups sent at a time (ask-hakken-every-chart-plan-2026-10-31.md, phase 3): the website's channels, kinds
+ * of page, devices or countries over the period as of its day, from the Conversions map's own read, worked out as Ask
+ * Hakken drew it — by email (each group a bar, with its name and figure written beside), and the bell. Counted and
+ * stopped as a line a day is.
+ */
+async function sendGroupsChartReport(
+  ctx: MutationCtx,
+  task: Doc<"hakkenTasks">,
+  report: ChartReportSpec & { kind: NonNullable<ChartReportSpec["kind"]>; by: NonNullable<ChartReportSpec["by"]> },
+  target: NonNullable<Doc<"hakkenTasks">["target"]>,
+  now: number,
+): Promise<"SENT" | "NOTHING_YET" | "GONE"> {
+  const view = await readMapView({ db: ctx.db, companyId: task.companyId }, { siteId: target.companyWebsiteId, period: report.period, device: "", columns: report.by }).catch(() => null);
+  if (!view || !("visits" in view) || !view.visits) return "NOTHING_YET";
+  const link = `/app/analytics/${target.companyWebsiteId}/conversions?period=${report.period}`;
+  const built = groupsChartFrom({ visits: view.visits, conversions: view.conversions }, {
+    kind: report.kind, by: report.by, measure: report.measure, ...(report.event ? { event: report.event } : {}), website: target.website, period: report.period, link,
+  });
+  // The conversion it was about is no longer counted: nothing true to send.
+  if (!built.ok) return report.event && !view.conversions.some((one) => one.event === report.event) ? "GONE" : "NOTHING_YET";
+  const chart: GroupsChart = built.chart;
+  const top = chart.groups.find((group) => group.name !== EVERY_OTHER) ?? chart.groups[0];
+
+  const owner = await ctx.db.get(task.userId);
+  if (!owner) return "GONE";
+  const preferences = await ensureReaderPreferences(ctx, owner._id);
+  const language = preferences?.language ?? "en";
+  const sentOn = dayIn(now, task.timeZone);
+  const seen = await ctx.db.query("hakkenTaskChecks").withIndex("by_task_day", (q) => q.eq("taskId", task._id).eq("day", sentOn)).first();
+  if (!seen) {
+    await ctx.db.insert("hakkenTaskChecks", { taskId: task._id, companyId: task.companyId, day: sentOn, value: top.value, met: true, streak: 0, alerted: true, checkedAt: now });
+    await chargeTaskWork(ctx, {
+      kind: "taskReports", runKey: `taskReports:${task._id}:${sentOn}`, companyId: task.companyId, userId: task.userId, how: "scheduled",
+      companyWebsiteId: target.companyWebsiteId, detail: task.title,
+    }, now);
+  }
+  if (task.channels.email && owner.email) {
+    await queueOutboxMessage(ctx, {
+      messageType: "TASK_REPORT",
+      userId: owner._id,
+      email: owner.email,
+      language,
+      payload: {
+        taskId: task._id, look: "analyticsGroups", website: target.website, kind: chart.kind, by: chart.by, measure: chart.measure, ...(chart.event ? { event: chart.event } : {}),
+        period: chart.period, groups: chart.groups, ...(chart.rows ? { rows: chart.rows } : {}),
+        every: report.every, weekday: report.weekday, timeOfDay: task.timeOfDay, link,
+      },
+      idempotencyKey: `TASK_CHART:${task._id}:${sentOn}`,
+    });
+  }
+  if (task.channels.bell && !seen) {
+    const words = emailWording(language).taskChart;
+    const rate = chart.measure === "conversionRate" || chart.kind === "scatter" || chart.kind === "grid" || chart.kind === "pie" || chart.kind === "stacked";
+    const figure = rate ? `${top.value.toLocaleString(emailWording(language).dateLocale, { maximumFractionDigits: 1 })}%` : Math.round(top.value).toLocaleString(emailWording(language).dateLocale);
+    await ctx.scheduler.runAfter(0, internal.notifications.notifyUserInternal, {
+      userId: owner._id,
+      companyId: task.companyId,
+      kind: "HAKKEN_TASK_REPORT",
+      title: words.bellTitle({ title: words.groupsTitle({ kind: chart.kind, by: chart.by, measure: chart.measure, ...(chart.event ? { event: chart.event } : {}) }) }),
+      body: `${words.groupsTop({ name: top.name === EVERY_OTHER ? words.everyOther : top.name })}: ${figure}.`,
+      href: link,
+    });
+  }
   if (report.every === "once") await ctx.db.patch(task._id, { state: "PAUSED", updatedAt: now });
   return "SENT";
 }
