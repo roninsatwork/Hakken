@@ -8,8 +8,12 @@ import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { findingValidator } from "./utils/sees/findingValidator";
-import { SEES_KEPT_MS, SEES_WRITING_MS, fromSeesKey, sameFigures, seesAskValidator, seesKey } from "./utils/seesAsk";
+import { MOST_SEES_FACTS, SEES_KEPT_MS, SEES_WRITING_MS, fromSeesKey, sameFigures, seesAskValidator, seesKey } from "./utils/seesAsk";
 import { weekOf } from "./insightsTeam";
+import { creditBalance, ensurePlanBatch, readCreditPrice } from "./creditLedger";
+import { creditsForUnits } from "./creditKinds";
+import { pageDataFor, pageFacts } from "./utils/sees/pageData";
+import { seesScreenFor } from "./utils/sees/screens";
 
 /**
  * What Hakken sees, asked of the Insights team when the eye is pressed
@@ -38,34 +42,58 @@ export function stillStands(row: Pick<Doc<"seesAnswers">, "status" | "askedAt" |
   return false;
 }
 
+/** Whether the company has the credits a press costs (Anthony, 2026-10-31: at zero credits the eye "stop[s]"). */
+export async function seesCreditsLeft(ctx: MutationCtx, companyId: Id<"companies">): Promise<boolean> {
+  const now = Date.now();
+  // The month's plan credits are granted the first time anything is charged in it: granted here first, so a new month never reads as empty.
+  await ensurePlanBatch(ctx, companyId, now);
+  const price = creditsForUnits(await readCreditPrice(ctx, "sees"), 1);
+  return price <= 0 || (await creditBalance(ctx, companyId)) >= price;
+}
+
 /**
  * The eye was pressed: the answer kept for this page as it stands, or a new
  * one started — a run of the Head of Strategy's, which asks the specialist
  * and the Editor (`seesAskActions.writeSeesAnswer`). Says the key the bubble
  * reads the answer by. A failed answer is asked again on the next press.
+ *
+ * Any page of the six sections may ask (sees-every-page-plan-2026-10-31.md): one with no facts of its own hands over
+ * its figures as it shows them (`data`), keyed here. A page whose words are already the team's writes nothing; a
+ * company with fewer credits than a press costs is told so, and nothing is written.
  */
 export const askSees = tenantMutation({
   args: seesAskValidator,
-  returns: v.object({ key: v.string(), status: v.union(v.literal("RESEARCHING"), v.literal("WRITTEN"), v.literal("FAILED")) }),
+  returns: v.object({ key: v.string(), status: v.union(v.literal("RESEARCHING"), v.literal("WRITTEN"), v.literal("FAILED"), v.literal("NO_CREDITS")) }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = site.hold._id;
     const key = seesKey(args);
     const now = Date.now();
+    const screen = seesScreenFor(args.screen);
+    if (!screen) throw appError("INVALID_INPUT", "That page has no eye.");
+    if (!screen.writes) throw appError("INVALID_INPUT", "That page's words are the team's own: pressing writes nothing new.");
+    const data = args.data !== undefined ? pageDataFor(args.data) : undefined;
+    // The page's own facts, or its figures keyed as the writer will name them.
+    const facts = (args.facts.length > 0 ? args.facts : pageFacts(args.screen, data, { ...(args.from ? { from: args.from } : {}), ...(args.to ? { to: args.to } : {}) }).facts.map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })))
+      .slice(0, MOST_SEES_FACTS);
     const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).first();
     // Kept three hours while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
-    if (held && stillStands(held, now) && (held.status === "RESEARCHING" || sameFigures(held.facts, args.facts))) return { key, status: held.status };
+    if (held && stillStands(held, now) && (held.status === "RESEARCHING" || sameFigures(held.facts, facts))) return { key, status: held.status };
     if (!/^\/app\/[^\s]{1,300}$/.test(args.path)) throw appError("INVALID_INPUT", "The screen's address is not one of the app's.");
-    if (args.facts.length === 0) throw appError("INVALID_INPUT", "The page handed over no figures.");
+    if (facts.length === 0) throw appError("INVALID_INPUT", "The page handed over no figures.");
     const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
     if (!lead || lead.isActive === false) {
       // No team to ask: the bubble keeps the rule's words, and nothing is kept.
       return { key, status: "FAILED" as const };
     }
     const companyId = site.hold.companyId;
+    if (!(await seesCreditsLeft(ctx, companyId))) return { key, status: "NO_CREDITS" as const };
+    // The page's own words for what it is where it gave them (the Conversions screens'); the list's otherwise.
+    const about = args.facts.length > 0 && args.about.trim() ? args.about : screen.about;
+    const kept = { path: args.path, about, facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId, ...(data !== undefined && data !== null ? { pageData: data } : {}) };
     const answerId: Id<"seesAnswers"> = held
-      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path, about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId }), held._id)
-      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId });
+      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), pageData: undefined, ...kept }), held._id)
+      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), ...kept });
     const runId = await ctx.db.insert("agentRuns", {
       agentId: lead._id,
       triggerType: "EVENT",
@@ -84,15 +112,16 @@ export const askSees = tenantMutation({
       companyId,
       host: site.website.host,
       screen: args.screen,
-      about: args.about,
+      about,
       period: args.period,
       from: args.from,
       to: args.to,
       country: args.country,
       device: args.device,
-      facts: args.facts,
+      facts,
       links: args.links,
       shop: args.shop ?? false,
+      ...(data !== undefined && data !== null ? { data } : {}),
     });
     return { key, status: "RESEARCHING" as const };
   },
@@ -185,6 +214,7 @@ const evalPageValidator = v.object({
   country: v.optional(v.string()),
   device: v.optional(v.string()),
   shop: v.optional(v.boolean()),
+  pageData: v.optional(v.any()),
 });
 
 /** A bubble kept as an eval page: its figures, links and where it was looked at, with Anthony's sentences. */
@@ -211,6 +241,7 @@ async function keepEvalPage(ctx: MutationCtx, args: { answerId: Id<"seesAnswers"
     country: at.country,
     device: at.device,
     shop: answer.shop ?? false,
+    ...(answer.pageData !== undefined ? { pageData: answer.pageData } : {}),
     gradings: [],
     createdBy: args.userId,
     createdAt: Date.now(),
@@ -310,6 +341,7 @@ export const evalPagesInternal = internalQuery({
       _id: row._id, companyId: row.companyId, companyWebsiteId: row.companyWebsiteId, host: row.host, screen: row.screen, about: row.about, facts: row.facts, links: row.links, expected: row.expected,
       ...(row.period ? { period: row.period } : {}), ...(row.from ? { from: row.from } : {}), ...(row.to ? { to: row.to } : {}),
       ...(row.country !== undefined ? { country: row.country } : {}), ...(row.device !== undefined ? { device: row.device } : {}), ...(row.shop !== undefined ? { shop: row.shop } : {}),
+      ...(row.pageData !== undefined ? { pageData: row.pageData } : {}),
     }));
   },
 });

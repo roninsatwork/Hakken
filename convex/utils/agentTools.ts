@@ -45,7 +45,8 @@ export function unitOf(name: string): FactUnit {
 function nameOf(item: unknown): string | null {
   if (!item || typeof item !== "object") return null;
   const row = item as Record<string, unknown>;
-  for (const field of ["event", "column", "channel", "classification", "page", "name", "came", "went", "source", "product", "kind", "check"]) {
+  // Then the names other sections' rows go by (sees-every-page-plan-2026-10-31.md): a search, a website, a domain, a browser…
+  for (const field of ["event", "column", "channel", "classification", "page", "name", "came", "went", "source", "product", "kind", "check", "key", "query", "keyword", "host", "domain", "device", "country", "browser", "anchor", "label", "title", "url", "prompt", "engine", "step"]) {
     const value = row[field];
     if (typeof value === "string" && value.trim()) return value.trim().replace(/[\]\s]+/g, "_").slice(0, 60);
   }

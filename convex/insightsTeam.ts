@@ -165,14 +165,17 @@ export const ensureTeamInternal = internalMutation({
         }
         continue;
       }
+      // A specialist joining a team already running takes the Conversion specialist's model, as an administrator set it:
+      // the eye's writers run on the strongest model (what-hakken-sees-guide.md), and a new one should not start weaker.
+      const peer = role !== "INSIGHTS_CONVERSION" ? await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", "INSIGHTS_CONVERSION")).first() : null;
+      const model = peer && peer.modelSelectionMode !== "inherit" ? { modelId: peer.modelId, ...(peer.modelSelectionMode ? { modelSelectionMode: peer.modelSelectionMode } : {}) } : { modelId: "agent (resolved at run time)", modelSelectionMode: "inherit" as const };
       const agentId = await ctx.db.insert("agents", {
         name: TEAM_AGENTS[role].name,
         description: TEAM_AGENTS[role].description,
         ...(INSIGHT_BRIEFS[role].brief ? { systemPrompt: INSIGHT_BRIEFS[role].brief } : {}),
         standingObjective: INSIGHT_BRIEFS[role].job,
         systemKey: role,
-        modelId: "agent (resolved at run time)",
-        modelSelectionMode: "inherit",
+        ...model,
         thinkingMode: false,
         isActive: true,
         isGlobal: true,

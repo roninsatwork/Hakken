@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { factsOf, seesFrom, seesKey, writerFrom, writersForHead } from "./seesAsk";
+import { factsOf, seesFrom, seesKey, writerFor } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -63,16 +63,14 @@ describe("the eye's ask", () => {
     expect(seesFrom({ says: [] }, facts, links)).toMatchObject({ ok: false });
   });
 
-  test("the Head may hand a page to any writer on the team, never to itself, the Editor or the Report Writer (S8)", () => {
-    const roles = writersForHead().map((writer) => writer.role);
-    expect(roles).toContain("INSIGHTS_CONVERSION");
-    expect(roles).toContain("INSIGHTS_ANALYST");
-    expect(roles).not.toContain("INSIGHTS_HEAD_OF_STRATEGY");
-    expect(roles).not.toContain("INSIGHTS_EDITOR");
-    expect(roles).not.toContain("INSIGHTS_REPORT_WRITER");
-    expect(writerFrom({ specialist: "INSIGHTS_CONVERSION" })).toBe("INSIGHTS_CONVERSION");
-    expect(writerFrom({ specialist: "INSIGHTS_EDITOR" })).toBeNull();
-    expect(writerFrom({ specialist: "someone else" })).toBeNull();
+  test("the screen list names each page's writer, every section by its own specialist (sees-every-page-plan)", () => {
+    expect(writerFor("googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
+    expect(writerFor("googleAnalytics.trackingHealth", [])).toBe("INSIGHTS_MEASUREMENT");
+    expect(writerFor("searchConsole.keywords", [])).toBe("INSIGHTS_SEARCH");
+    expect(writerFor("bing.crawling", [])).toBe("INSIGHTS_TECHNICAL");
+    expect(writerFor("clarity.pages", [])).toBe("INSIGHTS_BEHAVIOUR");
+    expect(writerFor("visibility.backlinks", [])).toBe("INSIGHTS_LINKS");
+    expect(writerFor("visibility.somethingNew", [])).toBe("INSIGHTS_SEARCH");
   });
 });
 
@@ -124,13 +122,11 @@ describe("tracking advice and who writes (Anthony, 2026-10-30: \"the advice is s
     expect(seesFrom({ says: ["[[conv.purchases.now]] checkout completes double-count alongside tracked purchases."], steps: [] }, facts, links)).toMatchObject({ ok: true });
   });
 
-  test("a page about conversions goes to the Conversion specialist, unless tracking health found a fault", async () => {
-    const { routeFor } = await import("./seesAsk");
-    expect(routeFor("INSIGHTS_MEASUREMENT", "googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
-    expect(routeFor("INSIGHTS_MEASUREMENT", "googleAnalytics.event:purchase", [])).toBe("INSIGHTS_CONVERSION");
-    expect(routeFor("INSIGHTS_MEASUREMENT", "googleAnalytics.conversions", ["NO_VALUE"])).toBe("INSIGHTS_MEASUREMENT");
-    expect(routeFor("INSIGHTS_ANALYST", "googleAnalytics.conversions", [])).toBe("INSIGHTS_ANALYST");
-    expect(routeFor(null, "googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
+  test("a page about conversions goes to the Measurement specialist only when tracking health found a fault that breaks its figures", () => {
+    expect(writerFor("googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
+    expect(writerFor("googleAnalytics.event:purchase", [])).toBe("INSIGHTS_CONVERSION");
+    expect(writerFor("googleAnalytics.conversions", ["nothing is counted as a conversion yet"])).toBe("INSIGHTS_MEASUREMENT");
+    expect(writerFor("googleAnalytics.channels", ["nothing is counted as a conversion yet"])).toBe("INSIGHTS_CONVERSION");
   });
 
   test("only faults that break the conversion figures count; housekeeping never lets tracking in", async () => {

@@ -10639,7 +10639,9 @@
           "desktop": "computers",
           "tablet": "tablets"
         }
-      }
+      },
+      "askBelow": "Ask about this page below.",
+      "noCredits": "Your company has used all its credits, so {platformName} can't write new advice for this page. Add credits in <billing>Billing</billing>."
     },
     "sidePanel": {
       "close": "Close"

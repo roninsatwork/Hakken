@@ -10639,7 +10639,9 @@
           "desktop": "computer",
           "tablet": "tablet"
         }
-      }
+      },
+      "askBelow": "Chiedi qualcosa su questa pagina qui sotto.",
+      "noCredits": "La tua azienda ha usato tutti i crediti, quindi {platformName} non può scrivere nuovi consigli per questa pagina. Aggiungi crediti in <billing>Fatturazione</billing>."
     },
     "sidePanel": {
       "close": "Chiudi"

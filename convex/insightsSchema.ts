@@ -439,6 +439,11 @@ export const insightsTables = {
     findings: v.optional(v.array(findingValidator)),
     /** Who pressed the eye for the words being written: the press is charged to them once written (ask-hakken-every-chart-plan, §3). */
     askedBy: v.optional(v.id("users")),
+    /**
+     * The page's own figures as it showed them, cut to its first rows (`utils/sees/pageData.ts`): what the writer read,
+     * kept so the page can join the eval set (sees-every-page-plan-2026-10-31.md, phase 1).
+     */
+    pageData: v.optional(v.any()),
   })
     .index("by_hold_key", ["companyWebsiteId", "key"])
     .index("by_hold_week", ["companyWebsiteId", "week"]),
@@ -469,6 +474,8 @@ export const insightsTables = {
     country: v.optional(v.string()),
     device: v.optional(v.string()),
     shop: v.optional(v.boolean()),
+    /** The page's own figures as it showed them, for a page of any section (sees-every-page-plan-2026-10-31.md). */
+    pageData: v.optional(v.any()),
     /**
      * Its gradings, the newest last, twenty kept: what the team wrote each time, whether the Editor passed it, and how
      * close it came to Anthony's (the share of the figures his sentences name that the team's name too, 0 to 1). On the

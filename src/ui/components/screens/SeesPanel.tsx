@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { FunctionReturnType } from "convex/server";
 import { AlertTriangle, ArrowRight, Clock, Eye, TrendingDown, TrendingUp } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -20,12 +21,14 @@ type Finding = FunctionReturnType<typeof api.seesFindings.seesFindings>[number];
  * (`seesFindings`); what it means — the team's words and steps, or the page's own rule's words; and, below them,
  * asking about the page (`chat`, given by the eye). It replaces the speech bubble.
  */
-export function SeesPanel({ open, onClose, says, steps, researching, name, findings: given, chat, foot, onAskAbout, id }: {
+export function SeesPanel({ open, onClose, says, steps, researching, noCredits = false, name, findings: given, chat, foot, onAskAbout, id }: {
   open: boolean;
   onClose: () => void;
   says: string[];
   steps: HakkenSeesStep[];
   researching: boolean;
+  /** The company has fewer credits than a press costs: nothing new is written, and it says so (Anthony, 2026-10-31: "stop"). */
+  noCredits?: boolean;
   /** An event's own name on the page, for the findings: "add_to_cart" → "Added to basket". */
   name?: (eventName: string) => string;
   /** What the figures show: as Jev ordered them when the words were written, or code's own, read at once (the eye's). */
@@ -54,6 +57,11 @@ export function SeesPanel({ open, onClose, says, steps, researching, name, findi
         ) : null}
         <section data-part="sees-means" className="flex flex-col gap-3">
           <SectionHead title={t("means")} note={researching ? undefined : t("meansNote", { platformName })} />
+          {noCredits ? (
+            <p data-part="sees-no-credits" className="text-[13px] leading-[1.6] text-secondary">
+              {t.rich("noCredits", { platformName, billing: (chunks) => <Link href="/app/settings/billing" className="text-foreground underline underline-offset-2 hover:text-brand">{chunks}</Link> })}
+            </p>
+          ) : null}
           {researching ? (
             <p className="text-[13px] leading-[1.6] text-secondary" aria-live="polite">{t("researching", { platformName })}</p>
           ) : (

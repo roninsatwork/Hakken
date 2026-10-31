@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { HakkenSeesStep, SeesAsk } from "./HakkenSees";
+import type { HakkenSeesStep, SeesAsk, SeesPage } from "./HakkenSees";
 
 /**
  * What the screen's What Hakken sees box holds, and whether it is open
@@ -22,7 +22,7 @@ import type { HakkenSeesStep, SeesAsk } from "./HakkenSees";
  * eye is pressed (sees-conversion-specialist-plan-2026-10-30.md S4); a page
  * without one shows the rule's words alone.
  */
-export type SeesBox = { screen: string; says: string[]; steps: HakkenSeesStep[]; advice: string; ask?: SeesAsk; name?: (eventName: string) => string };
+export type SeesBox = { screen: string; says: string[]; steps: HakkenSeesStep[]; advice: string; ask?: SeesAsk; name?: (eventName: string) => string; page?: SeesPage };
 
 const PREFIX = "hakken.sees.read.";
 let current: SeesBox | null = null;
@@ -106,11 +106,11 @@ export function closeSees() {
 
 /**
  * What the Insights team said when the eye asked for a page (its key):
- * "RESEARCHING" while it writes, then what it saved, or "FAILED" when there
- * was no team to ask. Kept here, outside React, so the eye's effect updates
+ * "RESEARCHING" while it writes, then what it saved, "FAILED" when there
+ * was no team to ask, or "NO_CREDITS" when the company has none left. Kept here, outside React, so the eye's effect updates
  * it as an external system and the bubble reads it.
  */
-export type SeesAsked = { key: string; status: "RESEARCHING" | "WRITTEN" | "FAILED" };
+export type SeesAsked = { key: string; status: "RESEARCHING" | "WRITTEN" | "FAILED" | "NO_CREDITS" };
 let asked: SeesAsked | null = null;
 
 export function noteAsked(key: string, status: SeesAsked["status"]) {

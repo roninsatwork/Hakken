@@ -1,9 +1,9 @@
 import { v } from "convex/values";
-import { INSIGHTS_LEAD_ROLE, INSIGHTS_ROLES, type InsightsRole } from "./agentRoles";
+import type { InsightsRole } from "./agentRoles";
 import { ANALYTICS_READ } from "./agentTools";
 import { fillFacts, namedFacts, type Fact } from "./insightFacts";
 import { typedNumbers } from "./insightEditor";
-import { DISCIPLINE, SPECIALIST_ROLE, type InsightSpecialist } from "./insightTeam";
+import { seesScreenFor, sourceOfSection } from "./sees/screens";
 
 /**
  * What Hakken sees, written by the Insights team when the eye is pressed
@@ -29,26 +29,11 @@ export const MOST_BUBBLE_FIGURES = 8;
 
 /**
  * What each screen shows, part by part, for the specialist to cover before it digs (Anthony, 2026-10-30, agreeing:
- * "cover the page before digging"). The page's own layout, never a list of findings. A screen given a bubble adds
- * its parts here.
+ * "cover the page before digging"). The page's own layout, never a list of findings: kept in the screen list
+ * (`utils/sees/screens.ts`) with the rest of what each page is.
  */
 export function pageParts(screen: string): string[] {
-  if (screen === "googleAnalytics.conversions") {
-    // Not the boxes: the reader sees those (2026-10-31: a sentence spent on them left less room to dig).
-    return [
-      "the chart: how many visits it took for one conversion, day by day",
-      "the map: each conversion by kind of page, channel, device or country, as visits, a rate or events",
-      "the table: each event the website counts, with its conversions, visits and change",
-    ];
-  }
-  if (screen.startsWith("googleAnalytics.event:")) {
-    return [
-      "the chart: the share of each day's visits that did it",
-      "the lines: the conversion by channel, day by day",
-      "when people convert: by hour and day of the week",
-    ];
-  }
-  return [];
+  return [...(seesScreenFor(screen)?.parts ?? [])];
 }
 
 /** Words the Analytics screens never use, which a reader would not know: the page's own names instead. */
@@ -82,6 +67,11 @@ export const seesAskValidator = {
   })),
   links: v.array(seesLinkValidator),
   shop: v.optional(v.boolean()),
+  /**
+   * The page's own figures as it shows them — the answer of the query that draws it, cut to its first rows
+   * (`utils/sees/pageData.ts`) — for a page with no facts of its own (sees-every-page-plan-2026-10-31.md, phase 1).
+   */
+  data: v.optional(v.any()),
 };
 
 /** A key read back into its parts: the screen, its dates, country and device (`seesKey`'s other way). */
@@ -96,13 +86,14 @@ export function seesKey(ask: { screen: string; period: string; from?: string; to
   return [ask.screen, ask.period, ask.from ?? "", ask.to ?? "", ask.country, ask.device].join("|");
 }
 
-/** The page's facts as the team's (`Fact`): Analytics' figures, the home country's, over the dates shown. */
-export function factsOf(ask: { facts: ReadonlyArray<{ key: string; value: number; unit: Fact["unit"]; label: string; currency?: string }>; from?: string; to?: string; country: string }): Fact[] {
+/** The page's facts as the team's (`Fact`): its section's figures, the home country's, over the dates shown. */
+export function factsOf(ask: { screen?: string; facts: ReadonlyArray<{ key: string; value: number; unit: Fact["unit"]; label: string; currency?: string }>; from?: string; to?: string; country: string }): Fact[] {
+  const section = ask.screen ? seesScreenFor(ask.screen)?.section : undefined;
   return ask.facts.slice(0, MOST_SEES_FACTS).map((fact) => ({
     key: fact.key,
     value: fact.value,
     unit: fact.unit,
-    source: "analytics" as const,
+    source: section ? sourceOfSection(section) : ("analytics" as const),
     label: fact.label,
     ...(ask.from ? { from: ask.from } : {}),
     ...(ask.to ? { to: ask.to } : {}),
@@ -110,27 +101,6 @@ export function factsOf(ask: { facts: ReadonlyArray<{ key: string; value: number
     ...(fact.currency ? { currency: fact.currency } : {}),
   }));
 }
-
-/** The specialists the Head may hand a page to: every role on the team but its own, the Editor's and the Report Writer's (S8). */
-export const SEES_WRITERS: readonly InsightsRole[] = INSIGHTS_ROLES.filter((role) => role !== INSIGHTS_LEAD_ROLE && role !== "INSIGHTS_EDITOR" && role !== "INSIGHTS_REPORT_WRITER");
-
-/** Each writer's discipline in words, for the Head's choice; the roles without a specialist's discipline named by their job. */
-export function writersForHead(): Array<{ role: InsightsRole; does: string }> {
-  const byRole = new Map<InsightsRole, string>(Object.entries(SPECIALIST_ROLE).map(([specialist, role]) => [role, DISCIPLINE[specialist as InsightSpecialist]]));
-  const extra: Partial<Record<InsightsRole, string>> = {
-    INSIGHTS_ANALYST: "why the visits and enquiries moved, period against period",
-    INSIGHTS_CANNIBALISATION: "which page should own each search where pages compete",
-    INSIGHTS_PAGE_DECISIONS: "what to do with each page: keep, improve, merge, redirect or remove",
-  };
-  return SEES_WRITERS.map((role) => ({ role, does: byRole.get(role) ?? extra[role] ?? role.toLowerCase() }));
-}
-
-/** What the Head answers with when handed a page (S8, S12). */
-export const ROUTE_FORMAT = [
-  "A reader pressed the eye on one page of the app. Choose which specialist on your team should say what the page means, from the specialists given, by what the page is about and the figures it holds.",
-  "A page about sales and conversions goes to the Conversion specialist. The measurement specialist answers only when trackingFaults lists a fault tracking health found.",
-  "Reply with only JSON: {\"specialist\": the role exactly as given, \"why\": one sentence}.",
-].join("\n");
 
 /**
  * What a specialist answers with for the bubble (S5, S7): the shape is fixed
@@ -192,6 +162,15 @@ export const SERIOUS_TRACKING_FAULTS: Readonly<Record<string, string>> = {
 export function seriousFaults(failing: readonly string[]): string[] {
   return failing.filter((check) => check in SERIOUS_TRACKING_FAULTS).map((check) => SERIOUS_TRACKING_FAULTS[check]);
 }
+
+/**
+ * Said when the page handed over its own figures (sees-every-page-plan-2026-10-31.md): the page as the reader sees it,
+ * every number beside its key. Its words come from what it shows, never from Google Analytics alone.
+ */
+export const SEES_PAGE_FORMAT = [
+  "pageFigures is the page as the reader sees it, every number beside its key in double square brackets. Write from it: name each figure by its key.",
+  "Use the page's own words for things: a page about searches speaks of clicks and times shown in Google; a page about links speaks of linking websites.",
+].join("\n");
 
 /** Findings the words must cover, of those code found: the first ones; the panel shows them all. */
 export const MOST_COVERED = 4;
@@ -290,20 +269,14 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
 }
 
 /**
- * Who writes, as the Head chose — held to its rule: a page about conversions goes to the Conversion specialist unless
- * tracking health found a fault, when the measurement specialist may answer. No choice: the Conversion specialist.
+ * Who writes a page's words: the screen list's specialist (sees-every-page-plan-2026-10-31.md; the Head of Strategy no
+ * longer chooses, which was a model call on every press). One rule beside it: on a page about conversions, a fault
+ * tracking health found that breaks the conversion figures hands the page to the Measurement specialist.
  */
-export function routeFor(chosen: InsightsRole | null, screen: string, trackingFaults: readonly string[]): InsightsRole {
+export function writerFor(screen: string, trackingFaults: readonly string[]): InsightsRole {
   const aboutConversions = screen === "googleAnalytics.conversions" || screen.startsWith("googleAnalytics.event:");
-  if (!chosen) return "INSIGHTS_CONVERSION";
-  if (aboutConversions && chosen === "INSIGHTS_MEASUREMENT" && trackingFaults.length === 0) return "INSIGHTS_CONVERSION";
-  return chosen;
-}
-
-/** The Head's choice, as a role on the team; null when it named none. */
-export function writerFrom(answer: unknown): InsightsRole | null {
-  const role = (answer as { specialist?: unknown } | null)?.specialist;
-  return typeof role === "string" && (SEES_WRITERS as readonly string[]).includes(role) ? (role as InsightsRole) : null;
+  if (aboutConversions && trackingFaults.length > 0) return "INSIGHTS_MEASUREMENT";
+  return seesScreenFor(screen)?.writer ?? "INSIGHTS_CONVERSION";
 }
 
 /**

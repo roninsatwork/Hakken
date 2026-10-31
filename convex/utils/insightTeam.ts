@@ -184,6 +184,7 @@ export const TEAM_AGENTS: Record<InsightsRole, { name: string; description: stri
   INSIGHTS_AI_VISIBILITY: { name: "Insights: AI visibility specialist", description: "How AI assistants and Google's AI answers name, cite and send people to the business and its rivals." },
   INSIGHTS_CONVERSION: { name: "Insights: Conversion specialist", description: "The money pages: how many visitors and Google clicks it takes for one enquiry, and why that changed." },
   INSIGHTS_MEASUREMENT: { name: "Insights: Measurement specialist", description: "Whether the figures can be trusted: tracking, what counts as a conversion, and comparing like with like." },
+  INSIGHTS_BEHAVIOUR: { name: "Insights: Visitor behaviour specialist", description: "How people behave on the website's pages, from Microsoft Clarity: where they scroll, give up, click in anger and hit errors." },
   INSIGHTS_EDITOR: { name: "Insights: Editor", description: "Checks every figure, comparison and claim before a customer sees it, and tells real change from chance." },
   INSIGHTS_REPORT_WRITER: { name: "Insights: Report Writer", description: "Writes the weekly brief, the monthly report and the quarterly board report from the week's findings." },
 };

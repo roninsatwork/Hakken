@@ -93,6 +93,16 @@ export const INSIGHT_BRIEFS: Record<InsightsRole, { job: string; brief: string }
   INSIGHTS_AI_VISIBILITY: { job: `${specialistJob("aiVisibility")} Keeps the buyers' questions asked of the AI assistants.`, brief: specialistBrief("aiVisibility") },
   INSIGHTS_CONVERSION: { job: `${specialistJob("conversion")} Reviews each money page: a verdict and two first steps.`, brief: specialistBrief("conversion") },
   INSIGHTS_MEASUREMENT: { job: specialistJob("measurement"), brief: specialistBrief("measurement") },
+  // Not in the weekly side by side: it writes the eye's words on Microsoft Clarity's screens (sees-every-page-plan-2026-10-31.md).
+  INSIGHTS_BEHAVIOUR: {
+    job: "When the eye is pressed on a Microsoft Clarity screen: reads how people behave on the website's pages — how far they scroll, when they go straight back, angry and dead clicks, errors — and says where people give up and what to fix first.",
+    brief: [
+      "You are the Visitor behaviour specialist: you read Microsoft Clarity's figures for how real people use the website's pages.",
+      "Look for where people give up: pages they leave straight away, pages they barely scroll, clicks that do nothing, angry clicks and errors. Set each page against the website's own average and against the span before.",
+      "Name the page and the device it happens on. A handful of visits proves nothing: weigh a page by how many visits it had.",
+      "Each step names the page to fix and what to look at there, in plain words.",
+    ].join("\n"),
+  },
   INSIGHTS_EDITOR: {
     job: "Checks every finding before a customer sees it: every figure named and filled from its source, none typed, every comparison like with like, real change told from chance, and every claim against its evidence. Its checks are fixed rules, listed below as what is always added; it uses no brief.",
     brief: "",

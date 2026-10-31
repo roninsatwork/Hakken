@@ -81,6 +81,8 @@ export const INSIGHTS_ROLES = [
   "INSIGHTS_AI_VISIBILITY",
   "INSIGHTS_CONVERSION",
   "INSIGHTS_MEASUREMENT",
+  // How people behave on the pages, from Microsoft Clarity: the eye's writer for Clarity's screens (sees-every-page-plan-2026-10-31.md; Anthony: "create a new one if one does not exist or match").
+  "INSIGHTS_BEHAVIOUR",
   "INSIGHTS_EDITOR",
   "INSIGHTS_REPORT_WRITER",
 ] as const;

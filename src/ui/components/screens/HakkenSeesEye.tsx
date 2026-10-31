@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -12,6 +13,10 @@ import { Button } from "./Button";
 import { SeesPanel } from "./SeesPanel";
 import { SeesChatFoot, SeesChatLog, useSeesChat } from "./SeesChat";
 import { findingWords } from "@/convex/utils/sees/findings";
+import { pageDataFor, pageFigureLines } from "@/convex/utils/sees/pageData";
+import { pageFindings } from "@/convex/utils/sees/pageFindings";
+import { seesScreenFor, seesWrites } from "@/convex/utils/sees/screens";
+import type { SeesAsk } from "./HakkenSees";
 import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
 
 /**
@@ -49,40 +54,66 @@ export function HakkenSeesEye() {
   const fresh = useSeesNew();
   const holder = useRef<HTMLSpanElement>(null);
   const askSees = useMutation(api.seesAsk.askSees);
-  const key = box?.ask ? seesKey(box.ask) : null;
+  const pathname = usePathname() ?? "";
+  // A page that handed over its own figures (sees-every-page-plan-2026-10-31.md): cut to what it shows first, and —
+  // where pressing writes — asked of the team as a press, its links the rule's own steps and the page's.
+  const page = box?.page;
+  const data = page?.data;
+  const pageData = useMemo(() => (data !== undefined ? pageDataFor(data) : null), [data]);
+  const derivedAsk = useMemo<SeesAsk | undefined>(() => {
+    if (!page?.siteId || pageData === null || !seesWrites(page.screen)) return undefined;
+    const links = new Map<string, { label: string; href: string }>();
+    for (const step of box?.steps ?? []) if (step.href.startsWith("/app/") && !step.external) links.set(step.href, { label: step.link, href: step.href });
+    for (const link of page.links ?? []) links.set(link.href, { label: link.label, href: link.href });
+    return {
+      siteId: page.siteId, screen: page.screen, about: "", path: pathname, period: page.period ?? "", country: page.country ?? "", device: page.device ?? "",
+      ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}),
+      facts: [], links: [...links.values()].slice(0, 12), data: pageData,
+    };
+  }, [page, pageData, pathname, box?.steps]);
+  const ask = box?.ask ?? derivedAsk;
+  const key = ask ? seesKey(ask) : null;
   // What the team said when asked for this key (the store's, outside React): "RESEARCHING" until its answer is saved,
   // "FAILED" when there is no team. Asked once per key, the first time the bubble opens on it.
   const asked = useSeesAsked();
   useEffect(() => {
-    if (!open || !box?.ask || !key || asked?.key === key) return;
+    if (!open || !ask || !key || asked?.key === key) return;
     noteAsked(key, "RESEARCHING");
     // Nobody waits on the page: the answer arrives through the store, and a refusal leaves the rule's words standing.
-    askSees(box.ask).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
-  }, [open, key, asked?.key, box?.ask, askSees]);
-  const answer = useQuery(api.seesAsk.seesAnswer, open && box?.ask && key && asked?.key === key && asked.status !== "FAILED" ? { siteId: box.ask.siteId, key } : "skip");
+    askSees(ask).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
+  }, [open, key, asked?.key, ask, askSees]);
+  const noCredits = Boolean(ask && asked?.key === key && asked.status === "NO_CREDITS");
+  const answer = useQuery(api.seesAsk.seesAnswer, open && ask && key && asked?.key === key && asked.status !== "FAILED" && !noCredits ? { siteId: ask.siteId, key } : "skip");
   // The panel closes itself: Escape, its close button, or a click on the page behind it (SidePanel).
-  // What the figures show, read at once on an Analytics screen; the words' own order once the team has written them.
-  const readsFindings = open && box?.ask && box.ask.screen.startsWith("googleAnalytics.") && !answer?.findings;
+  // What the figures show: read at once on the Conversions screens; worked out here from any other page's own figures;
+  // the words' own order once the team has written them.
+  const conversionsPage = Boolean(box?.ask && box.ask.screen.startsWith("googleAnalytics."));
+  const readsFindings = open && conversionsPage && box?.ask && !answer?.findings;
   const live = useQuery(api.seesFindings.seesFindings, readsFindings && box?.ask ? { siteId: box.ask.siteId, period: box.ask.period, device: box.ask.device, ...(box.ask.country ? { country: box.ask.country } : {}) } : "skip");
-  const read = answer?.status === "WRITTEN" && answer.findings ? answer.findings : live;
+  const local = useMemo(() => (page && !conversionsPage && pageData !== null ? pageFindings(page.screen, pageData) : undefined), [page, conversionsPage, pageData]);
+  const read = answer?.status === "WRITTEN" && answer.findings ? answer.findings : conversionsPage ? live : local;
   const findings = Array.isArray(read) ? read : undefined;
-  // Asking about the page: an Ask Hakken conversation for its website, started with the page as its starting point.
+  // Asking about the page: an Ask Hakken conversation for its website, started with the page as its starting point —
+  // its address, what it is, its dates and, for a page Ask Hakken has no tool to read, its own figures.
   const shown = answer?.status === "WRITTEN" ? answer : null;
+  const figures = useMemo(() => (page && pageData !== null ? pageFigureLines(page.screen, pageData) : []), [page, pageData]);
+  const where = ask ?? (page ? { period: page.period ?? "", from: page.from ?? undefined, to: page.to ?? undefined, country: page.country ?? "", device: page.device ?? "" } : null);
   const chat = useSeesChat({
     pageKey: key ?? box?.screen ?? null,
-    ...(box?.ask ? { siteId: box.ask.siteId } : {}),
+    ...(ask ? { siteId: ask.siteId } : page?.siteId ? { siteId: page.siteId } : {}),
     startedOn: {
-      path: box?.ask?.path ?? box?.screen ?? "",
-      about: box?.ask?.about ?? box?.screen ?? "",
-      dates: box?.ask ? [box.ask.from && box.ask.to ? `${box.ask.from} to ${box.ask.to}` : box.ask.period, box.ask.country || null, box.ask.device || null].filter(Boolean).join(", ") : "",
+      path: ask?.path || pathname || box?.screen || "",
+      about: ask?.about || (page ? seesScreenFor(page.screen)?.about ?? page.screen : box?.screen ?? ""),
+      dates: where ? [where.from && where.to ? `${where.from} to ${where.to}` : where.period, where.country || null, where.device || null].filter(Boolean).join(", ") : "",
       findings: (findings ?? []).map(findingWords),
       said: shown ? [...shown.says, ...shown.steps.map((step) => step.words)] : [...(box?.says ?? []), ...(box?.steps ?? []).map((step) => step.words)],
+      ...(figures.length > 0 ? { figures } : {}),
     },
   });
   if (!draws || !box) return null;
   // The team's words when it has written them; "researching" while it writes; the rule's words otherwise.
   const team = answer?.status === "WRITTEN" ? answer : null;
-  const researching = Boolean(box.ask && asked?.key === key && asked.status !== "FAILED" && !team && answer?.status !== "FAILED");
+  const researching = Boolean(ask && asked?.key === key && asked.status !== "FAILED" && !noCredits && !team && answer?.status !== "FAILED");
   const says = team ? team.says : box.says;
   const steps = team ? team.steps : box.steps;
   return (
@@ -93,7 +124,7 @@ export function HakkenSeesEye() {
       count={box.steps.length}
       onClick={toggleSees}
       bubbleId={`${id}-bubble`}
-      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
+      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} noCredits={noCredits} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
     />
   );
 }

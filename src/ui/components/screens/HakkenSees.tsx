@@ -7,6 +7,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { FunctionArgs } from "convex/server";
 import type { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
@@ -24,6 +25,25 @@ export type HakkenSeesStep = { words: string; link: string; href: string; extern
 export type SeesAsk = FunctionArgs<typeof api.seesAsk.askSees>;
 
 /**
+ * A page's own figures for the eye (docs/plans/active/sees-every-page-plan-2026-10-31.md, phase 1): its key in the
+ * screen list ("searchConsole.keywords"), its website and dates, and the answer of the query that draws it. From
+ * these the eye shows what code finds in the figures, hands them to the writer when pressed, and gives them to the
+ * chat — the figures the reader sees, never a second read. A section's wrapper fills everything but `data`.
+ */
+export type SeesPage = {
+  screen: string;
+  siteId?: Id<"companyWebsites">;
+  data: unknown;
+  period?: string;
+  from?: string | null;
+  to?: string | null;
+  country?: string;
+  device?: string;
+  /** Places a step may link to beyond the rule's own steps: the section's other screens. */
+  links?: ReadonlyArray<{ label: string; href: string }>;
+};
+
+/**
  * What Hakken sees: what the page means for the business, in two or three
  * sentences, then the first things to do, each with a quiet link to where it
  * is done (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2;
@@ -39,15 +59,17 @@ export type SeesAsk = FunctionArgs<typeof api.seesAsk.askSees>;
  * numbers is not new again; without it, the sentences themselves are the
  * advice.
  */
-export function HakkenSees({ says, steps, advice, ask, name }: { says: string[]; steps: HakkenSeesStep[]; advice?: string; ask?: SeesAsk; name?: (eventName: string) => string }) {
+export function HakkenSees({ says, steps, advice, ask, name, page }: { says: string[]; steps: HakkenSeesStep[]; advice?: string; ask?: SeesAsk; name?: (eventName: string) => string; page?: SeesPage }) {
   const screen = usePathname() ?? "";
   const held = advice ?? says.join(" ");
-  // Published once per change of words, not per render: the arrays are new each time.
-  const words = JSON.stringify({ says, steps, ask });
+  // Published once per change of words, not per render: the arrays are new each time. The page's figures by the
+  // query's own answer, which stays the same object until its figures change — never written out on every render.
+  const words = JSON.stringify({ says, steps, ask, page: page ? { ...page, data: undefined } : null });
+  const data = page?.data;
   useEffect(() => {
-    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}), ...(name ? { name } : {}) });
+    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}), ...(name ? { name } : {}), ...(page ? { page } : {}) });
     return () => publishSees(null, screen);
-  }, [screen, words, held]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [screen, words, held, data]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -93,7 +115,8 @@ export function SeesWords({ says, steps }: { says: string[]; steps: HakkenSeesSt
   const t = useTranslations("ui.hakkenSees");
   return (
     <>
-      <p className="text-[13px] leading-[1.6] text-secondary">{says.join(" ")}</p>
+      {/* A page with nothing to say by its rule yet still has the chat below (sees-every-page-plan-2026-10-31.md). */}
+      <p className="text-[13px] leading-[1.6] text-secondary">{says.length > 0 ? says.join(" ") : t("askBelow")}</p>
       {steps.length > 0 ? (
         <div className="mt-1 flex flex-col gap-2">
           <div className="text-[12px] text-muted">{t("doFirst")}</div>

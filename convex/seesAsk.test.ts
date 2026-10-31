@@ -111,14 +111,14 @@ describe("the eye asks the Insights team", () => {
       steps: [{ words: "Find why 28,623 conversions hold so few purchases.", link: "Tracking health", href: "/app/analytics/site/tracking-health" }],
       role: "INSIGHTS_CONVERSION",
     });
-    // Two model calls — the Head's choice and the specialist's words — on one run of the Head's, with its cost; no
-    // second look since 2026-10-31, when it had said "useful" every time and cost a sixth of a press.
-    expect(generate).toHaveBeenCalledTimes(1);
+    // One model call — the specialist's words — on one run of the Head's, with its cost: the screen list names the
+    // writer since 2026-10-31 (sees-every-page-plan), and there has been no second look since that morning.
+    expect(generate).toHaveBeenCalledTimes(0);
     expect(stream).toHaveBeenCalledTimes(1);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "The eye: acme-shop.test" });
-    expect(runs[0].inputTokens).toBe(200);
+    expect(runs[0].inputTokens).toBe(100);
     // The press wrote new words: two credits, to whoever pressed, with what the run cost us (ask-hakken-every-chart-plan, §3).
     const charges = await t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees"));
     expect(charges).toHaveLength(1);
@@ -127,7 +127,7 @@ describe("the eye asks the Insights team", () => {
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
     await finishScheduled(t);
-    expect(generate).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(0);
     expect(stream).toHaveBeenCalledTimes(1);
     // ...and costs nothing.
     expect(await t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees").length)).toBe(1);
@@ -212,7 +212,7 @@ describe("the eye asks the Insights team", () => {
     expect(told?.parts[0].text).toContain("The Editor sent it back: A step advised on tracking or what counts, and tracking health found nothing wrong: \"Stop counting basket additions as conversions.\"");
   });
 
-  test("the Head's choice of the measurement specialist for a conversions page stands only when tracking health found a fault", async () => {
+  test("the screen list names the writer, and no model is asked to choose (sees-every-page-plan-2026-10-31.md)", async () => {
     const t = harness();
     const { siteId, userId } = await seed(t);
     await t.run(async (ctx) => { await ctx.db.insert("agents", { name: "INSIGHTS_MEASUREMENT", systemKey: "INSIGHTS_MEASUREMENT", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 }); });
@@ -220,9 +220,11 @@ describe("the eye asks the Insights team", () => {
     answers({ specialist: "INSIGHTS_MEASUREMENT" }, { says: ["[[conv.purchases.now]] purchases last month."], steps: [] });
     const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
     await finishScheduled(t);
+    // Tracking health found nothing that breaks the conversion figures: the Conversion specialist writes.
     expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", role: "INSIGHTS_CONVERSION" });
+    expect(generate).toHaveBeenCalledTimes(0);
     const said = await t.run(async (ctx) => (await ctx.db.query("agentLogs").collect()).map((line) => line.responseContent).join(" "));
-    expect(said).toContain("tracking health found nothing that breaks the conversion figures: a page about conversions goes to the Conversion specialist");
+    expect(said).toContain("Handed Conversions: every conversion this website counts, for last month to conversion.");
   });
 
   test("with Jev's check switched on, a sentence that states a guess as fact goes back, and the specialist writes it again (sees-findings plan, phase 4)", async () => {
@@ -324,5 +326,66 @@ describe("the eye asks the Insights team", () => {
     await expect(stranger.mutation(api.seesAsk.askSees, ask(siteId))).rejects.toThrow();
     const user = t.withIdentity({ subject: userId });
     await expect(user.mutation(api.seesAsk.askSees, { ...ask(siteId), facts: [] })).rejects.toThrow("no figures");
+  });
+});
+
+describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", () => {
+  /** A Search Console page's own figures, as its query answered: a fraction rate, a list of searches. */
+  const keywordsPage = (siteId: Id<"companyWebsites">) => ({
+    siteId,
+    screen: "searchConsole.keywords",
+    about: "",
+    path: "/app/search-console/site/keywords",
+    period: "lastMonth",
+    country: "",
+    device: "",
+    facts: [],
+    links: [{ label: "Pages", href: "/app/search-console/site/pages" }],
+    data: { totals: { clicks: 900, impressions: 20000 }, rows: [{ key: "door handles", clicks: 840, impressions: 12000, ctr: 0.07 }, { key: "hinges", clicks: 60, impressions: 8000, ctr: 0.0075 }] },
+  });
+
+  test("a page hands over its own figures: they are keyed, the list's specialist writes from them, and every figure is the page's", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    await t.run(async (ctx) => { await ctx.db.insert("agents", { name: "INSIGHTS_SEARCH", systemKey: "INSIGHTS_SEARCH", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 }); });
+    const user = t.withIdentity({ subject: userId });
+    answers(null, { says: ["[[page.rows.door_handles.clicks]] clicks came from door handles, shown [[page.rows.door_handles.impressions]] times."], steps: [{ words: "Look at the pages that rank for hinges.", link: 0 }] });
+    const first = await user.mutation(api.seesAsk.askSees, keywordsPage(siteId));
+    expect(first.status).toBe("RESEARCHING");
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({
+      status: "WRITTEN", role: "INSIGHTS_SEARCH",
+      says: ["840 clicks came from door handles, shown 12,000 times."],
+      steps: [{ words: "Look at the pages that rank for hinges.", link: "Pages", href: "/app/search-console/site/pages" }],
+    });
+    // The writer read the page as the reader sees it: a click rate kept as a fraction shown as its percentage.
+    const prompt = JSON.parse((generate.mock.calls[0][0] as { contents: Array<{ text: string }> }).contents[0].text);
+    expect(JSON.stringify(prompt.pageFigures)).toContain("7% [[page.rows.door_handles.ctrPercent]]");
+    expect(prompt.page).toBe("the searches that bring the website visitors from Google");
+    // The figures are kept, so pressed again on the same figures the answer stands.
+    const saved = await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect()).find((row) => row.screen === "searchConsole.keywords"));
+    expect(saved?.facts?.find((fact) => fact.key === "page.totals.clicks")?.value).toBe(900);
+    expect(await user.mutation(api.seesAsk.askSees, keywordsPage(siteId))).toEqual({ key: first.key, status: "WRITTEN" });
+  });
+
+  test("at zero credits the eye stops: nothing is written or charged, and it says so (Anthony, 2026-10-31: \"stop\")", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    // A month's plan of one credit: less than a press costs.
+    await t.run(async (ctx) => { await ctx.db.insert("creditSettings", { key: "platform", planCredits: 1, creditCoversUsd: 0.05, updatedAt: 1 }); });
+    const user = t.withIdentity({ subject: userId });
+    answers(null, { says: ["[[page.totals.clicks]] clicks."], steps: [] });
+    expect((await user.mutation(api.seesAsk.askSees, keywordsPage(siteId))).status).toBe("NO_CREDITS");
+    await finishScheduled(t);
+    expect(generate).not.toHaveBeenCalled();
+    expect(await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect()).length)).toBe(0);
+  });
+
+  test("a page whose words are already the team's writes nothing new when pressed", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    await expect(user.mutation(api.seesAsk.askSees, { ...keywordsPage(siteId), screen: "insights.strategy", path: "/app/insights/strategy" })).rejects.toThrow("the team's own");
+    await expect(user.mutation(api.seesAsk.askSees, { ...keywordsPage(siteId), screen: "somewhere.else" })).rejects.toThrow("no eye");
   });
 });

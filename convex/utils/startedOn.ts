@@ -16,12 +16,19 @@ export const startedOnValidator = v.object({
   findings: v.array(v.string()),
   /** What the eye said about the page. */
   said: v.array(v.string()),
+  /**
+   * The page's own figures as it showed them, as lines (`utils/sees/pageData.ts`): for a page Ask Hakken has no tool to
+   * read (sees-every-page-plan-2026-10-31.md, phase 1).
+   */
+  figures: v.optional(v.array(v.string())),
 });
 
 export type StartedOn = Infer<typeof startedOnValidator>;
 
 /** Most findings and sentences kept: the panel's own. */
 const MOST = 12;
+/** Most of the page's figures kept: its first screen. */
+export const MOST_FIGURES = 60;
 
 /** The page as Ask Hakken is told it, below the website it is about. */
 export function startedOnLines(page: StartedOn): string {
@@ -31,5 +38,8 @@ export function startedOnLines(page: StartedOn): string {
   ];
   if (page.findings.length > 0) lines.push("", "What the figures show, as the platform's code found them:", ...page.findings.slice(0, MOST).map((line) => `- ${line}`));
   if (page.said.length > 0) lines.push("", "What the eye's panel said about the page:", ...page.said.slice(0, MOST).map((line) => `- ${line}`));
+  if (page.figures && page.figures.length > 0) {
+    lines.push("", "The page's own figures, as it showed them to the person (where no tool of yours reads this page, these are its figures, and you may give them):", ...page.figures.slice(0, MOST_FIGURES).map((line) => `- ${line}`));
+  }
   return lines.join("\n");
 }

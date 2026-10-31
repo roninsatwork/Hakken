@@ -218,6 +218,65 @@ describe("HakkenSees and its eye", () => {
     });
   });
 
+  describe("a page that hands over its own figures (sees-every-page-plan-2026-10-31.md, phase 1)", () => {
+    const page = {
+      screen: "searchConsole.keywords", siteId: "site_1" as never, period: "lastMonth", country: "", device: "",
+      data: { rows: [{ key: "door handles", clicks: 840, ctr: 0.07 }] },
+      links: [{ label: "Pages", href: "/app/search-console/site_1/pages" }],
+    };
+    const Paged = ({ words = says }: { words?: string[] }) => (
+      <>
+        <HakkenSeesEye />
+        <HakkenSees says={words} steps={[{ words: "Look at your pages.", link: "Keywords", href: "/app/search-console/site_1/keywords" }]} advice="rule" page={page} />
+      </>
+    );
+
+    it("is pressed as the page's figures: keyed on the server, its links the rule's steps and the page's", async () => {
+      at.path = "/app/search-console/site_1/keywords";
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      render(<Paged />);
+      fireEvent.click(eye());
+      await waitFor(() => expect(askSees).toHaveBeenCalled());
+      expect(askSees.mock.calls[0]).toEqual([expect.objectContaining({
+        siteId: "site_1", screen: "searchConsole.keywords", path: "/app/search-console/site_1/keywords", period: "lastMonth", facts: [],
+        links: [{ label: "Keywords", href: "/app/search-console/site_1/keywords" }, { label: "Pages", href: "/app/search-console/site_1/pages" }],
+        // The click rate as the page shows it, a percentage.
+        data: { rows: [{ key: "door handles", clicks: 840, ctrPercent: 7 }] },
+      })]);
+    });
+
+    it("at zero credits says so, with the way to Billing, and keeps the rule's words", async () => {
+      vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "NO_CREDITS" as const })) as never);
+      render(<Paged />);
+      fireEvent.click(eye());
+      await waitFor(() => expect(screen.getByText(/ui\.hakkenSees\.noCredits/)).toBeInTheDocument());
+      expect(screen.getByText(says.join(" "))).toBeInTheDocument();
+      expect(screen.queryByText("ui.hakkenSees.researching Hakken")).toBeNull();
+    });
+
+    it("a page with nothing to say by its rule still has an eye, and points to the chat", async () => {
+      vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "FAILED" as const })) as never);
+      render(<Paged words={[]} />);
+      fireEvent.click(eye());
+      await waitFor(() => expect(screen.getByText("ui.hakkenSees.askBelow")).toBeInTheDocument());
+    });
+
+    it("a page whose words are the team's weekly ones writes nothing when pressed", async () => {
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      render(
+        <>
+          <HakkenSeesEye />
+          <HakkenSees says={says} steps={[]} advice="box" page={{ ...page, screen: "insights.strategy" }} />
+        </>,
+      );
+      fireEvent.click(eye());
+      expect(screen.getByText(says.join(" "))).toBeInTheDocument();
+      expect(askSees).not.toHaveBeenCalled();
+    });
+  });
+
   it("names its advice by codes and quoted names, never by numbers", () => {
     const box = { says: [{ code: "update", text: "September spam update", a: 5.2 }], steps: [{ code: "hold", link: "seeUpdate", to: { segment: "google-updates" }, a: 22 }] };
     expect(seenAdvice(box)).toBe(seenAdvice({ ...box, says: [{ ...box.says[0], a: 6.1 }] }));
