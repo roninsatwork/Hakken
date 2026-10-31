@@ -7595,7 +7595,8 @@
         "assistant": "Per {per, plural, =1 {question} other {# questions}}",
         "taskAlerts": "Per {per, plural, =1 {check} other {# checks}}: an alert’s daily look at its figures",
         "taskReports": "Per {per, plural, =1 {report} other {# reports}} sent",
-        "taskResearch": "Per {per, plural, =1 {question} other {# questions}} looked into"
+        "taskResearch": "Per {per, plural, =1 {question} other {# questions}} looked into",
+        "sees": "Per {per, plural, =1 {press} other {# presses}} of the eye"
       },
       "was": "was {credits} · not saved",
       "coveredAt": "{cost} · covered",
@@ -19507,7 +19508,8 @@
       "assistant": "Ask {platformName}",
       "taskAlerts": "Task alerts",
       "taskReports": "Task reports",
-      "taskResearch": "Find out why"
+      "taskResearch": "Find out why",
+      "sees": "What {platformName} sees"
     },
     "prices": {
       "rankings": "{credits} per {per, plural, =1 {keyword} other {# keywords}} checked",
@@ -19518,7 +19520,8 @@
       "assistant": "{credits} per {per, plural, =1 {question} other {# questions}}",
       "taskAlerts": "{credits} per {per, plural, =1 {check} other {# checks}}",
       "taskReports": "{credits} per {per, plural, =1 {report} other {# reports}}",
-      "taskResearch": "{credits} per {per, plural, =1 {question} other {# questions}} looked into"
+      "taskResearch": "{credits} per {per, plural, =1 {question} other {# questions}} looked into",
+      "sees": "{credits} per {per, plural, =1 {press} other {# presses}} of the eye"
     },
     "units": {
       "rankings": "{count, plural, =1 {# keyword} other {# keywords}}",
@@ -19529,7 +19532,8 @@
       "assistant": "{count, plural, =1 {# question} other {# questions}}",
       "taskAlerts": "{count, plural, =1 {# check} other {# checks}}",
       "taskReports": "{count, plural, =1 {# report} other {# reports}}",
-      "taskResearch": "{count, plural, =1 {# question looked into} other {# questions looked into}}"
+      "taskResearch": "{count, plural, =1 {# question looked into} other {# questions looked into}}",
+      "sees": "{count, plural, =1 {# press of the eye} other {# presses of the eye}}"
     },
     "about": {
       "rankings": "Where your websites and the competitors you track rank on Google, checked on a schedule.",
@@ -19540,7 +19544,8 @@
       "assistant": "Every question someone on your team asked.",
       "taskAlerts": "Each day an alert someone set up looks at your figures.",
       "taskReports": "Each weekly report someone asked for.",
-      "taskResearch": "Each time someone said yes to “find out why”."
+      "taskResearch": "Each time someone said yes to “find out why”.",
+      "sees": "Each press of the eye that wrote new advice. A press within three hours of the last shows the same advice free."
     },
     "often": {
       "byHand": "When you ask",

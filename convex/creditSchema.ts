@@ -21,6 +21,7 @@ export const creditKindValidator = v.union(
   v.literal("taskAlerts"),
   v.literal("taskReports"),
   v.literal("taskResearch"),
+  v.literal("sees"),
 );
 
 export const creditSourceValidator = v.union(v.literal("plan"), v.literal("topup"));

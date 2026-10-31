@@ -7595,7 +7595,8 @@
         "assistant": "Ogni {per, plural, =1 {domanda} other {# domande}}",
         "taskAlerts": "Per {per, plural, =1 {controllo} other {# controlli}}: lo sguardo giornaliero di un avviso ai suoi dati",
         "taskReports": "Per {per, plural, =1 {report inviato} other {# report inviati}}",
-        "taskResearch": "Per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}"
+        "taskResearch": "Per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}",
+        "sees": "Per {per, plural, =1 {clic} other {# clic}} sull'occhio"
       },
       "was": "era {credits} · non salvato",
       "coveredAt": "{cost} · coperto",
@@ -19507,7 +19508,8 @@
       "assistant": "Chiedi a {platformName}",
       "taskAlerts": "Avvisi delle attività",
       "taskReports": "Report delle attività",
-      "taskResearch": "Scopri perché"
+      "taskResearch": "Scopri perché",
+      "sees": "Cosa vede {platformName}"
     },
     "prices": {
       "rankings": "{credits} ogni {per, plural, =1 {parola chiave controllata} other {# parole chiave controllate}}",
@@ -19518,7 +19520,8 @@
       "assistant": "{credits} ogni {per, plural, =1 {domanda} other {# domande}}",
       "taskAlerts": "{credits} per {per, plural, =1 {controllo} other {# controlli}}",
       "taskReports": "{credits} per {per, plural, =1 {report inviato} other {# report inviati}}",
-      "taskResearch": "{credits} per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}"
+      "taskResearch": "{credits} per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}",
+      "sees": "{credits} per {per, plural, =1 {clic} other {# clic}} sull'occhio"
     },
     "units": {
       "rankings": "{count, plural, =1 {# parola chiave} other {# parole chiave}}",
@@ -19529,7 +19532,8 @@
       "assistant": "{count, plural, =1 {# domanda} other {# domande}}",
       "taskAlerts": "{count, plural, =1 {# controllo} other {# controlli}}",
       "taskReports": "{count, plural, =1 {# report inviato} other {# report inviati}}",
-      "taskResearch": "{count, plural, =1 {# domanda approfondita} other {# domande approfondite}}"
+      "taskResearch": "{count, plural, =1 {# domanda approfondita} other {# domande approfondite}}",
+      "sees": "{count, plural, =1 {# clic sull'occhio} other {# clic sull'occhio}}"
     },
     "about": {
       "rankings": "Dove si posizionano su Google i tuoi siti e i concorrenti che segui, controllato secondo una pianificazione.",
@@ -19540,7 +19544,8 @@
       "assistant": "Ogni domanda posta da qualcuno del tuo team.",
       "taskAlerts": "Ogni giorno in cui un avviso impostato da qualcuno guarda i tuoi dati.",
       "taskReports": "Ogni report settimanale richiesto da qualcuno.",
-      "taskResearch": "Ogni volta che qualcuno ha detto sì a “scopri perché”."
+      "taskResearch": "Ogni volta che qualcuno ha detto sì a “scopri perché”.",
+      "sees": "Ogni clic sull'occhio che ha scritto nuovi consigli. Un clic entro tre ore dall'ultimo mostra gli stessi consigli gratis."
     },
     "often": {
       "byHand": "Quando lo chiedi",

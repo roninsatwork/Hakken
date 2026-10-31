@@ -119,12 +119,18 @@ describe("the eye asks the Insights team", () => {
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ status: "SUCCESS", title: "The eye: acme-shop.test" });
     expect(runs[0].inputTokens).toBe(200);
+    // The press wrote new words: two credits, to whoever pressed, with what the run cost us (ask-hakken-every-chart-plan, §3).
+    const charges = await t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees"));
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({ state: "charged", units: 1, creditsOut: 2, userId, how: "byHand", agentRunId: runs[0]._id });
     // Pressed again within three hours: the same answer, nothing asked.
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
     await finishScheduled(t);
     expect(generate).toHaveBeenCalledTimes(1);
     expect(stream).toHaveBeenCalledTimes(1);
+    // ...and costs nothing.
+    expect(await t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees").length)).toBe(1);
     // Another device is another answer (S9).
     const mobile = await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
     expect(mobile.status).toBe("RESEARCHING");

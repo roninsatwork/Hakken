@@ -4,7 +4,7 @@
  * (docs/plans/active/usage-credits-plan.md). Pure: no database.
  */
 
-export type CreditKind = "rankings" | "aiAnswers" | "keywordResearch" | "siteAudit" | "backlinks" | "assistant" | "taskAlerts" | "taskReports" | "taskResearch";
+export type CreditKind = "rankings" | "aiAnswers" | "keywordResearch" | "siteAudit" | "backlinks" | "assistant" | "taskAlerts" | "taskReports" | "taskResearch" | "sees";
 
 export type CreditPrice = { credits: number; per: number };
 
@@ -26,6 +26,10 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   taskAlerts: { credits: 1, per: 1 },
   taskReports: { credits: 1, per: 1 },
   taskResearch: { credits: 5, per: 1 },
+  // A press of the eye that writes a new bubble (ask-hakken-every-chart-plan-2026-10-31.md, §3; Anthony, 2026-10-30:
+  // "each press of the eye needs to consume your credit allowance"): about $0.06 of real cost since code finds the
+  // figures, two credits at $0.05 each. A press answered from the three-hour store writes nothing and costs nothing.
+  sees: { credits: 2, per: 1 },
 };
 
 /**

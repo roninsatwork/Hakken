@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { creditSeesPress } from "./creditHooks";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
@@ -63,8 +64,8 @@ export const askSees = tenantMutation({
     }
     const companyId = site.hold.companyId;
     const answerId: Id<"seesAnswers"> = held
-      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path, about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false }), held._id)
-      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false });
+      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), path: args.path, about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId }), held._id)
+      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, path: args.path, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), about: args.about, facts: args.facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId });
     const runId = await ctx.db.insert("agentRuns", {
       agentId: lead._id,
       triggerType: "EVENT",
@@ -134,6 +135,9 @@ export const saveSeesAnswer = internalMutation({
       ...(args.findings ? { findings: args.findings } : {}),
       ...(args.status === "WRITTEN" ? { writtenAt: Date.now(), failedWhy: undefined } : { failedWhy: args.failedWhy ?? "The team gave no answer." }),
     });
+    // New words written: the press is charged, once, with what the run cost us. A failed one, or one answered from the
+    // three hours kept, costs nothing (ask-hakken-every-chart-plan-2026-10-31.md, §3).
+    if (args.status === "WRITTEN") await creditSeesPress(ctx, row);
     return null;
   },
 });

@@ -437,6 +437,8 @@ export const insightsTables = {
     shop: v.optional(v.boolean()),
     /** What the figures show, as code found them and Jev ordered them when the words were written: the panel's first section. */
     findings: v.optional(v.array(findingValidator)),
+    /** Who pressed the eye for the words being written: the press is charged to them once written (ask-hakken-every-chart-plan, §3). */
+    askedBy: v.optional(v.id("users")),
   })
     .index("by_hold_key", ["companyWebsiteId", "key"])
     .index("by_hold_week", ["companyWebsiteId", "week"]),

@@ -371,3 +371,23 @@ export async function creditAssistantReply(
     }, 1, { realCostUsd }, Date.now());
   });
 }
+
+/**
+ * A press of the eye that wrote new words (ask-hakken-every-chart-plan-2026-10-31.md, §3; Anthony, 2026-10-30: "each
+ * press of the eye needs to consume your credit allowance"): one press, charged to whoever pressed, with what its run
+ * cost us. Keyed by the answer and when it was asked, so a page's words written again later is a press of its own.
+ */
+export async function creditSeesPress(ctx: MutationCtx, answer: Doc<"seesAnswers">): Promise<void> {
+  await quietly("a press of the eye", async () => {
+    const run = answer.runId ? await ctx.db.get(answer.runId) : null;
+    await chargeCreditsNow(ctx, {
+      companyId: answer.companyId,
+      kind: "sees",
+      runKey: `sees:${answer._id}:${answer.askedAt}`,
+      how: "byHand",
+      ...(answer.askedBy ? { userId: answer.askedBy } : {}),
+      ...(answer.runId ? { agentRunId: answer.runId } : {}),
+      detail: answer.about ?? answer.screen,
+    }, 1, { ...(run?.costUsd !== undefined ? { realCostUsd: run.costUsd } : {}) }, Date.now());
+  });
+}
