@@ -88,9 +88,10 @@ describe("once the team has read the website's screens (A1)", () => {
 });
 
 describe("a bubble readable in one go (2026-10-30: \"a wall of numbers\")", () => {
-  test("a sentence with more than two figures goes back; past eight figures the rest is left off; words the page never says go back", () => {
+  test("a first sentence with more than two figures goes back, a later one is left off; past eight figures the rest is left off; words the page never says go back", () => {
     const facts = factsByKey(factsOf(ask));
     expect(seesFrom({ says: ["[[conv.total.now]], [[conv.total.before]] and [[conv.purchases.now]] all moved."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("more than 2 figures") });
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions.", "[[conv.total.now]], [[conv.total.before]] and [[conv.purchases.now]] all moved.", "[[conv.purchases.now]] purchases."], steps: [] }, facts, links)).toMatchObject({ ok: true, says: ["28,623 conversions.", "1,258 purchases."] });
     const five = Array.from({ length: 5 }, () => "[[conv.total.now]] conversions, against [[conv.total.before]].");
     expect(seesFrom({ says: five, steps: [] }, facts, links)).toMatchObject({ ok: true, says: expect.arrayContaining([]) });
     expect((seesFrom({ says: five, steps: [] }, facts, links) as { says: string[] }).says).toHaveLength(4);

@@ -244,4 +244,12 @@ Paths under `/app/`. R = rule words today; W = written in the page today; T = fu
 - 2026-10-31, **phase 6**: `docs/developer/what-hakken-sees-guide.md` rewritten for how the eye works now.
 - **Still open**: phase 5 is Anthony's — pressing across the sections and noting what a good panel should find, each
   note an eval page; the second website for testing; Bing and Clarity pressed for real.
+- 2026-10-31, **Clarity tested in Chrome** at Anthony's "Yes, test Clarity" (the browser switched to the Ronins
+  workspace for ronins.co.uk, then back to Period House Group): Overview and Pages each wrote a story from the
+  page's figures by the Visitor behaviour specialist (Service pages' quick backs; the brand prism guide holding 43% of
+  visits; three steps naming pages), in 60 to 90 seconds. Found and fixed: a whole answer was lost to one later
+  sentence naming three figures (that sentence is now left off, the rest stand; the first sentence must still pass);
+  Clarity's groups keep their figures one level down, so no findings showed (now read); a list held twice gave each
+  finding twice; a page with nothing kept the span before "rose from 0" (now left out as new, not risen).
+  Bing is still not pressed for real: no website on the dev deployment has Bing connected.
 

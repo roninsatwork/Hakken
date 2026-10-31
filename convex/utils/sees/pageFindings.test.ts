@@ -65,4 +65,29 @@ describe("what a page's own figures show", () => {
     const words = pageFindings("googleAnalytics.products", products).map(findingWords);
     expect(words).toContain("Checkouts started fell to 2310 from 2950 the span before.");
   });
+
+  test("a row's figures kept one level down, as Clarity keeps its groups", () => {
+    const overview = { groups: [
+      { kind: "SERVICE", name: "Service", now: { visits: 325, scroll: 22 } },
+      { kind: "HUB", name: "Content hub", now: { visits: 487, scroll: 41 } },
+      { kind: "HOME", name: "Home", now: { visits: 139, scroll: 30 } },
+      { kind: "ABOUT", name: "About", now: { visits: 60, scroll: 70 } },
+    ] };
+    const words = pageFindings("clarity.overview", overview).map(findingWords);
+    expect(words).toContain("Service: how far people scroll 22%, against 35.1% on average across the list.");
+  });
+
+  test("a list held twice is said once, and a row from nothing is new, not the biggest rise (Clarity's Pages, 2026-10-31)", () => {
+    const rows = [
+      { page: "/guide/", visits: 320, visitsBefore: 0, scroll: 35 },
+      { page: "/", visits: 139, visitsBefore: 120, scroll: 39 },
+      { page: "/ai-agency/", visits: 135, visitsBefore: 160, scroll: 32 },
+      { page: "/about-us/", visits: 36, visitsBefore: 30, scroll: 69 },
+    ];
+    const found = pageFindings("clarity.pages", { rows, busiest: rows });
+    const ids = found.map((finding) => `${finding.kind}|${JSON.stringify(finding.params)}`);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(found.map(findingWords).some((line) => line.startsWith("/guide/: visits rose"))).toBe(false);
+  });
 });
+

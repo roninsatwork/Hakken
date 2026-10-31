@@ -230,7 +230,12 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     const trimmed = line.trim();
     if (typedNumbers(trimmed).length > 0) return { ok: false, why: `A sentence typed a number: "${trimmed}".` };
     if (namedFacts(trimmed).length === 0 && says.length === 0) return { ok: false, why: `The first sentence names no figure: "${trimmed}".` };
-    if (namedFacts(trimmed).length > MOST_SENTENCE_FIGURES) return { ok: false, why: `A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.` };
+    // Too many figures in the first sentence sends the words back; a later one is left off and the rest stand
+    // (sees-every-page-plan-2026-10-31.md: whole answers were lost to one crowded sentence on Products and Clarity).
+    if (namedFacts(trimmed).length > MOST_SENTENCE_FIGURES) {
+      if (says.length === 0) return { ok: false, why: `A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.` };
+      continue;
+    }
     // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence.
     if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) break;
     figures += namedFacts(trimmed).length;

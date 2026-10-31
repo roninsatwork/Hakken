@@ -70,7 +70,10 @@ function beforeOf(row: Row, field: string): number | undefined {
 function tablesIn(value: unknown, path: string[] = [], depth = 0, found: Table[] = []): Table[] {
   if (depth > MOST_DEPTH || !value || typeof value !== "object") return found;
   if (Array.isArray(value)) {
-    const rows = value.filter((item): item is Row => Boolean(item) && typeof item === "object" && !Array.isArray(item));
+    // A row's figures may sit one level down, as Clarity keeps them (`{ name, now: { visits, scroll }, scrollBefore }`).
+    const rows = value
+      .filter((item): item is Row => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+      .map((row) => (row.now && typeof row.now === "object" && !Array.isArray(row.now) ? { ...(row.now as Row), ...row } : row));
     if (rows.length >= 3 && rows.some((row) => rowName(row) !== null && Object.keys(row).some((field) => MEASURES[field] && isNumber(row[field])))) {
       found.push({ path: path.join(".") || "list", rows: rows.filter((row) => rowName(row) !== null) });
     }
@@ -136,7 +139,8 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
       // The biggest movers: the row that gained most, and the one that lost most.
       const moves = table.rows
         .map((row) => ({ row, now: row[main], before: beforeOf(row, main) }))
-        .filter((one): one is { row: Row; now: number; before: number } => isNumber(one.now) && one.before !== undefined)
+        // A row with nothing the span before is new, not risen: often only that its figures were not kept then.
+        .filter((one): one is { row: Row; now: number; before: number } => isNumber(one.now) && one.before !== undefined && one.before > 0)
         .map((one) => ({ ...one, change: one.now - one.before }));
       if (moves.length >= 3) {
         const least = Math.max(MOVE_LEAST, total * MOVE_SHARE);
@@ -209,10 +213,14 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
     }
   }
 
-  // The best first, at most two from one list.
+  // The best first, at most four from one list, and each once: a page may hold the same list twice (its table and its chart).
   const fromList = new Map<string, number>();
+  const said = new Set<string>();
   const chosen: Found[] = [];
   for (const finding of found.sort((a, b) => b.score - a.score)) {
+    const same = `${finding.kind}|${JSON.stringify(finding.params)}`;
+    if (said.has(same)) continue;
+    said.add(same);
     const list = finding.list.split(":")[0];
     if ((fromList.get(list) ?? 0) >= MOST_FROM_A_LIST) continue;
     fromList.set(list, (fromList.get(list) ?? 0) + 1);
