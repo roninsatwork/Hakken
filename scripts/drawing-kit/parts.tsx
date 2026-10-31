@@ -16,6 +16,7 @@ import { UserNavTree } from "@/src/ui/components/layout/SidebarNavTrees";
 import { SectionMenu } from "@/src/app/(dashboard)/app/_components/SectionMenu";
 import { IntentLabel, PageLinkCell, PositionCell, RecordLinkCell, TrendCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
 import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
+import { SITE_SERIES_COLOURS, SitePieChart } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Change } from "@/src/ui/components/screens/Change";
 import { ChangeBars } from "@/src/ui/components/screens/ChangeBars";
@@ -215,6 +216,21 @@ const PARTS: Part[] = [
       <ChartCard title="Searches a month in the United Kingdom" hint="The last 24 months, from Google Ads." exportName="searches-a-month" csv={() => ""}>
         <div className="h-[200px] rounded-lg border border-dashed border-border-dim" />
       </ChartCard>
+    ),
+  },
+  {
+    id: "pie-chart",
+    name: "Pie — shares at a glance",
+    source: "src/app/(dashboard)/app/sites/_components/SiteCharts.tsx (SitePieChart)",
+    use: "A ring of shares and, beside it, each slice's name, figure and share. Slices in the series colours; every other in the comparator grey.",
+    render: () => (
+      <SitePieChart
+        slices={[
+          { key: "m", name: "Mobile", value: 18614, colour: SITE_SERIES_COLOURS[0] },
+          { key: "d", name: "Desktop", value: 17580, colour: SITE_SERIES_COLOURS[1] },
+          { key: "t", name: "Tablet", value: 1046, colour: SITE_SERIES_COLOURS[2] },
+        ]}
+      />
     ),
   },
   {

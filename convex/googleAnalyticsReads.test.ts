@@ -16,6 +16,7 @@ import { keyedRead } from "./utils/agentTools";
 import { factsByKey } from "./utils/insightFacts";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
+import { ASSISTANT_CHART_HANDLERS } from "./assistantChartHandlers";
 import { renderOutboxRow } from "./outboxTemplates";
 import { chartFromToolCalls } from "./utils/assistantCharts";
 
@@ -907,5 +908,45 @@ describe("a chart sent at a time", () => {
     expect(rendered.email.html).toContain("YOUR CHART");
     // Sent once: it stops.
     expect((await t.run((db) => db.db.get(task._id)))?.state).toBe("PAUSED");
+  });
+});
+
+/**
+ * Every kind of chart (ask-hakken-every-chart-plan-2026-10-31.md, phase 1): a website's groups over a period, from
+ * the Conversions map's own saved figures, as bars, stacked bars, a pie, a scatter or a grid.
+ */
+describe("a chart of a website's groups", () => {
+  test("each kind is drawn from the map's figures, and the figures go back for the words", async () => {
+    const { t, siteId, adminId } = await collectedGrowing();
+    const companyId = (await t.run((ctx) => ctx.db.get(siteId)))!.companyId;
+    type Call = (reference: unknown, args: unknown) => Promise<unknown>;
+    const loose = t as unknown as { query: Call; mutation: Call; action: Call };
+    const ctx = { runQuery: loose.query, runMutation: loose.mutation, runAction: loose.action } as unknown as ToolHandlerExecutionInput["ctx"];
+    const draw = async (args: Record<string, unknown>) => (await ASSISTANT_CHART_HANDLERS["assistant.chart"]({
+      ctx, handlerMapping: "assistant.chart", companyId, userId: adminId,
+      args: { lookup: "google_analytics", website: "acme-shop.test", period: "lastMonth", ...args },
+    })) as { ok: boolean; problem?: string; groups?: Array<{ name: string; value: number }>; chart?: { look: string; kind: string; groups: Array<{ name: string; value: number }>; rows?: unknown[]; link: string } };
+    const map = await t.query(internal.agentReads.conversionsByInternal, { companyId, siteId, period: "lastMonth", device: "", columns: "channel" }) as { visits: Array<{ column: string; visits: number }> };
+    const biggest = [...map.visits].sort((a, b) => b.visits - a.visits)[0];
+
+    const bars = await draw({ kind: "bars", measure: "visits" });
+    expect(bars.ok).toBe(true);
+    expect(bars.chart).toMatchObject({ look: "analyticsGroups", kind: "bars", link: `/app/analytics/${siteId}/conversions?period=lastMonth` });
+    // The map's own figures, never the model's.
+    expect(bars.chart?.groups[0]).toMatchObject({ name: biggest.column, value: biggest.visits });
+    expect(bars.groups?.[0]).toMatchObject({ name: biggest.column, value: biggest.visits });
+
+    const pie = await draw({ kind: "pie", measure: "visits", by: "device" });
+    expect(pie.ok).toBe(true);
+    expect(Math.round(pie.chart!.groups.reduce((sum, group) => sum + group.value, 0))).toBe(100);
+
+    const grid = await draw({ kind: "grid", measure: "conversionRate", by: "channel" });
+    expect(grid.ok).toBe(true);
+    expect(grid.chart?.rows?.length).toBeGreaterThan(0);
+
+    // The reply carries it, as a line chart's does.
+    expect(chartFromToolCalls([{ handlerMapping: "assistant.chart", status: "SUCCESS", resultJson: JSON.stringify({ status: "ok", data: bars }) }])?.look).toBe("analyticsGroups");
+    // A kind it doesn't draw is said.
+    expect(await draw({ kind: "radar", measure: "visits" })).toMatchObject({ ok: false, problem: expect.stringContaining("kind is one of") });
   });
 });

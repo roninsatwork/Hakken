@@ -8312,7 +8312,45 @@
           "conversionRate": "Share of visits that did {event} each day"
         },
         "openAnalytics": "Open in Google Analytics",
-        "titlePurchase": "Share of visits that made a purchase each day"
+        "titlePurchase": "Share of visits that made a purchase each day",
+        "groups": {
+          "by": {
+            "channel": "channel",
+            "kind": "kind of page",
+            "device": "device",
+            "country": "country"
+          },
+          "did": {
+            "purchase": "made a purchase",
+            "event": "did {event}"
+          },
+          "bars": {
+            "visits": "Visits by {by}",
+            "conversions": "Visits that {did}, by {by}",
+            "conversionRate": "Share of visits that {did}, by {by}"
+          },
+          "stacked": {
+            "visits": "Each {by}'s share of visits",
+            "conversions": "Each {by}'s share of visits that {did}"
+          },
+          "pie": {
+            "visits": "Visits by {by}",
+            "conversions": "Visits that {did}, by {by}"
+          },
+          "scatter": "Visits against the share that {did}, by {by}",
+          "scatterY": "Share that {did} (%)",
+          "visits": "Visits",
+          "rate": "Rate",
+          "grid": "Share of visits that did each step, by {by}",
+          "everyOther": "Every other",
+          "shades": "a lower to a higher rate",
+          "none": "none",
+          "devices": {
+            "desktop": "Desktop",
+            "mobile": "Mobile",
+            "tablet": "Tablet"
+          }
+        }
       }
     },
     "costs": {

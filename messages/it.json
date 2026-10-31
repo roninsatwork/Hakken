@@ -8312,7 +8312,45 @@
           "conversionRate": "Quota di visite che hanno fatto {event}, al giorno"
         },
         "openAnalytics": "Apri in Google Analytics",
-        "titlePurchase": "Quota di visite con un acquisto, al giorno"
+        "titlePurchase": "Quota di visite con un acquisto, al giorno",
+        "groups": {
+          "by": {
+            "channel": "canale",
+            "kind": "tipo di pagina",
+            "device": "dispositivo",
+            "country": "paese"
+          },
+          "did": {
+            "purchase": "hanno fatto un acquisto",
+            "event": "hanno fatto {event}"
+          },
+          "bars": {
+            "visits": "Visite per {by}",
+            "conversions": "Visite che {did}, per {by}",
+            "conversionRate": "Quota di visite che {did}, per {by}"
+          },
+          "stacked": {
+            "visits": "Quota di visite di ogni {by}",
+            "conversions": "Quota di ogni {by} tra le visite che {did}"
+          },
+          "pie": {
+            "visits": "Visite per {by}",
+            "conversions": "Visite che {did}, per {by}"
+          },
+          "scatter": "Visite e quota che {did}, per {by}",
+          "scatterY": "Quota che {did} (%)",
+          "visits": "Visite",
+          "rate": "Quota",
+          "grid": "Quota di visite che hanno fatto ogni passaggio, per {by}",
+          "everyOther": "Tutti gli altri",
+          "shades": "da una quota più bassa a una più alta",
+          "none": "nessuna",
+          "devices": {
+            "desktop": "Computer",
+            "mobile": "Telefono",
+            "tablet": "Tablet"
+          }
+        }
       }
     },
     "costs": {

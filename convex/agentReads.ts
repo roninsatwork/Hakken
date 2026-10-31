@@ -97,6 +97,7 @@ export async function readMapView(reader: SiteReader, args: MapViewArgs) {
           by: columns.map((column, at) => ({
             column: column.name,
             visitsThatDidIt: row.cells[at].visits,
+            ...(map.hasBefore && row.cells[at].visitsBefore !== null ? { visitsThatDidItBefore: row.cells[at].visitsBefore! } : {}),
             ratePercent: percent(row.cells[at].visits, column.visits),
             ...(map.hasBefore && column.visitsBefore !== null && row.cells[at].visitsBefore !== null ? { ratePercentBefore: percent(row.cells[at].visitsBefore!, column.visitsBefore) } : {}),
           })),

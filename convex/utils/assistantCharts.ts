@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import { GROUP_CHART_BY, GROUP_CHART_KINDS, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
 
 /**
  * A chart under an Ask Hakken answer (docs/plans/active/hakken-tasks-plan.md,
@@ -24,7 +25,8 @@ export type AnalyticsChartMeasure = (typeof ANALYTICS_CHART_MEASURES)[number];
 /** Where in its words the answer wants the chart: on a line of its own. Drawn at the end when the answer does not say. */
 export const CHART_MARK = "{{chart}}";
 
-export const answerChartValidator = v.object({
+/** A figure a day against the days before: Search Console's or Google Analytics' line. */
+export const daysChartValidator = v.object({
   look: v.union(v.literal("searchConsoleDays"), v.literal("analyticsDays")),
   measure: v.union(v.literal("visitors"), v.literal("impressions"), v.literal("visits"), v.literal("conversions"), v.literal("conversionRate")),
   /** One conversion, by its Google name, for Analytics' conversions and their rate; absent for every one. */
@@ -42,7 +44,14 @@ export const answerChartValidator = v.object({
   link: v.string(),
 });
 
-export type AnswerChart = Infer<typeof answerChartValidator>;
+export type DaysChart = Infer<typeof daysChartValidator>;
+
+/**
+ * Any chart under an answer: a line a day, or — since 2026-10-31 (ask-hakken-every-chart-plan) — a website's groups
+ * as bars, stacked bars, a pie, a scatter or a grid (`assistantGroupCharts.ts`).
+ */
+export const answerChartValidator = v.union(daysChartValidator, groupsChartValidator);
+export type AnswerChart = DaysChart | GroupsChart;
 
 /** The longest chart: Search Console's longest look-up. */
 export const MOST_CHART_DAYS = 90;
@@ -56,9 +65,26 @@ function parse(json: string | undefined): unknown {
   }
 }
 
+/** The most groups a chart of groups carries: a scatter's twenty. */
+const MOST_GROUPS = 20;
+
+function isGroupsChart(chart: Record<string, unknown>): boolean {
+  return chart.look === "analyticsGroups"
+    && (GROUP_CHART_KINDS as readonly unknown[]).includes(chart.kind)
+    && (GROUP_CHART_BY as readonly unknown[]).includes(chart.by)
+    && (ANALYTICS_CHART_MEASURES as readonly unknown[]).includes(chart.measure)
+    && typeof chart.website === "string"
+    && typeof chart.period === "string"
+    && typeof chart.link === "string"
+    && Array.isArray(chart.groups)
+    && chart.groups.length > 0
+    && chart.groups.length <= MOST_GROUPS;
+}
+
 function isChart(value: unknown): value is AnswerChart {
   if (!value || typeof value !== "object") return false;
   const chart = value as Record<string, unknown>;
+  if (chart.look === "analyticsGroups") return isGroupsChart(chart);
   return (
     ((chart.look === "searchConsoleDays" && (chart.measure === "visitors" || chart.measure === "impressions"))
       || (chart.look === "analyticsDays" && (ANALYTICS_CHART_MEASURES as readonly unknown[]).includes(chart.measure)))
@@ -118,11 +144,11 @@ export function chartPoints(
   days: Array<{ day: string; value: number }>,
   before: Array<{ day: string; value: number }> | null,
   range: { from: string; to: string; beforeFrom: string; heldFrom?: string },
-): AnswerChart["points"] {
+): DaysChart["points"] {
   const shift = (day: string, by: number) => new Date(Date.parse(`${day}T00:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10);
   const values = new Map(days.map((entry) => [entry.day, entry.value]));
   const earlier = new Map((before ?? []).map((entry) => [entry.day, entry.value]));
-  const points: AnswerChart["points"] = [];
+  const points: DaysChart["points"] = [];
   for (let day = range.from, index = 0; day <= range.to && index < MOST_CHART_DAYS; day = shift(day, 1), index += 1) {
     const then = shift(range.beforeFrom, index);
     const held = before !== null && (!range.heldFrom || then >= range.heldFrom);

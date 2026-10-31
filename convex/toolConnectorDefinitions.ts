@@ -762,7 +762,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Show a chart",
         description:
-          "Draws a chart under your answer: one of the company's own websites' visitors from Google, or how often it showed up in Google (impressions), each day — for the whole website or the page whose address contains `page` — against as many days before. Use it when someone asks how something did over time, for one calendar month (`month`, e.g. last month) or the newest 7, 30 or 90 days. Or, with lookup google_analytics: the website's visits, its conversions (every one, or one by `event`), or the share of visits that converted (conversionRate), each day of a calendar `period`, against the period before where it is kept. It is drawn from the figures it reads, never from yours, and returns the totals for your words. One chart to an answer. Competitors have none.",
+          "Draws a chart under your answer: one of the company's own websites' visitors from Google, or how often it showed up in Google (impressions), each day — for the whole website or the page whose address contains `page` — against as many days before. Use it when someone asks how something did over time, for one calendar month (`month`, e.g. last month) or the newest 7, 30 or 90 days. Or, with lookup google_analytics: the website's visits, its conversions (every one, or one by `event`), or the share of visits that converted (conversionRate), each day of a calendar `period`, against the period before where it is kept. Or, with lookup google_analytics and a `kind`, the website's groups (`by` channel, kind of page, device or country) over the period: bars to rank them, stacked bars to show how their shares changed against the period before, a pie for shares at a glance, a scatter to set each group's visits against its conversion rate, or a grid of each group's rate for each conversion (where people drop out). Pick the kind that answers the question; line for anything over time. It is drawn from the figures it reads, never from yours, and returns the figures for your words. One chart to an answer. Competitors have none.",
         handlerMapping: "assistant.chart",
         modelName: "show_chart",
         requiredRole: "ADMIN",
@@ -780,6 +780,8 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
             month: { type: "string", description: "A calendar month as YYYY-MM, drawn against the month before. Leave out to use days." },
             days: { type: "number", description: "7, 30 or 90: the newest days, against as many before. Used when there's no month." },
             page: { type: "string", description: "Part of a page's address, e.g. /boiler-repair. Leave out for the whole website." },
+            kind: { type: "string", enum: ["line", "bars", "stacked", "pie", "scatter", "grid"], description: "google_analytics only: line (each day, the default), bars (groups ranked), stacked (each group's share, against the period before), pie (shares), scatter (visits against conversion rate) or grid (each group's rate for each conversion)." },
+            by: { type: "string", enum: ["channel", "kind", "device", "country"], description: "With a kind other than line: the groups — channel (default), kind (of page), device or country." },
           },
         }),
       },

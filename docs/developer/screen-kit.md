@@ -100,6 +100,7 @@ both):
 - `src/ui/components/screens/PageFlowChart.tsx`: `PageFlowChart` — how visits moved through a website: landing pages, the next page and the page after, each page a box as tall as its visits, grey bands for the routes, a red tail down a box's edge for the visits that left there, an orange dot for conversions (on a route, or inside a landing page's box), bigger for more. Click a box to follow it: its routes turn orange and the rest fade; it opens with none followed. Landing pages' "How visits moved through your website" (landing-pages-flow-plan.md LF2).
 - `src/ui/components/screens/ChannelMap.tsx`: `ChannelMap` — rows across columns, each square a count shaded by its share of its row on the engagement ramp (brighter for more), its conversions beneath, an empty square grey, and a key underneath saying what the numbers and shades mean. "Where each channel lands, by page classification".
 - FiledBars, the third part named that day, is `SiteBarChart` stacked along — no part of its own.
+- `src/app/(dashboard)/app/sites/_components/SiteCharts.tsx`: `SitePieChart` — shares at a glance as a ring, each slice in the series colours (the rest in the comparator grey), and beside it each slice's name, figure and share, so no figure needs a hover. Ask Hakken's pie (ask-hakken-every-chart-plan-2026-10-31.md, drawn and signed off 2026-10-31). Named to Anthony as new to the kit that day.
 
 Parts shared by one area rather than the whole app, in the narrowest folder their callers reach:
 

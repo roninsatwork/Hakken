@@ -21,6 +21,17 @@ vi.mock("@/src/app/(dashboard)/app/sites/_components/SiteCharts", async (origina
       ))}
     </ul>
   ),
+  SiteBarChart: ({ data, series, stacked, horizontal }: { data: Array<Record<string, unknown>>; series: SiteSeries[]; stacked?: boolean; horizontal?: boolean }) => (
+    <ul data-testid="bars" data-stacked={String(Boolean(stacked))} data-along={String(Boolean(horizontal))}>
+      {data.map((row) => <li key={String(row.label)}>{`${String(row.label)}: ${series.map((one) => `${one.name} ${String(row[one.key] ?? "–")}`).join(", ")}`}</li>)}
+    </ul>
+  ),
+  SitePieChart: ({ slices, formatValue }: { slices: Array<{ name: string; value: number }>; formatValue: (value: number) => string }) => (
+    <ul data-testid="pie">{slices.map((slice) => <li key={slice.name}>{`${slice.name} ${formatValue(slice.value)}`}</li>)}</ul>
+  ),
+  SiteScatterChart: ({ groups, yLabel }: { groups: Array<{ points: Array<{ x: number; y: number; label: string }> }>; yLabel: string }) => (
+    <ul data-testid="scatter" data-y={yLabel}>{groups[0].points.map((point) => <li key={point.label}>{`${point.label} ${point.x} ${point.y}`}</li>)}</ul>
+  ),
 }));
 
 const september: Chart = {
@@ -72,5 +83,48 @@ describe("a chart under an answer", () => {
     renderWithProviders(<AnswerChart chart={{ ...september, look: "analyticsDays", measure: "conversionRate", event: "add_to_cart", link: "/app/analytics/companyWebsites_1/conversions?period=lastMonth" }} />);
     expect(screen.getByRole("figure", { name: "Share of visits that did add to cart each day" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open in Google Analytics" })).toHaveAttribute("href", "/app/analytics/companyWebsites_1/conversions?period=lastMonth");
+  });
+});
+
+describe("a chart of a website's groups (ask-hakken-every-chart-plan-2026-10-31.md)", () => {
+  const groups = (chart: Partial<Chart> & Record<string, unknown>) => ({
+    look: "analyticsGroups", by: "channel", website: "morehandles.co.uk", period: "lastMonth", link: "/app/analytics/site/conversions?period=lastMonth", ...chart,
+  }) as Chart;
+
+  it("bars rank the channels, last month against the month before", () => {
+    renderWithProviders(<AnswerChart chart={groups({ kind: "bars", measure: "visits", groups: [{ name: "Organic Search", value: 12809, before: 13382 }, { name: "Direct", value: 4491 }] })} />);
+    expect(screen.getByRole("figure", { name: "Visits by channel" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Google Analytics" })).toHaveAttribute("href", "/app/analytics/site/conversions?period=lastMonth");
+    expect(screen.getByTestId("bars")).toHaveAttribute("data-along", "true");
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Organic Search: Last month 12809, The month before 13382", "Direct: Last month 4491, The month before –"]);
+  });
+
+  it("stacked bars set the month before beside last month, each channel's share, the rest together", () => {
+    renderWithProviders(<AnswerChart chart={groups({ kind: "stacked", measure: "visits", groups: [{ name: "Organic Search", value: 34.9, before: 38.6 }, { name: "*", value: 65.1, before: 61.4 }] })} />);
+    expect(screen.getByRole("figure", { name: "Each channel's share of visits" })).toBeInTheDocument();
+    expect(screen.getByTestId("bars")).toHaveAttribute("data-stacked", "true");
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["The month before: Organic Search 38.6, Every other 61.4", "Last month: Organic Search 34.9, Every other 65.1"]);
+  });
+
+  it("a pie names each device in plain words with its share", () => {
+    renderWithProviders(<AnswerChart chart={groups({ kind: "pie", by: "device", measure: "visits", groups: [{ name: "mobile", value: 50 }, { name: "desktop", value: 47.2 }, { name: "tablet", value: 2.8 }] })} />);
+    expect(screen.getByRole("figure", { name: "Visits by device" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Mobile 50%", "Desktop 47.2%", "Tablet 2.8%"]);
+  });
+
+  it("a scatter sets each kind of page's visits against the share that bought", () => {
+    renderWithProviders(<AnswerChart chart={groups({ kind: "scatter", by: "kind", measure: "conversionRate", event: "purchase", groups: [{ name: "Brand", value: 5.7, visits: 3517 }, { name: "Blog", value: 0.4, visits: 2027 }] })} />);
+    expect(screen.getByRole("figure", { name: "Visits against the share that made a purchase, by kind of page" })).toBeInTheDocument();
+    expect(screen.getByTestId("scatter")).toHaveAttribute("data-y", "Share that made a purchase (%)");
+    expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Brand 3517 5.7", "Blog 2027 0.4"]);
+  });
+
+  it("a grid shades each conversion's rate across the kinds of page", () => {
+    renderWithProviders(<AnswerChart chart={groups({ kind: "grid", by: "kind", measure: "conversionRate", event: "purchase", groups: [{ name: "Brand", value: 3517 }, { name: "Blog", value: 2027 }], rows: [{ event: "purchase", values: [5.7, 0.4] }, { event: "add_to_cart", values: [18.8, null] }] })} />);
+    expect(screen.getByRole("figure", { name: "Share of visits that did each step, by kind of page" })).toBeInTheDocument();
+    expect(screen.getByText("Purchase")).toBeInTheDocument();
+    expect(screen.getByText("Add to cart")).toBeInTheDocument();
+    expect(screen.getByText("5.7%")).toBeInTheDocument();
+    expect(screen.getByText("18.8%")).toBeInTheDocument();
   });
 });

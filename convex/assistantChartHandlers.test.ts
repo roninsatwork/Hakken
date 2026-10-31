@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { ASSISTANT_CHART_HANDLERS } from "./assistantChartHandlers";
 import schema from "./schema";
-import type { AnswerChart } from "./utils/assistantCharts";
+import type { DaysChart } from "./utils/assistantCharts";
 
 /**
  * The Assistant's chart (docs/plans/active/hakken-tasks-plan.md, item 2.1):
@@ -47,7 +47,7 @@ function runtime(t: Harness): ToolHandlerExecutionInput["ctx"] {
   } as unknown as ToolHandlerExecutionInput["ctx"];
 }
 
-type Drawn = { ok: boolean; problem?: string; total?: number; theDaysBefore?: { total: number }; chart?: AnswerChart; note?: string };
+type Drawn = { ok: boolean; problem?: string; total?: number; theDaysBefore?: { total: number }; chart?: DaysChart; note?: string };
 
 async function draw(t: Harness, companyId: ToolHandlerExecutionInput["companyId"], args: Record<string, unknown>) {
   return (await ASSISTANT_CHART_HANDLERS["assistant.chart"]({ ctx: runtime(t), handlerMapping: "assistant.chart", args, companyId })) as Drawn;

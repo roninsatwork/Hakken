@@ -12,6 +12,8 @@ import {
   LabelList,
   Legend,
   Line,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -736,6 +738,49 @@ function logAxis(values: number[]): { ticks: number[]; domain: [number, number] 
     for (const step of steps) if (decade * step <= high) ticks.push(decade * step);
   }
   return { ticks, domain: [low, high === low ? low * 10 : high] };
+}
+
+/** A slice of a pie: its name, its figure and its colour. */
+export type SitePieSlice = { key: string; name: string; value: number; colour: string };
+
+/**
+ * Shares at a glance, as a ring (ask-hakken-every-chart-plan-2026-10-31.md, drawn and signed off 2026-10-31 — canvas
+ * "Ask Hakken, every kind of chart", board 1): each slice in the series colours, and beside the ring each one's name,
+ * figure and share of the whole, so no figure needs a hover; a hover says the same in the app's own readout.
+ */
+export function SitePieChart({ slices, formatValue = formatNumber, size = 200 }: {
+  slices: SitePieSlice[];
+  /** How a slice's figure reads beside its name: a whole number unless said. */
+  formatValue?: (value: number) => string;
+  size?: number;
+}) {
+  const whole = slices.reduce((sum, slice) => sum + slice.value, 0);
+  const shareOf = (value: number) => (whole > 0 ? `${((value / whole) * 100).toFixed(1)}%` : "");
+  return (
+    <ChartReveal replay={slices.map((slice) => `${slice.key}:${slice.value}`).join("|")} motion="fade">
+      <div className="flex flex-wrap items-center gap-6">
+        {/* A ring is as wide as it is tall, so it is drawn at its own size rather than filling a box. */}
+        <div className="shrink-0">
+          <PieChart width={size} height={size}>
+            <Pie data={slices} dataKey="value" nameKey="name" innerRadius="63%" outerRadius="100%" paddingAngle={2} stroke="none" isAnimationActive={false}>
+              {slices.map((slice) => <Cell key={slice.key} fill={slice.colour} />)}
+            </Pie>
+            <Tooltip content={<ChartTooltip formatValue={(value) => `${formatValue(value)} · ${shareOf(value)}`} />} />
+          </PieChart>
+        </div>
+        <ul className="flex min-w-0 flex-col gap-2 text-[13px]">
+          {slices.map((slice) => (
+            <li key={slice.key} className="flex items-center gap-2.5">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: slice.colour }} aria-hidden />
+              <span className="text-foreground">{slice.name}</span>
+              <span className="font-mono text-secondary">{formatValue(slice.value)}</span>
+              <span className="font-mono text-muted">{shareOf(slice.value)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </ChartReveal>
+  );
 }
 
 export type SiteScatterGroup = {

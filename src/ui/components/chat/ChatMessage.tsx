@@ -153,13 +153,18 @@ export default function ChatMessage({
       </div>
 
       {/* Held to a reading measure. Tables and code inside the markdown break
-          out to the full column on their own. */}
-      <div className="text-[14px] leading-[1.75] text-foreground/90 max-w-[34rem]">
+          out to the full column on their own, and so does a grid chart, whose
+          squares need the room (ask-hakken-every-chart-plan-2026-10-31.md). */}
+      <div className="text-[14px] leading-[1.75] text-foreground/90">
         {/* The chart goes where the answer put its mark, or after its words;
             the mark itself is never shown (hakken-tasks-plan.md, item 2.1). */}
-        <HakkenMarkdown content={words.before} />
-        {!isStreaming && message.chart ? <AnswerChart chart={message.chart} /> : null}
-        {words.after ? <HakkenMarkdown content={words.after} /> : null}
+        <div className="max-w-[34rem]"><HakkenMarkdown content={words.before} /></div>
+        {!isStreaming && message.chart ? (
+          <div className={message.chart.look === "analyticsGroups" && message.chart.kind === "grid" ? undefined : "max-w-[34rem]"}>
+            <AnswerChart chart={message.chart} />
+          </div>
+        ) : null}
+        {words.after ? <div className="max-w-[34rem]"><HakkenMarkdown content={words.after} /></div> : null}
         {isStreaming && (
           <span
             aria-label={t("stillWriting")}
