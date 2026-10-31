@@ -146,3 +146,10 @@ website in the set, at a lower cost a bubble than today's $0.39.
   Anthony's three points: his "10%" step and AI assistants are not found.
   - Waiting on Anthony: phase 0 (what his "10%" measured; eval pages on other websites) and phase 6 (adding
     a ChatGPT model to grade against Argon).
+- 2026-10-31, morning, with Anthony: his "10%" was read down the map's column — 14.3% of visits add to basket,
+  6.3% start checkout — so a step is now weighed and said as visits lost in every 100 of all visits (f582c5fc,
+  4d370a87); "visits for one" always kept and covered. His AI assistants note was taken out of the eval page:
+  over September AI Assistant bought at 3.2% against the website's 3.4% (his picture was one day, 2 of 28).
+  Eval: 2 of 2. Then the cost (bdf125ff): with findings the writer reads no screen and the Head's second look is
+  gone — $0.058 a bubble against $0.54, still 2 of 2. Open: eval pages on other websites; the ChatGPT trial;
+  credits for a press.
