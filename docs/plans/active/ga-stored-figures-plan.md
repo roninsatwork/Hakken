@@ -515,7 +515,7 @@ the build"; nothing was asked of Google while it was built):
   going, then carries on from the list it was on. A refusal is no longer
   asked again a few seconds later. This replaces the ten-minute retry made
   that morning.
-- **The night** (SF19): a website's run may go on for 4½ hours from its
+- **The night** (SF19) — *changed 2026-10-31 (Anthony: "it's best to finish the pull in the day"): a run now goes on for up to 22 hours, hour by hour inside the same allowances, so a big website finishes the same day (`RUN_DAY_MS`); the 4½ hours below is the original rule*: a website's run may go on for 4½ hours from its
   start; a wait that would take it past stops it, saying the rest waits for
   the next night (finished, not failed: nothing is lost). Websites' runs
   start spread out — two minutes apart, closer for many, all within 12

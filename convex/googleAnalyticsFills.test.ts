@@ -10,7 +10,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { fillStops } from "./googleAnalyticsHistory";
 import { PAGE_ROWS_PER_ASK, pageFillPieces, unitsPerAsk } from "./googleAnalyticsPageSeries";
-import { NIGHT_MS } from "./googleAnalyticsBudget";
+import { RUN_DAY_MS } from "./googleAnalyticsBudget";
 import { historyFloors } from "./utils/analyticsHistory";
 
 /**
@@ -80,7 +80,7 @@ describe("each page's fill pieces (BR5)", () => {
     expect(await step.stopped(wait)).toMatchObject({ ok: true, handedOn: "HOUR" });
     expect(again).toEqual([0, 62 * 60_000]);
     // Past the night, or not a night's fill: stopped, for the next night's run.
-    vi.setSystemTime(NOW + NIGHT_MS - 30 * 60_000);
+    vi.setSystemTime(NOW + RUN_DAY_MS - 30 * 60_000);
     expect(await fillStops({} as never, async () => undefined, NOW, outcome).stopped(wait)).toMatchObject({ ok: false });
     expect(await fillStops({} as never, async () => undefined, undefined, outcome).stopped(wait)).toMatchObject({ ok: false });
   });

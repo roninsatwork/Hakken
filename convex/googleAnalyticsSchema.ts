@@ -445,8 +445,8 @@ export const googleAnalyticsTables = {
     /** The day lists whose two years are filled (SF12); a website filled before SF12 has the channels alone. */
     historyFilled: v.optional(v.array(dayFactListValidator)),
     /**
-     * The ready-made list a run cut short by the night (`NIGHT_MS`) had not
-     * asked yet, by its key (`jobKey`): the next night's run starts its lists
+     * The ready-made list a run cut short by its hours (`RUN_DAY_MS`) had not
+     * asked yet, by its key (`jobKey`): the next run starts its lists
      * there, so the last lists are never the ones always left out.
      */
     listsFrom: v.optional(v.string()),

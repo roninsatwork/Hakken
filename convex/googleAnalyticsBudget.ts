@@ -20,11 +20,13 @@ import type { QuotaLeft } from "./googleAnalyticsApi";
  * keeps the same amounts back.
  */
 /**
- * A website's night (ga-stored-figures-plan.md SF19): its run, and the two-year fills after it
- * (ga-big-site-reliability-plan.md BR7), may go on for 4½ hours from the run's start; past it, what is left waits for
- * the next night.
+ * How long a website's run, and the two-year fills after it (ga-big-site-reliability-plan.md BR7), may go on from the
+ * run's start: 22 hours, hour by hour inside Google's allowances, so a big website finishes the same day and the run
+ * is done before the next one starts at 01:00 (Anthony, 2026-10-31: "we start at 1am each day so the pull can
+ * continue for many hours, it's best to finish the pull in the day"). It was 4½ hours, the night alone
+ * (ga-stored-figures-plan.md SF19), and morehandles.co.uk's age, gender and interest asks — 120 an hour — never fit.
  */
-export const NIGHT_MS = 4.5 * 60 * 60 * 1000;
+export const RUN_DAY_MS = 22 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 /** Past the hour before carrying on, so Google's count has refreshed. */
 const AFTER_THE_HOUR_MS = 2 * 60 * 1000;

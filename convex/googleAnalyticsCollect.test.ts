@@ -662,28 +662,31 @@ describe("collecting a website's Google Analytics", () => {
     expect(reports[refusedAt + 1].at - reports[refusedAt].at).toBeGreaterThanOrEqual(60 * 60 * 1000);
   });
 
-  test("a run the night is too short for stops when it is over, and leaves the rest to the next night", async () => {
+  test("a run its 22 hours are too short for stops when they are over, and leaves the rest to the next run", async () => {
     const t = harness();
     const { siteId, connectionId, admin } = await connected(t);
     const google = fakeGoogle(history(70));
     // An allowance so small the weekly lists would take many hours.
     google.allowance = { thresholdedPerHour: 25, tokensPerAsk: 1 };
     await save(admin, siteId);
-    await finishScheduled(t);
+    // Long by design: a run waits for each hour, looking in every ten minutes, through its 22 hours (RUN_DAY_MS).
+    await finishScheduled(t, { rounds: 400 });
     expect(google.refused).toBe(0);
     const site = (await runsOf(t)).find((run) => run.title === "Google Analytics: acme-shop.test")!;
     expect(site.status).toBe("SUCCESS");
-    expect(site.finalOutput).toContain("as far as the night allowed");
-    expect(google.spent.size).toBeLessThanOrEqual(6);
+    expect(site.finalOutput).toContain("as far as the day allowed");
+    // It carried on hour by hour past the old 4½-hour night, and stopped inside its 22 hours.
+    expect(google.spent.size).toBeGreaterThan(6);
+    expect(google.spent.size).toBeLessThanOrEqual(23);
     // Cut short, it still ends as collected, free of Google (the audit of 2026-10-14): the run no longer reads as
-    // going, and the next night's lists start where this one stopped, so the last lists are never always left out.
+    // going, and the next run's lists start where this one stopped, so the last lists are never always left out.
     const connection = (await connectionOf(t, connectionId))!;
     expect(connection.lastCollectedAt).toBeDefined();
     expect(connection.collecting).toBeUndefined();
     expect(connection.listsFrom).toBeDefined();
   });
 
-  test("a run starts from what Google last said is left: with the day's allowance used, it asks Google nothing", async () => {
+  test("a run starts from what Google last said is left: with the day's allowance used, it asks Google nothing until Google's day turns", async () => {
     const t = harness();
     const { siteId, connectionId, admin } = await connected(t);
     const google = fakeGoogle(history(70));
@@ -691,12 +694,14 @@ describe("collecting a website's Google Analytics", () => {
     await t.run(async (ctx) => await ctx.db.patch(connectionId, {
       quotaSeen: { at: Date.now() - 60_000, tokensPerDay: 1_000, tokensPerHour: 30_000, tokensPerProjectPerHour: 10_000, thresholdedPerHour: 100 },
     }));
+    const begun = Date.now();
     await save(admin, siteId);
-    await finishScheduled(t);
-    expect(google.calls.filter((call) => call.url.endsWith(":runReport"))).toHaveLength(0);
-    const site = (await runsOf(t)).find((run) => run.title === "Google Analytics: acme-shop.test")!;
-    expect(site.finalOutput).toContain("as far as the night allowed");
-    expect(site.finalOutput).toContain("today");
+    // Long by design: a run waits for each hour, looking in every ten minutes, through its 22 hours (RUN_DAY_MS).
+    await finishScheduled(t, { rounds: 400 });
+    // Nothing is asked while Google's day is the one whose allowance was used; once it turns, the run carries on.
+    const asked = google.calls.filter((call) => call.url.endsWith(":runReport"));
+    expect(asked.filter((call) => googleDay(call.at) === googleDay(begun))).toHaveLength(0);
+    expect(asked.length).toBeGreaterThan(0);
   });
 
   test("what Google said is left holds for ten minutes, and the day's until Google's day turns", () => {

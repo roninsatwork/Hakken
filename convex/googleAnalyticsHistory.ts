@@ -8,7 +8,7 @@ import { EVERY_DEVICE, groupKeys, packList, unpackPart, type ListRow, type Packe
 import { addInto, blank } from "./googleAnalyticsRows";
 import { DAYS_PER_STEP, SPLIT_ROWS, STEP_BUDGET_MS, askList, collectDays, countryIdOf, dayFactsOf, failed, openSession, slotKey, type StepResult } from "./googleAnalyticsCollect";
 import { PART_ROWS } from "./utils/searchConsolePacks";
-import { NIGHT_MS, afterTheHour } from "./googleAnalyticsBudget";
+import { RUN_DAY_MS, afterTheHour } from "./googleAnalyticsBudget";
 import { fillStepKey, fillReachedOf, withoutReached } from "./googleAnalyticsFillAfter";
 import { shiftDay } from "./searchConsoleDays";
 import { coverageOf, filledLists, withCoverage } from "./googleAnalyticsCoverage";
@@ -386,7 +386,7 @@ export function fillStops(ctx: ActionCtx, again: (atMs: number) => Promise<unkno
     stopped: async (result: Extract<StepResult, { ok: false }>): Promise<FillOutcome> => {
       if (result.wait && nightFrom !== undefined) {
         const resumeAt = afterTheHour(Date.now());
-        if (resumeAt - nightFrom <= NIGHT_MS) {
+        if (resumeAt - nightFrom <= RUN_DAY_MS) {
           await again(resumeAt - Date.now());
           return { ok: true, ...outcome(), handedOn: "HOUR" };
         }

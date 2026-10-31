@@ -29,7 +29,7 @@ import {
   type StepResult,
 } from "./googleAnalyticsCollect";
 import { COUNTED_WITH, LISTED_WITH } from "./googleAnalyticsSchema";
-import { NIGHT_MS, afterTheHour } from "./googleAnalyticsBudget";
+import { RUN_DAY_MS, afterTheHour } from "./googleAnalyticsBudget";
 import { countriesKeptReady } from "./searchConsoleCountries";
 import { isTrackedHold } from "./utils/websitePairing";
 
@@ -86,11 +86,11 @@ const CONNECTIONS_PER_READ = 500;
  * whole hour boundaries" (Google's quota page) — it asks nothing more for an
  * hour and two minutes, looking in every ten minutes so it reads as going
  * (`ROLE_RUN_LIVE_MS`), then carries on where it left off. No run waits on a
- * person (AGENTS.md); past the night it stops, and the next night asks again.
+ * person (AGENTS.md); past its hours (`RUN_DAY_MS`) it stops, and the next run asks again.
  */
 const LOOK_IN_MS = 10 * 60 * 1000;
-// The night and the hour's wait are the budget's, shared with the two-year fills (ga-big-site-reliability-plan.md BR7).
-export { NIGHT_MS, afterTheHour } from "./googleAnalyticsBudget";
+// The run's hours and the hour's wait are the budget's, shared with the two-year fills (ga-big-site-reliability-plan.md BR7).
+export { RUN_DAY_MS, afterTheHour } from "./googleAnalyticsBudget";
 
 const NOT_HISTORY = "The newest day and the last two again; a website with nothing held gets the 60 days kept, and its 90 days and 12 months are asked of Google ready-made.";
 
@@ -357,7 +357,7 @@ export const collectSiteStepArgs = {
   recount: v.optional(v.boolean()),
   /** Each other home country's first day to fetch (SF7), worked out as the run starts so every step agrees. */
   countryFrom: v.optional(v.array(v.object({ country: v.string(), from: v.string() }))),
-  /** When the run began, for the night it may take (`NIGHT_MS`). */
+  /** When the run began, for the hours it may take (`RUN_DAY_MS`). */
   begunAt: v.optional(v.number()),
   /** Waiting for the hour to turn (SF17, SF20): nothing is asked of Google before this time. */
   resumeAt: v.optional(v.number()),
@@ -514,13 +514,13 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
       } else if (result.wait) {
         // The hour's budget spent, or Google refusing for an allowance that refreshes within the hour (SF17, SF20).
         const resumeAt = afterTheHour(Date.now());
-        if (resumeAt - (args.begunAt ?? Date.now()) > NIGHT_MS) {
+        if (resumeAt - (args.begunAt ?? Date.now()) > RUN_DAY_MS) {
           // What costs Google nothing is finished now — the days rolled on, the screens' lists rebuilt — and the next
-          // night's lists start where this one stopped, so the same last lists are never the ones left out.
+          // run's lists start where this one stopped, so the same last lists are never the ones left out.
           const next = to === null ? jobs[jobAt] : undefined;
           await close(
             "SUCCESS",
-            `Collected ${args.host} as far as the night allowed: ${result.reason}. The rest waits for tomorrow night's run, which starts where this one stopped; nothing is lost.`,
+            `Collected ${args.host} as far as the day allowed: ${result.reason}. The rest waits for the next run, at 01:00, which starts where this one stopped; nothing is lost.`,
             reachedSoFar(to),
             { ...(next && !("days" in next) ? { listsFrom: jobKey(next) } : {}), fills: false },
           );
