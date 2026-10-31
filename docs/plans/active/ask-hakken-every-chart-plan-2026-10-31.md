@@ -113,3 +113,13 @@ charts may break out to the full column as tables already do.
     which the chart library draws only in a browser.
   - Not checked: in Chrome — the browser tab Claude can drive was signed out, and Claude may not sign in. Anthony's
     answer still open: at zero credits the eye, like every kind today, records and carries on.
+- 2026-10-31, the gaps, at Anthony's "Yes, build gaps" (583a1369): landing pages as a chart's groups; the week's
+  hours as a grid (each weekday down, four-hour blocks across, the times a conversion happened); Search Console's
+  searches, pages, countries and devices — clicks or impressions as bars, a pie, stacked shares, or times shown
+  against the share clicked (no grid: it counts no conversions). One read for all of them
+  (`assistantGroupChartReads.ts`), shared by Ask Hakken and a chart sent on its day; every one can be sent at a
+  time. Checked on morehandles.co.uk's saved figures: searches (top "more handles", 84 clicks against 79), devices
+  (phones 56.5% of clicks), pages' times shown against the share clicked, landing pages (the home page first,
+  3,186 visits). Its hours grid says it waits for the next collection, which has not reached that list yet.
+  - Still not done: Visibility, Bing Webmaster and Clarity as chart sources; a saved-outline look test for the pie.
+  - Still not checked in Chrome: the drivable tab was signed out.
