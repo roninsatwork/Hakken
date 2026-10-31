@@ -122,7 +122,7 @@ export default function SearchConsoleUpdatesPage() {
       <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={t("updates.title")} description={t("updates.description", { days: status?.limits.updateWindowDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="updates" seen={seen} />
+          <SearchConsoleSees screen="updates" seen={seen} data={rows ? { updates: rows, days: days.figures ?? null } : undefined} />
           <ResultKindSwitch />
           {chartProblem ? (
             <LiveProblem problem={chartProblem} retry={problem ? live.retry : days.retry} />

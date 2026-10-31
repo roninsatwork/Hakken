@@ -62,7 +62,7 @@ export default function SearchConsoleVolatilityPage() {
       icon={<Activity className="h-5 w-5 text-brand" />}
       title={tv("title")}
       description={tv("description")}
-      sees={<SearchConsoleSees screen="volatility" seen={facts?.seen} />}
+      sees={<SearchConsoleSees screen="volatility" seen={facts?.seen} data={facts ? { volatility: facts, rows: list.table.pageRows ?? null, chart: periods ?? null } : undefined} />}
       kindSwitch={false}
       heroes={
         <FigureRow>

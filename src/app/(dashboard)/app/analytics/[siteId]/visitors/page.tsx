@@ -13,7 +13,7 @@ import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { FLOW_MORE } from "@/convex/utils/conversionFlow";
 import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
 import { SearchConsoleChartCard } from "../../../search-console/_components/SearchConsoleChartCard";
-import { AnalyticsListScreen, type VisitorList } from "../../_components/AnalyticsListScreen";
+import { AnalyticsListScreen, type ListPageAnswer, type VisitorList } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChannelsChart } from "../../_components/AnalyticsChart";
 import { useFlowKindName } from "../../_components/ConversionParts";
@@ -51,7 +51,7 @@ export default function AnalyticsVisitorsPage() {
   return (
     <AnalyticsListScreen
       header={{ icon: <Users className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
-      head={() => <VisitorsHead map={map ?? null} kindName={kindName} />}
+      head={(list) => <VisitorsHead map={map ?? null} kindName={kindName} list={list} />}
       list={view}
       noun={NOUNS[view]}
       searchPlaceholder={t(`find.${view}`)}
@@ -66,7 +66,7 @@ export default function AnalyticsVisitorsPage() {
 
 type VisitorMap = NonNullable<FunctionReturnType<typeof api.googleAnalyticsConversionReads.analyticsVisitorMap>>;
 
-function VisitorsHead({ map, kindName }: { map: VisitorMap | null; kindName: (kind: string) => string }) {
+function VisitorsHead({ map, kindName, list }: { map: VisitorMap | null; kindName: (kind: string) => string; list: ListPageAnswer | undefined }) {
   const t = useTranslations("googleAnalytics.visitors");
   const tf = useTranslations("googleAnalytics.filters");
   const args = useAnalyticsArgs();
@@ -81,7 +81,7 @@ function VisitorsHead({ map, kindName }: { map: VisitorMap | null; kindName: (ki
   const signalsOff = answer?.signals === "off";
   return (
     <>
-      <AnalyticsSees screen="visitors" seen={answer?.seen} currency={status?.connection?.currency} names={(value) => (map?.kinds.some((kind) => kind.kind === value) ? kindName(value) : null)} />
+      <AnalyticsSees screen="visitors" seen={answer?.seen} currency={status?.connection?.currency} names={(value) => (map?.kinds.some((kind) => kind.kind === value) ? kindName(value) : null)} data={{ figures: answer, map, list }} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
       {figures ? (
         <FigureRow columns={4}>

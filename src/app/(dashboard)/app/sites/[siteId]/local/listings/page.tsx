@@ -141,7 +141,7 @@ export default function LocalListingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Link2 className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="localListings" seen={data?.seen} />
+      <SiteSees screen="localListings" seen={data?.seen} data={data} />
       {data && !data.ownSite ? <Notice>{t("notOwnSite")}</Notice> : null}
       {data && data.ownSite && !data.on ? <LocalSetupNotice siteId={siteId} reason="off" /> : null}
 

@@ -88,7 +88,7 @@ export default function SiteSearchesPage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
-      <SiteSees screen="googleSearches" seen={rows && searchesSees(rows)} />
+      <SiteSees screen="googleSearches" seen={rows && searchesSees(rows)} data={rows && { searches: rows, positions }} />
 
       <SiteChartCard
         title={t("chartTitle")}

@@ -1,6 +1,8 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
@@ -30,10 +32,18 @@ export function formatCtr(value: number | null | undefined): string {
  * where it is read. Written from the page's own answer, so it says only what
  * the page shows.
  */
-export function BingSees({ says, steps = [] }: { says: (string | null | false | undefined)[]; steps?: HakkenSeesStep[] }) {
+export function BingSees({ says, steps = [], screen, data }: {
+  says: (string | null | false | undefined)[];
+  steps?: HakkenSeesStep[];
+  /** The page in the eye's screen list (`bing.<screen>`) and its own figures (sees-every-page-plan-2026-10-31.md). */
+  screen?: string;
+  data?: unknown;
+}) {
+  const siteId = useParams<{ siteId?: string }>()?.siteId as Id<"companyWebsites"> | undefined;
   const sentences = says.filter((line): line is string => Boolean(line));
-  if (sentences.length === 0) return null;
-  return <HakkenSees says={sentences.slice(0, 3)} steps={steps.slice(0, 3)} />;
+  const page = screen && data !== undefined && data !== null ? { screen: `bing.${screen}`, ...(siteId ? { siteId } : {}), data } : undefined;
+  if (!page && sentences.length === 0) return null;
+  return <HakkenSees says={sentences.slice(0, 3)} steps={steps.slice(0, 3)} {...(page ? { page } : {})} />;
 }
 
 type Totals = { clicks: number; impressions: number };

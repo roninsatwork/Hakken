@@ -94,7 +94,7 @@ export default function ClarityPagesPage() {
     <>
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {waiting ? <Notice>{waiting}</Notice> : null}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.pages", siteId, data: answer }} />
       <ChartCard
         title={t("chart.title")}
         hint={t("chart.hint", { few: CLARITY_FEW_VISITS, website: percent(answer?.website.scroll ?? null) })}

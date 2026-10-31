@@ -55,7 +55,7 @@ export default function SitePaidKeywordsPage() {
         description={t("description")}
         pills={partial ? <span className="text-[12px] text-secondary">{t("listing", { listed: formatNumber(listed), reported: formatNumber(reported) })}</span> : null}
       />
-      <SiteSees screen="paidKeywords" seen={table.result?.seen} />
+      <SiteSees screen="paidKeywords" seen={table.result?.seen} data={table.result} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}

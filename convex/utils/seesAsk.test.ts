@@ -69,7 +69,9 @@ describe("the eye's ask", () => {
     expect(writerFor("searchConsole.keywords", [])).toBe("INSIGHTS_SEARCH");
     expect(writerFor("bing.crawling", [])).toBe("INSIGHTS_TECHNICAL");
     expect(writerFor("clarity.pages", [])).toBe("INSIGHTS_BEHAVIOUR");
-    expect(writerFor("visibility.backlinks", [])).toBe("INSIGHTS_LINKS");
+    expect(writerFor("visibility.backlinksAnchors", [])).toBe("INSIGHTS_LINKS");
+    expect(writerFor("visibility.localMaps", [])).toBe("INSIGHTS_LOCAL");
+    expect(writerFor("visibility.aiShare", [])).toBe("INSIGHTS_AI_VISIBILITY");
     expect(writerFor("visibility.somethingNew", [])).toBe("INSIGHTS_SEARCH");
   });
 });

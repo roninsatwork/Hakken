@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Gauge } from "lucide-react";
@@ -47,6 +48,8 @@ export default function InsightsMeasurementPage() {
   const tBox = usePlatformTranslations("insights.box");
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsMeasurement, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ measurement: data, box }), [data, box]);
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<string>("status", "");
   const checks = data?.measurement?.checks;
@@ -85,7 +88,7 @@ export default function InsightsMeasurementPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.measurement", siteId: site, data: seesData }} />
       <ChartCard
         title={t("chart.title")}
         hint={days.length > 0 ? t("chart.hint", { from: days[0].label, to: days.at(-1)!.label, share: clicks > 0 ? Math.round((visits / clicks) * 100) : 0 }) : t("chart.none")}

@@ -88,7 +88,7 @@ export default function SiteFeaturesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleFeatures" seen={data && featuresSees(data, label)} />
+      <SiteSees screen="googleFeatures" seen={data && featuresSees(data, label)} data={data && { features: data, series }} />
 
       {across ? (
         <section aria-label={t("acrossAll")} className="flex flex-col gap-2">

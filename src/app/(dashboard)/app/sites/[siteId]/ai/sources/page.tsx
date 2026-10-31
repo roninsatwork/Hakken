@@ -59,7 +59,7 @@ export default function SiteSourcesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Link2 className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiSources" seen={answer?.seen} />
+      <SiteSees screen="aiSources" seen={answer?.seen} data={answer} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row.page}

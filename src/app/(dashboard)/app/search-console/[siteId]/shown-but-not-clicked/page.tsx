@@ -30,7 +30,7 @@ export default function SearchConsoleLowCtrPage() {
   const summary = list.summary;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="lowCtr" seen={list.summary ? lowCtrSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="lowCtr" seen={list.summary ? lowCtrSees(list.summary) : null} data={list.pageData} />}
       icon={<MousePointerClick className="h-5 w-5 text-brand" />}
       title={t("lowCtr.title")}
       description={t("lowCtr.description")}

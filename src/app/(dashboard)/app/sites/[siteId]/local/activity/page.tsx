@@ -102,7 +102,7 @@ export default function LocalActivityPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Activity className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="localActivity" seen={data?.seen} />
+      <SiteSees screen="localActivity" seen={data?.seen} data={data} />
       {data && data.rivals.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noRivals" /> : null}
 
       {figures ? (

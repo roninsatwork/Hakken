@@ -66,7 +66,7 @@ export default function InsightsExperimentsPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.experiments", siteId: site, data }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.experimentId}

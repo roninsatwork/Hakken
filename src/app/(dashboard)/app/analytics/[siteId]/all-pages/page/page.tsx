@@ -123,7 +123,7 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
       />
       {answer === null ? <Notice>{t("notFound")}</Notice> : null}
 
-      <AnalyticsSees screen="page" seen={answer && !answer.live ? answer.seen : undefined} currency={currency} />
+      <AnalyticsSees screen="page" seen={answer && !answer.live ? answer.seen : undefined} currency={currency} data={answer} />
 
       {answer && !row ? <Notice>{t("noViews", { period: named.period.toLowerCase() })}</Notice> : null}
       {row ? (

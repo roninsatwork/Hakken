@@ -161,7 +161,7 @@ export default function SiteYourPagesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<FileStack className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="yourPages" seen={table.result && yourPagesSees(table.result.own, table.result.summary)} />
+      <SiteSees screen="yourPages" seen={table.result && yourPagesSees(table.result.own, table.result.summary)} data={table.result} />
 
       <FigureRow>
         {FIGURES.map((key) => (

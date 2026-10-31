@@ -60,7 +60,7 @@ export default function SiteBrokenBacklinksPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Unlink className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksBroken" seen={table.result?.seen} />
+      <SiteSees screen="backlinksBroken" seen={table.result?.seen} data={table.result && { broken: table.result, totals }} />
       <ListHeldLine held={!term ? table.result?.total : undefined} total={totals?.broken} />
       <DataTable
         rows={table.pageRows}

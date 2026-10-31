@@ -52,6 +52,9 @@ describe("the Editor", () => {
     expect(editFinding(draft({ headline: "Enquiries fell by 41% from [[ga.conversions.30.before]]." }), facts)).toMatchObject({ ok: false });
     expect(typedNumbers("In the last 12 months of 2026, [[ga.x]] rose; check in 90 days.")).toEqual([]);
     expect(typedNumbers("about 70 fewer")).toEqual(["70"]);
+    // A name with a digit in it is a name (sees-every-page-plan, 2026-10-31: "handles4doors.co.uk" was sent back as a typed number).
+    expect(typedNumbers("[[f1.value]] links come from handles4doors.co.uk; the M4 bolt sells.")).toEqual([]);
+    expect(typedNumbers("about 70k more, 3x the rest")).toEqual(["70", "3"]);
   });
 
   test("a figure Hakken doesn't hold is sent back, never left blank", () => {

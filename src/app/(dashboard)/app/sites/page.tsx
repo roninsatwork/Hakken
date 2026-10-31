@@ -134,7 +134,7 @@ export default function SitesPage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<Globe className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
-        <SiteSees screen="websites" seen={sites && websitesSees(sites)} />
+        <SiteSees screen="websites" seen={sites && websitesSees(sites)} data={sites} />
 
         <DataTable
           rows={paged.pageRows}

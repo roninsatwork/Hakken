@@ -92,7 +92,7 @@ function RecordBody({ list, record, host }: { list: "query" | "page"; record: Re
   return (
     <div className="flex flex-col gap-6">
       {figures ? (
-        <BingSees says={[
+        <BingSees screen="record" data={{ list, record, rows }} says={[
           list === "query"
             ? figures.googlePosition !== null
               ? tw("keyword", { bing: formatPosition(figures.position), google: formatPosition(figures.googlePosition), clicks: formatNumber(figures.clicks), impressions: formatNumber(figures.impressions) })

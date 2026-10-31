@@ -51,6 +51,8 @@ function PerformanceBody({ status }: { status: BingStatus }) {
     <div className="flex flex-col gap-6">
       {bing ? (
         <BingSees
+          screen="performance"
+          data={figures}
           says={[
             tw("says", { impressions: formatNumber(bing.impressions), clicks: formatNumber(bing.clicks) }),
             google && tw("share", { share: formatShare(share), google: formatNumber(google.clicks) }),

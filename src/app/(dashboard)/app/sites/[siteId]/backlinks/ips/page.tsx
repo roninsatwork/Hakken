@@ -74,7 +74,7 @@ export default function SiteReferringIpsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Server className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksIps" seen={profile === undefined || subnets === undefined ? undefined : ipsSees(profile, subnets)} />
+      <SiteSees screen="backlinksIps" seen={profile === undefined || subnets === undefined ? undefined : ipsSees(profile, subnets)} data={profile && subnets && { profile, subnets, totals, ips: table.result }} />
       <ListHeldLine held={!term && !subnet ? table.result?.total : undefined} total={totals?.ips} />
 
       <SiteChartCard

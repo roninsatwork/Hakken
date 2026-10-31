@@ -74,7 +74,7 @@ export default function SiteBandMovePage() {
         title={title}
         description={moved?.day ? t("cell.description", { day: formatShortDay(moved.day) }) : undefined}
       />
-      <SiteSees screen="keywordsBandsMoved" seen={moved?.seen} />
+      <SiteSees screen="keywordsBandsMoved" seen={moved?.seen} data={moved} />
 
       <DataTable
         rows={pager.pageRows}

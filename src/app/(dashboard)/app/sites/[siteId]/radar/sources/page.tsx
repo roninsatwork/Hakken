@@ -94,7 +94,7 @@ export default function RadarSourcesPage() {
         description={t("description")}
         action={site ? <TagLabel>{tr("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
-      <SiteSees screen="radarSources" seen={data?.seen} />
+      <SiteSees screen="radarSources" seen={data?.seen} data={data} />
 
       {data ? (
         <FigureRow>

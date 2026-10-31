@@ -98,7 +98,7 @@ export default function SiteLinkSourcesPage() {
           ? <span className="text-[12px] text-secondary">{overlapping ? t("overlapping", { links: formatNumber(profile.backlinks) }) : t("largestOnly", { count: KEPT })}</span>
           : null}
       />
-      <SiteSees screen="backlinksWhere" seen={profile === undefined ? undefined : whereLinksSees({ breakdown, groups, total }, nameOf)} />
+      <SiteSees screen="backlinksWhere" seen={profile === undefined ? undefined : whereLinksSees({ breakdown, groups, total }, nameOf)} data={profile} />
       {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
       {drafts.shown ? (
         <>

@@ -70,7 +70,7 @@ export default function ClarityRecordingsPage() {
   return (
     <>
       <PageHeader icon={<PlayCircle className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <HakkenSees says={says} steps={[{ words: t("do.all"), link: t("do.openClarity"), href: links.project, external: true }]} />
+      <HakkenSees says={says} steps={[{ words: t("do.all"), link: t("do.openClarity"), href: links.project, external: true }]} page={{ screen: "clarity.recordings", siteId, data }} />
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.link}

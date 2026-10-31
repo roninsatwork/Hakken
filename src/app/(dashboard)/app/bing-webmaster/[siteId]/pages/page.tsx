@@ -34,6 +34,8 @@ export default function BingPagesPage() {
         <>
           {answer ? (
             <BingSees
+              screen="pages"
+              data={{ figures, list: answer }}
               says={[
                 tw("says", { count: formatNumber(answer.summary.rows) }),
                 answer.summary.top && tw("top", { page: pathOf(answer.summary.top.key), clicks: formatNumber(answer.summary.top.clicks) }),

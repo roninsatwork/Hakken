@@ -368,6 +368,20 @@ describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", 
     expect(await user.mutation(api.seesAsk.askSees, keywordsPage(siteId))).toEqual({ key: first.key, status: "WRITTEN" });
   });
 
+  test("words the Editor sends back are written once more, with why, on any page", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    await t.run(async (ctx) => { await ctx.db.insert("agents", { name: "INSIGHTS_SEARCH", systemKey: "INSIGHTS_SEARCH", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 }); });
+    const user = t.withIdentity({ subject: userId });
+    generate.mockResolvedValueOnce({ text: JSON.stringify({ says: ["About 840 clicks came from door handles."], steps: [] }), inputTokens: 100, outputTokens: 40 });
+    generate.mockResolvedValueOnce({ text: JSON.stringify({ says: ["[[page.rows.door_handles.clicks]] clicks came from door handles."], steps: [] }), inputTokens: 100, outputTokens: 40 });
+    const first = await user.mutation(api.seesAsk.askSees, keywordsPage(siteId));
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["840 clicks came from door handles."] });
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect((generate.mock.calls[1][0] as { contents: Array<{ text: string }> }).contents[0].text).toContain("sent back by the Editor: A sentence typed a number");
+  });
+
   test("at zero credits the eye stops: nothing is written or charged, and it says so (Anthony, 2026-10-31: \"stop\")", async () => {
     const t = harness();
     const { siteId, userId } = await seed(t);

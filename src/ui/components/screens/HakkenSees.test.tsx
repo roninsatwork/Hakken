@@ -224,10 +224,10 @@ describe("HakkenSees and its eye", () => {
       data: { rows: [{ key: "door handles", clicks: 840, ctr: 0.07 }] },
       links: [{ label: "Pages", href: "/app/search-console/site_1/pages" }],
     };
-    const Paged = ({ words = says }: { words?: string[] }) => (
+    const Paged = ({ words = says, data = page.data }: { words?: string[]; data?: unknown }) => (
       <>
         <HakkenSeesEye />
-        <HakkenSees says={words} steps={[{ words: "Look at your pages.", link: "Keywords", href: "/app/search-console/site_1/keywords" }]} advice="rule" page={page} />
+        <HakkenSees says={words} steps={[{ words: "Look at your pages.", link: "Keywords", href: "/app/search-console/site_1/keywords" }]} advice="rule" page={{ ...page, data }} />
       </>
     );
 
@@ -256,6 +256,15 @@ describe("HakkenSees and its eye", () => {
       );
       fireEvent.click(eye());
       expect(screen.getByText(/ui\.hakkenSees\.findings\.holdsMost door handles/)).toBeInTheDocument();
+    });
+
+    it("stays open while the page's figures change under it", async () => {
+      vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "FAILED" as const })) as never);
+      const view = render(<Paged />);
+      fireEvent.click(eye());
+      expect(bubble()).not.toBeNull();
+      view.rerender(<Paged data={{ rows: [{ key: "door handles", clicks: 900 }] }} />);
+      expect(bubble()).not.toBeNull();
     });
 
     it("at zero credits says so, with the way to Billing, and keeps the rule's words", async () => {

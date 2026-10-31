@@ -99,7 +99,7 @@ export default function SiteAllBacklinksPage() {
         title={t("title")}
         description={every ? t("descriptionEvery") : t("description")}
       />
-      <SiteSees screen="backlinksAll" seen={table.result?.seen} />
+      <SiteSees screen="backlinksAll" seen={table.result?.seen} data={table.result && { backlinks: table.result, totals }} />
       {narrowed ? <Notice>{t("narrowedNotice")}</Notice> : <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.[every ? "backlinks" : "oneEach"]} />}
       <DataTable
         rows={table.pageRows}

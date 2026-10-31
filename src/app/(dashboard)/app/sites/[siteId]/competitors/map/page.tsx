@@ -97,7 +97,7 @@ export default function SiteMarketMapPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MapIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="competitorsMap" seen={rows && marketMapSees(rows)} />
+      <SiteSees screen="competitorsMap" seen={rows && marketMapSees(rows)} data={rows} />
 
       <SiteChartCard
         dated={false}

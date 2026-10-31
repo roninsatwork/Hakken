@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ListChecks } from "lucide-react";
@@ -64,6 +65,8 @@ export default function InsightsPagePlanPage() {
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
   const decided = useQuery(api.insightDecisions.insightsPageDecisions, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ plan: data, decisions: decided, box }), [data, decided, box]);
   const [search, setSearch, term] = useSiteSearch();
   const [action, setAction] = useSiteParam<string>("action", "");
   const [pageSearch, setPageSearch, pageTerm] = useSiteSearch("pq", "every");
@@ -126,7 +129,7 @@ export default function InsightsPagePlanPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.pagePlan", siteId: site, data: seesData }} />
       {decisions.length > 0 ? (
         <>
           <FigureRow>

@@ -224,7 +224,7 @@ export default function SiteOverviewPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="overview" seen={overviewSees(line)} />
+      <SiteSees screen="overview" seen={overviewSees(line)} data={{ line, extras }} />
 
       <OverviewPanels latest={latest} before={before} extras={extras} />
 

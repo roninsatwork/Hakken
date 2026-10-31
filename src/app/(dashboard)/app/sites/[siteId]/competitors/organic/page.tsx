@@ -91,7 +91,7 @@ export default function SiteOrganicCompetitorsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Radar className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="competitorsOrganic" seen={rows && organicCompetitorsSees(rows)} />
+      <SiteSees screen="competitorsOrganic" seen={rows && organicCompetitorsSees(rows)} data={rows && { competitors: rows, everyOne }} />
       {rows && everyOne && everyOne > rows.length ? (
         <p className="text-[12px] leading-relaxed text-secondary">{t("readOf", { count: formatNumber(rows.length), total: formatNumber(everyOne) })}</p>
       ) : null}

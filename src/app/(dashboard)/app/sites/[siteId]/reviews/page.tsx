@@ -93,7 +93,7 @@ export default function YourReviewsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? null} allOffices /> : undefined}
       />
-      <SiteSees screen="reviews" seen={data?.seen} />
+      <SiteSees screen="reviews" seen={data?.seen} data={data} />
       {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
       {drafts.shown ? (
         <>

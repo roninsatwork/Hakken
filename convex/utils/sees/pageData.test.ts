@@ -45,7 +45,7 @@ describe("every page's eye, described once", () => {
   test("Insights' weekly boxes write nothing new; every other page writes", () => {
     expect(seesWrites("insights.strategy")).toBe(false);
     expect(seesWrites("insights.cannibalisation")).toBe(true);
-    expect(seesWrites("visibility.backlinks")).toBe(true);
+    expect(seesWrites("visibility.backlinksDomains")).toBe(true);
     expect(seesWrites("elsewhere.page")).toBe(false);
   });
 });

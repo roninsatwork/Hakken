@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,8 @@ export default function InsightsTrackRecordPage() {
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsTrackRecord, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ trackRecord: data, box }), [data, box]);
   const [changeSearch, setChangeSearch, changeTerm] = useSiteSearch("q", "changes");
   const [search, setSearch, term] = useSiteSearch();
   const [result, setResult] = useSiteParam<string>("result", "");
@@ -95,7 +98,7 @@ export default function InsightsTrackRecordPage() {
   return (
     <>
       <PageHeader icon={<History className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      {data ? <HakkenSees says={boxed} steps={steps} /> : null}
+      {data ? <HakkenSees says={boxed} steps={steps} page={{ screen: "insights.trackRecord", siteId: site, data: seesData }} /> : null}
       <FigureRow>
         <Figure label={t("figures.written")} value={data ? formatNumber(written) : "…"} detail={<span className="text-secondary">{t("figures.writtenDetail")}</span>} />
         <Figure label={t("figures.acted")} value={data ? formatNumber(acted) : "…"} detail={<span className="text-secondary">{t("figures.of", { all: formatNumber(written) })}</span>} />

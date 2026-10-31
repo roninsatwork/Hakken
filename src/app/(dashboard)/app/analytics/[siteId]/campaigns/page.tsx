@@ -31,7 +31,7 @@ export default function AnalyticsCampaignsPage() {
       header={{ icon: <Megaphone className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${periodWord(period)}`) }) }}
       head={(answer) => (
         <>
-          <AnalyticsSees screen="campaigns" seen={answer?.seen} currency={currency} />
+          <AnalyticsSees screen="campaigns" seen={answer?.seen} currency={currency} data={answer} />
           <CampaignsDailyChart />
           <ListTopBars list="campaign" sort="visits" bars="campaigns" />
         </>

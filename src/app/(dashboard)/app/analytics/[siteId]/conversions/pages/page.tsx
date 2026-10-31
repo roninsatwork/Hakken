@@ -88,7 +88,7 @@ function Body({ status }: { status: AnalyticsStatus }) {
         title={t("title", { event: nameOf(event), kind: columnName(key) })}
         description={t("description", { period: periodName })}
       />
-      <AnalyticsSees screen="conversionPages" seen={answer?.seen} currency={status.connection?.currency} />
+      <AnalyticsSees screen="conversionPages" seen={answer?.seen} currency={status.connection?.currency} data={answer} />
       {answer?.everyDevice ? <Notice>{t("everyDevice")}</Notice> : null}
       {answer?.cut ? <Notice>{t("cut", { count: answer.rows.length })}</Notice> : null}
       <DataTable

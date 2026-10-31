@@ -123,7 +123,7 @@ export default function SiteSideBySidePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Swords className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="competitors" seen={rivals && sideBySideSees(rivals, (host) => site?.holds.find((entry) => entry.host === host)?.siteId ?? null)} />
+      <SiteSees screen="competitors" seen={rivals && sideBySideSees(rivals, (host) => site?.holds.find((entry) => entry.host === host)?.siteId ?? null)} data={rivals && { rivals, figures, series, moves }} />
 
       <SiteChartCard
         title={t("chartTitle")}

@@ -106,7 +106,7 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description", { days: status?.limits.lostAfterDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="newLost" seen={counts ? (range.period === "custom" ? null : newLostSees(counts, range.period)) : null} />
+          <SearchConsoleSees screen="newLost" seen={counts ? (range.period === "custom" ? null : newLostSees(counts, range.period)) : null} data={list.result ? { counts, periods, rows: list.pageRows ?? null } : undefined} />
           <ResultKindSwitch />
           {list.result?.notKept ? <p className="text-[13px] text-secondary">{t("newLost.notKept")}</p> : country && list.result?.notReady ? <CountryNotReady country={country} /> : (
             <>

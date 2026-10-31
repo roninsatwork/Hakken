@@ -79,7 +79,7 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   const before = overview?.before ?? null;
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="overview" seen={overview?.seen} currency={currency} />
+      <AnalyticsSees screen="overview" seen={overview?.seen} currency={currency} data={{ figures: overview, chart, panels, health: status.connection?.health }} />
 
       {now ? (
         <AnalyticsFigures now={now} before={before} currency={currency} conversionsHref={hrefFor("conversions")} counting={counting} />

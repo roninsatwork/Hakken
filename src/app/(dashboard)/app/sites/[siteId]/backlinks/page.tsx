@@ -47,7 +47,7 @@ export default function SiteBacklinksPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<LinkIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinks" seen={series && backlinksSummarySees(series[0])} />
+      <SiteSees screen="backlinks" seen={series && backlinksSummarySees(series[0])} data={series} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Figure label={t("domainRank")} value={formatNumber(latest?.domainRank)} detail={<span className="text-muted">{t("rankScale")}</span>} />

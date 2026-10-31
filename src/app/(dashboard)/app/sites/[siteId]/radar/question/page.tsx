@@ -132,7 +132,7 @@ export default function OneQuestionPage() {
           </PagePrimaryAction>
         ) : undefined}
       />
-      <SiteSees screen="question" seen={data?.seen} />
+      <SiteSees screen="question" seen={data?.seen} data={data} />
 
       {data === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

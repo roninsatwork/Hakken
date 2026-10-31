@@ -78,7 +78,7 @@ export default function InsightsCannibalisationPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.cannibalisation", siteId: site, data }} />
       <FigureRow>
         <Figure label={t("figures.groups")} value={formatNumber(groups.length)} detail={<span className="text-secondary">{t("figures.pages", { count: pages })}</span>} />
         <Figure label={t("figures.split")} value={formatNumber(sum("split"))} detail={<span className="text-secondary">{t("figures.shared", { count: formatNumber(sum("shared")) })}</span>} />

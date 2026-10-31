@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -41,6 +42,7 @@ export default function InsightsReportsPage() {
   return (
     <>
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.reports", siteId: site, data: rows }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.reportId}

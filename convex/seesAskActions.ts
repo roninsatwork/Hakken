@@ -123,7 +123,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     figures: factLines(findingFacts.filter((fact) => fact.key.startsWith(`f${at + 1}.`))),
   }));
   const prompt = JSON.stringify({
-    website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period, trackingFaults,
+    website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period || "as the page shows them", trackingFaults,
     ...(findings.length > 0 ? { findings: findingsForWriter } : {}),
     ...(pageRead ? { pageFigures: pageRead.shown } : { facts: factLines(facts) }),
     links,
@@ -170,9 +170,22 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
     if (!strict.ok && verdict.ok) lines.push({ heading: "The Editor", detail: `Kept although ${strict.why.charAt(0).toLowerCase()}${strict.why.slice(1)}` });
     if (written.sentBack && verdict.ok) lines.push({ heading: "Jev", detail: `Kept after one rewrite, though: ${written.sentBack}`.slice(0, 900) });
   } else {
-    raw = await ask(ctx, run, writer, who, system, prompt, undefined, (value) => value !== null && typeof value === "object" && "says" in value);
-    // 3. The Editor checks every number and every word (S5, S7): what fails goes back.
-    verdict = seesFrom(raw, named, page.links, noTracking);
+    const answered = (value: unknown) => value !== null && typeof value === "object" && "says" in value;
+    raw = await ask(ctx, run, writer, who, system, prompt, undefined, answered);
+    // 3. The Editor checks every number and every word (S5, S7): what fails goes back once, with why, as it does for a
+    // writer that reads (sees-every-page-plan-2026-10-31.md: a page's words were left to the rule's after one slip).
+    verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering });
+    if (!verdict.ok) {
+      lines.push({ heading: "The Editor", detail: `Sent back once: ${verdict.why}`.slice(0, 900) });
+      raw = await ask(ctx, run, writer, who, system, `${prompt}\n\nYour last answer was sent back by the Editor: ${verdict.why} Write it again, keeping every rule.`, undefined, answered);
+      verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering });
+      // Words that still leave a finding out stand without it rather than leave the reader nothing.
+      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, noTracking);
+    }
+    if (verdict.ok) {
+      const jev = await wordsWhy(verdict);
+      if (jev) lines.push({ heading: "Jev", detail: `Kept, though: ${jev}`.slice(0, 900) });
+    }
   }
   if (!verdict.ok) return { verdict, role: chosen, lines, findings };
   return { verdict, role: chosen, lines, findings };

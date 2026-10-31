@@ -76,6 +76,7 @@ export default function SearchConsolePage() {
         <SearchConsoleSees
           screen="websites"
           seen={sites ? websitesSees(sites.map((site) => ({ siteId: site.siteId, host: site.host, connected: site.status === "CONNECTED", clicks: site.figures?.clicks ?? null }))) : null}
+          data={sites}
         />
 
         <DataTable

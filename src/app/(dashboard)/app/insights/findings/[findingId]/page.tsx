@@ -22,7 +22,7 @@ import { SiteBarChart } from "../../../sites/_components/SiteCharts";
 import { formatDay, toCsv } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
-import { useInsightsHref } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
 import { useInsightWords } from "../../_components/insightWords";
 import { howWeKnowWords, soFarWords } from "../../_components/insightCheck";
 
@@ -52,6 +52,7 @@ export default function InsightsFindingPage() {
   const tCheck = usePlatformTranslations("insights.check");
   const words = useInsightWords();
   const href = useInsightsHref();
+  const site = useInsightsSite();
   const finding = useQuery(api.insightsReads.insightsFinding, { findingId: params.findingId as Id<"insightFindings"> });
   const router = useRouter();
   const markActed = useMutation(api.insightsReads.markInsightFindingActed);
@@ -118,7 +119,7 @@ export default function InsightsFindingPage() {
         }
         action={<PagePrimaryAction variant="brand" onClick={toTasks}>{t("toTasks")}</PagePrimaryAction>}
       />
-      <HakkenSees says={says} steps={[{ words: finding.action, ...(group ? { link: t("seeGroup"), href: group } : { link: t("seeAll"), href: href("this-week") }) }]} />
+      <HakkenSees says={says} steps={[{ words: finding.action, ...(group ? { link: t("seeGroup"), href: group } : { link: t("seeAll"), href: href("this-week") }) }]} page={{ screen: "insights.finding", siteId: site, data: finding }} />
       {pairs.length > 0 ? (
         <FigureRow>
           {pairs.slice(0, 4).map((pair) => (

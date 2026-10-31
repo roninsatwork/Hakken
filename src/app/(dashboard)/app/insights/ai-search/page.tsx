@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -61,6 +62,8 @@ export default function InsightsAiSearchPage() {
   const site = useInsightsSite();
   const engineName = useEngineLabel();
   const data = useQuery(api.insightAiSearch.insightsAiSearch, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ aiSearch: data, box }), [data, box]);
   const [assistantSearch, setAssistantSearch, assistantTerm] = useSiteSearch("aq", "assistants");
   const [engineSearch, setEngineSearch, engineTerm] = useSiteSearch("eq", "engines");
   const [pageSearch, setPageSearch, pageTerm] = useSiteSearch("pq", "cited");
@@ -137,7 +140,7 @@ export default function InsightsAiSearchPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={[]} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={[]} page={{ screen: "insights.aiSearch", siteId: site, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.visits", { period: nowWords })} value={formatNumber(now?.visits ?? 0)} detail={<ChangeLine by={thenVisits === null ? null : (now?.visits ?? 0) - thenVisits}>{t("figures.against", { then: thenVisits === null ? "–" : formatNumber(thenVisits), period: compareWords })}</ChangeLine>} />
         <Figure label={t("figures.enquiries", { period: nowWords })} value={formatNumber(now?.enquiries ?? 0)} detail={<ChangeLine by={thenEnquiries === null ? null : (now?.enquiries ?? 0) - thenEnquiries}>{t("figures.against", { then: thenEnquiries === null ? "–" : formatNumber(thenEnquiries), period: compareWords })}</ChangeLine>} />

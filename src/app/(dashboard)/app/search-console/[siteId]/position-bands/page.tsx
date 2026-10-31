@@ -55,7 +55,7 @@ export default function SearchConsoleBandsPage() {
   const ticks = useSeriesTicks(series);
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="bands" seen={list.summary ? bandsSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="bands" seen={list.summary ? bandsSees(list.summary) : null} data={list.pageData ? { ...list.pageData, chart: periods ?? null } : undefined} />}
       icon={<BarChart3 className="h-5 w-5 text-brand" />}
       title={t("bands.title")}
       description={t("bands.description")}

@@ -100,7 +100,7 @@ export default function ClarityPageScreen() {
     <>
       {header}
       {waiting ? <Notice>{waiting}</Notice> : null}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.page", siteId, data }} />
       <FigureRow columns={4}>
         <Figure label={t("figures.visits")} value={formatNumber(now.visits)} detail={<span className="flex flex-col">{before ? <Moved by={growthOf(now.visits, before.visits)}>{tc("percentOn", { way: wayOf(growthOf(now.visits, before.visits)), value: Math.abs(growthOf(now.visits, before.visits) ?? 0).toFixed(1), against })}</Moved> : <span className="text-muted">{against}</span>}<span className="text-secondary">{phones ? t("figures.onPhones", { count: phones.now.visits }) : span}</span></span>} />
         <Figure label={t("figures.scroll")} value={percent(now.scroll)} detail={<span className="flex flex-col">{before ? <Moved by={changeOf(now.scroll, before.scroll)}>{tc("pointsOn", { way: wayOf(changeOf(now.scroll, before.scroll)), value: Math.abs(changeOf(now.scroll, before.scroll) ?? 0).toFixed(1), against })}</Moved> : null}<span className="text-secondary">{t("figures.website", { value: percent(website.scroll) })}</span></span>} />

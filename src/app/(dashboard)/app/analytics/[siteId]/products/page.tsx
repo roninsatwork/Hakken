@@ -85,7 +85,7 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="products" seen={answer?.seen} currency={currency} />
+      <AnalyticsSees screen="products" seen={answer?.seen} currency={currency} data={{ figures: answer, rows: paged.pageRows }} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
       {steps && shoppers ? (
         <>

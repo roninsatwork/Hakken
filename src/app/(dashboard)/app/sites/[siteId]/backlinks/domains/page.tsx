@@ -58,7 +58,7 @@ export default function SiteReferringDomainsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Network className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksDomains" seen={table.result?.seen} />
+      <SiteSees screen="backlinksDomains" seen={table.result?.seen} data={table.result && { domains: table.result, totals }} />
       <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.referringDomains} />
       <DataTable
         rows={table.pageRows}

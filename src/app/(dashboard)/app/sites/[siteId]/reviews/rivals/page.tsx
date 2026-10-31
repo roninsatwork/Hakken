@@ -98,7 +98,7 @@ export default function ReviewsAgainstRivalsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={data.office?.listingId ?? null} /> : undefined}
       />
-      <SiteSees screen="reviewsRivals" seen={data?.seen} />
+      <SiteSees screen="reviewsRivals" seen={data?.seen} data={data} />
       {data && !data.office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {data?.office && you ? (

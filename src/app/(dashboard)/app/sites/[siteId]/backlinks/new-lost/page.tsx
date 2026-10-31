@@ -72,7 +72,7 @@ export default function SiteLinksNewLostPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowLeftRight className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksNewLost" seen={points && newLostSees(points, range.step, formatDay)} />
+      <SiteSees screen="backlinksNewLost" seen={points && newLostSees(points, range.step, formatDay)} data={points} />
 
       <SiteChartCard
         title={t("chartTitle")}

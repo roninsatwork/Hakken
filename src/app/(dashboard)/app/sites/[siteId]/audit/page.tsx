@@ -118,7 +118,7 @@ export default function SiteAuditPage() {
           </span>
         ) : null}
       />
-      <SiteSees screen="audit" seen={audit === undefined ? undefined : auditSees(audit, label)} />
+      <SiteSees screen="audit" seen={audit === undefined ? undefined : auditSees(audit, label)} data={audit && { audit, moneyPages: money.data, series }} />
 
       {/* A crawl turned away at the door says so, rather than reading as an empty or a perfect audit (finish-off plan, item 7). */}
       {audit?.turnedAway ? (

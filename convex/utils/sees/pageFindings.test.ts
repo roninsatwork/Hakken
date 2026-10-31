@@ -51,10 +51,18 @@ describe("what a page's own figures show", () => {
     expect(found.find((finding) => finding.kind === "rowBelow")?.params).toMatchObject({ name: "/basket", measure: "scroll", value: 20 });
     expect(pageFindings("visibility.something", { rows: [{ name: "a", widgets: 5 }, { name: "b", widgets: 9 }, { name: "c", widgets: 1 }] })).toEqual([]);
     expect(pageFindings("visibility.something", null)).toEqual([]);
+    // A row named by a code the screen turns into words is never a finding's name (seen on Almost there, 2026-10-31).
+    expect(pageFindings("searchConsole.almost", { byIntent: [{ kind: "UNJUDGED", clicks: 97 }, { kind: "BUYING", clicks: 50 }, { kind: "RESEARCHING", clicks: 30 }, { kind: "BRAND", clicks: 23 }] })).toEqual([]);
   });
 
   test("small moves and even lists say nothing", () => {
     const even = { totals: { clicks: 100, clicksBefore: 96 }, rows: [{ key: "a", clicks: 25, previousClicks: 24 }, { key: "b", clicks: 25, previousClicks: 26 }, { key: "c", clicks: 25, previousClicks: 23 }, { key: "d", clicks: 25, previousClicks: 23 }] };
     expect(pageFindings("searchConsole.keywords", even)).toEqual([]);
+  });
+
+  test("the span before kept beside the figures, as the Products screen keeps its steps", () => {
+    const products = { figures: { steps: { looked: 24587, basket: 5108, checkout: 2310, bought: 1246 }, before: { looked: 23200, basket: 4910, checkout: 2950, bought: 1080 } } };
+    const words = pageFindings("googleAnalytics.products", products).map(findingWords);
+    expect(words).toContain("Checkouts started fell to 2310 from 2950 the span before.");
   });
 });

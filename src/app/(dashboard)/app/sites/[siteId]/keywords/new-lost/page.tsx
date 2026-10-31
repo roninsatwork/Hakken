@@ -147,7 +147,7 @@ export default function SiteNewLostPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowUpDown className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleMoves" seen={moves.result?.seen} />
+      <SiteSees screen="googleMoves" seen={moves.result?.seen} data={checks && { checks, moves: moves.result }} />
 
       {newest ? (
         <div className="flex flex-wrap items-center gap-3">

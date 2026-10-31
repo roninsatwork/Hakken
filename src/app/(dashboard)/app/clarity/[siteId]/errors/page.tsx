@@ -106,7 +106,7 @@ export default function ClarityErrorsPage() {
       {header}
       {waiting ? <Notice>{waiting}</Notice> : null}
       {period.countedFrom ? <Notice>{tc("countedFrom", { day: formatDay(period.countedFrom) })}</Notice> : null}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.errors", siteId: args.siteId, data }} />
       <FigureRow columns={4}>
         <Figure label={t("figures.visits")} value={formatNumber(now.errors)} detail={<span className="flex flex-col">{before ? <Moved by={now.errors - before.errors} neutral>{tc("plainOn", { way: wayOf(now.errors - before.errors), value: Math.abs(now.errors - before.errors), against })}</Moved> : <span className="text-muted">{against}</span>}<span className="text-secondary">{t("figures.ofVisits", { share: percent(now.shares.errors ?? 0) })}</span></span>} />
         <Figure label={t("figures.clicks")} value={formatNumber(now.errorClicks)} detail={<span className="flex flex-col">{before ? <Moved by={now.errorClicks - before.errorClicks} neutral>{tc("plainOn", { way: wayOf(now.errorClicks - before.errorClicks), value: Math.abs(now.errorClicks - before.errorClicks), against })}</Moved> : null}<span className="text-secondary">{t("figures.clicksDetail")}</span></span>} />

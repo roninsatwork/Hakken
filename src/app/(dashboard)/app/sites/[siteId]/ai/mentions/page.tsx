@@ -91,7 +91,7 @@ export default function SiteMentionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiMentions" seen={rows && mentionsSees(rows)} />
+      <SiteSees screen="aiMentions" seen={rows && mentionsSees(rows)} data={rows && { mentions: rows, series }} />
 
       <SiteChartCard
         title={t("chartTitle")}

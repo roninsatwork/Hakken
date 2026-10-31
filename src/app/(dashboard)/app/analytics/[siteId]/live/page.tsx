@@ -178,7 +178,7 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
       ) : null}
       {problem ? <Notice tone="warning">{t(problem === "NOT_CONNECTED" ? "notConnected" : "busy")}</Notice> : null}
       {/* Worked out each minute and never kept: not saved as advice. */}
-      <AnalyticsSees screen="live" seen={answer?.seen} currency={status.connection?.currency} keep={false} />
+      <AnalyticsSees screen="live" seen={answer?.seen} currency={status.connection?.currency} keep={false} data={answer} />
       {answer ? (
         <FigureRow columns={4}>
           <Figure label={t("now")} value={formatNumber(answer.now)} detail={<span className="text-secondary">{t("lastFive")}</span>} />

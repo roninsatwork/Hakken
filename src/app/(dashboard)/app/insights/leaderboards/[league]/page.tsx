@@ -13,7 +13,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { LeagueCard, leagueName, type LeagueData } from "../../_components/LeagueCard";
-import { isLeague, useInsightsHref, useInsightsLeagues } from "../../_components/useInsights";
+import { isLeague, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../../_components/useInsights";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
@@ -44,6 +44,7 @@ export default function InsightsLeaguePage() {
   const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const data = useInsightsLeagues();
+  const site = useInsightsSite();
   const league = data?.leagues.find((entry) => entry.id === id) ?? null;
   const [search, setSearch, term] = useSiteSearch();
   const rows: Row[] | undefined = league?.rows.map((row, index) => ({
@@ -78,7 +79,7 @@ export default function InsightsLeaguePage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={[{ words: t("sees.allLeagues"), link: t("seeAll"), href: href("leaderboards") }]} />
+      <HakkenSees says={says} steps={[{ words: t("sees.allLeagues"), link: t("seeAll"), href: href("leaderboards") }]} page={{ screen: "insights.leaderboard", siteId: site, data: league }} />
       <FigureRow>
         <Figure
           label={t("figures.place")}

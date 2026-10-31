@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
@@ -48,6 +49,8 @@ export default function InsightsStrategyPage() {
   const name = useServiceName();
   const serviceHref = useServiceHref();
   const data = useQuery(api.insightsReads.insightsStrategy, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ strategy: data, box }), [data, box]);
   const [search, setSearch, term] = useSiteSearch();
   const [call, setCall] = useSiteParam<string>("call", "");
   const services = data?.services;
@@ -79,7 +82,7 @@ export default function InsightsStrategyPage() {
   return (
     <>
       {header}
-      <HakkenSees says={[...boxedSays(box, says, tBox), called]} steps={steps} />
+      <HakkenSees says={[...boxedSays(box, says, tBox), called]} steps={steps} page={{ screen: "insights.strategy", siteId: site, data: seesData }} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-services`} csv={csv} enoughData={bars.length > 0}>
         <SiteBarChart data={bars} series={[{ key: "before", name: t("chart.before"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>

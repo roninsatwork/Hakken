@@ -10696,7 +10696,12 @@
         "scroll": "quanto scorrono le persone",
         "sharePercent": "quota",
         "engagementRatePercent": "quota di visite coinvolte",
-        "bounceRatePercent": "quota di visite uscite subito"
+        "bounceRatePercent": "quota di visite uscite subito",
+        "bought": "acquisti",
+        "checkout": "checkout iniziati",
+        "basket": "aggiunte al carrello",
+        "looks": "visualizzazioni dei prodotti",
+        "looked": "visite che hanno guardato un prodotto"
       }
     },
     "sidePanel": {

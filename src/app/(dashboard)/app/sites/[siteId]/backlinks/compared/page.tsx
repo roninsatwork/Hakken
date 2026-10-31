@@ -70,7 +70,7 @@ export default function SiteBacklinksComparedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Scale className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksCompared" seen={rows && comparedSees(rows)} />
+      <SiteSees screen="backlinksCompared" seen={rows && comparedSees(rows)} data={rows} />
 
       <SiteChartCard
         dated={false}

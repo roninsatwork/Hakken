@@ -36,7 +36,7 @@ export default function AnalyticsAllPagesPage() {
       header={{ icon: <Files className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
       head={(answer, plotted) => (
         <>
-          <AnalyticsSees screen="allPages" seen={answer?.seen} currency={currency} />
+          <AnalyticsSees screen="allPages" seen={answer?.seen} currency={currency} data={answer} />
           <PagesDailyChart pages={plotted} />
         </>
       )}

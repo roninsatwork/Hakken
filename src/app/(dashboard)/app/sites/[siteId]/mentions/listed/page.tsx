@@ -73,7 +73,7 @@ export default function WhereToGetListedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MapPinPlus className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="mentionsListed" seen={data?.seen} />
+      <SiteSees screen="mentionsListed" seen={data?.seen} data={data} />
 
       {data ? (
         <FigureRow>

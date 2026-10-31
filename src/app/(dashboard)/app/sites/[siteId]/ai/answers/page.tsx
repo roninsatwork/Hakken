@@ -94,7 +94,7 @@ export default function SiteAnswersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MessageSquareQuote className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiAnswers" seen={catalogue?.seen} />
+      <SiteSees screen="aiAnswers" seen={catalogue?.seen} data={catalogue && { catalogue, answers: table.result }} />
       {/* Insights' buyer-question panel (insights-analyst-plan.md I28): its questions, and whether each is asked yet. */}
       {panel.shown ? (
         <>

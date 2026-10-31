@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Target } from "lucide-react";
@@ -45,6 +46,8 @@ export default function InsightsOpportunitiesPage() {
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ plan: data, box }), [data, box]);
   const [search, setSearch, term] = useSiteSearch();
   const [service, setService] = useSiteParam<string>("service", "");
   const [places, setPlaces] = useSiteParam<string>("place", "4-30");
@@ -86,7 +89,7 @@ export default function InsightsOpportunitiesPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.opportunities", siteId: site, data: seesData }} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint", { rate: formatPosition(rate) })} exportName={`${data.host}-opportunities`} csv={csv} enoughData={dots.length > 1}>
         <SiteScatterChart groups={groups} xLabel={t("chart.x")} yLabel={t("chart.y")} readout={{ x: t("columns.place"), y: t("columns.shown") }} />
       </ChartCard>

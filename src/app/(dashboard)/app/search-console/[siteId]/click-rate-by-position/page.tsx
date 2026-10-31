@@ -91,7 +91,7 @@ export default function SearchConsoleCtrCurvePage() {
       <PageHeader icon={<Percent className="h-5 w-5 text-brand" />} title={t("ctrCurve.title")} description={t("ctrCurve.description", { period: periodWords.period })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="ctrCurve" seen={points ? curveSees(points) : null} />
+          <SearchConsoleSees screen="ctrCurve" seen={points ? curveSees(points) : null} data={points ? { points } : undefined} />
           <ResultKindSwitch />
           {server?.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
           <SearchConsoleChartCard

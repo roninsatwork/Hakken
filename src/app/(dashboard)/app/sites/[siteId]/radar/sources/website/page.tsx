@@ -118,7 +118,7 @@ export default function OneWebsitePage() {
           : undefined}
         action={<VisitLink icon href={`https://${host}`}>{t("visit", { host })}</VisitLink>}
       />
-      <SiteSees screen="website" seen={data?.seen} />
+      <SiteSees screen="website" seen={data?.seen} data={data} />
 
       {data === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

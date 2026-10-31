@@ -74,7 +74,7 @@ export default function GoogleAnalyticsPage() {
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<ChartColumn className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
 
-        <AnalyticsSees screen="websites" seen={sites && websitesSees(sites)} currency={sites?.find((row) => row.currency)?.currency ?? null} />
+        <AnalyticsSees screen="websites" seen={sites && websitesSees(sites)} currency={sites?.find((row) => row.currency)?.currency ?? null} data={sites} />
 
         <DataTable
           rows={paged.pageRows}

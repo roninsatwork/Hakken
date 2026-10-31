@@ -134,7 +134,7 @@ export default function SiteSearchedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Telescope className="h-5 w-5 text-brand" />} title={t("title")} description={t(own ? "description" : "descriptionCompetitor")} />
-      <SiteSees screen="aiSearched" seen={answer?.seen} />
+      <SiteSees screen="aiSearched" seen={answer?.seen} data={answer} />
       {answer && !answer.built ? <p className="text-[12px] text-muted">{t("notBuilt")}</p> : null}
       <div className="flex flex-col gap-3">
         <DataTable

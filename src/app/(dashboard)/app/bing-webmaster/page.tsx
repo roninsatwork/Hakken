@@ -76,7 +76,7 @@ export default function BingWebmasterPage() {
         <PageHeader icon={<ScanSearch className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
 
         {sites ? (
-          <BingSees says={[
+          <BingSees screen="websites" data={sites} says={[
             top
               ? top.googleClicks !== null
                 ? tw("top", { host: top.host, clicks: formatNumber(top.clicks), share: formatShare(top.share), google: formatNumber(top.googleClicks) })

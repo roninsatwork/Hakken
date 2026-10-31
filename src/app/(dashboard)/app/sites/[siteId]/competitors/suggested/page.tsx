@@ -62,7 +62,7 @@ export default function SiteSuggestedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Lightbulb className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="competitorsSuggested" seen={rows && suggestedSees(rows)} />
+      <SiteSees screen="competitorsSuggested" seen={rows && suggestedSees(rows)} data={rows} />
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.host}

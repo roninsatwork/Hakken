@@ -80,7 +80,7 @@ export default function SiteMovesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowUpDown className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleMoves" seen={table.result?.seen} />
+      <SiteSees screen="googleMoves" seen={table.result?.seen} data={table.result && { moves: table.result, series }} />
       {partHeld ? (
         <div className="flex flex-col gap-1">
           <HeldLine coverage={site?.coverage} />

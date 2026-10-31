@@ -80,7 +80,7 @@ function CrawlingBody({ status }: { status: BingStatus }) {
   return (
     <div className="flex flex-col gap-6">
       {crawling ? (
-        <BingSees says={[
+        <BingSees screen="crawling" data={crawling} says={[
           asked.length > 0 && tw("says", { count: formatNumber(inIndex), total: formatNumber(asked.length) }),
           missing && tw("missing", { page: missing.title ?? missing.page }),
           crawling.totals.errors > 0 ? tw("errors", { errors: formatNumber(crawling.totals.errors) }) : crawling.days.length > 0 && tw("noErrors"),

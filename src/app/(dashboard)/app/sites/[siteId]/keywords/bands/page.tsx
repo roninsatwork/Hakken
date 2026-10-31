@@ -148,7 +148,7 @@ export default function SiteBandsPage() {
           </span>
         ) : null}
       />
-      <SiteSees screen="keywordsBands" seen={moves?.seen} />
+      <SiteSees screen="keywordsBands" seen={moves?.seen} data={moves && { bands: moves, moved, series }} />
 
       {latest ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">

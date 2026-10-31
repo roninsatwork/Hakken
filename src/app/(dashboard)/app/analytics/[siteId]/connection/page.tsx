@@ -19,8 +19,6 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { NEVER_TICKED } from "@/convex/utils/analyticsEvents";
 import { eventsWithAddresses } from "@/convex/utils/analyticsAddresses";
-import { chooseEventsSees, connectionSees } from "@/convex/utils/sees/analytics";
-import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { formatDay, formatNumber } from "../../../sites/_components/siteFormat";
@@ -52,27 +50,19 @@ export default function AnalyticsConnectionPage() {
 }
 
 /**
- * What the page shows for the connection's stage, under What Hakken sees for
- * that stage (§15 screens 11, 12 and 14): the clicks Search Console cannot
- * weigh before connecting (in `AnalyticsConnectCard`), the key events while
- * choosing what counts — the ticks as Hakken set them — and, connected, what
- * counts and what it is worth. Choosing the property has nothing to read yet.
+ * What the page shows for the connection's stage: the way to connect (with
+ * `AnalyticsConnectCard`'s note on what Search Console's clicks cannot weigh),
+ * the property to choose, what counts while choosing it — the ticks as Hakken
+ * set them — and, connected, what counts and what it is worth. A connection
+ * page carries no What Hakken sees of its own (Anthony, 2026-10-31).
  */
 function ConnectionBody({ status }: { status: AnalyticsStatus }) {
   const siteId = useAnalyticsSiteId();
   const connection = status.connection;
   const changing = useSearchParams().get("change") === "1";
-  const currency = connection?.currency ?? null;
   const choosing = connection !== null && (connection.status === "COUNTING" || (changing && status.canManage && connection.status === "CONNECTED"));
-  // Each event's last 30 days on every address whose conversions count (conversion-addresses-plan.md), as saved.
-  const counts = connection?.events ? eventsWithAddresses(connection.events, connection.addressesRead) : null;
   return (
     <>
-      {connection && choosing ? (
-        <AnalyticsSees screen="chooseEvents" seen={chooseEventsSees(status.host, counts, new Set(connection.copies.filter((copy) => NEVER_TICKED.has(copy.of)).map((copy) => copy.eventName)))} currency={currency} />
-      ) : connection ? (
-        <AnalyticsSees screen="connection" seen={connectionSees(status.host, connection.status, counts)} currency={currency} />
-      ) : null}
       {connection?.attempt ? <AttemptNote status={status} /> : null}
       {!connection || connection.status === "CONNECTING" ? (
         <AnalyticsConnectCard status={status} siteId={siteId} />

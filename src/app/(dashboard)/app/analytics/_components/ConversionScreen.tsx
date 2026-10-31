@@ -76,7 +76,7 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
         title={name}
         description={t("countedDescription", { google: event })}
       />
-      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} />
+      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} data={{ conversion: answer, worth: kind }} />
 
       <FigureRow columns={4}>
         <Figure label={label} emphasis value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />

@@ -182,7 +182,7 @@ export default function SiteContentGapPage() {
         description={t("description")}
         pills={<span className="text-[12px] text-secondary">{t("ceiling")}</span>}
       />
-      <SiteSees screen="competitorsGap" seen={table.result?.seen} />
+      <SiteSees screen="competitorsGap" seen={table.result?.seen} data={table.result} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row.keyword}

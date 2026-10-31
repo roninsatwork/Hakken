@@ -111,7 +111,7 @@ export default function OnePagePage() {
           : undefined}
         action={<VisitLink icon href={data?.url ?? asked}>{t("visit")}</VisitLink>}
       />
-      <SiteSees screen="aiPage" seen={data?.seen} />
+      <SiteSees screen="aiPage" seen={data?.seen} data={data} />
 
       {data === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

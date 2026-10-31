@@ -166,7 +166,7 @@ export default function SitePageRecordPage() {
         ) : undefined}
         action={address ? <ExternalUrlCell url={address} label={`${t("openPage")} ↗`} /> : undefined}
       />
-      <SiteSees screen="pageRecord" seen={record && pageRecordSees(record, problemLabel)} />
+      <SiteSees screen="pageRecord" seen={record && pageRecordSees(record, problemLabel)} data={record && { record, keywords: table.result }} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

@@ -106,7 +106,7 @@ export default function LocalMarketPage() {
         description={data?.day ? t("descriptionRead", { day: formatDay(data.day) }) : t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? data.offices[0]?.listingId ?? null} /> : undefined}
       />
-      <SiteSees screen="localMarket" seen={data?.seen} />
+      <SiteSees screen="localMarket" seen={data?.seen} data={data} />
       {data && data.offices.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
       {data && data.offices.length > 0 && data.total === null ? <LocalSetupNotice siteId={siteId} reason="notChecked" /> : null}
 

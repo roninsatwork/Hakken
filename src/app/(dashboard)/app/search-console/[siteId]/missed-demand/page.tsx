@@ -40,7 +40,7 @@ export default function SearchConsoleDemandPage() {
   const keywords = tracking.counts?.keywords ?? null;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="demand" seen={list.summary ? demandSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="demand" seen={list.summary ? demandSees(list.summary) : null} data={list.pageData ? { ...list.pageData, searched, untracked, tracked: keywords } : undefined} />}
       icon={<SearchX className="h-5 w-5 text-brand" />}
       title={t("demand.title")}
       description={t("demand.description")}

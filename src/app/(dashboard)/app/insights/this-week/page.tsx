@@ -52,7 +52,7 @@ export default function InsightsThisWeekPage() {
   return (
     <>
       <PageHeader icon={<CalendarCheck className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      {data ? <HakkenSees says={says} steps={steps} /> : null}
+      {data ? <HakkenSees says={says} steps={steps} page={{ screen: "insights.thisWeek", siteId: site, data }} /> : null}
       <EnquiryCheckNotice check={data?.weeks[0]?.summary?.enquiryCheck} />
       <QuickCheckNotice />
       <FigureRow>

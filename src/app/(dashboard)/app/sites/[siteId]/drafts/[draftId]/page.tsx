@@ -57,7 +57,7 @@ export default function SiteDraftPage() {
         pills={<><StatusLabel tone={tone}>{t(`statuses.${draft.status}`)}</StatusLabel><span className="text-[12px] text-secondary">{t("drafted", { day: formatDay(new Date(draft.createdAt).toISOString().slice(0, 10)), target: draft.target })}</span></>}
         action={draft.status === "DISMISSED" ? undefined : <PagePrimaryAction variant="brand" onClick={() => answer("APPROVED")} disabled={busy}>{t(draft.status === "APPROVED" ? "copyAgain" : "approve")}</PagePrimaryAction>}
       />
-      <HakkenSees says={[draft.why]} steps={[{ words: t(`howTo.${draft.kind}`), link: t(`back.${draft.area}`), href: back }]} />
+      <HakkenSees says={[draft.why]} steps={[{ words: t(`howTo.${draft.kind}`), link: t(`back.${draft.area}`), href: back }]} page={{ screen: "visibility.draft", siteId: draft.siteId, data: draft }} />
       <div className="max-w-3xl whitespace-pre-wrap border-l-2 border-border-dim pl-4 text-[14px] leading-relaxed text-foreground">{draft.body}</div>
       {draft.link ? <p className="max-w-2xl text-[12px] text-secondary">{t("tagged", { campaign: draft.campaign })}</p> : null}
       {copied ? <Notice tone="info">{t("copied")}</Notice> : null}

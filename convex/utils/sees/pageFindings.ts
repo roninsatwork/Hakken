@@ -45,11 +45,14 @@ const round1 = (value: number) => Math.round(value * 10) / 10;
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 const cap = (field: string) => field.charAt(0).toUpperCase() + field.slice(1);
 
-/** A row's name, as the page shows it; null for a row with none. */
+/** A name that is a code the screen turns into words ("UNJUDGED", "PAID_SEARCH"): never a name a reader is shown. */
+const CODE = /^[A-Z][A-Z0-9_]+$/;
+
+/** A row's name, as the page shows it; null for a row with none, or named only by a code. */
 function rowName(row: Row): string | null {
   for (const field of NAME_FIELDS) {
     const value = row[field];
-    if (typeof value === "string" && value.trim()) return value.trim().slice(0, 80);
+    if (typeof value === "string" && value.trim()) return CODE.test(value.trim()) ? null : value.trim().slice(0, 80);
   }
   return null;
 }
@@ -82,6 +85,15 @@ function totalsIn(value: unknown, path: string[] = [], depth = 0, found: Array<{
   if (depth > 2 || !value || typeof value !== "object" || Array.isArray(value)) return found;
   const row = value as Row;
   if (COUNT_ORDER.some((field) => isNumber(row[field]) && beforeOf(row, field) !== undefined)) found.push({ path: path.join(".") || "page", row });
+  // The span before beside the figures, as a sibling (`{ steps: {…}, before: {…} }`, `{ now: {…}, before: {…} }`).
+  const sibling = row.before && typeof row.before === "object" && !Array.isArray(row.before) ? (row.before as Row) : null;
+  if (sibling) {
+    for (const [name, inner] of Object.entries(row)) {
+      if (name === "before" || !inner || typeof inner !== "object" || Array.isArray(inner)) continue;
+      const figures = inner as Row;
+      if (COUNT_ORDER.some((field) => isNumber(figures[field]) && isNumber(sibling[field]))) found.push({ path: [...path, name].join("."), row: { ...figures, before: sibling } });
+    }
+  }
   for (const [name, inner] of Object.entries(row)) if (name !== "before") totalsIn(inner, [...path, name], depth + 1, found);
   return found;
 }

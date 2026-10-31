@@ -8,6 +8,7 @@ import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
@@ -64,6 +65,7 @@ export default function InsightsEnquirySourcePage() {
   return (
     <>
       {header}
+      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.enquiriesSource", siteId: site, data }} />
       <FigureRow>
         <Figure label={t("visits", { period: nowWords })} value={formatNumber(full.figures.visits.now)} detail={<span className="text-secondary">{tEnquiries("figures.against", { then: formatNumber(then(full.figures.visits) ?? 0), period: compareWords })}</span>} />
         <Figure label={t("enquiries", { period: nowWords })} value={formatNumber(full.figures.enquiries.now)} detail={<span className="text-secondary">{tEnquiries("figures.against", { then: formatNumber(then(full.figures.enquiries) ?? 0), period: compareWords })}</span>} />

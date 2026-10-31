@@ -134,7 +134,7 @@ export default function SiteKeywordsPage() {
         description={t("description")}
         pills={isPartHeld(coverage) ? <HeldLine coverage={coverage} className="text-[12px] text-secondary" /> : null}
       />
-      <SiteSees screen="keywords" seen={table.result?.seen} />
+      <SiteSees screen="keywords" seen={table.result?.seen} data={table.result && { keywords: table.result, series }} />
 
       {/* A competitor's list is its top 1,000, refreshed monthly (finish-off plan, items 6b, 6c and 14). */}
       {site?.relationship === "TRACKED" ? <Notice>{t("competitorTop")}</Notice> : null}

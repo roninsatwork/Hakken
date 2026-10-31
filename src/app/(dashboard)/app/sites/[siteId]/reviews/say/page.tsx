@@ -110,7 +110,7 @@ export default function WhatCustomersSayPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? null} allOffices /> : undefined}
       />
-      <SiteSees screen="reviewsSay" seen={data?.seen} />
+      <SiteSees screen="reviewsSay" seen={data?.seen} data={data} />
       {data && data.unread > 0 ? <Notice>{t("reading", { count: data.unread })}</Notice> : null}
 
       {data ? (

@@ -101,7 +101,7 @@ export default function BrandRadarPage() {
         description={t("description")}
         action={site ? <TagLabel>{t("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
-      <SiteSees screen="radarOverview" seen={data?.seen} />
+      <SiteSees screen="radarOverview" seen={data?.seen} data={data} />
 
       {data ? (
         <FigureRow>

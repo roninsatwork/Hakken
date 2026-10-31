@@ -4,7 +4,7 @@ import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
+import { HakkenSees, type SeesPage } from "@/src/ui/components/screens/HakkenSees";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
@@ -31,7 +31,7 @@ export function reportLines(report: ReportView, t: (key: string) => string): Arr
  * its figures against the period before, and its enquiries a month — all as
  * they were the day it was written.
  */
-export function ReportTop({ report }: { report: ReportView }) {
+export function ReportTop({ report, page }: { report: ReportView; page?: SeesPage }) {
   const t = usePlatformTranslations("insights.reports");
   const tm = usePlatformTranslations("insights.summary.measures");
   const href = useInsightsHref();
@@ -49,7 +49,7 @@ export function ReportTop({ report }: { report: ReportView }) {
   const steps = body.next.slice(0, 3).map((words) => ({ words, link: t("seeThisWeek"), href: href("this-week") }));
   return (
     <>
-      <HakkenSees says={[body.headline, body.summary].filter((line, index, all) => line && all.indexOf(line) === index)} steps={steps} />
+      <HakkenSees says={[body.headline, body.summary].filter((line, index, all) => line && all.indexOf(line) === index)} steps={steps} page={page} />
       {figures.length > 0 ? (
         <FigureRow columns={figures.length === 3 ? 3 : 4}>
           {figures.map((figure) => (

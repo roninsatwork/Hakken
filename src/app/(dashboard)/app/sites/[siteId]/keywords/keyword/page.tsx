@@ -294,7 +294,7 @@ export default function SiteKeywordPage() {
           </>
         ) : undefined}
       />
-      <SiteSees screen="keywordRecord" seen={record?.seen} />
+      <SiteSees screen="keywordRecord" seen={record?.seen} data={record && { record, fromAi, positions }} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

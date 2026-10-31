@@ -118,7 +118,7 @@ export default function SearchConsoleAppearancePage() {
       <PageHeader icon={<Star className="h-5 w-5 text-brand" />} title={t("appearance.title")} description={t("appearance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="appearance" seen={rows ? appearanceSees(rows.length, [...rows].sort((left, right) => right.clicks - left.clicks)[0] ? { name: [...rows].sort((left, right) => right.clicks - left.clicks)[0].key } : null) : null} />
+          <SearchConsoleSees screen="appearance" seen={rows ? appearanceSees(rows.length, [...rows].sort((left, right) => right.clicks - left.clicks)[0] ? { name: [...rows].sort((left, right) => right.clicks - left.clicks)[0].key } : null) : null} data={rows ? { kinds: rows, totals: performance?.totals ?? null } : undefined} />
           <ResultKindSwitch />
           <FigureRow columns={3}>
             <Figure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />

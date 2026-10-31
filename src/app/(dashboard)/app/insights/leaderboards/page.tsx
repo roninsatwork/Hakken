@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Trophy } from "lucide-react";
 import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
@@ -9,7 +10,7 @@ import { ChangeLine } from "@/src/ui/components/screens/Change";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { MAIN_LEAGUES } from "@/convex/utils/insightLeagues";
 import { LeagueCard, leagueName, type LeagueData } from "../_components/LeagueCard";
-import { useInsightsBox, useInsightsHref, useInsightsLeagues } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
 import { boxedSays } from "../_components/insightBoxSays";
 import { formatNumber } from "../../sites/_components/siteFormat";
 
@@ -31,6 +32,9 @@ export default function InsightsLeaderboardsPage() {
   const tMenu = usePlatformTranslations("insights.menu.pages");
   const href = useInsightsHref();
   const data = useInsightsLeagues();
+  const site = useInsightsSite();
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ leagues: data, box }), [data, box]);
 
   const header = <PageHeader icon={<Trophy className="h-5 w-5 text-brand" />} title={t("title")} description={data ? t("description", { rivals: data.rivals }) : t("descriptionLoading")} />;
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
@@ -69,7 +73,7 @@ export default function InsightsLeaderboardsPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.leaderboards", siteId: site, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.lead")} value={t("figures.leadValue", { count: led.length, total: leagues.length })} detail={<span className="text-secondary">{led.length > 0 ? names(led) : t("figures.leadNone")}</span>} />
         <Figure label={t("figures.best")} value={ord(best)} detail={<span className="text-secondary">{names(bestLeagues)}</span>} />

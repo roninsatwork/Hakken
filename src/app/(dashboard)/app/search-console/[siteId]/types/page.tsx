@@ -67,7 +67,7 @@ export default function SearchConsoleTypesPage() {
       <PageHeader icon={<Shapes className="h-5 w-5 text-brand" />} title={t("types.title")} description={t("types.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="types" seen={pages ? typesSees(topKind ? { name: pageWord(topKind.kind), clicks: topKind.clicks } : null, pages.clicks) : null} />
+          <SearchConsoleSees screen="types" seen={pages ? typesSees(topKind ? { name: pageWord(topKind.kind), clicks: topKind.clicks } : null, pages.clicks) : null} data={pages || keywords ? { pages, keywords } : undefined} />
           <ResultKindSwitch />
           <FigureRow>
             {classified ? (

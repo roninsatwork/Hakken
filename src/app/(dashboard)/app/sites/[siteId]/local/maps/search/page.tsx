@@ -81,7 +81,7 @@ export default function LocalMapSearchPage() {
           volume: data.volume === null ? t("volumeUnknown") : t("volume", { count: data.volume, shown: formatNumber(data.volume) }),
         }) : undefined}
       />
-      <SiteSees screen="localMapSearch" seen={data?.seen} />
+      <SiteSees screen="localMapSearch" seen={data?.seen} data={data} />
       {data === null ? <Notice>{t("notChecked")}</Notice> : null}
 
       {data ? (

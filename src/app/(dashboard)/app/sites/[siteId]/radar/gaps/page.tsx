@@ -76,7 +76,7 @@ export default function AiOverviewGapsPage() {
         description={t("description")}
         action={site ? <TagLabel>{t("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
-      <SiteSees screen="overviewGaps" seen={data?.seen} />
+      <SiteSees screen="overviewGaps" seen={data?.seen} data={data} />
 
       {data ? (
         <FigureRow>

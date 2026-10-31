@@ -18,7 +18,7 @@ import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { ReportDownloadAction } from "../../_components/ReportDownload";
 import { ReportTop, reportLines } from "../../_components/ReportParts";
-import { useInsightsHref } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
 
 /**
  * One report, exactly as written (insights-analyst-plan.md §4.1, I6): its
@@ -30,6 +30,7 @@ export default function InsightsReportPage() {
   const params = useParams();
   const t = usePlatformTranslations("insights.reports");
   const href = useInsightsHref();
+  const site = useInsightsSite();
   const report = useQuery(api.insightsReads.insightsReport, { reportId: params.reportId as Id<"insightReports"> });
   const markRead = useMutation(api.insightsReads.markInsightReportRead);
   const lines = report ? reportLines(report, t) : undefined;
@@ -55,7 +56,7 @@ export default function InsightsReportPage() {
         pills={<TagLabel>{t(`kinds.${report.kind}`)}</TagLabel>}
         action={<ReportDownloadAction report={report} label={t("downloadPdf")} />}
       />
-      <ReportTop report={report} />
+      <ReportTop report={report} page={{ screen: "insights.report", siteId: site, data: report }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.key}

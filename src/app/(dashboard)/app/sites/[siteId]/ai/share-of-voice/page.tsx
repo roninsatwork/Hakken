@@ -101,7 +101,7 @@ export default function SiteShareOfVoicePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<PieChart className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiShare" seen={engines && shareSees(engines)} />
+      <SiteSees screen="aiShare" seen={engines && shareSees(engines)} data={engines} />
       <Notice>{t("note")}</Notice>
 
       <SiteChartCard

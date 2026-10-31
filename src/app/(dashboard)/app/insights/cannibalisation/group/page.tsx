@@ -97,7 +97,7 @@ export default function InsightsCompetingGroupPage() {
   return (
     <>
       <DetailHeader back={back} icon={<Split className="h-5 w-5 text-brand" />} title={group.name} description={t("group.description", { count: group.pages.length, ...span })} pills={<StatusLabel tone={group.sure === "LIKELY" ? "info" : "neutral"}>{t(`sure.${group.sure}`)}</StatusLabel>} />
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.cannibalisationGroup", siteId: site, data }} />
       <FigureRow>
         <Figure label={t("figures.split")} value={formatNumber(group.split)} detail={<span className="text-secondary">{t("figures.shared", { count: formatNumber(group.shared) })}</span>} />
         <Figure label={t("figures.shown")} value={formatNumber(group.shown)} detail={<span className="text-secondary">{t("figures.span", span)}</span>} />

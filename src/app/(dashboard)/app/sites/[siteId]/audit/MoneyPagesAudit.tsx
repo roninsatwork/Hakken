@@ -65,6 +65,8 @@ export function useMoneyPagesAudit(siteId: Id<"companyWebsites">, host: string) 
   );
   const link = data === null ? null : <Link href="/app/insights/findings" className="w-fit text-[13px] text-secondary hover:text-foreground">{t("seeInsights")}</Link>;
   return {
+    /** The saved money-page checks this section draws from, for the page's eye (sees-every-page-plan-2026-10-31.md). */
+    data,
     shown: data !== null,
     figures,
     link,

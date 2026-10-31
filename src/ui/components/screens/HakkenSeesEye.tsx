@@ -65,9 +65,9 @@ export function HakkenSeesEye() {
     const links = new Map<string, { label: string; href: string }>();
     for (const step of box?.steps ?? []) if (step.href.startsWith("/app/") && !step.external) links.set(step.href, { label: step.link, href: step.href });
     for (const link of page.links ?? []) links.set(link.href, { label: link.label, href: link.href });
+    const dates = datesOf(page);
     return {
-      siteId: page.siteId, screen: page.screen, about: "", path: pathname, period: page.period ?? "", country: page.country ?? "", device: page.device ?? "",
-      ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}),
+      siteId: page.siteId, screen: page.screen, about: "", path: pathname, ...dates,
       facts: [], links: [...links.values()].slice(0, 12), data: pageData,
     };
   }, [page, pageData, pathname, box?.steps]);
@@ -80,7 +80,7 @@ export function HakkenSeesEye() {
     if (!open || !ask || !key || asked?.key === key) return;
     noteAsked(key, "RESEARCHING");
     // Nobody waits on the page: the answer arrives through the store, and a refusal leaves the rule's words standing.
-    askSees(ask).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
+    Promise.resolve().then(() => askSees(ask)).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
   }, [open, key, asked?.key, ask, askSees]);
   const noCredits = Boolean(ask && asked?.key === key && asked.status === "NO_CREDITS");
   const answer = useQuery(api.seesAsk.seesAnswer, open && ask && key && asked?.key === key && asked.status !== "FAILED" && !noCredits ? { siteId: ask.siteId, key } : "skip");
@@ -97,7 +97,7 @@ export function HakkenSeesEye() {
   // its address, what it is, its dates and, for a page Ask Hakken has no tool to read, its own figures.
   const shown = answer?.status === "WRITTEN" ? answer : null;
   const figures = useMemo(() => (page && pageData !== null ? pageFigureLines(page.screen, pageData) : []), [page, pageData]);
-  const where = ask ?? (page ? { period: page.period ?? "", from: page.from ?? undefined, to: page.to ?? undefined, country: page.country ?? "", device: page.device ?? "" } : null);
+  const where = ask ?? (page ? datesOf(page) : null);
   const chat = useSeesChat({
     pageKey: key ?? box?.screen ?? null,
     ...(ask ? { siteId: ask.siteId } : page?.siteId ? { siteId: page.siteId } : {}),
@@ -127,6 +127,23 @@ export function HakkenSeesEye() {
       bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} noCredits={noCredits} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
     />
   );
+}
+
+/**
+ * A page's dates, country and device: as it gave them, else from its address, where every section keeps its date
+ * menu's choice (`?period=lastMonth`, `?from=…&to=…`, `?country=`, `?device=`), so a press is keyed to what is shown.
+ */
+function datesOf(page: { period?: string; from?: string | null; to?: string | null; country?: string; device?: string }) {
+  const query = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const from = page.from ?? query.get("from");
+  const to = page.to ?? query.get("to");
+  return {
+    period: page.period ?? query.get("period") ?? "",
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
+    country: page.country ?? query.get("country") ?? "",
+    device: page.device ?? query.get("device") ?? "",
+  };
 }
 
 /** The eye as drawn: pressed while the bubble is open, the count beside it while its steps are new, the bubble under it. */

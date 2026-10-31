@@ -114,7 +114,7 @@ export default function SiteStructurePage() {
           </span>
         ) : null}
       />
-      <SiteSees screen="keywordsStructure" seen={answer?.seen} />
+      <SiteSees screen="keywordsStructure" seen={answer?.seen} data={answer} />
       {partHeld ? (
         <div className="flex flex-col gap-1">
           <HeldLine coverage={coverage} />

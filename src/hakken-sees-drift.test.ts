@@ -35,6 +35,8 @@ const FORMS = new Set([
   "src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx",
   // Bing Webmaster's connection, the same.
   "src/app/(dashboard)/app/bing-webmaster/[siteId]/connection/page.tsx",
+  // Google Analytics' connection, the same (Anthony, 2026-10-31: connection pages carry no box).
+  "src/app/(dashboard)/app/analytics/[siteId]/connection/page.tsx",
   // A keyword's and a page's countries: the record's own tab, under the record's box.
   "src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx",
   "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",

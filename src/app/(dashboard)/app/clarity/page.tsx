@@ -7,6 +7,7 @@ import { MousePointerClick } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import Header from "@/src/ui/components/layout/Header";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
@@ -50,6 +51,7 @@ export default function ClarityPage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader divider icon={<MousePointerClick className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+        <HakkenSees says={[]} steps={[]} page={{ screen: "clarity.websites", data: sites }} />
         <DataTable
           rows={pages.pageRows}
           rowKey={(row) => row.siteId}

@@ -96,7 +96,7 @@ export default function SiteAbovePage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
-      <SiteSees screen="googleAbove" seen={rows && aboveSees(rows)} />
+      <SiteSees screen="googleAbove" seen={rows && aboveSees(rows)} data={rows} />
 
       <SiteChartCard
         dated={false}

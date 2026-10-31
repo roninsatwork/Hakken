@@ -38,7 +38,7 @@ export default function SearchConsoleAlmostPage() {
   const keywords = tracking.counts?.keywords ?? null;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="almost" seen={list.summary ? almostSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="almost" seen={list.summary ? almostSees(list.summary) : null} data={list.pageData} />}
       icon={<Target className="h-5 w-5 text-brand" />}
       title={t("almost.title")}
       description={t("almost.description")}

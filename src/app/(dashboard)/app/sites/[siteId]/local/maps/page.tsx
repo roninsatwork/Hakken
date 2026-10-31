@@ -105,7 +105,7 @@ export default function LocalMapsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={office?.listingId ?? null} /> : undefined}
       />
-      <SiteSees screen="localMaps" seen={data?.seen} />
+      <SiteSees screen="localMaps" seen={data?.seen} data={data} />
       {data && !office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {office && figures ? (

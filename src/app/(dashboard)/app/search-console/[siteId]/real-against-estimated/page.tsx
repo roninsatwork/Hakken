@@ -34,7 +34,7 @@ export default function SearchConsoleEstimatesPage() {
   const summary = list.summary;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="estimates" seen={list.summary ? estimatesSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="estimates" seen={list.summary ? estimatesSees(list.summary) : null} data={list.pageData} />}
       icon={<Scale className="h-5 w-5 text-brand" />}
       title={t("estimates.title")}
       description={t("estimates.description")}

@@ -130,7 +130,7 @@ export default function SiteRivalPage() {
           </Link>
         ) : undefined}
       />
-      <SiteSees screen="competitorsRival" seen={table.result?.seen} />
+      <SiteSees screen="competitorsRival" seen={table.result?.seen} data={table.result && { rival: hold?.host, yours, theirs, verdict, sharedInAll, shared: table.result, ownLine, rivalLine, cited: citedRows }} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Figure label={t("figures.traffic")} value={formatNumber(theirs?.estimatedTraffic)} detail={yoursLine(yours?.estimatedTraffic)} />

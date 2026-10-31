@@ -43,6 +43,8 @@ export default function BingVersusPage() {
           <>
             {summary && bing ? (
               <BingSees
+                screen="versus"
+                data={{ figures, list: answer }}
                 says={[
                   google && tw("share", { share: formatShare(share), bing: formatNumber(bing.clicks), total: formatNumber(bing.clicks + google.clicks) }),
                   summary.onBoth > 0 && tw("both", { count: formatNumber(summary.onBoth), higher: formatNumber(summary.bingHigher) }),

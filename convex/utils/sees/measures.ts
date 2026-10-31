@@ -47,6 +47,12 @@ const COUNTS: Record<string, Measure> = {
   volume: { words: "monthly searches", kind: "count" },
   searchVolume: { words: "monthly searches", kind: "count" },
   addToCarts: { words: "basket additions", kind: "count" },
+  // A shop's steps, as the Products screen names them.
+  bought: { words: "purchases", kind: "count" },
+  checkout: { words: "checkouts started", kind: "count" },
+  basket: { words: "basket additions", kind: "count" },
+  looks: { words: "product views", kind: "count" },
+  looked: { words: "visits that looked at a product", kind: "count" },
   itemsViewed: { words: "product views", kind: "count" },
   itemsPurchased: { words: "products bought", kind: "count" },
   crawled: { words: "pages read by the search engine", kind: "count" },

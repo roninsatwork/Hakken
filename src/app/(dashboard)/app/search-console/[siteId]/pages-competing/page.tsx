@@ -31,7 +31,7 @@ export default function SearchConsoleCompetingPage() {
   const page = (value: string | null) => <span className="block truncate text-[12px] text-secondary">{value === null ? "–" : pageLabel(value, host)}</span>;
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="competing" seen={list.summary ? competingSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="competing" seen={list.summary ? competingSees(list.summary) : null} data={list.pageData} />}
       icon={<Split className="h-5 w-5 text-brand" />}
       title={t("competing.title")}
       description={t("competing.description")}

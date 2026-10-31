@@ -27,8 +27,13 @@ import { useEventName } from "./useEventName";
  * page of this website's section, with the dates and device chosen
  * (`segment`, `filters`), or to an address of its own (`url`).
  */
-export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask }: {
+export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask, data }: {
   screen: string;
+  /**
+   * The page's own figures — the answer of the query that draws it — for the eye's findings, its writer and its chat
+   * (sees-every-page-plan-2026-10-31.md). With them the eye shows even when the rule has nothing to say.
+   */
+  data?: unknown;
   /** The page's figures and links for the Insights team, asked when the eye is pressed (sees-conversion-specialist-plan-2026-10-30.md). */
   ask?: SeesAsk;
   /**
@@ -56,7 +61,8 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask 
   // Saved as the reader reads it: a page group by its name, never its id, so Ask Hakken says the same.
   const box = seen && names ? { says: seen.says.map(named), steps: seen.steps.map(named) } : seen;
   useNoteAdvice(keep ? siteId : null, `googleAnalytics.seen.${screen}`, box, currency);
-  if (!box || box.says.length === 0) return null;
+  const page = data !== undefined && data !== null ? { screen: `googleAnalytics.${screen}`, siteId, data } : undefined;
+  if (!page && (!box || box.says.length === 0)) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const events = (text: string) => eventList(text, nameOf, locale);
   const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, valuesOf(phrase, currency, events));
@@ -65,8 +71,8 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask 
     // A page's own screen knows the screen its link was clicked on, to go back to (landing-pages-flow-plan.md LF9).
     return { href: hrefOf(to.segment ?? "", to.segment === "all-pages/page" ? { ...to.filters, from } : to.filters) };
   };
-  const steps: HakkenSeesStep[] = box.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
-  return <HakkenSees says={box.says.map(words)} steps={steps} advice={seenAdvice(box)} ask={ask} name={nameOf} />;
+  const steps: HakkenSeesStep[] = (box?.steps ?? []).map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
+  return <HakkenSees says={(box?.says ?? []).map(words)} steps={steps} advice={box ? seenAdvice(box) : screen} ask={ask} name={nameOf} {...(page ? { page } : {})} />;
 }
 
 /** Conversions' events, sent joined by commas, by their own names in the reader's language, as it lists them. */

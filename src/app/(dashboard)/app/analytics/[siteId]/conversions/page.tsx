@@ -68,7 +68,7 @@ function NothingCountedBody({ status }: { status: AnalyticsStatus }) {
   const answer = useQuery(api.googleAnalyticsReads.analyticsConversions, args);
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="conversions" seen={answer?.seen} currency={status.connection?.currency} />
+      <AnalyticsSees screen="conversions" seen={answer?.seen} currency={status.connection?.currency} data={answer} />
       <NothingCounted status={status} siteId={args.siteId} />
       <EventsTable status={status} worthOf={() => null} every />
     </div>
@@ -125,7 +125,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="conversions" seen={answer?.seen} currency={currency} names={names} ask={ask} />
+      <AnalyticsSees screen="conversions" seen={answer?.seen} currency={currency} names={names} ask={ask} data={answer} />
 
       {answer ? (
         <FigureRow>

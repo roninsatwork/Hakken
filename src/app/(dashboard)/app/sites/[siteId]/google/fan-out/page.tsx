@@ -138,7 +138,7 @@ export default function SiteTrackedFanOutPage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
-      <SiteSees screen="googleFanOut" seen={rows && fanOutTrackedSees(rows, own)} />
+      <SiteSees screen="googleFanOut" seen={rows && fanOutTrackedSees(rows, own)} data={rows && { rows, own, tracking }} />
 
       <DataTable
         rows={pager.pageRows}

@@ -35,6 +35,8 @@ export default function BingKeywordsPage() {
         <>
           {answer ? (
             <BingSees
+              screen="keywords"
+              data={{ figures, list: answer }}
               says={[
                 tw("says", { count: formatNumber(answer.summary.rows) }),
                 answer.summary.top && (answer.summary.top.googlePosition !== null

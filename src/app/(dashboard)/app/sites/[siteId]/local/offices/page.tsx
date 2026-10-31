@@ -101,7 +101,7 @@ export default function LocalOfficesPage() {
         description={t("description")}
         action={options ? <OfficeSwitch offices={options.offices} open={null} profile every /> : undefined}
       />
-      <SiteSees screen="localOffices" seen={data?.seen} />
+      <SiteSees screen="localOffices" seen={data?.seen} data={data} />
       {offices && offices.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       <FigureRow>

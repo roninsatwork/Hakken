@@ -66,7 +66,7 @@ export default function InsightsSourcesPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.sources", siteId: chosen.siteId, data: chosen }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.source}

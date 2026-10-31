@@ -91,7 +91,7 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="trackingHealth" seen={trackingHealthSees({ checks })} currency={status.connection?.currency} />
+      <AnalyticsSees screen="trackingHealth" seen={trackingHealthSees({ checks })} currency={status.connection?.currency} data={status.connection?.health} />
       <HealthFigures checks={checks} />
       <DataTable
         rows={pager.pageRows}

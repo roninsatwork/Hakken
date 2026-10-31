@@ -131,7 +131,7 @@ export default function SiteAnswerPage() {
           />
         ) : undefined}
       />
-      <SiteSees screen="aiAnswer" seen={shown?.seen} />
+      <SiteSees screen="aiAnswer" seen={shown?.seen} data={shown && { record, shown }} />
       <p className="max-w-2xl text-[12px] text-secondary">{t("howAsked", { platformName })}</p>
 
       {record === undefined || shown === undefined ? (

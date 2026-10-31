@@ -42,7 +42,7 @@ export default function InsightsYourMonthPage() {
   return (
     <>
       {header}
-      <ReportTop report={report} />
+      <ReportTop report={report} page={{ screen: "insights.yourMonth", siteId: site, data: report }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.work}

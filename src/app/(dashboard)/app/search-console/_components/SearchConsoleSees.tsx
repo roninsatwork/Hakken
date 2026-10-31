@@ -20,18 +20,24 @@ import { useNoteAdvice } from "../../_components/useNoteAdvice";
  * A step's link leads to a page of this website's section, with the dates
  * and kind of result chosen.
  */
-export function SearchConsoleSees({ screen, seen }: { screen: string; seen: Seen | null | undefined }) {
+export function SearchConsoleSees({ screen, seen, data }: {
+  screen: string;
+  seen: Seen | null | undefined;
+  /** The page's own figures, for the eye's findings, writer and chat (sees-every-page-plan-2026-10-31.md). */
+  data?: unknown;
+}) {
   const t = useTranslations("searchConsole.seen");
   const siteId = useSearchConsoleSiteId();
   const hrefOf = useSearchConsoleHref(siteId);
   useNoteAdvice(siteId, `searchConsole.seen.${screen}`, seen);
-  if (!seen || seen.says.length === 0) return null;
+  const page = data !== undefined && data !== null ? { screen: `searchConsole.${screen}`, ...(siteId ? { siteId } : {}), data } : undefined;
+  if (!page && (!seen || seen.says.length === 0)) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, valuesOf(phrase));
   const target = (to: SeenTarget): { href: string; external?: boolean } =>
     to.url ? (to.url.startsWith("/") ? { href: to.url } : { href: to.url, external: true }) : { href: hrefOf(to.segment ?? "", to.filters) };
-  const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
-  return <HakkenSees says={seen.says.map(words)} steps={steps} advice={seenAdvice(seen)} />;
+  const steps: HakkenSeesStep[] = (seen?.steps ?? []).map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...target(step.to) }));
+  return <HakkenSees says={(seen?.says ?? []).map(words)} steps={steps} advice={seen ? seenAdvice(seen) : screen} {...(page ? { page } : {})} />;
 }
 
 /** A count is whole; any other figure keeps its one decimal — a score of 2.1, a position of 18.2 — as the screen's figures write it. */

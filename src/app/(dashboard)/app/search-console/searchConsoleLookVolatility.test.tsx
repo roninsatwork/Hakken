@@ -62,7 +62,8 @@ const CHART = {
 
 function answer(queries: Record<string, unknown>) {
   vi.mocked(useQuery).mockImplementation(answerQueries(queries));
-  vi.mocked(useMutation).mockImplementation((() => vi.fn()) as never);
+  // A mutation answers a promise, as Convex's do: the eye, opened on the page's own figures, asks its writer, who has no answer here.
+  vi.mocked(useMutation).mockImplementation((() => vi.fn(async () => undefined)) as never);
   vi.mocked(useAction).mockImplementation((() => vi.fn(() => new Promise(() => undefined))) as never);
 }
 
@@ -83,7 +84,8 @@ describe("Volatility's approved look", () => {
     const { container } = render(<SearchConsoleVolatilityPage />);
     await screen.findByText("ai agency");
     await openHakkenSees();
-    expect(screen.getByText(/Google's September 2026 spam update ran from/)).toBeInTheDocument();
+    // The rule's words stand once the writer has no answer.
+    expect(await screen.findByText(/Google's September 2026 spam update ran from/)).toBeInTheDocument();
     await expectApprovedLook(container, "search-console-volatility", "Main", "Search Console → Volatility");
   });
 

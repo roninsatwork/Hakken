@@ -87,7 +87,7 @@ export default function SiteAuditProblemPage() {
           </>
         ) : undefined}
       />
-      <SiteSees screen="auditProblem" seen={found && problemSees(found.rows, issue?.pages ?? null, label)} />
+      <SiteSees screen="auditProblem" seen={found && problemSees(found.rows, issue?.pages ?? null, label)} data={found && { check, issue, found }} />
 
       <DataTable
         rows={table.pageRows}

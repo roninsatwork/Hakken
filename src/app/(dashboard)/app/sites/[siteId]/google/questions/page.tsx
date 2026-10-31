@@ -64,7 +64,7 @@ export default function SiteQuestionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MessageCircleQuestion className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleQuestions" seen={answer?.seen} />
+      <SiteSees screen="googleQuestions" seen={answer?.seen} data={answer} />
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => `${row.kind}:${row.text}`}

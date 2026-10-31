@@ -62,7 +62,7 @@ export default function InsightsServicePage() {
         description={service.kind === "GUIDES" ? t("descriptionGuides", { host: data.host }) : t("description", { page: service.page, host: data.host })}
         pills={<StatusLabel tone={service.verdict === "GROW" ? "success" : service.verdict === "STEADY" ? "neutral" : "warning"}>{ts(`verdicts.${service.verdict}`)}</StatusLabel>}
       />
-      <HakkenSees says={says} steps={[{ words: ts(`do.${service.verdict}`, { service: name(service) }), link: t("seeStrategy"), href: href("strategy") }]} />
+      <HakkenSees says={says} steps={[{ words: ts(`do.${service.verdict}`, { service: name(service) }), link: t("seeStrategy"), href: href("strategy") }]} page={{ screen: "insights.strategyService", siteId: site, data }} />
       <FigureRow>
         <Figure label={t("figures.enquiries")} value={formatNumber(service.enquiries)} detail={moved === null ? <span className="text-secondary">{t("figures.noYear")}</span> : <ChangeLine by={moved}>{t("figures.onYear", { percent: Math.abs(moved), before: formatNumber(service.enquiriesBefore ?? 0) })}</ChangeLine>} />
         <Figure label={t("figures.share")} value={share === null ? "–" : `${share}%`} detail={<span className="text-secondary">{t("figures.shareDetail", { clicks: formatNumber(service.clicks) })}</span>} />

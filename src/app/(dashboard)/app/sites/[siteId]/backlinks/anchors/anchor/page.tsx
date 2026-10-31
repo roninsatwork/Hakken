@@ -49,7 +49,7 @@ export default function SiteAnchorPage() {
         description={t("description")}
         pills={summary ? <LinkStatusLabel status={summary.status} /> : undefined}
       />
-      <SiteSees screen="backlinksAnchor" seen={record?.seen} />
+      <SiteSees screen="backlinksAnchor" seen={record?.seen} data={record} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

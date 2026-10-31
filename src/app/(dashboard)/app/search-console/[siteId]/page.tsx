@@ -42,7 +42,7 @@ export default function SearchConsolePerformancePage() {
       <PageHeader icon={<LineChart className="h-5 w-5 text-brand" />} title={t("performance.title")} description={t("performance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="performance" seen={performance && !problem ? (range.period === "custom" ? null : performanceSees(totals, performance.previous, range.period)) : null} />
+          <SearchConsoleSees screen="performance" seen={performance && !problem ? (range.period === "custom" ? null : performanceSees(totals, performance.previous, range.period)) : null} data={problem ? undefined : performance} />
           <ResultKindSwitch />
           {problem ? (
             <LiveProblem problem={problem} retry={retry} />

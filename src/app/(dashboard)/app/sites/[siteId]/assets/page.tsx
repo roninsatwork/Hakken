@@ -78,7 +78,7 @@ export default function YourAssetsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Layers className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="assets" seen={data && assetsSees(data.rows)} />
+      <SiteSees screen="assets" seen={data && assetsSees(data.rows)} data={data} />
 
       {data ? (
         <FigureRow>

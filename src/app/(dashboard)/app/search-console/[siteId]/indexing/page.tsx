@@ -63,7 +63,7 @@ export default function SearchConsoleIndexingPage() {
       <PageHeader icon={<FileSearch className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="indexing" seen={data ? indexingSees(data.pages.map((row) => ({ page: row.page, verdict: row.indexed?.verdict ?? null, lastRead: row.indexed?.lastRead ?? null })), checkedDay) : null} />
+          <SearchConsoleSees screen="indexing" seen={data ? indexingSees(data.pages.map((row) => ({ page: row.page, verdict: row.indexed?.verdict ?? null, lastRead: row.indexed?.lastRead ?? null })), checkedDay) : null} data={data} />
           <FigureRow>
             <Figure label={t("figures.indexed")} value={inspected.length > 0 ? t("of", { a: indexed.length, b: inspected.length }) : "–"} detail={<span className="text-secondary">{t("figures.indexedDetail")}</span>} />
             <Figure label={t("figures.readThisMonth")} value={inspected.length > 0 ? formatNumber(readThisMonth) : "–"} detail={<span className="text-secondary">{t("figures.readThisMonthDetail")}</span>} />

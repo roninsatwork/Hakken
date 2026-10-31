@@ -261,6 +261,11 @@ export function useSearchConsoleList(options: {
     download: { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction },
     /** A list asked of Google: every row, searched, filtered and ordered as on screen, for its download. */
     liveRows: isLive ? (liveOrder.rows ?? null) : null,
+    /**
+     * What the page draws from, for the eye (sees-every-page-plan-2026-10-31.md): the list's figures and the rows on
+     * screen — nothing until the figures are in.
+     */
+    pageData: summary ? { summary, rows: table.pageRows ?? null } : undefined,
   };
 }
 

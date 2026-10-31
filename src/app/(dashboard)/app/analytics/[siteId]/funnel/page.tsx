@@ -54,7 +54,7 @@ export default function AnalyticsLandingPagesPage() {
       header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
       head={(answer) => (
         <>
-          <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} />
+          <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} data={answer} />
           <LandingFlowCard />
         </>
       )}

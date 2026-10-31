@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
@@ -65,12 +65,43 @@ export function HakkenSees({ says, steps, advice, ask, name, page }: { says: str
   // Published once per change of words, not per render: the arrays are new each time. The page's figures by the
   // query's own answer, which stays the same object until its figures change — never written out on every render.
   const words = JSON.stringify({ says, steps, ask, page: page ? { ...page, data: undefined } : null });
-  const data = page?.data;
+  const data = useSteadyData(page?.data);
+  // New words or figures replace the box in place, so an open panel stays open; only leaving the screen clears it.
   useEffect(() => {
-    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}), ...(name ? { name } : {}), ...(page ? { page } : {}) });
-    return () => publishSees(null, screen);
+    publishSees({ screen, says, steps, advice: held, ...(ask ? { ask } : {}), ...(name ? { name } : {}), ...(page ? { page: { ...page, data } } : {}) });
   }, [screen, words, held, data]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => publishSees(null, screen), [screen]);
   return null;
+}
+
+/**
+ * A page's figures kept the same object while what they hold is: a page that gathers several answers into one
+ * (`{ figures, rows }`) builds it afresh on every draw, but each answer stays the same object until its figures
+ * change. Named by its parts' identities, so the eye works out the page again only when a part changed.
+ */
+function useSteadyData(data: unknown): unknown {
+  const name = identityOf(data);
+  // The same parts, the same object: the first one built from them stands for the rest.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => data, [name]);
+}
+
+/** Each object a page hands over, numbered once, so a set of parts has a name. */
+const numbered = new WeakMap<object, number>();
+let lastNumber = 0;
+function numberOf(value: unknown): string {
+  if (!value || typeof value !== "object") return JSON.stringify(value ?? null);
+  let held = numbered.get(value);
+  if (held === undefined) {
+    lastNumber += 1;
+    held = lastNumber;
+    numbered.set(value, held);
+  }
+  return `#${held}`;
+}
+function identityOf(data: unknown): string {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return numberOf(data);
+  return Object.entries(data as Record<string, unknown>).map(([key, part]) => `${key}=${numberOf(part)}`).join("&");
 }
 
 /**

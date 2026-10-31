@@ -66,7 +66,7 @@ export default function SearchConsoleBrandPage() {
   );
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="brand" seen={list.summary ? brandSees(list.summary) : null} />}
+      sees={<SearchConsoleSees screen="brand" seen={list.summary ? brandSees(list.summary) : null} data={list.pageData ? { ...list.pageData, brandWords: words?.names ?? null, chart: periods ?? null } : undefined} />}
       icon={<BadgeCheck className="h-5 w-5 text-brand" />}
       title={t("brand.title")}
       description={description}

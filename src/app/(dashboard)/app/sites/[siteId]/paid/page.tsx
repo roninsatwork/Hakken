@@ -53,7 +53,7 @@ export default function SitePaidPage() {
         description={t("description")}
         pills={latest ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(latest.lastDay) })}</span> : null}
       />
-      <SiteSees screen="paid" seen={series && paidSees(series[0]?.points ?? [])} />
+      <SiteSees screen="paid" seen={series && paidSees(series[0]?.points ?? [])} data={series} />
 
       {notAdvertising ? (
         <Notice>{t("notAdvertising")}</Notice>

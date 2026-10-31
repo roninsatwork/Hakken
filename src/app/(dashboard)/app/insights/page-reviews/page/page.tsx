@@ -56,6 +56,8 @@ export default function InsightsPageReviewPage() {
   const searches = useSitePager(service ? searchRows : undefined, { isLoading: service === undefined, table: "searches" });
   const tcp = useTranslations("sites.citedPages");
   const citedRows = useQuery(api.siteRivalCited.pageRivalCitedPages, data ? { siteId: data.siteId, page: path } : "skip");
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ review: data?.pages.find((row) => row.page === path), service, cited: citedRows }), [data, path, service, citedRows]);
   const cited = useCitedPagesTable(citedRows, { fileName: `${data?.host ?? "site"}-rival-pages-ai-cites`, withHost: true, table: "cited" });
   // Where its visitors were just before (I36), from the week's ask of Analytics.
   const recordHref = useSiteRecordHref(data?.siteId ?? "");
@@ -100,7 +102,7 @@ export default function InsightsPageReviewPage() {
         pills={<TagLabel className="text-foreground">{tVerdict(review.verdict)}</TagLabel>}
         action={<PagePrimaryAction variant="brand" onClick={toTasks}>{t("toTasks")}</PagePrimaryAction>}
       />
-      <HakkenSees says={says} steps={review.steps.map((step) => ({ words: step, link: t("seeExperiments"), href: href("experiments") }))} />
+      <HakkenSees says={says} steps={review.steps.map((step) => ({ words: step, link: t("seeExperiments"), href: href("experiments") }))} page={{ screen: "insights.pageReview", siteId: site, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.perEnquiry")} value={formatNumber(now)} detail={<span className="text-secondary">{t("figures.yearBefore", { value: formatNumber(before) })}</span>} />
         <Figure label={t("figures.enquiries")} value={formatNumber(review.enquiries)} detail={<span className="text-secondary">{moved(review.enquiries, review.enquiriesBefore) === null ? t("figures.twelveMonths") : t("figures.against", { by: formatNumber(moved(review.enquiries, review.enquiriesBefore)), before: formatNumber(review.enquiriesBefore) })}</span>} />

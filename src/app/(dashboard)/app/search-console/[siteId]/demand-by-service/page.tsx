@@ -87,7 +87,7 @@ export default function SearchConsoleDemandPage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           {!readyMade ? <Notice>{t("readyMade")}</Notice> : null}
-          <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} />
+          <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} data={data} />
           <SearchConsoleChartCard
             title={t("chart.title")}
             hint={t("chart.hint", { name: periodWords.name, before: periodWords.before })}

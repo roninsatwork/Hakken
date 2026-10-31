@@ -31,7 +31,7 @@ export default function SearchConsoleKeywordsPage() {
 
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="keywords" seen={list.summary ? (list.range.period === "custom" ? null : keywordsSees(list.summary, list.range.period)) : null} />}
+      sees={<SearchConsoleSees screen="keywords" seen={list.summary ? (list.range.period === "custom" ? null : keywordsSees(list.summary, list.range.period)) : null} data={list.pageData} />}
       icon={<Search className="h-5 w-5 text-brand" />}
       title={t("keywords.title")}
       description={t("keywords.description")}

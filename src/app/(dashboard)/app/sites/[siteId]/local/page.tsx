@@ -116,7 +116,7 @@ export default function LocalProfilePage() {
           </div>
         ) : undefined}
       />
-      <SiteSees screen="localProfile" seen={data?.seen} />
+      <SiteSees screen="localProfile" seen={data?.seen} data={data} />
       {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
       {drafts.shown ? (
         <>

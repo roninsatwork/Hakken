@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
@@ -27,14 +28,15 @@ export default function InsightsFindingsSectionPage() {
   const href = useInsightsHref();
   const site = useInsightsSite();
   const all = useQuery(api.insightsReads.insightsAllFindings, site ? { siteId: site } : {});
-  const rows = all?.filter((row) => sectionOf(row) === section);
+  // One list while the answer stays the same, so the eye is not handed its figures again on every render.
+  const rows = useMemo(() => all?.filter((row) => sectionOf(row) === section), [all, section]);
   const table = useFindingsTable({ rows, when: "found", opening: "week" });
   const top = [...(rows ?? [])].sort((a, b) => (b.atStake ?? 0) - (a.atStake ?? 0) || b.week.localeCompare(a.week) || a.rank - b.rank)[0];
   return (
     <>
       <PageHeader icon={<ListChecks className="h-5 w-5 text-brand" />} title={t(`sections.${section}.title`)} description={t(`sections.${section}.description`)} />
       {rows && rows.length === 0 ? <HakkenEmptyState icon={ListChecks} title={t("sections.emptyTitle")} description={t("sections.emptyDescription")} /> : null}
-      {top ? <HakkenSees says={[t("sections.sees", { count: rows?.length ?? 0 })]} steps={[{ words: top.headline, link: t("overview.see"), href: href(`findings/${top.findingId}`) }]} /> : null}
+      {rows ? <HakkenSees says={top ? [t("sections.sees", { count: rows.length })] : []} steps={top ? [{ words: top.headline, link: t("overview.see"), href: href(`findings/${top.findingId}`) }] : []} page={{ screen: "insights.findingsSection", siteId: site, data: rows }} /> : null}
       {rows && rows.length > 0 ? <DataTable {...table} footer={table.footer} /> : null}
     </>
   );

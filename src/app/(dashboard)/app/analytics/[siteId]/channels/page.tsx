@@ -47,7 +47,7 @@ export default function AnalyticsChannelsPage() {
       {status ? (
         <AnalyticsGate status={status} siteId={siteId}>
           <div className="flex flex-col gap-4">
-            <AnalyticsSees screen="channelsPage" seen={top?.seen} currency={currency} />
+            <AnalyticsSees screen="channelsPage" seen={top?.seen} currency={currency} data={top} />
             <ChannelsFigures figures={top?.figures} />
             <ChannelsDailyChart />
             <ChannelsMap top={top} kindName={kindName} />

@@ -206,3 +206,20 @@ describe("an Insights agent's Instructions page (12 Oct 2026)", () => {
     expect((await agentOf("INSIGHTS_HEAD_OF_STRATEGY"))?.systemPrompt).toBe(INSIGHT_BRIEFS.INSIGHTS_HEAD_OF_STRATEGY.brief);
   });
 });
+
+describe("a specialist joining a team already running (sees-every-page-plan-2026-10-31.md)", () => {
+  test("takes the Conversion specialist's model as an administrator set it; a first team inherits the platform's", async () => {
+    const t = harness();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("agents", { name: "Insights: Conversion specialist", systemKey: "INSIGHTS_CONVERSION", modelId: "flagship-model", modelSelectionMode: "override", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 });
+    });
+    await t.mutation(internal.insightsTeam.ensureTeamInternal, {});
+    const agentOf = (role: string) => t.run(async (ctx) => await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first());
+    expect(await agentOf("INSIGHTS_BEHAVIOUR")).toMatchObject({ name: "Insights: Visitor behaviour specialist", modelId: "flagship-model", modelSelectionMode: "override" });
+
+    const fresh = harness();
+    await fresh.mutation(internal.insightsTeam.ensureTeamInternal, {});
+    expect(await fresh.run(async (ctx) => await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", "INSIGHTS_BEHAVIOUR")).first())).toMatchObject({ modelSelectionMode: "inherit" });
+  });
+});
+

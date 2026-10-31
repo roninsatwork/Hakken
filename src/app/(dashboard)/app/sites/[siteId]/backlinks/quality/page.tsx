@@ -63,7 +63,7 @@ export default function SiteLinkQualityPage() {
         description={t("description")}
         pills={profile ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(profile.day) })}</span> : null}
       />
-      <SiteSees screen="backlinksQuality" seen={profile === undefined ? undefined : qualitySees(profile)} />
+      <SiteSees screen="backlinksQuality" seen={profile === undefined ? undefined : qualitySees(profile)} data={profile && { profile, series }} />
 
       {profile === null ? (
         <HakkenEmptyState icon={ShieldCheck} title={t("title")} description={t("empty")} />

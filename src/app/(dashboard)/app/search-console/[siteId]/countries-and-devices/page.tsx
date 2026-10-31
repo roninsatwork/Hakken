@@ -136,7 +136,7 @@ export default function SearchConsolePlacesPage() {
       <PageHeader icon={<MapPin className="h-5 w-5 text-brand" />} title={t("places.title")} description={t("places.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="places" seen={placesSeen} />
+          <SearchConsoleSees screen="places" seen={placesSeen} data={countries || devices ? { countries: countries ?? null, devices: devices ?? null } : undefined} />
           <ResultKindSwitch />
           {countryCopy.building ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : countryCopy.behind ? <p className="text-[12px] text-muted">{t("table.behind")}</p> : null}
           {nothing ? (

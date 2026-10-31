@@ -10696,7 +10696,12 @@
         "scroll": "how far people scroll",
         "sharePercent": "share",
         "engagementRatePercent": "share of engaged visits",
-        "bounceRatePercent": "share of visits that left at once"
+        "bounceRatePercent": "share of visits that left at once",
+        "bought": "purchases",
+        "checkout": "checkouts started",
+        "basket": "basket additions",
+        "looks": "product views",
+        "looked": "visits that looked at a product"
       }
     },
     "sidePanel": {

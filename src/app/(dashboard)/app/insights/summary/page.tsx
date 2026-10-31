@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
@@ -8,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
@@ -59,6 +61,8 @@ export default function InsightsSummaryPage() {
   const week = useQuery(api.insightsReads.insightsThisWeek, site ? { siteId: site } : {});
   const board = useQuery(api.insightsReads.insightsLatestReport, site ? { kind: "BOARD", siteId: site } : { kind: "BOARD" });
   const conversion = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
+  const seesData = useMemo(() => ({ period: view, week, leagues, conversion, board }), [view, week, leagues, conversion, board]);
   const newest = week?.weeks.find((entry) => !site || entry.siteId === site) ?? week?.weeks[0] ?? null;
   const competing = newest?.summary?.competing ?? null;
   const scorecard = newest?.summary?.scorecard ?? [];
@@ -150,6 +154,7 @@ export default function InsightsSummaryPage() {
         description={home ? (chosen ? t("descriptionPeriod", { company: home.company, period: nowWords }) : t("description", { company: home.company })) : undefined}
         action={<ReportDownloadAction report={board} label={t("downloadBoard")} />}
       />
+      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.summary", siteId: site, data: seesData }} />
       {newest ? (
         <StrategyNote verdict={newest.verdict} paragraphs={newest.summary?.paragraphs ?? []} writtenAt={newest.createdAt} points={findings.filter((finding) => finding.headline !== newest.verdict)} href={href} />
       ) : week !== undefined ? <Notice>{t("noWeek")}</Notice> : null}

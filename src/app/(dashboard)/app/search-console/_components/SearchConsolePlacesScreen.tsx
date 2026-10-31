@@ -19,6 +19,7 @@ import { ResultKindSwitch, SearchConsoleGate, hasFigures, canRetry, liveProblemK
 import { filePercent, formatRate, readerLanguage } from "./searchConsoleFormat";
 import { pageLabel, useLiveAsk, useRecordBack } from "./searchConsoleRecords";
 import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { SearchConsoleSees } from "./SearchConsoleSees";
 
 type Place = { key: string; name: string; clicks: number; impressions: number; share: number };
 
@@ -108,6 +109,12 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
       />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
+          {/* The eye, as on the record screens: no rule's words here, only this screen's own figures (sees-every-page-plan-2026-10-31.md). */}
+          <SearchConsoleSees
+            screen="record"
+            seen={null}
+            data={answer ? { [dimension === "query" ? "keyword" : "page"]: key, countries: countries ?? null, devices: devices ?? null } : undefined}
+          />
           <ResultKindSwitch />
           <DataTable
             rows={countryPages.pageRows}

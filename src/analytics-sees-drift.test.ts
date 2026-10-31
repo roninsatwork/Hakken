@@ -14,14 +14,15 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  *
  * The list is explicit, screen by screen as §15 numbers them. The states a
  * screen passes through carry their box in the same file: Not connected yet
- * (12, in `AnalyticsConnectCard`), Choose what counts (14) on Connection,
- * Nothing counted yet (16) on Conversions, a device asked of Google (17) on
+ * (12, in `AnalyticsConnectCard`), Nothing counted yet (16) on Conversions, a device asked of Google (17) on
  * Landing pages, Needs reconnecting (18) on Overview. Three have nothing to
  * read and carry none: Choose the property (13), The first 90 days coming in
  * (15) and the bell (19). Heroes and attention (3) was removed on
  * 2026-10-13 (Anthony: "remove the page please we don't need it"), and a
  * landing page's own screen (7) on 2026-10-14: every page opens the page's
- * own screen (landing-pages-flow-plan.md LF8).
+ * own screen (landing-pages-flow-plan.md LF8). Connection (11) and Choose
+ * what counts (14) lost theirs on 2026-10-31: connection pages carry no box
+ * (Anthony; sees-every-page-plan-2026-10-31.md).
  */
 const ANALYTICS = "src/app/(dashboard)/app/analytics";
 
@@ -42,7 +43,6 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, with every event, and 16 · Nothing counted yet
   `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
   `${ANALYTICS}/[siteId]/tracking-health/check/page.tsx`, // A tracking health check's own screen (ga-tracking-health-plan.md TH2)
-  `${ANALYTICS}/[siteId]/connection/page.tsx`, // 11 · Connection, and 14 · Choose what counts
   `${ANALYTICS}/_components/AnalyticsNotices.tsx`, // 12 · Not connected yet, on every page until connected
 ];
 

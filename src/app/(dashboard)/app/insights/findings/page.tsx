@@ -66,7 +66,7 @@ export default function InsightsAllFindingsPage() {
       <PageHeader icon={<ListChecks className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {all.length > 0 ? (
         <>
-          <HakkenSees says={says} steps={steps} />
+          <HakkenSees says={says} steps={steps} page={{ screen: "insights.findings", siteId: site, data: rows }} />
           <ChartCard title={t("overview.weekly")} hint={t("overview.weeklyHint")} exportName="insights-findings-by-week" csv={() => toCsv([t("overview.week"), ...series.map((entry) => entry.name)], weekRows.map((row) => [row.day, ...series.map((entry) => Number(row[entry.key] ?? 0))]))} enoughData={weekRows.length > 0}>
             <SiteBarChart data={weekRows} series={series} stacked labels={(value) => (value > 0 ? formatNumber(value) : null)} />
           </ChartCard>

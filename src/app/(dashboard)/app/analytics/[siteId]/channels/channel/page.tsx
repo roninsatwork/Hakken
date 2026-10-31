@@ -69,7 +69,7 @@ export default function AnalyticsChannelPage() {
       {status ? (
         <AnalyticsGate status={status} siteId={siteId}>
           <div className="flex flex-col gap-4">
-            <AnalyticsSees screen="channelPage" seen={top?.seen} currency={currency} names={(value) => (kinds.has(value) ? kindName(value) : null)} />
+            <AnalyticsSees screen="channelPage" seen={top?.seen} currency={currency} names={(value) => (kinds.has(value) ? kindName(value) : null)} data={{ figures: top, days }} />
             <ChannelFigures figures={top?.figures ?? null} assistants={assistants} />
             {assistants ? (
               // AI assistants by assistant over time, where they land, and how Google filed each (CH8).

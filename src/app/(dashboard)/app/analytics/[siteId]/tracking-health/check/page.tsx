@@ -73,7 +73,7 @@ function CheckBody({ status }: { status: AnalyticsStatus }) {
       {!health ? <Notice>{t("notYet")}</Notice> : !check || !known ? <Notice>{t("screen.unknown", { platformName })}</Notice> : (
         <>
           {/* The page's own box keeps the advice: a check's is worked out from the same checks, never saved twice. */}
-          <AnalyticsSees screen="trackingHealth" seen={trackingCheckSees(check, status.host)} currency={status.connection?.currency} keep={false} />
+          <AnalyticsSees screen="trackingHealth" seen={trackingCheckSees(check, status.host)} currency={status.connection?.currency} keep={false} data={{ check, checkedAt: health.checkedAt }} />
           {fixable && status.canManage ? (
             <div>
               <Button variant="quiet" className="px-3 py-2 text-[12px]" onClick={() => router.push(hrefFor("connection", { change: "1" }))}>

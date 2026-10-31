@@ -129,7 +129,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
         description={what ? t("descriptionWhat", { google: event, what }) : t("description", { google: event })}
         pills={answer?.counted ? <StatusLabel tone="success">{t("countsAsConversion")}</StatusLabel> : undefined}
       />
-      <AnalyticsSees screen="event" seen={answer?.seen} currency={currency} />
+      <AnalyticsSees screen="event" seen={answer?.seen} currency={currency} data={answer} />
 
       {figures ? (
         <FigureRow columns={4}>
