@@ -1,5 +1,6 @@
 "use client";
 
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { useQuery } from "convex/react";
 import { usePathname, useRouter } from "next/navigation";
 import type { FunctionReturnType } from "convex/server";
@@ -192,6 +193,8 @@ function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStat
   const nameOf = useEventName();
   const currency = status.connection?.currency ?? null;
   const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvents, args);
+  // Read for itself, so the page's eye is handed it here (sees-every-page-plan-2026-10-31.md).
+  useSeesPart("eventsTable", answer);
   const [search, setSearch, term] = useSiteSearch();
   const named: NamedRow[] | undefined = answer?.rows
     .filter((row) => every || row.counted)

@@ -1,5 +1,6 @@
 "use client";
 
+import { SeesStandIn } from "@/src/ui/components/screens/SeesStandIn";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarClock, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -134,6 +135,7 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
             <BingMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
+            <SeesStandIn section="bing" siteId={siteId} off={state === "NOT_CONNECTED"} />
             <PeriodDays siteId={siteId} period={period} newestDay={connection?.newestDay ?? null} newestWeek={connection?.newestWeek ?? null}>{children}</PeriodDays>
           </section>
         </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import type { Id } from "@/convex/_generated/dataModel";
+import { SeesStandIn } from "@/src/ui/components/screens/SeesStandIn";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Lightbulb } from "lucide-react";
@@ -76,6 +78,7 @@ export default function InsightsLayout({ children }: { children: React.ReactNode
             <aside className="lg:sticky lg:top-4 lg:self-start">
               <InsightsMenu />
             </aside>
+            <SeesStandIn section="insights" {...(site ? { siteId: site as Id<"companyWebsites"> } : {})} />
             <section className="flex min-w-0 flex-col gap-6">{children}</section>
           </div>
         )}

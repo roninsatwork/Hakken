@@ -1,5 +1,6 @@
 "use client";
 
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -352,6 +353,7 @@ export function ChannelsDailyChart() {
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChannelChart, status?.connection?.newestDay ? args : "skip");
+  useSeesPart("channelsByDay", chart);
   return (
     <ChannelsChart
       channels={chart?.channels ?? []}
@@ -377,6 +379,8 @@ export function CampaignsDailyChart() {
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsCampaignChart, status?.connection?.newestDay ? args : "skip");
+  // Read for itself, so the page's eye is handed it here (sees-every-page-plan-2026-10-31.md).
+  useSeesPart("taggedVisitsByDay", chart);
   return (
     <ChannelsChart
       channels={[t("visits")]}

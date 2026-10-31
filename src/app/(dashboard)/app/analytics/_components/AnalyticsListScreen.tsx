@@ -1,5 +1,6 @@
 "use client";
 
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAction, useConvex } from "convex/react";
@@ -159,7 +160,9 @@ export type ChannelTable = {
   kindName: (kind: string) => string;
 };
 
-export function AnalyticsTable({ list, channel, filed, kindName, group, move, plot = false, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head, nameOf, ofChannel }: {
+export function AnalyticsTable({ list, channel, filed, kindName, group, move, plot = false, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head, nameOf, ofChannel, seesPart }: {
+  /** The eye's name for this table's rows, where its page's own answer does not hold them (Channels; `useSeesPart`). */
+  seesPart?: string;
   /**
    * A channel's own landing pages or classifications (ga-channel-pages-plan.md
    * CH7): every device's, as they are kept; each page with its classification,
@@ -220,6 +223,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, move, pl
   const everyDevice = useSiteListPage(api.googleAnalyticsReads.analyticsListPage, live ? { ...base, device: "" } : "skip");
   const campaigns = list === "campaign" || list === "adKeyword";
   const shown = live ? everyDevice : paged;
+  useSeesPart(seesPart, shown.result);
   const currency = status?.connection?.currency ?? null;
   const plotted = usePlotted(shown.pageRows ?? [], plot && list === "page");
   const assistants = list === "source" && channel === AI_ASSISTANTS_CHANNEL;

@@ -32,6 +32,10 @@ Console, Bing Webmaster, Clarity, Visibility and Insights
 4. **Ask about this page** starts an Ask Hakken conversation told the page,
    its dates, its findings, its words and its figures.
 
+A table or chart that runs its own query hands its figures over with `useSeesPart("name", answer)`; the eye reads
+them beside the page's. A page with nothing to show yet still has the eye: the section's layout draws a stand-in
+(`SeesStandIn`) with the chat alone, which the page's own eye replaces.
+
 Bringing a new page to the eye is one entry in the screen list (writer, what it
 is, its parts, what it never talks about) and its figures passed to its eye
 piece. Anything not in the list falls back to its section's specialist.

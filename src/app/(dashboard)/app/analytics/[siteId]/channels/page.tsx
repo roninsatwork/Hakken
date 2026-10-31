@@ -54,6 +54,7 @@ export default function AnalyticsChannelsPage() {
             <ChannelsWorth top={top} />
             <AnalyticsTable
               list="channel"
+              seesPart="channelsTable"
               {...(chosen ? { group: chosen } : {})}
               kindName={kindName}
               noun="channels"

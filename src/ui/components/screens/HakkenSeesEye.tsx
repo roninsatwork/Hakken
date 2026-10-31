@@ -18,7 +18,7 @@ import { pageFindings } from "@/convex/utils/sees/pageFindings";
 import { seesScreenFor, seesWrites } from "@/convex/utils/sees/screens";
 import type { SeesAsk } from "./HakkenSees";
 import type { Id } from "@/convex/_generated/dataModel";
-import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen } from "./hakkenSeesStore";
+import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen, useSeesParts, withSeesParts } from "./hakkenSeesStore";
 
 /**
  * The eye in the top bar that opens What Hakken sees — option 7 on the
@@ -59,7 +59,9 @@ export function HakkenSeesEye() {
   // A page that handed over its own figures (sees-every-page-plan-2026-10-31.md): cut to what it shows first, and —
   // where pressing writes — asked of the team as a press, its links the rule's own steps and the page's.
   const page = box?.page;
-  const data = page?.data;
+  // Its panels that read their own figures (a table, a chart) add them under their names.
+  const held = useSeesParts();
+  const data = useMemo(() => withSeesParts(page?.data, held), [page?.data, held]);
   const pageData = useMemo(() => (data !== undefined ? pageDataFor(data) : null), [data]);
   // The website: the page's, else the one its figures are of (Insights opens on a website without naming it).
   const siteId = page?.siteId ?? (data !== undefined ? siteIdIn(data) : undefined);

@@ -253,3 +253,16 @@ Paths under `/app/`. R = rule words today; W = written in the page today; T = fu
   finding twice; a page with nothing kept the span before "rose from 0" (now left out as new, not risen).
   Bing is still not pressed for real: no website on the dev deployment has Bing connected.
 
+- 2026-10-31, **phase 4's two gaps closed** (Anthony: "Yes, fix both"):
+  - **Panels that read their own figures** now hand them to the page's eye: a panel names them with `useSeesPart`
+    (`src/ui/components/screens/hakkenSeesStore.ts`) and the eye reads them beside the page's own, under that name.
+    Wired: Channels' table (`channelsTable`), Channels' chart (`channelsByDay`), Campaigns' chart
+    (`taggedVisitsByDay`) and the Conversions events table (`eventsTable`). Their rows reach the findings, the writer
+    and the chat.
+  - **No vanishing eyes**: a sweep found about forty pages whose empty state hid the eye — the "collecting" gates of
+    Analytics, Search Console and Bing, the "no days of this period yet" notice, Search Console lists whose period
+    is not built, Bing pages with no span, and eighteen Insights pages that return an empty state early. Rather than
+    patch each, the section's layout draws a stand-in (`SeesStandIn`): the eye with the chat, no words and no
+    figures, so pressing writes nothing and costs nothing. A page's own eye replaces it, and an open panel stays open.
+    Never on a connection page, nor on a website not connected (its pages are the way to connect it), nor on a
+    Visibility page waiting for its list to be set up. Clarity needed none: every page already shows its eye.

@@ -1,5 +1,6 @@
 "use client";
 
+import { SeesStandIn } from "@/src/ui/components/screens/SeesStandIn";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarClock, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -122,6 +123,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             <SearchConsoleMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
+            <SeesStandIn section="searchConsole" siteId={siteId} off={state === "NOT_CONNECTED"} />
             <PeriodDays siteId={siteId} newestDay={connection?.newestDay ?? null}>{children}</PeriodDays>
           </section>
         </div>

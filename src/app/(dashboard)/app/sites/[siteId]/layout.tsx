@@ -1,5 +1,6 @@
 "use client";
 
+import { SeesStandIn } from "@/src/ui/components/screens/SeesStandIn";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Globe, Search, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -132,6 +133,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 {reading.needs && setupPaused(reading, site.counts) ? (
                   <Notice tone="warning">{ts(`${reading.needs}.paused`)}</Notice>
                 ) : null}
+                <SeesStandIn section="visibility" siteId={siteId} />
                 {children}
               </>
             )}

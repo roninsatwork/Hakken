@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HakkenSees } from "./HakkenSees";
 import { HakkenSeesEye } from "./HakkenSeesEye";
 import { PageHeader } from "./PageHeader";
-import { resetSees } from "./hakkenSeesStore";
+import { SeesStandIn, standInScreen } from "./SeesStandIn";
+import { resetSees, useSeesPart } from "./hakkenSeesStore";
 import { seenAdvice } from "@/convex/utils/hakkenSees";
 
 vi.mock("next-intl", async () => {
@@ -283,6 +284,24 @@ describe("HakkenSees and its eye", () => {
       await waitFor(() => expect(screen.getByText("ui.hakkenSees.askBelow")).toBeInTheDocument());
     });
 
+    it("hands over the figures a panel reads for itself, under the panel's name, and forgets them as it goes", async () => {
+      at.path = "/app/search-console/site_1/keywords";
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      const table = { rows: [{ key: "Organic Search", visits: 520 }, { key: "Direct", visits: 160 }, { key: "Email", visits: 120 }, { key: "Social", visits: 60 }] };
+      const Table = () => { useSeesPart("channelsTable", table); return null; };
+      const view = render(<><Paged /><Table /></>);
+      fireEvent.click(eye());
+      await waitFor(() => expect(askSees).toHaveBeenCalled());
+      expect(askSees.mock.calls[0]).toEqual([expect.objectContaining({
+        data: { rows: [{ key: "door handles", clicks: 840, ctrPercent: 7 }], channelsTable: table },
+      })]);
+      // Its findings speak of the panel's rows too.
+      expect(screen.getByText(/ui\.hakkenSees\.findings\.holdsMost Organic Search/)).toBeInTheDocument();
+      view.rerender(<Paged />);
+      expect(screen.queryByText(/Organic Search/)).toBeNull();
+    });
+
     it("a page whose words are the team's weekly ones writes nothing when pressed", async () => {
       const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
       vi.mocked(useMutation).mockReturnValue(askSees as never);
@@ -295,6 +314,42 @@ describe("HakkenSees and its eye", () => {
       fireEvent.click(eye());
       expect(screen.getByText(says.join(" "))).toBeInTheDocument();
       expect(askSees).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a page that put up no eye itself (sees-every-page-plan-2026-10-31.md: no vanishing eyes)", () => {
+    it("still has its section's eye, which points to the chat and writes nothing when pressed", async () => {
+      at.path = "/app/search-console/site_1/almost-there";
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      render(<><HakkenSeesEye /><SeesStandIn section="searchConsole" siteId={"site_1" as never} /></>);
+      fireEvent.click(eye());
+      await waitFor(() => expect(screen.getByText("ui.hakkenSees.askBelow")).toBeInTheDocument());
+      expect(askSees).not.toHaveBeenCalled();
+    });
+
+    it("gives way to the page's own eye, staying open as it does", () => {
+      at.path = "/app/search-console/site_1/almost-there";
+      const view = render(<><HakkenSeesEye /><SeesStandIn section="searchConsole" /></>);
+      fireEvent.click(eye());
+      view.rerender(<><HakkenSeesEye /><SeesStandIn section="searchConsole" /><HakkenSees says={says} steps={[]} advice="rule" /></>);
+      expect(bubble()).not.toBeNull();
+      expect(screen.getByText(says.join(" "))).toBeInTheDocument();
+    });
+
+    it("is never on a connection page, nor on a website not connected", () => {
+      at.path = "/app/analytics/site_1/connection";
+      const view = render(<><HakkenSeesEye /><SeesStandIn section="googleAnalytics" /></>);
+      expect(screen.queryByRole("button", { name: "ui.hakkenSees.title Hakken" })).toBeNull();
+      at.path = "/app/analytics/site_1/channels";
+      view.rerender(<><HakkenSeesEye /><SeesStandIn section="googleAnalytics" off /></>);
+      expect(screen.queryByRole("button", { name: "ui.hakkenSees.title Hakken" })).toBeNull();
+    });
+
+    it("names the page by its address, for what the chat is told", () => {
+      expect(standInScreen("searchConsole", "/app/search-console/site_1/almost-there", "site_1")).toBe("searchConsole.almostThere");
+      expect(standInScreen("googleAnalytics", "/app/analytics/site_1", "site_1")).toBe("googleAnalytics.overview");
+      expect(standInScreen("insights", "/app/insights/page-reviews/page")).toBe("insights.pageReviewsPage");
     });
   });
 

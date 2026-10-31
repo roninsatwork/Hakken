@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { closeSees, noteSeesThread, resetSees, toggleSees, useSeesThread } from "./hakkenSeesStore";
+import { closeSees, noteSeesThread, resetSees, toggleSees, useSeesThread, withSeesParts } from "./hakkenSeesStore";
 
 /**
  * The eye's panel and its conversation (ask-hakken-every-chart-plan-2026-10-31.md, §2b; Anthony: "every time we press
@@ -20,5 +20,21 @@ describe("the eye's panel conversation", () => {
     expect(result.current).toBe("threads_1");
     act(() => toggleSees());
     expect(result.current).toBeNull();
+  });
+});
+
+/** A panel's own figures join its page's (sees-every-page-plan-2026-10-31.md, phase 4's gaps). */
+describe("a page's figures with its panels' own", () => {
+  const table = { rows: [{ key: "Direct", visits: 40 }] };
+
+  it("sit beside the page's answer's parts, or beside a list as `page`", () => {
+    expect(withSeesParts({ figures: { visits: 3 } }, { channelsTable: table })).toEqual({ figures: { visits: 3 }, channelsTable: table });
+    expect(withSeesParts([{ key: "a" }], { channelsTable: table })).toEqual({ page: [{ key: "a" }], channelsTable: table });
+  });
+
+  it("leave a page as it is with no panels, and a page that handed over nothing with nothing", () => {
+    const answer = { figures: { visits: 3 } };
+    expect(withSeesParts(answer, {})).toBe(answer);
+    expect(withSeesParts(undefined, { channelsTable: table })).toBeUndefined();
   });
 });

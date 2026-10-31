@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { HakkenSeesStep, SeesAsk, SeesPage } from "./HakkenSees";
 
 /**
@@ -50,7 +50,8 @@ const useStore = <T>(read: () => T, onServer: () => T) => useSyncExternalStore(s
 /** The box the screen has published, or null as it leaves: called by `HakkenSees`. A screen leaving clears only its own. */
 export function publishSees(box: SeesBox | null, leaving?: string) {
   if (box) {
-    if (current?.screen !== box.screen) open = false;
+    // The stand-in open on this screen stays open as the page's own box replaces it.
+    if ((current ?? standIn)?.screen !== box.screen) open = false;
     current = box;
   } else if (!leaving || current?.screen === leaving) {
     current = null;
@@ -59,8 +60,26 @@ export function publishSees(box: SeesBox | null, leaving?: string) {
   changed();
 }
 
+/**
+ * A section's stand-in (`SeesStandIn`): the eye on a page of the section that put none up itself — nothing collected
+ * yet, no days of the period yet, nothing to list (sees-every-page-plan-2026-10-31.md: "No vanishing eyes"). It says
+ * nothing and has no figures, so pressing writes nothing; the chat is there. A page's own box always wins.
+ */
+let standIn: SeesBox | null = null;
+
+export function publishSeesStandIn(box: SeesBox | null, leaving?: string) {
+  if (box) {
+    if (!current && standIn?.screen !== box.screen) open = false;
+    standIn = box;
+  } else if (!leaving || standIn?.screen === leaving) {
+    if (!current) open = false;
+    standIn = null;
+  }
+  changed();
+}
+
 export function useSeesBox(): SeesBox | null {
-  return useStore(() => current, () => null);
+  return useStore(() => current ?? standIn, () => null);
 }
 
 export function useSeesOpen(): boolean {
@@ -147,12 +166,54 @@ export function useDrawsEye(id: string): boolean {
   return useStore(() => claims[0] === id, () => false);
 }
 
+/**
+ * Figures a panel reads for itself, inside a page that hands the eye its own (sees-every-page-plan-2026-10-31.md,
+ * phase 4's gaps): Channels' table, Campaigns' chart, Conversions' events table each run their own query, so the
+ * page's answer never held them. A panel names its figures here while it is on screen, and the eye reads them as part
+ * of the page's figures, under that name. Held apart from the box, so a panel's figures arriving never republish it.
+ */
+let parts: Readonly<Record<string, unknown>> = {};
+
+/** A panel's figures for the eye, under `name`, while it is on screen; nothing while they load or without a name. */
+export function useSeesPart(name: string | undefined, data: unknown) {
+  useEffect(() => {
+    if (!name || data === undefined || data === null) return;
+    parts = { ...parts, [name]: data };
+    changed();
+    return () => {
+      // A panel's later figures under the same name have already replaced these: leave them.
+      if (parts[name] !== data) return;
+      const { [name]: _gone, ...rest } = parts;
+      parts = rest;
+      changed();
+    };
+  }, [name, data]);
+}
+
+/** The figures panels have named, the same object until one changes. */
+export function useSeesParts(): Readonly<Record<string, unknown>> {
+  return useStore(() => parts, () => NO_PARTS);
+}
+const NO_PARTS: Readonly<Record<string, unknown>> = {};
+
+/**
+ * A page's figures with its panels' own: beside the page's answer's parts, or — where the answer is a list or a number
+ * — beside it as `page`. A page that handed over nothing keeps nothing: a panel speaks only through its page.
+ */
+export function withSeesParts(data: unknown, held: Readonly<Record<string, unknown>>): unknown {
+  if (data === undefined || data === null || Object.keys(held).length === 0) return data;
+  if (typeof data === "object" && !Array.isArray(data)) return { ...(data as Record<string, unknown>), ...held };
+  return { page: data, ...held };
+}
+
 /** Everything forgotten: for tests. */
 export function resetSees() {
   current = null;
+  standIn = null;
   open = false;
   claims = [];
   asked = null;
+  parts = {};
   readKept.clear();
   changed();
 }
