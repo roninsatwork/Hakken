@@ -24,7 +24,8 @@ export function AnswerChart({ chart }: { chart: Chart }) {
   const page = chart.page ? pathOf(chart.page) : null;
   // An Analytics chart of one conversion names it as Google does, in plain words; Search Console's names its page.
   const event = chart.event ? chart.event.replace(/_/g, " ") : null;
-  const title = event && (chart.measure === "conversions" || chart.measure === "conversionRate")
+  const title = chart.event === "purchase" && chart.measure === "conversionRate" ? t("titlePurchase")
+    : event && (chart.measure === "conversions" || chart.measure === "conversionRate")
     ? t(`titleEvent.${chart.measure}`, { event: chart.measure === "conversions" ? event.charAt(0).toUpperCase() + event.slice(1) : event })
     : page ? t(`titlePage.${chart.measure}` as "titlePage.visitors", { page }) : t(`title.${chart.measure}`);
   const named = (from: string, to: string) => wholeMonth(from, to, locale) ?? t("span", { from: formatShortDay(from), to: formatShortDay(to) });

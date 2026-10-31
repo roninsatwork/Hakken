@@ -120,6 +120,8 @@ export function HakkenTasksScreen({
     const time = locale.startsWith("en") ? clockOf(row.timeOfDay) : row.timeOfDay;
     const channels = listed.charAt(0).toUpperCase() + listed.slice(1);
     // A weekly report says its day: "Hakken and email, Mondays 9am" (item 4.1).
+    // A chart sent once says its date (sees-side-panel-plan-2026-10-31.md, phase 5).
+    if (row.report?.look === "analyticsChart" && row.report.every === "once" && row.report.sendOn) return t("hear.once", { channels, date: dayDate(row.report.sendOn), time });
     return row.report
       ? t("hear.weekly", { channels, weekday: t(`weekdaysPlural.${row.report.weekday}` as "weekdaysPlural.1"), time })
       : t("hear.at", { channels, time });

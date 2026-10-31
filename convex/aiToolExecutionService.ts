@@ -83,6 +83,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.tasks.propose",
   // A weekly report, proposed the same way (item 4.1).
   "assistant.tasks.proposeReport",
+  // A chart sent at a time, proposed the same way (sees-side-panel-plan, phase 5).
+  "assistant.tasks.proposeChartReport",
   // Alerts on AI answers and Google rankings, proposed the same way (item 4.3).
   "assistant.tasks.proposeAnswerAlert",
   "assistant.tasks.proposeRankingAlert",

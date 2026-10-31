@@ -1,4 +1,6 @@
 import type { EmailContent } from "./emailLayoutService";
+import type { EmailPicture } from "./utils/emailPictures";
+import { TASK_CHART_CID } from "./taskAlertEmail";
 import { emailWording } from "./utils/emailWording";
 import { signed } from "./utils/hakkenReports";
 import { clockOf } from "./utils/hakkenTaskTiming";
@@ -16,8 +18,10 @@ export function buildTaskReportEmail(args: {
   language: string;
   brand: { platformName: string; appUrl: string };
   payload: Record<string, unknown>;
-}): { subject: string; content: EmailContent } | { skip: string } {
+}): { subject: string; content: EmailContent; pictures?: EmailPicture[] } | { skip: string } {
   const { brand, payload } = args;
+  // A chart sent at a time (2026-10-31) is its own email: its bars, its figure, and the period before.
+  if (payload.look === "analyticsChart") return buildTaskChartEmail(args);
   const wording = emailWording(args.language);
   const words = wording.taskReport;
   const pages = pagesOf(payload.pages);
@@ -60,4 +64,50 @@ function pagesOf(value: unknown): Array<{ page: string; now: number; change: num
   const pages = value.filter((entry): entry is { page: string; now: number; change: number } =>
     Boolean(entry) && typeof entry.page === "string" && typeof entry.now === "number" && typeof entry.change === "number");
   return pages.length === value.length ? pages : null;
+}
+
+/**
+ * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5): its whole period's figure big — the visits,
+ * the conversions, or the share of visits that converted — the days it covers and the period before, the days as
+ * bars in a picture that travels with the email, and the way to Google Analytics. Built from the figures read when
+ * it was sent.
+ */
+export function buildTaskChartEmail(args: {
+  language: string;
+  brand: { platformName: string; appUrl: string };
+  payload: Record<string, unknown>;
+}): { subject: string; content: EmailContent; pictures: EmailPicture[] } | { skip: string } {
+  const { brand, payload } = args;
+  const wording = emailWording(args.language);
+  const words = wording.taskChart;
+  const day = (value: unknown) => (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
+  const from = day(payload.from);
+  const to = day(payload.to);
+  const measure = payload.measure === "conversions" || payload.measure === "conversionRate" ? payload.measure : "visits";
+  const values = Array.isArray(payload.values) && payload.values.length <= 400 && payload.values.every((value) => typeof value === "number") ? payload.values as number[] : null;
+  if (!from || !to || !values || values.length === 0 || typeof payload.website !== "string" || typeof payload.figure !== "number") return { skip: "It says nothing of what the chart showed." };
+  const event = typeof payload.event === "string" ? payload.event : undefined;
+  const once = payload.every === "once";
+  const weekday = typeof payload.weekday === "number" ? payload.weekday : 1;
+  const timeOfDay = typeof payload.timeOfDay === "string" ? payload.timeOfDay : "09:00";
+  const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
+  const shown = (value: number) => (measure === "conversionRate"
+    ? `${value.toLocaleString(wording.dateLocale, { maximumFractionDigits: 1 })}%`
+    : Math.round(value).toLocaleString(wording.dateLocale));
+  const said = (on: string) => new Date(`${on}T12:00:00Z`).toLocaleDateString(wording.dateLocale, { day: "numeric", month: "long", timeZone: "UTC" });
+  const title = words.title({ measure, ...(event ? { event } : {}) });
+  return {
+    subject: words.subject({ title, figure: shown(payload.figure) }),
+    content: {
+      kind: `${words.kind({ once, weekday })} · ${payload.website}`,
+      figure: shown(payload.figure),
+      verdict: words.figureIs({ measure }),
+      lede: words.span({ from: said(from), to: said(to) }),
+      picture: { cid: TASK_CHART_CID, alt: words.alt({ title, days: values.length }), from: said(from), to: said(to) },
+      ...(typeof payload.figureBefore === "number" ? { paragraphs: [words.before({ figure: shown(payload.figureBefore) })] } : {}),
+      actions: [{ label: words.open, url: `${brand.appUrl}${link}`, emphasis: "primary" }],
+      quiet: [words.youAsked({ once, weekday, time: args.language.startsWith("en") ? clockOf(timeOfDay) : timeOfDay, platformName: brand.platformName })],
+    },
+    pictures: [{ cid: TASK_CHART_CID, bars: { values, marked: values.map(() => false) } }],
+  };
 }

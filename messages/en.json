@@ -8244,7 +8244,21 @@
             "5": "Friday",
             "6": "Saturday",
             "7": "Sunday"
-          }
+          },
+          "once": "{date} at {time}",
+          "covers": "It covers",
+          "coversWhat": "{period}, against {before}",
+          "chartNewest": "It uses the newest figures saved on the day it goes, not today’s",
+          "chartSet": "You’re all set: I’ll send it when it’s due",
+          "chart": {
+            "visits": "A chart of visits",
+            "conversions": "A chart of conversions",
+            "conversionsOf": "A chart of {event} each day",
+            "conversionRate": "A chart of the share of visits that converted",
+            "conversionRateOf": "A chart of the share of visits that did {event}",
+            "conversionRatePurchase": "A chart of the share of visits that made a purchase"
+          },
+          "chartHint": "Want something different? Just tell me, like “make it 9am” or “every Monday instead”."
         },
         "research": {
           "lookInto": "I’ll look into",
@@ -8285,7 +8299,7 @@
           "impressions": "Times shown in Google each day",
           "visits": "Visits each day",
           "conversions": "Conversions each day",
-          "conversionRate": "Visits that converted each day, in every hundred"
+          "conversionRate": "Share of visits that converted each day"
         },
         "titlePage": {
           "visitors": "Visitors to {page} from Google each day",
@@ -8295,9 +8309,10 @@
         "span": "{from} to {to}",
         "titleEvent": {
           "conversions": "{event} each day",
-          "conversionRate": "Visits that did {event} each day, in every hundred"
+          "conversionRate": "Share of visits that did {event} each day"
         },
-        "openAnalytics": "Open in Google Analytics"
+        "openAnalytics": "Open in Google Analytics",
+        "titlePurchase": "Share of visits that made a purchase each day"
       }
     },
     "costs": {
@@ -9388,7 +9403,8 @@
       "email": "email",
       "telegram": "Telegram",
       "at": "{channels}, {time}",
-      "weekly": "{channels}, {weekday} {time}"
+      "weekly": "{channels}, {weekday} {time}",
+      "once": "{channels}, {date} {time}"
     },
     "states": {
       "ON": "On",

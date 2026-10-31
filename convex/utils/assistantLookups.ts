@@ -48,6 +48,8 @@ const LOOKUP_KINDS: Record<string, Lookup["kind"]> = {
   "assistant.tasks.proposeAnswerAlert": "aiMentions",
   // A report's proposal reads this week's pages (4.1).
   "assistant.tasks.proposeReport": "searchConsole",
+  // A chart sent at a time reads Google Analytics' days (sees-side-panel-plan, phase 5).
+  "assistant.tasks.proposeChartReport": "googleAnalytics",
   // A chart reads Search Console's days (hakken-tasks-plan.md, 2.1).
   "assistant.chart": "searchConsole",
 };

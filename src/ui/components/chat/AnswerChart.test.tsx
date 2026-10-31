@@ -70,7 +70,7 @@ describe("a chart under an answer", () => {
 
   it("draws Google Analytics' days too: one conversion named as Google names it, linked to Analytics (2026-10-31)", () => {
     renderWithProviders(<AnswerChart chart={{ ...september, look: "analyticsDays", measure: "conversionRate", event: "add_to_cart", link: "/app/analytics/companyWebsites_1/conversions?period=lastMonth" }} />);
-    expect(screen.getByRole("figure", { name: "Visits that did add to cart each day, in every hundred" })).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: "Share of visits that did add to cart each day" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open in Google Analytics" })).toHaveAttribute("href", "/app/analytics/companyWebsites_1/conversions?period=lastMonth");
   });
 });

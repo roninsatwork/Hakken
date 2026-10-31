@@ -8244,7 +8244,21 @@
             "5": "venerdì",
             "6": "sabato",
             "7": "domenica"
-          }
+          },
+          "once": "{date} alle {time}",
+          "covers": "Riguarda",
+          "coversWhat": "{period}, rispetto a {before}",
+          "chartNewest": "Usa i dati più recenti salvati il giorno dell’invio, non quelli di oggi",
+          "chartSet": "Tutto pronto: lo invierò quando è il momento",
+          "chart": {
+            "visits": "Un grafico delle visite",
+            "conversions": "Un grafico delle conversioni",
+            "conversionsOf": "Un grafico di {event} ogni giorno",
+            "conversionRate": "Un grafico della quota di visite che hanno convertito",
+            "conversionRateOf": "Un grafico della quota di visite che hanno fatto {event}",
+            "conversionRatePurchase": "Un grafico della quota di visite con un acquisto"
+          },
+          "chartHint": "Vuoi qualcosa di diverso? Dimmelo, ad esempio “alle 9” o “ogni lunedì invece”."
         },
         "research": {
           "lookInto": "Approfondirò",
@@ -8285,7 +8299,7 @@
           "impressions": "Volte in cui è apparso su Google ogni giorno",
           "visits": "Visite al giorno",
           "conversions": "Conversioni al giorno",
-          "conversionRate": "Visite che hanno convertito al giorno, su cento"
+          "conversionRate": "Quota di visite che hanno convertito, al giorno"
         },
         "titlePage": {
           "visitors": "Visitatori di {page} da Google ogni giorno",
@@ -8295,9 +8309,10 @@
         "span": "dal {from} al {to}",
         "titleEvent": {
           "conversions": "{event} al giorno",
-          "conversionRate": "Visite che hanno fatto {event} al giorno, su cento"
+          "conversionRate": "Quota di visite che hanno fatto {event}, al giorno"
         },
-        "openAnalytics": "Apri in Google Analytics"
+        "openAnalytics": "Apri in Google Analytics",
+        "titlePurchase": "Quota di visite con un acquisto, al giorno"
       }
     },
     "costs": {
@@ -9388,7 +9403,8 @@
       "email": "email",
       "telegram": "Telegram",
       "at": "{channels}, alle {time}",
-      "weekly": "{channels}, {weekday} alle {time}"
+      "weekly": "{channels}, {weekday} alle {time}",
+      "once": "{channels}, {date} {time}"
     },
     "states": {
       "ON": "Attiva",

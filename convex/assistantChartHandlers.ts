@@ -1,8 +1,9 @@
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
-import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
-import { isCalendarPeriod } from "./utils/calendarPeriods";
+import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, mainConversionAt, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
+import { isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * The Assistant's chart (docs/plans/active/hakken-tasks-plan.md, item 2.1),
@@ -126,6 +127,18 @@ export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecuti
  * before where Analytics keeps it as days. The figures are the reads' own, worked out in code.
  */
 async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown> {
+  const found = await analyticsChartFor(input);
+  return found.ok ? found.answer : found;
+}
+
+/**
+ * The same chart, and the website it is of, for a chart sent at a time (phase 5): the proposal shows what it would
+ * hold today, and keeps the website for the task.
+ */
+export async function analyticsChartFor(input: ToolHandlerExecutionInput): Promise<
+  | { ok: false; problem: string }
+  | { ok: true; siteId: Id<"companyWebsites">; host: string; period: CalendarPeriod; measure: AnalyticsChartMeasure; event?: string; chart: AnswerChart; answer: Record<string, unknown> }
+> {
   const website = text(input.args, "website");
   if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
   const measure = (text(input.args, "measure") ?? "visits") as AnalyticsChartMeasure;
@@ -133,8 +146,11 @@ async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown
   const period = text(input.args, "period") ?? "lastMonth";
   if (!isCalendarPeriod(period)) return { ok: false, problem: "period is one of thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months, last12Months." };
   const read = await input.ctx.runQuery(internal.assistantAnalyticsCharts.analyticsChartInternal, { companyId: input.companyId!, website, period });
-  if (!read.ok) return { ok: false, problem: read.problem };
-  const event = measure === "visits" ? undefined : text(input.args, "event");
+  if (!read.ok) return { ok: false, problem: read.problem ?? "That website has no Google Analytics days yet." };
+  // A rate is always of one conversion: the one named, else the page's own (a shop's purchase, else the biggest).
+  const named = measure === "visits" ? undefined : text(input.args, "event");
+  const main = measure === "conversionRate" && !named ? mainConversionAt(read.events, read.points) : null;
+  const event = named ?? (main !== null ? read.events[main] : undefined);
   const eventAt = event ? read.events.indexOf(event) : null;
   if (event && eventAt === -1) return { ok: false, problem: `${event} is not one of the conversions this website counts: ${read.events.join(", ")}.` };
   const days = analyticsChartValues(read.points, measure, eventAt);
@@ -160,7 +176,7 @@ async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown
     link,
   };
   const total = measure === "conversionRate" ? undefined : sum(days);
-  return {
+  const answer = {
     ok: true,
     website: read.host,
     measure: measure === "visits" ? "visits" : measure === "conversions" ? `conversions${event ? ` (${event})` : ""}` : `share of visits that converted${event ? ` (${event})` : ""}, in percent`,
@@ -172,4 +188,5 @@ async function analyticsChart(input: ToolHandlerExecutionInput): Promise<unknown
     note: `The chart is drawn under your answer from these figures, with a link to the screen. Write ${CHART_MARK} on a line of its own where it belongs, after the sentences it illustrates; don't list the days or describe the chart.`,
     chart,
   };
+  return { ok: true, siteId: read.siteId, host: read.host, period, measure, ...(event ? { event } : {}), chart, answer };
 }

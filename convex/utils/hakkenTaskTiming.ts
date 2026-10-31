@@ -70,6 +70,12 @@ export function nextTaskRun(timeOfDay: string, timeZone: string, now: number): n
   return instantOf({ year: tomorrow.getUTCFullYear(), month: tomorrow.getUTCMonth() + 1, day: tomorrow.getUTCDate(), hour, minute }, zone);
 }
 
+/** The day a moment falls on in a zone, `YYYY-MM-DD`. */
+export function dayIn(at: number, timeZone: string): string {
+  const wall = wallClock(at, taskTimeZone(timeZone));
+  return `${wall.year}-${String(wall.month).padStart(2, "0")}-${String(wall.day).padStart(2, "0")}`;
+}
+
 /** The weekday a moment falls on in a zone: 1 Monday … 7 Sunday. */
 export function weekdayIn(at: number, timeZone: string): number {
   const name = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: taskTimeZone(timeZone) }).format(new Date(at));
@@ -80,9 +86,15 @@ export function weekdayIn(at: number, timeZone: string): number {
  * When a task next runs: an alert at its owner's time each day; a weekly
  * report at that time on its weekday (item 4.1).
  */
-export function nextRunOf(task: { timeOfDay: string; timeZone: string; report?: { every: "week"; weekday: number } }, now: number): number {
+export function nextRunOf(task: { timeOfDay: string; timeZone: string; report?: { every: "week" | "once"; weekday: number; sendOn?: string } }, now: number): number {
   let next = nextTaskRun(task.timeOfDay, task.timeZone, now);
   if (!task.report) return next;
+  // A chart sent once (2026-10-31): the owner's time on its day — never before it, and once that day has passed, next.
+  if (task.report.every === "once") {
+    const sendOn = task.report.sendOn;
+    for (let tries = 0; sendOn && tries < 400 && dayIn(next, task.timeZone) < sendOn; tries += 1) next = nextTaskRun(task.timeOfDay, task.timeZone, next);
+    return next;
+  }
   for (let tries = 0; tries < 7 && weekdayIn(next, task.timeZone) !== task.report.weekday; tries += 1) {
     next = nextTaskRun(task.timeOfDay, task.timeZone, next);
   }

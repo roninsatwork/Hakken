@@ -14,6 +14,7 @@ export type TaskProposal = Infer<typeof hakkenTaskProposalValidator>;
 const PROPOSING = new Set([
   "assistant.tasks.propose",
   "assistant.tasks.proposeReport",
+  "assistant.tasks.proposeChartReport",
   "assistant.tasks.proposeAnswerAlert",
   "assistant.tasks.proposeRankingAlert",
   "assistant.tasks.proposeResearch",

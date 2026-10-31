@@ -5,7 +5,10 @@ import { shiftDay } from "./searchConsoleDays";
 import { reportCount, reportTitle, weekdayOf } from "./utils/hakkenReports";
 import { answerTitle, engineName, engineOf, rankingTitle, type AiEngine } from "./utils/hakkenWatches";
 import { TRIAL_DAYS, pathOf, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
-import { taskTimeOfDay } from "./utils/hakkenTaskTiming";
+import { DEFAULT_TASK_TIME_ZONE, dayIn, taskTimeOfDay } from "./utils/hakkenTaskTiming";
+import { analyticsChartFor } from "./assistantChartHandlers";
+import { CHART_MARK } from "./utils/assistantCharts";
+import { chartReportTitle } from "./utils/hakkenChartReport";
 
 /**
  * The Assistant's Hakken task tools (docs/plans/active/hakken-tasks-plan.md,
@@ -44,6 +47,22 @@ function ruleOf(args: Record<string, unknown>): { measure: TaskMeasure; conditio
   if (op === "dropBy" && value > 100) return { problem: "A drop can be at most 100%." };
   const days = Math.min(14, Math.max(1, Math.round(number(args, "days") ?? 1)));
   return { measure, condition: { op: op as TaskCondition["op"], value, days } };
+}
+
+/**
+ * The day a chart goes, from the model's words: once on today, tomorrow or a date, or every week on a weekday.
+ * Today and tomorrow are the default time zone's (the person's own is known only on their yes).
+ */
+function chartDay(day: string | undefined, every: "once" | "week", weekday: unknown): { sendOn?: string; weekday: number } | { problem: string } {
+  if (every === "week") return { weekday: weekdayOf(weekday ?? day) };
+  const today = dayIn(Date.now(), DEFAULT_TASK_TIME_ZONE);
+  const said = (day ?? "tomorrow").toLowerCase();
+  const sendOn = said === "today" ? today : said === "tomorrow" ? shiftDay(today, 1) : /^\d{4}-\d{2}-\d{2}$/.test(said) ? said : null;
+  if (!sendOn) return { problem: "Say the day it goes: today, tomorrow or a date as YYYY-MM-DD; or every: week with a weekday." };
+  if (sendOn < today) return { problem: `${sendOn} has passed; today is ${today}.` };
+  if (sendOn > shiftDay(today, 366)) return { problem: "A chart can be set up to a year ahead." };
+  const noon = new Date(`${sendOn}T12:00:00Z`).getUTCDay();
+  return { sendOn, weekday: noon === 0 ? 7 : noon };
 }
 
 /** How a new task tells its owner: the bell, email unless they turned it off, and Telegram once they have linked it (item 6.1). */
@@ -150,6 +169,49 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
         title: reportTitle(report, "visitors"),
         measure: "visitors",
         target: resolved.target,
+        report,
+        timeOfDay: taskTimeOfDay(text(input.args, "time")),
+        channels: await channelsOf(input.ctx, input.userId),
+        price: (await pricesOf(input.ctx)).taskReports,
+      },
+    };
+  },
+
+  /**
+   * A chart sent at a time, written out for a yes (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a
+   * chart at 10am tomorrow with my new conversion rates … this is handle tasks"): Google Analytics' visits,
+   * conversions or the share of visits that converted, once on a day or every week, with the chart as it would be
+   * today drawn under the offer. Its day is worked out in the default time zone; the yes keeps the person's own.
+   */
+  "assistant.tasks.proposeChartReport": async (input) => {
+    if (!input.companyId) return NO_COMPANY;
+    if (!input.userId) return NO_PERSON;
+    const every: "once" | "week" = text(input.args, "every") === "week" ? "week" : "once";
+    const when = chartDay(text(input.args, "day"), every, input.args.weekday);
+    if ("problem" in when) return { ok: false, problem: when.problem };
+    const period = text(input.args, "period") ?? (every === "week" ? "lastWeek" : "lastMonth");
+    const found = await analyticsChartFor({ ...input, args: { ...input.args, period } });
+    if (!found.ok) return { ok: false, problem: found.problem };
+    const report = {
+      look: "analyticsChart" as const,
+      measure: found.measure,
+      ...(found.event ? { event: found.event } : {}),
+      period: found.period,
+      every,
+      weekday: when.weekday,
+      ...(when.sendOn ? { sendOn: when.sendOn } : {}),
+    };
+    const { chart, answer } = found;
+    return {
+      ...answer,
+      note:
+        `The chart is written out under your reply for a yes, with two buttons, “Yes, send it” and “Not now”; nothing is sent until they tap yes. When it is sent it covers ${found.period} as of that day, so its figures will be newer than today's. Above it is the chart as it would look today: write ${CHART_MARK} on a line of its own where it belongs. In one or two warm sentences, say what today's shows and that they just need to say yes. Don't repeat the offer's lines.`,
+      chart,
+      proposal: {
+        action: "CREATE",
+        status: "PENDING",
+        title: chartReportTitle(report),
+        target: { companyWebsiteId: found.siteId, website: found.host },
         report,
         timeOfDay: taskTimeOfDay(text(input.args, "time")),
         channels: await channelsOf(input.ctx, input.userId),

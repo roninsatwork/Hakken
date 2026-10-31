@@ -47,7 +47,7 @@ export const hakkenTaskTargetValidator = v.object({
  * Monday to Sunday, against the week before — Search Console's own Pages
  * list — every week on `weekday` (1 Monday … 7 Sunday) at the owner's time.
  */
-export const hakkenTaskReportValidator = v.object({
+export const hakkenTaskPagesReportValidator = v.object({
   look: v.literal("pagesChange"),
   direction: v.union(v.literal("lost"), v.literal("gained")),
   /** How many pages: 3 to 10. */
@@ -55,6 +55,27 @@ export const hakkenTaskReportValidator = v.object({
   every: v.literal("week"),
   weekday: v.number(),
 });
+
+/**
+ * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
+ * with my new conversion rates … this is handle tasks"): Google Analytics' visits, conversions (every one or one
+ * event's) or the share of visits that converted, each day of a calendar period against the period before — once
+ * on `sendOn` at the owner's time, or every week on `weekday`.
+ */
+export const hakkenTaskChartReportValidator = v.object({
+  look: v.literal("analyticsChart"),
+  measure: v.union(v.literal("visits"), v.literal("conversions"), v.literal("conversionRate")),
+  event: v.optional(v.string()),
+  /** One of the screens' calendar periods: lastWeek, lastMonth… */
+  period: v.string(),
+  every: v.union(v.literal("week"), v.literal("once")),
+  /** 1 Monday … 7 Sunday: the day it goes every week, or the day of `sendOn`. */
+  weekday: v.number(),
+  /** For a chart sent once, its day, `YYYY-MM-DD` in the owner's time zone. */
+  sendOn: v.optional(v.string()),
+});
+
+export const hakkenTaskReportValidator = v.union(hakkenTaskPagesReportValidator, hakkenTaskChartReportValidator);
 
 /**
  * An alert on an AI engine's answers to one of the company's tracked questions

@@ -14,6 +14,10 @@ import { YOUR_PAGES_COPY, YOUR_PAGES_FIELDS } from "./holdPages";
 import { encodeCopyRows } from "./utils/copyColumns";
 import { keyedRead } from "./utils/agentTools";
 import { factsByKey } from "./utils/insightFacts";
+import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
+import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
+import { renderOutboxRow } from "./outboxTemplates";
+import { chartFromToolCalls } from "./utils/assistantCharts";
 
 /**
  * What the Google Analytics screens read (docs/plans/active/google-analytics-plan.md
@@ -854,5 +858,54 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
   test("only the caller's own website", async () => {
     const { siteId, rival } = await collectedRoutes();
     await expect(rival.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" })).rejects.toThrow();
+  });
+});
+
+/**
+ * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
+ * with my new conversion rates … this is handle tasks"): Ask Hakken offers it with today's chart drawn under the
+ * offer, a yes makes it a task for that day and time, and on its day it is read from the saved days and sent.
+ */
+describe("a chart sent at a time", () => {
+  test("offered with today's chart, set up on a yes, sent on its day from the saved days, then paused", async () => {
+    const { t, siteId, adminId } = await collectedGrowing();
+    const companyId = (await t.run((ctx) => ctx.db.get(siteId)))!.companyId;
+    type Call = (reference: unknown, args: unknown) => Promise<unknown>;
+    const loose = t as unknown as { query: Call; mutation: Call; action: Call };
+    const ctx = { runQuery: loose.query, runMutation: loose.mutation, runAction: loose.action } as unknown as ToolHandlerExecutionInput["ctx"];
+    const offer = (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeChartReport"]({
+      ctx, handlerMapping: "assistant.tasks.proposeChartReport", companyId, userId: adminId,
+      args: { website: "acme-shop.test", measure: "conversionRate", day: "tomorrow", time: "10:00" },
+    })) as { ok: boolean; chart?: { look: string; points: unknown[] }; proposal?: Record<string, unknown> };
+    expect(offer.ok).toBe(true);
+    // Thursday 1 October: tomorrow is Friday the 2nd, covering last month as of then.
+    expect(offer.proposal).toMatchObject({
+      action: "CREATE", title: "On 2 October, send me a chart of the share of visits that did generate lead", timeOfDay: "10:00",
+      target: { companyWebsiteId: siteId, website: "acme-shop.test" },
+      // A rate is of one conversion, as the page's own box: no purchase here, so the one done most.
+      report: { look: "analyticsChart", measure: "conversionRate", event: "generate_lead", period: "lastMonth", every: "once", sendOn: "2026-10-02", weekday: 5 },
+    });
+    expect(offer.chart).toMatchObject({ look: "analyticsDays" });
+    expect(offer.chart?.points).toHaveLength(30);
+    // The reply carries the chart, as a chart's own does.
+    expect(chartFromToolCalls([{ handlerMapping: "assistant.tasks.proposeChartReport", status: "SUCCESS", resultJson: JSON.stringify({ status: "ok", data: offer }) }])?.look).toBe("analyticsDays");
+
+    const threadId = await t.run((db) => db.db.insert("threads", { userId: adminId, companyId, title: "A chart", createdAt: 1, updatedAt: 1 }));
+    const messageId = await t.run((db) => db.db.insert("messages", { threadId, role: "assistant", content: "Here it is.", createdAt: NOW, taskProposal: offer.proposal as never }));
+    await t.withIdentity({ subject: adminId }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true, timeZone: "Europe/London" });
+    const task = (await t.run((db) => db.db.query("hakkenTasks").collect())).find((row) => row.threadId === threadId)!;
+    expect(task).toMatchObject({ kind: "REPORT", state: "ON" });
+    // 10am in London on the 2nd.
+    expect(task.nextCheckAt).toBe(Date.parse("2026-10-02T09:00:00Z"));
+
+    expect(await t.mutation(internal.hakkenStatReporter.sendReportInternal, { taskId: task._id })).toBe("SENT");
+    const email = (await t.run((db) => db.db.query("outboxMessages").collect())).find((row) => row.idempotencyKey === `TASK_CHART:${task._id}:2026-10-01`)!;
+    expect(email).toMatchObject({ messageType: "TASK_REPORT", userId: adminId });
+    const rendered = await t.run((db) => renderOutboxRow(db, email));
+    if (!("email" in rendered)) throw new Error(rendered.skip);
+    expect(rendered.email.subject).toMatch(/^Share of visits that did generate lead each day: [0-9.]+%$/);
+    expect(rendered.email.html).toContain("YOUR CHART");
+    // Sent once: it stops.
+    expect((await t.run((db) => db.db.get(task._id)))?.state).toBe("PAUSED");
   });
 });

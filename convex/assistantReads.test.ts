@@ -210,6 +210,7 @@ describe("the Assistant's company figures", () => {
       "assistant.tasks.open",
       "assistant.tasks.propose",
       "assistant.tasks.proposeAnswerAlert",
+      "assistant.tasks.proposeChartReport",
       "assistant.tasks.proposeRankingAlert",
       "assistant.tasks.proposeReport",
       "assistant.tasks.proposeResearch",

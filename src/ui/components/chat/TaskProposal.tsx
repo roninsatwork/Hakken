@@ -26,6 +26,11 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
  */
 export function TaskProposal({ messageId, proposal, isReadOnly = false }: { messageId: Id<"messages">; proposal: Proposal; isReadOnly?: boolean }) {
   const t = useTranslations("ai.assistant.taskProposal");
+  const tPeriods = useTranslations("common.periods");
+  // "A chart of the share of visits that did purchase": an event's own name, in plain words.
+  const chartWords = (chart: { measure: "visits" | "conversions" | "conversionRate"; event?: string }) =>
+    chart.event === "purchase" && chart.measure === "conversionRate" ? t("report.chart.conversionRatePurchase")
+      : chart.event ? t(`report.chart.${chart.measure}Of` as "report.chart.conversionsOf", { event: chart.event.replace(/_/g, " ") }) : t(`report.chart.${chart.measure}`);
   const engineLabel = useEngineLabel();
   const locale = useLocale();
   const { platformName } = useSystemSettings();
@@ -132,6 +137,17 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
     [t("where"), where],
     [t("goodToKnow"), proposal.adds ? t("watches.addsSearch") : t("watches.searchWhen")],
     [t("cost"), watchCost("costRankingAdds")],
+  ] : report?.look === "analyticsChart" ? [
+    // A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5): what it shows, its day and what it covers.
+    [t("report.send"), chartWords(report)],
+    [t("website"), proposal.target?.website ?? ""],
+    [t("when"), report.every === "once" && report.sendOn
+      ? t("report.once", { date: formatDate(new Date(`${report.sendOn}T12:00:00`), { locale, fallback: report.sendOn, options: { weekday: "long", day: "numeric", month: "long" } }), time })
+      : t("report.every", { weekday: t(`report.weekdays.${report.weekday}` as "report.weekdays.1"), time })],
+    [t("report.covers"), t("report.coversWhat", { period: tPeriods(report.period as "lastMonth"), before: tPeriods(`before.${report.period}` as "before.lastMonth") })],
+    [t("where"), where],
+    [t("goodToKnow"), t("report.chartNewest")],
+    [t("cost"), proposal.price ? t("costReport", { credits: proposal.price }) : t("free")],
   ] : report ? [
     [t("report.send"), t("report.pages", { count: report.count, direction: report.direction })],
     [t("website"), proposal.target?.website ?? ""],
@@ -156,7 +172,7 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
       <ProposalRows rows={rows} />
       {answered ? (
         proposal.status === "DONE" ? (
-          <StatusLabel tone="success">{report ? t("report.set") : t("set", { date: formatDate(proposal.answeredAt, { locale, fallback: "" }) })}</StatusLabel>
+          <StatusLabel tone="success">{report?.look === "analyticsChart" ? t("report.chartSet") : report ? t("report.set") : t("set", { date: formatDate(proposal.answeredAt, { locale, fallback: "" }) })}</StatusLabel>
         ) : (
           <TagLabel>{t("declined")}</TagLabel>
         )
@@ -166,7 +182,7 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
             <Button variant="primary" onClick={() => reply(true)} disabled={busy}>{report ? t("report.yes") : t("yes")}</Button>
             <Button variant="ghost" onClick={() => reply(false)} disabled={busy}>{t("notNow")}</Button>
           </div>
-          <p className="text-[12px] text-muted">{report ? t("report.hint") : t("hint")}</p>
+          <p className="text-[12px] text-muted">{report?.look === "analyticsChart" ? t("report.chartHint") : report ? t("report.hint") : t("hint")}</p>
         </>
       ) : null}
       {action.error && <p role="alert" className="text-[12px] text-warning">{action.error}</p>}

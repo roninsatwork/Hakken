@@ -75,12 +75,15 @@ function isChart(value: unknown): value is AnswerChart {
 }
 
 /** The chart a run asked for: the last `show_chart` that drew one. One chart to an answer. */
+const CHARTING = new Set(["assistant.chart", "assistant.tasks.proposeChartReport"]);
+
 export function chartFromToolCalls(
   calls: Array<{ handlerMapping: string; status: string; resultJson?: string }>,
 ): AnswerChart | undefined {
   let found: AnswerChart | undefined;
   for (const call of calls) {
-    if (call.handlerMapping !== "assistant.chart" || call.status !== "SUCCESS") continue;
+    // A chart sent at a time shows what it would hold today, under its offer (sees-side-panel-plan, phase 5).
+    if (!CHARTING.has(call.handlerMapping) || call.status !== "SUCCESS") continue;
     // The runtime wraps a handler's answer as { status, data }.
     const data = (parse(call.resultJson) as { data?: { ok?: boolean; chart?: unknown } } | undefined)?.data;
     if (data?.ok !== false && isChart(data?.chart)) found = data.chart;
@@ -126,6 +129,25 @@ export function chartPoints(
     points.push({ day, value: values.get(day) ?? 0, ...(held ? { before: earlier.get(then) ?? 0 } : {}) });
   }
   return points;
+}
+
+/**
+ * The conversion a rate is of when none is named, as Conversions' own "Conversion rate" box picks it: a shop's
+ * purchase, else the conversion done most over the days. Never every conversion over the visits, which counts a
+ * basket, a checkout and a purchase three times (Anthony's page: 3.4%, where every conversion gave about 80).
+ */
+export function mainConversionAt(
+  events: readonly string[],
+  points: ReadonlyArray<{ events: readonly number[]; eventVisits?: readonly number[] }>,
+): number | null {
+  const totals = events.map((_, at) => points.reduce((sum, point) => sum + (point.eventVisits?.[at] ?? point.events[at] ?? 0), 0));
+  const purchase = events.indexOf("purchase");
+  if (purchase >= 0 && totals[purchase] > 0) return purchase;
+  let best: number | null = null;
+  totals.forEach((total, at) => {
+    if (total > 0 && (best === null || total > totals[best])) best = at;
+  });
+  return best;
 }
 
 /**

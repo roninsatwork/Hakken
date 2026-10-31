@@ -373,7 +373,8 @@ async function answerProposalAs(ctx: MutationCtx, userId: Id<"users">, args: { m
       }, now);
     } else if (proposal.action === "CREATE") {
       // An alert watches a Search Console rule, an AI answer or a ranking (item 4.3); a report (4.1) sends its pages each week.
-      const watches = proposal.measure ? Boolean(proposal.condition || proposal.report) : Boolean(proposal.answer || proposal.ranking);
+      // A chart sent at a time (2026-10-31) is a report with no Search Console measure.
+      const watches = proposal.report ? true : proposal.measure ? Boolean(proposal.condition) : Boolean(proposal.answer || proposal.ranking);
       if (!proposal.target || !watches || !proposal.channels) {
         throw appError("INVALID_INPUT", "That offer is missing what it would watch.");
       }

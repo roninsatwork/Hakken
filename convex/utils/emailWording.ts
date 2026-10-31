@@ -97,6 +97,23 @@ export type EmailWording = {
     bellTitle: (args: { weekday: number }) => string;
     bellBody: (args: { change: string; pages: number; direction: "lost" | "gained" }) => string;
   };
+  /** A chart sent at a time, to the person who asked Ask Hakken for it (sees-side-panel-plan-2026-10-31.md, phase 5). */
+  taskChart: {
+    /** "Your chart" or "Monday chart", beside the wordmark. */
+    kind: (args: { once: boolean; weekday: number }) => string;
+    /** What it shows: "Visits each day", "Purchase each day", "Share of visits that did add to cart each day". */
+    title: (args: { measure: "visits" | "conversions" | "conversionRate"; event?: string }) => string;
+    subject: (args: { title: string; figure: string }) => string;
+    /** Under the big figure: "visits over these days", "of visits converted over these days". */
+    figureIs: (args: { measure: "visits" | "conversions" | "conversionRate" }) => string;
+    span: (args: { from: string; to: string }) => string;
+    before: (args: { figure: string }) => string;
+    alt: (args: { title: string; days: number }) => string;
+    open: string;
+    youAsked: (args: { once: boolean; weekday: number; time: string; platformName: string }) => string;
+    bellTitle: (args: { title: string }) => string;
+    bellBody: (args: { figure: string; figureIs: string }) => string;
+  };
   /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
   taskAlert: {
     kind: string;
@@ -256,6 +273,28 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           ? (direction === "lost" ? "None of your pages lost visitors this week." : "None of your pages gained visitors this week.")
           : `${change} visitors from Google across ${pages} ${pages === 1 ? "page" : "pages"}.`,
     },
+    taskChart: {
+      kind: ({ once, weekday }) => (once ? "Your chart" : `${EN_WEEKDAYS[weekday - 1] ?? "Weekly"} chart`),
+      title: ({ measure, event }) => {
+        const named = event ? event.replace(/_/g, " ") : null;
+        if (measure === "visits") return "Visits each day";
+        if (measure === "conversions") return named ? `${named.charAt(0).toUpperCase()}${named.slice(1)} each day` : "Conversions each day";
+        if (event === "purchase") return "Share of visits that made a purchase each day";
+        return named ? `Share of visits that did ${named} each day` : "Share of visits that converted each day";
+      },
+      subject: ({ title, figure }) => `${title}: ${figure}`,
+      figureIs: ({ measure }) => (measure === "visits" ? "visits over these days" : measure === "conversions" ? "conversions over these days" : "of visits converted over these days"),
+      span: ({ from, to }) => `${from} to ${to}.`,
+      before: ({ figure }) => `The period before: ${figure}.`,
+      alt: ({ title, days }) => `Bars, one for each of ${days} days: ${title}.`,
+      open: "Open in Google Analytics",
+      youAsked: ({ once, weekday, time, platformName }) =>
+        once
+          ? `You asked ${platformName} for this chart at ${time}.`
+          : `You asked ${platformName} for this chart every ${EN_WEEKDAYS[weekday - 1] ?? "week"} at ${time}. Pause or stop it any time in ${platformName} tasks.`,
+      bellTitle: ({ title }) => `Your chart is ready: ${title}`,
+      bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
+    },
     taskAlert: {
       kind: "Alert",
       visitorsOn: ({ day }) => `visitors from Google on ${day}`,
@@ -386,6 +425,28 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
         pages === 0
           ? (direction === "lost" ? "Nessuna delle tue pagine ha perso visitatori questa settimana." : "Nessuna delle tue pagine ha guadagnato visitatori questa settimana.")
           : `${change} visitatori da Google su ${pages} ${pages === 1 ? "pagina" : "pagine"}.`,
+    },
+    taskChart: {
+      kind: ({ once, weekday }) => (once ? "Il tuo grafico" : `Grafico ${itOfWeekday(weekday)}`),
+      title: ({ measure, event }) => {
+        const named = event ? event.replace(/_/g, " ") : null;
+        if (measure === "visits") return "Visite al giorno";
+        if (measure === "conversions") return named ? `${named.charAt(0).toUpperCase()}${named.slice(1)} al giorno` : "Conversioni al giorno";
+        if (event === "purchase") return "Quota di visite con un acquisto, al giorno";
+        return named ? `Quota di visite che hanno fatto ${named}, al giorno` : "Quota di visite che hanno convertito, al giorno";
+      },
+      subject: ({ title, figure }) => `${title}: ${figure}`,
+      figureIs: ({ measure }) => (measure === "visits" ? "visite in questi giorni" : measure === "conversions" ? "conversioni in questi giorni" : "delle visite ha convertito in questi giorni"),
+      span: ({ from, to }) => `Dal ${from} al ${to}.`,
+      before: ({ figure }) => `Il periodo precedente: ${figure}.`,
+      alt: ({ title, days }) => `Barre, una per ciascuno di ${days} giorni: ${title}.`,
+      open: "Apri in Google Analytics",
+      youAsked: ({ once, weekday, time, platformName }) =>
+        once
+          ? `Hai chiesto a ${platformName} questo grafico alle ${time}.`
+          : `Hai chiesto a ${platformName} questo grafico ogni ${IT_WEEKDAYS[weekday - 1] ?? "settimana"} alle ${time}. Puoi metterlo in pausa o fermarlo quando vuoi in Attività di ${platformName}.`,
+      bellTitle: ({ title }) => `Il tuo grafico è pronto: ${title}`,
+      bellBody: ({ figure, figureIs }) => `${figure} ${figureIs}.`,
     },
     taskAlert: {
       kind: "Avviso",

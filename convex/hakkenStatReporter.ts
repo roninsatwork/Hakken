@@ -12,6 +12,7 @@ import { emailWording } from "./utils/emailWording";
 import { REPORT_PERIOD, pickPages, signed, type PageChange } from "./utils/hakkenReports";
 import { pathOf } from "./utils/hakkenTaskRules";
 import { nextRunOf } from "./utils/hakkenTaskTiming";
+import { sendChartReport } from "./hakkenChartReporter";
 import { REPORT_STEP, STAT_REPORTER } from "./utils/statReporter";
 
 /**
@@ -141,6 +142,8 @@ export const sendReportInternal = internalMutation({
     const report = task.report;
     const target = task.target;
     await ctx.db.patch(task._id, { nextCheckAt: nextRunOf(task, now), updatedAt: now });
+    // A chart sent at a time (2026-10-31), beside the pages reports.
+    if (report.look === "analyticsChart") return await sendChartReport(ctx, task, report, target, now);
 
     const read = await readReportPages(ctx, target.companyWebsiteId, report);
     if (!read) return "NOTHING_YET";

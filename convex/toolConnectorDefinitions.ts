@@ -833,6 +833,30 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         }),
       },
       {
+        name: "Propose a chart sent at a time",
+        description:
+          "When someone asks to be sent a chart from Google Analytics at a time — once (\"send me a chart at 10am tomorrow with my conversion rates\") or every week — propose it with this. It draws the chart as it would look today under your reply and writes the offer out with “Yes, send it” and “Not now”: nothing is sent until they tap yes. On its day, at their time, it reads the period's newest saved days and sends the chart by email and here, against the period before. Visits, conversions (every one, or one event's) or the share of visits that converted. Never promise to send it yourself, and never use propose_report for a chart.",
+        handlerMapping: "assistant.tasks.proposeChartReport",
+        modelName: "propose_chart_report",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "measure"],
+          properties: {
+            website: { type: "string", description: "One of the company's own websites, e.g. example.co.uk, from list_websites." },
+            measure: { type: "string", enum: ["visits", "conversions", "conversionRate"], description: "conversionRate: the share of visits that converted, for \"conversion rates\"." },
+            event: { type: "string", description: "One conversion's event name, e.g. purchase, for that conversion alone. Leave out for every conversion together." },
+            period: { type: "string", enum: ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"], description: "What the chart covers on the day it is sent. lastMonth for a chart sent once, lastWeek for a weekly one, if they don't say." },
+            every: { type: "string", enum: ["once", "week"], description: "once on a day, or every week. once if they don't say." },
+            day: { type: "string", description: "For once: today, tomorrow or YYYY-MM-DD. tomorrow if they don't say." },
+            weekday: { type: "string", description: "For every week: Monday to Sunday. Monday if they don't say." },
+            time: { type: "string", description: "Their time, HH:MM, 24-hour, e.g. 10:00; 09:00 if they don't say." },
+          },
+        }),
+      },
+      {
         name: "Propose an alert on AI answers",
         description:
           `When someone asks to be told if an AI engine (${AI_ENGINES.map((engine) => AI_ENGINE_NAMES[engine]).join(", ")}) stops recommending them, leaves them out, or warns against them, for one of the company's tracked questions, propose it with this. It reads the newest answer and writes the alert out under your reply for a yes. It is checked whenever the question is next asked. If the question isn't tracked yet, the offer adds it on their yes, asked of that engine alone, and says what each check costs in credits.`,
