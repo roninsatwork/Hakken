@@ -853,6 +853,7 @@ import type * as utils_sees_findingValidator from "../utils/sees/findingValidato
 import type * as utils_sees_findings from "../utils/sees/findings.js";
 import type * as utils_sees_google from "../utils/sees/google.js";
 import type * as utils_sees_local from "../utils/sees/local.js";
+import type * as utils_sees_measures from "../utils/sees/measures.js";
 import type * as utils_sees_mentions from "../utils/sees/mentions.js";
 import type * as utils_sees_organic from "../utils/sees/organic.js";
 import type * as utils_sees_pageData from "../utils/sees/pageData.js";
@@ -1825,6 +1826,7 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/findings": typeof utils_sees_findings;
   "utils/sees/google": typeof utils_sees_google;
   "utils/sees/local": typeof utils_sees_local;
+  "utils/sees/measures": typeof utils_sees_measures;
   "utils/sees/mentions": typeof utils_sees_mentions;
   "utils/sees/organic": typeof utils_sees_organic;
   "utils/sees/pageData": typeof utils_sees_pageData;

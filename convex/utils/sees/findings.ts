@@ -1,4 +1,5 @@
 import { couldBeChance } from "../insightEditor";
+import { MEASURES, measureWords } from "./measures";
 
 /**
  * What the figures show, found by code (docs/plans/active/sees-findings-in-code-plan-2026-10-31.md, phase 1;
@@ -26,7 +27,8 @@ export type FindingView = {
   shopSteps?: ReadonlyArray<{ step: string; wentOnPercent: number | null; wentOnPercentBefore?: number | null }>;
 };
 
-export type FindingKind = "visitsForOne" | "step" | "groupAbove" | "groupBelow" | "rose" | "fell" | "trackingGap";
+/** The Conversions screens' kinds, then every other page's (`pageFindings.ts`, sees-every-page-plan-2026-10-31.md). */
+export type FindingKind = "visitsForOne" | "step" | "groupAbove" | "groupBelow" | "rose" | "fell" | "trackingGap" | "wholeUp" | "wholeDown" | "rowUp" | "rowDown" | "holdsMost" | "rowAbove" | "rowBelow";
 
 /** A figure a finding names, keyed so the team names it and the Editor fills it in. */
 export type FindingFact = { key: string; value: number; unit: "count" | "percent" | "ratio" | "score"; label: string };
@@ -312,5 +314,18 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
       return `${p.rate}% of the ${by} ${p.group}'s visits did ${eventWords(p.event)}, ${finding.kind === "rose" ? "up" : "down"} from ${p.rateBefore}% the span before.`;
     case "trackingGap":
       return `${p.highRate}% of ${p.high} visits did ${eventWords(p.event)}, against ${p.lowRate}% of ${p.low} visits.`;
+    case "wholeUp":
+    case "wholeDown":
+      return `${capital(measureWords(p.measure))} ${finding.kind === "wholeUp" ? "rose" : "fell"} to ${p.now} from ${p.before} the span before.`;
+    case "rowUp":
+    case "rowDown":
+      return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "rowUp" ? "rose" : "fell"} to ${p.now} from ${p.before}, the biggest ${finding.kind === "rowUp" ? "rise" : "fall"} on the list.`;
+    case "holdsMost":
+      return `${p.name} holds ${p.share}% of the list's ${measureWords(p.measure)}.`;
+    case "rowAbove":
+    case "rowBelow":
+      return `${p.name}: ${measureWords(p.measure)} ${p.value}${MEASURES[String(p.measure)]?.kind === "percent" ? "%" : ""}, against ${p.mean}${MEASURES[String(p.measure)]?.kind === "percent" ? "%" : ""} on average across the list.`;
   }
 }
+
+const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);

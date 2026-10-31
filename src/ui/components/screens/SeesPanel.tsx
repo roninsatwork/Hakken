@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { FunctionReturnType } from "convex/server";
-import { AlertTriangle, ArrowRight, Clock, Eye, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Eye, PieChart, TrendingDown, TrendingUp } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -11,6 +11,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { SeesWords, type HakkenSeesStep } from "./HakkenSees";
 import { Button } from "./Button";
 import { SidePanel } from "./SidePanel";
+import { MEASURES } from "@/convex/utils/sees/measures";
 
 type Finding = FunctionReturnType<typeof api.seesFindings.seesFindings>[number];
 
@@ -92,7 +93,18 @@ const ICONS: Record<Finding["kind"], { icon: typeof Clock; tone: string }> = {
   groupBelow: { icon: TrendingDown, tone: "text-warning" },
   fell: { icon: TrendingDown, tone: "text-warning" },
   trackingGap: { icon: AlertTriangle, tone: "text-warning" },
+  // Every other page's (sees-every-page-plan-2026-10-31.md): up and down by their arrow; good or bad by their colour,
+  // turned round for a figure where less is better (`lessIsBetter`), so the shape always says which way it went.
+  wholeUp: { icon: TrendingUp, tone: "text-success" },
+  rowUp: { icon: TrendingUp, tone: "text-success" },
+  rowAbove: { icon: TrendingUp, tone: "text-success" },
+  wholeDown: { icon: TrendingDown, tone: "text-warning" },
+  rowDown: { icon: TrendingDown, tone: "text-warning" },
+  rowBelow: { icon: TrendingDown, tone: "text-warning" },
+  holdsMost: { icon: PieChart, tone: "text-secondary" },
 };
+/** A figure where less is better, by the page's own measures: its rise is the bad news. */
+const LESS_IS_BETTER = new Set(Object.entries(MEASURES).filter(([, measure]) => measure.lessIsBetter).map(([field]) => field));
 
 /** One finding in the reader's words: its line icon, then a plain sentence with its figures in the numbers' font. */
 function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (eventName: string) => string; onAsk?: (words: string) => void }) {
@@ -104,6 +116,10 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
   const one = (value: string | number | undefined) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(value ?? 0));
   const two = (value: string | number | undefined) => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Number(value ?? 0));
   const event = (value: string | number | undefined) => (name ? name(String(value)) : String(value));
+  // A page's own figure by its name in the reader's words, and its value as a count or a percentage.
+  const tm = useTranslations("ui.hakkenSees.measures");
+  const measure = (field: string | number | undefined) => (MEASURES[String(field)] ? tm(String(field) as "clicks") : String(field));
+  const figure = (field: string | number | undefined, value: string | number | undefined) => (MEASURES[String(field)]?.kind === "percent" ? percent(value) : whole(value));
   const device = (value: string | number | undefined) => (["mobile", "desktop", "tablet"].includes(String(value)) ? t(`devices.${String(value)}` as "devices.mobile") : String(value));
   const group = () => (p.by === "kind" ? t("kindPages", { group: String(p.group) }) : p.by === "device" ? device(p.group) : String(p.group));
   const rich = { n: (chunks: ReactNode) => <span className="font-mono text-foreground">{chunks}</span>, b: (chunks: ReactNode) => <span className="text-foreground">{chunks}</span> };
@@ -132,9 +148,25 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
         return t.rich(finding.kind, { ...rich, group: group(), event: event(p.event), rate: percent(p.rate), before: percent(p.rateBefore) });
       case "trackingGap":
         return t.rich(p.tracking === "behaviour" ? "trackingBehaviour" : "trackingCheck", { ...rich, event: event(p.event), low: device(p.low), lowRate: percent(p.lowRate), high: device(p.high), highRate: percent(p.highRate) });
+      case "wholeUp":
+      case "wholeDown": {
+        const named = measure(p.measure);
+        return t.rich(finding.kind, { ...rich, measure: named.charAt(0).toUpperCase() + named.slice(1), now: figure(p.measure, p.now), before: figure(p.measure, p.before) });
+      }
+      case "rowUp":
+      case "rowDown":
+        return t.rich(finding.kind, { ...rich, name: String(p.name), measure: measure(p.measure), now: figure(p.measure, p.now), before: figure(p.measure, p.before) });
+      case "holdsMost":
+        return t.rich("holdsMost", { ...rich, name: String(p.name), measure: measure(p.measure), share: percent(p.share) });
+      case "rowAbove":
+      case "rowBelow":
+        return t.rich("rowApart", { ...rich, name: String(p.name), measure: measure(p.measure), value: figure(p.measure, p.value), mean: figure(p.measure, p.mean) });
     }
   })();
-  const { icon: Icon, tone } = ICONS[finding.kind];
+  const { icon: Icon, tone: usual } = ICONS[finding.kind];
+  // A rise in errors or angry clicks is bad news, and a fall good: the colour turns round, the arrow does not.
+  const turned = LESS_IS_BETTER.has(String(p.measure)) && ["wholeUp", "wholeDown", "rowUp", "rowDown", "rowAbove", "rowBelow"].includes(finding.kind);
+  const tone = turned ? (usual === "text-success" ? "text-warning" : "text-success") : usual;
   const content = (
     <>
       <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", tone)} aria-hidden="true" />

@@ -246,6 +246,18 @@ describe("HakkenSees and its eye", () => {
       })]);
     });
 
+    it("shows what code finds in the page's own figures the moment it opens, before anything is written", async () => {
+      vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const })) as never);
+      render(
+        <>
+          <HakkenSeesEye />
+          <HakkenSees says={says} steps={[]} advice="rule" page={{ ...page, data: { rows: [{ key: "door handles", clicks: 520 }, { key: "hinges", clicks: 160 }, { key: "knobs", clicks: 120 }, { key: "stops", clicks: 60 }] } }} />
+        </>,
+      );
+      fireEvent.click(eye());
+      expect(screen.getByText(/ui\.hakkenSees\.findings\.holdsMost door handles/)).toBeInTheDocument();
+    });
+
     it("at zero credits says so, with the way to Billing, and keeps the rule's words", async () => {
       vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "NO_CREDITS" as const })) as never);
       render(<Paged />);
