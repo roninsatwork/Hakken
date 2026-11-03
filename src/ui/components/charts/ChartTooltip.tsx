@@ -24,6 +24,8 @@ export type ChartTooltipEntry = {
   value?: number | string;
   color?: string;
   payload?: Record<string, unknown>;
+  /** Recharts' `tooltipType`: "none" for a mark drawn without a row of its own. */
+  type?: string;
 };
 
 type ChartTooltipProps = {
@@ -134,7 +136,10 @@ export function ChartTooltip({
 }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
 
-  const rows = hideEmptyRows ? payload.filter((entry) => Number(entry.value ?? 0) !== 0) : payload;
+  // A mark drawn with `tooltipType="none"` has no row, as in Recharts' own readout: a lone line's fill shares its
+  // line's key, and listed it twice (2026-11-03).
+  const listed = payload.filter((entry) => entry.type !== "none");
+  const rows = hideEmptyRows ? listed.filter((entry) => Number(entry.value ?? 0) !== 0) : listed;
   if (rows.length === 0) return null;
 
   const rawLabel = label === undefined || label === null ? "" : String(label);

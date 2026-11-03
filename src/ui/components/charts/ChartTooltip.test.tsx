@@ -38,6 +38,19 @@ describe("ChartTooltip", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("gives a mark drawn without a row none, as a lone line's fill under the line", () => {
+    render(
+      <ChartTooltip
+        active
+        payload={[{ dataKey: "views", value: 40, type: "none" }, { dataKey: "views", name: "Views", value: 40 }]}
+        label="5 Aug"
+      />
+    );
+
+    expect(screen.getAllByText("40")).toHaveLength(1);
+    expect(screen.getByText("Views")).toBeInTheDocument();
+  });
+
   it("lets a chart say how its numbers read", () => {
     render(
       <ChartTooltip
