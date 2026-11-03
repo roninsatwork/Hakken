@@ -179,22 +179,24 @@ const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì"
 /** A chart of groups' groups and periods in words (ask-hakken-every-chart-plan-2026-10-31.md), as the screens say them. */
 const EN_GROUPS_BY: Record<string, string> = {
   channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
-  source: "source", browser: "browser", website: "website", position: "Google position",
+  source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
 };
 const IT_GROUPS_BY: Record<string, string> = {
   channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese", page: "pagina di arrivo", hour: "ora", query: "ricerca",
-  source: "fonte", browser: "browser", website: "sito", position: "posizione su Google",
+  source: "fonte", browser: "browser", website: "sito", position: "posizione su Google", product: "prodotto",
 };
 /** Clarity's and Visibility's measures in words (ask-hakken-every-chart-plan-2026-10-31.md, the last sources). */
 const EN_MEASURES: Record<string, string> = {
   visits: "Visits", scroll: "How far people scroll", quickBacks: "Share of visits that went straight back", rageClicks: "Share of visits with an angry click",
   deadClicks: "Share of visits with a dead click", errors: "Share of visits with an error", estimatedVisitors: "Estimated visitors from Google",
   searches: "Searches ranked for", topThree: "Searches in Google's top 3", linkingWebsites: "Linking websites",
+  itemsBought: "Products sold most", itemsLeft: "Products most often left in baskets", sellingMore: "Products selling more", sellingLess: "Products selling less",
 };
 const IT_MEASURES: Record<string, string> = {
   visits: "Visite", scroll: "Quanto scorrono le persone", quickBacks: "Quota di visite tornate subito indietro", rageClicks: "Quota di visite con un clic di rabbia",
   deadClicks: "Quota di visite con un clic a vuoto", errors: "Quota di visite con un errore", estimatedVisitors: "Visitatori stimati da Google",
   searches: "Ricerche posizionate", topThree: "Ricerche nella top 3 di Google", linkingWebsites: "Siti che rimandano",
+  itemsBought: "I prodotti più venduti", itemsLeft: "I prodotti lasciati più spesso nel carrello", sellingMore: "Prodotti che vendono di più", sellingLess: "Prodotti che vendono di meno",
 };
 /** A grid of Clarity's measures names each row shortly. */
 const EN_CLARITY_ROWS: Record<string, string> = { scroll: "Scroll", quickBacks: "Quick backs", rageClicks: "Angry clicks", deadClicks: "Dead clicks", errors: "Errors" };
@@ -364,6 +366,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           if (kind === "stacked") return `Each ${of}'s share of ${what.charAt(0).toLowerCase()}${what.slice(1)}`;
           return `${what} by ${of}`;
         }
+        if (by === "product") return EN_MEASURES[measure] ?? measure;
         const did = event === "purchase" ? "made a purchase" : event === "*" ? "converted" : `did ${(event ?? "").replace(/_/g, " ")}`;
         if (by === "hour") return `When people ${did}, by hour and day`;
         if (kind === "grid") return `Share of visits that did each step, by ${of}`;
@@ -558,6 +561,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           if (kind === "stacked") return `Quota di ${measure === "clicks" ? "clic" : "apparizioni"} di ogni ${of}`;
           return `${what} per ${of}`;
         }
+        if (by === "product") return IT_MEASURES[measure] ?? measure;
         const did = event === "purchase" ? "hanno fatto un acquisto" : event === "*" ? "hanno convertito" : `hanno fatto ${(event ?? "").replace(/_/g, " ")}`;
         if (by === "hour") return `Quando le persone ${did}, per ora e giorno`;
         if (kind === "grid") return `Quota di visite che hanno fatto ogni passaggio, per ${of}`;

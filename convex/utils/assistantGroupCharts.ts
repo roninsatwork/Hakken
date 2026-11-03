@@ -18,7 +18,8 @@ export type GroupChartKind = (typeof GROUP_CHART_KINDS)[number];
  * page, the source a visit came by (`source`) or its browser. From Visibility: each website of the group
  * (`website`) or the website's searches by its place on Google (`position`).
  */
-export const GROUP_CHART_BY = ["channel", "kind", "device", "country", "page", "hour", "query", "source", "browser", "website", "position"] as const;
+// "product": a shop's products from Google Analytics, as Products' chart draws them (products-screen-4-plan-2026-11-02.md, phase 5).
+export const GROUP_CHART_BY = ["channel", "kind", "device", "country", "page", "hour", "query", "source", "browser", "website", "position", "product"] as const;
 export type GroupChartBy = (typeof GROUP_CHART_BY)[number];
 /** Search Console's and Bing's measures for a chart of groups: clicks (visitors from the engine) and impressions (times shown). */
 export const SEARCH_GROUP_MEASURES = ["clicks", "impressions"] as const;
@@ -32,8 +33,14 @@ export type ClarityGroupMeasure = (typeof CLARITY_GROUP_MEASURES)[number];
 /** Visibility's measures for each website: estimated visitors from Google, searches ranked for, in Google's top 3, linking websites. */
 export const VISIBILITY_GROUP_MEASURES = ["estimatedVisitors", "searches", "topThree", "linkingWebsites"] as const;
 export type VisibilityGroupMeasure = (typeof VISIBILITY_GROUP_MEASURES)[number];
-export type GroupMeasure = AnalyticsChartMeasure | SearchGroupMeasure | ClarityGroupMeasure | VisibilityGroupMeasure;
-export const GROUP_MEASURES = ["visits", "conversions", "conversionRate", ...SEARCH_GROUP_MEASURES, ...CLARITY_GROUP_MEASURES, ...VISIBILITY_GROUP_MEASURES] as const;
+/**
+ * A shop's products, the four views of Products' chart: the items bought (beside the period before), the items left in
+ * baskets, and the products selling more or less than the period before. Items, never money.
+ */
+export const PRODUCT_GROUP_MEASURES = ["itemsBought", "itemsLeft", "sellingMore", "sellingLess"] as const;
+export type ProductGroupMeasure = (typeof PRODUCT_GROUP_MEASURES)[number];
+export type GroupMeasure = AnalyticsChartMeasure | SearchGroupMeasure | ClarityGroupMeasure | VisibilityGroupMeasure | ProductGroupMeasure;
+export const GROUP_MEASURES = ["visits", "conversions", "conversionRate", ...SEARCH_GROUP_MEASURES, ...CLARITY_GROUP_MEASURES, ...VISIBILITY_GROUP_MEASURES, ...PRODUCT_GROUP_MEASURES] as const;
 export const groupMeasureValidator = v.union(...GROUP_MEASURES.map((measure) => v.literal(measure)));
 
 /** Where a chart of groups' figures come from, each section's saved data (Anthony, 2026-10-29: Insights' five sections). */

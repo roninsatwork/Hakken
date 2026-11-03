@@ -19,15 +19,19 @@ type Figures = {
   value: number;
 };
 
-/** The change on the span before, its arrow in the words ("up 8.4% on the 30 days before"), or nothing to compare. */
-export function BeforeLine({ now, before }: { now: number; before: number | null | undefined }) {
+/**
+ * The change on the span before, its arrow in the words ("up 8.4% on the 30 days before"), or nothing to compare.
+ * `lowerIsBetter` for a count where fewer is the good news — Products' products added and never bought
+ * (products-screen-4-plan-2026-11-02.md) — so its colour says so; the words stay the same.
+ */
+export function BeforeLine({ now, before, lowerIsBetter = false }: { now: number; before: number | null | undefined; lowerIsBetter?: boolean }) {
   const t = useTranslations("googleAnalytics.figures");
   const tf = useTranslations("googleAnalytics.filters");
   const [period] = usePeriod();
   const change = changeOf(now, before);
   if (change === null) return <span className="text-[12px] text-muted">{t("nothingBefore")}</span>;
   return (
-    <ChangeLine by={change}>
+    <ChangeLine by={lowerIsBetter ? -change : change}>
       {t(change > 0 ? "onBeforeUp" : change < 0 ? "onBeforeDown" : "onBeforeSame", { change: formatPercent(Math.abs(change)), before: tf(`before.${periodWord(period)}`) })}
     </ChangeLine>
   );

@@ -14,6 +14,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { beforeClicksOf, readList as readBingList, shownRows as shownBingRows } from "./bingWebmasterReads";
 import { readClarityPeriod, type ClarityPeriodRead } from "./clarity";
 import { classifierFor } from "./googleAnalyticsChannelReads";
+import { productChart } from "./googleAnalyticsProductReads";
 import { addUpBy, unpackTotals } from "./utils/clarityPacks";
 import { CLARITY_FEW_VISITS, measuresOf, type ClarityTotals, type ClarityTotalsRow } from "./utils/clarityRows";
 import { findMySite, myRivals } from "./siteAccess";
@@ -21,6 +22,7 @@ import { latestBands, latestFigures, linkingWebsitesOf, searchTotalOf } from "./
 import {
   CLARITY_GROUP_MEASURES,
   GROUP_CHART_BY,
+  PRODUCT_GROUP_MEASURES,
   GROUP_CHART_KINDS,
   VISIBILITY_GROUP_MEASURES,
   clarityGroupsChartFrom,
@@ -38,6 +40,7 @@ import {
   type GroupSource,
   type GroupsChart,
   type GroupsView,
+  type ProductGroupMeasure,
   type VisibilityGroupMeasure,
   type VisibilityWebsite,
 } from "./utils/assistantGroupCharts";
@@ -91,6 +94,7 @@ export async function groupsChartOf(
     return searchGroupsChartFrom(rows, { kind: ask.kind, by: ask.by, measure, website: hold.host, period: ask.period, link: `${site}/${screen}` });
   }
 
+  if (ask.by === "product") return await productsChartOf(ctx, hold, ask);
   const measure: AnalyticsChartMeasure = (ANALYTICS_CHART_MEASURES as readonly string[]).includes(ask.measure) ? ask.measure as AnalyticsChartMeasure : "visits";
   if (ask.by === "query") return { ok: false, problem: "Searches come from Search Console: ask with lookup search_console." };
   if (ask.by === "source" || ask.by === "browser") return { ok: false, problem: "Sources and browsers are Clarity's: ask with lookup clarity." };
@@ -147,6 +151,37 @@ export async function groupsChartOf(
 
 type Hold = { _id: Id<"companyWebsites">; host: string };
 type Built = { ok: true; chart: GroupsChart } | { ok: false; problem: string };
+
+/** Each products view, as Products' chart names it in the address (`chartShow`). */
+const PRODUCT_VIEWS: Record<ProductGroupMeasure, "sold" | "left" | "more" | "less"> = { itemsBought: "sold", itemsLeft: "left", sellingMore: "more", sellingLess: "less" };
+
+/**
+ * A shop's products, as Products' chart draws them (products-screen-4-plan-2026-11-02.md, phase 5): ten products for
+ * the view asked, from the product lists the collection kept. Items, never money; bars alone.
+ */
+async function productsChartOf(ctx: Reader, hold: Hold, ask: GroupsAsk): Promise<Built> {
+  if (ask.kind !== "bars") return { ok: false, problem: "A chart of products is drawn as bars." };
+  const measure = (PRODUCT_GROUP_MEASURES as readonly string[]).includes(ask.measure) ? ask.measure as ProductGroupMeasure : "itemsBought";
+  const connection = await connectionOf(ctx, hold._id);
+  if (!connection?.newestDay) return { ok: false, problem: `${hold.host} has no Google Analytics figures yet.` };
+  if (connection.shop !== true) return { ok: false, problem: `${hold.host} is not a shop: Google Analytics recorded no products looked at, added to a basket or bought this quarter or last.` };
+  const held = await ctx.db.get(hold._id);
+  if (!held) return { ok: false, problem: `${hold.host} is not one of the company's websites.` };
+  const view = PRODUCT_VIEWS[measure];
+  const chart = await productChart(ctx, held, { period: ask.period, device: "" });
+  if ((view === "more" || view === "less") && !chart.compared) return { ok: false, problem: "There's nothing from the period before to compare with yet." };
+  const rows = chart[view];
+  if (rows.length === 0) return { ok: false, problem: "No products in those dates." };
+  const groups = rows.map((row) => ({
+    name: row.name,
+    value: view === "left" ? row.itemsLeft : row.itemsBought,
+    ...(view !== "left" && row.itemsBoughtBefore !== null ? { before: row.itemsBoughtBefore } : {}),
+  }));
+  return {
+    ok: true,
+    chart: { look: "analyticsGroups", kind: "bars", by: "product", measure, website: hold.host, period: ask.period, groups, link: `/app/analytics/${hold._id}/products?period=${ask.period}&chartShow=${view}` },
+  };
+}
 
 /** Bing rows a chart names at most, the busiest by clicks and by times shown: every other row is counted, unnamed. */
 const BING_NAMED = 30;

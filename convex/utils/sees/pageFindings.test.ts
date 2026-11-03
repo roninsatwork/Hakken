@@ -66,6 +66,20 @@ describe("what a page's own figures show", () => {
     expect(words).toContain("Checkouts started fell to 2310 from 2950 the span before.");
   });
 
+  test("Products' items: a product holding much of what sold, and the biggest fall against the period before", () => {
+    // Screen 4 (products-screen-4-plan-2026-11-02.md): the products chart's rows, in items, never money.
+    const page = { productsChart: { sold: [
+      { name: "Waltz 32mm", itemsBought: 493, itemsAdded: 1753, itemsLeft: 1260, itemsBoughtBefore: 547 },
+      { name: "Eclipse hinge", itemsBought: 200, itemsAdded: 200, itemsLeft: 0, itemsBoughtBefore: 150 },
+      { name: "Waltz 38mm", itemsBought: 188, itemsAdded: 619, itemsLeft: 431, itemsBoughtBefore: 250 },
+      { name: "Bardom", itemsBought: 178, itemsAdded: 770, itemsLeft: 592, itemsBoughtBefore: 170 },
+    ] } };
+    expect(pageFindings("googleAnalytics.products", page).map(findingWords)).toEqual([
+      "Waltz 32mm holds 46.6% of the list's items bought.",
+      "Waltz 38mm: items bought fell to 188 from 250, the biggest fall on the list.",
+    ]);
+  });
+
   test("a row's figures kept one level down, as Clarity keeps its groups", () => {
     const overview = { groups: [
       { kind: "SERVICE", name: "Service", now: { visits: 325, scroll: 22 } },

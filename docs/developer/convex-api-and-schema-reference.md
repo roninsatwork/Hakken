@@ -157,11 +157,12 @@ This pass found 2099 recognized registered exports across 430 top-level modules.
 | [googleAnalyticsPageConversions.ts](../../convex/googleAnalyticsPageConversions.ts) | `analyticsPageVisitsPerConversion` (tenantQuery); `analyticsPageConversionGrid` (tenantQuery) |
 | [googleAnalyticsPageReads.ts](../../convex/googleAnalyticsPageReads.ts) | `analyticsLandingPage` (tenantQuery); `analyticsPage` (tenantQuery); `analyticsPagesDaily` (tenantQuery) |
 | [googleAnalyticsPageSeries.ts](../../convex/googleAnalyticsPageSeries.ts) | `writePageSeries` (internalMutation); `pagesSeenOf` (internalQuery); `notePageChannelsFrom` (internalMutation); `notePagesHeld` (internalMutation); `dropOldPageSeries` (internalMutation) |
-| [googleAnalyticsProductReads.ts](../../convex/googleAnalyticsProductReads.ts) | `analyticsProducts` (tenantQuery); `analyticsProductList` (tenantQuery); `analyticsProductListAll` (tenantQuery) |
+| [googleAnalyticsProductReads.ts](../../convex/googleAnalyticsProductReads.ts) | `analyticsProducts` (tenantQuery); `analyticsProductChart` (tenantQuery); `analyticsProductList` (tenantQuery); `analyticsProductListAll` (tenantQuery); `analyticsProductPage` (tenantQuery) |
 | [googleAnalyticsQuota.ts](../../convex/googleAnalyticsQuota.ts) | `quotaSeenOf` (internalQuery); `noteQuota` (internalMutation) |
 | [googleAnalyticsReads.ts](../../convex/googleAnalyticsReads.ts) | `analyticsListPage` (tenantQuery); `analyticsListAll` (tenantQuery); `analyticsTopList` (tenantQuery); `analyticsOverview` (tenantQuery); `analyticsConversions` (tenantQuery); `analyticsSites` (tenantQuery) |
 | [googleAnalyticsRealtime.ts](../../convex/googleAnalyticsRealtime.ts) | `askGoogleAnalyticsRealtime` (tenantAction) |
 | [googleAnalyticsRunEnd.ts](../../convex/googleAnalyticsRunEnd.ts) | `closeSiteRun` (internalMutation); `clearCollecting` (internalMutation) |
+| [googleAnalyticsShopSteps.ts](../../convex/googleAnalyticsShopSteps.ts) | `saveShopSteps` (adminMutation) |
 | [googleAnalyticsSteps.ts](../../convex/googleAnalyticsSteps.ts) | `collectSiteStep` (internalAction); `fillHistory` (internalAction); `fillPageHistory` (internalAction) |
 | [googleAnalyticsTitles.ts](../../convex/googleAnalyticsTitles.ts) | `putTitles` (internalMutation); `dropOldTitles` (internalMutation) |
 | [googleAnalyticsVisitorReads.ts](../../convex/googleAnalyticsVisitorReads.ts) | `analyticsVisitors` (tenantQuery) |

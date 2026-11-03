@@ -79,7 +79,13 @@ export const SEES_SCREENS: Readonly<Record<string, Partial<SeesScreen> & { about
   "googleAnalytics.allPages": { about: "every page of the website, with its visits and conversions" },
   "googleAnalytics.page": { about: "one page's own screen: its visits, where they came from and what they did" },
   "googleAnalytics.conversionPages": { about: "the pages behind one square of the Conversions map" },
-  "googleAnalytics.products": { about: "the shop's products: viewed, added to basket and bought", never: NO_MONEY },
+  // Screen 4 of the canvas "Products page, three ways" (products-screen-4-plan-2026-11-02.md): visits and items, never money.
+  "googleAnalytics.products": {
+    about: "the shop's products: the visits left at each of the shop's steps before a sale, and the products bought, left in baskets, and selling more or less",
+    parts: ["the four boxes: baskets left behind, checkouts not finished, visits that bought, products added and never bought", "Bought or left behind, for the steps and sale the shop picked", "the products chart's view", "the products table"],
+    // Seen on MoreHandles, 2026-11-02: the writer brought in Referral and Paid Search, which this page never shows.
+    never: [...NO_MONEY, "where visits came from: channels, sources and campaigns are on their own pages, never on this one"],
+  },
   "googleAnalytics.visitors": { about: "who the visitors are: their ages, interests, devices and places" },
   "googleAnalytics.trackingHealth": { writer: "INSIGHTS_MEASUREMENT", about: "tracking health: whether the website's Google Analytics figures can be trusted" },
 

@@ -8336,7 +8336,14 @@
             "source": "fonte",
             "browser": "browser",
             "website": "sito",
-            "position": "posizione su Google"
+            "position": "posizione su Google",
+            "product": "prodotto"
+          },
+          "products": {
+            "itemsBought": "I prodotti più venduti",
+            "itemsLeft": "I prodotti lasciati più spesso nel carrello",
+            "sellingMore": "Prodotti che vendono di più",
+            "sellingLess": "Prodotti che vendono di meno"
           },
           "did": {
             "purchase": "hanno fatto un acquisto",
@@ -10583,6 +10590,7 @@
       "ageGroups": "{count, plural, =1 {# fascia d'età} other {# fasce d'età}}",
       "interests": "{count, plural, =1 {# interesse} other {# interessi}}",
       "products": "{count, plural, =1 {# prodotto} other {# prodotti}}",
+      "categories": "{count, plural, =1 {# categoria} other {# categorie}}",
       "stories": "{count, plural, =1 {# storia} other {# storie}}",
       "storiesSoFar": "{count, plural, other {#+ storie}}",
       "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
@@ -10681,6 +10689,9 @@
         "addToCarts": "aggiunte al carrello",
         "itemsViewed": "prodotti visti",
         "itemsPurchased": "prodotti acquistati",
+        "itemsBought": "articoli comprati",
+        "itemsAdded": "articoli messi nel carrello",
+        "itemsLeft": "articoli lasciati nel carrello",
         "crawled": "pagine lette dal motore di ricerca",
         "inIndex": "pagine nell'indice",
         "errors": "errori",
@@ -17366,64 +17377,105 @@
     },
     "products": {
       "title": "Prodotti",
-      "description": "Quanto ha venduto ogni prodotto, e fin dove sono arrivati gli acquirenti: l'hanno visto, messo nel carrello, iniziato il pagamento, comprato.",
+      "description": "Dove gli acquirenti escono senza comprare, e i prodotti che lasciano più spesso.",
       "notAShop": "Prodotti compare per un sito che vende online. Google Analytics non ha registrato prodotti visti, messi nel carrello o comprati su {host} negli ultimi 90 giorni, quindi qui non c'è niente da mostrare.",
       "preparing": "I prodotti arrivano con la prossima raccolta, entro un giorno.",
+      "basketsLeft": "Carrelli abbandonati",
+      "checkoutsLeft": "Pagamenti non completati",
+      "stepLeft": "Usciti dopo {step}",
+      "basketsLeftDetail": "il {rate} delle visite che hanno messo qualcosa nel carrello non ha comprato",
+      "checkoutsLeftDetail": "il {rate} delle visite arrivate al pagamento non ha comprato",
+      "stepLeftDetail": "il {rate} delle visite con {step} non è arrivato a {sale}",
+      "boughtVisits": "Visite che hanno comprato",
+      "saleVisits": "Visite con {sale}",
+      "boughtDetail": "il {rate} delle visite con {step}",
+      "boughtOfBasket": "il {rate} delle visite che hanno messo qualcosa nel carrello",
+      "neverBought": "Nel carrello ma mai comprati",
+      "neverBoughtValue": "{count, plural, =1 {# prodotto} other {# prodotti}}",
+      "neverBoughtDetail": "il {rate} dei prodotti messi nel carrello",
+      "pickSteps": "Scegli i passaggi del tuo negozio e l'evento che indica una vendita nel grafico qui sotto.",
       "steps": {
-        "looked": "Prodotto visto",
-        "basket": "Messo nel carrello",
-        "checkout": "Pagamento iniziato",
-        "bought": "Comprato"
+        "title": "Comprato o lasciato",
+        "hint": "Delle visite a ogni passaggio che scegli, quante sono arrivate alla vendita.",
+        "stepsLabel": "Passaggi",
+        "everyEvent": "Ogni evento",
+        "saleLabel": "La vendita",
+        "endedWith": "Finite con {sale}",
+        "leftWithout": "Uscite senza",
+        "noSteps": "Spunta almeno un passaggio per vedere chi è arrivato alla vendita.",
+        "noSale": "Scegli l'evento che indica una vendita.",
+        "empty": "Nessuna visita a questi passaggi in queste date.",
+        "visits": "Visite",
+        "saveFailed": "Non è stato possibile salvare i passaggi del tuo negozio. Riprova tra un momento."
       },
-      "lookedVisits": "Visite che hanno visto un prodotto",
-      "lookTimes": "{times} visualizzazioni di prodotti",
-      "ofLooks": "{rate} delle visualizzazioni",
-      "ofLookVisits": "{rate} di quelle visite · messo nel carrello {times} volte",
-      "ofBaskets": "{rate} dei carrelli",
-      "ofCheckouts": "{rate} dei pagamenti · {revenue}",
-      "basketLeft": "Lasciati nel carrello",
-      "basketLeftDetail": "{left} delle {all} visite che hanno messo qualcosa nel carrello sono uscite senza comprare",
-      "checkoutLeft": "Lasciati al pagamento",
-      "checkoutLeftDetail": "{left} delle {all} visite che hanno iniziato il pagamento non l'hanno completato",
-      "stepsTitle": "I passaggi del negozio",
-      "stepsHint": "Fin dove sono arrivati gli acquirenti, {period}: le visite che hanno raggiunto ogni passaggio.",
-      "visits": "Visite",
-      "bought": "Comprati",
-      "chartTitle": {
-        "day": "Prodotti comprati al giorno",
-        "week": "Prodotti comprati a settimana",
-        "month": "Prodotti comprati al mese"
-      },
-      "chartHint": "{period}.",
-      "shoppersTitle": {
-        "day": "Acquirenti a ogni passaggio al giorno",
-        "week": "Acquirenti a ogni passaggio a settimana",
-        "month": "Acquirenti a ogni passaggio al mese"
-      },
-      "shoppersHint": "{period}: le visite che hanno messo nel carrello, iniziato il pagamento e comprato. Lo spazio tra la linea in alto e quella in basso sono i carrelli lasciati.",
-      "findProduct": "Trova un prodotto…",
-      "categoryFilter": "Categoria",
-      "everyCategory": "Ogni categoria",
-      "columns": {
-        "product": "Prodotto",
-        "looks": "Visti",
-        "basket": "Carrello",
+      "chart": {
+        "showLabel": "Mostra",
+        "categoryLabel": "Categoria",
+        "everyCategory": "Ogni categoria",
+        "views": {
+          "left": "Lasciati nel carrello",
+          "sold": "Prodotti venduti",
+          "more": "Vendono di più",
+          "less": "Vendono di meno"
+        },
+        "titles": {
+          "left": "I prodotti lasciati più spesso nel carrello",
+          "sold": "I prodotti più venduti",
+          "more": "Prodotti che vendono di più rispetto a {before}",
+          "less": "Prodotti che vendono di meno rispetto a {before}"
+        },
+        "hints": {
+          "left": "I 10 prodotti messi più spesso nel carrello senza comprarli, {period}.",
+          "sold": "I 10 prodotti più comprati, {period}.",
+          "more": "I 10 prodotti con l'aumento maggiore di articoli venduti rispetto a {before}.",
+          "less": "I 10 prodotti con il calo maggiore di articoli venduti rispetto a {before}."
+        },
         "bought": "Comprati",
-        "revenue": "Ricavi",
-        "change": "Variazione",
-        "changeTitle": "Ricavi rispetto al periodo precedente"
+        "leftInBasket": "Lasciati nel carrello",
+        "items": "Articoli",
+        "notCompared": "Non c'è ancora nulla di {before} con cui confrontare.",
+        "empty": "Nessun prodotto in queste date."
       },
-      "csv": {
-        "category": "Categoria",
-        "revenue": "Ricavi ({currency})",
-        "change": "Variazione dei ricavi (%)"
-      },
-      "collecting": "Ancora in raccolta…",
-      "empty": "Nessun prodotto in queste date.",
-      "noMatch": "Nessun risultato per questa ricerca.",
-      "download": "Scarica CSV",
-      "downloading": "Download in corso…",
-      "downloadFailed": "Non è stato possibile scaricare i prodotti ora. Riprova tra poco."
+      "table": {
+        "viewLabel": "Cosa mostra la tabella",
+        "views": {
+          "products": "Prodotti",
+          "categories": "Categorie"
+        },
+        "showLabel": "Mostra",
+        "show": {
+          "all": "Ogni prodotto",
+          "selling": "In vendita",
+          "notBought": "Nel carrello ma mai comprati"
+        },
+        "categoryLabel": "Categoria",
+        "everyCategory": "Ogni categoria",
+        "columns": {
+          "product": "Prodotto",
+          "category": "Categoria",
+          "bought": "Comprati",
+          "boughtTitle": "Articoli comprati",
+          "share": "% degli articoli venduti",
+          "shareTitle": "La quota di questo prodotto su tutti gli articoli venduti",
+          "added": "Nel carrello",
+          "addedTitle": "Articoli messi nel carrello"
+        },
+        "findProduct": "Cerca un prodotto…",
+        "findCategory": "Cerca una categoria…",
+        "collecting": "Raccolta in corso…",
+        "empty": "Nessun prodotto in queste date.",
+        "noMatch": "Nessun risultato per questa ricerca.",
+        "download": "Scarica CSV",
+        "downloading": "Download in corso…",
+        "downloadFailed": "Non è stato possibile scaricare i prodotti. Riprova tra un momento.",
+        "csv": {
+          "itemsBought": "Articoli comprati",
+          "itemsAdded": "Articoli nel carrello",
+          "itemsLeft": "Articoli lasciati nel carrello",
+          "share": "Quota degli articoli venduti (%)",
+          "itemsBoughtBefore": "Articoli comprati {before}"
+        }
+      }
     },
     "visitors": {
       "title": "Visitatori",
@@ -18063,15 +18115,16 @@
         "countUncounted": "Decidi se {event} deve contare come conversione."
       },
       "products": {
-        "none": "Nessun prodotto è stato visto o comprato in queste date.",
-        "looksToBasket": "Delle {a} visite che hanno visto un prodotto, {b} ne hanno messo uno nel carrello ({cRate}).",
-        "basketsLeft": "Il {aRate} di quei carrelli è stato lasciato senza comprare, contro il {bRate} di prima.",
-        "basketsLeftAlone": "Il {aRate} di quei carrelli è stato lasciato senza comprare.",
+        "none": "Nessun prodotto è stato messo nel carrello o comprato in queste date.",
+        "basketsLeft": "Il {aRate} delle {c} visite che hanno messo qualcosa nel carrello è uscito senza comprare, contro il {bRate} di prima.",
+        "basketsLeftAlone": "Il {aRate} delle {c} visite che hanno messo qualcosa nel carrello è uscito senza comprare.",
         "checkoutsLeft": "Il {aRate} delle {c} visite che hanno iniziato il pagamento non l'ha completato, contro il {bRate} di prima.",
-        "checkoutsLeftAlone": "Il {aRate} delle {b} visite che hanno iniziato il pagamento non l'ha completato.",
-        "stuck": "{text} è stato visto {a} volte e comprato {countB, plural, =0 {mai} =1 {una volta} other {# volte}}.",
-        "bestSeller": "{text} è il più venduto: {aMoney}.",
-        "seeProduct": "Guarda la pagina di {text}: tante visualizzazioni, quasi nessuna vendita.",
+        "checkoutsLeftAlone": "Il {aRate} delle {c} visite che hanno iniziato il pagamento non l'ha completato.",
+        "stepLeft": "Il {aRate} delle {c} visite con {text} non è arrivato alla vendita, contro il {bRate} di prima.",
+        "stepLeftAlone": "Il {aRate} delle {c} visite con {text} non è arrivato alla vendita.",
+        "mostLeft": "{text} è stato messo nel carrello {a} volte e comprato {countB, plural, =0 {mai} =1 {una volta} other {# volte}}.",
+        "bestSeller": "{text} è il più venduto: {a} comprati.",
+        "seeProduct": "Guarda la pagina di {text}: messo spesso nel carrello, comprato di rado.",
         "whyUnfinished": "Scopri perché tanti pagamenti non vengono completati: provane uno tu, anche da telefono."
       },
       "visitors": {

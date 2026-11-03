@@ -56,6 +56,10 @@ const COUNTS: Record<string, Measure> = {
   looked: { words: "product views", kind: "count" },
   itemsViewed: { words: "product views", kind: "count" },
   itemsPurchased: { words: "products bought", kind: "count" },
+  // Products' items (products-screen-4-plan-2026-11-02.md): bought, put in a basket, and put in and not bought.
+  itemsBought: { words: "items bought", kind: "count" },
+  itemsAdded: { words: "items added to baskets", kind: "count" },
+  itemsLeft: { words: "items left in baskets", kind: "count", lessIsBetter: true },
   crawled: { words: "pages read by the search engine", kind: "count" },
   inIndex: { words: "pages in the index", kind: "count" },
   errors: { words: "errors", kind: "count", lessIsBetter: true },

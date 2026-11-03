@@ -1,47 +1,61 @@
 "use client";
 
-import { useConvex, useQuery } from "convex/react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { ShoppingBag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { Meter } from "@/src/ui/components/screens/Meter";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
-import { toCsv } from "../../../sites/_components/siteFormat";
+import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
+import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { ChangeCell, FigureCell, MoneyCell } from "../../_components/AnalyticsCells";
-import { ChannelsChart, TopBars } from "../../_components/AnalyticsChart";
+import { FigureCell } from "../../_components/AnalyticsCells";
 import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
-import { formatMoney, formatPercent } from "../../_components/analyticsFormat";
-import { formatNumber } from "../../../sites/_components/siteFormat";
+import { formatPercent } from "../../_components/analyticsFormat";
+import { useEventName } from "../../_components/useEventName";
 import { leftWithout } from "@/convex/utils/sees/analyticsProducts";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
+import { periodWord, useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePageHref, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
+import { BoughtOrLeftChart, ProductsChart, eventFigures, type ShopChoice } from "./_components/ProductsCharts";
 
-type Product = FunctionReturnType<typeof api.googleAnalyticsProductReads.analyticsProductList>["rows"][number];
+type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsProductReads.analyticsProducts>>;
+type Shown = FunctionReturnType<typeof api.googleAnalyticsProductReads.analyticsProductList>["rows"][number];
 
 /** Which way each heading's first press runs: the most first, names A to Z. */
-const FIRSTS = { name: "asc", looks: "desc", basket: "desc", bought: "desc", revenue: "desc", change: "desc" } as const;
+const FIRSTS = { name: "asc", itemsBought: "desc", share: "desc", itemsAdded: "desc" } as const;
+const TABLE_VIEWS = ["products", "categories"] as const;
+type TableView = (typeof TABLE_VIEWS)[number];
+const SHOWS = ["all", "selling", "notBought"] as const;
+type Show = (typeof SHOWS)[number];
+
+/** Google's own names for a basket, a checkout and a purchase: the steps whose boxes are named so. */
+const BASKET = "add_to_cart";
+const CHECKOUT = "begin_checkout";
+const PURCHASE = "purchase";
 
 /**
- * Products (GA34; §18.2 board 25): what each product sold, and how far
- * shoppers got with it — looked, added it to the basket, started checkout,
- * bought. What Hakken sees, the shop's four steps by shoppers as figures and
- * bars with the baskets and checkouts left (shop-baskets-plan.md), shoppers at
- * each step and the products bought a day, and each product's looks, basket, bought, revenue
- * and change, with a Category filter. Only for a website that is a shop,
- * found by itself (§18.6.6); one device's lists asked of Google when the
- * screen opens.
+ * Products, as board "4 · Your products" of the canvas "Products page, three ways" draws it
+ * (docs/plans/active/products-screen-4-plan-2026-11-02.md, phase 3): the header; four boxes, each against the period
+ * before — the baskets left behind, the checkouts not finished, the visits that bought and the products added and never
+ * bought; Bought or left behind, its steps and sale picked from the shop's own events; the products chart; and the
+ * products table, by product or category. Visits and items, never money: not every Google Analytics account records
+ * revenue (Anthony, 2026-11-02). Only for a website that is a shop, found by itself (§18.6.6).
  */
 export default function AnalyticsProductsPage() {
   const t = useTranslations("googleAnalytics.products");
@@ -61,167 +75,191 @@ export default function AnalyticsProductsPage() {
 
 function ProductsBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.products");
-  const tf = useTranslations("googleAnalytics.filters");
   const args = useAnalyticsArgs();
-  const [period] = usePeriod();
-  const [device] = useDevice();
-  const currency = status.connection?.currency ?? null;
   const answer = useQuery(api.googleAnalyticsProductReads.analyticsProducts, args);
-  // Any category in the address: the list holds it to the shop's own (`analyticsProductList`).
-  const [category, setCategory] = useSiteParam<string>("category", "");
-  const [search, setSearch, settled] = useSiteSearch();
-  const order = useSiteSort(FIRSTS, "revenue");
-  const listArgs = { ...args, ...(category ? { category } : {}), ...(settled ? { q: settled } : {}), sort: order.key, direction: order.direction };
-  const paged = useSiteListPage(api.googleAnalyticsProductReads.analyticsProductList, listArgs);
-  const steps = answer?.steps ?? null;
-  const shoppers = steps?.visits ?? null;
-  const was = answer?.before?.visits ?? null;
-  const basketLeft = shoppers ? leftWithout(shoppers.basket, shoppers.bought) : null;
-  const checkoutLeft = shoppers ? leftWithout(shoppers.checkout, shoppers.bought) : null;
-  const periodName = tf(`periods.${periodWord(period)}`);
-  const of = (part: number, whole: number) => (whole > 0 ? formatPercent(Math.min(1, part / whole)) : "–");
-  const inPoints = (value: number) => (value * 100).toFixed(1);
-  const bar = [periodName, tf(`devices.${device}`).toLowerCase()].join(" · ");
-
+  const canWrite = useCanWriteHere();
+  const save = useMutation(api.googleAnalyticsShopSteps.saveShopSteps);
+  const { run } = useAdminAction({ scope: "google-analytics-shop-steps" });
+  // A pick shows at once, for the boxes and the chart alike; saved for the company when the viewer may change it.
+  const [picked, setPicked] = useState<ShopChoice | null>(null);
+  const choice: ShopChoice | null = picked ?? (answer ? { steps: answer.choice.steps, sale: answer.choice.sale } : null);
+  const pick = (next: ShopChoice) => {
+    setPicked(next);
+    const sale = next.sale;
+    if (canWrite && sale) void run(() => save({ siteId: args.siteId, steps: next.steps, sale }), { fallbackMessage: t("steps.saveFailed") });
+  };
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="products" seen={answer?.seen} currency={currency} data={{ figures: answer, rows: paged.pageRows }} />
+      <AnalyticsSees screen="products" seen={answer?.seen} currency={null} data={answer ? { figures: answer, picked: choice } : undefined} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
-      {steps && shoppers ? (
+      {answer && choice ? (
         <>
-          {/* The shop's steps by shoppers, each with the times it happened (shop-baskets-plan.md; Anthony, 2026-10-21). */}
-          <FigureRow columns={4}>
-            <Figure
-              label={t("lookedVisits")}
-              value={formatNumber(shoppers.looked)}
-              detail={<span className="flex flex-col"><span className="text-secondary">{t("lookTimes", { times: formatNumber(steps.looked) })}</span><BeforeLine now={shoppers.looked} before={was?.looked} /></span>}
-            />
-            <Figure
-              label={t("steps.basket")}
-              value={formatNumber(shoppers.basket)}
-              detail={<span className="flex flex-col"><span className="text-secondary">{t("ofLookVisits", { rate: of(shoppers.basket, shoppers.looked), times: formatNumber(steps.basket) })}</span><BeforeLine now={shoppers.basket} before={was?.basket} /></span>}
-            />
-            <Figure
-              label={t("steps.checkout")}
-              value={formatNumber(shoppers.checkout)}
-              detail={<span className="flex flex-col"><span className="text-secondary">{t("ofBaskets", { rate: of(shoppers.checkout, shoppers.basket) })}</span><BeforeLine now={shoppers.checkout} before={was?.checkout} /></span>}
-            />
-            <Figure
-              label={t("steps.bought")}
-              value={formatNumber(shoppers.bought)}
-              detail={(
-                <span className="flex flex-col">
-                  <span className="text-secondary">{t("ofCheckouts", { rate: of(shoppers.bought, shoppers.checkout), revenue: formatMoney(steps.revenue, currency) })}</span>
-                  <BeforeLine now={shoppers.bought} before={was?.bought} />
-                </span>
-              )}
-            />
-          </FigureRow>
-          {/* What was left: the baskets and the checkouts no purchase followed, in points on the span before; fewer is better. */}
-          <FigureRow columns={2}>
-            <Figure
-              label={t("basketLeft")}
-              value={basketLeft === null ? "–" : formatPercent(basketLeft)}
-              detail={(
-                <span className="flex flex-col">
-                  <span className="text-secondary">{t("basketLeftDetail", { left: formatNumber(Math.max(0, shoppers.basket - shoppers.bought)), all: formatNumber(shoppers.basket) })}</span>
-                  <PerVisitLine now={basketLeft} before={was ? leftWithout(was.basket, was.bought) : null} format={inPoints} points lowerIsBetter />
-                </span>
-              )}
-            />
-            <Figure
-              label={t("checkoutLeft")}
-              value={checkoutLeft === null ? "–" : formatPercent(checkoutLeft)}
-              detail={(
-                <span className="flex flex-col">
-                  <span className="text-secondary">{t("checkoutLeftDetail", { left: formatNumber(Math.max(0, shoppers.checkout - shoppers.bought)), all: formatNumber(shoppers.checkout) })}</span>
-                  <PerVisitLine now={checkoutLeft} before={was ? leftWithout(was.checkout, was.bought) : null} format={inPoints} points lowerIsBetter />
-                </span>
-              )}
-            />
-          </FigureRow>
+          <ShopBoxes answer={answer} choice={choice} />
+          <BoughtOrLeftChart answer={answer} choice={choice} onPick={pick} host={status.host} />
+          <ProductsChart categories={answer.categories} host={status.host} />
         </>
       ) : null}
-      <TopBars
-        title={t("stepsTitle")}
-        hint={t("stepsHint", { period: periodName.toLowerCase() })}
-        rows={shoppers ? (["looked", "basket", "checkout", "bought"] as const).map((step) => ({ label: t(`steps.${step}`), value: shoppers[step] })) : undefined}
-        measure={t("visits")}
-        labels={(value) => formatNumber(value)}
-        exportName="google-analytics-shop-steps"
-        host={status.host}
-        from={null}
-        to={null}
-      />
-      <ChannelsChart
-        channels={[t("steps.basket"), t("steps.checkout"), t("steps.bought")]}
-        rest={false}
-        points={(answer?.shoppers ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.basket, point.checkout, point.bought] }))}
-        host={status.host}
-        from={null}
-        to={null}
-        exportName="google-analytics-shop-steps-over-time"
-        title={{ ...t.raw("shoppersTitle") as { day: string; week: string; month: string }, hint: t("shoppersHint", { period: periodName }) }}
-      />
-      <ChannelsChart
-        channels={[t("bought")]}
-        rest={false}
-        points={(answer?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.bought] }))}
-        host={status.host}
-        from={null}
-        to={null}
-        exportName="google-analytics-products-bought"
-        title={{ ...t.raw("chartTitle") as { day: string; week: string; month: string }, hint: t("chartHint", { period: periodName }) }}
-      />
-      <DataTable
-        rows={paged.pageRows}
-        rowKey={(row) => row.key}
-        search={{ value: search, onChange: setSearch, placeholder: t("findProduct") }}
-        filters={(answer?.categories.length ?? 0) > 0 ? (
-          <Select chip={{ label: t("categoryFilter"), choice: category || null }} value={category} onChange={(value) => setCategory(value)}>
-            <option value="">{t("everyCategory")}</option>
-            {answer?.categories.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-          </Select>
-        ) : undefined}
-        cardHeader={
-          <TableBar footer={paged.footer} noun="products" actions={<ProductsDownload args={listArgs} currency={currency} host={status.host} />}>
-            <span className="text-[12px] text-secondary">{paged.result?.live ? t("collecting") : bar}</span>
-          </TableBar>
-        }
-        sort={order.tableSort}
-        empty={{ icon: <ShoppingBag className="h-8 w-8 text-muted/30" />, label: settled || category ? t("noMatch") : t("empty") }}
-        footer={paged.footer}
-        columns={[
-          {
-            key: "name",
-            header: t("columns.product"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row: Product) => (
-              <span className="flex min-w-0 flex-col">
-                <span className="block truncate text-[13px] text-foreground" title={row.name}>{row.name}</span>
-                {row.category && !/^\(.*\)$/.test(row.category) ? <span className="block truncate text-[12px] text-muted">{row.category}</span> : null}
-              </span>
-            ),
-          },
-          { key: "looks", header: t("columns.looks"), align: "right", sortable: true, cell: (row: Product) => <FigureCell value={row.looks} /> },
-          { key: "basket", header: t("columns.basket"), align: "right", sortable: true, cell: (row: Product) => <FigureCell value={row.basket} /> },
-          { key: "bought", header: t("columns.bought"), align: "right", sortable: true, cell: (row: Product) => <FigureCell value={row.bought} /> },
-          { key: "revenue", header: t("columns.revenue"), align: "right", sortable: true, cell: (row: Product) => <MoneyCell value={row.revenue} currency={currency} /> },
-          { key: "change", header: <span title={t("columns.changeTitle")}>{t("columns.change")}</span>, align: "right", sortable: true, cell: (row: Product) => <ChangeCell change={row.change} /> },
-        ]}
-      />
+      <ProductsTable categories={answer?.categories ?? []} host={status.host} />
     </div>
   );
 }
 
-/** Every product, in the order on screen, as CSV: read when pressed. */
-function ProductsDownload({ args, currency, host }: {
+/**
+ * The four boxes, from the same steps and sale as the chart beneath them, so the two always agree: the visits left
+ * after the first two steps, named as baskets and checkouts where they are Google's own; the visits with the sale; and
+ * the products put in a basket and never bought. Each against the period before.
+ */
+function ShopBoxes({ answer, choice }: { answer: Answer; choice: ShopChoice }) {
+  const t = useTranslations("googleAnalytics.products");
+  const nameOf = useEventName();
+  const figureOf = eventFigures(answer);
+  const steps = choice.steps.map(figureOf).sort((left, right) => right.visits - left.visits);
+  if (choice.sale === null || steps.length === 0) return <Notice>{t("pickSteps")}</Notice>;
+  const sale = figureOf(choice.sale);
+  const saleName = nameOf(sale.eventName);
+  const of = (part: number, whole: number) => (whole > 0 ? formatPercent(Math.min(1, part / whole)) : "–");
+  const inPoints = (value: number) => (value * 100).toFixed(1);
+  const left = (step: (typeof steps)[number]) => {
+    const share = leftWithout(step.visits, sale.visits);
+    const before = step.visitsBefore !== null && sale.visitsBefore !== null ? leftWithout(step.visitsBefore, sale.visitsBefore) : null;
+    const rate = share === null ? "–" : formatPercent(share);
+    const label = step.eventName === BASKET ? t("basketsLeft") : step.eventName === CHECKOUT ? t("checkoutsLeft") : t("stepLeft", { step: nameOf(step.eventName) });
+    const words = step.eventName === BASKET ? t("basketsLeftDetail", { rate }) : step.eventName === CHECKOUT ? t("checkoutsLeftDetail", { rate }) : t("stepLeftDetail", { rate, step: nameOf(step.eventName), sale: saleName });
+    return (
+      <Figure
+        key={step.eventName}
+        label={label}
+        value={formatNumber(Math.max(0, step.visits - sale.visits))}
+        detail={<span className="flex flex-col"><span className="text-secondary">{words}</span><PerVisitLine now={share} before={before} format={inPoints} points lowerIsBetter /></span>}
+      />
+    );
+  };
+  const first = steps[0];
+  const never = answer.neverBought;
+  return (
+    <FigureRow columns={steps.length > 1 ? 4 : 3}>
+      {steps.slice(0, 2).map(left)}
+      <Figure
+        label={sale.eventName === PURCHASE ? t("boughtVisits") : t("saleVisits", { sale: saleName })}
+        value={formatNumber(sale.visits)}
+        detail={(
+          <span className="flex flex-col">
+            <span className="text-secondary">{first.eventName === BASKET ? t("boughtOfBasket", { rate: of(sale.visits, first.visits) }) : t("boughtDetail", { rate: of(sale.visits, first.visits), step: nameOf(first.eventName) })}</span>
+            <BeforeLine now={sale.visits} before={sale.visitsBefore} />
+          </span>
+        )}
+      />
+      <Figure
+        label={t("neverBought")}
+        value={t("neverBoughtValue", { count: never.count })}
+        detail={<span className="flex flex-col"><span className="text-secondary">{t("neverBoughtDetail", { rate: of(never.count, never.of) })}</span><BeforeLine now={never.count} before={never.countBefore} lowerIsBetter /></span>}
+      />
+    </FigureRow>
+  );
+}
+
+/** The products table, by product or by category: items bought, the share of every item sold, and items added. */
+function ProductsTable({ categories, host }: { categories: readonly string[]; host: string }) {
+  const t = useTranslations("googleAnalytics.products.table");
+  const tf = useTranslations("googleAnalytics.filters");
+  const args = useAnalyticsArgs();
+  const [period] = usePeriod();
+  const [device] = useDevice();
+  const [view, setView] = useSiteParam<TableView>("table", "products", TABLE_VIEWS);
+  const [show, setShow] = useSiteParam<Show>("show", "all", SHOWS);
+  // Any category in the address: the list holds it to the shop's own (`analyticsProductList`).
+  const [category, setCategory] = useSiteParam<string>("category", "");
+  const [search, setSearch, settled] = useSiteSearch();
+  const order = useSiteSort(FIRSTS, "itemsBought");
+  const byCategory = view === "categories";
+  const listArgs = {
+    ...args, view, show, ...(category ? { category } : {}), ...(settled ? { q: settled } : {}), sort: order.key, direction: order.direction,
+  };
+  const paged = useSiteListPage(api.googleAnalyticsProductReads.analyticsProductList, listArgs);
+  // Its own query, so the page's eye is handed its rows here (sees-every-page-plan-2026-10-31.md) — without each row's
+  // share, which the eye would set against the list's average, and shares of a whole always average the same.
+  useSeesPart("productsTable", paged.pageRows?.map(({ share: _share, ...row }) => row));
+  const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase()].join(" · ");
+  const most = Math.max(0, ...(paged.pageRows ?? []).map((row) => row.share));
+  // A product opens the page it is sold on, and its screen's Back returns here as it was (Anthony, 2026-11-02:
+  // "click through and click back"); with no page near enough its name, All pages searched for it.
+  const convex = useConvex();
+  const router = useRouter();
+  const pageHref = usePageHref();
+  const hrefFor = useAnalyticsHref(args.siteId);
+  const openProduct = async (row: Shown) => {
+    const found = await convex.query(api.googleAnalyticsProductReads.analyticsProductPage, { ...args, name: row.name }).catch(() => null);
+    router.push(found ? pageHref(found.key) : hrefFor("all-pages", { q: row.name }));
+  };
+  return (
+    <DataTable
+      rows={paged.pageRows}
+      rowKey={(row) => row.key}
+      views={<SiteViewSwitch label={t("viewLabel")} options={TABLE_VIEWS.map((value) => ({ value, label: t(`views.${value}`) }))} value={view} onChange={setView} />}
+      search={{ value: search, onChange: setSearch, placeholder: byCategory ? t("findCategory") : t("findProduct") }}
+      filters={(
+        <div className="flex flex-wrap items-center gap-3">
+          <Select chip={{ label: t("showLabel"), choice: show === "all" ? null : t(`show.${show}`) }} value={show} onChange={(value) => setShow(value as Show)}>
+            {SHOWS.map((value) => <option key={value} value={value}>{t(`show.${value}`)}</option>)}
+          </Select>
+          {categories.length > 0 ? (
+            <Select chip={{ label: t("categoryLabel"), choice: category || null }} value={category} onChange={setCategory}>
+              <option value="">{t("everyCategory")}</option>
+              {categories.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+            </Select>
+          ) : null}
+        </div>
+      )}
+      cardHeader={
+        <TableBar footer={paged.footer} noun={byCategory ? "categories" : "products"} actions={<ProductsDownload args={listArgs} host={host} />}>
+          <span className="text-[12px] text-secondary">{paged.result?.live ? t("collecting") : bar}</span>
+        </TableBar>
+      }
+      sort={order.tableSort}
+      onRowClick={byCategory ? undefined : (row) => void openProduct(row)}
+      empty={{ icon: <ShoppingBag className="h-8 w-8 text-muted/30" />, label: settled || category || show !== "all" ? t("noMatch") : t("empty") }}
+      footer={paged.footer}
+      columns={[
+        {
+          key: "name",
+          header: byCategory ? t("columns.category") : t("columns.product"),
+          sortable: true,
+          className: CUT_COLUMN.first,
+          cell: (row: Shown) => (
+            <span className="flex min-w-0 flex-col">
+              <span className="block truncate text-[13px] text-foreground" title={row.name}>{row.name}</span>
+              {!byCategory && row.category && !/^\(.*\)$/.test(row.category) ? <span className="block truncate text-[12px] text-muted">{row.category}</span> : null}
+            </span>
+          ),
+        },
+        { key: "itemsBought", header: <span title={t("columns.boughtTitle")}>{t("columns.bought")}</span>, align: "right", sortable: true, cell: (row: Shown) => <FigureCell value={row.itemsBought} /> },
+        {
+          key: "share",
+          header: <span title={t("columns.shareTitle")}>{t("columns.share")}</span>,
+          align: "right",
+          sortable: true,
+          // The bar against the largest share on the page, beside its figure (Anthony, 2026-11-02: "i really love this").
+          cell: (row: Shown) => (
+            <div className="flex items-center justify-end gap-2">
+              <Meter value={most > 0 ? row.share / most : 0} className="w-16 shrink-0" />
+              <span className="w-12 shrink-0 text-right font-mono text-[12px] text-secondary">{formatPercent(row.share)}</span>
+            </div>
+          ),
+        },
+        { key: "itemsAdded", header: <span title={t("columns.addedTitle")}>{t("columns.added")}</span>, align: "right", sortable: true, cell: (row: Shown) => <FigureCell value={row.itemsAdded} /> },
+      ]}
+    />
+  );
+}
+
+/** Every product or category, in the order on screen, as CSV: read when pressed. */
+function ProductsDownload({ args, host }: {
   args: Parameters<typeof useSiteListPage<typeof api.googleAnalyticsProductReads.analyticsProductList>>[1];
-  currency: string | null;
   host: string;
 }) {
-  const t = useTranslations("googleAnalytics.products");
+  const t = useTranslations("googleAnalytics.products.table");
+  const tf = useTranslations("googleAnalytics.filters");
+  const [period] = usePeriod();
   const convex = useConvex();
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-products-download" });
   if (args === "skip") return null;
@@ -233,9 +271,15 @@ function ProductsDownload({ args, currency, host }: {
       onClick={async () => {
         const outcome = await run(() => convex.query(api.googleAnalyticsProductReads.analyticsProductListAll, args), { fallbackMessage: t("downloadFailed") });
         if (!outcome.ok) return;
-        const headers = [t("columns.product"), t("csv.category"), t("columns.looks"), t("columns.basket"), t("columns.bought"), t("csv.revenue", { currency: currency ?? "" }), t("csv.change")];
-        const rows = outcome.data.rows.map((row) => [row.name, row.category, row.looks, row.basket, row.bought, row.revenue / 100, row.change === null ? null : Math.round(row.change * 1000) / 10]);
-        saveTextFile(toCsv(headers, rows), `${host}-google-analytics-products.csv`);
+        const byCategory = args.view === "categories";
+        const headers = [
+          byCategory ? t("columns.category") : t("columns.product"), ...(byCategory ? [] : [t("columns.category")]),
+          t("csv.itemsBought"), t("csv.itemsAdded"), t("csv.itemsLeft"), t("csv.share"), t("csv.itemsBoughtBefore", { before: tf(`before.${periodWord(period)}`) }),
+        ];
+        const rows = outcome.data.rows.map((row) => [
+          row.name, ...(byCategory ? [] : [row.category]), row.itemsBought, row.itemsAdded, row.itemsLeft, Math.round(row.share * 1000) / 10, row.itemsBoughtBefore,
+        ]);
+        saveTextFile(toCsv(headers, rows), `${host}-google-analytics-${byCategory ? "product-categories" : "products"}.csv`);
       }}
     />
   );

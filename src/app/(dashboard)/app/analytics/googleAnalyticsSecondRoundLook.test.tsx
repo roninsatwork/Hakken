@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
@@ -59,11 +60,16 @@ function at(path: string, search = "") {
 const DAYS = ["2026-10-06", "2026-10-07", "2026-10-08"];
 
 beforeEach(() => {
+  // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+  useScreenDay("2026-10-09");
   vi.mocked(useQuery).mockReset();
   vi.mocked(useMutation).mockReset();
   vi.mocked(useAction).mockReset();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("Google Analytics' second-round looks", () => {
   it("14 · Live", async () => {
@@ -311,26 +317,32 @@ describe("Google Analytics' second-round looks", () => {
 
   it("25 · Products, for a shop", async () => {
     at("/app/analytics/site_1/products");
-    const product = { key: "Brass lever handle\u001fHandles", name: "Brass lever handle", category: "Handles", looks: 612, basket: 88, bought: 22, revenue: 286_000, change: 0.12 };
+    // Screen 4 of the canvas "Products page, three ways" (products-screen-4-plan-2026-11-02.md): items, never money.
+    const product = { key: "Brass lever handle\u001fHandles", name: "Brass lever handle", category: "Handles", itemsBought: 22, itemsAdded: 88, itemsLeft: 66, itemsBoughtBefore: 18, share: 0.4 };
+    const event = (eventName: string, visits: number, visitsBefore: number) => ({ eventName, visits, visitsBefore });
+    const journey = { steps: [event("add_to_cart", 412, 398), event("begin_checkout", 201, 205)], sale: event("purchase", 118, 112) };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ shop: true }),
       "googleAnalyticsProductReads:analyticsProducts": {
         shop: true, preparing: false, missing: [],
-        // Each step in times and in the visits that reached it (shop-baskets-plan.md).
-        steps: { looked: 4210, basket: 612, checkout: 241, bought: 118, revenue: 724_800, visits: { looked: 1980, basket: 412, checkout: 201, bought: 118 } },
-        before: { looked: 3968, basket: 594, checkout: 248, bought: 112, revenue: 690_000, visits: { looked: 1870, basket: 398, checkout: 205, bought: 112 } },
-        points: DAYS.map((day) => ({ day, bought: 4 })), shoppers: DAYS.map((day) => ({ day, basket: 14, checkout: 7, bought: 4 })), categories: ["Handles"],
-        seen: productsSees({ looked: 1980, basket: 412, checkout: 201, bought: 118 }, [{ name: product.name, looks: 612, bought: 22, revenue: 286_000 }], { looked: 1870, basket: 398, checkout: 205, bought: 112 }),
+        events: [event("view_item", 1980, 1870), ...journey.steps, journey.sale],
+        choice: { steps: ["add_to_cart", "begin_checkout"], sale: "purchase", saved: false },
+        journey,
+        neverBought: { count: 3, of: 9, countBefore: 4 },
+        categories: ["Handles"],
+        seen: productsSees(journey, [product]),
       },
+      "googleAnalyticsProductReads:analyticsProductChart": { left: [product], sold: [product], more: [product], less: [], compared: true },
       "googleAnalyticsProductReads:analyticsProductList": { rows: [product], total: 1, page: 1, pages: 1, size: 25, cut: null, live: false, preparing: false },
     });
     const { container } = render(<AnalyticsProductsPage />);
-    await screen.findByText("Brass lever handle");
+    await screen.findAllByText("Brass lever handle");
     await openHakkenSees();
-    await screen.findByText(/Of the 1,980 visits that looked at a product, 412 added one to the basket/);
-    // The baskets and checkouts left, in points on the span before.
-    await screen.findByText("Left in the basket");
-    await screen.findByText("71.4%");
-    await expectApprovedLook(container, PLAN, "Products", "Google Analytics → Products");
+    await screen.findByText(/of the 412 visits that added to the basket left without buying/);
+    // The baskets left behind, of the visits that added something, in points on the period before; no money anywhere.
+    await screen.findByText("Baskets left behind");
+    await screen.findByText(/71.4% of visits that added something didn't buy/);
+    expect(container.textContent ?? "").not.toMatch(/£/);
+    await expectApprovedLook(container, "products-screen-4", "Products", "Google Analytics → Products");
   });
 });

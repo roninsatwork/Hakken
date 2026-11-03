@@ -10,7 +10,7 @@ import { readConversions, readListPage, readOverview, type ShownRow } from "./go
 import { readOverviewPagePanels, readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitors } from "./googleAnalyticsVisitorReads";
-import { productList, readProducts } from "./googleAnalyticsProductReads";
+import { productChart, readProducts, shownProductList } from "./googleAnalyticsProductReads";
 import { readLandingPage, readPage } from "./googleAnalyticsPageReads";
 import { LIVE_LISTS, askLiveFigures } from "./googleAnalyticsRealtime";
 import { pathOfAddress } from "./utils/sees/analytics";
@@ -407,19 +407,31 @@ export const googleAnalyticsInternal = internalQuery({
       case "products": {
         const answer = await readProducts(site, common);
         if (!answer?.shop) return { ok: false, problem: `${host} is not a shop: Google Analytics recorded no products looked at, added to a basket or bought this quarter or last.` };
-        const products = await productList(ctx, hold, { ...common, ...(args.search ? { q: args.search } : {}) });
-        // Each step in times and in visits (shoppers), and the baskets and checkouts left, as the screen shows them (shop-baskets-plan.md).
-        const stepsOf = (steps: NonNullable<typeof answer.steps>) => ({
-          ...steps,
-          revenue: money(steps.revenue),
-          basketsLeftPercent: percent(leftWithout(steps.visits.basket, steps.visits.bought)),
-          checkoutsLeftPercent: percent(leftWithout(steps.visits.checkout, steps.visits.bought)),
+        const table = await shownProductList(ctx, hold, { ...common, ...(args.search ? { q: args.search } : {}) });
+        const chart = await productChart(ctx, hold, common);
+        // As the screen shows them (products-screen-4-plan-2026-11-02.md): visits and items, no money, because not
+        // every Google Analytics account records revenue; the steps and sale the company picked.
+        const sale = answer.journey.sale;
+        const product = (row: (typeof table.rows)[number]) => ({
+          name: row.name, category: row.category, itemsBought: row.itemsBought, itemsAddedToBasket: row.itemsAdded,
+          itemsLeftInBasket: row.itemsLeft, shareOfItemsBoughtPercent: percent(row.share), itemsBoughtTheSpanBefore: row.itemsBoughtBefore,
         });
         return {
           ...base,
-          steps: answer.steps && stepsOf(answer.steps),
-          theSpanBefore: answer.before && stepsOf(answer.before),
-          products: products.rows.slice(0, ROWS).map((row) => ({ name: row.name, category: row.category, looks: row.looks, basket: row.basket, bought: row.bought, revenue: money(row.revenue), changeInRevenuePercent: percent(row.change) })),
+          rule: "These are the figures the screen shows. Give them with the link, in plain words. Products counts visits and items, never money.",
+          stepsPickedBy: answer.choice.saved ? "the company" : "Google's own event names, until the company picks its own",
+          steps: answer.journey.steps.map((step) => ({
+            event: step.eventName, visits: step.visits, visitsTheSpanBefore: step.visitsBefore,
+            // The visits left, as the page's boxes count them, so an answer never works them out from the share.
+            visitsLeftWithoutTheSale: sale ? Math.max(0, step.visits - sale.visits) : null,
+            leftWithoutTheSalePercent: sale ? percent(leftWithout(step.visits, sale.visits)) : null,
+          })),
+          sale: sale && { event: sale.eventName, visits: sale.visits, visitsTheSpanBefore: sale.visitsBefore },
+          productsAddedNeverBought: answer.neverBought,
+          products: table.rows.slice(0, ROWS).map(product),
+          mostLeftInBaskets: chart.left.slice(0, 5).map(product),
+          sellingMore: chart.more.slice(0, 5).map(product),
+          sellingLess: chart.less.slice(0, 5).map(product),
           link: linkTo("products"),
         };
       }

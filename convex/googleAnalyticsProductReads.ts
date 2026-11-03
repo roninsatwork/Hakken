@@ -1,86 +1,79 @@
-import { readDayPoints } from "./googleAnalyticsHistory";
 import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
-import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
-import { SHOP_STEPS, splitChannelKey } from "./googleAnalyticsLists";
+import { splitChannelKey } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { seenValidator } from "./utils/hakkenSees";
-import { productsSees, type ShopSteps } from "./utils/sees/analyticsProducts";
-import { connectionOf, readFor, readSlot, type Held } from "./googleAnalyticsRows";
+import { productsSees } from "./utils/sees/analyticsProducts";
+import { connectionOf, readFor, type Held } from "./googleAnalyticsRows";
+import { decodePages } from "./holdPageRefs";
+import { AUTOMATIC_EVENTS, shopChoiceOf } from "./googleAnalyticsShopSteps";
 
 /**
- * What Products reads (docs/plans/active/google-analytics-plan.md GA34,
- * §18.2 board 25, §18.6.6): the shop's four steps from the events list and
- * its revenue, against the span before — the visits that reached each step
- * too, and a day at a time, for the baskets and checkouts left
- * (docs/plans/active/shop-baskets-plan.md); the products bought a day; and each
- * product's looks, baskets, sales and revenue, searched, filtered by
- * category, sorted and paged on the server. Only for a shop; each device's
- * lists kept by each collection. Only the caller's own
- * website (`requireMySite`).
+ * What Products reads (docs/plans/active/products-screen-4-plan-2026-11-02.md, phase 2; drawn as board 4 of the
+ * canvas "Products page, three ways"). No money anywhere, because not every Google Analytics account records revenue
+ * (Anthony, 2026-11-02): visits and items only.
+ *
+ * - **The page** (`analyticsProducts`): the shop's own events for the Steps dropdown, the steps and sale it picked
+ *   (`shopChoiceOf`), each step's visits and how many ended with the sale, and the products added and never bought.
+ * - **The products chart** (`analyticsProductChart`): ten products for each of its four views, picked from the whole
+ *   list: most left in baskets, most bought, and the biggest rise and fall in items bought against the period before.
+ * - **The table** (`analyticsProductList`): each product or category's items bought, its share and its items added,
+ *   searched, filtered, sorted and paged on the server.
+ *
+ * Nothing is asked of Google: each collection already keeps the events list and the product list for every period and
+ * the period before. Only a shop; only the caller's own website (`requireMySite`).
  */
 
 type Reader = { db: QueryCtx["db"] };
 
 const heldOf = (list: Held | "LIVE" | null) => (list && list !== "LIVE" ? list : null);
 
-/** The lists Products reads besides the totals, each a device's built by the next run. */
+/** The lists Products reads, each a device's built by the next run. */
 const NEEDED = ["event", "product"] as const;
 
-const shopStepsValidator = v.object({ looked: v.number(), basket: v.number(), checkout: v.number(), bought: v.number() });
-const stepsValidator = v.object({
-  looked: v.number(), basket: v.number(), checkout: v.number(), bought: v.number(), revenue: v.number(),
-  /** The visits that reached each step: shoppers, not times (shop-baskets-plan.md; Anthony, 2026-10-21). */
-  visits: shopStepsValidator,
-});
-
-/** Each step's event, in the events list. */
-const STEP_EVENTS: Record<keyof ShopSteps, (typeof SHOP_STEPS)[number]> = { looked: "view_item", basket: "add_to_cart", checkout: "begin_checkout", bought: "purchase" };
-
-/** The shop's four steps from an events list, as many times as each happened and as many visits as reached it, and the revenue from the totals. */
-function stepsOf(events: Held | null, total: Held | null): (ShopSteps & { revenue: number; visits: ShopSteps }) | null {
-  if (!events) return null;
-  const row = (step: keyof ShopSteps) => events.rows.find((one) => one.key === STEP_EVENTS[step]);
-  const of = (figure: (step: keyof ShopSteps) => number): ShopSteps => ({ looked: figure("looked"), basket: figure("basket"), checkout: figure("checkout"), bought: figure("bought") });
-  return { ...of((step) => row(step)?.times ?? 0), revenue: total?.rows[0]?.revenue ?? 0, visits: of((step) => row(step)?.visits ?? 0) };
-}
-
-/** One product as the screen shows it. */
-const productRowValidator = v.object({
-  key: v.string(),
-  name: v.string(),
-  category: v.string(),
-  looks: v.number(),
-  basket: v.number(),
-  bought: v.number(),
-  /** In hundredths of the property's currency. */
-  revenue: v.number(),
+/** A product as the product list holds it, money and looks kept for Overview's shop panel (OV7). */
+type ProductRow = {
+  key: string;
+  name: string;
+  category: string;
+  looks: number;
+  basket: number;
+  bought: number;
+  /** In hundredths of the property's currency. Overview's only: Products shows no money. */
+  revenue: number;
   /** Revenue against the span before, as a fraction; null when there is none to compare. */
-  change: v.union(v.number(), v.null()),
-});
-type ProductRow = typeof productRowValidator.type;
+  change: number | null;
+  /** Items bought the period before; null when nothing is held for it. */
+  boughtBefore: number | null;
+};
 
-/** The products held for the dates, device and home country chosen, each against the span before. */
+/** The products held for the dates, device and home country chosen, each beside the period before. */
 async function productsOf(ctx: Reader, holdId: Id<"companyWebsites">, args: { period: AnalyticsPeriod; device: string }, country: string) {
   const nowList = await readFor(ctx, holdId, "product", args.period, "NOW", args.device, undefined, country);
   const before = heldOf(await readFor(ctx, holdId, "product", args.period, "BEFORE", args.device, undefined, country));
   const now = heldOf(nowList);
-  const was = new Map((before?.rows ?? []).map((row) => [row.key, row.revenue]));
-  const rows: ProductRow[] = (now?.rows ?? []).map((row) => {
-    const { channel: name, source: category } = splitChannelKey(row.key);
-    const earlier = was.get(row.key) ?? 0;
+  const was = new Map((before?.rows ?? []).map((row) => [row.key, row]));
+  const row = (held: Held["rows"][number], earlier: Held["rows"][number] | undefined, gone = false): ProductRow => {
+    const { channel: name, source: category } = splitChannelKey(held.key);
     return {
-      key: row.key, name, category, looks: row.views, basket: row.basket ?? 0, bought: row.purchases, revenue: row.revenue,
-      change: before && earlier > 0 ? (row.revenue - earlier) / earlier : null,
+      key: held.key, name, category,
+      looks: gone ? 0 : held.views, basket: gone ? 0 : held.basket ?? 0, bought: gone ? 0 : held.purchases, revenue: gone ? 0 : held.revenue,
+      change: before && earlier && earlier.revenue > 0 ? ((gone ? 0 : held.revenue) - earlier.revenue) / earlier.revenue : null,
+      boughtBefore: before ? earlier?.purchases ?? 0 : null,
     };
-  });
-  return { rows, live: nowList === "LIVE", preparing: nowList === null };
+  };
+  const rows = (now?.rows ?? []).map((held) => row(held, was.get(held.key)));
+  const kept = new Set(rows.map((one) => one.key));
+  // Bought the period before and nothing now: selling less, to none. Never in the table, which lists the dates' own.
+  const gone = (before?.rows ?? []).filter((held) => held.purchases > 0 && !kept.has(held.key)).map((held) => row(held, held, true));
+  const neverBoughtBefore = before ? before.rows.filter((held) => (held.basket ?? 0) > 0 && held.purchases === 0).length : null;
+  return { rows, gone, neverBoughtBefore, live: nowList === "LIVE", preparing: nowList === null };
 }
 
 /** Whether the website's connection is a shop's: Products shows nothing else. */
@@ -95,11 +88,35 @@ const filterArgs = {
 
 const analyticsProductsArgs = filterArgs;
 
-/**
- * Products above its table (§18.2 board 25): the shop's four steps and its
- * revenue against the span before, the products bought a day, the categories
- * for the filter, and What Hakken sees over all of it.
- */
+/** A product, or a category, as Products shows it: items, never money. */
+const shownValidator = v.object({
+  key: v.string(),
+  name: v.string(),
+  category: v.string(),
+  itemsBought: v.number(),
+  itemsAdded: v.number(),
+  /** Items put in a basket and not bought: added less bought. */
+  itemsLeft: v.number(),
+  /** Items bought the period before; null when nothing is held for it. */
+  itemsBoughtBefore: v.union(v.number(), v.null()),
+  /** Its share of every item bought in the dates, 0–1. */
+  share: v.number(),
+});
+type Shown = typeof shownValidator.type;
+
+const shownOf = (row: ProductRow, total: number): Shown => ({
+  key: row.key, name: row.name, category: row.category,
+  itemsBought: row.bought, itemsAdded: row.basket, itemsLeft: Math.max(0, row.basket - row.bought),
+  itemsBoughtBefore: row.boughtBefore,
+  share: total > 0 ? row.bought / total : 0,
+});
+
+const itemsBoughtIn = (rows: readonly ProductRow[]) => rows.reduce((sum, row) => sum + row.bought, 0);
+
+/** An event's visits, and the period before's when held. */
+const eventFigureValidator = v.object({ eventName: v.string(), visits: v.number(), visitsBefore: v.union(v.number(), v.null()) });
+
+/** Products above its table: the steps, the sale, the boxes' figures and What Hakken sees. */
 export const analyticsProducts = tenantQuery({
   args: analyticsProductsArgs,
   returns: v.union(v.null(), v.object({
@@ -107,11 +124,14 @@ export const analyticsProducts = tenantQuery({
     preparing: v.boolean(),
     /** One device's lists still to ask of Google. */
     missing: v.array(v.union(...NEEDED.map((list) => v.literal(list)))),
-    steps: v.union(v.null(), stepsValidator),
-    before: v.union(v.null(), stepsValidator),
-    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), bought: v.number() })),
-    /** The visits that added to the basket, started checkout and bought, a day (then a week, then a month), from the events' days kept. */
-    shoppers: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), basket: v.number(), checkout: v.number(), bought: v.number() })),
+    /** Every event recorded in the dates, most visits first, Google's automatic ones left out: the Steps dropdown. */
+    events: v.array(eventFigureValidator),
+    /** The steps and sale the company picked, or Google's own names until it does. */
+    choice: v.object({ steps: v.array(v.string()), sale: v.union(v.string(), v.null()), saved: v.boolean() }),
+    /** Bought or left behind: each step's visits, most first, and the sale's. */
+    journey: v.object({ steps: v.array(eventFigureValidator), sale: v.union(v.null(), eventFigureValidator) }),
+    /** Products put in a basket and none bought: how many, of how many added, and the period before's. */
+    neverBought: v.object({ count: v.number(), of: v.number(), countBefore: v.union(v.number(), v.null()) }),
     categories: v.array(v.string()),
     seen: seenValidator,
   })),
@@ -125,64 +145,263 @@ export async function readProducts(ctx: SiteReader, args: ObjectType<typeof anal
   const country = await keptCountry(ctx, site.hold, args.country);
   const connection = await connectionOf(ctx, holdId);
   if (!connection?.newestDay) return null;
-  const none = { shop: false, preparing: false, missing: [], steps: null, before: null, points: [], shoppers: [], categories: [], seen: { says: [], steps: [] } };
+  const none = {
+    shop: false, preparing: false, missing: [], events: [], choice: { steps: [], sale: null, saved: false },
+    journey: { steps: [], sale: null }, neverBought: { count: 0, of: 0, countBefore: null }, categories: [], seen: { says: [], steps: [] },
+  };
   if (!isShop(connection)) return none;
   const eventsList = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
   const eventsBefore = heldOf(await readFor(ctx, holdId, "event", args.period, "BEFORE", args.device, undefined, country));
-  // The products bought stored a day, then a week, then a month (SF12).
-  const every = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-  const stored = every ? await readDayPoints(ctx, connection, "product", args.device, every.from, every.to, country) : null;
-  // The visits at each step the same way, from the events' days (shop-baskets-plan.md): none until those are kept.
-  const eventDays = every ? await readDayPoints(ctx, connection, "event", args.device, every.from, every.to, country) : null;
   const products = await productsOf(ctx, holdId, args, country);
-  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
-  const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", args.device, country));
   const missing = [
     ...(eventsList === "LIVE" ? ["event" as const] : []),
     ...(products.live ? ["product" as const] : []),
   ];
-  const steps = stepsOf(heldOf(eventsList), total);
-  const points: Array<{ day: string; lastDay?: string; bought: number }> = (stored ?? []).map((point) => ({
-    day: point.start,
-    ...(point.end !== point.start ? { lastDay: point.end } : {}),
-    bought: point.rows.reduce((sum, row) => sum + row.purchases, 0),
-  }));
-  const shoppers = (eventDays ?? []).map((point) => {
-    const visits = (step: keyof ShopSteps) => point.rows.filter((row) => row.key === STEP_EVENTS[step]).reduce((sum, row) => sum + row.visits, 0);
-    return { day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), basket: visits("basket"), checkout: visits("checkout"), bought: visits("bought") };
-  });
-  const before = stepsOf(eventsBefore, totalBefore);
+  const was = new Map((eventsBefore?.rows ?? []).map((row) => [row.key, row.visits]));
+  const figureOf = (eventName: string, visits: number) => ({ eventName, visits, visitsBefore: eventsBefore ? was.get(eventName) ?? 0 : null });
+  const recorded = (heldOf(eventsList)?.rows ?? []).filter((row) => row.visits > 0 && !AUTOMATIC_EVENTS.has(row.key));
+  const events = recorded.map((row) => figureOf(row.key, row.visits)).sort((left, right) => right.visits - left.visits || left.eventName.localeCompare(right.eventName));
+  const visitsOf = new Map(events.map((event) => [event.eventName, event.visits]));
+  const choice = shopChoiceOf(connection, new Set(visitsOf.keys()));
+  const journey = {
+    // The funnel's order is its own: the step most visits reached first.
+    steps: choice.steps.map((step) => figureOf(step, visitsOf.get(step) ?? 0)).sort((left, right) => right.visits - left.visits),
+    sale: choice.sale === null ? null : figureOf(choice.sale, visitsOf.get(choice.sale) ?? 0),
+  };
+  const neverBought = {
+    count: products.rows.filter((row) => row.basket > 0 && row.bought === 0).length,
+    of: products.rows.filter((row) => row.basket > 0).length,
+    countBefore: products.neverBoughtBefore,
+  };
+  const total = itemsBoughtIn(products.rows);
   return {
     shop: true,
     preparing: products.preparing,
     missing,
-    steps,
-    before,
-    points,
-    shoppers,
-    categories: [...new Set(products.rows.map((row) => row.category).filter((category) => category && !/^\(.*\)$/.test(category)))].sort(),
-    seen: steps && missing.length === 0 && !products.preparing
-      ? productsSees(steps.visits, products.rows.map((row) => ({ name: row.name, looks: row.looks, bought: row.bought, revenue: row.revenue })), before?.visits ?? null)
+    events,
+    choice,
+    journey,
+    neverBought,
+    categories: categoriesOf(products.rows),
+    seen: missing.length === 0 && !products.preparing
+      ? productsSees(journey, products.rows.map((row) => shownOf(row, total)))
       : { says: [], steps: [] },
   };
 }
 
-const SORTS: ListSorts<ProductRow, "name" | "looks" | "basket" | "bought" | "revenue" | "change"> = {
-name: { value: (row) => row.name, first: "asc" },
-looks: { value: (row) => row.looks, first: "desc" },
-basket: { value: (row) => row.basket, first: "desc" },
-bought: { value: (row) => row.bought, first: "desc" },
-revenue: { value: (row) => row.revenue, first: "desc" },
-change: { value: (row) => row.change, first: "desc" },
+/** The shop's own categories, named; Google's "(not set)" and the like left out. */
+function categoriesOf(rows: readonly ProductRow[]): string[] {
+  return [...new Set(rows.map((row) => row.category).filter((category) => category && !/^\(.*\)$/.test(category)))].sort();
+}
+
+// ---------------------------------------------------------------------------
+// The products chart
+// ---------------------------------------------------------------------------
+
+/** Each view's bars: ten products, picked from the whole list. */
+const CHART_ROWS = 10;
+
+const chartArgs = { ...filterArgs, category: v.optional(v.string()) };
+
+/** The products chart's four views (board "The products chart, ready to reuse"), for one category or all. */
+export const analyticsProductChart = tenantQuery({
+  args: chartArgs,
+  returns: v.object({
+    left: v.array(shownValidator),
+    sold: v.array(shownValidator),
+    more: v.array(shownValidator),
+    less: v.array(shownValidator),
+    /** Whether the period before is held: without it, Selling more and Selling less have nothing to compare. */
+    compared: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    return await productChart(ctx, site.hold, args);
+  },
+});
+
+export async function productChart(ctx: Reader, hold: Doc<"companyWebsites">, args: Omit<ObjectType<typeof chartArgs>, "siteId"> & { siteId?: Id<"companyWebsites"> }) {
+  const empty = { left: [], sold: [], more: [], less: [], compared: false };
+  const country = await keptCountry(ctx, hold, args.country);
+  const connection = await connectionOf(ctx, hold._id);
+  if (!connection?.newestDay || !isShop(connection)) return empty;
+  const products = await productsOf(ctx, hold._id, args, country);
+  const total = itemsBoughtIn(products.rows);
+  const inCategory = (row: ProductRow) => args.category === undefined || row.category === args.category;
+  const now = products.rows.filter(inCategory).map((row) => shownOf(row, total));
+  const gone = products.gone.filter(inCategory).map((row) => shownOf(row, total));
+  const top = (rows: readonly Shown[], figure: (row: Shown) => number) => rows
+    .filter((row) => figure(row) > 0)
+    .sort((left, right) => figure(right) - figure(left) || left.name.localeCompare(right.name))
+    .slice(0, CHART_ROWS);
+  const moved = (row: Shown) => row.itemsBought - (row.itemsBoughtBefore ?? row.itemsBought);
+  const compared = now.some((row) => row.itemsBoughtBefore !== null) || gone.length > 0;
+  return {
+    left: top(now, (row) => row.itemsLeft),
+    sold: top(now, (row) => row.itemsBought),
+    more: compared ? top(now, moved) : [],
+    less: compared ? top([...now, ...gone], (row) => -moved(row)) : [],
+    compared,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The table
+// ---------------------------------------------------------------------------
+
+const SHOWN_SORTS: ListSorts<Shown, "name" | "itemsBought" | "share" | "itemsAdded"> = {
+  name: { value: (row) => row.name, first: "asc" },
+  itemsBought: { value: (row) => row.itemsBought, first: "desc" },
+  share: { value: (row) => row.share, first: "desc" },
+  itemsAdded: { value: (row) => row.itemsAdded, first: "desc" },
 };
 
 const listArgs = {
   ...filterArgs,
+  /** Products, or the shop's categories added up. */
+  view: v.optional(v.union(v.literal("products"), v.literal("categories"))),
+  /** Every product, those that sold, or those added and never bought. */
+  show: v.optional(v.union(v.literal("all"), v.literal("selling"), v.literal("notBought"))),
   /** Only one category's products. */
   category: v.optional(v.string()),
   q: v.optional(v.string()),
-  sort: v.optional(v.union(...(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((key) => v.literal(key)))),
+  sort: v.optional(v.union(...(Object.keys(SHOWN_SORTS) as (keyof typeof SHOWN_SORTS)[]).map((key) => v.literal(key)))),
   direction: sortDirectionArg,
+};
+
+/** Every product or category the filters leave, searched and in the order asked: the most bought first unless told otherwise. */
+export async function shownProductList(ctx: Reader, hold: Doc<"companyWebsites">, args: Omit<ObjectType<typeof listArgs>, "siteId"> & { siteId?: Id<"companyWebsites"> }) {
+  const country = await keptCountry(ctx, hold, args.country);
+  const connection = await connectionOf(ctx, hold._id);
+  if (!connection?.newestDay || !isShop(connection)) return { rows: [] as Shown[], live: false, preparing: false };
+  const products = await productsOf(ctx, hold._id, args, country);
+  const total = itemsBoughtIn(products.rows);
+  const matches = wordStartMatcher(args.q);
+  const show = args.show ?? "all";
+  const kept = products.rows.filter((row) => (args.category === undefined || row.category === args.category)
+    && (show === "all" || (show === "selling" ? row.bought > 0 : row.basket > 0 && row.bought === 0)));
+  const shown = args.view === "categories" ? categoriesAddedUp(kept, total) : kept.map((row) => shownOf(row, total));
+  const rows = shown
+    .filter((row) => !matches || matches(row.name))
+    .sort(listOrder(SHOWN_SORTS, args.sort ?? "itemsBought", args.direction, (row) => row.name));
+  return { rows, live: products.live, preparing: products.preparing };
+}
+
+/** The products added up by category, each a row of its own. */
+function categoriesAddedUp(rows: readonly ProductRow[], total: number): Shown[] {
+  const byCategory = new Map<string, Shown>();
+  for (const row of rows) {
+    const name = row.category && !/^\(.*\)$/.test(row.category) ? row.category : "(not set)";
+    const held = byCategory.get(name) ?? { key: name, name, category: "", itemsBought: 0, itemsAdded: 0, itemsLeft: 0, itemsBoughtBefore: row.boughtBefore === null ? null : 0, share: 0 };
+    held.itemsBought += row.bought;
+    held.itemsAdded += row.basket;
+    held.itemsLeft += Math.max(0, row.basket - row.bought);
+    if (held.itemsBoughtBefore !== null) held.itemsBoughtBefore += row.boughtBefore ?? 0;
+    held.share = total > 0 ? held.itemsBought / total : 0;
+    byCategory.set(name, held);
+  }
+  return [...byCategory.values()];
+}
+
+/** One page of the products or categories, counted exactly. */
+export const analyticsProductList = tenantQuery({
+  args: { ...listArgs, ...listPageArgs },
+  returns: v.object({
+    rows: v.array(shownValidator),
+    total: v.number(),
+    page: v.number(),
+    pages: v.number(),
+    size: v.number(),
+    cut: v.union(v.number(), v.null()),
+    live: v.boolean(),
+    preparing: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const { page, rows: size, ...filters } = args;
+    const list = await shownProductList(ctx, site.hold, filters);
+    return { ...pageOfList(list.rows, page, size), cut: null, live: list.live, preparing: list.preparing };
+  },
+});
+
+/** Every product or category, in the order on screen: its download. */
+export const analyticsProductListAll = tenantQuery({
+  args: listArgs,
+  returns: v.object({ rows: v.array(shownValidator) }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    return { rows: (await shownProductList(ctx, site.hold, args)).rows };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// A product's own page
+// ---------------------------------------------------------------------------
+
+/** A page's address matched to a product only when this share of its words are the product's, and at least this many. */
+const PAGE_WORDS_SHARE = 0.75;
+const PAGE_WORDS_LEAST = 3;
+
+/** A name or an address in plain lower-case words: "Zoo Hardware 4\" Hinge – Pair" and "/zoo-hardware-4-hinge-pair.html" alike. */
+function wordsOf(text: string): string[] {
+  return text.toLowerCase().replace(/\.(?:html?|php|aspx?)$/, "").split(/[^a-z0-9]+/).filter((word) => word.length > 0);
+}
+
+/**
+ * The page a product is sold on, for a click on its row (products-screen-4-plan-2026-11-02.md; Anthony, 2026-11-02:
+ * "click through and click back"). Google never says which page a product is on, so it is the page viewed in the
+ * dates whose address is most nearly the product's own name — a shop's addresses are its products' names
+ * (/zoo-hardware-top-drawer-fittings-round-cupboard-knob.html) — the product's sizes and finishes sharing one page.
+ * Null when no address is near enough; the screen then searches All pages for the name. Read only when a row is
+ * clicked, never with the table.
+ */
+export function bestPageFor(name: string, pages: ReadonlyArray<{ key: string; address: string; views: number }>): string | null {
+  const named = new Set(wordsOf(name));
+  let best: { key: string; share: number; covered: number; views: number } | null = null;
+  for (const page of pages) {
+    const last = page.address.replace(/^https?:\/\/[^/]+/, "").split("?")[0].split("/").filter(Boolean).pop() ?? "";
+    const words = wordsOf(last);
+    if (words.length === 0) continue;
+    const matched = words.filter((word) => named.has(word)).length;
+    const share = matched / words.length;
+    if (matched < PAGE_WORDS_LEAST || share < PAGE_WORDS_SHARE) continue;
+    const covered = matched / named.size;
+    if (!best || share > best.share || (share === best.share && (covered > best.covered || (covered === best.covered && page.views > best.views)))) {
+      best = { key: page.key, share, covered, views: page.views };
+    }
+  }
+  return best?.key ?? null;
+}
+
+/** The page a product is sold on, as its own screen's key: one read when a row is clicked. */
+export const analyticsProductPage = tenantQuery({
+  args: { ...filterArgs, name: v.string() },
+  returns: v.union(v.null(), v.object({ key: v.string() })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
+    const connection = await connectionOf(ctx, holdId);
+    if (!connection?.newestDay || !isShop(connection)) return null;
+    const list = heldOf(await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country));
+    if (!list) return null;
+    const addresses = await decodePages(ctx, holdId, list.rows.map((row) => row.key));
+    const key = bestPageFor(args.name, list.rows.map((row, at) => ({ key: row.key, address: addresses[at] ?? "", views: row.views })));
+    return key ? { key } : null;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Overview's shop panel
+// ---------------------------------------------------------------------------
+
+const SORTS: ListSorts<ProductRow, "name" | "looks" | "basket" | "bought" | "revenue" | "change"> = {
+  name: { value: (row) => row.name, first: "asc" },
+  looks: { value: (row) => row.looks, first: "desc" },
+  basket: { value: (row) => row.basket, first: "desc" },
+  bought: { value: (row) => row.bought, first: "desc" },
+  revenue: { value: (row) => row.revenue, first: "desc" },
+  change: { value: (row) => row.change, first: "desc" },
 };
 
 type ListArgs = {
@@ -190,7 +409,7 @@ type ListArgs = {
   sort?: keyof typeof SORTS; direction?: "asc" | "desc";
 };
 
-/** Every product the filters leave, searched and in the order asked: the best seller first unless told otherwise. */
+/** Every product the filters leave, money and looks kept, in the order asked: Overview's shop panel and Ask Hakken's best sellers. */
 export async function productList(ctx: Reader, hold: Doc<"companyWebsites">, args: ListArgs) {
   const country = await keptCountry(ctx, hold, args.country);
   const connection = await connectionOf(ctx, hold._id);
@@ -202,33 +421,3 @@ export async function productList(ctx: Reader, hold: Doc<"companyWebsites">, arg
     .sort(listOrder(SORTS, args.sort ?? "revenue", args.direction, (row) => row.name));
   return { rows, live: products.live, preparing: products.preparing };
 }
-
-/** One page of the products, counted exactly. */
-export const analyticsProductList = tenantQuery({
-  args: { ...listArgs, ...listPageArgs },
-  returns: v.object({
-    rows: v.array(productRowValidator),
-    total: v.number(),
-    page: v.number(),
-    pages: v.number(),
-    size: v.number(),
-    cut: v.union(v.number(), v.null()),
-    live: v.boolean(),
-    preparing: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const list = await productList(ctx, site.hold, args);
-    return { ...pageOfList(list.rows, args.page, args.rows), cut: null, live: list.live, preparing: list.preparing };
-  },
-});
-
-/** Every product, in the order on screen: its download. */
-export const analyticsProductListAll = tenantQuery({
-  args: listArgs,
-  returns: v.object({ rows: v.array(productRowValidator) }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return { rows: (await productList(ctx, site.hold, args)).rows };
-  },
-});

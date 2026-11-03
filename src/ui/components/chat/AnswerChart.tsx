@@ -61,6 +61,8 @@ export function useGroupsChartTitle() {
       if (chart.look === "bingGroups") return chart.kind === "scatter" ? tg("bing.scatter", { by }) : tg(`bing.${chart.kind === "stacked" ? "stacked" : "bars"}.${measure}`, { by });
       return chart.kind === "scatter" ? tg("search.scatter", { by }) : tg(`search.${chart.kind === "stacked" ? "stacked" : chart.kind === "pie" ? "pie" : "bars"}.${measure}`, { by });
     }
+    // A shop's products, as Products' chart names each view (products-screen-4-plan-2026-11-02.md).
+    if (chart.by === "product") return tg(`products.${chart.measure as "itemsBought"}`);
     if (chart.by === "hour") return tg("hours", { did });
     if (chart.kind === "grid") return tg("grid", { by });
     if (chart.kind === "scatter") return tg("scatter", { did, by });

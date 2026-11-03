@@ -4,7 +4,7 @@ import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
 import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, mainConversionAt, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
 import { isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
-import { CLARITY_GROUP_MEASURES, GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, VISIBILITY_GROUP_MEASURES, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupSource, type GroupsChart } from "./utils/assistantGroupCharts";
+import { CLARITY_GROUP_MEASURES, GROUP_CHART_BY, GROUP_CHART_KINDS, PRODUCT_GROUP_MEASURES, SEARCH_GROUP_MEASURES, VISIBILITY_GROUP_MEASURES, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupSource, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
  * The Assistant's chart (docs/plans/active/hakken-tasks-plan.md, item 2.1),
@@ -167,7 +167,16 @@ const VISIBILITY_MEASURE_WORDS: Record<string, string> = {
   estimatedVisitors: "estimated visitors a month from Google", searches: "searches it ranks for on Google", topThree: "searches it is in Google's top 3 for", linkingWebsites: "websites linking to it",
 };
 
+/** Products' chart, each view in words: items, never money (products-screen-4-plan-2026-11-02.md, phase 5). */
+const PRODUCT_MEASURE_WORDS: Record<string, string> = {
+  itemsBought: "each product's items bought, beside the period before",
+  itemsLeft: "each product's items put in a basket and not bought",
+  sellingMore: "the products whose items bought rose most against the period before, each beside it",
+  sellingLess: "the products whose items bought fell most against the period before, each beside it",
+};
+
 function groupsMeasureWords(chart: GroupsChart): string {
+  if (chart.by === "product") return PRODUCT_MEASURE_WORDS[chart.measure] ?? chart.measure;
   const event = chart.event === "*" ? "any conversion" : chart.event ? chart.event.replace(/_/g, " ") : null;
   if (chart.look === "searchConsoleGroups" || chart.look === "bingGroups") {
     const engine = chart.look === "bingGroups" ? "Bing" : "Google";
@@ -217,11 +226,14 @@ export async function analyticsGroupsChartFor(input: ToolHandlerExecutionInput):
   if (!(GROUP_CHART_BY as readonly string[]).includes(by)) return { ok: false, problem: `by is one of ${GROUP_CHART_BY.join(", ")}.` };
   const said = text(input.args, "measure");
   const firstMeasure: Record<GroupSource, GroupMeasure> = { analytics: "visits", searchConsole: "clicks", bing: "clicks", clarity: "visits", visibility: "estimatedVisitors" };
-  const measure = (said === "visitors" ? (source === "visibility" ? "estimatedVisitors" : "clicks") : said ?? firstMeasure[source]) as GroupMeasure;
+  // A shop's products are drawn by their own measures: items bought, left, selling more and selling less.
+  const products = source === "analytics" && by === "product";
+  const measure = (said === "visitors" ? (source === "visibility" ? "estimatedVisitors" : "clicks") : said ?? (products ? "itemsBought" : firstMeasure[source])) as GroupMeasure;
   const measures: Record<GroupSource, readonly string[]> = {
     analytics: ANALYTICS_CHART_MEASURES, searchConsole: SEARCH_GROUP_MEASURES, bing: SEARCH_GROUP_MEASURES, clarity: ["visits", ...CLARITY_GROUP_MEASURES], visibility: VISIBILITY_GROUP_MEASURES,
   };
-  if (!measures[source].includes(measure)) return { ok: false, problem: `From ${lookup ?? source} a chart of groups shows ${measures[source].join(", ")}.` };
+  if (products && !(PRODUCT_GROUP_MEASURES as readonly string[]).includes(measure)) return { ok: false, problem: `A chart of products shows ${PRODUCT_GROUP_MEASURES.join(", ")}.` };
+  if (!products && !measures[source].includes(measure)) return { ok: false, problem: `From ${lookup ?? source} a chart of groups shows ${measures[source].join(", ")}.` };
   const period = text(input.args, "period") ?? "lastMonth";
   if (!isCalendarPeriod(period)) return { ok: false, problem: "period is one of thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months, last12Months." };
   const event = text(input.args, "event");

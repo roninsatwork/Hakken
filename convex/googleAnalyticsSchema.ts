@@ -428,6 +428,13 @@ export const googleAnalyticsTables = {
      * events; the Products page and its lists are only for a shop (§18.6.6).
      */
     shop: v.optional(v.boolean()),
+    /**
+     * A shop's steps and the event that means a sale, as the company picked them on Products
+     * (products-screen-4-plan-2026-11-02.md, phase 1): every shop names its events its own way. Until picked, Hakken
+     * reads Google's own names among the events recorded (`shopChoiceOf`).
+     */
+    shopSteps: v.optional(v.array(v.string())),
+    shopSale: v.optional(v.string()),
     clearing: v.optional(v.boolean()),
     connectedBy: v.optional(v.id("users")),
     connectedAt: v.optional(v.number()),

@@ -8336,7 +8336,14 @@
             "source": "source",
             "browser": "browser",
             "website": "website",
-            "position": "Google position"
+            "position": "Google position",
+            "product": "product"
+          },
+          "products": {
+            "itemsBought": "Products sold most",
+            "itemsLeft": "Products most often left in baskets",
+            "sellingMore": "Products selling more",
+            "sellingLess": "Products selling less"
           },
           "did": {
             "purchase": "made a purchase",
@@ -10583,6 +10590,7 @@
       "ageGroups": "{count, plural, =1 {# age group} other {# age groups}}",
       "interests": "{count, plural, =1 {# interest} other {# interests}}",
       "products": "{count, plural, =1 {# product} other {# products}}",
+      "categories": "{count, plural, =1 {# category} other {# categories}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
@@ -10681,6 +10689,9 @@
         "addToCarts": "basket additions",
         "itemsViewed": "product views",
         "itemsPurchased": "products bought",
+        "itemsBought": "items bought",
+        "itemsAdded": "items added to baskets",
+        "itemsLeft": "items left in baskets",
         "crawled": "pages read by the search engine",
         "inIndex": "pages in the index",
         "errors": "errors",
@@ -17366,64 +17377,105 @@
     },
     "products": {
       "title": "Products",
-      "description": "What each product sold, and how far shoppers got with it: looked, added it to the basket, started checkout, bought.",
+      "description": "Where shoppers leave without buying, and the products they leave behind most.",
       "notAShop": "Products shows for a website that sells online. Google Analytics has recorded no products looked at, added to a basket or bought on {host} in the last 90 days, so there's nothing to show here.",
       "preparing": "The products come in with the next collection, within a day.",
+      "basketsLeft": "Baskets left behind",
+      "checkoutsLeft": "Checkouts not finished",
+      "stepLeft": "Left after {step}",
+      "basketsLeftDetail": "{rate} of visits that added something didn't buy",
+      "checkoutsLeftDetail": "{rate} of visits that reached checkout didn't buy",
+      "stepLeftDetail": "{rate} of visits with {step} didn't go on to {sale}",
+      "boughtVisits": "Visits that bought",
+      "saleVisits": "Visits with {sale}",
+      "boughtDetail": "{rate} of visits with {step}",
+      "boughtOfBasket": "{rate} of visits that added something",
+      "neverBought": "Added but not bought",
+      "neverBoughtValue": "{count, plural, =1 {# product} other {# products}}",
+      "neverBoughtDetail": "{rate} of the products people added",
+      "pickSteps": "Pick your shop's steps and the event that means a sale in the chart below.",
       "steps": {
-        "looked": "Looked at a product",
-        "basket": "Added to the basket",
-        "checkout": "Started checkout",
-        "bought": "Bought"
+        "title": "Bought or left behind",
+        "hint": "Of the visits at each step you pick, how many went on to the sale.",
+        "stepsLabel": "Steps",
+        "everyEvent": "Every event",
+        "saleLabel": "The sale",
+        "endedWith": "Ended with {sale}",
+        "leftWithout": "Left without it",
+        "noSteps": "Tick at least one step to see who went on to the sale.",
+        "noSale": "Pick the event that means a sale.",
+        "empty": "No visits at these steps in these dates.",
+        "visits": "Visits",
+        "saveFailed": "Your shop's steps couldn't be saved just now. Try again in a moment."
       },
-      "lookedVisits": "Visits that looked at a product",
-      "lookTimes": "{times} looks at a product",
-      "ofLooks": "{rate} of looks",
-      "ofLookVisits": "{rate} of those visits · added {times} times",
-      "ofBaskets": "{rate} of baskets",
-      "ofCheckouts": "{rate} of checkouts · {revenue}",
-      "basketLeft": "Left in the basket",
-      "basketLeftDetail": "{left} of the {all} visits that added something left without buying",
-      "checkoutLeft": "Left at checkout",
-      "checkoutLeftDetail": "{left} of the {all} visits that started checkout didn't finish",
-      "stepsTitle": "The shop's steps",
-      "stepsHint": "How far shoppers got, {period}: the visits that reached each step.",
-      "visits": "Visits",
-      "bought": "Bought",
-      "chartTitle": {
-        "day": "Products bought a day",
-        "week": "Products bought a week",
-        "month": "Products bought a month"
-      },
-      "chartHint": "{period}.",
-      "shoppersTitle": {
-        "day": "Shoppers at each step a day",
-        "week": "Shoppers at each step a week",
-        "month": "Shoppers at each step a month"
-      },
-      "shoppersHint": "{period}: the visits that added to the basket, started checkout and bought. The gap between the top line and the bottom one is the baskets left.",
-      "findProduct": "Find a product…",
-      "categoryFilter": "Category",
-      "everyCategory": "Every category",
-      "columns": {
-        "product": "Product",
-        "looks": "Looks",
-        "basket": "Basket",
+      "chart": {
+        "showLabel": "Show",
+        "categoryLabel": "Category",
+        "everyCategory": "Every category",
+        "views": {
+          "left": "Left in basket",
+          "sold": "Products sold",
+          "more": "Selling more",
+          "less": "Selling less"
+        },
+        "titles": {
+          "left": "Products most often left in baskets",
+          "sold": "Products sold most",
+          "more": "Products selling more than {before}",
+          "less": "Products selling less than {before}"
+        },
+        "hints": {
+          "left": "The 10 products people added most without buying, {period}.",
+          "sold": "The 10 products people bought most, {period}.",
+          "more": "The 10 products with the biggest rise in items sold against {before}.",
+          "less": "The 10 products with the biggest drop in items sold against {before}."
+        },
         "bought": "Bought",
-        "revenue": "Revenue",
-        "change": "Change",
-        "changeTitle": "Revenue against the span before"
+        "leftInBasket": "Left in basket",
+        "items": "Items",
+        "notCompared": "There's nothing from {before} to compare with yet.",
+        "empty": "No products in these dates."
       },
-      "csv": {
-        "category": "Category",
-        "revenue": "Revenue ({currency})",
-        "change": "Change in revenue (%)"
-      },
-      "collecting": "Still being collected…",
-      "empty": "No products in these dates.",
-      "noMatch": "Nothing matches that search.",
-      "download": "Download CSV",
-      "downloading": "Downloading…",
-      "downloadFailed": "The products couldn't be downloaded just now. Try again in a moment."
+      "table": {
+        "viewLabel": "What the table shows",
+        "views": {
+          "products": "Products",
+          "categories": "Categories"
+        },
+        "showLabel": "Show",
+        "show": {
+          "all": "Every product",
+          "selling": "Selling",
+          "notBought": "Added but not bought"
+        },
+        "categoryLabel": "Category",
+        "everyCategory": "Every category",
+        "columns": {
+          "product": "Product",
+          "category": "Category",
+          "bought": "Bought",
+          "boughtTitle": "Items bought",
+          "share": "% of items sold",
+          "shareTitle": "This product's share of all items sold",
+          "added": "Added",
+          "addedTitle": "Items added to a basket"
+        },
+        "findProduct": "Find a product…",
+        "findCategory": "Find a category…",
+        "collecting": "Still being collected…",
+        "empty": "No products in these dates.",
+        "noMatch": "Nothing matches that search.",
+        "download": "Download CSV",
+        "downloading": "Downloading…",
+        "downloadFailed": "The products couldn't be downloaded just now. Try again in a moment.",
+        "csv": {
+          "itemsBought": "Items bought",
+          "itemsAdded": "Items added",
+          "itemsLeft": "Items left in baskets",
+          "share": "Share of items sold (%)",
+          "itemsBoughtBefore": "Items bought {before}"
+        }
+      }
     },
     "visitors": {
       "title": "Visitors",
@@ -18063,15 +18115,16 @@
         "countUncounted": "Decide whether {event} should count as a conversion."
       },
       "products": {
-        "none": "No products were looked at or bought in these dates.",
-        "looksToBasket": "Of the {a} visits that looked at a product, {b} added one to the basket ({cRate}).",
-        "basketsLeft": "{aRate} of those baskets were left without buying, against {bRate} before.",
-        "basketsLeftAlone": "{aRate} of those baskets were left without buying.",
+        "none": "No products were added to a basket or bought in these dates.",
+        "basketsLeft": "{aRate} of the {c} visits that added to the basket left without buying, against {bRate} before.",
+        "basketsLeftAlone": "{aRate} of the {c} visits that added to the basket left without buying.",
         "checkoutsLeft": "{aRate} of the {c} visits that started checkout didn't finish it, against {bRate} before.",
-        "checkoutsLeftAlone": "{aRate} of the {b} visits that started checkout didn't finish it.",
-        "stuck": "{text} was looked at {a} times and bought {countB, plural, =0 {never} =1 {once} other {# times}}.",
-        "bestSeller": "{text} sells best: {aMoney}.",
-        "seeProduct": "Look at the page for {text}: many looks, almost no sales.",
+        "checkoutsLeftAlone": "{aRate} of the {c} visits that started checkout didn't finish it.",
+        "stepLeft": "{aRate} of the {c} visits with {text} didn't go on to the sale, against {bRate} before.",
+        "stepLeftAlone": "{aRate} of the {c} visits with {text} didn't go on to the sale.",
+        "mostLeft": "{text} was added to baskets {a} times and bought {countB, plural, =0 {never} =1 {once} other {# times}}.",
+        "bestSeller": "{text} sold the most: {a} bought.",
+        "seeProduct": "Look at the page for {text}: often added to baskets, rarely bought.",
         "whyUnfinished": "Find out why so many checkouts aren't finished: try one yourself, on a phone too."
       },
       "visitors": {

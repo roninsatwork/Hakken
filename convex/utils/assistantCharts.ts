@@ -1,5 +1,5 @@
 import { v, type Infer } from "convex/values";
-import { GROUP_CHART_BY, GROUP_CHART_KINDS, SEARCH_GROUP_MEASURES, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
+import { GROUP_CHART_BY, GROUP_CHART_KINDS, PRODUCT_GROUP_MEASURES, SEARCH_GROUP_MEASURES, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
 
 /**
  * A chart under an Ask Hakken answer (docs/plans/active/hakken-tasks-plan.md,
@@ -72,7 +72,8 @@ function isGroupsChart(chart: Record<string, unknown>): boolean {
   return (chart.look === "analyticsGroups" || chart.look === "searchConsoleGroups")
     && (GROUP_CHART_KINDS as readonly unknown[]).includes(chart.kind)
     && (GROUP_CHART_BY as readonly unknown[]).includes(chart.by)
-    && ([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES] as readonly unknown[]).includes(chart.measure)
+    // A shop's products are Google Analytics' own groups too (products-screen-4-plan-2026-11-02.md, phase 5).
+    && ([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES, ...PRODUCT_GROUP_MEASURES] as readonly unknown[]).includes(chart.measure)
     && typeof chart.website === "string"
     && typeof chart.period === "string"
     && typeof chart.link === "string"
