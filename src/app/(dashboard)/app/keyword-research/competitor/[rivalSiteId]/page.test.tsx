@@ -1,5 +1,6 @@
 import { act, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useMutation, useQuery } from "convex/react";
 
 import { GAP, LISTS, SETUP, STARTS, answerResearch } from "@/src/test/keywordResearchFixtures";
@@ -48,11 +49,17 @@ const bodyRows = () => within(screen.getByRole("table")).getAllByRole("row").sli
  */
 describe("Start from a competitor", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-02");
     vi.mocked(useQuery).mockReset();
     vi.mocked(useMutation).mockReset();
     nav.push.mockClear();
     nav.search = "site=site_1";
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("lists the competitor's searches the website doesn't rank for, the most searched first, at no cost", () => {

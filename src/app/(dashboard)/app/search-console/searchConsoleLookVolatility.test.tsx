@@ -1,5 +1,6 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
@@ -69,9 +70,14 @@ function answer(queries: Record<string, unknown>) {
 
 describe("Volatility's approved look", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-10");
     nav.search = "range=30";
   });
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it("1 · Volatility", async () => {
     answer({

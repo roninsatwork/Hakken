@@ -1,5 +1,6 @@
 import { act, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useMutation, useQuery } from "convex/react";
 
 import { LISTS, LOOKUPS, SETUP, STARTS, answerResearch } from "@/src/test/keywordResearchFixtures";
@@ -52,11 +53,17 @@ const tableRows = (title: string) => {
  */
 describe("the Keyword research page", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-02");
     vi.mocked(useQuery).mockReset();
     vi.mocked(useMutation).mockReset();
     nav.push.mockClear();
     nav.search = "";
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("draws Look up, the company's past lookups newest first and its research lists", () => {

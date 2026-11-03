@@ -55,6 +55,10 @@ describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
   afterEach(() => vi.useRealTimers());
 
   beforeAll(async () => {
+
+    // The rows are saved on the tests' own day: the test database's clock never moves back once it has saved (AGENTS.md).
+
+    useFixedDay("2026-10-16");
     ({ holdId, ownerId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Shop", createdAt: 1 });
       const userId = await ctx.db.insert("users", { email: "owner@big-shop.test", role: "ADMIN", companyId });

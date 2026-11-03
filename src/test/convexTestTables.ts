@@ -74,6 +74,12 @@ export const CONVEX_TEST_CHANGES: ReadonlyArray<{ what: string; from: string; to
     // An index read compared each record with its range by working out the range's own values again for every
     // record, and splitting each field's name again: the same answer each time. They are worked out once a read,
     // and each record compared exactly as `evaluateRangeFilter` compares it.
+    //
+    // A field equal to a word or a number is answered by comparing the two as they are (2026-11-02): Convex's own
+    // comparison built a pair for each value and compared a word letter by letter, and a website's lists, read
+    // field by field for every record, spent a third of a collection's time there (googleAnalyticsCountries.test.ts).
+    // Two words are equal in Convex's order exactly when they are the same word; two numbers, NaN apart, exactly
+    // when `Object.is` says so (it tells 0 from -0, as Convex does). Anything else is compared as before.
     what: "an index read works out its range once",
     from: `                this._iterateDocs(tableName, (doc) => {
                     if (source.range.every((filter) => evaluateRangeFilter(doc, filter))) {`,
@@ -83,11 +89,60 @@ export const CONVEX_TEST_CHANGES: ReadonlyArray<{ what: string; from: string; to
                     for (const p of path) {
                         result = result !== undefined && result !== null && isSimpleObject(result) ? result[p] : undefined;
                     }
+                    if (type === "Eq" && typeof result === "string" && typeof value === "string") {
+                        return result === value;
+                    }
+                    if (type === "Eq" && typeof result === "number" && typeof value === "number" && !Number.isNaN(result) && !Number.isNaN(value)) {
+                        return Object.is(result, value);
+                    }
                     const order = compareValues(result === undefined ? undefined : resolvePendingValues(result), value);
                     return type === "Eq" ? order === 0 : type === "Gt" ? order > 0 : type === "Gte" ? order >= 0 : type === "Lt" ? order < 0 : type === "Lte" ? order <= 0 : undefined;
                 };
                 this._iterateDocs(tableName, (doc) => {
                     if (range.every((filter) => inRange(doc, filter))) {`,
+  },
+  {
+    // Every id a query goes through is its own table's (the first change), or a write's picked out by its table, yet
+    // each was checked again for its table as the record was read. It is read as `get` reads it: the newest write
+    // first, then what is stored (2026-11-02).
+    what: "a query reads its own table's records without checking each id's table again",
+    from: `            const document = this.get(tableName, id);`,
+    to: `            let document = undefined;
+            for (let i = this._writes.length - 1; i >= 0 && document === undefined; i--) {
+                document = this._writes[i][id];
+            }
+            if (document === undefined) {
+                document = this._documents[id] ?? null;
+            }`,
+  },
+  {
+    // A field that may be one of several kinds tried each kind until one fitted, and each that did not threw an error
+    // on the way, its message and its stack written out: a record with many such fields, written at every answer from
+    // Google (a website's connection, noting what Google said is left), spent a third of a night's run making errors
+    // (googleAnalyticsCollect.test.ts, 2026-11-02). A kind a value plainly is not is passed over without one: a
+    // different word, not null, not a word, number, true or false, bigint, list or object. Those are exactly the cases
+    // the library's own check throws for, so the same kinds fit and the same records are refused, in the same words.
+    what: "a field of several kinds passes over a kind its value plainly is not",
+    from: `        case "union": {
+            let isValid = false;
+            for (const v of validator.value) {
+                try {`,
+    to: `        case "union": {
+            let isValid = false;
+            const plainlyNot = (kind) => kind.type === "literal" ? value !== kind.value
+                : kind.type === "null" ? value !== null
+                : kind.type === "string" ? typeof value !== "string"
+                : kind.type === "number" ? typeof value !== "number"
+                : kind.type === "boolean" ? typeof value !== "boolean"
+                : kind.type === "bigint" ? typeof value !== "bigint"
+                : kind.type === "array" ? !Array.isArray(value)
+                : kind.type === "object" ? typeof value !== "object" || value === null
+                : false;
+            for (const v of validator.value) {
+                if (plainlyNot(v)) {
+                    continue;
+                }
+                try {`,
   },
 ];
 

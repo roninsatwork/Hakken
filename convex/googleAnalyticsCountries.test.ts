@@ -22,14 +22,14 @@ import { PROPERTY, fakeGoogle, history, type Visit } from "@/src/test/googleAnal
  * October 2026: last month is September's 30 days. Google faked.
  */
 
-// Friday 1 January 2027: Google's newest day is 31 December, so This Month, This Quarter and This Year hold no days yet
-// and the runs ask This Week and Last Month — December's 31 days, which these tests read — and little else
-// (AGENTS.md: a test asks no more than its assertions read).
+// Friday 1 January 2027: Google's newest day is 31 December, so This Month holds no days yet, and the runs ask This
+// Week, Last Month — December's 31 days, which these tests read — and the last 3, 6 and 12 months, which every run asks
+// (calendar-periods-plan.md; AGENTS.md: a test asks no more than its assertions read).
 const NOW = Date.parse("2027-01-01T09:30:00Z");
 const TOP = "2026-12-31";
 /** Last month's days: December's. */
 const DAYS = 31;
-/** The finished periods the tests don't read, fetched already: last week from 21 December, last quarter from 1 October. */
+/** The finished period the tests don't read, fetched already: last week, from 21 December. */
 const FETCHED = ["", "|fra"].flatMap((country) => [
   { key: `lastWeek${country}`, from: "2026-12-21", settled: true },
 ]);

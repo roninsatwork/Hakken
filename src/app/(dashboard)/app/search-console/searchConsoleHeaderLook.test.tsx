@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
@@ -58,13 +59,18 @@ function answer(status: unknown) {
 }
 
 beforeEach(() => {
+  // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+  useScreenDay("2026-09-27");
   nav.search = "";
   nav.push.mockReset();
   vi.mocked(useQuery).mockReset();
   vi.mocked(useMutation).mockReset();
   vi.mocked(useAction).mockReset();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("Search Console → a website's header", () => {
   // The standard website header (2026-10-30, the Conversions canvas): the name on its own row, the status and the filters under it.

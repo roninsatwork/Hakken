@@ -1,5 +1,6 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
@@ -135,11 +136,16 @@ function at(path: string, search = "") {
 }
 
 beforeEach(() => {
+  // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+  useScreenDay("2026-09-27");
   vi.mocked(useQuery).mockReset();
   vi.mocked(useMutation).mockReset();
   vi.mocked(useAction).mockReset();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("Search Console's approved looks: missed demand, pages competing and the breakdowns", () => {
   it("11 · Missed demand", async () => {

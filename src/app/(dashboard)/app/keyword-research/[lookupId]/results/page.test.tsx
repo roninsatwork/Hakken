@@ -1,5 +1,6 @@
 import { act, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { OVERVIEW, RESULTS, SETUP, answerResearch } from "@/src/test/keywordResearchFixtures";
@@ -53,11 +54,17 @@ const resultRows = () => within(screen.getAllByRole("table")[0]).getAllByRole("r
  */
 describe("a lookup's Google's results", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-02");
     vi.mocked(useQuery).mockReset();
     vi.mocked(useMutation).mockReset();
     vi.mocked(useAction).mockReset();
     nav.search = "";
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("lists the top ten in Google's order with each page's figures, competitors marked, under the lookup's menu", async () => {

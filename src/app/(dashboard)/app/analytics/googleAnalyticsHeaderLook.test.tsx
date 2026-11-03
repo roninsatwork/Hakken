@@ -1,5 +1,6 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { fireEvent } from "@testing-library/react";
 
@@ -45,6 +46,8 @@ function answer(status: unknown) {
 }
 
 beforeEach(() => {
+  // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+  useScreenDay("2026-10-09");
   nav.pathname = "/app/analytics/site_1";
   nav.search = "";
   nav.push.mockReset();
@@ -52,7 +55,10 @@ beforeEach(() => {
   vi.mocked(useMutation).mockReset();
   vi.mocked(useAction).mockReset();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("Google Analytics → a website's header", () => {
   it("is the standard website header: the name opens the company's websites, the status and the filters share the row under it", async () => {

@@ -1,5 +1,6 @@
 import { act, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { ANSWERS, CONSOLE_SERIES, CONSOLE_STATUS, IDEAS, OVERVIEW, SETUP, answerResearch } from "@/src/test/keywordResearchFixtures";
@@ -59,11 +60,17 @@ const card = (title: string) => screen.getByRole("heading", { name: title }).clo
  */
 describe("a lookup's Overview", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-02");
     vi.mocked(useQuery).mockReset();
     vi.mocked(useMutation).mockReset();
     vi.mocked(useAction).mockReset();
     nav.push.mockClear();
     nav.pathname = "/app/keyword-research/lookup_1";
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("wears the lookup's header and menu: the keyword, where and against what, when and at what cost", async () => {

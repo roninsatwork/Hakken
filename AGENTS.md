@@ -245,6 +245,16 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   file: that is how ten were found in six files. Ignore failures from
   module-level `Date.now()` or real elapsed time, which only that check
   breaks.
+- **A screen whose figures end on a written day runs on a fixed day too**
+  (2026-11-02). Search Console's screen tests held figures to 26 September
+  and fixed no day: in October "Last month" was September, and on 2 November
+  it was October, which none of their figures reach, so 23 tests failed at
+  once. A screen test whose website's `newestDay` is written down, in the
+  test or in a shared fixture under `src/test/`, calls
+  `useScreenDay("<the day after>")` before each test and `vi.useRealTimers()`
+  after. Rows saved in `beforeAll` are saved on that same day: fix it at the
+  start of `beforeAll` as well, because the test database's clock never moves
+  back once it has saved. `src/test-time-limits-drift.test.ts` fails both.
 - **A Convex function's clock is pinned** (2026-10-22, `convex-test` 0.0.63 on). Each
   query and mutation sees the clock as it started, never behind the last change saved, as
   Convex does — so with the clock frozen, each saved change moves the next function's clock
@@ -269,7 +279,10 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
 - **A slow test is made lighter, never excused.** Time it with a real clock,
   find which step costs, and cut what its assertions do not read — the test
   database checks every stored row on each lookup, so rows nobody asserts on
-  are the usual cost.
+  are the usual cost. A function's answer is copied out of the test database
+  whole, so a `t.run` returns only what is asserted: a 45,000-row list
+  returned to have its length checked took 1.6 seconds to copy and a quarter
+  of a second to read (`convex/googleAnalyticsLoad.test.ts`, 2026-11-02).
 - **The test database reads a table's own rows** (2026-10-15). `convex-test`
   went through every row of every table on each lookup; the backend project
   loads it through Vite with a change that keeps each table's ids
@@ -282,7 +295,13 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   trusting it. `convex-test` 0.0.64 ran them a quarter slower, looking for a
   commit time inside every plain value; the same file now skips that look for
   words and numbers and works an index read's range out once a read
-  (2026-10-22), with the same answers.
+  (2026-10-22), with the same answers. Since 2026-11-02 it also answers a
+  field equal to a word or a number by comparing the two as they are, reads a
+  table's records without checking each id's table again, and passes over a
+  kind a value plainly is not, rather than making an error for it:
+  Google Analytics' collection tests ran in half the time.
+  `convex/testDatabaseShortcuts.test.ts` holds each shortcut to Convex's
+  own answers.
 - **A drift test never reads what a test run writes.** The repo scan
   (`walkRepoFiles`, `src/test/driftUtils.ts`) skips `coverage/`,
   `test-results/` and `playwright-report/`: a drift test reading coverage's

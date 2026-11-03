@@ -78,14 +78,17 @@ describe("a large website's Google Analytics", () => {
       [{ list: "landing" as const, period: "last3Months" as const, device: "", sort: "visits" as const, direction: "asc" as const }, 0.5],
       [{ list: "landing" as const, period: "last3Months" as const, device: "", q: "product-4471" }, 0.75],
     ] as const) {
+      // Only what is checked comes back: the test database copies a function's answer out, and a list of 45,000 rows
+      // copied took six times as long as reading it (1.6s to 0.25s, 2026-11-02).
       const { list, reads } = await t.run(async (ctx) => {
         const { db, reads } = metered(ctx.db);
-        return { list: await readAnalyticsList({ db }, siteId, args), reads };
+        const read = await readAnalyticsList({ db }, siteId, args);
+        return { list: { preparing: read.preparing, rows: read.rows.length, labels: "q" in args ? read.rows.map((row) => row.label) : [] }, reads };
       });
       expect(list.preparing).toBe(false);
       // Words matched from their starts, as every Sites search: product-4471 and product-44710 to 44719.
-      if ("q" in args) expect(list.rows.map((row) => row.label)).toHaveLength(11);
-      else expect(list.rows).toHaveLength(PAGES);
+      if ("q" in args) expect(list.labels).toHaveLength(11);
+      else expect(list.rows).toBe(PAGES);
       const bytes = reads.reduce((sum, read) => sum + read.bytes, 0);
       const documents = reads.reduce((sum, read) => sum + read.documents, 0);
       expect(bytes, JSON.stringify(args)).toBeLessThan(16 * MIB * share);

@@ -1,5 +1,6 @@
 import { act, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { AI_ENGINE_KEYS, ANSWERS, IDEAS, OVERVIEW, SETUP, answerResearch } from "@/src/test/keywordResearchFixtures";
@@ -50,9 +51,15 @@ const card = (title: string) => screen.getByRole("heading", { name: title }).clo
  */
 describe("a lookup's What the AI says", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-02");
     vi.mocked(useQuery).mockReset();
     vi.mocked(useMutation).mockReset();
     vi.mocked(useAction).mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("draws the question, the figures across the four, each assistant's answer and the cards beneath", async () => {

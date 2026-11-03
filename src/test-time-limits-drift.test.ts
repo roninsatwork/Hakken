@@ -63,6 +63,12 @@ const CLOCK_FIXED = /\buseMiddayUtc\s*\(|\bsetSystemTime\s*\(|\buseFakeTimers\s*
 const DAY_WRITTEN = /["'`]20\d\d-\d\d-\d\d/
 /** The pretend clock started on the real date. */
 const CLOCK_ON_TODAY = /\bvi\.useFakeTimers\(\s*\)/
+/** A test, or a shared fixture, whose website's figures end on a written day. */
+const NEWEST_WRITTEN = /\bnewestDay:\s*["'`]20\d\d-\d\d-\d\d["'`]/
+/** A day fixed for a test: the helpers, or the pretend clock set to one. */
+const DAY_FIXED = /\buse(?:ScreenDay|FixedDay|MiddayUtc)\s*\(|\bsetSystemTime\s*\(/
+/** Rows saved through the test database. */
+const ROWS_SAVED = /\bctx\.db\.(?:insert|patch|replace)\s*\(|\.mutation\s*\(/
 
 /** A wait on screen given its own limit, or Vitest's own wait, which no default reaches. */
 const SCREEN_WAIT = /\b(?:find(?:All)?By\w+|waitFor(?:ElementToBeRemoved)?)\s*\(/g
@@ -211,6 +217,47 @@ describe('test time limits', () => {
       offenders,
       'A plain `vi.useFakeTimers()` starts on the real date: rows written for "2026-09-23", beside code counting from today, '
       + 'pass the week the test is written and fail a fortnight later (2026-10-08). Start it with `useFixedDay()` (src/test/realTime.ts).',
+    ).toEqual([])
+  })
+
+  test('a screen whose figures end on a written day runs on a fixed day', () => {
+    // The screens' calendar periods count from today: Search Console's tests, figures to 26 September, read "Last
+    // month" as September in October and as October on 2 November, which none of their figures reach — 23 failed
+    // that morning (2026-11-02). A shared fixture's newest day counts as the test's own.
+    const fixtures = readdirSync(join(repoRoot, 'src/test'))
+      .filter((name) => /\.tsx?$/.test(name) && !/\.test\./.test(name))
+      .filter((name) => NEWEST_WRITTEN.test(readFileSync(join(repoRoot, 'src/test', name), 'utf8')))
+      .map((name) => name.replace(/\.tsx?$/, ''))
+    expect(fixtures.length).toBeGreaterThan(0)
+    const offenders = offendersOf((file, source) => {
+      if (!file.endsWith('.tsx')) return []
+      const dated = NEWEST_WRITTEN.test(source) || fixtures.some((name) => source.includes(`from "@/src/test/${name}"`))
+      return dated && !DAY_FIXED.test(source) ? [0] : []
+    })
+    expect(
+      offenders,
+      'A screen test whose website\'s figures end on a written day ("newestDay: \\"2026-09-26\\"", here or in a shared fixture) passes '
+      + 'the month it is written and fails when the calendar moves past them. Call `useScreenDay("<the day after>")` '
+      + '(src/test/realTime.ts) before each test, and `vi.useRealTimers()` after.',
+    ).toEqual([])
+  })
+
+  test('rows saved before the tests are saved on the tests\' fixed day', () => {
+    // The test database's clock never moves back once it has saved: rows saved in `beforeAll` on the real date, beside
+    // a day fixed only before each test, read "this month" as the real one (Search Console at five times, 2026-11-02).
+    const offenders = offendersOf((_, source) => {
+      if (!/\bbeforeEach\s*\(/.test(source) || !DAY_FIXED.test(source)) return []
+      return Array.from(source.matchAll(/\bbeforeAll\s*\(/g))
+        .filter((match) => {
+          const body = callArguments(source, (match.index ?? 0) + match[0].length - 1)
+          return ROWS_SAVED.test(body) && !DAY_FIXED.test(body)
+        })
+        .map((match) => match.index ?? 0)
+    })
+    expect(
+      offenders,
+      'Rows saved in `beforeAll` before the day is fixed are saved on the real date, and the test database never moves '
+      + 'its clock back: fix the day at the start of `beforeAll` too, the same day each test uses.',
     ).toEqual([])
   })
 

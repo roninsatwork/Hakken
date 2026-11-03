@@ -45,6 +45,10 @@ describe("a list of keywords read as columns", () => {
   let siteId: Id<"companyWebsites">;
 
   beforeAll(async () => {
+
+    // The rows are saved on the tests' own day: the test database's clock never moves back once it has saved (AGENTS.md).
+
+    useFixedDay("2026-10-07");
     siteId = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
       const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });

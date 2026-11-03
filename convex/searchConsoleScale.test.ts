@@ -70,6 +70,10 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
   afterEach(() => vi.useRealTimers());
 
   beforeAll(async () => {
+
+    // The rows are saved on the tests' own day: the test database's clock never moves back once it has saved (AGENTS.md).
+
+    useFixedDay("2026-10-07");
     siteId = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Shop", createdAt: 1 });
       const websiteId = await ctx.db.insert("websites", { host: "big-shop.co.uk", displayHost: "big-shop.co.uk", firstSeenAt: 1 });

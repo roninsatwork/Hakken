@@ -1,5 +1,6 @@
 import { act, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { useScreenDay } from "@/src/test/realTime";
 import { useMutation, useQuery } from "convex/react";
 
 import { LIST, answerResearch } from "@/src/test/keywordResearchFixtures";
@@ -31,9 +32,15 @@ vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
 /** Renaming a research list: a name is a field, so its own page with a way back, never a pop-up. */
 describe("the Rename list page", () => {
   beforeEach(() => {
+    // A fixed day, the one after the fixtures' newest: the screens' calendar periods count from today (AGENTS.md, "A test whose rows carry fixed days runs on a fixed day").
+    useScreenDay("2026-10-02");
     vi.mocked(useQuery).mockReset();
     vi.mocked(useMutation).mockReset();
     nav.push.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("opens on the list's name, saves the new one and returns to the list", async () => {
