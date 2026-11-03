@@ -105,7 +105,7 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
                 columns={[
                   { key: "line", header: t("scoreLine"), cell: (score) => <span className="text-[13px] text-foreground">{score.name}</span> },
                   { key: "latest", header: t("latest", { step: step ?? "day" }), align: "right", cell: (score) => cell(score.latest) },
-                  { key: "previous", header: t("previous"), align: "right", cell: (score) => verdict(score.latest, score.previous) },
+                  { key: "previous", header: t("previous", { step: step ?? "day" }), align: "right", cell: (score) => verdict(score.latest, score.previous) },
                   { key: "last3", header: t("last3", { step: step ?? "day" }), align: "right", cell: (score) => cell(score.last3) },
                   { key: "previous3", header: t("previous3"), align: "right", cell: (score) => verdict(score.last3, score.previous3) },
                   ...(scores.withYear ? [{ key: "yearAgo", header: t("yearAgo"), align: "right" as const, cell: (score: ExplorerScore) => verdict(score.last3, score.yearAgo) }] : []),

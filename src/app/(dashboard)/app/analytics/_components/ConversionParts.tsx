@@ -9,7 +9,6 @@ import { OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
 import { FLOW_LEFT, FLOW_MORE } from "@/convex/utils/conversionFlow";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
-import { ConversionsMap, type ConversionsCount, type ConversionsMapColumn, type ConversionsMapRow } from "@/src/ui/components/screens/ConversionsMap";
 import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "@/src/ui/components/screens/PageFlowChart";
 import type { ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import { SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
@@ -19,8 +18,6 @@ import { useKindName } from "../[siteId]/channels/_components/ChannelParts";
 import { formatMoney, formatPercent, formatPerConversion } from "./analyticsFormat";
 import { eventList } from "./AnalyticsSees";
 import { useEventName } from "./useEventName";
-import { useSiteParam } from "../../sites/_components/useSiteParam";
-import { COMPARES, COUNTS, Choice, useBeforeName, useMapWords, type Compare } from "./ConversionsMapChoices";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, periodWord } from "./useAnalytics";
 import { visitsPerConversion, type CostPoint, type CostRow } from "./visitsPerConversion";
 import { shiftDays } from "./stepScale";
@@ -171,55 +168,6 @@ export function ConversionsByKind({ flow }: { flow: Flow | null }) {
     </SearchConsoleChartCard>
   );
 }
-
-/**
- * A page's own conversions by channel, Conversions' squares "aligned to this
- * page" (Anthony, 2026-10-20): each counted kind and each key event not
- * counted down the side, each channel whose visits started on the page
- * across, each square that event's count from visits that came from that
- * channel and started there (`analyticsPageConversionGrid`).
- */
-export function PageConversionsByChannel({ page }: { page: string }) {
-  const t = useTranslations("googleAnalytics.conversionFlow");
-  const tc = useTranslations("googleAnalytics.chart");
-  const tm = useTranslations("googleAnalytics.conversionsMap");
-  const tp = useTranslations("googleAnalytics.page");
-  const args = useAnalyticsArgs();
-  const status = useAnalyticsStatus();
-  const nameOf = useEventName();
-  const [count, setCount] = useSiteParam<ConversionsCount>("pageMapCount", "visits", COUNTS);
-  const [compare, setCompare] = useSiteParam<Compare>("pageMapCompare", "none", COMPARES);
-  const grid = useQuery(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, status?.connection?.newestDay && page ? { ...args, page } : "skip");
-  const beforeName = useBeforeName();
-  const words = useMapWords(count);
-  const columns: ConversionsMapColumn[] = (grid?.channels ?? []).map((entry) => ({ key: entry.channel, name: entry.channel || tc("noChannel"), visits: entry.visits, visitsBefore: entry.visitsBefore }));
-  const rows: ConversionsMapRow[] = (grid?.rows ?? []).map((row) => ({ eventName: row.eventName, name: nameOf(row.eventName), counted: row.counted, cells: row.cells }));
-  const controls = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Choice label={tm("count")} value={count} choices={COUNTS} word={(choice) => tm(`counts.${choice}`)} onChange={setCount} />
-      <Choice label={tm("compare")} value={compare} choices={COMPARES} word={(choice) => (choice === "before" ? beforeName : tm("compares.none"))} onChange={setCompare} />
-    </div>
-  );
-  const csv = () => toCsv(["event", ...columns.map((column) => column.name)], rows.map((row) => [row.eventName, ...row.cells.map((cell) => (count === "events" ? cell.times : cell.visits))]));
-  return (
-    <ConversionsMap
-      title={t("byChannelTitle")}
-      controls={controls}
-      columns={columns}
-      rows={rows}
-      count={count}
-      compare={compare === "before" && (grid?.hasBefore ?? false)}
-      words={words}
-      newWord={tm("new")}
-      pickWord={tm("conversion")}
-      exportName="google-analytics-page-conversions-by-channel"
-      csv={csv}
-      caption={status?.host}
-      emptyText={grid === undefined ? undefined : grid === null ? tp("collecting") : t("byChannelNone")}
-    />
-  );
-}
-
 
 /** The periods drawn with the span before beside them: the weeks and months, held a day at a time (`analyticsPeriodBeforeChart`). */
 const DRAWN_BEFORE: ReadonlySet<string> = new Set(["thisWeek", "lastWeek", "thisMonth", "lastMonth"]);

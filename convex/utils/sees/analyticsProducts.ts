@@ -16,6 +16,17 @@ export const FEW_FINISHED = 0.5;
 const BASKET = "add_to_cart";
 const CHECKOUT = "begin_checkout";
 
+/**
+ * Each view of Products' chart as the eye's writer reads it: what the chart shows, in the eye's own English, never the
+ * screen's language (page-screen-redo-plan-2026-11-03.md, step 3).
+ */
+export const PRODUCT_CHART_VIEWS = {
+  left: "products most often left in baskets",
+  sold: "products sold most",
+  more: "products selling more than before",
+  less: "products selling less than before",
+} as const;
+
 /** An event's visits, and the period before's when held. */
 export type JourneyFigure = { eventName: string; visits: number; visitsBefore: number | null };
 /** The shop's steps, most visits first, and the event that means a sale. */

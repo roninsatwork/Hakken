@@ -316,15 +316,19 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
       return `${p.highRate}% of ${p.high} visits did ${eventWords(p.event)}, against ${p.lowRate}% of ${p.low} visits.`;
     case "wholeUp":
     case "wholeDown":
-      return `${capital(measureWords(p.measure))} ${finding.kind === "wholeUp" ? "rose" : "fell"} to ${p.now} from ${p.before} the span before.`;
+      return `${p.name !== undefined ? `${p.name}: ` : ""}${capital(measureWords(p.measure))} ${finding.kind === "wholeUp" ? "rose" : "fell"} to ${p.now} from ${p.before} the span before.`;
     case "rowUp":
     case "rowDown":
       return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "rowUp" ? "rose" : "fell"} to ${p.now} from ${p.before}, the biggest ${finding.kind === "rowUp" ? "rise" : "fall"} on the list.`;
     case "holdsMost":
       return `${p.name} holds ${p.share}% of the list's ${measureWords(p.measure)}.`;
     case "rowAbove":
-    case "rowBelow":
-      return `${p.name}: ${measureWords(p.measure)} ${p.value}${MEASURES[String(p.measure)]?.kind === "percent" ? "%" : ""}, against ${p.mean}${MEASURES[String(p.measure)]?.kind === "percent" ? "%" : ""} on average across the list.`;
+    case "rowBelow": {
+      const unit = MEASURES[String(p.measure)]?.kind === "percent" ? "%" : "";
+      // Against its own reference (pageFindings' `apart`): the whole website's, or similar pages'.
+      const against = p.against === "website" ? "across the whole website" : p.against === "group" ? "on similar pages" : "on average across the list";
+      return `${p.name}: ${measureWords(p.measure)} ${p.value}${unit}, against ${p.mean}${unit} ${against}.`;
+    }
   }
 }
 

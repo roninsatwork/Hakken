@@ -133,7 +133,7 @@ export function VisitsChart({ days, host, from, to, exportName, viewsOnly = fals
   const tf = useTranslations("googleAnalytics.filters");
   const [step] = useStep();
   const [period] = usePeriod();
-  const views: SiteSeries = { key: "views", name: t("views"), colour: CHART_SERIES_ORANGE, marks: "converted" };
+  const views: SiteSeries = { key: "views", name: t(viewsOnly ? "viewsOnlyLine" : "views"), colour: CHART_SERIES_ORANGE, marks: "converted" };
   const series: SiteSeries[] = viewsOnly ? [views] : [
     views,
     { key: "visits", name: t("visits"), colour: CHART_SERIES_BLUE },
@@ -143,7 +143,7 @@ export function VisitsChart({ days, host, from, to, exportName, viewsOnly = fals
   return (
     <SearchConsoleChartCard
       title={t(viewsOnly ? `viewsOnlyTitle.${step}` : `viewsTitle.${step}`)}
-      hint={`${t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: tf(`periods.${periodWord(period)}`), step })}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
+      hint={`${t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: viewsOnly ? tf(`periods.${periodWord(period)}`).toLowerCase() : tf(`periods.${periodWord(period)}`), step })}${data.some((row) => row.coarse === true) ? ` ${t(`coarse.${step}`)}` : ""}`}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name), t("conversions")], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number), row.conversions as number]))}
       host={host}

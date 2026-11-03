@@ -11,7 +11,6 @@ import { campaignsSees } from "@/convex/utils/sees/analyticsCampaigns";
 import { visitorsSees } from "@/convex/utils/sees/analyticsVisitors";
 import { productsSees } from "@/convex/utils/sees/analyticsProducts";
 import { liveSees } from "@/convex/utils/sees/analyticsLive";
-import { pageSees } from "@/convex/utils/sees/analytics";
 import AnalyticsEventScreen from "./[siteId]/events/event/page";
 import AnalyticsCampaignsPage from "./[siteId]/campaigns/page";
 import AnalyticsVisitorsPage from "./[siteId]/visitors/page";
@@ -120,151 +119,105 @@ describe("Google Analytics' second-round looks", () => {
     await expectApprovedLook(container, PLAN, "Campaigns", "Google Analytics → Campaigns");
   });
 
-  it("21 · a page's own screen, with its story (analytics-page-screen-plan.md, approved 2026-10-13)", async () => {
-    at("/app/analytics/site_1/all-pages/page", "key=~0");
-    const before = [
-      { kind: "site" as const, key: "google.com", label: "Google", hosts: ["google.com", "google.es"], views: 118, share: 0.35 },
-      { kind: "page" as const, key: "~1", label: "https://www.acme-shop.test/", title: "Digital Growth Agency", views: 74, share: 0.22 },
-      { kind: "none" as const, key: "none", label: "", views: 41, share: 0.12 },
-    ];
-    const who = (rows: Array<{ key: string; readers: number; share: number; websiteShare: number; conversions: number }>) => ({ rows, readersPlaced: 38, readers: 457, conversionsPlaced: 0, conversions: 1 });
+  /** A page's own screen's figures, as `analyticsPage`, `analyticsPageChannelExplorer` and `analyticsPageBoxes` answer. */
+  function pageScreenAnswers(boxes: unknown) {
+    const who = (rows: Array<{ key: string; readers: number; share: number; websiteShare: number; conversions: number }>, conversionsPlaced = 0) => ({ rows, readersPlaced: 38, readers: 457, conversionsPlaced, conversions: 1 });
     const story = {
       live: false, thresholded: true,
       started: { visits: 593, visitsBefore: 480, websiteVisits: 4494, conversions: 1, value: 2000, visitsPerConversion: 593, websiteVisitsPerConversion: 27, countedPages: 3.5, websiteCountedPages: 5.2, fewVisits: false },
       differentPages: 1.2, viewsPerVisit: 3.4, read: 0.18, groupRead: 0.31, group: "Content hub",
       sources: [
         { key: "g", channel: "Organic Search", source: "Google", name: "Google", visits: 452, pages: 1.1, time: 38, read: 0.14, back: 0.05, conversions: 0, value: 0, fewVisits: false },
-        { key: "d", channel: "Direct", source: "(direct)", name: null, visits: 70, pages: 2.4, time: 112, read: 0.41, back: 0.38, conversions: 1, value: 2000, fewVisits: true },
+        { key: "d", channel: "Direct", source: "(direct)", name: null, visits: 70, pages: 2.4, time: 112, read: 0.41, back: 0.38, conversions: 3, value: 2000, fewVisits: true },
       ],
       next: [
         { kind: "again" as const, key: null, address: "", views: 1262, share: 0.62 },
         { kind: "left" as const, key: null, address: "", views: 641, share: 0.32 },
-        { kind: "page" as const, key: "~12", address: "https://www.acme-shop.test/web-design-insights/", views: 46, share: 0.02 },
       ],
       returning: { first: 444, back: 110, unknown: 39, websiteBack: 0.244 },
       devices: [{ device: "mobile", share: 0.56, websiteShare: 0.3 }, { device: "desktop", share: 0.41, websiteShare: 0.68 }],
       countries: [{ code: "GB", people: 457 }, { code: "US", people: 298 }],
-      ages: who([{ key: "18-24", readers: 26, share: 0.68, websiteShare: 0.42, conversions: 0 }, { key: "25-34", readers: 12, share: 0.32, websiteShare: 0.26, conversions: 0 }]),
+      ages: who([{ key: "45-54", readers: 26, share: 0.68, websiteShare: 0.42, conversions: 2 }, { key: "25-34", readers: 12, share: 0.32, websiteShare: 0.26, conversions: 0 }], 2),
       genders: who([{ key: "female", readers: 18, share: 0.46, websiteShare: 0.38, conversions: 0 }, { key: "male", readers: 21, share: 0.54, websiteShare: 0.62, conversions: 0 }]),
       weekdays: ["1", "2", "3", "4", "5", "6", "0"].map((day, at) => ({ day, views: 100 + at * 10 })),
       clicks: [{ kind: "click" as const, url: "https://en.wikipedia.org/wiki/Brand", clicks: 14 }],
-      league: [
-        { key: "~0", address: "https://www.acme-shop.test/ai-agency/", title: "AI Agency | Agent Automation Company", visits: 593, conversions: 1, isThis: true },
-        { key: "~31", address: "https://www.acme-shop.test/hub/brand-bible-guidelines/", title: "Brand Bible", visits: 35, conversions: 3, isThis: false },
-      ],
+      league: [],
     };
-    answer({
+    return {
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      // Conversions' two pictures for this page alone (Anthony, 2026-10-20), under its views a day.
       "googleAnalyticsPageChannels:analyticsPageChannelExplorer": {
-        heldFrom: "2024-10-01",
-        everyDevice: false,
-        events: ["generate_lead", "click_tel", "click_email"],
-        channels: ["Organic Search", "Direct"],
-        from: "2026-09-09",
-        to: "2026-10-08",
-        now: DAYS.map((day, at) => ({ day, lastDay: day, rows: [{ channel: "Organic Search", visits: 20, counts: [at === 1 ? 1 : 0, 0, 0] }, { channel: "Direct", visits: 5, counts: [0, 0, 0] }] })),
-        before: DAYS.map((day) => ({ day, lastDay: day, rows: [{ channel: "Organic Search", visits: 18, counts: [1, 0, 0] }] })),
+        heldFrom: "2024-10-01", everyDevice: false, events: ["generate_lead"], channels: ["Organic Search", "Direct"], from: "2026-09-09", to: "2026-10-08",
+        now: DAYS.map((day, at) => ({ day, lastDay: day, rows: [{ channel: "Organic Search", visits: 20, counts: [at === 1 ? 1 : 0] }, { channel: "Direct", visits: 5, counts: [0] }] })),
+        before: DAYS.map((day) => ({ day, lastDay: day, rows: [{ channel: "Organic Search", visits: 18, counts: [1] }] })),
         year: [],
       },
-      "googleAnalyticsPageConversions:analyticsPageConversionGrid": {
-        everyDevice: false,
-        hasBefore: true,
-        bothUnits: true,
-        channels: [
-          { channel: "Organic Search", visits: 452, visitsBefore: 400, conversions: 0, websiteVisits: 3100, websiteConversions: 40 },
-          { channel: "Direct", visits: 141, visitsBefore: 120, conversions: 1, websiteVisits: 900, websiteConversions: 20 },
-        ],
-        rows: [
-          { eventName: "generate_lead", counted: true, count: 1, cells: [{ visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 1, times: 1, visitsBefore: 0, timesBefore: 0 }] },
-          { eventName: "click_tel", counted: true, count: 0, cells: [{ visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
-          { eventName: "click_email", counted: true, count: 0, cells: [{ visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }, { visits: 0, times: 0, visitsBefore: 0, timesBefore: 0 }] },
-        ],
-      },
+      "googleAnalyticsPageBoxes:analyticsPageBoxes": boxes,
       "googleAnalyticsPageReads:analyticsPage": {
         address: "https://www.acme-shop.test/ai-agency/", title: "AI Agency | Agent Automation Company", path: "/ai-agency/", group: "Service",
-        row: { ...ROW, people: 241, newPeople: 200, bounceRate: 0.3, pagesPerVisit: 2.1, lengthPerVisit: 95 }, viewsBefore: 320, live: false,
+        row: { ...ROW, views: 300, people: 241, newPeople: 200, bounceRate: 0.3, pagesPerVisit: 2.1, lengthPerVisit: 95 }, viewsBefore: 320, live: false,
         points: DAYS.map((day) => ({ day, visits: 9, engaged: 5, views: 12, conversions: 0, value: 0 })),
-        before,
-        story,
-        seen: pageSees(before.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views })), "site_1", () => false, "~0", {
-          started: { visits: 593, websiteVisits: 4494, conversions: 1, madeHere: 0 },
-          biggest: { name: "Google", visits: 452, conversions: 0 },
-          converter: { name: "(direct)", conversions: 1 },
-          viewsPerVisit: 2.7,
-          pages: { different: 1.2, counted: 3.5 },
-          nearest: { page: "~31", visits: 35, conversions: 3 },
-        }),
+        before: [{ kind: "site" as const, key: "google.com", label: "Google", hosts: ["google.com"], views: 118, share: 0.35 }],
       },
-    });
+      "googleAnalyticsPageReads:analyticsPageStory": { story, seen: { says: [], steps: [] } },
+    };
+  }
+
+  it("21 · a page's own screen, redone (page-screen-redo-plan-2026-11-03.md, approved 2026-11-03)", async () => {
+    at("/app/analytics/site_1/all-pages/page", "key=~0");
+    answer(pageScreenAnswers({ product: null, sale: { eventName: "generate_lead", shop: false, visits: 12, startedVisits: 593, websiteVisits: 4494, websiteEventVisits: 90 } }));
     const { container } = render(<AnalyticsPageScreen />);
-    await screen.findByText("Digital Growth Agency");
-    await screen.findByText("Typed in, a bookmark or an app");
-    await screen.findByText("Typed in or a bookmark");
-    await openHakkenSees();
-    await screen.findByText(/593 visits started on this page/);
-    // The visits needed for one conversion, by channel and conversion (page-conversion-explorer-plan.md): its toolbar, and a channel ticked off.
-    screen.getByText(/^Last month: the visits that started on this page and the conversions they went on to make, day by day, from the dates at the top of the page\.$/);
-    // Both charts have their own toolbar: each is read within its card.
+    // Its address as the title, at the smaller size, "Open the page" on its own line, and no line of words under it.
+    const title = await screen.findByRole("heading", { level: 1, name: /\/ai-agency\// });
+    expect(title.className).toContain("text-xl");
+    screen.getByRole("link", { name: /Open the page/ });
+    expect(screen.queryByText(/Every figure here is for views of this page/)).toBeNull();
+    // Four boxes on any other page, never money, people or time (Anthony, 2026-11-03: "we should only have 4 max").
+    const boxes = [...container.querySelectorAll("[data-part='figure'] [data-part-title]")].map((label) => label.textContent);
+    expect(boxes).toEqual(["Views", "Started on this page", "Visitors who converted", "Scrolled to the bottom"]);
+    await screen.findByText("2.0% of them");
+    screen.getByText("Whole website: 2.0%");
+    screen.getByText("Similar pages: 31.0%");
+    expect(screen.queryByText(/£/)).toBeNull();
+    expect(screen.queryByText("Google held back some small groups in these figures to protect people's privacy.")).toBeNull();
+    // Visitors each day, opening on Visits (Anthony, 2026-11-03: "can we default this to visits please").
     const cardOf = (title: string) => screen.getByText(title).closest("[data-part='chart-card']")!.parentElement as HTMLElement;
-    // It opens on conversions, a whole line every day (Anthony, 2026-10-20: "default this to conversions").
-    const explorer = within(cardOf("Conversions, by channel"));
-    const channels = explorer.getByRole("button", { name: /Channels: Every channel/ });
-    fireEvent.click(channels);
-    fireEvent.click(within(explorer.getByRole("group", { name: "Channels" })).getByLabelText("Direct"));
-    explorer.getByRole("button", { name: /Channels: Organic Search/ });
-    // Deselect all, then Select all (Anthony, 2026-10-20): nothing ticked says what to tick, rather than drawing nothing.
-    fireEvent.click(within(explorer.getByRole("group", { name: "Channels" })).getByRole("button", { name: "Deselect all" }));
-    explorer.getByRole("button", { name: /Channels: None/ });
-    explorer.getByText("Nothing ticked: tick at least one channel to draw a line.");
-    fireEvent.click(within(explorer.getByRole("group", { name: "Channels" })).getByRole("button", { name: "Select all" }));
-    explorer.getByRole("button", { name: /Channels: Every channel/ });
-    expect(explorer.queryByText(/^Nothing ticked/)).toBeNull();
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(explorer.queryByRole("group", { name: "Channels" })).toBeNull();
-    // A year before only for 12 months (the audit, 2026-10-20): 30 days a year ago are kept only as weeks and months.
-    const against = explorer.getByRole("combobox", { name: "Against" });
-    expect(within(against).getAllByRole("option").map((option) => option.textContent)).toEqual(["Nothing", "The period before"]);
-    expect(explorer.queryByText("Against a year before")).toBeNull();
-    // The title follows Show and Lines (Anthony, 2026-10-20: "is the component name correct"), and the toolbar's chips
-    // look the same whatever is picked ("same").
-    const greyChips = () => [...document.querySelectorAll("[data-part='filter']")].filter((chip) => chip.className.split(" ").includes("bg-hover"));
-    fireEvent.change(explorer.getByRole("combobox", { name: "Lines" }), { target: { value: "kind" } });
-    explorer.getByText("Conversions, by kind of conversion");
-    expect(greyChips()).toEqual([]);
-    fireEvent.change(explorer.getByRole("combobox", { name: "Lines" }), { target: { value: "one" } });
-    expect([...document.querySelectorAll("[data-part-title]")].map((title) => title.textContent)).toContain("Conversions");
-    fireEvent.change(explorer.getByRole("combobox", { name: "Show" }), { target: { value: "perOne" } });
-    fireEvent.change(explorer.getByRole("combobox", { name: "Lines" }), { target: { value: "channel" } });
-    explorer.getByText("Visits needed for one conversion, by channel");
-    fireEvent.change(explorer.getByRole("combobox", { name: "Show" }), { target: { value: "conversions" } });
-    // Their conversions by the channel the visits came from.
-    // The card's heading part, and the squares beside it in the same card.
-    const byChannel = screen.getByText("Conversions by channel").closest("[data-part='chart-card']")!.parentElement as HTMLElement;
-    within(byChannel).getByText("Organic Search");
-    within(byChannel).getByText("Direct");
-    // Its visitors, one chart in place of five (page-visitors-explorer-plan.md): By picks what the bars are, and the
-    // title, Show's choices and Split follow it.
-    const visitorsCard = cardOf("Visits, by channel");
-    const visitors = within(visitorsCard);
-    const byChoices = within(visitors.getByRole("combobox", { name: "By" })).getAllByRole("option").map((option) => option.textContent);
-    expect(byChoices).toEqual(["Channel", "Source", "First visit or back again", "Place just before", "Page next"]);
-    expect(within(visitors.getByRole("combobox", { name: "Show" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["Visits", "Share of visits", "Back again", "Pages a visit", "Read to the end"]);
-    fireEvent.change(visitors.getByRole("combobox", { name: "By" }), { target: { value: "source" } });
-    visitors.getByText("Visits, by source");
-    visitors.getByRole("combobox", { name: "Split" });
-    fireEvent.change(visitors.getByRole("combobox", { name: "By" }), { target: { value: "before" } });
-    visitors.getByText("Views, by the place just before");
-    expect(within(visitors.getByRole("combobox", { name: "Show" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["Views", "Share of views"]);
-    expect(visitors.queryByRole("combobox", { name: "Split" })).toBeNull();
-    fireEvent.change(visitors.getByRole("combobox", { name: "By" }), { target: { value: "channel" } });
-    // The five charts it replaces are gone, and the earlier visits needed for one conversion with them.
-    for (const gone of ["Visits that started here, by channel", "Visits that started here, by where they came from", "Where visitors went next", "First visit or back again", "Visits needed for one conversion"]) {
-      expect([...document.querySelectorAll("[data-part-title]")].map((title) => title.textContent)).not.toContain(gone);
+    const explorer = within(cardOf("Visitors each day"));
+    expect((explorer.getByRole("combobox", { name: "Show" }) as HTMLSelectElement).value).toBe("visits");
+    explorer.getByText("One line for each place they came from, like Google or Facebook.");
+    expect(within(explorer.getByRole("combobox", { name: "Compare with" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["Nothing", "The period before"]);
+    // The websites that sent visitors, opening on Source; Channel is the line chart's above.
+    const visitors = within(cardOf("Websites that sent visitors"));
+    expect(within(visitors.getByRole("combobox", { name: "By" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["Source", "New or returning", "Page before", "Page next"]);
+    // Who looks at this page: one chart in place of four, approved by Anthony on 3 November.
+    const who = within(cardOf("Who looks at this page, by device"));
+    who.getByText(/Did people look at this page on mobile, desktop or tablet\?/);
+    fireEvent.change(who.getByRole("combobox", { name: "By" }), { target: { value: "age" } });
+    within(cardOf("Who looks at this page, by age")).getByText(/Google only knows the age of 38 of the 457 people\. All 2 conversions it knows about came from people aged 45–54\./);
+    fireEvent.change(within(cardOf("Who looks at this page, by age")).getByRole("combobox", { name: "By" }), { target: { value: "country" } });
+    expect(within(cardOf("Who looks at this page, by country")).queryByRole("combobox", { name: "Compare with" })).toBeNull();
+    screen.getByText("Busiest days of the week");
+    screen.getByText("Where visitors came from");
+    // Gone, at Anthony's word: the squares, the page before and the links clicked.
+    const titles = [...document.querySelectorAll("[data-part-title]")].map((one) => one.textContent);
+    for (const gone of ["Conversions by channel", "Conversions by channel, device or country", "Where visitors were just before", "What its readers clicked", "Phone or computer", "Their age", "Their gender", "When they read"]) {
+      expect(titles).not.toContain(gone);
     }
-    await expectApprovedLook(container, "analytics-page-screen", "Page", "Google Analytics → a page's own screen, with its story");
+    await expectApprovedLook(container, "page-screen-redo", "Page", "Google Analytics → a page's own screen, redone");
   });
 
+  it("21 · a product's own page: its items added and bought, the box the eye lands on first", async () => {
+    at("/app/analytics/site_1/all-pages/page", "key=~0");
+    answer(pageScreenAnswers({
+      product: { products: 3, itemsAdded: 400, itemsBought: 100, itemsAddedBefore: 380, itemsBoughtBefore: 90, websiteItemsBought: 700 },
+      sale: { eventName: "purchase", shop: true, visits: 12, startedVisits: 593, websiteVisits: 4494, websiteEventVisits: 90 },
+    }));
+    const { container } = render(<AnalyticsPageScreen />);
+    await screen.findByText("1 in 4 were bought");
+    const boxes = [...container.querySelectorAll("[data-part='figure'] [data-part-title]")].map((label) => label.textContent);
+    expect(boxes).toEqual(["Views", "Added to basket", "Bought", "Started on this page"]);
+    screen.getByText("All 3 sizes and finishes");
+    screen.getByText("About 1 in 7 of everything you sold");
+  });
 
   it("23 · an event's own screen", async () => {
     at("/app/analytics/site_1/events/event", "key=click");

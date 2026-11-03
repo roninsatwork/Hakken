@@ -260,6 +260,7 @@ import type * as googleAnalyticsLandingKinds from "../googleAnalyticsLandingKind
 import type * as googleAnalyticsLists from "../googleAnalyticsLists.js";
 import type * as googleAnalyticsLive from "../googleAnalyticsLive.js";
 import type * as googleAnalyticsOverviewReads from "../googleAnalyticsOverviewReads.js";
+import type * as googleAnalyticsPageBoxes from "../googleAnalyticsPageBoxes.js";
 import type * as googleAnalyticsPageChannels from "../googleAnalyticsPageChannels.js";
 import type * as googleAnalyticsPageConversions from "../googleAnalyticsPageConversions.js";
 import type * as googleAnalyticsPageLists from "../googleAnalyticsPageLists.js";
@@ -734,6 +735,7 @@ import type * as utils_copyColumns from "../utils/copyColumns.js";
 import type * as utils_coreModules from "../utils/coreModules.js";
 import type * as utils_countingReads from "../utils/countingReads.js";
 import type * as utils_countryCodes from "../utils/countryCodes.js";
+import type * as utils_creditMargin from "../utils/creditMargin.js";
 import type * as utils_decisionShapes from "../utils/decisionShapes.js";
 import type * as utils_emailPictures from "../utils/emailPictures.js";
 import type * as utils_emailWording from "../utils/emailWording.js";
@@ -1234,6 +1236,7 @@ declare const fullApi: ApiFromModules<{
   googleAnalyticsLists: typeof googleAnalyticsLists;
   googleAnalyticsLive: typeof googleAnalyticsLive;
   googleAnalyticsOverviewReads: typeof googleAnalyticsOverviewReads;
+  googleAnalyticsPageBoxes: typeof googleAnalyticsPageBoxes;
   googleAnalyticsPageChannels: typeof googleAnalyticsPageChannels;
   googleAnalyticsPageConversions: typeof googleAnalyticsPageConversions;
   googleAnalyticsPageLists: typeof googleAnalyticsPageLists;
@@ -1708,6 +1711,7 @@ declare const fullApi: ApiFromModules<{
   "utils/coreModules": typeof utils_coreModules;
   "utils/countingReads": typeof utils_countingReads;
   "utils/countryCodes": typeof utils_countryCodes;
+  "utils/creditMargin": typeof utils_creditMargin;
   "utils/decisionShapes": typeof utils_decisionShapes;
   "utils/emailPictures": typeof utils_emailPictures;
   "utils/emailWording": typeof utils_emailWording;

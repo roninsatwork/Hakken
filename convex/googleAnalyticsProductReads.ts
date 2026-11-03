@@ -53,8 +53,8 @@ type ProductRow = {
   boughtBefore: number | null;
 };
 
-/** The products held for the dates, device and home country chosen, each beside the period before. */
-async function productsOf(ctx: Reader, holdId: Id<"companyWebsites">, args: { period: AnalyticsPeriod; device: string }, country: string) {
+/** The products held for the dates, device and home country chosen, each beside the period before; a page's own screen reads them too. */
+export async function productsOf(ctx: Reader, holdId: Id<"companyWebsites">, args: { period: AnalyticsPeriod; device: string }, country: string) {
   const nowList = await readFor(ctx, holdId, "product", args.period, "NOW", args.device, undefined, country);
   const before = heldOf(await readFor(ctx, holdId, "product", args.period, "BEFORE", args.device, undefined, country));
   const now = heldOf(nowList);
@@ -359,18 +359,34 @@ export function bestPageFor(name: string, pages: ReadonlyArray<{ key: string; ad
   const named = new Set(wordsOf(name));
   let best: { key: string; share: number; covered: number; views: number } | null = null;
   for (const page of pages) {
-    const last = page.address.replace(/^https?:\/\/[^/]+/, "").split("?")[0].split("/").filter(Boolean).pop() ?? "";
-    const words = wordsOf(last);
-    if (words.length === 0) continue;
-    const matched = words.filter((word) => named.has(word)).length;
-    const share = matched / words.length;
-    if (matched < PAGE_WORDS_LEAST || share < PAGE_WORDS_SHARE) continue;
+    const near = nearness(named, page.address);
+    if (!near) continue;
+    const { share, matched } = near;
     const covered = matched / named.size;
     if (!best || share > best.share || (share === best.share && (covered > best.covered || (covered === best.covered && page.views > best.views)))) {
       best = { key: page.key, share, covered, views: page.views };
     }
   }
   return best?.key ?? null;
+}
+
+/** How nearly an address is a product's name: its last part's words that are the name's, when near enough to match. */
+function nearness(named: ReadonlySet<string>, address: string): { matched: number; share: number } | null {
+  const last = address.replace(/^https?:\/\/[^/]+/, "").split("?")[0].split("/").filter(Boolean).pop() ?? "";
+  const words = wordsOf(last);
+  if (words.length === 0) return null;
+  const matched = words.filter((word) => named.has(word)).length;
+  const share = matched / words.length;
+  return matched < PAGE_WORDS_LEAST || share < PAGE_WORDS_SHARE ? null : { matched, share };
+}
+
+/**
+ * Whether a product is sold on a page: `bestPageFor` the other way round, for a page's own screen (page-screen-redo-
+ * plan-2026-11-03.md, step 1: "Added to basket" and "Bought" on a product's page). The same nearness, so the page a
+ * product's row opens is the page whose boxes count it; each size and finish sharing the page's words counts.
+ */
+export function soldOnPage(name: string, address: string): boolean {
+  return nearness(new Set(wordsOf(name)), address) !== null;
 }
 
 /** The page a product is sold on, as its own screen's key: one read when a row is clicked. */

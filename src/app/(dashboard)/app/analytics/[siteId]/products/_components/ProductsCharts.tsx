@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { PRODUCT_CHART_VIEWS } from "@/convex/utils/sees/analyticsProducts";
 import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
@@ -107,10 +109,23 @@ export function ProductsChart({ categories, host }: { categories: readonly strin
   const [view, setView] = useSiteParam<View>("chartShow", "left", VIEWS);
   const [category, setCategory] = useSiteParam<string>("chartCategory", "");
   const answer = useQuery(api.googleAnalyticsProductReads.analyticsProductChart, { ...args, ...(category ? { category } : {}) });
-  // The eye is handed the view on screen and its products' names (sees-every-page-plan-2026-10-31.md): ten products
-  // picked from the whole list are not a list of their own, so their figures would read as "holds most of the list".
-  useSeesPart("productsChart", answer ? { view: t(`titles.${view}`, { before: tf(`before.${periodWord(period)}`) }), products: answer[view].map((row) => row.name) } : undefined);
   const before = tf(`before.${periodWord(period)}`);
+  // The eye is handed Selling more and Selling less, whichever view is on screen, with each product's items bought now
+  // and before, so code finds what moved (page-screen-redo-plan-2026-11-03.md, step 3); and the view on screen. Ten
+  // products picked from the whole list (`picked`) are no whole: never "holds most of the list".
+  const seen = useMemo(() => {
+    if (!answer) return undefined;
+    const listed = (list: typeof answer.more) => ({
+      picked: true,
+      rows: list.map((row) => ({ name: row.name, itemsBought: row.itemsBought, itemsBoughtBefore: row.itemsBoughtBefore, itemsAdded: row.itemsAdded, itemsLeft: row.itemsLeft })),
+    });
+    return {
+      view: PRODUCT_CHART_VIEWS[view],
+      ...(answer.compared ? { sellingMore: listed(answer.more), sellingLess: listed(answer.less) } : {}),
+      ...(view === "left" ? { leftMost: listed(answer.left) } : view === "sold" ? { soldMost: listed(answer.sold) } : {}),
+    };
+  }, [answer, view]);
+  useSeesPart("productsChart", seen);
   const periodName = tf(`periods.${periodWord(period)}`);
   const compares = view === "more" || view === "less";
   const bought = { key: "bought", name: t("bought"), colour: CHART_SERIES_ORANGE };

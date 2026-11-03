@@ -16,6 +16,18 @@ describe("a page's own figures", () => {
     expect(trimmed).not.toHaveProperty("siteId");
   });
 
+  test("on Google Analytics' screens a rate, share or change past 1 is a percentage past 100; elsewhere a figure past 1 is left as it is", () => {
+    // A channel's conversions over its visits, and a campaign's visits against the span before (page-screen-redo-plan-2026-11-03.md).
+    const channels = { rows: [{ name: "Paid Search", conversionRate: 1.827, change: 2, share: 0.4 }] };
+    expect(pageDataFor(channels, "googleAnalytics.channelsPage")).toEqual({ rows: [{ name: "Paid Search", conversionRatePercent: 182.7, changePercent: 200, sharePercent: 40 }] });
+    // Insights' page plan keeps its rates as percentages; Search Console's moves count places.
+    expect(pageDataFor({ rows: [{ page: "/a", rate: 3.4 }] }, "insights.pagePlan")).toEqual({ rows: [{ page: "/a", rate: 3.4 }] });
+    expect(pageDataFor({ rows: [{ key: "door handles", change: 16 }] }, "searchConsole.almost")).toEqual({ rows: [{ key: "door handles", change: 16 }] });
+    // Read twice, as the eye and then the press read it, it stays as it was read once.
+    const once = pageDataFor(channels, "googleAnalytics.channelsPage");
+    expect(pageDataFor(once, "googleAnalytics.channelsPage")).toEqual(once);
+  });
+
   test("held to its size: the longest lists cut until it fits", () => {
     const huge = { rows: Array.from({ length: 25 }, (_, at) => ({ key: `page ${at}`, words: "x".repeat(199), more: Array.from({ length: 25 }, () => ({ note: "y".repeat(199) })) })) };
     expect(JSON.stringify(huge).length).toBeGreaterThan(MOST_PAGE_DATA_CHARS);

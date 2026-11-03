@@ -15,6 +15,7 @@ import { beforeClicksOf, readList as readBingList, shownRows as shownBingRows } 
 import { readClarityPeriod, type ClarityPeriodRead } from "./clarity";
 import { classifierFor } from "./googleAnalyticsChannelReads";
 import { productChart } from "./googleAnalyticsProductReads";
+import { findPage, readPageStoryPart } from "./googleAnalyticsPageReads";
 import { addUpBy, unpackTotals } from "./utils/clarityPacks";
 import { CLARITY_FEW_VISITS, measuresOf, type ClarityTotals, type ClarityTotalsRow } from "./utils/clarityRows";
 import { findMySite, myRivals } from "./siteAccess";
@@ -56,7 +57,7 @@ import {
  * Google, Bing, Clarity or the supplier (Anthony, 2026-10-29: a chart, like Insights, reads what the sections saved).
  */
 
-export type GroupsAsk = { kind: GroupChartKind; by: GroupChartBy; measure: GroupMeasure; event?: string; period: CalendarPeriod; source: GroupSource };
+export type GroupsAsk = { kind: GroupChartKind; by: GroupChartBy; measure: GroupMeasure; event?: string; period: CalendarPeriod; source: GroupSource; page?: string };
 type Reader = { db: QueryCtx["db"] };
 
 /** Landing pages a chart weighs: the busiest, enough for any kind. */
@@ -94,6 +95,8 @@ export async function groupsChartOf(
     return searchGroupsChartFrom(rows, { kind: ask.kind, by: ask.by, measure, website: hold.host, period: ask.period, link: `${site}/${screen}` });
   }
 
+  if (ask.page) return await pageChartOf(ctx, companyId, hold, ask, ask.page);
+  if (ask.by === "age" || ask.by === "gender" || ask.by === "weekday") return { ok: false, problem: "Age, gender and day of the week are drawn for one page: name the page's address." };
   if (ask.by === "product") return await productsChartOf(ctx, hold, ask);
   const measure: AnalyticsChartMeasure = (ANALYTICS_CHART_MEASURES as readonly string[]).includes(ask.measure) ? ask.measure as AnalyticsChartMeasure : "visits";
   if (ask.by === "query") return { ok: false, problem: "Searches come from Search Console: ask with lookup search_console." };
@@ -151,6 +154,38 @@ export async function groupsChartOf(
 
 type Hold = { _id: Id<"companyWebsites">; host: string };
 type Built = { ok: true; chart: GroupsChart } | { ok: false; problem: string };
+
+/** The groups one page's chart can be by, as its own screen shows them. */
+const PAGE_BY: readonly GroupChartBy[] = ["channel", "source", "device", "country", "age", "gender", "weekday"];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/**
+ * One page's chart (page-screen-redo-plan-2026-11-03.md, step 5): its own screen's figures by channel or source (the
+ * visits that started on it), device or day of the week (its views), country, age or gender (its people), as bars or
+ * a pie. Never conversions: for one page Google counts each time, not visits. Read from what the page's screen reads.
+ */
+async function pageChartOf(ctx: Reader, companyId: Id<"companies">, hold: Hold, ask: GroupsAsk, page: string): Promise<Built> {
+  if (!PAGE_BY.includes(ask.by)) return { ok: false, problem: `One page's chart is by ${PAGE_BY.join(", ")}.` };
+  if (ask.kind !== "bars" && ask.kind !== "pie" && ask.kind !== "stacked") return { ok: false, problem: "One page's chart is bars, stacked bars or a pie." };
+  if (ask.measure !== "visits") return { ok: false, problem: "One page's chart counts its visits, views or people, never conversions." };
+  const site = { db: ctx.db, companyId };
+  // Found as Ask Hakken finds a page (`findPage`), never by All pages' search, which with its story ran to the second.
+  const match = await findPage(site, { siteId: hold._id, period: ask.period, device: "", page });
+  if (!match) return { ok: false, problem: `No page of ${hold.host} matching ${pathOf(page.trim())} had visits in those dates.` };
+  // Its story alone, the screen's second read: its views are the list's own row, as on its screen.
+  const story = (await readPageStoryPart(site, { siteId: hold._id, period: ask.period, device: "", page: match.key }, match.pages))?.story;
+  if (!story || story.live) return { ok: false, problem: "Who looks at that page comes when its screen is opened: open it in Google Analytics first." };
+  const views = match.views;
+  const groups: Array<{ column: string; visits: number }> =
+    ask.by === "channel" ? [...story.sources.reduce((into, row) => into.set(row.channel, (into.get(row.channel) ?? 0) + row.visits), new Map<string, number>())].map(([column, visits]) => ({ column, visits }))
+      : ask.by === "source" ? story.sources.map((row) => ({ column: `${row.name ?? (row.source === "(direct)" ? "Typed in or a bookmark" : "Not known")} · ${row.channel}`, visits: row.visits }))
+        : ask.by === "device" ? story.devices.map((row) => ({ column: row.device, visits: Math.round(row.share * views) }))
+          : ask.by === "country" ? story.countries.map((row) => ({ column: row.code, visits: row.people }))
+            : ask.by === "weekday" ? story.weekdays.map((row) => ({ column: WEEKDAYS[Number(row.day)] ?? row.day, visits: row.views }))
+              : (ask.by === "age" ? story.ages : story.genders).rows.map((row) => ({ column: row.key, visits: Math.round(row.share * (ask.by === "age" ? story.ages : story.genders).readersPlaced) }));
+  const view: GroupsView = { visits: groups.filter((group) => group.visits > 0).sort((a, b) => b.visits - a.visits), conversions: [] };
+  return groupsChartFrom(view, { kind: ask.kind, by: ask.by, measure: "visits", website: hold.host, period: ask.period, link: `/app/analytics/${hold._id}/all-pages/page?key=${encodeURIComponent(match.key)}&period=${ask.period}` });
+}
 
 /** Each products view, as Products' chart names it in the address (`chartShow`). */
 const PRODUCT_VIEWS: Record<ProductGroupMeasure, "sold" | "left" | "more" | "less"> = { itemsBought: "sold", itemsLeft: "left", sellingMore: "more", sellingLess: "less" };
@@ -299,6 +334,7 @@ export const groupsChartInternal = internalQuery({
     by: v.union(...GROUP_CHART_BY.map((by) => v.literal(by))),
     measure: groupMeasureValidator,
     event: v.optional(v.string()),
+    page: v.optional(v.string()),
     source: groupSourceValidator,
   },
   handler: async (ctx, args) => {

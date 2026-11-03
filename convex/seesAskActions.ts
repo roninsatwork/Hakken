@@ -19,9 +19,12 @@ import {
   JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, judgeFrom, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
-import { pageFacts } from "./utils/sees/pageData";
+import { briefOf, pageFacts } from "./utils/sees/pageData";
 import { pageFindings } from "./utils/sees/pageFindings";
 import { seesScreenFor } from "./utils/sees/screens";
+
+/** A list's rows in the writer's brief once code has found the figures: enough for the page's setting. */
+const BRIEF_ROWS = 8;
 
 /**
  * The eye asks the Insights team (sees-conversion-specialist-plan-2026-10-30.md
@@ -125,7 +128,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   const prompt = JSON.stringify({
     website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period || "as the page shows them", trackingFaults,
     ...(findings.length > 0 ? { findings: findingsForWriter } : {}),
-    ...(pageRead ? { pageFigures: pageRead.shown } : { facts: factLines(facts) }),
+    // With code's findings, a short brief of the page; without, all it shows (page-screen-redo-plan-2026-11-03.md, step 6).
+    ...(pageRead ? { pageFigures: findings.length > 0 ? briefOf(pageRead.shown, BRIEF_ROWS) : pageRead.shown } : { facts: factLines(facts) }),
     links,
   });
   // With code's findings in hand the writer writes them up from them and the page's own figures, and reads no screen:
@@ -258,7 +262,8 @@ export const writeSeesAnswer = internalAction({
         await sentBack(written.verdict.why, written.role);
         return null;
       }
-      await ctx.runMutation(internal.seesAsk.saveSeesAnswer, { answerId: args.answerId, status: "WRITTEN", says: written.verdict.says, steps: written.verdict.steps, role: written.role, ...(written.findings && written.findings.length > 0 ? { findings: written.findings } : {}) });
+      // Its own findings, none included, so the panel never shows an earlier press's beside these words.
+      await ctx.runMutation(internal.seesAsk.saveSeesAnswer, { answerId: args.answerId, status: "WRITTEN", says: written.verdict.says, steps: written.verdict.steps, role: written.role, findings: written.findings ?? [] });
       await log("The Editor", `Passed: ${written.verdict.says.length} sentence${written.verdict.says.length === 1 ? "" : "s"}, ${written.verdict.steps.length} step${written.verdict.steps.length === 1 ? "" : "s"}.`);
       await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, status: "SUCCESS", summary: `The bubble for ${args.about} on ${args.host}: ${written.verdict.says.join(" ")}`.slice(0, 900) });
     } catch (error) {

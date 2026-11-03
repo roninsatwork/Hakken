@@ -1,0 +1,32 @@
+# Google Analytics → a page's own screen, redone — the approved look (board "Page" of docs/plans/assets/page-screen-redo/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: All pages
+  page-header: ‹the record's name›
+figures
+  figure: Views
+  figure: Started on this page
+  figure: Visitors who converted
+  figure: Scrolled to the bottom
+chart-card: Views each day
+chart-card: Visitors each day
+filter: Show
+filter: Conversions
+filter: From
+filter: Lines
+filter: Compare with
+compact-list: Up or down | Last day | Than the day before | Last # days | Than the # before
+chart-card: Websites that sent visitors
+filter: By
+filter: Show
+filter: Showing
+filter: Split by
+chart-card: Who looks at this page, by country
+filter: By
+chart-card: Busiest days of the week
+search: Find a source…
+table: Source | Type | Visits | Pages seen | Time spent | Scrolled to bottom | Came back | Conversions
+  table-bar: Where visitors came from
+    download: Download CSV
+  table-footer

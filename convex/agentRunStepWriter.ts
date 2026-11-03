@@ -22,6 +22,11 @@ export async function appendRunStep(
     costUsd?: number;
     /** Who was paid for the step, when it was not a model: "dataforseo". */
     providerKey?: string;
+    /** A model step's model and how much text went in and came out, so a run shows where its cost went (2026-11-03). */
+    modelId?: string;
+    providerModelId?: string;
+    inputTokens?: number;
+    outputTokens?: number;
     startedAt?: number;
     error?: string;
   },
@@ -47,6 +52,10 @@ export async function appendRunStep(
     ...(step.output !== undefined ? { output: step.output.slice(0, 4_000) } : {}),
     ...(step.costUsd !== undefined ? { costUsd: step.costUsd } : {}),
     ...(step.providerKey ? { providerKey: step.providerKey } : {}),
+    ...(step.modelId ? { modelId: step.modelId } : {}),
+    ...(step.providerModelId ? { providerModelId: step.providerModelId } : {}),
+    ...(step.inputTokens !== undefined ? { inputTokens: step.inputTokens } : {}),
+    ...(step.outputTokens !== undefined ? { outputTokens: step.outputTokens } : {}),
     ...(step.error ? { error: step.error } : {}),
     startedAt: step.startedAt ?? now,
     completedAt: now,

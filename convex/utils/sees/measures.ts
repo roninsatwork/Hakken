@@ -13,6 +13,12 @@ export type Measure = {
   lessIsBetter?: boolean;
   /** A percentage's own base, where its row holds it: a click rate is of the times shown, a conversion rate of the visits. */
   weighBy?: string;
+  /**
+   * A share of a whole (a device's share of the views): a list's shares always add up to the whole, so their average
+   * says nothing (it gave "tablet: share 2.8%, against 33.3% on average" on every page). Set only against its own
+   * reference where the row holds one: the whole website's (`website…`) or similar pages' (`group…`).
+   */
+  ofWhole?: boolean;
 };
 
 /** Counts, most telling first: a table's main figure is the first of these it holds. */
@@ -60,6 +66,11 @@ const COUNTS: Record<string, Measure> = {
   itemsBought: { words: "items bought", kind: "count" },
   itemsAdded: { words: "items added to baskets", kind: "count" },
   itemsLeft: { words: "items left in baskets", kind: "count", lessIsBetter: true },
+  // Products' four boxes (page-screen-redo-plan-2026-11-03.md, step 3): visits and products, never money.
+  basketsLeft: { words: "baskets left behind", kind: "count", lessIsBetter: true },
+  checkoutsLeft: { words: "checkouts not finished", kind: "count", lessIsBetter: true },
+  visitsThatBought: { words: "visitors who bought", kind: "count" },
+  productsNeverBought: { words: "products added but never bought", kind: "count", lessIsBetter: true },
   crawled: { words: "pages read by the search engine", kind: "count" },
   inIndex: { words: "pages in the index", kind: "count" },
   errors: { words: "errors", kind: "count", lessIsBetter: true },
@@ -77,9 +88,16 @@ const PERCENTS: Record<string, Measure> = {
   conversionRatePercent: { words: "conversion rate", kind: "percent", weighBy: "visits" },
   ratePercent: { words: "conversion rate", kind: "percent", weighBy: "visits" },
   scroll: { words: "how far people scroll", kind: "percent", weighBy: "visits" },
-  sharePercent: { words: "share", kind: "percent" },
+  sharePercent: { words: "share", kind: "percent", ofWhole: true },
   engagementRatePercent: { words: "share of engaged visits", kind: "percent" },
   bounceRatePercent: { words: "share of visits that left at once", kind: "percent", lessIsBetter: true },
+  // A page's own screen, redone (page-screen-redo-plan-2026-11-03.md, step 2): shares and rates handed as fractions,
+  // read as percentages (`pageData.ts`), each beside the whole website's or similar pages' where the page shows it.
+  viewsSharePercent: { words: "share of views", kind: "percent", ofWhole: true },
+  peopleSharePercent: { words: "share of people", kind: "percent", ofWhole: true },
+  boughtRatePercent: { words: "visitors who bought", kind: "percent", weighBy: "visits" },
+  scrolledToBottomRatePercent: { words: "scrolled to the bottom", kind: "percent", weighBy: "visits" },
+  cameBackRatePercent: { words: "came back later", kind: "percent", weighBy: "visits" },
 };
 
 export const MEASURES: Readonly<Record<string, Measure>> = { ...COUNTS, ...PERCENTS };

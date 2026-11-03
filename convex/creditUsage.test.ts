@@ -59,14 +59,14 @@ describe("usage screens' reads", () => {
     const { anthony, own, competitor } = await seed(t);
     const summary = await t.withIdentity({ subject: anthony }).query(api.creditUsage.usageSummary, {});
     if (!summary) throw new Error("expected a summary");
-    // Six rankings runs at 4 credits, and one question.
-    expect(summary.used).toBe(25);
-    expect(summary.plan).toMatchObject({ granted: 10_000, left: 9975 });
-    expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6, people: 0, counting: 0 }, { kind: "assistant", credits: 1, runs: 1, people: 1, counting: 0 }]);
+    // Six rankings runs at 4 credits, and one question at 2 (page-screen-redo-plan-2026-11-03.md, step 7).
+    expect(summary.used).toBe(26);
+    expect(summary.plan).toMatchObject({ granted: 10_000, left: 9974 });
+    expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6, people: 0, counting: 0 }, { kind: "assistant", credits: 2, runs: 1, people: 1, counting: 0 }]);
     const byWebsite = new Map(summary.websites.map((row) => [row.website?.websiteId ?? "none", row]));
     expect(byWebsite.get(own)).toMatchObject({ credits: 12, runs: 3, website: { host: "acme.com", relationship: "owned" } });
     expect(byWebsite.get(competitor)).toMatchObject({ credits: 12, website: { relationship: "tracked" } });
-    expect(byWebsite.get("none")).toMatchObject({ credits: 1, website: null });
+    expect(byWebsite.get("none")).toMatchObject({ credits: 2, website: null });
     // Scheduled once a day, so the screen says how often; a question is "when you ask".
     expect(summary.lines.find((line) => line.website?.websiteId === own)?.everyDays).toBe(1);
     expect(summary.lines.find((line) => line.kind === "assistant")?.everyDays).toBeNull();
@@ -84,13 +84,13 @@ describe("usage screens' reads", () => {
     expect(statement.isDone).toBe(true);
     expect(lines[0]).toMatchObject({ entry: "grant", in: 10_000, source: "plan" });
     expect(lines.slice(1).every((line) => line.entry === "charge")).toBe(true);
-    expect(lines.at(-1)).toMatchObject({ kind: "assistant", out: 1, user: "Anthony Basker", how: "byHand" });
+    expect(lines.at(-1)).toMatchObject({ kind: "assistant", out: 2, user: "Anthony Basker", how: "byHand" });
     expect(lines[1].from).toEqual([expect.objectContaining({ source: "plan" })]);
     expect(JSON.stringify(statement)).not.toContain("realCost");
 
     // The month's figures, without reading its lines: what it opened with, came in, went out and stands at.
     const totals = await asAnthony.query(api.creditUsage.usageStatementTotals, {});
-    expect(totals).toMatchObject({ opening: 0, planIn: 10_000, otherIn: 0, used: 25, ended: 0, closing: 9975 });
+    expect(totals).toMatchObject({ opening: 0, planIn: 10_000, otherIn: 0, used: 26, ended: 0, closing: 9974 });
     expect(totals?.people).toEqual([expect.objectContaining({ userId: anthony, name: "Anthony Basker" })]);
   });
 
@@ -139,17 +139,17 @@ describe("usage screens' reads", () => {
     });
     const asAnthony = t.withIdentity({ subject: anthony });
     const summary = await asAnthony.query(api.creditUsage.usageSummary, {});
-    expect(summary?.used).toBe(25);
+    expect(summary?.used).toBe(26);
     expect(summary?.counting).toBe(7);
     expect(summary?.kinds.find((row) => row.kind === "siteAudit")).toMatchObject({ credits: 0, runs: 0, counting: 7 });
     expect(summary?.websites.find((row) => row.website?.websiteId === own)).toMatchObject({ credits: 12, counting: 7 });
     // Not taken: the plan still holds them, and the forecast takes them off what will be left.
-    expect(summary?.plan.left).toBe(9975);
+    expect(summary?.plan.left).toBe(9974);
 
     const statement = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 50 }, order: "desc" });
     expect(statement.page.find((line) => line.counting)).toMatchObject({ kind: "siteAudit", out: 7, units: 340, balance: null });
     const totals = await asAnthony.query(api.creditUsage.usageStatementTotals, {});
-    expect(totals).toMatchObject({ counting: 7, closing: 9975, used: 25 });
+    expect(totals).toMatchObject({ counting: 7, closing: 9974, used: 26 });
   });
 
   test("coming up: each scheduled check's next run and what it will use", async () => {

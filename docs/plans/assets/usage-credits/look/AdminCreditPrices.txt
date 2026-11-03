@@ -6,6 +6,7 @@ notice (info)
 filter: This month
 settings-card: How prices are suggested
   field: A credit covers, in US dollars of real cost
+  field: Margin
   field: Credits a month
 figures
   figure: Credits counted this month
@@ -14,7 +15,7 @@ figures
   figure: Prices not covering their cost
 search: Find a kind of work…
 filter: Status
-table: Work | Real cost a unit | Suggested | In use | Counted this month | Real cost this month | A credit cost us | Use the suggestion
+table: Work | Costs us | Suggested | In use | Counted this month | Real cost this month | A credit cost us | Use the suggestion
   table-bar
   table-footer
 save

@@ -19,7 +19,9 @@ export type GroupChartKind = (typeof GROUP_CHART_KINDS)[number];
  * (`website`) or the website's searches by its place on Google (`position`).
  */
 // "product": a shop's products from Google Analytics, as Products' chart draws them (products-screen-4-plan-2026-11-02.md, phase 5).
-export const GROUP_CHART_BY = ["channel", "kind", "device", "country", "page", "hour", "query", "source", "browser", "website", "position", "product"] as const;
+// "age", "gender", "weekday": one page's own readers, as its screen's "Who looks at this page" and busiest days draw them
+// (page-screen-redo-plan-2026-11-03.md, step 5); with `source`, `device` and `country` they chart one page when one is named.
+export const GROUP_CHART_BY = ["channel", "kind", "device", "country", "page", "hour", "query", "source", "browser", "website", "position", "product", "age", "gender", "weekday"] as const;
 export type GroupChartBy = (typeof GROUP_CHART_BY)[number];
 /** Search Console's and Bing's measures for a chart of groups: clicks (visitors from the engine) and impressions (times shown). */
 export const SEARCH_GROUP_MEASURES = ["clicks", "impressions"] as const;

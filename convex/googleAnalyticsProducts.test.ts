@@ -222,3 +222,30 @@ describe("Products, only for a shop", () => {
     expect((await admin.query(api.googleAnalyticsProductReads.analyticsProducts, { siteId, period: "lastMonth", device: "" }))?.shop).toBe(false);
   });
 });
+
+describe("a product's own page (page-screen-redo-plan-2026-11-03.md, step 1)", () => {
+  test("its boxes count the items of every product sold on it, and the visits that started there and bought", async () => {
+    vi.setSystemTime(Date.parse("2026-10-01T09:30:00Z"));
+    const t = harness();
+    const { siteId, agentId, admin } = await connected(t, ON_1_OCTOBER);
+    // The brass lever handle sold on its own page, every visit starting there.
+    const onItsPage = shopDays().map((visit) => ({ ...visit, landing: "/brass-lever-handle.html", page: "/brass-lever-handle.html" }));
+    fakeGoogle([...history(70, LAST_MONTH_END), ...onItsPage]);
+    await save(admin, siteId);
+    await finishScheduled(t);
+    await dailyRun(t, agentId);
+    const list = { period: "lastMonth" as const, device: "", page: 1, rows: 25 };
+    const all = await admin.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...list });
+    const page = all.rows.find((row) => row.label.endsWith("/brass-lever-handle.html"))!.key;
+    const boxes = (await admin.query(api.googleAnalyticsPageBoxes.analyticsPageBoxes, { siteId, page, period: "lastMonth", device: "" }))!;
+    // Its own product only: the T-bar pull's name is not the page's address. Items, never money.
+    expect(boxes.product).toEqual({ products: 1, itemsAdded: 240, itemsBought: 60, itemsAddedBefore: 0, itemsBoughtBefore: 0, websiteItemsBought: 60 });
+    expect(JSON.stringify(boxes)).not.toMatch(/revenue/i);
+    // The shop's sale, Google's own until the company picks: visits that started here and bought, never more than the visits.
+    expect(boxes.sale).toMatchObject({ eventName: "purchase", shop: true, startedVisits: 600 });
+    expect(boxes.sale!.visits).toBeGreaterThan(0);
+    expect(boxes.sale!.visits).toBeLessThanOrEqual(boxes.sale!.startedVisits);
+    expect(boxes.sale!.websiteEventVisits).toBeGreaterThanOrEqual(boxes.sale!.visits);
+    expect(boxes.sale!.websiteVisits).toBeGreaterThanOrEqual(boxes.sale!.startedVisits);
+  });
+});

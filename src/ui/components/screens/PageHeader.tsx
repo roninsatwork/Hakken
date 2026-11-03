@@ -27,19 +27,27 @@ type AdminPageHeaderProps = {
    * any other admin page looks.
    */
   divider?: boolean;
+  /**
+   * `small`: a smaller title, for a record whose name runs long — a page's own screen in Google Analytics, titled by
+   * its web address (Anthony, 2026-11-03: "this font is too large for long pages"). The default is the standard size.
+   */
+  size?: "standard" | "small";
+  /** A quiet link on its own line under the title — a page's own screen's "Open the page" (Anthony, 2026-11-03). */
+  link?: ReactNode;
 };
 
-export function PageHeader({ icon, title, description, action, pills, divider = false }: AdminPageHeaderProps) {
+export function PageHeader({ icon, title, description, action, pills, divider = false, size = "standard", link }: AdminPageHeaderProps) {
   return (
     <div data-part="page-header" className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4${divider ? " border-b border-border-dim pb-6" : ""}`}>
       <div>
         <div className="flex items-center gap-3">
-          <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+          <h1 data-part-title className={`${size === "small" ? "text-xl break-all" : "text-2xl"} font-bold tracking-tight text-foreground flex items-center gap-3`}>
             {icon}
             {title}
           </h1>
         </div>
         {description ? <p className="text-[13px] text-secondary mt-1 tracking-wide">{description}</p> : null}
+        {link ? <div className="mt-2">{link}</div> : null}
         {pills ? <div className="flex flex-wrap items-center gap-2 mt-2.5">{pills}</div> : null}
       </div>
 

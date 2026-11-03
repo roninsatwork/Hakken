@@ -10,6 +10,7 @@ import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { connectionOf, conversionsOf, countedOf, readFor, readSlot } from "./googleAnalyticsRows";
 import { readPageSeries } from "./googleAnalyticsPageSeries";
 import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { landingKeyOf } from "./googleAnalyticsPageNumbers";
 
 /**
  * A page's own conversions on its All pages screen, under "Views a day"
@@ -155,12 +156,14 @@ export const analyticsPageConversionGrid = tenantQuery({
     const byChannel = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
     if (!byChannel) return null;
     const countedEvents = countedOf(connection);
+    // The landing pages' number for it: its own, or its address without the trailing slash's (`landingKeyOf`).
+    const landed = await landingKeyOf(ctx, holdId, args.page, byChannel.rows.map((row) => splitChannelKey(row.key).channel));
     // This page's rows, one a channel: keyed page then channel; and every page's from each channel, the website's.
     const own = new Map<string, ListRow>();
     const website = new Map<string, { visits: number; conversions: number }>();
     for (const row of byChannel.rows) {
       const { channel: page, source: channel } = splitChannelKey(row.key);
-      if (page === args.page && row.visits > 0) own.set(channel, row);
+      if (page === landed && row.visits > 0) own.set(channel, row);
       const whole = website.get(channel) ?? website.set(channel, { visits: 0, conversions: 0 }).get(channel)!;
       whole.visits += row.visits;
       whole.conversions += conversionsOf(row, countedEvents).conversions;
@@ -170,7 +173,7 @@ export const analyticsPageConversionGrid = tenantQuery({
     const ownBefore = new Map<string, ListRow>();
     for (const row of wasByChannel?.rows ?? []) {
       const { channel: page, source: channel } = splitChannelKey(row.key);
-      if (page === args.page) ownBefore.set(channel, row);
+      if (page === landed) ownBefore.set(channel, row);
     }
     const hasBefore = wasByChannel !== null;
     const channels = [...own.entries()].sort((left, right) => right[1].visits - left[1].visits || left[0].localeCompare(right[0]));

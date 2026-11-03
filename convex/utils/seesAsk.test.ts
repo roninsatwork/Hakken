@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { factsOf, seesFrom, seesKey, writerFor } from "./seesAsk";
+import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -31,6 +31,23 @@ describe("the eye's ask", () => {
     expect(seesKey({ ...ask, device: "mobile" })).not.toBe(key);
     expect(seesKey({ ...ask, country: "irl" })).not.toBe(key);
     expect(seesKey({ ...ask, period: "custom", from: "2026-10-01", to: "2026-10-14" })).not.toBe(key);
+  });
+
+  test("a screen about one record keeps one answer per record: each page's own screen its own (page-screen-redo-plan-2026-11-03.md)", () => {
+    const page = { screen: "googleAnalytics.page", period: "lastMonth", country: "", device: "" };
+    const pageA = seesKey({ ...page, path: "/app/analytics/s1/all-pages/page?key=~fu&period=lastMonth&from=all-pages" });
+    expect(pageA).toBe("googleAnalytics.page?key=~fu|lastMonth||||");
+    expect(seesKey({ ...page, path: "/app/analytics/s1/all-pages/page?key=~1u" })).not.toBe(pageA);
+    // Filters and views are no record: the same page under another filter is the same answer, its figures checked.
+    expect(seesKey({ ...page, path: "/app/analytics/s1/all-pages/page?key=%7Efu&device=mobile&chartShow=less" })).toBe(pageA);
+    // A screen about no one record is keyed as before.
+    expect(seesKey({ ...page, path: "/app/analytics/s1/products?chartShow=less" })).toBe("googleAnalytics.page|lastMonth||||");
+    expect(fromSeesKey(pageA)).toEqual({ screen: "googleAnalytics.page", record: "key=~fu", period: "lastMonth", country: "", device: "" });
+    expect(fromSeesKey("googleAnalytics.conversions|custom|2026-10-01|2026-10-14|gbr|mobile")).toEqual({ screen: "googleAnalytics.conversions", period: "custom", from: "2026-10-01", to: "2026-10-14", country: "gbr", device: "mobile" });
+    // The address the chat is told: the path and its record, never its filters.
+    expect(seesPath("/app/analytics/s1/conversions/pages", "?event=purchase&by=channel&key=Organic%20Search&period=lastWeek")).toBe("/app/analytics/s1/conversions/pages?key=Organic%20Search&event=purchase&by=channel");
+    expect(seesPath("/app/analytics/s1/all-pages/page", "?key=~fu")).toBe("/app/analytics/s1/all-pages/page?key=~fu");
+    expect(seesPath("/app/analytics/s1/products", "")).toBe("/app/analytics/s1/products");
   });
 
   test("the page's figures become the team's facts, Analytics' and the home country's", () => {

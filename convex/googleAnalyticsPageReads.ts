@@ -17,8 +17,9 @@ import { readPageRows } from "./googleAnalyticsPageLists";
 import { OTHER_ROWS } from "./utils/analyticsPageStory";
 import { assistantOf } from "./utils/aiAssistants";
 import { seenValidator } from "./utils/hakkenSees";
-import { pageSees, type BeforeFacts, type PageStoryFacts } from "./utils/sees/analytics";
-import { readPageStory, storyValidator, type PageStory } from "./googleAnalyticsPageStory";
+import { pageSees, pageStoryFacts, pathOfAddress } from "./utils/sees/analytics";
+import { wordStartMatcher } from "./utils/wordStarts";
+import { readPageStory, storyValidator } from "./googleAnalyticsPageStory";
 import {
   blank,
   connectionOf,
@@ -163,32 +164,6 @@ export function beforeRows(
     .sort((left, right) => right.views - left.views);
 }
 
-/**
- * What the page's box says of its story (analytics-page-screen-plan.md §5):
- * the visits that started on it and their conversions, with those made on
- * the page itself; its biggest source and the one its conversions came from;
- * its views a visit; and the busiest page of its group whose visits converted
- * better, with two conversions at least.
- */
-export function storyFacts(story: PageStory, madeHere: number): PageStoryFacts {
-  const nameOf = (row: PageStory["sources"][number]) => row.name ?? row.source;
-  // A channel's other sources, added up past a page's 20 biggest, are never one source.
-  const named = story.sources.filter((row) => row.source !== OTHER_ROWS);
-  const [biggest] = named;
-  const converter = [...named].filter((row) => row.conversions > 0).sort((a, b) => b.conversions - a.conversions)[0] ?? null;
-  const own = story.started;
-  const rate = own && own.visits > 0 ? own.conversions / own.visits : 0;
-  const nearest = story.league.find((row) => !row.isThis && row.conversions >= 2 && row.visits > 0 && row.conversions / row.visits > rate) ?? null;
-  return {
-    started: own ? { visits: own.visits, websiteVisits: own.websiteVisits, conversions: own.conversions, madeHere } : null,
-    biggest: biggest ? { name: nameOf(biggest), visits: biggest.visits, conversions: biggest.conversions } : null,
-    converter: converter ? { name: nameOf(converter), conversions: converter.conversions } : null,
-    viewsPerVisit: story.viewsPerVisit,
-    pages: story.differentPages !== null && own?.countedPages !== null && own?.countedPages !== undefined ? { different: Math.round(story.differentPages * 10) / 10, counted: Math.round(own.countedPages * 10) / 10 } : null,
-    nearest: nearest ? { page: nearest.key, visits: nearest.visits, conversions: nearest.conversions } : null,
-  };
-}
-
 /** A page or website a page's views came from just before (GA29), as its screen shows it. */
 const beforeRowValidator = v.object({
 /** `other`: the pages and websites past a page's 20 biggest, added up (ga-stored-figures-plan.md SF14). */
@@ -213,30 +188,73 @@ const analyticsPageArgs = { siteId: v.id("companyWebsites"), page: v.string(), p
  * before — from the page held over time and the shared lists each collection
  * keeps (ga-stored-figures-plan.md SF5, SF13); `live` until they are held.
  */
-export const analyticsPage = tenantQuery({
-  args: analyticsPageArgs,
-  returns: v.union(v.null(), v.object({
-    address: v.string(),
-    title: v.union(v.string(), v.null()),
-    /** The path Analytics names it by, for asking Google. */
-    path: v.string(),
-    group: v.union(v.string(), v.null()),
-    row: v.union(shownRowValidator, v.null()),
-    /** Its views in the span before; null when there is none to compare. */
-    viewsBefore: v.union(v.number(), v.null()),
-    live: v.boolean(),
-    /** A day; or, past 90 days, a week or a month to its `lastDay` (ga-stored-figures-plan.md SF2b). */
-    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), engaged: v.number(), views: v.number(), conversions: v.number(), value: v.number() })),
-    before: v.array(beforeRowValidator),
-    /** Its story (analytics-page-screen-plan.md §2): the visits that started on it, where its views went, who reads it. */
-    story: storyValidator,
-    seen: seenValidator,
-  })),
-  handler: async (ctx, args) => await readPage(ctx, args),
+const pageMainValidator = v.object({
+  address: v.string(),
+  title: v.union(v.string(), v.null()),
+  /** The path Analytics names it by, for asking Google. */
+  path: v.string(),
+  group: v.union(v.string(), v.null()),
+  row: v.union(shownRowValidator, v.null()),
+  /** Its views in the span before; null when there is none to compare. */
+  viewsBefore: v.union(v.number(), v.null()),
+  live: v.boolean(),
+  /** A day; or, past 90 days, a week or a month to its `lastDay` (ga-stored-figures-plan.md SF2b). */
+  points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), engaged: v.number(), views: v.number(), conversions: v.number(), value: v.number() })),
+  before: v.array(beforeRowValidator),
 });
 
-/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
-export async function readPage(ctx: SiteReader, args: ObjectType<typeof analyticsPageArgs>) {
+/**
+ * A page's own screen, in two reads that run side by side (page-screen-redo-plan-2026-11-03.md: "why don't we do them
+ * now not later"): its own figures here, its story in `analyticsPageStory`. Read whole, one query took 0.72–0.85s of
+ * Convex's 1s on More Handles' knob, and the first load after new code went live could time out; each half now has the
+ * second to itself.
+ */
+export const analyticsPage = tenantQuery({
+  args: analyticsPageArgs,
+  returns: v.union(v.null(), pageMainValidator),
+  handler: async (ctx, args) => await readPageMain(ctx, args),
+});
+
+/** Its story (analytics-page-screen-plan.md §2) and What Hakken sees of it: the visits that started on it, who reads it. */
+export const analyticsPageStory = tenantQuery({
+  args: analyticsPageArgs,
+  returns: v.union(v.null(), v.object({ story: storyValidator, seen: seenValidator })),
+  handler: async (ctx, args) => await readPageStoryPart(ctx, args),
+});
+
+/**
+ * A page of the website by its address or path, as Ask Hakken names it (page-screen-redo-plan-2026-11-03.md): the page
+ * with that path, or else the one with most views whose address has those words; a reference (`~fu`) is taken as it is.
+ * Read from the page list its screen reads, never All pages' search, which works out the whole screen to find one row
+ * and took half of Convex's second on its own (0.53s on More Handles).
+ */
+export async function findPage(ctx: SiteReader, args: Omit<ObjectType<typeof analyticsPageArgs>, "page"> & { page: string }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const now = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
+  if (!now || now === "LIVE") return null;
+  const asked = args.page.trim();
+  // Its views come with it: a page found is one viewed in these dates.
+  if (isPageRef(asked)) {
+    const row = now.rows.find((one) => one.key === asked);
+    return row ? { key: asked, address: (await decodePages(ctx, holdId, [asked]))[0], views: row.views, pages: now.rows } : null;
+  }
+  const path = pathOfAddress(asked);
+  const addresses = await decodePages(ctx, holdId, now.rows.map((row) => row.key));
+  const exact = addresses.findIndex((address) => pathOfAddress(address) === path);
+  const matches = wordStartMatcher(path.replace(/^\//, "") || "/");
+  let best = exact;
+  if (best < 0) {
+    addresses.forEach((address, at) => {
+      if (matches?.(address) && (best < 0 || now.rows[at].views > now.rows[best].views)) best = at;
+    });
+  }
+  return best >= 0 ? { key: now.rows[best].key, address: addresses[best], views: now.rows[best].views, pages: now.rows } : null;
+}
+
+/** Its own figures: its row, views a day and where its views came from, for the screen and Ask Hakken alike. */
+export async function readPageMain(ctx: SiteReader, args: ObjectType<typeof analyticsPageArgs>) {
   const site = await requireMySite(ctx, args.siteId);
   const holdId = site.hold._id;
   const country = await keptCountry(ctx, site.hold, args.country);
@@ -266,10 +284,6 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
   const titles = await titlesOf(ctx, holdId, [address, ...named]);
   const total = split.reduce((sum, row) => sum + row.views, 0);
   const rows = beforeRows(split, total, (ref) => addressOf.get(ref) ?? ref, (label) => titles.get(label));
-  const facts: BeforeFacts[] = rows.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views }));
-  const story = await readPageStory(ctx, {
-    holdId, page: args.page, address, period: args.period, device: args.device, country, counted, pages: now && now !== "LIVE" ? now.rows : [],
-  });
   return {
     address,
     title: titles.get(address) ?? null,
@@ -283,9 +297,34 @@ export async function readPage(ctx: SiteReader, args: ObjectType<typeof analytic
       return { day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), visits: point.row.visits, engaged: point.row.engaged, views: point.row.views, conversions, value };
     }),
     before: rows,
+  };
+}
+
+/** The website's pages in a span, as the page list holds them. */
+type PageRows = Exclude<Awaited<ReturnType<typeof readFor>>, null | "LIVE">["rows"];
+
+/**
+ * Its story and What Hakken sees of it, read apart from its own figures (`analyticsPageStory`). Handed the page list
+ * when its reader has read it already (`findPage`), so the list is unpacked once.
+ */
+export async function readPageStoryPart(ctx: SiteReader, args: ObjectType<typeof analyticsPageArgs>, read?: PageRows) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  if (!connection?.newestDay) return null;
+  const counted = countedOf(connection);
+  const [address] = await decodePages(ctx, holdId, [args.page]);
+  const now = read ? null : await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
+  const pages = read ?? (now && now !== "LIVE" ? now.rows : []);
+  const story = await readPageStory(ctx, { holdId, page: args.page, address, period: args.period, device: args.device, country, counted, pages });
+  const viewed = pages.some((row) => row.key === args.page);
+  return {
     story,
-    seen: stored && came
-      ? await namedSeen(ctx, holdId, pageSees(facts, args.siteId, (name) => assistantOf(name) !== null, args.page, storyFacts(story, own ? conversionsOf(own, counted).conversions : 0)))
+    seen: !story.live
+      // Its story as the redone screen shows it (page-screen-redo-plan-2026-11-03.md, item 13). The boxes' items and
+      // sale are their own read (`analyticsPageBoxes`), so the screen runs the same rules again with them.
+      ? await namedSeen(ctx, holdId, pageSees(args.page, address, viewed, pageStoryFacts(story, null)))
       : { says: [], steps: [] },
   };
 }

@@ -11,11 +11,12 @@ import { readOverviewPagePanels, readOverviewPanels, type OverviewPanels } from 
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitors } from "./googleAnalyticsVisitorReads";
 import { productChart, readProducts, shownProductList } from "./googleAnalyticsProductReads";
-import { readLandingPage, readPage } from "./googleAnalyticsPageReads";
+import { findPage, readLandingPage, readPageMain, readPageStoryPart } from "./googleAnalyticsPageReads";
+import { readPageBoxes } from "./googleAnalyticsPageBoxes";
 import { LIVE_LISTS, askLiveFigures } from "./googleAnalyticsRealtime";
 import { pathOfAddress } from "./utils/sees/analytics";
 import { MOVE_VIEWS } from "./utils/pageMoves";
-import { ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
+import { ANALYTICS_PARTS, ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
 import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { leftWithout } from "./utils/sees/analyticsProducts";
@@ -132,6 +133,39 @@ function kindWords(kind: string, name: string | null): string {
 }
 
 /**
+ * A page's story as its redone screen shows it (page-screen-redo-plan-2026-11-03.md, step 5): the visits that started
+ * on it, how far its readers got, its visitors by where they came from, who looks at it and its busiest days. A read of
+ * its own (`part: "story"`), so a page's figures never run past Convex's second.
+ */
+function pageStoryParts(story: NonNullable<Awaited<ReturnType<typeof readPageStoryPart>>>["story"]) {
+  if (story.live) return { storyNote: "Who looks at the page and where its visitors came from are asked of Google when the page's screen opens: open the link." };
+  return {
+    visitsThatStartedHere: story.started ? {
+      visits: story.started.visits,
+      visitsTheSpanBefore: story.started.visitsBefore,
+      percentOfAllTheWebsitesVisits: percent(story.started.websiteVisits > 0 ? story.started.visits / story.started.websiteVisits : null),
+    } : null,
+    scrolledToTheBottomPercent: percent(story.read),
+    ...(story.group ? { similarPages: story.group, similarPagesScrolledToTheBottomPercent: percent(story.groupRead) } : {}),
+    visitsThatStartedHereByChannel: [...story.sources.reduce((into, row) => into.set(row.channel, (into.get(row.channel) ?? 0) + row.visits), new Map<string, number>())]
+      .sort((a, b) => b[1] - a[1]).map(([channel, visits]) => ({ channel, visits })),
+    bySource: story.sources.slice(0, ROWS).map((row) => ({
+      source: row.name ?? (row.source === "(direct)" ? "typed in or a bookmark" : "not known"), channel: row.channel, visits: row.visits,
+      pagesAVisit: row.pages, scrolledToTheBottomPercent: percent(row.read), cameBackPercent: percent(row.back), conversionsCountedEachTime: row.conversions,
+    })),
+    wentNext: story.next.slice(0, ROWS).map((row) => ({ went: row.kind === "again" ? "this page again" : row.kind === "left" ? "left the website" : pathOfAddress(row.address), views: row.views, sharePercent: percent(row.share) })),
+    whoLooks: {
+      devices: story.devices.map((row) => ({ device: row.device, percentOfViews: percent(row.share), wholeWebsitePercent: percent(row.websiteShare) })),
+      countries: story.countries.slice(0, ROWS).map((row) => ({ country: row.code, people: row.people })),
+      ages: { googleKnowsTheAgeOf: story.ages.readersPlaced, of: story.ages.readers, groups: story.ages.rows.map((row) => ({ age: row.key, percent: percent(row.share), wholeWebsitePercent: percent(row.websiteShare), conversions: row.conversions })) },
+      genders: { googleKnowsTheGenderOf: story.genders.readersPlaced, of: story.genders.readers, groups: story.genders.rows.map((row) => ({ gender: row.key, percent: percent(row.share), wholeWebsitePercent: percent(row.websiteShare), conversions: row.conversions })) },
+      note: "Shares are of the people Google could place, not of every visitor.",
+    },
+    busiestDaysOfTheWeek: story.weekdays.map((row) => ({ day: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][Number(row.day)] ?? row.day, views: row.views })),
+  };
+}
+
+/**
  * Channels' parts above its table, as its screen shows them
  * (ga-channel-pages-plan.md CH9): the channel converting best over 12
  * months, the key events not counted, each channel by page group, and what a
@@ -204,8 +238,8 @@ export const googleAnalyticsInternal = internalQuery({
     search: v.optional(v.string()),
     /** Visitors' list. */
     list: v.optional(v.union(...VISITOR_VIEWS.map((view) => v.literal(view)))),
-    /** Overview's page panels alone, a read of their own (calendar-periods audit, 2026-10-21): the tool asks them after the rest. */
-    part: v.optional(v.literal("pages")),
+    /** A screen's further read (`analyticsPartsOf`), which the tool asks after the rest. */
+    part: v.optional(v.union(...ANALYTICS_PARTS.map((part) => v.literal(part)))),
   },
   handler: async (ctx, args) => {
     const found = await holdFor(ctx, args.companyId, args.website);
@@ -320,43 +354,68 @@ export const googleAnalyticsInternal = internalQuery({
           link: linkTo("conversions"),
         };
       }
-      case "landingPage":
-      case "page": {
+      case "landingPage": {
         if (!args.key) return { ok: false, problem: "Say which page: its address or path." };
         const path = pathOfAddress(args.key.trim());
-        const pages = await readListPage(site, { ...common, device: "", list: args.screen === "page" ? "page" : "landing", q: path.replace(/^\//, "") || "/", page: 1, rows: ROWS });
+        const pages = await readListPage(site, { ...common, device: "", list: "landing", q: path.replace(/^\//, "") || "/", page: 1, rows: ROWS });
         const match = pages.rows.find((row) => pathOfAddress(row.label) === path) ?? pages.rows[0];
         if (!match) return { ok: false, problem: `No page of ${host} matching ${path} had visits in these dates.` };
-        if (args.screen === "landingPage") {
-          const answer = await readLandingPage(site, { ...common, page: match.key });
-          return {
-            ...base, page: answer?.address ?? match.label, title: answer?.title ?? null, figures: answer?.row ? rowOf(answer.row) : null,
-            channels: answer && !answer.live ? answer.channels.slice(0, ROWS).map(rowOf) : null,
-            ...(answer?.live ? { note: "Where its visits came from is asked of Google when its screen opens: open the link." } : {}),
-            link: linkTo("landing-pages/page", { key: match.key }),
-          };
-        }
-        const answer = await readPage(site, { ...common, page: match.key });
-        const story = answer?.story ?? null;
+        const answer = await readLandingPage(site, { ...common, page: match.key });
         return {
           ...base, page: answer?.address ?? match.label, title: answer?.title ?? null, figures: answer?.row ? rowOf(answer.row) : null,
-          justBefore: answer && !answer.live ? answer.before.slice(0, ROWS).map((row) => ({ came: row.kind === "none" ? "no page before" : row.title ?? pathOfAddress(row.label), views: row.views, sharePercent: percent(row.share) })) : null,
-          // Its story, as its screen tells it (analytics-page-screen-plan.md §2): conversions made on the page are its figures'
-          // own; those from visits that started on it were made anywhere on the website, and are never said to be the page's.
-          visitsThatStartedHere: story?.started ? {
-            visits: story.started.visits, conversionsFromThoseVisitsMadeAnywhere: story.started.conversions, value: money(story.started.value),
-            visitsForOneConversion: story.started.visitsPerConversion, websiteVisitsForOneConversion: story.started.websiteVisitsPerConversion,
-            pagesAVisitAsCounted: story.started.countedPages,
-          } : null,
-          ...(story && !story.live ? {
-            differentPagesAVisit: story.differentPages,
-            timesCountedAVisit: story.viewsPerVisit,
-            readToEndPercent: story.read === null ? null : percent(story.read),
-            bySource: story.sources.slice(0, ROWS).map((row) => ({ source: row.name ?? (row.source === "(direct)" ? "typed in or a bookmark" : "not known"), channel: row.channel, visits: row.visits, conversions: row.conversions })),
-            wentNext: story.next.slice(0, ROWS).map((row) => ({ went: row.kind === "again" ? "this page again" : row.kind === "left" ? "left the website" : pathOfAddress(row.address), views: row.views, sharePercent: percent(row.share) })),
-          } : story?.live ? { storyNote: "Where its views went next, each source's visits and who reads it are asked of Google when the page's screen opens: open the link." } : {}),
-          ...(answer?.live ? { note: "The page or website visitors were on just before is asked of Google when the page's screen opens: open the link." } : {}),
-          link: linkTo("all-pages/page", { key: match.key }),
+          channels: answer && !answer.live ? answer.channels.slice(0, ROWS).map(rowOf) : null,
+          ...(answer?.live ? { note: "Where its visits came from is asked of Google when its screen opens: open the link." } : {}),
+          link: linkTo("landing-pages/page", { key: match.key }),
+        };
+      }
+      case "page": {
+        if (!args.key) return { ok: false, problem: "Say which page: its address or path." };
+        // Found from the page list its screen reads, never All pages' search (`findPage`); the story's read is handed the
+        // reference the first read found, so it never looks again.
+        const match = await findPage(site, { ...common, device: "", page: args.key });
+        if (!match) return { ok: false, problem: `No page of ${host} matching ${pathOfAddress(args.key.trim())} had visits in these dates.` };
+        // As the redone screen shows it (page-screen-redo-plan-2026-11-03.md, step 5): its four boxes, its visitors by where
+        // they came from, who looks at it and its busiest days. Never money, people as persons, time, the page before or
+        // links clicked, which the screen no longer shows; conversions are Google's count of times, never a share of visits.
+        // Three reads, as the screen reads them: its views here, its boxes and its story as their own parts after.
+        const link = linkTo("all-pages/page", { key: match.key });
+        if (args.part === "story") {
+          // The finder's list is every device's: handed on only when the story is too.
+          const told = await readPageStoryPart(site, { ...common, page: match.key }, device === "" ? match.pages : undefined);
+          return { ...base, ...(told ? pageStoryParts(told.story) : {}), link };
+        }
+        if (args.part !== "boxes") {
+          const answer = await readPageMain(site, { ...common, page: match.key });
+          return {
+            ...base, page: answer?.address ?? match.address, pageKey: match.key, title: answer?.title ?? null,
+            views: answer?.row?.views ?? null,
+            viewsTheSpanBefore: answer?.viewsBefore ?? null,
+            link,
+          };
+        }
+        const boxes = await readPageBoxes(site, { ...common, page: match.key });
+        const product = boxes?.product ?? null;
+        const sale = !product ? boxes?.sale ?? null : null;
+        return {
+          ...base,
+          ...(product ? {
+            productsSoldOnThisPage: {
+              sizesAndFinishes: product.products,
+              itemsAddedToBasket: product.itemsAdded,
+              itemsBought: product.itemsBought,
+              itemsBoughtTheSpanBefore: product.itemsBoughtBefore,
+              percentOfEveryItemTheWebsiteSold: percent(product.websiteItemsBought > 0 ? product.itemsBought / product.websiteItemsBought : null),
+            },
+          } : {}),
+          ...(sale ? {
+            [sale.shop ? "visitorsWhoBought" : "visitorsWhoConverted"]: {
+              event: sale.eventName,
+              visits: sale.visits,
+              percentOfVisitsThatStartedHere: percent(sale.startedVisits > 0 ? sale.visits / sale.startedVisits : null),
+              wholeWebsitePercent: percent(sale.websiteVisits > 0 ? sale.websiteEventVisits / sale.websiteVisits : null),
+            },
+          } : {}),
+          link,
         };
       }
       case "events": {

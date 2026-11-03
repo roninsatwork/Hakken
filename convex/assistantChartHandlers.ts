@@ -237,7 +237,9 @@ export async function analyticsGroupsChartFor(input: ToolHandlerExecutionInput):
   const period = text(input.args, "period") ?? "lastMonth";
   if (!isCalendarPeriod(period)) return { ok: false, problem: "period is one of thisWeek, lastWeek, thisMonth, lastMonth, last3Months, last6Months, last12Months." };
   const event = text(input.args, "event");
-  const read = await input.ctx.runQuery(internal.assistantGroupChartReads.groupsChartInternal, { companyId: input.companyId!, website, period, kind, by, measure, ...(event ? { event } : {}), source });
+  // One page's own chart (page-screen-redo-plan-2026-11-03.md, step 5): Google Analytics only, its page by address.
+  const page = source === "analytics" ? text(input.args, "page") : undefined;
+  const read = await input.ctx.runQuery(internal.assistantGroupChartReads.groupsChartInternal, { companyId: input.companyId!, website, period, kind, by, measure, ...(event ? { event } : {}), ...(page ? { page } : {}), source });
   if (!read.ok) return { ok: false, problem: read.problem ?? "That website has no figures for that chart yet." };
   const chart = read.chart;
   const answer = {

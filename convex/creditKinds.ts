@@ -18,7 +18,10 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   keywordResearch: { credits: 5, per: 1 },
   siteAudit: { credits: 1, per: 50 },
   backlinks: { credits: 10, per: 1_000 },
-  assistant: { credits: 1, per: 1 },
+  // Ask Hakken, one question: 2 credits since 2026-11-03, up from 1 (page-screen-redo-plan-2026-11-03.md, step 7).
+  // Measured on dev, 23 questions cost $0.33 in all, about 1.4 cents each. Kept at an 80% margin with a credit
+  // covering 5 cents, that is 2 credits.
+  assistant: { credits: 2, per: 1 },
   // Hakken tasks (hakken-tasks-plan.md, across all of it): placeholders until
   // the Watcher's real cost is measured (Anthony, 2026-10-07: "Small
   // placeholder prices") — an alert's daily check, a weekly report, a
@@ -29,7 +32,10 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   // A press of the eye that writes a new bubble (ask-hakken-every-chart-plan-2026-10-31.md, §3; Anthony, 2026-10-30:
   // "each press of the eye needs to consume your credit allowance"): about $0.06 of real cost since code finds the
   // figures, two credits at $0.05 each. A press answered from the three-hour store writes nothing and costs nothing.
-  sees: { credits: 2, per: 1 },
+  // Priced on 2026-11-03 (page-screen-redo-plan-2026-11-03.md, steps 6 and 7) once a press was made cheaper: four
+  // presses on More Handles cost 2.3 to 11.1 cents, 7.8 on average (from 15 earlier in November, some at 50), which at
+  // the 80% margin is 39 cents: eight credits at $0.05 each.
+  sees: { credits: 8, per: 1 },
 };
 
 /**

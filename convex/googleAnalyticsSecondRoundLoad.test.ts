@@ -7,7 +7,7 @@ import { packList, type ListRow } from "./googleAnalyticsLists";
 import { historyFloors, pointsBetween } from "./utils/analyticsHistory";
 import { slotKey } from "./googleAnalyticsCollect";
 import { PAGE_RECORD } from "./holdPageRefs";
-import { readPage } from "./googleAnalyticsPageReads";
+import { readPageMain, readPageStoryPart } from "./googleAnalyticsPageReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { productChart, productList, readProducts, shownProductList } from "./googleAnalyticsProductReads";
 import { readListPage } from "./googleAnalyticsReads";
@@ -116,8 +116,11 @@ describe("a large website's second-round Google Analytics", () => {
       withinBudget(reads, what);
       return answer;
     };
-    const page = await measured("a page's own screen", (ctx) => readPage(ctx, { ...args, page: "~a" }));
+    // A page's own screen is two reads, its figures and its story, each inside the budget on its own.
+    const page = await measured("a page's own screen", (ctx) => readPageMain(ctx, { ...args, page: "~a" }));
     expect(page?.row?.views).toBeGreaterThan(0);
+    const story = await measured("a page's story", (ctx) => readPageStoryPart(ctx, { ...args, page: "~a" }));
+    expect(story?.story).toBeDefined();
     const events = await measured("Events", (ctx) => readEvents(ctx, args));
     expect(events?.rows).toHaveLength(EVENT_NAMES.length + 1);
     const event = await measured("an event's own screen", (ctx) => readEvent(ctx, { ...args, event: "click" }));

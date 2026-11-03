@@ -9,7 +9,8 @@ import { keptCountry } from "./googleAnalyticsCountries";
 import { shiftDay } from "./searchConsoleDays";
 import { EVERY_DEVICE, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
-import { addInto, blank, connectionOf, countedOf, readSlot } from "./googleAnalyticsRows";
+import { addInto, blank, connectionOf, countedOf, readFor, readSlot } from "./googleAnalyticsRows";
+import { landingKeyOf } from "./googleAnalyticsPageNumbers";
 import { coverageOf } from "./googleAnalyticsCoverage";
 import { landingChannelOf, less } from "./googleAnalyticsChannelReads";
 import { pointOf } from "./googleAnalyticsPageSeries";
@@ -37,7 +38,7 @@ export type ChannelPoint = { grain: Grain; start: string; end: string; channels:
 export async function readPageChannelPoints(
   ctx: Reader,
   connection: Doc<"googleAnalyticsConnections">,
-  page: string,
+  page: string | readonly string[],
   from: string,
   to: string,
   country = "",
@@ -45,12 +46,18 @@ export async function readPageChannelPoints(
   const { newestDay: newest, pageChannelsFrom } = coverageOf(connection, country);
   if (!newest || !pageChannelsFrom) return { heldFrom: null, points: [] };
   const device = dayDevice(EVERY_DEVICE, country);
+  // A page kept under two numbers (its address with and without the trailing slash, `landingKeyOf`) reads both.
+  const pages = typeof page === "string" ? [page] : [...new Set(page)];
   const read = async (list: "landingChannel" | "landingAssistant") => {
-    const record = await ctx.db
-      .query("googleAnalyticsPageSeries")
-      .withIndex("by_hold_list_page_device", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("list", list).eq("page", page).eq("device", device))
-      .first();
-    return record ? unpackPart(record as PackedPart) : [];
+    const rows: ListRow[] = [];
+    for (const one of pages) {
+      const record = await ctx.db
+        .query("googleAnalyticsPageSeries")
+        .withIndex("by_hold_list_page_device", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("list", list).eq("page", one).eq("device", device))
+        .first();
+      if (record) rows.push(...unpackPart(record as PackedPart));
+    }
+    return rows;
   };
   const [channelRows, assistantRows] = [await read("landingChannel"), await read("landingAssistant")];
   const points = pointsBetween(from, to, newest).map((point) => ({ ...point, filed: new Map<string, ListRow>(), assistants: new Map<string, ListRow>() }));
@@ -128,7 +135,10 @@ export const analyticsPageChannelExplorer = tenantQuery({
     const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country));
     const beforeRange = totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) ?? total;
     const yearRange = periodRange(args.period, "YEAR", connection.newestDay) ?? { from: shiftDay(total.from, -364), to: shiftDay(total.to, -364) };
-    const span = async (range: { from: string; to: string }) => await readPageChannelPoints(ctx, connection, args.page, range.from, range.to, country);
+    // Analytics names a landing page without its trailing slash, which can be a second number: its days are read from both.
+    const landing = await readFor(ctx, holdId, "landing", args.period, "NOW", "", undefined, country);
+    const twin = landing && landing !== "LIVE" ? await landingKeyOf(ctx, holdId, args.page, landing.rows.map((row) => row.key)) : args.page;
+    const span = async (range: { from: string; to: string }) => await readPageChannelPoints(ctx, connection, [args.page, twin], range.from, range.to, country);
     const [now, before, year] = [await span(total), await span(beforeRange), await span(yearRange)];
     const shape = (points: ChannelPoint[]) => points.map((point) => ({
       day: point.start,

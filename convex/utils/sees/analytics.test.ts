@@ -16,13 +16,14 @@ import {
   landingSees,
   overviewSees,
   pageSees,
+  pageStoryFacts,
   pathOfAddress,
   trackingHealthSees,
   trackingCheckSees,
   HEALTH_CHECKS_WITH_STEPS,
   websitesSees,
-  type BeforeFacts,
   type ListRowFacts,
+  type PageStoryFacts,
   type WebsiteFacts,
 } from "./analytics";
 
@@ -355,78 +356,98 @@ describe("8 · All pages", () => {
   });
 });
 
-describe("21 · A page's own screen", () => {
-  // Ronins' /ai-agency/ as the drawing reads it (§18.2 board 21).
-  const before: BeforeFacts[] = [
-    { kind: "site", key: "google.com", name: "Google", views: 118 },
-    { kind: "page", key: "~0", name: "https://ronins.co.uk/", views: 74 },
-    { kind: "none", key: "none", name: "", views: 41 },
-    { kind: "site", key: "chatgpt.com", name: "ChatGPT", views: 22 },
-    { kind: "page", key: "~4", name: "https://ronins.co.uk/about-us/", views: 19 },
-    { kind: "site", key: "bing.com", name: "Bing", views: 9 },
-  ];
-  const isAssistant = (name: string) => name === "ChatGPT";
-  const total = 118 + 74 + 41 + 22 + 19 + 9;
+describe("21 · A page's own screen, redone (page-screen-redo-plan-2026-11-03.md, item 13)", () => {
+  const address = "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html";
+  // More Handles' Waltz Round Knob in October 2026, as its redone screen reads it.
+  const knob: PageStoryFacts = {
+    started: { visits: 919, visitsBefore: 904, websiteVisits: 35_739 },
+    biggest: { name: "Google", channel: "Cross-network", visits: 777, conversions: 64 },
+    phones: { share: 0.65, websiteShare: 0.393 },
+    product: { itemsAdded: 3957, itemsBought: 1034, itemsBoughtBefore: 972 },
+    sale: null,
+    nearest: null,
+  };
 
-  test("its two biggest sources; views with no page before; an assistant; keep the link, check the assistant", () => {
-    const box = pageSees(before, "s1", isAssistant, "~9");
+  test("a product's page: the visits that started on it, its items added and bought against before, the source that sent most; then a product many add and few buy", () => {
+    const box = pageSees("~fu", address, true, knob);
     expect(box).toEqual({
       says: [
-        { code: "twoSources", text: "Google", a: 118 / total, more: "~0", b: 74 / total },
-        { code: "assistant", text: "ChatGPT", a: 22 },
+        // Under a twentieth more than before: said without a change.
+        { code: "started", a: 919, b: 919 / 35_739 },
+        { code: "itemsMore", a: 3957, b: 1034, c: (1034 - 972) / 972 },
+        { code: "biggest", text: "Google", a: 777, b: 64 },
       ],
-      steps: [
-        { code: "keepLink", text: "~0", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~0" } } },
-        { code: "checkAssistant", text: "ChatGPT", link: "aiAnswers", to: { url: "/app/sites/s1/ai/answers" } },
-      ],
+      steps: [],
     });
-    // A fifth or more with no page before is said; one source alone; none at all.
-    const typed = pageSees([{ kind: "page", key: "~0", name: "https://ronins.co.uk/", views: 30 }, { kind: "none", key: "none", name: "", views: 10 }], "s1", isAssistant, "~9");
-    expect(typed.says).toEqual([{ code: "oneSource", text: "~0", a: 0.75 }, { code: "noneBefore", a: 0.25 }]);
-    const nothing = pageSees([{ kind: "none", key: "none", name: "", views: 5 }], "s1", isAssistant, "~9");
-    expect(nothing).toEqual({ says: [{ code: "noSources" }], steps: [] });
-    const empty = pageSees([], "s1", isAssistant, "~9");
-    // The page reloaded is not a source of its own: never the link to keep.
-    const reloaded = pageSees([{ kind: "page", key: "~9", name: "https://ronins.co.uk/", views: 50 }, ...before], "s1", isAssistant, "~9");
-    expect(reloaded.says[0]).toMatchObject({ code: "twoSources", text: "Google", more: "~0" });
-    expect(reloaded.steps[0]).toMatchObject({ code: "keepLink", text: "~0" });
-    expect(empty).toEqual({ says: [{ code: "none" }], steps: [] });
-    worded("page", box, typed, nothing, empty, reloaded);
+    // Phones far from the website's share are said once a sentence is free; a product many add and few buy is checked on its page.
+    const stuck = pageSees("~fu", address, true, { ...knob, started: { ...knob.started!, visitsBefore: 700 }, biggest: null, product: { itemsAdded: 400, itemsBought: 12, itemsBoughtBefore: null } });
+    expect(stuck.says).toEqual([
+      { code: "startedMore", a: 919, b: 919 / 35_739, c: (919 - 700) / 700 },
+      { code: "items", a: 400, b: 12 },
+      { code: "phones", a: 0.65, b: 0.393 },
+    ]);
+    expect(stuck.steps).toEqual([{ code: "checkProductPage", link: "openPage", to: { url: address } }]);
+    const unsold = pageSees("~fu", address, true, { ...knob, product: { itemsAdded: 30, itemsBought: 0, itemsBoughtBefore: 4 } });
+    expect(unsold.says[1]).toEqual({ code: "itemsNone", a: 30 });
+    worded("page", box, stuck, unsold);
   });
 
-  test("its story first: the visits that started on it and where their conversion was made, Google's with none, counted again, a page that converts better (analytics-page-screen-plan.md §5)", () => {
-    // Ronins' Kapferer article, 13 October 2026.
-    const kapferer = {
-      started: { visits: 593, websiteVisits: 4494, conversions: 1, madeHere: 0 },
-      biggest: { name: "Google", visits: 500, conversions: 0 },
-      converter: { name: "(direct)", conversions: 1 },
-      viewsPerVisit: 2.7,
-      pages: { different: 1, counted: 3.5 },
-      nearest: { page: "~31", visits: 35, conversions: 3 },
+  test("any other page: its visitors who bought against the whole website, the biggest source that never converted, a page of its group that converts better", () => {
+    const article: PageStoryFacts = {
+      started: { visits: 593, visitsBefore: 700, websiteVisits: 4494 },
+      biggest: { name: "Google", channel: "Organic Search", visits: 500, conversions: 0 },
+      phones: { share: 0.42, websiteShare: 0.4 },
+      product: null,
+      sale: { eventName: "generate_lead", shop: false, visits: 2, startedVisits: 593, websiteShare: 0.034 },
+      nearest: { page: "~31", address: "https://ronins.co.uk/web-design/", visits: 35, conversions: 3 },
     };
-    const box = pageSees(before, "s1", isAssistant, "~9", kapferer);
+    const box = pageSees("~9", "https://ronins.co.uk/hub/kapferer/", true, article);
     expect(box.says).toEqual([
-      { code: "startedElsewhere", a: 593, b: 593 / 4494, c: 1 },
-      { code: "biggestNoneTyped", text: "Google", a: 500 },
-      // Said with the figures the page shows: 1.0 different pages a visit, 3.5 as Google counts them.
-      { code: "countedAgainPages", a: 1, b: 3.5 },
+      { code: "startedFewer", a: 593, b: 593 / 4494, c: (700 - 593) / 700 },
+      { code: "converted", text: "generate_lead", a: 2 / 593, b: 0.034 },
+      { code: "biggestNone", text: "Google", a: 500 },
     ]);
-    expect(box.steps.map((step) => step.code)).toEqual(["nextStep", "fixCountedAgain", "keepLink"]);
-    expect(box.steps[0]).toMatchObject({ link: "landingPage", to: { segment: "all-pages/page", filters: { key: "~9" } } });
-    // Counted once a visit, with its conversion on the page, from a source of its own: the page that converts better is said.
-    const plain = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { ...kapferer.started, madeHere: 1 }, converter: { name: "Bing", conversions: 1 }, viewsPerVisit: 1.1, pages: { different: 1.4, counted: 1.6 } });
-    expect(plain.says.map((phrase) => phrase.code)).toEqual(["startedConverted", "biggestNone", "nearest"]);
-    expect(plain.says[1]).toEqual({ code: "biggestNone", text: "Google", a: 500, more: "Bing" });
-    // A busy page whose visits never convert gets its next step; a quiet one doesn't.
-    const none = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { ...kapferer.started, conversions: 0 }, converter: null, nearest: null, viewsPerVisit: null, pages: null });
-    expect(none.says[0]).toEqual({ code: "startedNone", a: 593, b: 593 / 4494 });
-    expect(none.steps[0]?.code).toBe("nextStep");
-    const quiet = pageSees(before, "s1", isAssistant, "~9", { ...kapferer, started: { visits: 40, websiteVisits: 4494, conversions: 0, madeHere: 0 }, converter: null, nearest: null, viewsPerVisit: null, pages: null });
-    expect(quiet.steps.map((step) => step.code)).not.toContain("nextStep");
-    // A page another page sends under a twentieth of its views is no link worth keeping.
-    const faint = pageSees([{ kind: "site", key: "google.com", name: "Google", views: 1444 }, { kind: "page", key: "~2", name: "https://ronins.co.uk/web-design-insights/", views: 1 }], "s1", isAssistant, "~9");
-    expect(faint.steps.map((step) => step.code)).not.toContain("keepLink");
-    worded("page", box, plain, none, quiet, faint);
+    expect(box.steps).toEqual([
+      { code: "nextStep", link: "openPage", to: { url: "https://ronins.co.uk/hub/kapferer/" } },
+      { code: "seeChannel", text: "Google", link: "channel", to: { segment: "channels/channel", filters: { key: "Organic Search" } } },
+      { code: "seeNearest", text: "https://ronins.co.uk/web-design/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~31" } } },
+    ]);
+    // A shop's page, none bought; typed in the biggest; the page that converts better said once a sentence is free.
+    const shop = pageSees("~9", "https://shop.test/blog/latches/", true, {
+      ...article, started: { visits: 120, visitsBefore: null, websiteVisits: 4494 }, biggest: { name: "(direct)", channel: "Direct", visits: 60, conversions: 2 },
+      sale: { eventName: "purchase", shop: true, visits: 0, startedVisits: 120, websiteShare: 0.034 },
+    });
+    expect(shop.says).toEqual([
+      { code: "started", a: 120, b: 120 / 4494 },
+      { code: "boughtNone", a: 0, b: 0.034 },
+      { code: "biggestTyped", text: "(direct)", a: 60, b: 2 },
+    ]);
+    expect(shop.steps.map((step) => step.code)).toEqual(["nextStepShop", "seeNearest"]);
+    // Too few visits started here to weigh its share; a quiet page wants no next step.
+    const quiet = pageSees("~9", "https://shop.test/a/", true, { ...article, started: { visits: 12, visitsBefore: 12, websiteVisits: 4494 }, biggest: null, sale: { ...article.sale!, startedVisits: 12 }, nearest: null });
+    expect(quiet).toEqual({ says: [{ code: "started", a: 12, b: 12 / 4494 }], steps: [] });
+    // Not viewed in these dates.
+    expect(pageSees("~9", "https://shop.test/a/", false, null)).toEqual({ says: [{ code: "none" }], steps: [] });
+    worded("page", box, shop, quiet, pageSees("~9", "", false, null));
+  });
+
+  test("its facts from the page's own read and its boxes: a source's channels added up, typed in by its own word, the boxes' items or sale", () => {
+    const story = {
+      started: { visits: 919, visitsBefore: 904, websiteVisits: 35_739, conversions: 1459, value: 0, visitsPerConversion: null, websiteVisitsPerConversion: null, countedPages: null, websiteCountedPages: null, fewVisits: false },
+      sources: [
+        { key: "a", channel: "Cross-network", source: "google", name: "Google", visits: 497, pages: 4, time: null, read: 0.5, back: 0.16, conversions: 40, value: 0, fewVisits: false },
+        { key: "b", channel: "Paid Shopping", source: "google", name: "Google", visits: 280, pages: 4, time: null, read: 0.49, back: 0.22, conversions: 24, value: 0, fewVisits: false },
+        { key: "c", channel: "Unassigned", source: "(not set)", name: null, visits: 300, pages: 9, time: null, read: 1, back: 0.13, conversions: 0, value: 0, fewVisits: false },
+        { key: "d", channel: "Direct", source: "(direct)", name: null, visits: 30, pages: 3, time: null, read: 0.27, back: 0.43, conversions: 2, value: 0, fewVisits: false },
+      ],
+      devices: [{ device: "mobile", share: 0.65, websiteShare: 0.393 }, { device: "desktop", share: 0.32, websiteShare: 0.577 }],
+      league: [{ key: "~fu", address, visits: 919, conversions: 1459, isThis: true }, { key: "~2", address: "https://www.morehandles.co.uk/b/", visits: 20, conversions: 1, isThis: false }],
+    } as unknown as Parameters<typeof pageStoryFacts>[0];
+    const boxes = { product: { products: 23, itemsAdded: 3957, itemsBought: 1034, itemsAddedBefore: 3765, itemsBoughtBefore: 972, websiteItemsBought: 6913 }, sale: { eventName: "purchase", shop: true, visits: 64, startedVisits: 918, websiteVisits: 35_843, websiteEventVisits: 1205 } };
+    expect(pageStoryFacts(story, boxes)).toEqual(knob);
+    // Without its boxes, as the page's own read works it out, nothing of items or the sale; any other page's sale.
+    expect(pageStoryFacts(story, null)).toMatchObject({ product: null, sale: null });
+    expect(pageStoryFacts(story, { product: null, sale: boxes.sale }).sale).toEqual({ eventName: "purchase", shop: true, visits: 64, startedVisits: 918, websiteShare: 1205 / 35_843 });
   });
 });
 

@@ -162,7 +162,8 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
         return t.rich("holdsMost", { ...rich, name: String(p.name), measure: measure(p.measure), share: percent(p.share) });
       case "rowAbove":
       case "rowBelow":
-        return t.rich("rowApart", { ...rich, name: String(p.name), measure: measure(p.measure), value: figure(p.measure, p.value), mean: figure(p.measure, p.mean) });
+        // Against its own reference where the figures carry one (the whole website, similar pages), else the list's average.
+        return t.rich(p.against === "website" ? "apartWebsite" : p.against === "group" ? "apartGroup" : "rowApart", { ...rich, name: p.whole ? t("thisPage") : String(p.name), measure: measure(p.measure), value: figure(p.measure, p.value), mean: figure(p.measure, p.mean) });
     }
   })();
   const { icon: Icon, tone: usual } = ICONS[finding.kind];

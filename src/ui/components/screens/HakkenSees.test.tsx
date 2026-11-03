@@ -247,6 +247,28 @@ describe("HakkenSees and its eye", () => {
       })]);
     });
 
+    it("on a page's own screen, is pressed for that page and the period shown: its record in the address, the opening period when the address has none", async () => {
+      // Every page's own screen shared one answer, keyed by none of its dates (page-screen-redo-plan-2026-11-03.md).
+      at.path = "/app/analytics/site_1/all-pages/page";
+      window.history.replaceState(null, "", "/app/analytics/site_1/all-pages/page?key=~fu&chartShow=less");
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      render(
+        <>
+          <HakkenSeesEye />
+          <HakkenSees says={says} steps={[]} advice="rule" page={{ screen: "googleAnalytics.page", siteId: "site_1" as never, data: { boxes: { views: 2107, viewsBefore: 2181, boughtRate: 1.4 } } }} />
+        </>,
+      );
+      fireEvent.click(eye());
+      await waitFor(() => expect(askSees).toHaveBeenCalled());
+      expect(askSees.mock.calls[0]).toEqual([expect.objectContaining({
+        screen: "googleAnalytics.page", path: "/app/analytics/site_1/all-pages/page?key=~fu", period: "lastMonth",
+        // A Google Analytics rate past 1 is a percentage past 100, never left as it was.
+        data: { boxes: { views: 2107, viewsBefore: 2181, boughtRatePercent: 140 } },
+      })]);
+      window.history.replaceState(null, "", "/");
+    });
+
     it("shows what code finds in the page's own figures the moment it opens, before anything is written", async () => {
       vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const })) as never);
       render(

@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import type { AgentTool } from "./insightsToolAsk";
 import { ANALYTICS_READ, SEARCH_CONSOLE_READ, keyedRead } from "./utils/agentTools";
-import { ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
+import { ANALYTICS_SCREENS, analyticsPartsOf, type AnalyticsScreen } from "./utils/analyticsScreens";
 import { CALENDAR_PERIODS, isCalendarPeriod, periodSpan, ukDay } from "./utils/calendarPeriods";
 
 /**
@@ -124,10 +124,10 @@ export function analyticsTool(scope: ReadScope): AgentTool {
       };
       const answer = await ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, asked) as Record<string, unknown>;
       if (answer.ok === false) return { problem: String(answer.problem ?? "That screen could not be read.") };
-      // Overview's page panels are a read of their own, as on the screen and in Ask Hakken.
-      const whole = screen === "overview"
-        ? { ...answer, ...await ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, { ...asked, part: "pages" }) as Record<string, unknown> }
-        : answer;
+      // Overview's page panels, and a page's boxes and story, are reads of their own, as on the screen and in Ask Hakken.
+      const found = typeof answer.pageKey === "string" ? { key: answer.pageKey } : {};
+      const more = await Promise.all(analyticsPartsOf(screen).map((part) => ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, { ...asked, ...found, part })));
+      const whole = Object.assign({}, answer, ...more) as Record<string, unknown>;
       const currency = typeof whole.currency === "string" ? whole.currency : null;
       // A read the agent dated itself says its period in its keys, so two periods' figures never share a name.
       return keyedRead(whole, scope.period ? `${prefix}.${screen}` : `${prefix}.${period}.${screen}`, {

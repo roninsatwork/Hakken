@@ -6,7 +6,8 @@ import { useMutation, useQuery } from "convex/react";
 import { Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { seesKey } from "@/convex/utils/seesAsk";
+import { seesKey, seesPath } from "@/convex/utils/seesAsk";
+import { OPENING_PERIOD } from "@/convex/utils/calendarPeriods";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
@@ -56,13 +57,16 @@ export function HakkenSeesEye() {
   const holder = useRef<HTMLSpanElement>(null);
   const askSees = useMutation(api.seesAsk.askSees);
   const pathname = usePathname() ?? "";
+  // The screen's address with the record it is about (`?key=~fu`): each page's own screen keeps its own answer, and the
+  // chat knows which page it is on. Read as the eye draws, as a page changing only its record republishes its box.
+  const here = seesPath(pathname, typeof window === "undefined" ? "" : window.location.search);
   // A page that handed over its own figures (sees-every-page-plan-2026-10-31.md): cut to what it shows first, and —
   // where pressing writes — asked of the team as a press, its links the rule's own steps and the page's.
   const page = box?.page;
   // Its panels that read their own figures (a table, a chart) add them under their names.
   const held = useSeesParts();
   const data = useMemo(() => withSeesParts(page?.data, held), [page?.data, held]);
-  const pageData = useMemo(() => (data !== undefined ? pageDataFor(data) : null), [data]);
+  const pageData = useMemo(() => (data !== undefined ? pageDataFor(data, page?.screen) : null), [data, page?.screen]);
   // The website: the page's, else the one its figures are of (Insights opens on a website without naming it).
   const siteId = page?.siteId ?? (data !== undefined ? siteIdIn(data) : undefined);
   const derivedAsk = useMemo<SeesAsk | undefined>(() => {
@@ -72,10 +76,10 @@ export function HakkenSeesEye() {
     for (const link of page.links ?? []) links.set(link.href, { label: link.label, href: link.href });
     const dates = datesOf(page);
     return {
-      siteId, screen: page.screen, about: "", path: pathname, ...dates,
+      siteId, screen: page.screen, about: "", path: here, ...dates,
       facts: [], links: [...links.values()].slice(0, 12), data: pageData,
     };
-  }, [page, siteId, pageData, pathname, box?.steps]);
+  }, [page, siteId, pageData, here, box?.steps]);
   const ask = box?.ask ?? derivedAsk;
   const key = ask ? seesKey(ask) : null;
   // What the team said when asked for this key (the store's, outside React): "RESEARCHING" until its answer is saved,
@@ -97,7 +101,8 @@ export function HakkenSeesEye() {
   const readsFindings = open && conversionsPage && box?.ask && !answer?.findings;
   const live = useQuery(api.seesFindings.seesFindings, readsFindings && box?.ask ? { siteId: box.ask.siteId, period: box.ask.period, device: box.ask.device, ...(box.ask.country ? { country: box.ask.country } : {}) } : "skip");
   const local = useMemo(() => (page && !conversionsPage && pageData !== null ? pageFindings(page.screen, pageData) : undefined), [page, conversionsPage, pageData]);
-  const read = answer?.status === "WRITTEN" && answer.findings ? answer.findings : conversionsPage ? live : local;
+  // A press that found none saves none: the figures code finds here and now stand in.
+  const read = answer?.status === "WRITTEN" && answer.findings && answer.findings.length > 0 ? answer.findings : conversionsPage ? live : local;
   const findings = Array.isArray(read) ? read : undefined;
   // Asking about the page: an Ask Hakken conversation for its website, started with the page as its starting point —
   // its address, what it is, its dates and, for a page Ask Hakken has no tool to read, its own figures.
@@ -108,7 +113,7 @@ export function HakkenSeesEye() {
     pageKey: key ?? box?.screen ?? null,
     ...(ask ? { siteId: ask.siteId } : siteId ? { siteId } : {}),
     startedOn: {
-      path: ask?.path || pathname || box?.screen || "",
+      path: ask?.path || here || box?.screen || "",
       about: ask?.about || (page ? seesScreenFor(page.screen)?.about ?? page.screen : box?.screen ?? ""),
       dates: where ? [where.from && where.to ? `${where.from} to ${where.to}` : where.period, where.country || null, where.device || null].filter(Boolean).join(", ") : "",
       findings: (findings ?? []).map(findingWords),
@@ -156,16 +161,22 @@ function siteIdIn(data: unknown): Id<"companyWebsites"> | undefined {
   return named.size === 1 ? ([...named][0] as Id<"companyWebsites">) : undefined;
 }
 
+/** The sections whose screens carry the dates menu, each opening on Last month (calendar-periods-plan.md rule 6). */
+const DATED = /^(googleAnalytics|searchConsole|bing|clarity|visibility)\./;
+
 /**
  * A page's dates, country and device: as it gave them, else from its address, where every section keeps its date
  * menu's choice (`?period=lastMonth`, `?from=…&to=…`, `?country=`, `?device=`), so a press is keyed to what is shown.
+ * A screen on its opening period keeps none in its address: it is keyed by that period, never by none, so the writer
+ * is told the dates it shows (page-screen-redo-plan-2026-11-03.md). A website holding nothing of last month yet opens
+ * on This month, which the eye, drawn outside the section, cannot see: such a page should give its period itself.
  */
-function datesOf(page: { period?: string; from?: string | null; to?: string | null; country?: string; device?: string }) {
+function datesOf(page: { screen?: string; period?: string; from?: string | null; to?: string | null; country?: string; device?: string }) {
   const query = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const from = page.from ?? query.get("from");
   const to = page.to ?? query.get("to");
   return {
-    period: page.period ?? query.get("period") ?? "",
+    period: page.period ?? query.get("period") ?? (page.screen && DATED.test(page.screen) ? OPENING_PERIOD : ""),
     ...(from ? { from } : {}),
     ...(to ? { to } : {}),
     country: page.country ?? query.get("country") ?? "",

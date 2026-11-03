@@ -184,7 +184,7 @@ describe("home countries", () => {
     expect(chart.live).toBe(false);
     const all = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "page", page: 1, rows: 25 });
     const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
-    const page = (await admin.query(api.googleAnalyticsPageReads.analyticsPage, { ...args, page: home }))!;
+    const page = (await admin.query(api.googleAnalyticsPageReads.analyticsPageStory, { ...args, page: home }))!;
     // France's own: three visits a day from Google, all landing on the home page.
     expect(page.story.live).toBe(false);
     expect(page.story.sources.map((row) => [row.channel, row.visits])).toEqual([["Organic Search", DAYS * 3]]);

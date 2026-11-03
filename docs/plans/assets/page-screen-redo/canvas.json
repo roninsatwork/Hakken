@@ -1,0 +1,192 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-03T08:39:51Z"
+  },
+  "title": "Hakken — A page's own screen, redo",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 8000,
+      "title": "1 · Today · Google Analytics → Products → the Waltz Round Knob's page, More Handles, last month",
+      "expand": "fill"
+    },
+    "Redo.dc.html": {
+      "x": 2600,
+      "y": 0,
+      "w": 1440,
+      "h": 8000,
+      "title": "2 · A product page · the Waltz Round Knob, More Handles, last month · press Play to switch Who looks at this page",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Other.dc.html": {
+      "x": 4640,
+      "y": 0,
+      "w": 1440,
+      "h": 8000,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "3 · Any other page · the Cupboard Door Knobs category page, More Handles, last month · press Play to switch Who looks at this page"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Redo.dc.html",
+    "Other.dc.html"
+  ],
+  "notes": {
+    "top": {
+      "x": 1520,
+      "y": 0,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "The top\nBuilt from the standard record header.\n\n• The title is the web address. The product's name is tucked into the grey line under it.\n• That grey line is long and hard to read.\n• You came from Products, but nothing here says this is a product."
+    },
+    "figures": {
+      "x": 1520,
+      "y": 300,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "The eight boxes\nBuilt from the standard figures.\n\n• Eight boxes, all the same size. Nothing says which one matters most.\n• Two are called conversions. 1,050 made here and 1,459 from visits that started here.\n• 1,459 conversions from 919 visits is more conversions than visits. It looks like every basket add counts, so one visit can make several.\n• It says \"1 visits for one\", which reads wrong.\n• It shows £0 and £5,219. On 2 November you asked for no money on Google Analytics screens.\n• Read to the end means little for a product."
+    },
+    "viewsDay": {
+      "x": 1520,
+      "y": 860,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Views a day\nBuilt from the standard chart card.\n\n• A dot marks a day with a conversion. There's one on every day, so it tells you nothing.\n• The hint explains how the figures are fetched. A shop owner doesn't need that."
+    },
+    "convChart": {
+      "x": 1520,
+      "y": 1259,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Conversions, by channel\nBuilt from the standard chart you can explore.\n\n• It opens on every kind of conversion at once. Basket adds and sales are mixed in one line.\n• Four lines cross each other day by day. It's hard to see which way things are going.\n• The table under it compares single days. One quiet day shows as 100% worse."
+    },
+    "convMap": {
+      "x": 1520,
+      "y": 1990,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Conversions by channel, the squares\nBuilt from the standard conversions map.\n\n• Its name is almost the same as the chart above it.\n• 6 of its 13 lines are empty. They take up almost half its height.\n• Names like \"Ua 5 minutes on site\" come straight from Google."
+    },
+    "visits": {
+      "x": 1520,
+      "y": 2813,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Visits, by channel\nBuilt from the standard chart you can explore, as bars.\n\n• Its By menu also shows the page before and the page next.\n• So the page before is shown twice. Here and in a table near the bottom."
+    },
+    "devices": {
+      "x": 1520,
+      "y": 3430,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Phone or computer, and where its readers are\nBuilt from the standard bar chart.\n\n• Phone or computer is clear. It sets this page beside the whole website.\n• Countries is one long bar for the UK and nine tiny ones."
+    },
+    "who": {
+      "x": 1520,
+      "y": 4382,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Age, gender and day of the week\nBuilt from the standard bar chart.\n\n• Google knows the age of only 198 of the 958 people, and the gender of 210.\n• These three say much less than the charts above, but take as much room.\n• \"When they read\" is a word for articles, not products."
+    },
+    "sources": {
+      "x": 1520,
+      "y": 5663,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Each source's visits\nBuilt from the standard table.\n\n• Ten columns across.\n• Conversions show as more than 100% of visits, up to 1950%. That's the same counting problem as the boxes.\n• \"(data not available)\" shows as if it were a source.\n• Channel has already come up three times above this."
+    },
+    "before": {
+      "x": 1520,
+      "y": 6859,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Where visitors were just before\nBuilt from the standard table.\n\n• 1 in 6 views came from this same page. Probably people reloading it or changing an option.\n• It works, but it's the third place you can see where people came from."
+    },
+    "bottom": {
+      "x": 1520,
+      "y": 7480,
+      "w": 440,
+      "fill": "gray",
+      "size": "s",
+      "text": "Below the frame\nThe page is about 8,700 pixels tall, so the last part scrolls inside the frame.\n\nIt's What its readers clicked. The table is empty, because a product page has no links out or downloads."
+    },
+    "overall": {
+      "x": 2040,
+      "y": 0,
+      "w": 480,
+      "fill": "orange",
+      "size": "m",
+      "text": "What I see overall\n\n• This is the article page's story, used again for a product. Read to the end, readers, when they read, links clicked.\n• It never says how this product sold. The Products screen already knows that. Added to basket, bought, left behind.\n• 12 charts and tables, one under another. Everything weighs the same.\n• Channel comes up four times. Two charts, the squares and the sources table.\n• The conversion figures don't agree with each other. More conversions than visits, and shares over 100%."
+    },
+    "redoWho": {
+      "x": 4120,
+      "y": 2330,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "Approved by you on 3 November. Not built yet.\n\nFour charts are now one.\n\n• Use By to switch between device, country, age and gender. Press Play to try it.\n• The grey bars show your whole website.\n• Each bar has one number.\n\nOne gap. Countries have no grey bars yet. Hakken doesn't have the whole website's countries for this chart."
+    },
+    "redoNext": {
+      "x": 4120,
+      "y": 0,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "A product page\nFour boxes instead of eight.\n\n• Views. How many times the page was seen.\n• Added to basket and Bought. These count every size and finish of the knob.\n• Bought is the main one, so it stands out.\n• Came in on this page. Visits that started here.\n\nThese are gone from the boxes. People, time spent, pages seen, scrolled to the bottom, and money.\n\nEvery word on this board is now written for a reading age of 14."
+    },
+    "parts": {
+      "x": 2040,
+      "y": 720,
+      "w": 480,
+      "fill": "green",
+      "size": "m",
+      "text": "Standard parts on this page\n• Record header\n• Figures, eight of them\n• Notice\n• Chart card, with line and bar charts\n• The chart you can explore, as lines and as bars\n• Conversions map, the squares\n• Table, with its bar and search box\n• The eye in the top bar\n\nStandard parts not used here that could help\n• Tabs, to group charts instead of stacking them\n• Page flow, for where people came from and went next\n• Gains and losses bars\n• The ring chart, for phone or computer\n• Bought or left behind, from the Products screen"
+    },
+    "otherBoxes": {
+      "x": 6160,
+      "y": 0,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "Any other page\nShown on a category page. Four boxes instead of eight.\n\n• Views, and visits that came in on this page.\n• Visits that bought something is the main one. It's compared with your whole website.\n• Scrolled to the bottom, compared with similar pages.\n\nEverything below the boxes matches board 2."
+    },
+    "otherFault": {
+      "x": 6160,
+      "y": 620,
+      "w": 440,
+      "fill": "orange",
+      "size": "s",
+      "text": "Something broken\nI wanted to show the tubular latch guide here. Its page says no visits came in on it. But All pages says it had 491 visits.\n\nSo an article would show empty boxes today. This needs fixing before we build."
+    },
+    "approved": {
+      "x": 2600,
+      "y": -360,
+      "w": 1000,
+      "fill": "green",
+      "size": "m",
+      "text": "Approved by Anthony on 3 November: boards 2 and 3, as drawn. Google's own names stay for where visits come from. Plan: docs/plans/active/page-screen-redo-plan-2026-11-03.md"
+    }
+  },
+  "designSystems": []
+}

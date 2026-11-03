@@ -1,5 +1,6 @@
-import type { ActionCtx } from "./_generated/server";
-import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
+import type { ActionCtx, QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { addressesOf, decodePages, encodePagesFromAction, isPageRef } from "./holdPageRefs";
 import { channelKey, pageAddress, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { OTHER_ROWS } from "./utils/analyticsSharedLists";
 import type { CollectTarget } from "./googleAnalyticsCollect";
@@ -55,4 +56,30 @@ export async function numberPages(
     for (const [event, value] of row.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
   });
   return [...merged.values()];
+}
+
+/** An address with a path that ends in a slash: the home page's own slash is no page's twin. */
+const SLASHED_PATH = /^https?:\/\/[^/]+\/.+\/$/;
+
+/**
+ * Which of a landing list's pages (`refs`, each with its address) is the All pages page `page` at `address`: its own
+ * number, or else the number its address without the trailing slash was given (2026-11-03). `numberPages` gives a
+ * landing page the slashed address only while the website holds no address without it, so once another section has
+ * numbered that one too — morehandles.co.uk held 59 such pairs — the visits that started on `/blog/x/` are kept under
+ * `/blog/x`'s number, and `/blog/x/`'s screen found none. The page's own number when neither is among them.
+ */
+export function landingKeyAmong(page: string, address: string, refs: readonly string[], addresses: readonly string[]): string {
+  if (refs.includes(page) || !SLASHED_PATH.test(address)) return page;
+  const at = addresses.indexOf(address.slice(0, -1));
+  return at >= 0 && isPageRef(refs[at]) ? refs[at] : page;
+}
+
+/** The same inside a query (`landingKeyAmong`): the landing pages' addresses read only when the page's own number is not among them. */
+export async function landingKeyOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, page: string, refs: readonly string[]): Promise<string> {
+  const held = new Set(refs);
+  if (!isPageRef(page) || held.has(page)) return page;
+  const [address] = await decodePages(ctx, holdId, [page]);
+  if (!SLASHED_PATH.test(address)) return page;
+  const landing = [...held].filter(isPageRef);
+  return landingKeyAmong(page, address, landing, await decodePages(ctx, holdId, landing));
 }

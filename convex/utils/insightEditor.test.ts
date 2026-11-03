@@ -55,6 +55,9 @@ describe("the Editor", () => {
     // A name with a digit in it is a name (sees-every-page-plan, 2026-10-31: "handles4doors.co.uk" was sent back as a typed number).
     expect(typedNumbers("[[f1.value]] links come from handles4doors.co.uk; the M4 bolt sells.")).toEqual([]);
     expect(typedNumbers("about 70k more, 3x the rest")).toEqual(["70", "3"]);
+    // A size in a product's name is its name: the whole number at once, never the "3" of "32mm" (2026-11-03).
+    expect(typedNumbers("Shoppers leave the 32mm Waltz knob behind [[a.left]] times; the 25mm sells.")).toEqual([]);
+    expect(typedNumbers("12,500 visits")).toEqual(["12,500"]);
   });
 
   test("a figure Hakken doesn't hold is sent back, never left blank", () => {

@@ -77,12 +77,35 @@ export const SEES_SCREENS: Readonly<Record<string, Partial<SeesScreen> & { about
   "googleAnalytics.landing": { about: "landing pages as a flow: where visits start and how many go on to convert" },
   "googleAnalytics.landingPage": { about: "one landing page's own screen" },
   "googleAnalytics.allPages": { about: "every page of the website, with its visits and conversions" },
-  "googleAnalytics.page": { about: "one page's own screen: its visits, where they came from and what they did" },
+  // A page's own screen, redone (page-screen-redo-plan-2026-11-03.md, step 2; boards 2 and 3, approved 2026-11-03).
+  "googleAnalytics.page": {
+    about: "one page's own screen: how often it was seen, the visitors who started on it and where they came from, who looks at it, and on a product's page the items added to baskets and bought",
+    parts: [
+      "the four boxes: on a product's page views, items added to basket, items bought and visits that started here; on any other page views, visits that started here, visitors who bought and how many scrolled to the bottom",
+      "views each day",
+      "visitors each day, a line for each channel they came by",
+      "the websites that sent visitors",
+      "who looks at the page: by device, country, age or gender, against the whole website",
+      "the busiest days of the week",
+      "where visitors came from: a row for each source",
+    ],
+    never: [
+      ...NO_MONEY,
+      "people as a count of persons, time spent, pages a visit, the page before or links clicked: this page no longer shows them",
+    ],
+  },
   "googleAnalytics.conversionPages": { about: "the pages behind one square of the Conversions map" },
   // Screen 4 of the canvas "Products page, three ways" (products-screen-4-plan-2026-11-02.md): visits and items, never money.
   "googleAnalytics.products": {
     about: "the shop's products: the visits left at each of the shop's steps before a sale, and the products bought, left in baskets, and selling more or less",
-    parts: ["the four boxes: baskets left behind, checkouts not finished, visits that bought, products added and never bought", "Bought or left behind, for the steps and sale the shop picked", "the products chart's view", "the products table"],
+    // Its figures as the page hands them (page-screen-redo-plan-2026-11-03.md, step 3): the boxes with the period before,
+    // the shop's steps, Selling more and Selling less with each product's items bought now and before, the table's page.
+    parts: [
+      "the four boxes: baskets left behind, checkouts not finished, visits that bought, products added and never bought",
+      "Bought or left behind, for the steps and sale the shop picked",
+      "the products chart: the view on screen, and the products selling more and selling less than before",
+      "the products table: the page of products on screen",
+    ],
     // Seen on MoreHandles, 2026-11-02: the writer brought in Referral and Paid Search, which this page never shows.
     never: [...NO_MONEY, "where visits came from: channels, sources and campaigns are on their own pages, never on this one"],
   },

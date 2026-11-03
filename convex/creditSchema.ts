@@ -184,6 +184,12 @@ export const creditTables = {
     planCredits: v.number(),
     /** What one credit covers, in US dollars of real cost (outstanding question 1). */
     creditCoversUsd: v.number(),
+    /**
+     * The share of every credit sold we keep, in percent, which suggested
+     * prices are worked out with (page-screen-redo-plan-2026-11-03.md, step
+     * 7). Absent until someone saves one: `DEFAULT_MARGIN_PERCENT`.
+     */
+    marginPercent: v.optional(v.number()),
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),

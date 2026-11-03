@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -14,10 +14,11 @@ import { formatPerConversion } from "./analyticsFormat";
 import { CHANNEL_COLOURS } from "./AnalyticsChart";
 import { daysSpanned } from "./stepScale";
 import { useEventName } from "./useEventName";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, periodWord } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
 import { bucketsOf, fewerIsBetter, linesOf, rowsOf, scoresOf, sumsOf, type Against, type Bucket, type Line, type LinesBy, type Measure } from "./explorerRule";
 import { useExplorerReadout } from "./ExplorerReadout";
 import { eventList } from "./AnalyticsSees";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 /** Channels drawn at first: the busiest four, the rest a tick away. */
 const FIRST_CHANNELS = 4;
@@ -41,9 +42,8 @@ type Sums = { visits: number; conversions: number };
  * and Channels what counts, Lines what each line is, Against what to set it beside. Its title says what Show and
  * Lines set ("is the component name correct"; "fix it").
  */
-export function ConversionExplorerCard({ page }: { page: string }) {
+export function ConversionExplorerCard({ page, opening = "conversions" }: { page: string; opening?: Measure }) {
   const t = useTranslations("googleAnalytics.conversionExplorer");
-  const tf = useTranslations("googleAnalytics.filters");
   const tp = useTranslations("searchConsole.chart");
   const locale = useLocale();
   const args = useAnalyticsArgs();
@@ -52,9 +52,10 @@ export function ConversionExplorerCard({ page }: { page: string }) {
   const nameOf = useEventName();
   const tableOf = useExplorerReadout();
   const answer = useQuery(api.googleAnalyticsPageChannels.analyticsPageChannelExplorer, status?.connection?.newestDay && page ? { ...args, page } : "skip");
-  // Conversions first, so the chart opens on a whole line: visits for one has no figure on a day with no conversion
-  // (Anthony, 2026-10-20: "can we default this to conversions so we always show a full graph").
-  const [measure, setMeasure] = useState<Measure>("conversions");
+  // A whole line first: visits for one has no figure on a day with no conversion (Anthony, 2026-10-20: "can we default
+  // this to conversions so we always show a full graph"); a page's own screen opens on Visits (2026-11-03: "can we
+  // default this to visits please").
+  const [measure, setMeasure] = useState<Measure>(opening);
   const [kinds, setKinds] = useState<string[] | null>(null);
   const [channels, setChannels] = useState<string[] | null>(null);
   const [lines, setLines] = useState<LinesBy>("channel");
@@ -74,6 +75,21 @@ export function ConversionExplorerCard({ page }: { page: string }) {
   const before = bucketsOf(answer?.before ?? [], step, events.length);
   const year = bucketsOf(answer?.year ?? [], step, events.length);
   const drawn = linesOf({ measure, kinds: pickedKinds, channels: pickedChannels, lines });
+  // What the eye reads of the chart (page-screen-redo-plan-2026-11-03.md, step 2): each channel's visits that started
+  // here over the dates, and the span before's, whatever is ticked.
+  const seen = useMemo(() => {
+    if (!answer) return null;
+    const kinds = answer.events ?? [];
+    const nowAll = bucketsOf(answer.now ?? [], step, kinds.length);
+    const beforeAll = bucketsOf(answer.before ?? [], step, kinds.length);
+    return {
+      channels: (answer.channels ?? []).map((channel) => {
+        const line = { key: `c:${channel}`, channels: [channel], kinds };
+        return { name: channel, visits: sumsOf(line, nowAll, kinds).visits, visitsBefore: answer.before ? sumsOf(line, beforeAll, kinds).visits : null };
+      }),
+    };
+  }, [answer, step]);
+  useSeesPart("visitorsByChannel", seen);
   const compared = against === "before" ? before : against === "year" ? year : null;
   const rows = rowsOf(now, compared, drawn, measure, events);
 
@@ -149,7 +165,7 @@ export function ConversionExplorerCard({ page }: { page: string }) {
 
   const heldLate = answer?.heldFrom && answer.from && answer.heldFrom > answer.from;
   const hint = [
-    t("hint", { period: tf(`periods.${periodWord(period)}`), step }),
+    t("hint", { lines }),
     measure === "perOne" ? t("fewerBetter") : null,
     answer?.everyDevice ? t("everyDevice") : null,
     heldLate ? t("heldFrom", { date: formatDay(answer.heldFrom) }) : null,
@@ -158,7 +174,7 @@ export function ConversionExplorerCard({ page }: { page: string }) {
 
   return (
     <ChartExplorer
-      title={t("title", { measure, lines })}
+      title={t("title", { measure, step })}
       hint={hint}
       exportName="google-analytics-page-conversion-explorer"
       csv={csv}

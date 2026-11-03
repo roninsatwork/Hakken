@@ -122,7 +122,7 @@ describe("the eye asks the Insights team", () => {
     // The press wrote new words: two credits, to whoever pressed, with what the run cost us (ask-hakken-every-chart-plan, §3).
     const charges = await t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees"));
     expect(charges).toHaveLength(1);
-    expect(charges[0]).toMatchObject({ state: "charged", units: 1, creditsOut: 2, userId, how: "byHand", agentRunId: runs[0]._id });
+    expect(charges[0]).toMatchObject({ state: "charged", units: 1, creditsOut: 8, userId, how: "byHand", agentRunId: runs[0]._id });
     // Pressed again within three hours: the same answer, nothing asked.
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
@@ -366,6 +366,28 @@ describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", 
     const saved = await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect()).find((row) => row.screen === "searchConsole.keywords"));
     expect(saved?.facts?.find((fact) => fact.key === "page.totals.clicks")?.value).toBe(900);
     expect(await user.mutation(api.seesAsk.askSees, keywordsPage(siteId))).toEqual({ key: first.key, status: "WRITTEN" });
+  });
+
+  test("a new press never shows the last one's findings: they go as it starts, and words written from none save none (page-screen-redo-plan-2026-11-03.md)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    await t.run(async (ctx) => { await ctx.db.insert("agents", { name: "INSIGHTS_SEARCH", systemKey: "INSIGHTS_SEARCH", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 }); });
+    const user = t.withIdentity({ subject: userId });
+    answers(null, { says: ["[[page.rows.door_handles.clicks]] clicks came from door handles."], steps: [] });
+    const first = await user.mutation(api.seesAsk.askSees, keywordsPage(siteId));
+    await finishScheduled(t);
+    // The last press's findings, still on the row.
+    const stale = { id: "holdsMost:rows:clicks:door handles", kind: "holdsMost" as const, score: 0.9, params: { name: "door handles", measure: "clicks", share: 93.3 }, facts: [] };
+    await t.run(async (ctx) => {
+      const row = (await ctx.db.query("seesAnswers").collect()).find((one) => one.key === first.key)!;
+      await ctx.db.patch(row._id, { findings: [stale] });
+    });
+    const moved = { ...keywordsPage(siteId), data: { ...keywordsPage(siteId).data, totals: { clicks: 950, impressions: 21000 } } };
+    expect(await user.mutation(api.seesAsk.askSees, moved)).toEqual({ key: first.key, status: "RESEARCHING" });
+    const findingsKept = async () => await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect()).find((one) => one.key === first.key)?.findings !== undefined);
+    expect(await findingsKept()).toBe(false);
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", findings: [] });
   });
 
   test("words the Editor sends back are written once more, with why, on any page", async () => {

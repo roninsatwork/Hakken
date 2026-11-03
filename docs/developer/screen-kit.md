@@ -401,7 +401,7 @@ Orange means *this page's action*, and nothing else. Filters, pickers, secondary
 
 **A page inside such a section** — a tab's own content. Its own `PageHeader`, with **no** `divider`: the section's `DetailLayout` has already drawn the rule, and a second one reads as two headers stacked. The company Dashboard, Calls and Features tabs are the examples to copy. A tab whose content is a list needs this — the anatomy rule below requires a header above any `DataTable`.
 
-**A record-level page** — one that opens on top of a record: a rule editor, a script, a schedule, a document. `DetailHeader`. It draws a quiet back row on its own line, *then* the standard title block, so the title starts at the left edge exactly like every other page. Status labels go under the description via `pills`, never woven into the title row.
+**A record-level page** — one that opens on top of a record: a rule editor, a script, a schedule, a document. `DetailHeader`. It draws a quiet back row on its own line, *then* the standard title block, so the title starts at the left edge exactly like every other page. Status labels go under the description via `pills`, never woven into the title row. A record whose name runs long (a page's own screen in Google Analytics, titled by its web address) takes `size="small"`, a smaller title; a quiet link to the record itself ("Open the page") goes on its own line under the title through `link` (Anthony, 2026-11-03, page-screen-redo-plan-2026-11-03.md).
 
 ```tsx
 <DetailHeader

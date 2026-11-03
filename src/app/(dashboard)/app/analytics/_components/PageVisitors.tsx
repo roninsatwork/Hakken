@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useQuery } from "convex/react";
 import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { api } from "@/convex/_generated/api";
 import type { PageStory } from "@/convex/googleAnalyticsPageStory";
 import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
 import type { ChartReadoutTableProps, ReadoutCell, ReadoutColumn } from "@/src/ui/components/charts/ChartReadoutTable";
@@ -13,22 +11,21 @@ import type { SiteSeries } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { pathOf } from "./analyticsFormat";
 import { useSourceName } from "./PageStory";
-import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, periodWord } from "./useAnalytics";
+import { useAnalyticsStatus, usePeriod, periodWord } from "./useAnalytics";
 
-type By = "channel" | "source" | "returning" | "before" | "next";
+type By = "source" | "returning" | "before" | "next";
 type Show = "visits" | "share" | "back" | "pages" | "read" | "views" | "viewsShare";
 type Split = "none" | "returning";
 type Against = "none" | "website";
-const BY: readonly By[] = ["channel", "source", "returning", "before", "next"];
+const BY: readonly By[] = ["source", "returning", "before", "next"];
 const SHOWS: Record<By, readonly Show[]> = {
-  channel: ["visits", "share", "back", "pages", "read"],
   source: ["visits", "share", "back", "pages", "read"],
   returning: ["visits", "share"],
   before: ["views", "viewsShare"],
   next: ["views", "viewsShare"],
 };
 /** The bars ticked at first, as many as the page's charts showed before (none for every one). */
-const FIRST: Record<By, number | null> = { channel: null, source: 12, returning: null, before: 8, next: null };
+const FIRST: Record<By, number | null> = { source: 12, returning: null, before: 8, next: null };
 
 /** A bar's figures: its visits (or views) and, where the figures have them, its visitors' habits. */
 type Item = { key: string; name: string; visits: number; back: number | null; pages: number | null; read: number | null; website?: number | null };
@@ -42,17 +39,16 @@ type BeforeRow = { key: string; kind: string; label: string; title?: string | nu
  * About visitors, not conversions ("it's about visitors now"): the hover leads with visits on its band. Drawn by the
  * kit's `ChartExplorer` as bars; every figure is one the screen already reads.
  */
-export function PageVisitorsCard({ page, story, before }: { page: string; story: PageStory; before: readonly BeforeRow[] }) {
+export function PageVisitorsCard({ story, before }: { story: PageStory; before: readonly BeforeRow[] }) {
   const t = useTranslations("googleAnalytics.pageVisitors");
   const ts = useTranslations("googleAnalytics.page.story");
   const tp = useTranslations("googleAnalytics.page");
   const tf = useTranslations("googleAnalytics.filters");
-  const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const [period] = usePeriod();
   const sourceName = useSourceName();
-  const grid = useQuery(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, status?.connection?.newestDay && page ? { ...args, page } : "skip");
-  const [by, setBy] = useState<By>("channel");
+  // Opens on Source (Anthony, 2026-11-03): each channel's visits are the line chart's, day by day, above it.
+  const [by, setBy] = useState<By>("source");
   const [shows, setShows] = useState<Partial<Record<By, Show>>>({});
   const [ticked, setTicked] = useState<Partial<Record<By, string[]>>>({});
   const [split, setSplit] = useState<Split>("none");
@@ -63,7 +59,7 @@ export function PageVisitorsCard({ page, story, before }: { page: string; story:
   const shareShown = show === "share" || show === "viewsShare";
   // Split only for sources' visits; against the whole website only for a share it holds.
   const splitShown = by === "source" && show === "visits";
-  const againstShown = (by === "channel" || by === "returning") && show === "share";
+  const againstShown = by === "returning" && show === "share";
   const splitting = splitShown && split === "returning";
   const against: Against = againstShown ? chosenAgainst : "none";
 
@@ -77,17 +73,10 @@ export function PageVisitorsCard({ page, story, before }: { page: string; story:
     };
     return { key, name, visits, back: of("back"), pages: of("pages"), read: of("read"), website };
   };
-  const siteVisits = (grid?.channels ?? []).reduce((sum, row) => sum + row.websiteVisits, 0);
   // Google's paid and unpaid visits both read "Google": named apart by their channel.
   const names = story.sources.map((row) => sourceName(row));
   const twice = new Set(names.filter((name, at) => names.indexOf(name) !== at));
   const itemsOf = (which: By): Item[] => {
-    if (which === "channel") {
-      return (grid?.channels ?? []).filter((row) => row.visits > 0).map((row) => ({
-        ...weighed(row.channel, row.channel, story.sources.filter((source) => source.channel === row.channel), siteVisits > 0 ? row.websiteVisits / siteVisits : null),
-        visits: row.visits,
-      }));
-    }
     if (which === "source") {
       return story.sources.map((row, at) => weighed(`${row.channel}|${row.source}|${at}`, twice.has(names[at]) ? `${names[at]} · ${row.channel}` : names[at], [row]));
     }
@@ -169,7 +158,7 @@ export function PageVisitorsCard({ page, story, before }: { page: string; story:
         total: { visits: { text: formatNumber(item.visits) }, share: { text: percent(100) } },
       };
     }
-    if (by === "channel" || by === "source") {
+    if (by === "source") {
       if (against === "website") {
         return {
           heading: head,
@@ -208,18 +197,18 @@ export function PageVisitorsCard({ page, story, before }: { page: string; story:
     against === "website" ? t("titleAgainst") : "",
   ].join("");
   const csv = () => toCsv([t(`by.${by}`), ...series.map((entry) => entry.name)], data.map((row) => [row.label, ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number | null)]));
-  const tickWords = { channel: "channels", source: "sources", returning: "kinds", before: "places", next: "places" } as const;
+  const tickWords = { source: "sources", returning: "kinds", before: "places", next: "places" } as const;
 
   return (
     <ChartExplorer
       title={title}
-      hint={t(ofVisits ? "hintVisits" : "hintViews", { period: tf(`periods.${periodWord(period)}`) })}
+      hint={t(ofVisits ? "hintVisits" : "hintViews", { period: tf(`periods.${periodWord(period)}`).toLowerCase() })}
       exportName="google-analytics-page-visitors"
       csv={csv}
       host={status?.host ?? ""}
       from={null}
       to={null}
-      waiting={by === "channel" && grid === undefined ? undefined : story.live ? ts("collecting") : null}
+      waiting={story.live ? ts("collecting") : null}
       controls={[
         { kind: "select", key: "by", label: t("byLabel"), value: by, options: BY.map((one) => ({ value: one, label: t(`by.${one}`) })), onChange: (next) => setBy(next as By) },
         { kind: "select", key: "show", label: t("show"), value: show, options: SHOWS[by].map((one) => ({ value: one, label: t(`shows.${one}`) })), onChange: (next) => setShows({ ...shows, [by]: next as Show }) },

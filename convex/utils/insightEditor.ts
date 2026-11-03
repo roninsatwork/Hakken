@@ -49,11 +49,13 @@ export function madeOnPageClaim(text: string, named: readonly string[]): string 
 export function typedNumbers(text: string): string[] {
   const bare = text.replace(/\[\[[^\]]+\]\]/g, " ");
   const found: string[] = [];
-  // A digit inside a name — a website ("handles4doors.co.uk"), a product ("M4 bolt") — is part of the name, not a figure;
-  // a figure with its unit ("70k", "3x") still is.
-  for (const match of bare.matchAll(/(?<![A-Za-z])\d(?:[\d,.]*\d)?%?(?![A-Za-z]{2})/g)) {
+  // A digit inside a name — a website ("handles4doors.co.uk"), a product ("M4 bolt", "Waltz knob 32mm") — is part of the
+  // name, not a figure; a figure with its unit ("70k", "3x") still is. The whole number is taken at once: matched a digit
+  // at a time, "32mm" left "3" behind as a typed figure, and a product's page was sent back twice (2026-11-03).
+  for (const match of bare.matchAll(/(?<![A-Za-z\d])\d(?:[\d,.]*\d)?%?/g)) {
     const value = match[0];
     const after = bare.slice((match.index ?? 0) + value.length, (match.index ?? 0) + value.length + 12).toLowerCase();
+    if (/^[a-z]{2}/.test(after)) continue;
     if (/^(19|20)\d\d$/.test(value)) continue;
     if (/^\s*(day|days|week|weeks|month|months|year|years)\b/.test(after)) continue;
     found.push(value);

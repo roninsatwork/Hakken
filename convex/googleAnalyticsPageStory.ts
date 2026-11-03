@@ -8,6 +8,7 @@ import { titlesOf } from "./pageTitles";
 import { slotKey } from "./googleAnalyticsCollect";
 import { PAGE_FACT_JOIN, channelKey, emptyRow, siteNameOf, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { readPageRows, type PageRows } from "./googleAnalyticsPageLists";
+import { landingKeyAmong } from "./googleAnalyticsPageNumbers";
 import { FEW_VISITS, addInto, conversionsOf, readFor, readSlot, type Counted, type Held } from "./googleAnalyticsRows";
 import type { AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { assistantOf, channelOf } from "./utils/aiAssistants";
@@ -33,8 +34,8 @@ import {
  * collection keeps (docs/plans/active/ga-stored-figures-plan.md SF13, SF16;
  * `googleAnalyticsPageLists.ts`), so a page's screen never asks Google
  * (SF15): `live` until the next run has built them. Read with the screen's
- * own query (`googleAnalyticsPageReads.readPage`), so the screen and Ask
- * Hakken say one thing.
+ * own query (`googleAnalyticsPageReads.readPageStoryPart`), so the screen
+ * and Ask Hakken say one thing.
  */
 
 /** The parts of a page's story, each worked out from the shared lists. */
@@ -190,14 +191,15 @@ type Shared = Record<(typeof SHARED)[number] | "pageDevice", PageRows>;
 /**
  * A page's rows of every shared list its story is worked out from (SF13), or
  * null until each is built for the date range and device — and the page
- * list counts its reading. Kept for each home country (SF7).
+ * list counts its reading. Kept for each home country (SF7). A landing list's
+ * rows under the landing pages' number for it (`landed`, `landingKeyAmong`).
  */
-async function sharedLists(ctx: Reader, input: StoryInput): Promise<Shared | null> {
+async function sharedLists(ctx: Reader, input: StoryInput, landed: string): Promise<Shared | null> {
   if (!input.pages[0]?.counts.has("scroll")) return null;
   const out: Partial<Shared> = {};
   for (const list of SHARED) {
     // Its readers' countries are every country's, whatever the home country (PS8): kept with the main one's lists.
-    const rows = await readPageRows(ctx, input.holdId, list, input.period, input.device, input.page, "NOW", list === "pageCountry" ? "" : input.country);
+    const rows = await readPageRows(ctx, input.holdId, list, input.period, input.device, list.startsWith("landing") ? landed : input.page, "NOW", list === "pageCountry" ? "" : input.country);
     if (!rows) return null;
     out[list] = rows;
   }
@@ -247,17 +249,26 @@ function storyFromShared(shared: Shared, page: string, own: ListRow | null, page
 
 export async function readPageStory(ctx: Reader, input: StoryInput): Promise<PageStory> {
   const { holdId, page, period, device, country, counted } = input;
-  const shared = await sharedLists(ctx, input);
-  const lists = shared ? storyFromShared(shared, page, input.pages.find((row) => row.key === page) ?? null, input.pages, counted) : new Map<StoryList, Held>();
-  const held = (name: StoryList) => lists.get(name) ?? null;
-  const money = (row: ListRow) => conversionsOf(row, counted);
-
   // Visits that started here, kept with the landing pages; the website's, with its totals (PS1, PS5).
   const landingNow = await readFor(ctx, holdId, "landing", period, "NOW", device, undefined, country);
   const landingBefore = await readFor(ctx, holdId, "landing", period, "BEFORE", device, undefined, country);
   const landing = landingNow && landingNow !== "LIVE" ? landingNow.rows : [];
-  const own = landing.find((row) => row.key === page) ?? null;
-  const was = landingBefore && landingBefore !== "LIVE" ? landingBefore.rows.find((row) => row.key === page) ?? null : null;
+  // Every landing page and page by its address, for its page group — and which landing page it is: its own number, or
+  // its address without the trailing slash's, as Analytics names landing pages (`landingKeyAmong`).
+  const leagueRows = [...landing].sort((a, b) => b.visits - a.visits);
+  const groupRefs = [...new Set([...leagueRows.map((row) => row.key), ...input.pages.map((row) => row.key)])];
+  const groupAddresses = groupRefs.length > 0 ? await decodePages(ctx, holdId, groupRefs) : [];
+  const addressOfRef = new Map(groupRefs.map((ref, at) => [ref, groupAddresses[at]]));
+  const landingRefs = leagueRows.map((row) => row.key);
+  const landed = landingKeyAmong(page, input.address, landingRefs, landingRefs.map((ref) => addressOfRef.get(ref) ?? ref));
+
+  const shared = await sharedLists(ctx, input, landed);
+  const lists = shared ? storyFromShared(shared, page, input.pages.find((row) => row.key === page) ?? null, input.pages, counted) : new Map<StoryList, Held>();
+  const held = (name: StoryList) => lists.get(name) ?? null;
+  const money = (row: ListRow) => conversionsOf(row, counted);
+
+  const own = landing.find((row) => row.key === landed) ?? null;
+  const was = landingBefore && landingBefore !== "LIVE" ? landingBefore.rows.find((row) => row.key === landed) ?? null : null;
   const total = (await readSlot(ctx, holdId, slotKey("total", period, "NOW", device, country)))?.rows[0] ?? null;
   const ownMoney = own ? money(own) : null;
   const totalMoney = total ? money(total) : null;
@@ -292,24 +303,20 @@ export async function readPageStory(ctx: Reader, input: StoryInput): Promise<Pag
   const addressOf = new Map(nextRefs.map((ref, at) => [ref, nextAddresses[at]]));
 
   // Its page group, and the group's busiest pages beside it: visits that started on each, and their conversions.
-  const leagueRows = [...landing].sort((a, b) => b.visits - a.visits);
-  const groupRefs = [...new Set([...leagueRows.map((row) => row.key), ...input.pages.map((row) => row.key)])];
-  const groupAddresses = groupRefs.length > 0 ? await decodePages(ctx, holdId, groupRefs) : [];
-  const addressOfRef = new Map(groupRefs.map((ref, at) => [ref, groupAddresses[at]]));
   const kinds = await readPageKinds(ctx, holdId, { pages: [input.address, ...groupAddresses] });
   const kind = kinds?.kindOf(input.address) ?? null;
   const inGroup = (ref: string) => kind !== null && kind !== NOT_SORTED_KIND && kinds?.kindOf(addressOfRef.get(ref) ?? "") === kind;
   const group = kind && kind !== NOT_SORTED_KIND ? kinds?.nameOf(kind) ?? null : null;
   const league = group ? leagueRows.filter((row) => inGroup(row.key) && row.visits > 0) : [];
   const shown = league.slice(0, LEAGUE_ROWS);
-  if (own && group && !shown.some((row) => row.key === page)) shown.splice(LEAGUE_ROWS - 1, 1, own);
+  if (own && group && !shown.some((row) => row.key === landed)) shown.splice(LEAGUE_ROWS - 1, 1, own);
   const scrolls = new Map((held("storyGroupRead")?.rows ?? []).map((row) => [row.key, row.times ?? 0]));
   const groupPages = group ? input.pages.filter((row) => inGroup(row.key)) : [];
   // Readers past 90% down over the visits that saw each page, as this page's own is read.
   const groupVisits = groupPages.reduce((sum, row) => sum + row.visits, 0);
   const groupRead = groupVisits > 0 && held("storyGroupRead") ? Math.min(1, groupPages.reduce((sum, row) => sum + (scrolls.get(row.key) ?? 0), 0) / groupVisits) : null;
 
-  const titles = await titlesOf(ctx, holdId, [...nextAddresses, ...shown.map((row) => addressOfRef.get(row.key) ?? "")].filter(Boolean));
+  const titles = await titlesOf(ctx, holdId, [...nextAddresses, input.address, ...shown.map((row) => addressOfRef.get(row.key) ?? "")].filter(Boolean));
 
   // Who reads it, beside the website's: devices, new and back again, age and gender.
   const deviceViews = new Map<string, number>();
@@ -365,9 +372,11 @@ export async function readPageStory(ctx: Reader, input: StoryInput): Promise<Pag
     weekdays: held("storyWeekdays") ? weekdaysOf(held("storyWeekdays")?.rows ?? []) : [],
     clicks: clicksOf(held("storyClicks")?.rows ?? [], CLICK_ROWS),
     league: shown.map((row) => {
-      const address = addressOfRef.get(row.key) ?? row.key;
+      // This page by its own number and address, wherever the landing pages keep it.
+      const isThis = row.key === landed;
+      const address = isThis ? input.address : addressOfRef.get(row.key) ?? row.key;
       const title = titles.get(address);
-      return { key: row.key, address, ...(title ? { title } : {}), visits: row.visits, conversions: money(row).conversions, isThis: row.key === page };
+      return { key: isThis ? page : row.key, address, ...(title ? { title } : {}), visits: row.visits, conversions: money(row).conversions, isThis };
     }),
   };
 }

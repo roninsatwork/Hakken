@@ -319,6 +319,10 @@ export const recordRunModelCall = internalMutation({
       output: args.responseContent,
       costUsd,
       ...(args.providerKey ? { providerKey: args.providerKey } : {}),
+      modelId: args.modelId,
+      ...(args.providerModelId ? { providerModelId: args.providerModelId } : {}),
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
     });
     await ctx.db.insert("agentLogs", {
       agentId: run.agentId,

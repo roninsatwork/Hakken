@@ -42,14 +42,18 @@ const SEARCH_CONSOLE_NEWEST = shiftDay(TOP, -1);
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
-/** A website collected from the log given, with generate_lead worth £250 in Hakken and sign_up £10 in Analytics. */
-async function collected(t: Harness, visits: Visit[]) {
+/**
+ * A website collected from the log given, with generate_lead worth £250 in Hakken and sign_up £10 in Analytics —
+ * holding the page addresses `numbered` first, as Search Console or Bing would have numbered them.
+ */
+async function collected(t: Harness, visits: Visit[], numbered: string[] = []) {
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
     const adminId = await ctx.db.insert("users", { name: "Admin", email: "admin@acme-shop.test", role: "ADMIN", companyId, createdAt: 1 });
     const userId = await ctx.db.insert("users", { name: "User", email: "user@acme-shop.test", role: "USER", companyId, createdAt: 1 });
     const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+    if (numbered.length > 0) await ctx.db.insert("holdPageAddresses", { companyWebsiteId: siteId, record: 0, addresses: numbered });
     const connectionId = await ctx.db.insert("googleAnalyticsConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "COUNTING", property: PROPERTY, propertyName: "Acme",
       stream: "https://www.acme-shop.test", addresses: ["www.acme-shop.test"], otherAddresses: [], timeZone: "Europe/London", currency: "GBP", eventsReadAt: 1, listedWith: "EVENT_COUNT_ADDRESSES",
@@ -280,7 +284,8 @@ describe("a page's own screen from All pages (GA29)", () => {
     const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
     const args = { siteId, page, period: "lastMonth" as const, device: "" };
     // Its views a day from the page held over time, and where they came from, kept for every page (ga-stored-figures-plan.md SF5, SF13).
-    const opened = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
+    // Its own figures and its story, read side by side as the screen reads them.
+    const opened = { ...(await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!, ...(await user.query(api.googleAnalyticsPageReads.analyticsPageStory, args))! };
     expect(opened).toMatchObject({ address: "https://www.acme-shop.test/ai-agency/", path: "/ai-agency/", live: false, viewsBefore: 30 * 9 });
     expect(opened.row).toMatchObject({ views: 30 * 18 + 30 * 2 });
     expect(opened.points).toHaveLength(30);
@@ -289,15 +294,13 @@ describe("a page's own screen from All pages (GA29)", () => {
       { kind: "page", key: home, label: "https://www.acme-shop.test/", views: 540, share: 0.9 },
       { kind: "site", key: "chatgpt.com", label: "ChatGPT", views: 60, share: 0.1 },
     ]);
-    // Its story first (analytics-page-screen-plan.md §5): the visits that started on it, kept with the landing pages, and their
-    // conversions; then, its story held, the page counted again (1 different page a visit, 2.2 as Google counts them).
-    expect(opened.seen.says.map((phrase) => phrase.code)).toEqual(["startedConverted", "countedAgainPages", "twoSources"]);
-    expect(opened.seen.says[2]).toEqual({ code: "twoSources", text: "/", a: 0.9, more: "ChatGPT", b: 0.1 });
-    expect(opened.seen.steps).toMatchObject([
-      { code: "fixCountedAgain" },
-      { code: "keepLink", text: "/", to: { segment: "all-pages/page", filters: { key: home } } },
-      { code: "checkAssistant", text: "ChatGPT" },
-    ]);
+    // Its story as the redone screen shows it (page-screen-redo-plan-2026-11-03.md, item 13): the visits that started on
+    // it, kept with the landing pages, and the source that sent most of them; never the page before, which it no longer shows.
+    expect(opened.seen.says.map((phrase) => phrase.code)).toEqual(["startedMore", "biggest", "phones"]);
+    expect(opened.seen.says[1]).toEqual({ code: "biggest", text: "Perplexity", a: 240, b: 60 });
+    // Its phones' share of its views against the whole website's, far apart (a tenth against nearly two-thirds).
+    expect(opened.seen.says[2]).toEqual({ code: "phones", a: 0.1, b: expect.closeTo(0.636, 3) });
+    expect(opened.seen.steps).toEqual([]);
   });
 });
 
@@ -325,7 +328,7 @@ describe("a page's story on its own screen (analytics-page-screen-plan.md §2, �
     const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
     const page = all.rows.find((row) => row.label.endsWith("/hub/prism/"))!.key;
     const args = { siteId, page, period: "lastMonth" as const, device: "" };
-    const first = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
+    const first = { ...(await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!, ...(await user.query(api.googleAnalyticsPageReads.analyticsPageStory, args))! };
     // Kept with the landing pages: the visits that started here and the conversions they made elsewhere.
     expect(first.story.started).toMatchObject({ visits: 30 * 13, conversions: 30, fewVisits: false });
     expect(first.row).toMatchObject({ conversions: 0 });
@@ -358,14 +361,42 @@ describe("a page's story on its own screen (analytics-page-screen-plan.md §2, �
     expect(story.weekdays.reduce((sum, row) => sum + row.views, 0)).toBe(960);
     expect(story.clicks).toEqual([{ kind: "click", url: "https://en.wikipedia.org/wiki/Brand", clicks: 30 }]);
     expect(story.returning).toMatchObject({ first: expect.any(Number), back: expect.any(Number) });
-    // The box: the visits and the conversion made elsewhere, the biggest source with none, the page counted again.
-    expect(opened.seen.says.map((phrase) => phrase.code)).toEqual(["startedElsewhere", "biggestNoneTyped", "countedAgainPages"]);
-    // The box's figures are the page's own: 1.0 different pages a visit, 2.5 as Google counts them (990 views in 390 visits).
-    expect(opened.seen.says[2]).toEqual({ code: "countedAgainPages", a: 1, b: 2.5 });
+    // The box: the visits that started here, and the source that sent most of them, with none converting.
+    expect(opened.seen.says.map((phrase) => phrase.code)).toEqual(["started", "biggestNone", "phones"]);
+    expect(opened.seen.says[1]).toEqual({ code: "biggestNone", text: "Google", a: 300 });
     // First visit or back again by the visits that started here, which add up to them as the figure and the table do.
     expect(story.returning).toMatchObject({ first: 300, back: 90, unknown: 0 });
+    // Ask Hakken draws the same page's readers (page-screen-redo-plan-2026-11-03.md, step 5): by device and by day of the
+    // week, from the page's own screen; never its conversions, which Google counts each time.
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    const pageChart = { companyId, website: "acme-shop.test", period: "lastMonth" as const, kind: "bars" as const, measure: "visits" as const, source: "analytics" as const, page: "/hub/prism/" };
+    const byDevice = await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...pageChart, by: "device" });
+    expect(byDevice).toMatchObject({ ok: true, chart: { by: "device", link: expect.stringContaining(`all-pages/page?key=${encodeURIComponent(page)}`) } });
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...pageChart, by: "weekday" })).toMatchObject({ ok: true, chart: { by: "weekday" } });
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...pageChart, by: "device", measure: "conversions" })).toMatchObject({ ok: false });
+    // Age without a page has nothing to draw.
+    const { page: _page, ...website } = pageChart;
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...website, by: "age" })).toMatchObject({ ok: false });
     expect((story.returning?.first ?? 0) + (story.returning?.back ?? 0) + (story.returning?.unknown ?? 0)).toBe(story.started?.visits);
-    expect(opened.seen.steps.map((step) => step.code)).toEqual(["fixCountedAgain"]);
+    // Google sent most of its visits and none converted: a look at that channel across the website.
+    expect(opened.seen.steps).toEqual([{ code: "seeChannel", text: "Google", link: "channel", to: { segment: "channels/channel", filters: { key: "Organic Search" } } }]);
+  });
+
+  test("the visits that started on it, when Analytics' address for it without the slash was numbered too (morehandles.co.uk's tubular latch guide, 2026-11-03)", async () => {
+    const t = harness();
+    // Analytics names the landing page without the slash All pages keeps, and another section had numbered that address.
+    const visits = article().map((visit) => (visit.landing === "/hub/prism/" ? { ...visit, landing: "/hub/prism" } : visit));
+    const { siteId, user } = await collected(t, visits, ["https://www.acme-shop.test/hub/prism"]);
+    const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    const page = all.rows.find((row) => row.label === "https://www.acme-shop.test/hub/prism/")!.key;
+    const args = { siteId, page, period: "lastMonth" as const, device: "" };
+    const { story } = (await user.query(api.googleAnalyticsPageReads.analyticsPageStory, args))!;
+    expect(story.started).toMatchObject({ visits: 30 * 13, conversions: 30 });
+    expect(story.sources.map((row) => [row.name ?? row.source, row.visits])).toEqual([["Google", 300], ["(direct)", 90]]);
+    expect(story.returning).toMatchObject({ first: 300, back: 90 });
+    // Its visits by channel, from the landing pages by channel.
+    const grid = (await user.query(api.googleAnalyticsPageConversions.analyticsPageConversionGrid, args))!;
+    expect(grid.channels.map((row) => [row.channel, row.visits, row.conversions])).toEqual([["Organic Search", 300, 0], ["Direct", 90, 30]]);
   });
 });
 
@@ -586,7 +617,22 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     expect((channels.whereEachChannelLands as Array<{ channel: string }>).map((row) => row.channel)).toContain("Organic Search");
 
     const page = await read("page", { key: "https://www.acme-shop.test/ai-agency/" });
-    expect(page).toMatchObject({ ok: true, page: "https://www.acme-shop.test/ai-agency/", figures: { pageViews: 30 * 18 + 30 * 2 } });
+    // As the redone screen shows it (page-screen-redo-plan-2026-11-03.md): its views, never money, people or the page before.
+    expect(page).toMatchObject({ ok: true, page: "https://www.acme-shop.test/ai-agency/", views: 30 * 18 + 30 * 2 });
+    expect(page).not.toHaveProperty("figures");
+    expect(page).not.toHaveProperty("justBefore");
+    expect(JSON.stringify(page)).not.toMatch(/"value"|revenue/);
+    // Its boxes and its story, reads of their own the tool asks after the rest by the page the first found, as the
+    // screen reads them; the page found by its reference as by its address.
+    expect(page.pageKey).toMatch(/^~/);
+    const pageBoxes = await read("page", { key: String(page.pageKey), part: "boxes" });
+    const pageStory = await read("page", { key: String(page.pageKey), part: "story" });
+    expect(page).not.toHaveProperty("whoLooks");
+    expect(pageStory).toHaveProperty("whoLooks");
+    expect(pageStory).toHaveProperty("visitsThatStartedHereByChannel");
+    expect(pageBoxes).not.toHaveProperty("whoLooks");
+    expect([pageBoxes.link, pageStory.link]).toEqual([page.link, page.link]);
+    expect(JSON.stringify([pageBoxes, pageStory])).not.toMatch(/"value"|revenue/);
 
     const events = await read("events");
     expect((events.events as Array<{ event: string; times: number }>).find((row) => row.event === "generate_lead")?.times).toBe(60);

@@ -52,6 +52,7 @@ export function chartReportFigures(points: readonly Day[], before: readonly Day[
 const BY_WORDS: Record<GroupChartBy, string> = {
   channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
   source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
+  age: "age", gender: "gender", weekday: "day of the week",
 };
 /** Bing's, Clarity's and Visibility's measures in plain words, for the tasks page. */
 const MEASURE_WORDS: Record<string, string> = {

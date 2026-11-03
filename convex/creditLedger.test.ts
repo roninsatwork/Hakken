@@ -360,8 +360,9 @@ describe("batches", () => {
       // UK midnights: 1 October 2026 is in summer time (an hour ahead of UTC), 1 November in winter.
       expect(lines.map((line) => [line.entry, line.creditsIn, line.creditsOut, line.at])).toEqual([
         ["grant", 10_000, 0, Date.UTC(2026, 8, 30, 23)],
-        ["charge", 0, 1, october],
-        ["ended", 0, 9999, Date.UTC(2026, 10, 1)],
+        // A question is 2 credits (page-screen-redo-plan-2026-11-03.md, step 7).
+        ["charge", 0, 2, october],
+        ["ended", 0, 9998, Date.UTC(2026, 10, 1)],
         ["grant", 10_000, 0, Date.UTC(2026, 10, 1)],
       ]);
       expect(await creditBalance(ctx, acme)).toBe(10_000);
@@ -459,7 +460,8 @@ describe("lookups and questions", () => {
       const ctx = asCtx(raw);
       const charges = (await statement(ctx, acme)).filter((line) => line.entry === "charge");
       expect(charges).toHaveLength(1);
-      expect(charges[0]).toMatchObject({ kind: "assistant", units: 1, creditsOut: 1, realCostUsd: 4.5 });
+      // One question, at 2 credits since 2026-11-03 (page-screen-redo-plan-2026-11-03.md, step 7).
+      expect(charges[0]).toMatchObject({ kind: "assistant", units: 1, creditsOut: 2, realCostUsd: 4.5 });
       // A second save of the same reply is not a second question.
       await creditAssistantReply(ctx, await ctx.db.get(threadId), charges[0].messageId!, { inputTokens: 1, outputTokens: 1 });
       expect((await statement(ctx, acme)).filter((line) => line.entry === "charge")).toHaveLength(1);

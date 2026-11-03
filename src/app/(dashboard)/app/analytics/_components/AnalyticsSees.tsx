@@ -27,13 +27,15 @@ import { useEventName } from "./useEventName";
  * page of this website's section, with the dates and device chosen
  * (`segment`, `filters`), or to an address of its own (`url`).
  */
-export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask, data }: {
+export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask, data, links }: {
   screen: string;
   /**
    * The page's own figures — the answer of the query that draws it — for the eye's findings, its writer and its chat
    * (sees-every-page-plan-2026-10-31.md). With them the eye shows even when the rule has nothing to say.
    */
   data?: unknown;
+  /** Screens the team's "Do first" steps may link to, beside the rule's own (page-screen-redo-plan-2026-11-03.md, step 2). */
+  links?: ReadonlyArray<{ label: string; href: string }>;
   /** The page's figures and links for the Insights team, asked when the eye is pressed (sees-conversion-specialist-plan-2026-10-30.md). */
   ask?: SeesAsk;
   /**
@@ -61,7 +63,7 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask,
   // Saved as the reader reads it: a page group by its name, never its id, so Ask Hakken says the same.
   const box = seen && names ? { says: seen.says.map(named), steps: seen.steps.map(named) } : seen;
   useNoteAdvice(keep ? siteId : null, `googleAnalytics.seen.${screen}`, box, currency);
-  const page = data !== undefined && data !== null ? { screen: `googleAnalytics.${screen}`, siteId, data } : undefined;
+  const page = data !== undefined && data !== null ? { screen: `googleAnalytics.${screen}`, siteId, data, ...(links ? { links } : {}) } : undefined;
   if (!page && (!box || box.says.length === 0)) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const events = (text: string) => eventList(text, nameOf, locale);

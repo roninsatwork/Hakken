@@ -21,25 +21,35 @@ const PLUMBING = /^(_id|_creationTime|siteId|companyId|companyWebsiteId|websiteI
 const FRACTION = /(rate|share|ctr|change)$/i;
 
 /**
+ * Whether a screen keeps every rate, share and change as a fraction, past 1 as well: Google Analytics' do, every one of
+ * them (checked 2026-11-03: its `change` fields are all "against the span before, as a fraction"; a channel's
+ * conversions over its visits read 1.83, 183%; a campaign's visits against the span before 2, +200%). Elsewhere a
+ * figure past 1 may already be a percentage (Insights' page plan keeps its rates as 3.4) or a count of places (Search
+ * Console's moves keep a `change` of 16): there only a fraction of 1 or less is turned round, as before.
+ */
+const FRACTIONS_ALWAYS = /^googleAnalytics\./;
+
+/**
  * The page's answer cut to what it shows first: lists to their first rows, long words shortened, plumbing dropped, and
  * a rate kept as a fraction (0.034) turned into the percentage the page shows (3.4), so the writer reads it right.
+ * `always`: the screen keeps its rates, shares and changes as fractions whatever their size (`FRACTIONS_ALWAYS`).
  */
-export function trimPageData(value: unknown, depth = 0): unknown {
+export function trimPageData(value: unknown, depth = 0, always = false): unknown {
   if (value === null || value === undefined) return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value === "string") return value.length > MOST_TEXT ? `${value.slice(0, MOST_TEXT)}…` : value;
   if (typeof value === "boolean") return value;
   if (depth >= MOST_DEPTH) return null;
-  if (Array.isArray(value)) return value.slice(0, MOST_ROWS).map((item) => trimPageData(item, depth + 1));
+  if (Array.isArray(value)) return value.slice(0, MOST_ROWS).map((item) => trimPageData(item, depth + 1, always));
   if (typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [name, inner] of Object.entries(value as Record<string, unknown>)) {
       if (PLUMBING.test(name) || inner === undefined || inner === null || name.startsWith("$")) continue;
-      if (typeof inner === "number" && FRACTION.test(name) && !/percent$/i.test(name) && Math.abs(inner) <= 1) {
+      if (typeof inner === "number" && Number.isFinite(inner) && FRACTION.test(name) && !/percent$/i.test(name) && (always || Math.abs(inner) <= 1)) {
         out[`${name}Percent`] = Math.round(inner * 1000) / 10;
         continue;
       }
-      const kept = trimPageData(inner, depth + 1);
+      const kept = trimPageData(inner, depth + 1, always);
       if (kept !== null) out[name] = kept;
     }
     return out;
@@ -47,13 +57,25 @@ export function trimPageData(value: unknown, depth = 0): unknown {
   return null;
 }
 
-/** The page's answer trimmed and held to its size: rows dropped from the end of the longest lists until it fits. */
-export function pageDataFor(value: unknown): unknown {
-  let trimmed = trimPageData(value);
+/**
+ * The page's answer trimmed and held to its size: rows dropped from the end of the longest lists until it fits. With
+ * its screen's key, a Google Analytics screen's rates and shares past 1 are turned into percentages too.
+ */
+export function pageDataFor(value: unknown, screen = ""): unknown {
+  let trimmed = trimPageData(value, 0, FRACTIONS_ALWAYS.test(screen));
   for (let rows = MOST_ROWS; rows > 2 && JSON.stringify(trimmed ?? null).length > MOST_PAGE_DATA_CHARS; rows = Math.floor(rows / 2)) {
     trimmed = cutLists(trimmed, rows);
   }
   return JSON.stringify(trimmed ?? null).length > MOST_PAGE_DATA_CHARS ? null : trimmed;
+}
+
+/**
+ * The page's figures as a short brief: each list to its first `rows` (page-screen-redo-plan-2026-11-03.md, step 6). With
+ * code's findings in hand the writer writes them up and needs the page only for its setting; a press handed the whole page
+ * cost three times one handed a short brief (More Handles, 3 November: 9,000 words in, 5 cents; 94,000, 50 cents).
+ */
+export function briefOf(value: unknown, rows: number): unknown {
+  return cutLists(value, rows);
 }
 
 function cutLists(value: unknown, rows: number): unknown {

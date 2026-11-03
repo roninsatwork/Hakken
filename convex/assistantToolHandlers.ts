@@ -1,7 +1,7 @@
 import type { FunctionArgs } from "convex/server";
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
-import { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
+import { ANALYTICS_SCREENS, analyticsPartsOf } from "./utils/analyticsScreens";
 import { BING_SCREENS } from "./utils/bingScreens";
 import { OPENING_PERIOD, isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
 
@@ -125,9 +125,13 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(list === "visitorType" || list === "browser" || list === "system" || list === "age" || list === "gender" || list === "interest" ? { list } : {}),
     };
     const answer = await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, asked);
-    // Overview's page panels are a read of their own, as on the screen (calendar-periods audit, 2026-10-21).
-    if (screen !== "overview" || !answer.ok) return answer;
-    return { ...answer, ...await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, { ...asked, part: "pages" }) };
+    // Overview's page panels, and a page's boxes and story, are reads of their own, as on the screen
+    // (`analyticsPartsOf`); a page's are asked by the page the first read found, so they never look for it again.
+    const parts = analyticsPartsOf(screen);
+    if (parts.length === 0 || !answer.ok) return answer;
+    const found = "pageKey" in answer && typeof answer.pageKey === "string" ? { key: answer.pageKey } : {};
+    const more = await Promise.all(parts.map((part) => input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, { ...asked, ...found, part })));
+    return Object.assign({}, answer, ...more) as typeof answer;
   },
   /** Every Bing Webmaster screen (bing-webmaster-plan.md BW13), through the screens' own reads (`assistantBingReads.ts`). */
   "assistant.bingWebmaster": async (input) => {

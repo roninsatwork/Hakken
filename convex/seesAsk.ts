@@ -72,7 +72,7 @@ export const askSees = tenantMutation({
     const screen = seesScreenFor(args.screen);
     if (!screen) throw appError("INVALID_INPUT", "That page has no eye.");
     if (!screen.writes) throw appError("INVALID_INPUT", "That page's words are the team's own: pressing writes nothing new.");
-    const data = args.data !== undefined ? pageDataFor(args.data) : undefined;
+    const data = args.data !== undefined ? pageDataFor(args.data, args.screen) : undefined;
     // The page's own facts, or its figures keyed as the writer will name them.
     const facts = (args.facts.length > 0 ? args.facts : pageFacts(args.screen, data, { ...(args.from ? { from: args.from } : {}), ...(args.to ? { to: args.to } : {}) }).facts.map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })))
       .slice(0, MOST_SEES_FACTS);
@@ -92,7 +92,8 @@ export const askSees = tenantMutation({
     const about = args.facts.length > 0 && args.about.trim() ? args.about : screen.about;
     const kept = { path: args.path, about, facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId, ...(data !== undefined && data !== null ? { pageData: data } : {}) };
     const answerId: Id<"seesAnswers"> = held
-      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, week: weekOf(now), pageData: undefined, ...kept }), held._id)
+      // A new press clears the last one's findings too: its answer shows its own, never the press before's.
+      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, findings: undefined, week: weekOf(now), pageData: undefined, ...kept }), held._id)
       : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), ...kept });
     const runId = await ctx.db.insert("agentRuns", {
       agentId: lead._id,
@@ -161,7 +162,8 @@ export const saveSeesAnswer = internalMutation({
       says: args.says,
       steps: args.steps,
       ...(args.role ? { role: args.role } : {}),
-      ...(args.findings ? { findings: args.findings } : {}),
+      // Written words keep the findings they were written from, none included: never an earlier press's.
+      ...(args.status === "WRITTEN" ? { findings: args.findings } : args.findings ? { findings: args.findings } : {}),
       ...(args.status === "WRITTEN" ? { writtenAt: Date.now(), failedWhy: undefined } : { failedWhy: args.failedWhy ?? "The team gave no answer." }),
     });
     // New words written: the press is charged, once, with what the run cost us. A failed one, or one answered from the

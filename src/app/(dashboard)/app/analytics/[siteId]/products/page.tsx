@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -88,9 +88,17 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
     const sale = next.sale;
     if (canWrite && sale) void run(() => save({ siteId: args.siteId, steps: next.steps, sale }), { fallbackMessage: t("steps.saveFailed") });
   };
+  const nameOf = useEventName();
+  // What the eye reads: the boxes and the steps as shown, the same object until the figures or the pick change. The
+  // events' words change only with the language, which reloads the page.
+  const seesData = useMemo(
+    () => (answer ? productsSeesData(answer, picked ?? { steps: answer.choice.steps, sale: answer.choice.sale }, nameOf) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [answer, picked],
+  );
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="products" seen={answer?.seen} currency={null} data={answer ? { figures: answer, picked: choice } : undefined} />
+      <AnalyticsSees screen="products" seen={answer?.seen} currency={null} data={seesData} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
       {answer && choice ? (
         <>
@@ -102,6 +110,39 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
       <ProductsTable categories={answer?.categories ?? []} host={status.host} />
     </div>
   );
+}
+
+/**
+ * What the eye reads of Products (page-screen-redo-plan-2026-11-03.md, step 3): only what the screen shows, under the
+ * measures' names (`convex/utils/sees/measures.ts`), so code finds what moved — the four boxes against the period
+ * before; the steps the shop picked, a funnel and never a whole (`picked`). The charts and the table hand their own
+ * rows (`useSeesPart`). Visits, items and products, never money; never every event the shop records.
+ */
+function productsSeesData(answer: Answer, choice: ShopChoice, nameOf: (eventName: string) => string) {
+  const figureOf = eventFigures(answer);
+  const steps = choice.steps.map(figureOf).sort((left, right) => right.visits - left.visits);
+  const sale = choice.sale ? figureOf(choice.sale) : null;
+  // The visits left after each of the first two steps, as the boxes count them, where they are Google's basket and checkout.
+  const leftAt = (eventName: string) => {
+    const step = steps.slice(0, 2).find((one) => one.eventName === eventName);
+    if (!step || !sale) return null;
+    const before = step.visitsBefore !== null && sale.visitsBefore !== null ? Math.max(0, step.visitsBefore - sale.visitsBefore) : null;
+    return { now: Math.max(0, step.visits - sale.visits), before };
+  };
+  const baskets = leftAt(BASKET);
+  const checkouts = leftAt(CHECKOUT);
+  return {
+    boxes: {
+      ...(baskets ? { basketsLeft: baskets.now, basketsLeftBefore: baskets.before } : {}),
+      ...(checkouts ? { checkoutsLeft: checkouts.now, checkoutsLeftBefore: checkouts.before } : {}),
+      ...(sale ? { sale: nameOf(sale.eventName), visitsThatBought: sale.visits, visitsThatBoughtBefore: sale.visitsBefore } : {}),
+      productsNeverBought: answer.neverBought.count, productsNeverBoughtBefore: answer.neverBought.countBefore, productsAdded: answer.neverBought.of,
+    },
+    steps: {
+      picked: true,
+      rows: steps.map((step) => ({ name: nameOf(step.eventName), visits: step.visits, visitsThatBought: sale ? Math.min(sale.visits, step.visits) : 0, visitsLeft: sale ? Math.max(0, step.visits - sale.visits) : step.visits })),
+    },
+  };
 }
 
 /**
@@ -176,9 +217,10 @@ function ProductsTable({ categories, host }: { categories: readonly string[]; ho
     ...args, view, show, ...(category ? { category } : {}), ...(settled ? { q: settled } : {}), sort: order.key, direction: order.direction,
   };
   const paged = useSiteListPage(api.googleAnalyticsProductReads.analyticsProductList, listArgs);
-  // Its own query, so the page's eye is handed its rows here (sees-every-page-plan-2026-10-31.md) — without each row's
-  // share, which the eye would set against the list's average, and shares of a whole always average the same.
-  useSeesPart("productsTable", paged.pageRows?.map(({ share: _share, ...row }) => row));
+  // Its own query, so the page's eye is handed its rows here (sees-every-page-plan-2026-10-31.md): the page on screen,
+  // picked from every product by its sort, so never "holds most of the list".
+  const seen = useMemo(() => (paged.pageRows ? { picked: true, rows: paged.pageRows } : undefined), [paged.pageRows]);
+  useSeesPart("productsTable", seen);
   const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase()].join(" · ");
   const most = Math.max(0, ...(paged.pageRows ?? []).map((row) => row.share));
   // A product opens the page it is sold on, and its screen's Back returns here as it was (Anthony, 2026-11-02:

@@ -7,6 +7,7 @@ import { Coins } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { CreditKind } from "@/convex/creditKinds";
+import { DEFAULT_MARGIN_PERCENT, MAX_MARGIN_PERCENT, suggestedCredits } from "@/convex/utils/creditMargin";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
@@ -28,7 +29,8 @@ import { recentMonths } from "../../../app/usage/_components/usageWords";
  * Admin → Settings → Credit prices (docs/plans/active/usage-credits-plan.md,
  * step 2, board AdminCreditPrices): what each kind of work really cost us
  * this month, every company together, against the credits it charged — and
- * the price each would need, from one setting: what a credit covers.
+ * the price each would need, from two settings: what a credit covers, and the
+ * margin we keep (page-screen-redo-plan-2026-11-03.md, step 7).
  *
  * Suggestions never change a price by themselves: "Use" puts one in, Save
  * makes it the price from each company's next run. Nothing charges anyone
@@ -38,13 +40,8 @@ import { recentMonths } from "../../../app/usage/_components/usageWords";
 type Report = FunctionReturnType<typeof api.creditPricesAdmin.creditPriceReport>;
 type Line = Report["lines"][number];
 
-/** What one unit of a kind of work costs standing alone — what was paid and what sharing saved — in dollars. */
-const costPerUnit = (line: Line) => (line.units > 0 ? (line.realCostUsd + line.reusedValueUsd) / line.units : null);
-/** Credits for every `per` units that would cover that cost, rounded up and never below one. */
-const suggestion = (line: Line, cover: number) => {
-  const cost = costPerUnit(line);
-  return cost === null ? null : Math.max(1, Math.ceil((cost * line.per) / cover - 1e-9));
-};
+/** Credits for every `per` units that keep the margin on what one unit cost us (`suggestedCredits`), at the settings as typed. */
+const suggestion = (line: Line, cover: number, margin: number) => suggestedCredits(line.costPerUnitUsd, line.per, cover, margin);
 /** What a credit charged this month cost us, in dollars. */
 const perCredit = (line: Line) => (line.charged > 0 ? line.realCostUsd / line.charged : null);
 
@@ -62,6 +59,8 @@ export default function CreditPricesPage() {
   const action = useAdminAction({ scope: "admin-credit-prices" });
 
   const [cover, setCover] = useState<string | null>(null);
+  // The share of every credit sold we keep, in percent: suggestions follow it as it is typed.
+  const [margin, setMargin] = useState<string | null>(null);
   // Credits a month every company's plan gives where its plan sets none (finish-off-plan.md, item 3a).
   const [plan, setPlan] = useState<string | null>(null);
   const [pending, setPending] = useState<Partial<Record<CreditKind, number>>>({});
@@ -72,6 +71,11 @@ export default function CreditPricesPage() {
   const coverText = cover ?? (report ? String(report.settings.creditCoversUsd) : "");
   const coverValue = Number(coverText) > 0 ? Number(coverText) : report?.settings.creditCoversUsd ?? 0.05;
   const planText = plan ?? (report ? String(report.settings.planCredits) : "");
+  const marginText = margin ?? (report ? String(report.settings.marginPercent) : "");
+  // A margin as typed, "80" or "80%"; null while it is not a number from 0 to 95.
+  const marginTyped = margin === null ? null : readMargin(margin);
+  const marginWrong = margin !== null && marginTyped === null;
+  const marginValue = marginTyped ?? report?.settings.marginPercent ?? DEFAULT_MARGIN_PERCENT;
 
   const number = (value: number) => value.toLocaleString(locale);
   const dollars = (value: number, digits = 2) => `$${value.toLocaleString(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
@@ -90,7 +94,7 @@ export default function CreditPricesPage() {
     (!status || (status === "covered" ? covered(line) === true : status === "notCovered" ? covered(line) === false : covered(line) === null))
     && matchesSearchTerm(search, [kindName(line.kind)]));
   const paged = paginateItems(shown ?? [], page);
-  const changed = Object.keys(pending).length > 0 || cover !== null || plan !== null;
+  const changed = Object.keys(pending).length > 0 || cover !== null || plan !== null || margin !== null;
   const lastDay = report ? report.endsAt - 1 : 0;
 
   const onSave = async () => {
@@ -101,6 +105,7 @@ export default function CreditPricesPage() {
         creditCoversUsd: coverValue,
         // Sent as typed: the server refuses anything but a whole number, and says so.
         ...(plan !== null ? { planCredits: Number(plan.replace(/[,\s]/g, "")) } : {}),
+        ...(marginTyped !== null ? { marginPercent: marginTyped } : {}),
       }),
       { successMessage: t("saved"), fallbackMessage: t("saveFailed"), suppressErrorToast: true },
     );
@@ -108,6 +113,7 @@ export default function CreditPricesPage() {
       setPending({});
       setCover(null);
       setPlan(null);
+      setMargin(null);
     }
   };
 
@@ -123,8 +129,9 @@ export default function CreditPricesPage() {
       </div>
 
       <SettingsCard title={t("settings.title")}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Field label={t("settings.cover")} hint={t("settings.coverHint")} inputMode="decimal" value={coverText} onChange={(event) => setCover(event.target.value)} />
+          <Field label={t("settings.margin")} hint={t("settings.marginHint")} error={marginWrong ? t("settings.marginWrong", { most: MAX_MARGIN_PERCENT }) : undefined} inputMode="decimal" value={marginText} onChange={(event) => setMargin(event.target.value)} />
           <Field label={t("settings.planCredits")} hint={t("settings.planCreditsHint")} inputMode="numeric" value={planText} onChange={(event) => setPlan(event.target.value)} />
         </div>
         <FieldHint>{t("settings.plans")}</FieldHint>
@@ -171,8 +178,19 @@ export default function CreditPricesPage() {
               </span>
             ),
           },
-          { key: "cost", header: t("columns.cost"), align: "right", cell: (line) => <span className="font-mono text-[12px] tabular-nums text-secondary">{costPerUnit(line) === null ? "–" : dollars(costPerUnit(line) ?? 0, 4)}</span> },
-          { key: "suggested", header: t("columns.suggested"), align: "right", cell: (line) => <span className="font-mono text-[13px] text-foreground">{suggestion(line, coverValue) ?? "–"}</span> },
+          {
+            key: "cost",
+            header: t("columns.cost"),
+            align: "right",
+            cell: (line) => (
+              <span className="flex flex-col items-end">
+                <span className="font-mono text-[12px] tabular-nums text-secondary">{line.costPerUnitUsd === null ? "–" : dollars(line.costPerUnitUsd, 4)}</span>
+                {/* Read from the month before while this month has none of the work yet. */}
+                {line.costMonth !== null && line.costMonth !== report?.month ? <span className="whitespace-nowrap text-[12px] text-secondary">{t("costFrom", { month: monthName(line.costMonth, locale) })}</span> : null}
+              </span>
+            ),
+          },
+          { key: "suggested", header: t("columns.suggested"), align: "right", cell: (line) => <span className="font-mono text-[13px] text-foreground">{suggestion(line, coverValue, marginValue) ?? "–"}</span> },
           {
             key: "inUse",
             header: t("columns.inUse"),
@@ -202,7 +220,7 @@ export default function CreditPricesPage() {
             hiddenHeader: t("columns.use"),
             align: "right",
             cell: (line) => {
-              const suggested = suggestion(line, coverValue);
+              const suggested = suggestion(line, coverValue, marginValue);
               if (suggested === null || suggested === (pending[line.kind] ?? line.credits)) return null;
               return <Button variant="quiet" className="whitespace-nowrap text-[12px]" onClick={() => setPending((before) => ({ ...before, [line.kind]: suggested }))}>{t("use", { credits: number(suggested) })}</Button>;
             },
@@ -213,11 +231,19 @@ export default function CreditPricesPage() {
       <SaveError>{action.error}</SaveError>
       <div className="flex flex-wrap items-center justify-end gap-3">
         {changed ? <span className="text-[12px] text-secondary">{t("notSaved")}</span> : null}
-        <Button variant="ghost" disabled={!changed} onClick={() => { setPending({}); setCover(null); setPlan(null); }}>{t("discard")}</Button>
-        <SaveAction isSaving={action.isBusy()} disabled={!changed || !report} label={t("save")} savingLabel={t("saving")} onClick={() => void onSave()} />
+        <Button variant="ghost" disabled={!changed} onClick={() => { setPending({}); setCover(null); setPlan(null); setMargin(null); }}>{t("discard")}</Button>
+        <SaveAction isSaving={action.isBusy()} disabled={!changed || !report || marginWrong} label={t("save")} savingLabel={t("saving")} onClick={() => void onSave()} />
       </div>
     </div>
   );
+}
+
+/** A margin typed as "80" or "80%": the number, or null when it is not one from 0 to the most allowed. */
+function readMargin(text: string): number | null {
+  const typed = text.replace(/[%\s]/g, "");
+  if (!typed) return null;
+  const value = Number(typed);
+  return Number.isFinite(value) && value >= 0 && value <= MAX_MARGIN_PERCENT ? value : null;
 }
 
 function monthName(month: string, locale: string) {

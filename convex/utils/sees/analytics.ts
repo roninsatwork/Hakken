@@ -3,6 +3,9 @@ import { AI_ASSISTANTS_CHANNEL } from "../aiAssistants";
 import { LIKELY_CONVERSIONS, NEVER_TICKED, PURCHASE_EVENT } from "../analyticsEvents";
 import { NOT_SORTED_KIND } from "../pageKinds";
 import { MOVE_VIEWS, moveCounts, type MoveCounts } from "../pageMoves";
+import { OTHER_ROWS } from "../analyticsSharedLists";
+import type { PageStory } from "../../googleAnalyticsPageStory";
+import type { PageBoxes } from "../../googleAnalyticsPageBoxes";
 
 /**
  * What Hakken sees on the Google Analytics screens
@@ -427,93 +430,127 @@ export function conversionPagesSees(rows: readonly SquarePageFacts[]): Seen {
   ]);
 }
 
-/** Views with no page before reading as worth a sentence (§18.7): a fifth or more. */
-export const NO_PAGE_BEFORE_SHARE = 0.2;
-
-/**
- * Where a page's views came from just before (GA29): a page of the website by
- * its number, another website by its name, none, or the rest past its 20
- * biggest added up (`other`).
- */
-export type BeforeFacts = { kind: "page" | "site" | "none" | "other"; key: string; name: string; views: number };
-
-/** The least share of a page's views another page of the website must send for the link on it to be worth keeping. */
-export const KEEP_LINK_SHARE = 0.05;
-
-/** Views a visit at which Google is counting a page again and again, its contents links taken as new views (PS4). */
+/** Views a visit at which Google is counting a page again and again, its contents links taken as new views (PS4; tracking health's check). */
 export const COUNTED_AGAIN = 1.5;
 
+/** A change in the visits that started on a page this size or more is said as more or fewer than before. */
+export const PAGE_MOVE_SHARE = 0.05;
+/** A page needs this many visits starting on it before its share that bought is weighed against the website's. */
+export const PAGE_TRUSTED_VISITS = 20;
+/** A page with this many visits starting on it, buying or converting at two-thirds of the website's rate or less, wants a next step. */
+export const PAGE_NEXT_STEP_VISITS = 100;
+/** Its biggest source sending this many visits and none converting wants a look at that channel. */
+export const PAGE_SOURCE_VISITS = 50;
+/** A product's page: added this often and this share or less bought wants its page checked. */
+export const PAGE_MANY_ADDED = 20;
+export const PAGE_RARELY_BOUGHT = 0.1;
+/** Phones' share of a page's views this far from the website's, in points, or half as much again (or two-thirds) and five points. */
+export const PHONES_FAR = 0.15;
+export const PHONES_APART = 0.05;
+
 /**
- * A page's story (analytics-page-screen-plan.md §5): the visits that started
- * on it and the conversions they went on to make, where those came from, a
- * page Google counts more than once a visit, and a page of its group that
- * converts better. A source is its name, or `(direct)` for visits typed in.
+ * A page's story (page-screen-redo-plan-2026-11-03.md, item 13; analytics-page-screen-plan.md §5), as its redone
+ * screen shows it: the visits that started on it against the span before; the source that sent most of them and
+ * whether they converted; on a product's page the items added and bought, elsewhere the visits that went on to the
+ * sale (a shop's) or the main conversion against the whole website; phones against the whole website; and a page of
+ * its group that converts better. Counts and shares only, never money. A source is its name, or `(direct)` for visits
+ * typed in.
  */
 export type PageStoryFacts = {
-  started: { visits: number; websiteVisits: number; conversions: number; madeHere: number } | null;
-  /** The source that brought the most of those visits, and the one their conversions came from most. */
-  biggest: { name: string; visits: number; conversions: number } | null;
-  converter: { name: string; conversions: number } | null;
-  viewsPerVisit: number | null;
-  /** Different pages a visit, and pages a visit as Google counts them, for visits that started here: as the page shows them. */
-  pages: { different: number; counted: number } | null;
-  /** A page of its group whose visits converted better, by its number. */
-  nearest: { page: string; visits: number; conversions: number } | null;
+  started: { visits: number; visitsBefore: number | null; websiteVisits: number } | null;
+  /** The source that sent the most of those visits, across its channels, and the conversions they made. */
+  biggest: { name: string; channel: string; visits: number; conversions: number } | null;
+  /** Phones' share of its views and of the whole website's, 0–1. */
+  phones: { share: number; websiteShare: number } | null;
+  /** On a product's page: the items of every size and finish sold on it, added and bought, and bought the span before. */
+  product: { itemsAdded: number; itemsBought: number; itemsBoughtBefore: number | null } | null;
+  /** On any other page: the visits that started on it and did the sale or the main conversion, and the website's share, 0–1. */
+  sale: { eventName: string; shop: boolean; visits: number; startedVisits: number; websiteShare: number | null } | null;
+  /** A page of its group whose visits converted better: its number, for its link, and its address, for the words. */
+  nearest: { page: string; address: string; visits: number; conversions: number } | null;
 };
 
 /**
- * A page's own screen from All pages (§18.7): first its story, when Google
- * has answered for it (analytics-page-screen-plan.md §5) — the visits that
- * started on it and the conversions they made, and where; the biggest source
- * that brought none; a page counted more than once a visit; a page of its
- * group that converts better — then the two biggest sources of its views and
- * their shares, views with no page before when a fifth or more, an AI
- * assistant among its sources. Its steps: a next step to the service it
- * supports, the contents links counted as new views, keep the link on the
- * page that sends most (a twentieth of its views or more), and check what
- * that assistant says about the page. The page before a view of itself —
- * reloaded, opened again — is never one of its sources.
+ * The page's story as its rules read it, from its own read (`analyticsPage`'s story) and its boxes' figures
+ * (`analyticsPageBoxes`) where they are read: the visits that started on it, the source that sent most of them (its
+ * channels added up, so Google's free and paid visits are one Google), phones' share against the website's, the items
+ * or the sale, and the busiest page of its group whose visits converted better, with two conversions at least. No
+ * database here, so the screen can read it again once its boxes arrive.
  */
-export function pageSees(rows: readonly BeforeFacts[], siteId: string, isAssistant: (name: string) => boolean, self: string, story: PageStoryFacts | null = null): Seen {
-  const total = sum(rows, (row) => row.views);
-  if (total === 0 && !story?.started) return seen([{ code: "none" }]);
-  const sources = rows.filter((row) => (row.kind === "page" || row.kind === "site") && row.key !== self && row.views > 0).sort((left, right) => right.views - left.views);
-  const none = sum(rows.filter((row) => row.kind === "none"), (row) => row.views);
-  const nameOf = (row: BeforeFacts) => (row.kind === "page" ? row.key : row.name);
-  const [first, second] = sources;
-  const assistant = sources.find((row) => row.kind === "site" && isAssistant(row.name)) ?? null;
-  const sender = sources.find((row) => row.kind === "page" && row.views / total >= KEEP_LINK_SHARE) ?? null;
+export function pageStoryFacts(story: PageStory, boxes: PageBoxes | null): PageStoryFacts {
+  // A channel's other sources, added up past a page's 20 biggest, are never one source; nor is Google's "(not set)".
+  const bySource = new Map<string, { name: string; channel: string; visits: number; conversions: number }>();
+  for (const row of story.sources) {
+    if (row.source === OTHER_ROWS || (!row.name && row.source !== "(direct)")) continue;
+    const name = row.name ?? row.source;
+    const held = bySource.get(name);
+    if (held) bySource.set(name, { ...held, visits: held.visits + row.visits, conversions: held.conversions + row.conversions });
+    else bySource.set(name, { name, channel: row.channel, visits: row.visits, conversions: row.conversions });
+  }
+  const biggest = [...bySource.values()].sort((left, right) => right.visits - left.visits)[0] ?? null;
+  const own = story.started;
+  const rate = own && own.visits > 0 ? own.conversions / own.visits : 0;
+  const nearest = story.league.find((row) => !row.isThis && row.conversions >= 2 && row.visits > 0 && row.conversions / row.visits > rate) ?? null;
+  const phones = story.devices.find((row) => row.device === "mobile");
+  const product = boxes?.product ?? null;
+  const sale = boxes?.sale ?? null;
+  return {
+    started: own ? { visits: own.visits, visitsBefore: own.visitsBefore, websiteVisits: own.websiteVisits } : null,
+    biggest,
+    phones: phones && phones.websiteShare !== null ? { share: phones.share, websiteShare: phones.websiteShare } : null,
+    product: product ? { itemsAdded: product.itemsAdded, itemsBought: product.itemsBought, itemsBoughtBefore: product.itemsBoughtBefore } : null,
+    sale: !product && sale ? { eventName: sale.eventName, shop: sale.shop, visits: sale.visits, startedVisits: sale.startedVisits, websiteShare: sale.websiteVisits > 0 ? sale.websiteEventVisits / sale.websiteVisits : null } : null,
+    nearest: nearest ? { page: nearest.key, address: nearest.address, visits: nearest.visits, conversions: nearest.conversions } : null,
+  };
+}
+
+/**
+ * A page's own screen from All pages, redone (page-screen-redo-plan-2026-11-03.md, approved 3 November 2026): the
+ * visits that started on it, more or fewer than before; the source that sent most of them and whether they converted;
+ * on a product's page the items added to baskets and bought, against before; on any other page the share of its
+ * visitors who bought (or converted) against the whole website; phones far from the whole website's share; a page of
+ * its group that converts better. Its steps: look at the channel whose visitors never convert, at the page that
+ * converts better, at a product's page many add and few buy, and give a page that rarely converts a next step. Nothing
+ * of money, the page before, pages a visit or links clicked: the screen no longer shows them.
+ */
+export function pageSees(self: string, address: string, viewed: boolean, story: PageStoryFacts | null): Seen {
   const started = story?.started && story.started.visits > 0 ? story.started : null;
+  if (!viewed && !started) return seen([{ code: "none" }]);
   const share = started && started.websiteVisits > 0 ? started.visits / started.websiteVisits : 0;
-  const biggest = story?.biggest;
-  const converter = story?.converter;
-  // Counted again: said with the two figures the page shows — different pages a visit, and Google's count — never a third.
-  const pages = story?.pages && story.pages.different > 0 && story.pages.counted / story.pages.different >= COUNTED_AGAIN ? story.pages : null;
-  const counted = pages ? pages.counted / pages.different : story?.viewsPerVisit !== null && story?.viewsPerVisit !== undefined && story.viewsPerVisit >= COUNTED_AGAIN ? story.viewsPerVisit : null;
+  const change = started && started.visitsBefore ? (started.visits - started.visitsBefore) / started.visitsBefore : null;
+  const biggest = started && story?.biggest && story.biggest.visits > 0 ? story.biggest : null;
+  const typed = biggest?.name === "(direct)";
+  const product = story?.product && (story.product.itemsAdded > 0 || story.product.itemsBought > 0) ? story.product : null;
+  const boughtChange = product && product.itemsBoughtBefore ? (product.itemsBought - product.itemsBoughtBefore) / product.itemsBoughtBefore : null;
+  const sale = !product && story?.sale && story.sale.startedVisits >= PAGE_TRUSTED_VISITS && story.sale.websiteShare !== null ? story.sale : null;
+  const saleShare = sale ? sale.visits / sale.startedVisits : 0;
+  const phones = story?.phones ?? null;
+  const phonesGap = phones ? Math.abs(phones.share - phones.websiteShare) : 0;
+  const phonesFar = phones && phones.websiteShare > 0 && (phonesGap >= PHONES_FAR || (phonesGap >= PHONES_APART && (phones.share / phones.websiteShare >= 1.5 || phones.share / phones.websiteShare <= 1 / 1.5)));
+  const nearest = !product ? story?.nearest ?? null : null;
+  const leaking = sale && sale.startedVisits >= PAGE_NEXT_STEP_VISITS && sale.websiteShare !== null && saleShare <= (sale.websiteShare * 2) / 3;
+  const rarelyBought = product && product.itemsAdded >= PAGE_MANY_ADDED && product.itemsBought / product.itemsAdded <= PAGE_RARELY_BOUGHT;
+  const moved = (way: string) => (change === null || Math.abs(change) < PAGE_MOVE_SHARE ? way : `${way}${change > 0 ? "More" : "Fewer"}`);
+  const items = (way: string) => (boughtChange === null || Math.abs(boughtChange) < PAGE_MOVE_SHARE ? way : `${way}${boughtChange > 0 ? "More" : "Fewer"}`);
   return seen([
-    started && (started.conversions === 0
-      ? { code: "startedNone", a: started.visits, b: share }
-      : started.madeHere === 0
-        ? { code: "startedElsewhere", a: started.visits, b: share, c: started.conversions }
-        : { code: "startedConverted", a: started.visits, b: share, c: started.conversions }),
-    started && started.conversions > 0 && biggest && biggest.conversions === 0 && converter && converter.name !== biggest.name && (converter.name === "(direct)"
-      ? { code: "biggestNoneTyped", text: biggest.name, a: biggest.visits }
-      : { code: "biggestNone", text: biggest.name, a: biggest.visits, more: converter.name }),
-    pages ? { code: "countedAgainPages", a: pages.different, b: pages.counted } : counted !== null && { code: "countedAgain", a: counted },
-    story?.nearest && { code: "nearest", text: story.nearest.page, a: story.nearest.conversions, b: story.nearest.visits },
-    total > 0 && (second
-      ? { code: "twoSources", text: nameOf(first), a: first.views / total, more: nameOf(second), b: second.views / total }
-      : first ? { code: "oneSource", text: nameOf(first), a: first.views / total } : { code: "noSources" }),
-    total > 0 && none / total >= NO_PAGE_BEFORE_SHARE && sources.length > 0 && { code: "noneBefore", a: none / total },
-    assistant && { code: "assistant", text: assistant.name, a: assistant.views },
+    started && { code: moved("started"), a: started.visits, b: share, ...(change !== null && Math.abs(change) >= PAGE_MOVE_SHARE ? { c: Math.abs(change) } : {}) },
+    // The page's main box next, the items or the sale: a box says three sentences at most.
+    product && (product.itemsBought === 0
+      ? { code: "itemsNone", a: product.itemsAdded }
+      : { code: items("items"), a: product.itemsAdded, b: product.itemsBought, ...(boughtChange !== null && Math.abs(boughtChange) >= PAGE_MOVE_SHARE ? { c: Math.abs(boughtChange) } : {}) }),
+    sale && (sale.shop
+      ? { code: sale.visits === 0 ? "boughtNone" : "bought", a: saleShare, b: sale.websiteShare ?? 0 }
+      : { code: sale.visits === 0 ? "convertedNone" : "converted", text: sale.eventName, a: saleShare, b: sale.websiteShare ?? 0 }),
+    biggest && (biggest.conversions > 0
+      ? { code: typed ? "biggestTyped" : "biggest", text: biggest.name, a: biggest.visits, b: biggest.conversions }
+      : { code: typed ? "biggestTypedNone" : "biggestNone", text: biggest.name, a: biggest.visits }),
+    phonesFar && phones && { code: "phones", a: phones.share, b: phones.websiteShare },
+    nearest && { code: "nearest", text: nearest.address, a: nearest.conversions, b: nearest.visits },
   ], [
-    // A busy page whose visits never convert, or one whose group has a page that converts better.
-    started && ((started.visits >= 100 && started.conversions === 0) || story?.nearest)
-      ? { code: "nextStep", link: "landingPage", to: toPage("all-pages/page", { key: self }) }
-      : null,
-    counted !== null && { code: "fixCountedAgain", link: "trackingHealth", to: toPage("tracking-health") },
-    sender && { code: "keepLink", text: sender.key, link: "seePage", to: toPage("all-pages/page", { key: sender.key }) },
-    assistant && { code: "checkAssistant", text: assistant.name, link: "aiAnswers", to: { url: `/app/sites/${siteId}/ai/answers` } },
+    rarelyBought && /^https?:\/\//.test(address) ? { code: "checkProductPage", link: "openPage", to: { url: address } } : null,
+    leaking && /^https?:\/\//.test(address) ? { code: sale?.shop ? "nextStepShop" : "nextStep", link: "openPage", to: { url: address } } : null,
+    biggest && !typed && biggest.conversions === 0 && biggest.visits >= PAGE_SOURCE_VISITS ? { code: "seeChannel", text: biggest.name, link: "channel", to: toPage("channels/channel", { key: biggest.channel }) } : null,
+    nearest && nearest.page !== self ? { code: "seeNearest", text: nearest.address, link: "seePage", to: toPage("all-pages/page", { key: nearest.page }) } : null,
   ]);
 }
 

@@ -180,10 +180,12 @@ const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì"
 const EN_GROUPS_BY: Record<string, string> = {
   channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
   source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
+  age: "age", gender: "gender", weekday: "day of the week",
 };
 const IT_GROUPS_BY: Record<string, string> = {
   channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese", page: "pagina di arrivo", hour: "ora", query: "ricerca",
   source: "fonte", browser: "browser", website: "sito", position: "posizione su Google", product: "prodotto",
+  age: "età", gender: "genere", weekday: "giorno della settimana",
 };
 /** Clarity's and Visibility's measures in words (ask-hakken-every-chart-plan-2026-10-31.md, the last sources). */
 const EN_MEASURES: Record<string, string> = {

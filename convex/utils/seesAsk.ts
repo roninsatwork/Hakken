@@ -74,16 +74,56 @@ export const seesAskValidator = {
   data: v.optional(v.any()),
 };
 
-/** A key read back into its parts: the screen, its dates, country and device (`seesKey`'s other way). */
-export function fromSeesKey(key: string): { screen: string; period: string; from?: string; to?: string; country: string; device: string } {
-  const parts = key.split("|");
-  const [period, from, to, country, device] = parts.slice(-5);
-  return { screen: parts.slice(0, -5).join("|"), period: period ?? "", ...(from ? { from } : {}), ...(to ? { to } : {}), country: country ?? "", device: device ?? "" };
+/**
+ * The address fields that name the one record a screen is about: a page's own screen (`all-pages/page?key=~fu`), an
+ * event's, a channel's, a search's or a tracking check's (`?key=`), the pages behind one square of the Conversions map
+ * (`?event=…&by=…&key=…`), one AI question (`?question=`). Every other field is a filter or a view, never a record.
+ */
+const RECORD_FIELDS = ["key", "event", "by", "question"] as const;
+
+/**
+ * The record a screen's address names, as `field=value` pairs (`key=~fu`), or "" for a screen about no one record
+ * (page-screen-redo-plan-2026-11-03.md, step 2: every page's own screen shared one saved answer, and a press on page B
+ * wrote over page A's words).
+ */
+export function seesRecord(path: string): string {
+  const at = path.indexOf("?");
+  if (at < 0) return "";
+  const query = new URLSearchParams(path.slice(at + 1));
+  return RECORD_FIELDS.flatMap((field) => {
+    const value = query.get(field);
+    return value ? [`${field}=${value}`] : [];
+  }).join("&").replace(/\|/g, "").slice(0, 200);
 }
 
-/** One answer for one website, page, dates, country and device (S9): change any and it is written afresh. */
-export function seesKey(ask: { screen: string; period: string; from?: string; to?: string; country: string; device: string }): string {
-  return [ask.screen, ask.period, ask.from ?? "", ask.to ?? "", ask.country, ask.device].join("|");
+/** A screen's address as the eye hands it on: its path, and of its query only the record it is about (`seesRecord`). */
+export function seesPath(pathname: string, search: string): string {
+  const query = new URLSearchParams(search.replace(/^\?/, ""));
+  const text = RECORD_FIELDS.flatMap((field) => {
+    const value = query.get(field);
+    return value ? [`${field}=${encodeURIComponent(value)}`] : [];
+  }).join("&");
+  return text ? `${pathname}?${text}` : pathname;
+}
+
+/** A key read back into its parts: the screen and the record it is about, its dates, country and device (`seesKey`'s other way). */
+export function fromSeesKey(key: string): { screen: string; record?: string; period: string; from?: string; to?: string; country: string; device: string } {
+  const parts = key.split("|");
+  const [period, from, to, country, device] = parts.slice(-5);
+  const head = parts.slice(0, -5).join("|");
+  const at = head.indexOf("?");
+  const screen = at < 0 ? head : head.slice(0, at);
+  const record = at < 0 ? "" : head.slice(at + 1);
+  return { screen, ...(record ? { record } : {}), period: period ?? "", ...(from ? { from } : {}), ...(to ? { to } : {}), country: country ?? "", device: device ?? "" };
+}
+
+/**
+ * One answer for one website, page, record, dates, country and device (S9): change any and it is written afresh. The
+ * record comes from the screen's address (`path`'s `?key=`), so each page's own screen keeps its own words.
+ */
+export function seesKey(ask: { screen: string; path?: string; period: string; from?: string; to?: string; country: string; device: string }): string {
+  const record = ask.path ? seesRecord(ask.path) : "";
+  return [record ? `${ask.screen}?${record}` : ask.screen, ask.period, ask.from ?? "", ask.to ?? "", ask.country, ask.device].join("|");
 }
 
 /** The page's facts as the team's (`Fact`): its section's figures, the home country's, over the dates shown. */
@@ -119,6 +159,9 @@ export const SEES_FORMAT = [
   "The most useful thing first: what a client would act on, never what did not happen.",
   // The platform's word (Anthony, GA19, 2026-10-09), though some screens' own figures still say enquiries.
   "Call them conversions, never enquiries, even where the page's figures say enquiries.",
+  // Anthony, 2026-11-03: every word a client reads at a reading age of 14 ("we need to remember the reading age for
+  // whenever you write text").
+  "Write for a reading age of 14, as a helpful person would say it out loud. Never the system's words: no \"list\", \"row\", \"span\", \"share of\", \"the month before\" when the month has a name. Say \"visitors\" or \"people\", and \"more than September\" or \"fewer than September\". Keep Google's own names for channels (Cross-network, Organic Search, Direct).",
 ].join("\n");
 
 /**
